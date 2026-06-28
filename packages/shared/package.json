@@ -1,0 +1,14 @@
+{
+  "name": "@orca/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "echo \"No shared tests yet\"",
+    "lint": "tsc -p tsconfig.json"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@orca/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "bun test",
+    "lint": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.15.0",
+    "@orca/shared": "file:../../packages/shared",
+    "hono": "^4.8.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.17"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@orca/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -p tsconfig.json && vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "echo \"No web tests yet\"",
+    "lint": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@orca/shared": "file:../../packages/shared",
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^7.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6"
+  }
+}
