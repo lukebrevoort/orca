@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   accountFixture,
+  authSessionFixture,
+  authSessionSchema,
   createProviderPageSchema,
   inboxFixture,
+  inboxQuerySchema,
   inboxResponseSchema,
   mailAccountSchema,
   normalizedLabelSchema,
@@ -46,6 +49,7 @@ const normalizedMessageFixture = normalizedMessageSchema.parse({
 
 test("shared fixtures satisfy the exported schemas", () => {
   assert.deepStrictEqual(mailAccountSchema.parse(accountFixture), accountFixture);
+  assert.deepStrictEqual(authSessionSchema.parse(authSessionFixture), authSessionFixture);
   assert.deepStrictEqual(
     inboxResponseSchema.parse({
       account: accountFixture,
@@ -58,6 +62,14 @@ test("shared fixtures satisfy the exported schemas", () => {
       nextCursor: null,
     },
   );
+});
+
+test("inbox query schema rejects blank cursors", () => {
+  const result = inboxQuerySchema.safeParse({
+    cursor: "",
+  });
+
+  assert.equal(result.success, false);
 });
 
 test("provider page schemas stay reusable across normalized payloads", () => {

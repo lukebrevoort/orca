@@ -1,7 +1,10 @@
-export { accountFixture, inboxFixture } from "./fixtures.ts";
+export { accountFixture, authSessionFixture, inboxFixture } from "./fixtures.ts";
 
 export {
+  authSessionSchema,
+  authUserSchema,
   createProviderPageSchema,
+  inboxQuerySchema,
   inboxMessagePageSchema,
   inboxMessageSchema,
   inboxResponseSchema,
@@ -21,7 +24,10 @@ export {
 } from "./schemas.ts";
 
 export type {
+  AuthSession,
+  AuthUser,
   InboxMessage,
+  InboxQuery,
   InboxMessagePage,
   InboxResponse,
   MailAccount,
