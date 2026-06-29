@@ -10,5 +10,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "echo \"No shared tests yet\"",
     "lint": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
