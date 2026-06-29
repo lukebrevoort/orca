@@ -234,6 +234,123 @@ input {
   white-space: nowrap;
 }
 
+.account-chip-muted {
+  color: #85858c;
+}
+
+.inbox-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding-top: 24px;
+}
+
+.message-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  max-width: 880px;
+  overflow: auto;
+  padding: 0;
+  width: 100%;
+}
+
+.message-list li {
+  min-width: 0;
+}
+
+.message-row {
+  align-items: start;
+  background: #111113;
+  border: 1px solid #242428;
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  padding: 16px;
+}
+
+.message-row-unread {
+  border-color: #3b3b40;
+  box-shadow: inset 0 0 0 1px #323238;
+}
+
+.message-avatar {
+  align-items: center;
+  background: #1b1b1f;
+  border-radius: 12px;
+  color: #b4b4ba;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.message-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.message-meta,
+.message-subject-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.message-meta strong,
+.message-subject-row h2,
+.message-copy p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message-meta strong,
+.message-copy p {
+  white-space: nowrap;
+}
+
+.message-meta strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.message-meta span {
+  color: #85858c;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.message-subject-row h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.message-badge {
+  background: #f3f3f1;
+  border-radius: 999px;
+  color: #080809;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.message-copy p {
+  color: #9a9aa1;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .empty-state {
   align-self: center;
   align-items: center;

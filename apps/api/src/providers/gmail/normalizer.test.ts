@@ -1,10 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   normalizeGmailLabel,
   normalizeGmailMessage,
   normalizeGmailThread,
-} from "./normalizer";
-import type { GmailMessage } from "./types";
+} from "./normalizer.ts";
+import type { GmailMessage } from "./types.ts";
 
 const gmailMessage: GmailMessage = {
   id: "msg_123",
@@ -42,23 +43,23 @@ describe("Gmail normalizer", () => {
       accountId: "acct_123",
     });
 
-    expect(normalized.provider).toBe("gmail");
-    expect(normalized.providerMessageId).toBe("msg_123");
-    expect(normalized.threadId).toBe("gmail:acct_123:thread_123");
-    expect(normalized.from).toEqual({
+    assert.equal(normalized.provider, "gmail");
+    assert.equal(normalized.providerMessageId, "msg_123");
+    assert.equal(normalized.threadId, "gmail:acct_123:thread_123");
+    assert.deepEqual(normalized.from, {
       name: "Maya Chen",
       email: "maya@example.com",
     });
-    expect(normalized.to).toEqual([
+    assert.deepEqual(normalized.to, [
       {
         name: "Luke Brevoort",
         email: "luke@example.com",
       },
     ]);
-    expect(normalized.subject).toBe("Provider test");
-    expect(normalized.bodyText).toBe("Hello from Gmail");
-    expect(normalized.unread).toBe(true);
-    expect(normalized.raw).toEqual({
+    assert.equal(normalized.subject, "Provider test");
+    assert.equal(normalized.bodyText, "Hello from Gmail");
+    assert.equal(normalized.unread, true);
+    assert.deepEqual(normalized.raw, {
       provider: "gmail",
       accountId: "acct_123",
       messageId: "msg_123",
@@ -68,7 +69,7 @@ describe("Gmail normalizer", () => {
   });
 
   test("maps Gmail labels to normalized labels", () => {
-    expect(normalizeGmailLabel({ id: "INBOX", name: "Inbox" })).toEqual({
+    assert.deepEqual(normalizeGmailLabel({ id: "INBOX", name: "Inbox" }), {
       id: "gmail:INBOX",
       provider: "gmail",
       providerLabelId: "INBOX",
@@ -76,7 +77,7 @@ describe("Gmail normalizer", () => {
       type: "system",
     });
 
-    expect(normalizeGmailLabel({ id: "Label_42", name: "Customers" }).type).toBe("user");
+    assert.equal(normalizeGmailLabel({ id: "Label_42", name: "Customers" }).type, "user");
   });
 
   test("maps normalized messages to a normalized thread", () => {
@@ -84,7 +85,7 @@ describe("Gmail normalizer", () => {
       accountId: "acct_123",
     });
 
-    expect(normalizeGmailThread([message])).toEqual({
+    assert.deepEqual(normalizeGmailThread([message]), {
       id: "gmail:acct_123:thread_123",
       provider: "gmail",
       providerThreadId: "thread_123",

@@ -6,7 +6,7 @@
     "dev": "bun --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test",
+    "test": "node --experimental-strip-types --test src/index.test.ts src/providers/gmail/normalizer.test.ts",
     "lint": "tsc -p tsconfig.json"
   },
   "dependencies": {

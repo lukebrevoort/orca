@@ -4,7 +4,12 @@ import type {
   NormalizedMessage,
   NormalizedThread,
 } from "@orca/shared";
-import type { GmailHeader, GmailLabel, GmailMessage, GmailMessagePart } from "./types";
+import type {
+  GmailHeader,
+  GmailLabel,
+  GmailMessage,
+  GmailMessagePart,
+} from "./types.ts";
 
 type NormalizeOptions = {
   accountId: string;
