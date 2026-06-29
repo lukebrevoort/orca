@@ -1,9 +1,22 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { accountFixture, inboxFixture } from "@orca/shared";
+import {
+  accountFixture,
+  inboxFixture,
+  type InboxListResponse,
+  type MeResponse,
+} from "@orca/shared";
 
 export const app = new Hono();
+
+const meResponse: MeResponse = accountFixture;
+
+const inboxListResponse: InboxListResponse = {
+  account: accountFixture,
+  messages: inboxFixture,
+  nextCursor: null,
+};
 
 app.use(
   "*",
@@ -19,15 +32,9 @@ app.get("/health", (c) =>
   }),
 );
 
-app.get("/v1/me", (c) => c.json(accountFixture));
+app.get("/v1/me", (c) => c.json(meResponse));
 
-app.get("/v1/inbox", (c) =>
-  c.json({
-    account: accountFixture,
-    messages: inboxFixture,
-    nextCursor: null,
-  }),
-);
+app.get("/v1/inbox", (c) => c.json(inboxListResponse));
 
 const port = Number(process.env.PORT ?? 3000);
 

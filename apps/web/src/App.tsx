@@ -1,3 +1,12 @@
+import { useEffect, useMemo, useState } from "react";
+import type {
+  InboxListResponse,
+  InboxMessage,
+  MailAccount,
+  MailContact,
+  MeResponse,
+} from "@orca/shared";
+
 type MailboxItem = {
   label: string;
   count?: number;
@@ -24,13 +33,83 @@ const frequentContacts: PersonItem[] = [
 ];
 
 const mailboxes: MailboxItem[] = [
-  { label: "Inbox", count: 12, active: true },
+  { label: "Inbox", active: true },
   { label: "Sent" },
   { label: "Spam", count: 2 },
   { label: "All Mail" },
 ];
 
 export function App() {
+  const [account, setAccount] = useState<MailAccount | null>(null);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadInbox() {
+      setStatus("loading");
+      setErrorMessage(null);
+
+      try {
+        const [meResult, inboxResult] = await Promise.allSettled([
+          fetchJson<MeResponse>("/v1/me"),
+          fetchJson<InboxListResponse>("/v1/inbox"),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        if (meResult.status === "fulfilled") {
+          setAccount(meResult.value);
+        }
+
+        if (inboxResult.status === "fulfilled") {
+          setAccount((currentAccount) => currentAccount ?? inboxResult.value.account);
+          setMessages(inboxResult.value.messages);
+          setStatus("ready");
+          return;
+        }
+
+        setMessages([]);
+        setStatus("error");
+        setErrorMessage(
+          meResult.status === "rejected"
+            ? getErrorMessage(meResult.reason)
+            : getErrorMessage(inboxResult.reason),
+        );
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+
+        setErrorMessage(getErrorMessage(error));
+        setStatus("error");
+      }
+    }
+
+    void loadInbox();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const mailboxItems = useMemo(
+    () =>
+      mailboxes.map((mailbox) =>
+        mailbox.label === "Inbox"
+          ? {
+              ...mailbox,
+              count: status === "ready" ? messages.length : undefined,
+            }
+          : mailbox,
+      ),
+    [messages.length, status],
+  );
+
   return (
     <main className="app-shell">
       <aside className="sidebar" aria-label="Mailbox navigation">
@@ -52,14 +131,14 @@ export function App() {
         <section className="sidebar-section mailbox-section">
           <h2>Mailboxes</h2>
           <nav className="nav-list">
-            {mailboxes.map((mailbox) => (
+            {mailboxItems.map((mailbox) => (
               <a
                 aria-current={mailbox.active ? "page" : undefined}
                 href={`/${mailbox.label.toLowerCase().replaceAll(" ", "-")}`}
                 key={mailbox.label}
               >
                 <span>{mailbox.label}</span>
-                {mailbox.count ? <small>{mailbox.count}</small> : null}
+                {mailbox.count !== undefined ? <small>{mailbox.count}</small> : null}
               </a>
             ))}
           </nav>
@@ -72,17 +151,65 @@ export function App() {
             <p>Human inbox</p>
             <h1>Inbox</h1>
           </div>
-          <div className="account-chip">Gmail · luke@example.com</div>
+          <div className={`account-chip${account ? "" : " account-chip-muted"}`}>
+            {account
+              ? `${formatProvider(account.provider)} · ${account.email}`
+              : "Connecting account..."}
+          </div>
         </header>
 
-        <div className="empty-state">
-          <p>Ready for sync</p>
-          <h2>No message selected</h2>
-          <span>
-            The shell is ready for backend inbox data, thread reading, and full
-            compose. Until then, this space stays intentionally quiet.
-          </span>
-        </div>
+        <section className="inbox-body" aria-live="polite">
+          {status === "loading" ? (
+            <InboxStatusState
+              eyebrow="Loading inbox"
+              title="Connecting to the read-only API"
+              description="Pulling your account and inbox list into Orca."
+            />
+          ) : null}
+
+          {status === "error" ? (
+            <InboxStatusState
+              eyebrow="Inbox unavailable"
+              title="We couldn't load your inbox"
+              description={errorMessage ?? "Try again once the API is reachable."}
+            />
+          ) : null}
+
+          {status === "ready" && messages.length === 0 ? (
+            <InboxStatusState
+              eyebrow="Inbox empty"
+              title="No messages yet"
+              description="When synced mail arrives, your inbox list will appear here."
+            />
+          ) : null}
+
+          {status === "ready" && messages.length > 0 ? (
+            <ol className="message-list">
+              {messages.map((message) => (
+                <li key={message.id}>
+                  <article
+                    className={`message-row${message.unread ? " message-row-unread" : ""}`}
+                  >
+                    <span className="message-avatar" aria-hidden="true">
+                      {getInitials(message.from)}
+                    </span>
+                    <div className="message-copy">
+                      <div className="message-meta">
+                        <strong>{message.from.name ?? message.from.email}</strong>
+                        <span>{formatReceivedAt(message.receivedAt)}</span>
+                      </div>
+                      <div className="message-subject-row">
+                        <h2>{message.subject || "(no subject)"}</h2>
+                        {message.unread ? <span className="message-badge">Unread</span> : null}
+                      </div>
+                      <p>{message.snippet}</p>
+                    </div>
+                  </article>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </section>
       </section>
     </main>
   );
@@ -106,4 +233,73 @@ function SidebarSection({ title, items }: { title: string; items: PersonItem[] }
       </div>
     </section>
   );
+}
+
+function InboxStatusState({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="empty-state">
+      <p>{eyebrow}</p>
+      <h2>{title}</h2>
+      <span>{description}</span>
+    </div>
+  );
+}
+
+async function fetchJson<T>(input: string): Promise<T> {
+  const response = await fetch(input);
+
+  if (!response.ok) {
+    throw new Error(`Request failed with ${response.status} ${response.statusText}`.trim());
+  }
+
+  return (await response.json()) as T;
+}
+
+function formatProvider(provider: MailAccount["provider"]) {
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+function getInitials(contact: MailContact) {
+  const source = contact.name ?? contact.email;
+  const initials = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return initials || "?";
+}
+
+function formatReceivedAt(receivedAt: string) {
+  const date = new Date(receivedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions =
+    date.toDateString() === now.toDateString()
+      ? { hour: "numeric", minute: "2-digit" }
+      : { month: "short", day: "numeric" };
+  const formatter = new Intl.DateTimeFormat(undefined, options);
+
+  return formatter.format(date);
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "An unexpected error occurred while loading inbox data.";
 }

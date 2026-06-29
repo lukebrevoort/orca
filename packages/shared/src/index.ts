@@ -12,6 +12,8 @@ export type MailAccount = {
   displayName: string;
 };
 
+export type MeResponse = MailAccount;
+
 export type InboxMessage = {
   id: string;
   provider: MailProvider;
@@ -23,6 +25,12 @@ export type InboxMessage = {
   receivedAt: string;
   unread: boolean;
   labels: string[];
+};
+
+export type InboxListResponse = {
+  account: MailAccount;
+  messages: InboxMessage[];
+  nextCursor: string | null;
 };
 
 export type NormalizedLabel = {
