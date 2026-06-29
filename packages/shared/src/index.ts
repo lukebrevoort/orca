@@ -25,6 +25,49 @@ export type InboxMessage = {
   labels: string[];
 };
 
+export type NormalizedLabel = {
+  id: string;
+  provider: MailProvider;
+  providerLabelId: string;
+  name: string;
+  type: "system" | "user";
+};
+
+export type NormalizedThread = {
+  id: string;
+  provider: MailProvider;
+  providerThreadId: string;
+  subject: string;
+  latestReceivedAt: string;
+  messageCount: number;
+  labels: string[];
+};
+
+export type NormalizedMessage = InboxMessage & {
+  to: MailContact[];
+  cc: MailContact[];
+  bcc: MailContact[];
+  bodyText: string | null;
+  bodyHtml: string | null;
+  raw: {
+    provider: MailProvider;
+    accountId: string;
+    messageId: string;
+    threadId: string;
+    labelIds: string[];
+  };
+};
+
+export type ProviderPage<T> = {
+  items: T[];
+  nextCursor: string | null;
+};
+
+export type MailProviderClient = {
+  provider: MailProvider;
+  listInboxMessages(cursor?: string | null): Promise<ProviderPage<NormalizedMessage>>;
+};
+
 export const accountFixture: MailAccount = {
   id: "acct_local_gmail",
   provider: "gmail",
