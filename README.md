@@ -41,6 +41,20 @@ bun run build
 bun run test
 ```
 
+## Database Foundation
+
+The API workspace now includes a Drizzle + SQLite persistence foundation for
+future auth and sync work. By default it writes to
+`apps/api/data/orca.sqlite`. Override that with `DATABASE_PATH` if needed.
+
+Useful commands:
+
+```bash
+bun --cwd apps/api db:generate
+bun --cwd apps/api db:migrate
+bun --cwd apps/api db:verify
+```
+
 ## Workspace Layout
 
 - `apps/api`: Bun/Hono backend.
