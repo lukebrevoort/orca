@@ -47,25 +47,38 @@ export async function verifySessionToken(token: string) {
   } satisfies SessionTokenPayload;
 }
 
-export function buildSessionCookie(token: string, expiresAt: Date) {
+export type SessionCookieOptions = {
+  secure?: boolean;
+};
+
+export function buildSessionCookie(
+  token: string,
+  expiresAt: Date,
+  options: SessionCookieOptions = {},
+) {
   const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+  const secure = options.secure ?? true;
 
   return [
     `${sessionCookieName}=${token}`,
     "HttpOnly",
     "Path=/",
     "SameSite=Lax",
+    ...(secure ? ["Secure"] : []),
     `Max-Age=${maxAge}`,
     `Expires=${expiresAt.toUTCString()}`,
   ].join("; ");
 }
 
-export function buildClearedSessionCookie() {
+export function buildClearedSessionCookie(options: SessionCookieOptions = {}) {
+  const secure = options.secure ?? true;
+
   return [
     `${sessionCookieName}=`,
     "HttpOnly",
     "Path=/",
     "SameSite=Lax",
+    ...(secure ? ["Secure"] : []),
     "Max-Age=0",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
   ].join("; ");

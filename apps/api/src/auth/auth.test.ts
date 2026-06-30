@@ -12,6 +12,10 @@ import { oauthAccounts, users } from "../db/schema.ts";
 import { getAuthConfig, sessionCookieName } from "./config.ts";
 import { requireAuth, type AuthVariables } from "./middleware.ts";
 import {
+  buildClearedSessionCookie,
+  buildSessionCookie,
+} from "./jwt.ts";
+import {
   createSession,
   getSessionFromToken,
   invalidateSession,
@@ -201,6 +205,26 @@ describe("auth foundation", () => {
         message: "Authentication required",
       },
     });
+  });
+
+  test("adds secure session cookie attributes by default", () => {
+    const expiresAt = new Date("2026-07-01T00:00:00.000Z");
+
+    const sessionCookie = buildSessionCookie("token-value", expiresAt);
+    const clearedCookie = buildClearedSessionCookie();
+
+    assert.match(sessionCookie, /; Secure(?:;|$)/);
+    assert.match(clearedCookie, /; Secure(?:;|$)/);
+  });
+
+  test("allows opting out of secure cookies for local HTTP development", () => {
+    const expiresAt = new Date("2026-07-01T00:00:00.000Z");
+
+    const sessionCookie = buildSessionCookie("token-value", expiresAt, { secure: false });
+    const clearedCookie = buildClearedSessionCookie({ secure: false });
+
+    assert.doesNotMatch(sessionCookie, /; Secure(?:;|$)/);
+    assert.doesNotMatch(clearedCookie, /; Secure(?:;|$)/);
   });
 
   test("validates missing auth configuration clearly", () => {
