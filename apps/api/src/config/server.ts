@@ -10,14 +10,15 @@ export function getServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCon
   const portValue = env.PORT ?? `${defaultPort}`;
   const port = Number(portValue);
 
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new Error("PORT must be a positive integer");
+  if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
+    throw new Error("PORT must be an integer between 1 and 65535");
   }
 
-  const webOrigin = env.WEB_ORIGIN ?? defaultWebOrigin;
+  const webOriginValue = env.WEB_ORIGIN ?? defaultWebOrigin;
+  let webOrigin: string;
 
   try {
-    new URL(webOrigin);
+    webOrigin = new URL(webOriginValue).origin;
   } catch {
     throw new Error("WEB_ORIGIN must be a valid URL");
   }

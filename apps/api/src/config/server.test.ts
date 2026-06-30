@@ -14,9 +14,17 @@ describe("server config", () => {
   test("validates the port", () => {
     assert.throws(() => getServerConfig({ PORT: "abc" }), /PORT/);
     assert.throws(() => getServerConfig({ PORT: "0" }), /PORT/);
+    assert.throws(() => getServerConfig({ PORT: "65536" }), /PORT/);
   });
 
   test("validates the web origin", () => {
     assert.throws(() => getServerConfig({ WEB_ORIGIN: "not-a-url" }), /WEB_ORIGIN/);
+  });
+
+  test("normalizes web origin values to a bare origin", () => {
+    assert.deepEqual(getServerConfig({ WEB_ORIGIN: "http://localhost:5173/app?foo=bar#hash" }), {
+      port: 3000,
+      webOrigin: "http://localhost:5173",
+    });
   });
 });
