@@ -1,11 +1,18 @@
-export { accountFixture, inboxFixture } from "./fixtures";
+export { accountFixture, authSessionFixture, inboxFixture } from "./fixtures.ts";
+
 export {
+  authSessionSchema,
+  authUserSchema,
   createProviderPageSchema,
+  inboxQuerySchema,
   inboxMessagePageSchema,
   inboxMessageSchema,
+  inboxResponseSchema,
+  mailAccountPageSchema,
   mailAccountSchema,
   mailContactSchema,
   mailProviderSchema,
+  meResponseSchema,
   normalizedLabelPageSchema,
   normalizedLabelSchema,
   normalizedMessagePageSchema,
@@ -13,17 +20,28 @@ export {
   normalizedMessageSchema,
   normalizedThreadPageSchema,
   normalizedThreadSchema,
-} from "./schemas";
+  providerPageShapeSchema,
+} from "./schemas.ts";
 
 export type {
+  AuthSession,
+  AuthUser,
   InboxMessage,
+  InboxQuery,
+  InboxMessagePage,
+  InboxResponse,
   MailAccount,
+  MailAccountPage,
   MailContact,
   MailProvider,
   MailProviderClient,
+  MeResponse,
   NormalizedLabel,
+  NormalizedLabelPage,
   NormalizedMessage,
+  NormalizedMessagePage,
   NormalizedMessageRaw,
   NormalizedThread,
+  NormalizedThreadPage,
   ProviderPage,
-} from "./schemas";
+} from "./schemas.ts";

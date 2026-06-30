@@ -1,11 +1,25 @@
 import { z } from "zod";
-import { inboxMessageSchema, mailAccountSchema } from "./schemas";
+import {
+  authSessionSchema,
+  inboxMessageSchema,
+  mailAccountSchema,
+} from "./schemas.ts";
 
 export const accountFixture = mailAccountSchema.parse({
   id: "acct_local_gmail",
   provider: "gmail",
   email: "luke@example.com",
   displayName: "Luke Brevoort",
+});
+
+export const authSessionFixture = authSessionSchema.parse({
+  isAuthenticated: true,
+  user: {
+    id: "user_local_luke",
+    email: accountFixture.email,
+    name: accountFixture.displayName,
+  },
+  expiresAt: null,
 });
 
 export const inboxFixture = z.array(inboxMessageSchema).parse([
