@@ -10,7 +10,7 @@ import {
   inboxFixture,
   inboxQuerySchema,
   inboxResponseSchema,
-  meResponseSchema,
+  mailAccountSchema,
 } from "@orca/shared";
 
 export const app = new Hono();
@@ -29,11 +29,9 @@ app.get("/health", (c) =>
   }),
 );
 
-app.get("/v1/auth/session", (c) =>
-  jsonWithSchema(c, authSessionSchema, authSessionFixture),
-);
+app.get("/v1/auth/session", (c) => jsonWithSchema(c, authSessionSchema, authSessionFixture));
 
-app.get("/v1/me", (c) => jsonWithSchema(c, meResponseSchema, accountFixture));
+app.get("/v1/me", (c) => jsonWithSchema(c, mailAccountSchema, accountFixture));
 
 app.get(
   "/v1/inbox",
@@ -58,7 +56,7 @@ app.get(
     return result.data;
   }),
   (c) => {
-    void c.req.valid("query");
+    c.req.valid("query");
 
     return jsonWithSchema(c, inboxResponseSchema, {
       account: accountFixture,
@@ -83,7 +81,11 @@ type JsonSchema<T> = {
   parse(value: unknown): T;
 };
 
-function jsonWithSchema<T>(c: Context, schema: JsonSchema<T>, value: unknown) {
+function jsonWithSchema<T>(
+  c: Context,
+  schema: JsonSchema<T>,
+  value: unknown,
+) {
   return c.json(schema.parse(value));
 }
 

@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  authSessionSchema,
-  inboxMessageSchema,
-  mailAccountSchema,
-} from "./schemas.ts";
+import { authSessionSchema, inboxMessageSchema, mailAccountSchema } from "./schemas.ts";
 
 export const accountFixture = mailAccountSchema.parse({
   id: "acct_local_gmail",

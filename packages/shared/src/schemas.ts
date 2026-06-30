@@ -34,6 +34,9 @@ export const mailAccountSchema = z
   .strict();
 export type MailAccount = z.infer<typeof mailAccountSchema>;
 
+export const meResponseSchema = mailAccountSchema;
+export type MeResponse = z.infer<typeof meResponseSchema>;
+
 export const inboxMessageSchema = z
   .object({
     id: nonEmptyStringSchema,
@@ -133,7 +136,7 @@ const providerPageFields = {
 
 export const providerPageShapeSchema = z.object(providerPageFields).strict();
 
-export function createProviderPageSchema<TSchema extends z.ZodType>(itemSchema: TSchema) {
+export function createProviderPageSchema<TSchema extends z.ZodTypeAny>(itemSchema: TSchema) {
   return z
     .object({
       items: z.array(itemSchema),
@@ -161,9 +164,6 @@ export type NormalizedThreadPage = z.infer<typeof normalizedThreadPageSchema>;
 
 export const normalizedLabelPageSchema = createProviderPageSchema(normalizedLabelSchema);
 export type NormalizedLabelPage = z.infer<typeof normalizedLabelPageSchema>;
-
-export const meResponseSchema = mailAccountSchema;
-export type MeResponse = z.infer<typeof meResponseSchema>;
 
 export const inboxResponseSchema = z
   .object({
