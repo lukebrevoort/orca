@@ -122,3 +122,22 @@ export const emails = sqliteTable(
     threadIdx: index("emails_thread_idx").on(table.threadId),
   }),
 );
+
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    invalidatedAt: integer("invalidated_at", { mode: "timestamp_ms" }),
+  },
+  (table) => ({
+    userIdx: index("sessions_user_idx").on(table.userId),
+    expiresAtIdx: index("sessions_expires_at_idx").on(table.expiresAt),
+  }),
+);
