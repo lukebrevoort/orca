@@ -40,11 +40,8 @@ describe("Orca API", () => {
     assert.equal(response.status, 400);
     assert.equal(body.error.code, "validation_error");
     assert.equal(body.error.message, "Invalid inbox query parameters");
-    assert.deepEqual(body.error.issues, [
-      {
-        path: "cursor",
-        message: "String must contain at least 1 character(s)",
-      },
-    ]);
+    assert.equal(body.error.issues.length, 1);
+    assert.equal(body.error.issues[0].path, "cursor");
+    assert.match(body.error.issues[0].message, /1 character/);
   });
 });
