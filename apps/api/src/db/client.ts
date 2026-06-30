@@ -6,6 +6,7 @@ import * as schema from "./schema.ts";
 
 export function createDatabaseClient(databasePath = ensureDatabaseDirectory()) {
   const sqlite = new Database(databasePath);
+  sqlite.exec("PRAGMA foreign_keys = ON");
   const db = drizzle(sqlite, { schema });
 
   return {
