@@ -100,6 +100,35 @@ export const normalizedMessageSchema = inboxMessageSchema
   .strict();
 export type NormalizedMessage = z.infer<typeof normalizedMessageSchema>;
 
+export const authUserSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    email: nonEmptyStringSchema,
+    name: z.string().nullable(),
+  })
+  .strict();
+export type AuthUser = z.infer<typeof authUserSchema>;
+
+export const authSessionSchema = z
+  .object({
+    isAuthenticated: z.boolean(),
+    user: authUserSchema.nullable(),
+    expiresAt: isoDateTimeStringSchema.nullable(),
+  })
+  .strict()
+  .refine((session) => !session.isAuthenticated || session.user !== null, {
+    message: "Authenticated sessions must include a user",
+    path: ["user"],
+  });
+export type AuthSession = z.infer<typeof authSessionSchema>;
+
+export const inboxQuerySchema = z
+  .object({
+    cursor: z.string().trim().min(1).optional(),
+  })
+  .strict();
+export type InboxQuery = z.infer<typeof inboxQuerySchema>;
+
 const providerPageFields = {
   items: z.array(z.unknown()),
   nextCursor: z.string().nullable(),
@@ -135,35 +164,6 @@ export type NormalizedThreadPage = z.infer<typeof normalizedThreadPageSchema>;
 
 export const normalizedLabelPageSchema = createProviderPageSchema(normalizedLabelSchema);
 export type NormalizedLabelPage = z.infer<typeof normalizedLabelPageSchema>;
-
-export const authUserSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    email: nonEmptyStringSchema,
-    name: z.string().nullable(),
-  })
-  .strict();
-export type AuthUser = z.infer<typeof authUserSchema>;
-
-export const authSessionSchema = z
-  .object({
-    isAuthenticated: z.boolean(),
-    user: authUserSchema.nullable(),
-    expiresAt: isoDateTimeStringSchema.nullable(),
-  })
-  .strict()
-  .refine((session) => !session.isAuthenticated || session.user !== null, {
-    message: "Authenticated sessions must include a user",
-    path: ["user"],
-  });
-export type AuthSession = z.infer<typeof authSessionSchema>;
-
-export const inboxQuerySchema = z
-  .object({
-    cursor: nonEmptyStringSchema.optional(),
-  })
-  .strict();
-export type InboxQuery = z.infer<typeof inboxQuerySchema>;
 
 export const inboxResponseSchema = z
   .object({

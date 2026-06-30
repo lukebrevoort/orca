@@ -16,28 +16,28 @@ describe("shared API schemas", () => {
         nextCursor: null,
       }),
       {
-      account: accountFixture,
-      messages: inboxFixture,
-      nextCursor: null,
+        account: accountFixture,
+        messages: inboxFixture,
+        nextCursor: null,
       },
     );
   });
 
   test("rejects blank inbox cursors", () => {
-    assert.throws(
-      () => inboxQuerySchema.parse({ cursor: "" }),
-      /Too small: expected string to have >=1 characters/,
-    );
+    const result = inboxQuerySchema.safeParse({ cursor: "" });
+
+    assert.equal(result.success, false);
+    assert.equal(result.error.issues[0]?.path.join("."), "cursor");
   });
 
   test("requires an authenticated user when the session is authenticated", () => {
     assert.throws(
       () =>
         authSessionSchema.parse({
-        isAuthenticated: true,
-        user: null,
-        expiresAt: null,
-      }),
+          isAuthenticated: true,
+          user: null,
+          expiresAt: null,
+        }),
       /Authenticated sessions must include a user/,
     );
   });

@@ -43,7 +43,7 @@ describe("Orca API", () => {
     assert.deepEqual(body.error.issues, [
       {
         path: "cursor",
-        message: "Too small: expected string to have >=1 characters",
+        message: "String must contain at least 1 character(s)",
       },
     ]);
   });

@@ -127,7 +127,7 @@ export function App() {
         <section className="sidebar-section mailbox-section">
           <h2>Mailboxes</h2>
           <nav className="nav-list">
-            {mailboxes.map((mailbox) => (
+            {mailboxItems.map((mailbox) => (
               <a
                 aria-current={mailbox.active ? "page" : undefined}
                 href={`/${mailbox.label.toLowerCase().replaceAll(" ", "-")}`}
