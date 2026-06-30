@@ -13,6 +13,12 @@ Install dependencies:
 bun install
 ```
 
+Copy the example environment file before running the API:
+
+```bash
+cp .env.example .env
+```
+
 ## Development
 
 Run both apps:
@@ -50,10 +56,38 @@ future auth and sync work. By default it writes to
 Useful commands:
 
 ```bash
-bun --cwd apps/api db:generate
-bun --cwd apps/api db:migrate
-bun --cwd apps/api db:verify
+cd apps/api
+bun run db:generate
+bun run db:migrate
+bun run db:verify
 ```
+
+## Environment Setup
+
+The canonical local env contract lives in `.env.example`.
+
+Variables used by the current local boot flow:
+
+- `PORT`: API port. Defaults to `3000`.
+- `WEB_ORIGIN`: browser origin allowed by API CORS. Defaults to `http://localhost:5173`.
+- `DATABASE_PATH`: SQLite file path used by the API workspace. Because the API scripts run from `apps/api`, the default local value is `./data/orca.sqlite`.
+
+Variables required by the auth/session foundation when that code path is exercised:
+
+- `SESSION_SECRET`: signing secret for the Orca session cookie. Must be at least 32 characters.
+- `TOKEN_ENCRYPTION_KEY`: base64-encoded 32-byte key used for AES-GCM encryption of provider tokens at rest.
+
+Variables reserved for the upcoming Gmail connect flow:
+
+- `GMAIL_CLIENT_ID`
+- `GMAIL_CLIENT_SECRET`
+- `GMAIL_REDIRECT_URI`
+
+Local validation notes:
+
+- The API now validates `PORT` and `WEB_ORIGIN` at startup.
+- The auth/session layer validates `SESSION_SECRET` and `TOKEN_ENCRYPTION_KEY` when auth/token code is invoked.
+- The current persistence branch does not force `DATABASE_PATH`; it falls back to `./data/orca.sqlite` for local development.
 
 ## Workspace Layout
 

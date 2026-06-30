@@ -13,12 +13,16 @@ import {
   mailAccountSchema,
 } from "@orca/shared";
 
+import { getServerConfig } from "./config/server.ts";
+
+const serverConfig = getServerConfig();
+
 export const app = new Hono();
 
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [serverConfig.webOrigin],
   }),
 );
 
@@ -89,7 +93,7 @@ function jsonWithSchema<T>(
   return c.json(schema.parse(value));
 }
 
-const port = Number(process.env.PORT ?? 3000);
+const { port } = serverConfig;
 
 if (import.meta.main) {
   serve({
