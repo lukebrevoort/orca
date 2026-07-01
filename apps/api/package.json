@@ -16,7 +16,8 @@
     "@hono/node-server": "^1.15.0",
     "@orca/shared": "file:../../packages/shared",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.8.2"
+    "hono": "^4.8.2",
+    "jose": "^6.1.2"
   },
   "devDependencies": {
     "@types/bun": "^1.2.17",
