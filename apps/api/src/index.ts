@@ -14,6 +14,7 @@ import {
   mailAccountSchema,
 } from "@orca/shared";
 
+import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
@@ -27,7 +28,9 @@ type CreateAppOptions = {
   syncPage?: typeof syncGmailAccountPage;
 };
 
-export function createApp(options: CreateAppOptions = {}) {
+export function createApp(options: CreateAppOptions = {}): Hono<{
+  Variables: AuthVariables;
+}> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const syncPage = options.syncPage ?? syncGmailAccountPage;
 
@@ -83,6 +86,8 @@ export function createApp(options: CreateAppOptions = {}) {
       });
     },
   );
+
+  app.route("/v1/auth/gmail", createGmailAuthApp());
 
   app.post(
     "/v1/sync/gmail",
