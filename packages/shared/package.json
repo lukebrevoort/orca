@@ -8,7 +8,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "echo \"No shared tests yet\"",
+    "test": "bun test",
     "lint": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }

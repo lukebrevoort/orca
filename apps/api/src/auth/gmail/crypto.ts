@@ -1,34 +1,34 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
-const KEY_LENGTH = 32;
-const IV_LENGTH = 12;
-const ALGORITHM = "aes-256-gcm";
-const ENCRYPTION_VERSION = "v1";
+const keyLengthBytes = 32;
+const ivLengthBytes = 12;
+const algorithm = "aes-256-gcm";
+const encryptionVersion = "v1";
 
-export function encryptSecret(value: string, secret: string): string {
-  const key = deriveKey(secret);
-  const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(ALGORITHM, key, iv);
+export function encryptSecret(value: string, encodedKey: string): string {
+  const key = decodeKey(encodedKey);
+  const iv = randomBytes(ivLengthBytes);
+  const cipher = createCipheriv(algorithm, key, iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
 
   return [
-    ENCRYPTION_VERSION,
+    encryptionVersion,
     toBase64Url(iv),
     toBase64Url(tag),
     toBase64Url(encrypted),
   ].join(":");
 }
 
-export function decryptSecret(value: string, secret: string): string {
+export function decryptSecret(value: string, encodedKey: string): string {
   const [version, ivPart, tagPart, encryptedPart] = value.split(":");
 
-  if (version !== ENCRYPTION_VERSION || !ivPart || !tagPart || !encryptedPart) {
+  if (version !== encryptionVersion || !ivPart || !tagPart || !encryptedPart) {
     throw new Error("Unsupported encrypted secret format");
   }
 
-  const key = deriveKey(secret);
-  const decipher = createDecipheriv(ALGORITHM, key, fromBase64Url(ivPart));
+  const key = decodeKey(encodedKey);
+  const decipher = createDecipheriv(algorithm, key, fromBase64Url(ivPart));
   decipher.setAuthTag(fromBase64Url(tagPart));
 
   const decrypted = Buffer.concat([
@@ -39,8 +39,14 @@ export function decryptSecret(value: string, secret: string): string {
   return decrypted.toString("utf8");
 }
 
-function deriveKey(secret: string): Buffer {
-  return createHash("sha256").update(secret).digest().subarray(0, KEY_LENGTH);
+function decodeKey(encodedKey: string): Buffer {
+  const key = Buffer.from(encodedKey, "base64");
+
+  if (key.byteLength !== keyLengthBytes) {
+    throw new Error(`TOKEN_ENCRYPTION_KEY must decode to ${keyLengthBytes} bytes of key material`);
+  }
+
+  return key;
 }
 
 function toBase64Url(value: Uint8Array): string {

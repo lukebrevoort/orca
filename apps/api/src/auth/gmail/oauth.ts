@@ -1,11 +1,13 @@
-import { createHmac, randomUUID } from "node:crypto";
-import type { GmailOAuthConfig } from "./config";
-import { encryptSecret } from "./crypto";
-import type { OAuthAccountStore } from "./oauth-accounts";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
-const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
+import type { GmailOAuthConfig } from "./config.ts";
+import { encryptSecret } from "./crypto.ts";
+import type { OAuthAccountStore } from "./oauth-accounts.ts";
+
+const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+const googleTokenUrl = "https://oauth2.googleapis.com/token";
+const googleUserInfoUrl = "https://www.googleapis.com/oauth2/v2/userinfo";
+const maxStateAgeMs = 1000 * 60 * 10;
 
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -17,14 +19,14 @@ export type GmailOAuthErrorCode =
   | "provider_error"
   | "token_exchange_failed"
   | "userinfo_failed"
-  | "account_identity_missing";
+  | "account_identity_missing"
+  | "account_persistence_failed";
 
 type TokenResponse = {
-  access_token: string;
+  access_token?: string;
   refresh_token?: string;
   expires_in?: number;
   scope?: string;
-  token_type?: string;
 };
 
 type UserInfoResponse = {
@@ -40,7 +42,7 @@ type SignedStatePayload = {
 
 export type GmailOAuthService = {
   getAuthorizationUrl(returnTo?: string | null): { url: string; state: string };
-  handleCallback(params: URLSearchParams): Promise<GmailOAuthCallbackResult>;
+  handleCallback(params: URLSearchParams, userId: string): Promise<GmailOAuthCallbackResult>;
 };
 
 export type GmailOAuthCallbackResult =
@@ -72,12 +74,12 @@ export function createGmailOAuthService(options: {
       const state = signState(
         {
           nonce: randomUUID(),
-          returnTo: normalizeReturnTo(returnTo),
+          returnTo: normalizeReturnTo(returnTo, options.config.webOrigin),
           issuedAt: new Date().toISOString(),
         },
         options.config.stateSecret,
       );
-      const url = new URL(GOOGLE_AUTH_URL);
+      const url = new URL(googleAuthUrl);
       url.searchParams.set("client_id", options.config.clientId);
       url.searchParams.set("redirect_uri", options.config.redirectUri);
       url.searchParams.set("response_type", "code");
@@ -93,7 +95,7 @@ export function createGmailOAuthService(options: {
       };
     },
 
-    async handleCallback(params) {
+    async handleCallback(params, userId) {
       const state = params.get("state");
       if (!state) {
         return buildError(options.config.errorRedirectUrl, "missing_state", "Missing OAuth state.");
@@ -101,7 +103,11 @@ export function createGmailOAuthService(options: {
 
       const decodedState = verifyState(state, options.config.stateSecret);
       if (!decodedState) {
-        return buildError(resolveReturnTo(decodedState, options.config.errorRedirectUrl), "invalid_state", "Could not verify OAuth state.");
+        return buildError(
+          options.config.errorRedirectUrl,
+          "invalid_state",
+          "Could not verify OAuth state.",
+        );
       }
 
       const providerError = params.get("error");
@@ -153,18 +159,29 @@ export function createGmailOAuthService(options: {
         );
       }
 
-      await options.store.upsert({
-        provider: "gmail",
-        providerAccountId: userInfoResponse.providerAccountId,
-        providerEmail: userInfoResponse.providerEmail,
-        grantedScopes: tokenResponse.grantedScopes,
-        encryptedAccessToken: encryptSecret(tokenResponse.accessToken, options.config.encryptionKey),
-        encryptedRefreshToken: tokenResponse.refreshToken
-          ? encryptSecret(tokenResponse.refreshToken, options.config.encryptionKey)
-          : null,
-        tokenType: tokenResponse.tokenType,
-        expiresAt: tokenResponse.expiresAt,
-      });
+      try {
+        await options.store.upsert({
+          userId,
+          provider: "gmail",
+          providerAccountId: userInfoResponse.providerAccountId,
+          providerEmail: userInfoResponse.providerEmail,
+          grantedScopes: tokenResponse.grantedScopes,
+          encryptedAccessToken: encryptSecret(
+            tokenResponse.accessToken,
+            options.config.tokenEncryptionKey,
+          ),
+          encryptedRefreshToken: tokenResponse.refreshToken
+            ? encryptSecret(tokenResponse.refreshToken, options.config.tokenEncryptionKey)
+            : null,
+          expiresAt: tokenResponse.expiresAt,
+        });
+      } catch (error) {
+        return buildError(
+          resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+          "account_persistence_failed",
+          error instanceof Error ? error.message : "Could not persist OAuth account data.",
+        );
+      }
 
       return {
         ok: true,
@@ -193,8 +210,7 @@ async function exchangeCode(options: {
       accessToken: string;
       refreshToken: string | null;
       grantedScopes: string[];
-      tokenType: string;
-      expiresAt: string | null;
+      expiresAt: Date | null;
     }
   | {
       ok: false;
@@ -206,23 +222,33 @@ async function exchangeCode(options: {
     return {
       ok: false,
       code: "oauth_not_configured",
-      message: "Google OAuth is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI.",
+      message: "Gmail OAuth is not configured. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REDIRECT_URI.",
     };
   }
 
-  const response = await options.fetchImpl(GOOGLE_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      code: options.code,
-      client_id: options.config.clientId,
-      client_secret: options.config.clientSecret,
-      redirect_uri: options.config.redirectUri,
-      grant_type: "authorization_code",
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await options.fetchImpl(googleTokenUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        code: options.code,
+        client_id: options.config.clientId,
+        client_secret: options.config.clientSecret,
+        redirect_uri: options.config.redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      code: "token_exchange_failed",
+      message: error instanceof Error ? error.message : "Failed to exchange Gmail OAuth code.",
+    };
+  }
 
   if (!response.ok) {
     const detail = await response.text();
@@ -235,6 +261,14 @@ async function exchangeCode(options: {
 
   const tokens = (await response.json()) as TokenResponse;
 
+  if (!tokens.access_token) {
+    return {
+      ok: false,
+      code: "token_exchange_failed",
+      message: "Gmail token exchange did not return an access token.",
+    };
+  }
+
   return {
     ok: true,
     accessToken: tokens.access_token,
@@ -243,10 +277,9 @@ async function exchangeCode(options: {
       .split(/\s+/)
       .map((scope) => scope.trim())
       .filter(Boolean),
-    tokenType: tokens.token_type ?? "Bearer",
     expiresAt:
       typeof tokens.expires_in === "number"
-        ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+        ? new Date(Date.now() + tokens.expires_in * 1000)
         : null,
   };
 }
@@ -266,11 +299,21 @@ async function fetchUserInfo(
       message: string;
     }
 > {
-  const response = await fetchImpl(GOOGLE_USERINFO_URL, {
-    headers: {
-      authorization: `Bearer ${accessToken}`,
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetchImpl(googleUserInfoUrl, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      code: "userinfo_failed",
+      message: error instanceof Error ? error.message : "Failed to fetch Gmail account identity.",
+    };
+  }
 
   if (!response.ok) {
     const detail = await response.text();
@@ -302,15 +345,36 @@ function verifyState(value: string, secret: string): SignedStatePayload | null {
   }
 
   const expected = signValue(encodedPayload, secret);
-  if (signature !== expected) {
+
+  if (!safeEquals(signature, expected)) {
     return null;
   }
 
   try {
-    return JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as SignedStatePayload;
+    const payload = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as SignedStatePayload;
+
+    const issuedAt = Date.parse(payload.issuedAt);
+    if (!Number.isFinite(issuedAt) || Date.now() - issuedAt > maxStateAgeMs) {
+      return null;
+    }
+
+    return payload;
   } catch {
     return null;
   }
+}
+
+function safeEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  if (leftBuffer.byteLength !== rightBuffer.byteLength) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function signValue(value: string, secret: string): string {
@@ -355,10 +419,23 @@ function resolveReturnTo(state: SignedStatePayload | null, fallback: string | nu
   return state?.returnTo ?? fallback;
 }
 
-function normalizeReturnTo(value: string | null | undefined): string | null {
+function normalizeReturnTo(value: string | null | undefined, webOrigin: string): string | null {
   if (!value) {
     return null;
   }
 
-  return value;
+  try {
+    const origin = new URL(webOrigin);
+    const url = value.startsWith("/")
+      ? new URL(value, origin)
+      : new URL(value);
+
+    if (url.origin !== origin.origin) {
+      return null;
+    }
+
+    return url.toString();
+  } catch {
+    return null;
+  }
 }

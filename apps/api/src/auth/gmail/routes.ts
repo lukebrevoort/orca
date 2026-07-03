@@ -1,24 +1,40 @@
 import { Hono } from "hono";
-import { loadGmailOAuthConfig, validateGmailOAuthConfig, type GmailOAuthConfig } from "./config";
-import { FileOAuthAccountStore, type OAuthAccountStore } from "./oauth-accounts";
-import { createGmailOAuthService, type FetchLike } from "./oauth";
+import type { MiddlewareHandler } from "hono";
+
+import { requireAuth, type AuthVariables } from "../middleware.ts";
+import {
+  loadGmailOAuthConfig,
+  validateGmailOAuthConfig,
+  type GmailOAuthConfig,
+} from "./config.ts";
+import {
+  DatabaseOAuthAccountStore,
+  type OAuthAccountStore,
+} from "./oauth-accounts.ts";
+import { createGmailOAuthService, type FetchLike } from "./oauth.ts";
 
 type GmailAuthAppOptions = {
+  authMiddleware?: MiddlewareHandler<{ Variables: AuthVariables }>;
   config?: GmailOAuthConfig;
   store?: OAuthAccountStore;
   fetch?: FetchLike;
 };
 
-export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono {
+export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
+  Variables: AuthVariables;
+}> {
   const config = options.config ?? loadGmailOAuthConfig();
-  const store = options.store ?? new FileOAuthAccountStore(config.oauthAccountsPath);
+  const store = options.store ?? new DatabaseOAuthAccountStore();
   const service = createGmailOAuthService({
     config,
     store,
     fetch: options.fetch,
   });
+  const authMiddleware = options.authMiddleware ?? requireAuth();
 
-  const app = new Hono();
+  const app = new Hono<{ Variables: AuthVariables }>();
+
+  app.use("*", authMiddleware);
 
   app.get("/connect", (c) => {
     const configErrors = validateGmailOAuthConfig(config);
@@ -45,7 +61,8 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono {
   });
 
   app.get("/callback", async (c) => {
-    const result = await service.handleCallback(new URLSearchParams(c.req.query()));
+    const auth = c.get("auth");
+    const result = await service.handleCallback(new URLSearchParams(c.req.query()), auth.userId);
 
     if (result.redirectUrl) {
       return c.redirect(result.redirectUrl, 302);

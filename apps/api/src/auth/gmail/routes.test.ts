@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createGmailAuthApp } from "./routes";
-import { decryptSecret } from "./crypto";
-import { InMemoryOAuthAccountStore } from "./oauth-accounts";
-import type { GmailOAuthConfig } from "./config";
+import type { MiddlewareHandler } from "hono";
+
+import type { AuthVariables } from "../middleware.ts";
+import type { GmailOAuthConfig } from "./config.ts";
+import { decryptSecret } from "./crypto.ts";
+import { InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
+import { createGmailAuthApp } from "./routes.ts";
 
 const config: GmailOAuthConfig = {
   clientId: "client-id",
@@ -12,16 +15,27 @@ const config: GmailOAuthConfig = {
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/userinfo.email",
   ],
-  encryptionKey: "test-encryption-key",
+  tokenEncryptionKey: Buffer.alloc(32, 7).toString("base64"),
   stateSecret: "test-state-secret",
   successRedirectUrl: "http://localhost:5173/settings/integrations/gmail",
   errorRedirectUrl: "http://localhost:5173/settings/integrations/gmail",
-  oauthAccountsPath: "/tmp/orca-oauth-accounts-test.json",
+  webOrigin: "http://localhost:5173",
+};
+
+const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
+  c.set("auth", {
+    sessionId: "session_1",
+    userId: "user_1",
+    expiresAt: new Date("2026-07-01T00:00:00.000Z"),
+  });
+
+  await next();
 };
 
 describe("Gmail auth routes", () => {
   test("connect returns a Google authorization URL", async () => {
     const app = createGmailAuthApp({
+      authMiddleware,
       config,
       store: new InMemoryOAuthAccountStore(),
     });
@@ -51,6 +65,7 @@ describe("Gmail auth routes", () => {
   test("callback exchanges code, encrypts tokens, and upserts an oauth account record", async () => {
     const store = new InMemoryOAuthAccountStore();
     const app = createGmailAuthApp({
+      authMiddleware,
       config,
       store,
       fetch: async (input, init) => {
@@ -63,7 +78,6 @@ describe("Gmail auth routes", () => {
             refresh_token: "refresh-token-456",
             expires_in: 3600,
             scope: config.scopes.join(" "),
-            token_type: "Bearer",
           });
         }
 
@@ -99,24 +113,68 @@ describe("Gmail auth routes", () => {
     const records = store.getAll();
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({
+      userId: "user_1",
       provider: "gmail",
       providerAccountId: "google-user-1",
       providerEmail: "luke@gmail.com",
       grantedScopes: config.scopes,
-      tokenType: "Bearer",
     });
     expect(records[0].encryptedAccessToken).not.toBe("access-token-123");
     expect(records[0].encryptedRefreshToken).not.toBe("refresh-token-456");
-    expect(decryptSecret(records[0].encryptedAccessToken, config.encryptionKey)).toBe(
+    expect(decryptSecret(records[0].encryptedAccessToken, config.tokenEncryptionKey)).toBe(
       "access-token-123",
     );
-    expect(decryptSecret(records[0].encryptedRefreshToken!, config.encryptionKey)).toBe(
+    expect(decryptSecret(records[0].encryptedRefreshToken!, config.tokenEncryptionKey)).toBe(
       "refresh-token-456",
     );
   });
 
+  test("callback ignores cross-origin returnTo values and falls back to the configured redirect", async () => {
+    const app = createGmailAuthApp({
+      authMiddleware,
+      config,
+      store: new InMemoryOAuthAccountStore(),
+      fetch: async (input) => {
+        const url = input.toString();
+
+        if (url === "https://oauth2.googleapis.com/token") {
+          return Response.json({
+            access_token: "access-token-123",
+            expires_in: 3600,
+          });
+        }
+
+        if (url === "https://www.googleapis.com/oauth2/v2/userinfo") {
+          return Response.json({
+            id: "google-user-1",
+            email: "luke@gmail.com",
+          });
+        }
+
+        throw new Error(`Unexpected fetch: ${url}`);
+      },
+    });
+
+    const connectResponse = await app.request(
+      "/connect?returnTo=https%3A%2F%2Fevil.example%2Fsteal",
+    );
+    const connectBody = (await connectResponse.json()) as { state: string };
+
+    const callbackResponse = await app.request(
+      `/callback?code=test-code&state=${encodeURIComponent(connectBody.state)}`,
+      { redirect: "manual" },
+    );
+
+    expect(callbackResponse.status).toBe(302);
+    expect(callbackResponse.headers.get("location")).toStartWith(
+      "http://localhost:5173/settings/integrations/gmail",
+    );
+    expect(callbackResponse.headers.get("location")).not.toContain("evil.example");
+  });
+
   test("callback redirects with a clear error state when Google denies access", async () => {
     const app = createGmailAuthApp({
+      authMiddleware,
       config,
       store: new InMemoryOAuthAccountStore(),
     });
