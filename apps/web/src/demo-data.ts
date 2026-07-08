@@ -21,6 +21,18 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
   },
   {
+    id: "msg_1_reply",
+    provider: "gmail",
+    providerMessageId: "gmail_1_reply",
+    threadId: "thread_1",
+    from: { name: "Luke Brevoort", email: "luke@example.com" },
+    subject: "Re: Launch notes for Orca Mail",
+    snippet: "I like the pinned people direction. Let's keep the first version read-only.",
+    receivedAt: "2026-07-03T17:12:00.000Z",
+    unread: false,
+    labels: ["SENT"],
+  },
+  {
     id: "msg_2",
     provider: "gmail",
     providerMessageId: "gmail_2",
@@ -82,18 +94,17 @@ export const demoMessages: InboxMessage[] = [
   },
 ];
 
-export const threadBodies: Record<string, string> = {
-  thread_1:
+export const messageBodies: Record<string, string> = {
+  msg_1:
     "Hey Luke,\n\nHere are the launch notes for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.\n\nLet me know what you think.\n\n— Maya",
-  thread_2:
-    "Updated the deck with the blur treatment on the full shell — sidebar included.\n\n— Maya",
-  thread_3:
+  msg_1_reply:
+    "I like the pinned people direction. Let's keep the first version read-only and make sure the thread view never assumes HTML is safe to render.\n\n— Luke",
+  msg_2: "Updated the deck with the blur treatment on the full shell — sidebar included.\n\n— Maya",
+  msg_3:
     "Thursday works for me. I'd like to see the compose canvas feel more like a blank page than a reply bar.\n\n— Jon",
-  thread_4:
-    "Keeping the palette orca-simple: black or white surfaces, one accent at most.\n\n— Anika",
-  thread_5:
-    "Adding you to the thread about inbox filtering — Maya had great notes.\n\n— Dana",
-  thread_6: "Any time Tuesday or Wednesday morning works.\n\n— Maya",
+  msg_4: "Keeping the palette orca-simple: black or white surfaces, one accent at most.\n\n— Anika",
+  msg_5: "Adding you to the thread about inbox filtering — Maya had great notes.\n\n— Dana",
+  msg_6: "Any time Tuesday or Wednesday morning works.\n\n— Maya",
 };
 
 export function messageIncludesPerson(message: InboxMessage, personName: string) {

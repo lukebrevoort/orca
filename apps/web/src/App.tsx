@@ -5,7 +5,7 @@ import {
   demoAccount,
   demoMessages,
   messageIncludesPerson,
-  threadBodies,
+  messageBodies,
 } from "./demo-data";
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 
@@ -24,7 +24,7 @@ type PersonItem = {
   unread?: boolean;
 };
 
-type PanelMode = "compose" | "thread" | null;
+type PanelMode = "compose" | null;
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
   | { kind: "success"; email: string | null }
@@ -59,11 +59,11 @@ function InboxApp() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
   const [account, setAccount] = useState<MailAccount | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
-  const [selectedMessage, setSelectedMessage] = useState<InboxMessage | null>(null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [draft, setDraft] = useState("");
@@ -152,6 +152,19 @@ function InboxApp() {
     return messages.filter((message) => messageIncludesPerson(message, personFilter));
   }, [messages, personFilter]);
 
+  const selectedThreadMessages = useMemo(() => {
+    if (!selectedThreadId) {
+      return [];
+    }
+
+    return messages
+      .filter((message) => message.threadId === selectedThreadId)
+      .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+  }, [messages, selectedThreadId]);
+
+  const selectedThreadLatestMessage =
+    selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
+
   const mailboxItems = useMemo(
     () =>
       mailboxes.map((mailbox) =>
@@ -180,7 +193,6 @@ function InboxApp() {
 
     setPanelClosing(false);
     setZenClosing(false);
-    setSelectedMessage(null);
     setPanelMode("compose");
     setComposeTo("");
     setComposeSubject("");
@@ -195,12 +207,11 @@ function InboxApp() {
 
     setPanelClosing(false);
     setZenClosing(false);
-    setSelectedMessage(message);
-    setPanelMode("thread");
-    setComposeTo(message.from.name ?? message.from.email);
-    setComposeSubject(replySubject(message.subject));
-    setDraft("");
-    setZen(false);
+    setSelectedThreadId(message.threadId);
+  }
+
+  function closeThread() {
+    setSelectedThreadId(null);
   }
 
   function closePanel() {
@@ -219,7 +230,6 @@ function InboxApp() {
 
     closeTimerRef.current = setTimeout(() => {
       setPanelMode(null);
-      setSelectedMessage(null);
       setComposeTo("");
       setComposeSubject("");
       setDraft("");
@@ -259,6 +269,7 @@ function InboxApp() {
 
   function togglePersonFilter(name: string) {
     setPersonFilter((current) => (current === name ? null : name));
+    setSelectedThreadId(null);
     closePanel();
   }
 
@@ -312,100 +323,26 @@ function InboxApp() {
           />
         </aside>
 
-        <section className="content-pane" aria-label="Inbox">
-          <header className="pane-header">
-            <div>
-              <p>{inboxEyebrow}</p>
-              <h1>{inboxTitle}</h1>
-            </div>
-            <div className="pane-header-meta">
-              {personFilter ? (
-                <div className="filter-chip">
-                  <span className="filter-chip-label">Showing threads with</span>
-                  <strong>{personFilter}</strong>
-                  <button
-                    aria-label={`Clear filter for ${personFilter}`}
-                    onClick={() => setPersonFilter(null)}
-                    type="button"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : null}
-              <div className={`account-chip${account ? "" : " account-chip-muted"}`}>
-                {account
-                  ? `${formatProvider(account.provider)} · ${account.email}`
-                  : "Connecting account..."}
-              </div>
-            </div>
-          </header>
-
-          <section className="inbox-body" aria-live="polite">
-            {status === "loading" ? (
-              <InboxStatusState
-                description="Pulling your account and inbox list into Orca."
-                eyebrow="Loading inbox"
-                title="Connecting to the read-only API"
-              />
-            ) : null}
-
-            {status === "ready" && visibleMessages.length === 0 ? (
-              <InboxStatusState
-                description={
-                  personFilter
-                    ? `No threads in your inbox include ${personFilter} yet.`
-                    : "When synced mail arrives, your inbox list will appear here."
-                }
-                eyebrow={personFilter ? "No matches" : "Inbox empty"}
-                title={personFilter ? "Nothing from this person" : "No messages yet"}
-              />
-            ) : null}
-
-            {status === "ready" && visibleMessages.length > 0 ? (
-              <ol className="message-list">
-                {visibleMessages.map((message) => {
-                  const signature = getContactSignature(message.from);
-                  const isReply = message.subject.trim().toLowerCase().startsWith("re:");
-
-                  return (
-                    <li key={message.id}>
-                      <button
-                        className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                        onClick={() => openThread(message)}
-                        style={
-                          {
-                            "--message-rail": signature.palette.rail,
-                            "--message-mark-bg": signature.palette.bg,
-                            "--message-mark-fg": signature.palette.fg,
-                          } as React.CSSProperties
-                        }
-                        type="button"
-                      >
-                        <MessageMark signature={signature} unread={message.unread} />
-                        <div className="message-copy">
-                          <div className="message-meta">
-                            <strong>{message.from.name ?? message.from.email}</strong>
-                            <span>{formatReceivedAt(message.receivedAt)}</span>
-                          </div>
-                          <div className="message-subject-row">
-                            <h2>{message.subject || "(no subject)"}</h2>
-                            {message.unread ? <span className="message-unread-dot" /> : null}
-                          </div>
-                          <p>{message.snippet}</p>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : null}
-          </section>
-
-          {errorMessage ? (
-            <p className="filter-chip-label" style={{ marginTop: 12 }}>
-              Previewing demo inbox — {errorMessage}
-            </p>
-          ) : null}
+        <section className="content-pane" aria-label={selectedThreadId ? "Thread" : "Inbox"}>
+          {selectedThreadId && selectedThreadLatestMessage ? (
+            <ThreadView
+              messages={selectedThreadMessages}
+              onBack={closeThread}
+              title={selectedThreadLatestMessage.subject || "(no subject)"}
+            />
+          ) : (
+            <InboxView
+              account={account}
+              errorMessage={errorMessage}
+              inboxEyebrow={inboxEyebrow}
+              inboxTitle={inboxTitle}
+              messages={visibleMessages}
+              onClearFilter={() => setPersonFilter(null)}
+              onOpenThread={openThread}
+              personFilter={personFilter}
+              status={status}
+            />
+          )}
         </section>
       </main>
 
@@ -419,11 +356,11 @@ function InboxApp() {
           />
 
           <aside
-            aria-label={panelMode === "compose" ? "Compose message" : "Thread"}
+            aria-label="Compose message"
             className={`slide-panel slide-panel-open${panelClosing ? " slide-panel-closing" : ""}`}
           >
             <header className="panel-header">
-              <h2>{panelMode === "compose" ? "New message" : selectedMessage?.subject || "Thread"}</h2>
+              <h2>New message</h2>
               <div className="panel-actions">
                 <button className="panel-zen" onClick={enterZen} type="button">
                   <ZenGlyph />
@@ -441,32 +378,14 @@ function InboxApp() {
             </header>
 
             <div className="panel-body">
-              {panelMode === "thread" && selectedMessage ? (
-                <section aria-label="Thread message" className="thread-read">
-                  <div className="thread-meta">
-                    <strong>{selectedMessage.from.name ?? selectedMessage.from.email}</strong>
-                    <span>
-                      {selectedMessage.from.email} · {formatReceivedAt(selectedMessage.receivedAt)}
-                    </span>
-                  </div>
-                  <div className="thread-body">
-                    {threadBodies[selectedMessage.threadId] ?? selectedMessage.snippet}
-                  </div>
-                </section>
-              ) : null}
-
               <ComposeFlow
                 autoFocusTo={panelMode === "compose"}
-                context={
-                  panelMode === "thread" && selectedMessage
-                    ? `Replying to ${selectedMessage.from.name ?? selectedMessage.from.email} · ${selectedMessage.subject || "no subject"}`
-                    : ""
-                }
+                context=""
                 draft={draft}
                 onDraftChange={setDraft}
                 onSubjectChange={setComposeSubject}
                 onToChange={setComposeTo}
-                showContext={panelMode === "thread"}
+                showContext={false}
                 subject={composeSubject}
                 to={composeTo}
               />
@@ -476,17 +395,13 @@ function InboxApp() {
           {zen ? (
             <ZenWriter
               closing={zenClosing}
-              context={
-                panelMode === "thread" && selectedMessage
-                  ? `Replying to ${selectedMessage.from.name ?? selectedMessage.from.email} · ${selectedMessage.subject || "no subject"}`
-                  : ""
-              }
+              context=""
               draft={draft}
               onDraftChange={setDraft}
               onExit={exitZen}
               onSubjectChange={setComposeSubject}
               onToChange={setComposeTo}
-              showContext={panelMode === "thread"}
+              showContext={false}
               subject={composeSubject}
               to={composeTo}
             />
@@ -631,6 +546,169 @@ function MessageMark({ signature, unread }: { signature: ContactSignature; unrea
     >
       <ContactGlyph variant={signature.variant} />
     </span>
+  );
+}
+
+function InboxView({
+  account,
+  errorMessage,
+  inboxEyebrow,
+  inboxTitle,
+  messages,
+  personFilter,
+  status,
+  onClearFilter,
+  onOpenThread,
+}: {
+  account: MailAccount | null;
+  errorMessage: string | null;
+  inboxEyebrow: string;
+  inboxTitle: string;
+  messages: InboxMessage[];
+  personFilter: string | null;
+  status: "loading" | "ready";
+  onClearFilter: () => void;
+  onOpenThread: (message: InboxMessage) => void;
+}) {
+  return (
+    <>
+      <header className="pane-header">
+        <div>
+          <p>{inboxEyebrow}</p>
+          <h1>{inboxTitle}</h1>
+        </div>
+        <div className="pane-header-meta">
+          {personFilter ? (
+            <div className="filter-chip">
+              <span className="filter-chip-label">Showing threads with</span>
+              <strong>{personFilter}</strong>
+              <button
+                aria-label={`Clear filter for ${personFilter}`}
+                onClick={onClearFilter}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+          <div className={`account-chip${account ? "" : " account-chip-muted"}`}>
+            {account
+              ? `${formatProvider(account.provider)} · ${account.email}`
+              : "Connecting account..."}
+          </div>
+        </div>
+      </header>
+
+      <section className="inbox-body" aria-live="polite">
+        {status === "loading" ? (
+          <InboxStatusState
+            description="Pulling your account and inbox list into Orca."
+            eyebrow="Loading inbox"
+            title="Connecting to the read-only API"
+          />
+        ) : null}
+
+        {status === "ready" && messages.length === 0 ? (
+          <InboxStatusState
+            description={
+              personFilter
+                ? `No threads in your inbox include ${personFilter} yet.`
+                : "When synced mail arrives, your inbox list will appear here."
+            }
+            eyebrow={personFilter ? "No matches" : "Inbox empty"}
+            title={personFilter ? "Nothing from this person" : "No messages yet"}
+          />
+        ) : null}
+
+        {status === "ready" && messages.length > 0 ? (
+          <ol className="message-list">
+            {messages.map((message) => {
+              const signature = getContactSignature(message.from);
+              const isReply = message.subject.trim().toLowerCase().startsWith("re:");
+
+              return (
+                <li key={message.id}>
+                  <button
+                    className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
+                    onClick={() => onOpenThread(message)}
+                    style={
+                      {
+                        "--message-rail": signature.palette.rail,
+                        "--message-mark-bg": signature.palette.bg,
+                        "--message-mark-fg": signature.palette.fg,
+                      } as React.CSSProperties
+                    }
+                    type="button"
+                  >
+                    <MessageMark signature={signature} unread={message.unread} />
+                    <div className="message-copy">
+                      <div className="message-meta">
+                        <strong>{message.from.name ?? message.from.email}</strong>
+                        <span>{formatReceivedAt(message.receivedAt)}</span>
+                      </div>
+                      <div className="message-subject-row">
+                        <h2>{message.subject || "(no subject)"}</h2>
+                        {message.unread ? <span className="message-unread-dot" /> : null}
+                      </div>
+                      <p>{message.snippet}</p>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+      </section>
+
+      {errorMessage ? (
+        <p className="filter-chip-label" style={{ marginTop: 12 }}>
+          Previewing demo inbox — {errorMessage}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function ThreadView({
+  messages,
+  title,
+  onBack,
+}: {
+  messages: InboxMessage[];
+  title: string;
+  onBack: () => void;
+}) {
+  return (
+    <article className="thread-view">
+      <header className="thread-view-header">
+        <button className="thread-back" onClick={onBack} type="button">
+          <ArrowGlyph direction="left" />
+          <span>Inbox</span>
+        </button>
+        <div>
+          <p>Thread</p>
+          <h1>{title}</h1>
+          <span>
+            {messages.length} {messages.length === 1 ? "message" : "messages"}
+          </span>
+        </div>
+      </header>
+
+      <ol className="thread-message-list">
+        {messages.map((message) => (
+          <li className="thread-message" key={message.id}>
+            <div className="thread-message-meta">
+              <div>
+                <strong>{message.from.name ?? message.from.email}</strong>
+                <span>{message.from.email}</span>
+              </div>
+              <time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time>
+            </div>
+            <div className="thread-body">{getThreadBody(message)}</div>
+          </li>
+        ))}
+      </ol>
+    </article>
   );
 }
 
@@ -1064,6 +1142,10 @@ function formatReceivedAt(receivedAt: string) {
       : { month: "short", day: "numeric" };
 
   return new Intl.DateTimeFormat(undefined, options).format(date);
+}
+
+function getThreadBody(message: InboxMessage) {
+  return messageBodies[message.id] ?? message.snippet;
 }
 
 function getErrorMessage(error: unknown) {
