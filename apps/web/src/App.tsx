@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { InboxMessage, MailAccount } from "@orca/shared";
 import { inboxResponseSchema, meResponseSchema } from "@orca/shared";
 import {
@@ -48,15 +55,27 @@ const mailboxes: MailboxItem[] = [
 ];
 
 export function App() {
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("orca-theme", theme);
+  }, [theme]);
+
   if (isOAuthLoginRoute()) {
     return <GmailOAuthLoginPage />;
   }
 
-  return <InboxApp />;
+  return <InboxApp theme={theme} setTheme={setTheme} />;
 }
 
-function InboxApp() {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+function InboxApp({
+  theme,
+  setTheme,
+}: {
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+}) {
   const [account, setAccount] = useState<MailAccount | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
@@ -79,11 +98,6 @@ function InboxApp() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("orca-theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -415,9 +429,16 @@ function InboxApp() {
 function GmailOAuthLoginPage() {
   const [connectStatus, setConnectStatus] = useState<OAuthConnectStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const returnStatus = useMemo(() => readOAuthReturnStatus(), []);
+  const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
+  const connectInFlightRef = useRef(false);
 
   async function connectGmail() {
+    if (connectInFlightRef.current || connectStatus === "loading") {
+      return;
+    }
+
+    connectInFlightRef.current = true;
+    setReturnStatus(null);
     setConnectStatus("loading");
     setErrorMessage(null);
 
@@ -449,6 +470,7 @@ function GmailOAuthLoginPage() {
 
       window.location.assign(authUrl);
     } catch (error) {
+      connectInFlightRef.current = false;
       setConnectStatus("error");
       setErrorMessage(getErrorMessage(error));
     }

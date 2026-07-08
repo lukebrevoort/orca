@@ -16,13 +16,31 @@ describe("App", () => {
 
   test("renders the Gmail OAuth login page on auth routes", () => {
     const originalWindow = globalThis.window;
+    const localStorage = new Map<string, string>();
 
     Object.defineProperty(globalThis, "window", {
       configurable: true,
       value: {
         location: {
+          assign() {},
+          href: "http://localhost:5173/login",
+          origin: "http://localhost:5173",
           pathname: "/login",
           search: "",
+        },
+        localStorage: {
+          getItem(key: string) {
+            return localStorage.get(key) ?? null;
+          },
+          setItem(key: string, value: string) {
+            localStorage.set(key, value);
+          },
+          removeItem(key: string) {
+            localStorage.delete(key);
+          },
+          clear() {
+            localStorage.clear();
+          },
         },
       },
     });
