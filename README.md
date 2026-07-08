@@ -82,12 +82,34 @@ Variables reserved for the upcoming Gmail connect flow:
 - `GMAIL_CLIENT_ID`
 - `GMAIL_CLIENT_SECRET`
 - `GMAIL_REDIRECT_URI`
+- `GMAIL_OAUTH_SCOPES`: optional space- or comma-delimited scopes. Defaults to `https://www.googleapis.com/auth/gmail.readonly` and `https://www.googleapis.com/auth/userinfo.email`.
 
 Local validation notes:
 
 - The API now validates `PORT` and `WEB_ORIGIN` at startup.
 - The auth/session layer validates `SESSION_SECRET` and `TOKEN_ENCRYPTION_KEY` when auth/token code is invoked.
 - The current persistence branch does not force `DATABASE_PATH`; it falls back to `./data/orca.sqlite` for local development.
+
+## Gmail OAuth Login
+
+The web app includes a Gmail connection page at `/login` and `/settings/integrations/gmail`.
+Selecting **Continue with Google** calls `/v1/auth/gmail/connect`, receives the Google
+authorization URL from the API, and redirects the browser into Google's OAuth consent flow.
+The callback returns to `/settings/integrations/gmail` with `status=success` or
+`status=error` query parameters that the page renders for the user.
+
+Google Cloud setup:
+
+1. Create or select a Google Cloud project.
+2. Configure the OAuth consent screen and add local test users while the app is unpublished.
+3. Create an OAuth client ID using application type **Web application**.
+4. Add `http://localhost:5173` as an Authorized JavaScript origin.
+5. Add `http://localhost:3000/v1/auth/gmail/callback` as an Authorized redirect URI.
+6. Enable the Gmail API.
+7. Copy the client ID and secret into `.env`, then restart the API.
+
+The same setup guide is available as a local HTML page at
+`http://localhost:5173/docs/gmail-oauth-setup.html` when the web dev server is running.
 
 ## Workspace Layout
 
