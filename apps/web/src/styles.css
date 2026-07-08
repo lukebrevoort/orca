@@ -526,6 +526,119 @@ textarea {
   line-height: 1.6;
 }
 
+.thread-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.thread-view-header {
+  border-bottom: 1px solid var(--orca-border);
+  display: grid;
+  gap: 18px;
+  padding-bottom: 24px;
+}
+
+.thread-back {
+  align-items: center;
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  color: var(--orca-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 14px 0 12px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.thread-back:hover {
+  background: var(--orca-surface-hover);
+  color: var(--orca-ink);
+  transform: translateX(-1px);
+}
+
+.thread-view-header p {
+  color: var(--orca-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.thread-view-header h1 {
+  font-family: var(--orca-font-display);
+  font-size: clamp(40px, 6vw, 76px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  margin: 8px 0 12px;
+  max-width: 980px;
+}
+
+.thread-view-header span {
+  color: var(--orca-muted);
+  font-size: 14px;
+}
+
+.thread-message-list {
+  display: grid;
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  max-width: 980px;
+  overflow: auto;
+  padding: 24px 0 0;
+  width: 100%;
+}
+
+.thread-message {
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 12px;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.thread-message-meta {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.thread-message-meta div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.thread-message-meta strong {
+  color: var(--orca-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.thread-message-meta span,
+.thread-message-meta time {
+  color: var(--orca-muted);
+  font-size: 13px;
+}
+
+.thread-message-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .overlay-backdrop {
   backdrop-filter: blur(0px) saturate(1);
   background: transparent;
@@ -996,5 +1109,21 @@ textarea {
 
   .pane-header-meta {
     align-items: start;
+  }
+
+  .thread-view-header h1 {
+    font-size: 38px;
+  }
+
+  .thread-message-list {
+    max-width: none;
+  }
+
+  .thread-message {
+    padding: 18px;
+  }
+
+  .thread-message-meta {
+    display: grid;
   }
 }
