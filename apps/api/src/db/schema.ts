@@ -80,6 +80,32 @@ export const threads = sqliteTable(
   }),
 );
 
+export const labels = sqliteTable(
+  "labels",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    providerLabelId: text("provider_label_id").notNull(),
+    name: text("name").notNull(),
+    type: text("type").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    providerLabelUniqueIdx: uniqueIndex("labels_provider_label_unique_idx").on(
+      table.accountId,
+      table.providerLabelId,
+    ),
+    accountIdx: index("labels_account_idx").on(table.accountId),
+  }),
+);
+
 export const emails = sqliteTable(
   "emails",
   {
@@ -120,6 +146,54 @@ export const emails = sqliteTable(
       table.receivedAt,
     ),
     threadIdx: index("emails_thread_idx").on(table.threadId),
+  }),
+);
+
+export const emailLabels = sqliteTable(
+  "email_labels",
+  {
+    id: text("id").primaryKey(),
+    emailId: text("email_id")
+      .notNull()
+      .references(() => emails.id, { onDelete: "cascade" }),
+    labelId: text("label_id")
+      .notNull()
+      .references(() => labels.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    emailLabelUniqueIdx: uniqueIndex("email_labels_email_label_unique_idx").on(
+      table.emailId,
+      table.labelId,
+    ),
+    labelIdx: index("email_labels_label_idx").on(table.labelId),
+  }),
+);
+
+export const contacts = sqliteTable(
+  "contacts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    name: text("name"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    accountEmailUniqueIdx: uniqueIndex("contacts_account_email_unique_idx").on(
+      table.accountId,
+      table.email,
+    ),
+    accountIdx: index("contacts_account_idx").on(table.accountId),
   }),
 );
 
