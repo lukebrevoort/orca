@@ -10,7 +10,7 @@
     "lint": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@orca/shared": "file:../../packages/shared",
+    "@orca/shared": "workspace:*",
     "@vitejs/plugin-react": "^4.5.2",
     "vite": "^7.0.0",
     "react": "^19.1.0",

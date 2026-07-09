@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-102 Manual Sync Check</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --paper: #fffdf8;
+        --ink: #171717;
+        --muted: #675f57;
+        --line: #d8cfc2;
+        --accent: #0a6e5c;
+        --accent-soft: #ddf2ed;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        background:
+          radial-gradient(circle at top left, rgba(10, 110, 92, 0.08), transparent 28rem),
+          linear-gradient(180deg, #f8f3eb 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+
+      h1,
+      h2 {
+        font-family: Georgia, serif;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+      }
+
+      h1 {
+        font-size: clamp(2.2rem, 4vw, 3.5rem);
+      }
+
+      h2 {
+        font-size: 1.3rem;
+        margin-top: 28px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      .hero,
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: 0 18px 50px rgba(23, 23, 23, 0.05);
+      }
+
+      .hero {
+        padding: 28px;
+        margin-bottom: 22px;
+      }
+
+      .hero p {
+        max-width: 42rem;
+        margin: 0;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .card {
+        padding: 22px;
+      }
+
+      .badge {
+        display: inline-block;
+        margin-bottom: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font: 600 0.78rem/1.2 ui-monospace, "SFMono-Regular", monospace;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, "SFMono-Regular", monospace;
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px;
+        overflow-x: auto;
+        border-radius: 14px;
+        background: #161616;
+        color: #f5f5f5;
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .two-up {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="badge">BRE-102</div>
+        <h1>Manual Gmail Sync Check</h1>
+        <p>
+          This walkthrough verifies the new first-page Gmail sync path, the protected
+          manual trigger, and the SQLite rows written for messages, threads, labels,
+          and contacts.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="badge">1. Verify Code</div>
+          <pre>bun --filter @orca/api typecheck
+bun --filter @orca/api test
+bun --filter @orca/api db:verify</pre>
+        </article>
+
+        <article class="card">
+          <div class="badge">2. Start API</div>
+          <pre>bun --filter @orca/api dev</pre>
+          <p>
+            Make sure your `.env` includes valid `SESSION_SECRET`,
+            `TOKEN_ENCRYPTION_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`,
+            and `GMAIL_REDIRECT_URI`.
+          </p>
+        </article>
+
+        <div class="two-up">
+          <article class="card">
+            <div class="badge">3. Trigger Sync</div>
+            <pre>curl -X POST \
+  -H "Cookie: orca_session=&lt;session-token&gt;" \
+  http://localhost:3000/v1/sync/gmail</pre>
+            <p>
+              Expected shape: `accountId`, `emailCount`, `threadCount`,
+              `labelCount`, `contactCount`, `nextCursor`, `lastSyncedAt`.
+            </p>
+          </article>
+
+          <article class="card">
+            <div class="badge">4. Check DB</div>
+            <pre>sqlite3 apps/api/data/orca.sqlite "
+select count(*) from emails;
+select count(*) from threads;
+select count(*) from labels;
+select count(*) from email_labels;
+select count(*) from contacts;
+select sync_cursor, last_synced_at
+from oauth_accounts;
+"</pre>
+            <p>
+              Re-running the same page should not increase duplicate message rows.
+              `sync_cursor` should clear to `NULL` when the last page is consumed.
+            </p>
+          </article>
+        </div>
+
+        <article class="card">
+          <div class="badge">Acceptance</div>
+          <ul>
+            <li>The sync endpoint returns 200 for an authenticated Gmail user.</li>
+            <li>Emails, threads, labels, and contacts are present in SQLite.</li>
+            <li>Duplicate reruns do not create extra `emails` rows.</li>
+            <li>`oauth_accounts.last_synced_at` updates after a successful sync page.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

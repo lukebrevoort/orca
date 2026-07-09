@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -14,12 +15,26 @@ import {
 } from "@orca/shared";
 
 import { createGmailAuthApp } from "./auth/gmail/routes.ts";
+import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
+import { createDatabaseClient } from "./db/client.ts";
+import { oauthAccounts } from "./db/schema.ts";
+import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
 
-export function createApp(): Hono {
-  const app = new Hono();
+type CreateAppOptions = {
+  dbFactory?: typeof createDatabaseClient;
+  syncPage?: typeof syncGmailAccountPage;
+};
+
+export function createApp(options: CreateAppOptions = {}): Hono<{
+  Variables: AuthVariables;
+}> {
+  const dbFactory = options.dbFactory ?? createDatabaseClient;
+  const syncPage = options.syncPage ?? syncGmailAccountPage;
+
+  const app = new Hono<{ Variables: AuthVariables }>();
 
   app.use(
     "*",
@@ -74,6 +89,67 @@ export function createApp(): Hono {
 
   app.route("/v1/auth/gmail", createGmailAuthApp());
 
+  app.post(
+    "/v1/sync/gmail",
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const auth = c.get("auth");
+      const { db, sqlite } = dbFactory();
+
+      try {
+        const account = db
+          .select({
+            id: oauthAccounts.id,
+          })
+          .from(oauthAccounts)
+          .where(
+            and(
+              eq(oauthAccounts.userId, auth.userId),
+              eq(oauthAccounts.provider, "gmail"),
+            ),
+          )
+          .get();
+
+        if (!account) {
+          return c.json(
+            {
+              error: {
+                code: "not_found",
+                message: "No Gmail account is connected for this user",
+              },
+            },
+            404,
+          );
+        }
+
+        const result = await syncPage(db, {
+          accountId: account.id,
+        });
+
+        return c.json(result, 200);
+      } catch (error) {
+        console.error("Gmail sync failed", {
+          userId: auth.userId,
+          error,
+        });
+
+        const publicError = toPublicSyncError(error);
+
+        return c.json(
+          {
+            error: {
+              code: publicError.code,
+              message: publicError.message,
+            },
+          },
+          publicError.status,
+        );
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   return app;
 }
 
@@ -100,6 +176,38 @@ function jsonWithSchema<T>(
   value: unknown,
 ) {
   return c.json(schema.parse(value));
+}
+
+function toPublicSyncError(error: unknown) {
+  if (error instanceof GmailSyncError) {
+    switch (error.code) {
+      case "provider_auth_error":
+        return {
+          code: "provider_auth_error",
+          message: "Gmail needs to be reconnected before sync can continue",
+          status: 401,
+        } as const;
+      case "sync_conflict":
+        return {
+          code: "sync_conflict",
+          message: "Gmail sync cannot start until the connected account is fully configured",
+          status: 409,
+        } as const;
+      case "provider_error":
+      default:
+        return {
+          code: "provider_error",
+          message: "Gmail sync is temporarily unavailable",
+          status: 502,
+        } as const;
+    }
+  }
+
+  return {
+    code: "internal_error",
+    message: "Gmail sync failed unexpectedly",
+    status: 500,
+  } as const;
 }
 
 const { port } = serverConfig;

@@ -10,7 +10,15 @@ import { createDatabaseClient } from "./client.ts";
 const tempDir = mkdtempSync(join(tmpdir(), "orca-db-"));
 const databasePath = join(tempDir, "verify.sqlite");
 const migrationsFolder = resolve(import.meta.dir, "../../drizzle");
-const requiredTables = ["users", "oauth_accounts", "threads", "emails"];
+const requiredTables = [
+  "users",
+  "oauth_accounts",
+  "threads",
+  "labels",
+  "emails",
+  "email_labels",
+  "contacts",
+];
 
 const { db, sqlite } = createDatabaseClient(databasePath);
 
