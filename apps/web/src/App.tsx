@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { InboxMessage, MailAccount } from "@orca/shared";
 import { inboxResponseSchema, meResponseSchema } from "@orca/shared";
 import {
@@ -25,6 +32,11 @@ type PersonItem = {
 };
 
 type PanelMode = "compose" | null;
+type OAuthConnectStatus = "idle" | "loading" | "error";
+type OAuthReturnStatus =
+  | { kind: "success"; email: string | null }
+  | { kind: "error"; reason: string | null; message: string | null }
+  | null;
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
@@ -44,6 +56,26 @@ const mailboxes: MailboxItem[] = [
 
 export function App() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("orca-theme", theme);
+  }, [theme]);
+
+  if (isOAuthLoginRoute()) {
+    return <GmailOAuthLoginPage />;
+  }
+
+  return <InboxApp theme={theme} setTheme={setTheme} />;
+}
+
+function InboxApp({
+  theme,
+  setTheme,
+}: {
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+}) {
   const [account, setAccount] = useState<MailAccount | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
@@ -66,11 +98,6 @@ export function App() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("orca-theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -395,6 +422,139 @@ export function App() {
           ) : null}
         </>
       ) : null}
+    </div>
+  );
+}
+
+function GmailOAuthLoginPage() {
+  const [connectStatus, setConnectStatus] = useState<OAuthConnectStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
+  const connectInFlightRef = useRef(false);
+
+  async function connectGmail() {
+    if (connectInFlightRef.current || connectStatus === "loading") {
+      return;
+    }
+
+    connectInFlightRef.current = true;
+    setReturnStatus(null);
+    setConnectStatus("loading");
+    setErrorMessage(null);
+
+    try {
+      const returnTo =
+        typeof window === "undefined"
+          ? "/settings/integrations/gmail"
+          : `${window.location.origin}/settings/integrations/gmail`;
+      const response = await fetch(
+        `/v1/auth/gmail/connect?returnTo=${encodeURIComponent(returnTo)}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        const body = await readJsonObject(response);
+        throw new Error(
+          getStringField(body, "message") ??
+            `Could not start Gmail OAuth (${response.status} ${response.statusText})`.trim(),
+        );
+      }
+
+      const body = await readJsonObject(response);
+      const authUrl = getStringField(body, "authUrl");
+      if (!authUrl) {
+        throw new Error("The Gmail OAuth connect response did not include an authUrl.");
+      }
+
+      window.location.assign(authUrl);
+    } catch (error) {
+      connectInFlightRef.current = false;
+      setConnectStatus("error");
+      setErrorMessage(getErrorMessage(error));
+    }
+  }
+
+  return (
+    <main className="oauth-page">
+      <section className="oauth-shell" aria-labelledby="gmail-oauth-title">
+        <div className="oauth-brand">
+          <span className="oauth-brand-mark" aria-hidden="true">
+            O
+          </span>
+          <span>Orca</span>
+        </div>
+
+        <div className="oauth-hero">
+          <p className="oauth-eyebrow">Gmail OAuth</p>
+          <h1 id="gmail-oauth-title">Connect your Gmail inbox</h1>
+          <p>
+            Give Orca read-only access to Gmail so it can sync human mail without
+            sending, deleting, or modifying messages.
+          </p>
+
+          {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
+          {errorMessage ? (
+            <div className="oauth-notice oauth-notice-error" role="alert">
+              <strong>Connection could not start</strong>
+              <span>{errorMessage}</span>
+            </div>
+          ) : null}
+
+          <button
+            className="oauth-google-button"
+            disabled={connectStatus === "loading"}
+            onClick={connectGmail}
+            type="button"
+          >
+            <GoogleGlyph />
+            <span>{connectStatus === "loading" ? "Opening Google..." : "Continue with Google"}</span>
+          </button>
+
+          <p className="oauth-fine-print">
+            Uses the `gmail.readonly` and `userinfo.email` scopes. You can revoke
+            access later in your Google Account security settings.
+          </p>
+        </div>
+
+        <aside className="oauth-setup-panel" aria-label="Google OAuth setup checklist">
+          <h2>Google setup checklist</h2>
+          <ol>
+            <li>Create a Google Cloud OAuth client for a web application.</li>
+            <li>Add `http://localhost:5173` as an authorized JavaScript origin.</li>
+            <li>Add `http://localhost:3000/v1/auth/gmail/callback` as the redirect URI.</li>
+            <li>Copy the client ID and secret into `.env`, then restart the API.</li>
+          </ol>
+          <a href="/docs/gmail-oauth-setup.html">Open setup guide</a>
+        </aside>
+      </section>
+    </main>
+  );
+}
+
+function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
+  if (!status) {
+    return null;
+  }
+
+  if (status.kind === "success") {
+    return (
+      <div className="oauth-notice oauth-notice-success" role="status">
+        <strong>Gmail connected</strong>
+        <span>
+          {status.email
+            ? `${status.email} is ready for read-only inbox sync.`
+            : "Your Gmail account is ready for read-only inbox sync."}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="oauth-notice oauth-notice-error" role="alert">
+      <strong>Google returned an error</strong>
+      <span>{status.message ?? status.reason ?? "The Gmail OAuth flow did not complete."}</span>
     </div>
   );
 }
@@ -864,6 +1024,29 @@ function ZenGlyph() {
   );
 }
 
+function GoogleGlyph() {
+  return (
+    <svg aria-hidden="true" height="20" viewBox="0 0 24 24" width="20">
+      <path
+        d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 22c2.7 0 5-0.9 6.6-2.5L15.4 17c-.9.6-2 .9-3.4.9a6 6 0 0 1-5.7-4.1H3v2.6A10 10 0 0 0 12 22Z"
+        fill="#34A853"
+      />
+      <path
+        d="M6.3 13.8a6 6 0 0 1 0-3.6V7.6H3a10 10 0 0 0 0 8.8l3.3-2.6Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 6.1c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.7 9.7 0 0 0 12 2a10 10 0 0 0-9 5.6l3.3 2.6A6 6 0 0 1 12 6.1Z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
 function InboxStatusState({
   eyebrow,
   title,
@@ -898,6 +1081,56 @@ async function fetchJson<T>(
   }
 
   return schema.parse(await response.json());
+}
+
+async function readJsonObject(response: Response): Promise<Record<string, unknown>> {
+  try {
+    const value: unknown = await response.json();
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function getStringField(value: Record<string, unknown>, key: string) {
+  const field = value[key];
+  return typeof field === "string" && field.trim() ? field : null;
+}
+
+function isOAuthLoginRoute() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.location.pathname === "/login" || window.location.pathname === "/settings/integrations/gmail";
+}
+
+function readOAuthReturnStatus(): OAuthReturnStatus {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get("status");
+
+  if (status === "success") {
+    return {
+      kind: "success",
+      email: params.get("email"),
+    };
+  }
+
+  if (status === "error") {
+    return {
+      kind: "error",
+      reason: params.get("reason"),
+      message: params.get("message"),
+    };
+  }
+
+  return null;
 }
 
 function readStoredTheme(): Theme {
