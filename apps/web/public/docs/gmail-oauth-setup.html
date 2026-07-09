@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orca Gmail OAuth Setup</title>
+    <style>
+      :root {
+        color: #0a0a0b;
+        background: #f4f4f2;
+        font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 980px;
+        padding: 48px 22px 72px;
+      }
+
+      h1,
+      h2 {
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        font-weight: 400;
+        letter-spacing: -0.03em;
+      }
+
+      h1 {
+        font-size: clamp(48px, 8vw, 88px);
+        line-height: 0.95;
+        margin: 0 0 18px;
+      }
+
+      h2 {
+        font-size: 34px;
+        margin: 42px 0 14px;
+      }
+
+      p,
+      li {
+        color: rgba(10, 10, 11, 0.74);
+        font-size: 17px;
+        line-height: 1.65;
+      }
+
+      ol {
+        display: grid;
+        gap: 12px;
+        padding-left: 24px;
+      }
+
+      code,
+      pre {
+        background: rgba(10, 10, 11, 0.06);
+        border: 1px solid rgba(10, 10, 11, 0.1);
+        border-radius: 8px;
+        color: #0a0a0b;
+      }
+
+      code {
+        padding: 2px 5px;
+      }
+
+      pre {
+        overflow: auto;
+        padding: 16px;
+      }
+
+      .eyebrow {
+        color: #6f6f76;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        margin: 0 0 16px;
+        text-transform: uppercase;
+      }
+
+      .panel {
+        border-left: 1px solid rgba(10, 10, 11, 0.12);
+        margin-top: 32px;
+        padding-left: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Orca setup guide</p>
+      <h1>Gmail OAuth for local development</h1>
+      <p>
+        Use these values when creating the Google Cloud OAuth client that backs
+        Orca's Gmail read-only connection flow.
+      </p>
+
+      <section class="panel" aria-label="Google Cloud setup">
+        <h2>Google Cloud Console</h2>
+        <ol>
+          <li>Create or select a Google Cloud project.</li>
+          <li>Configure the OAuth consent screen and add yourself as a test user while the app is unpublished.</li>
+          <li>Create an OAuth client ID with application type <strong>Web application</strong>.</li>
+          <li>Add <code>http://localhost:5173</code> to Authorized JavaScript origins.</li>
+          <li>Add <code>http://localhost:3000/v1/auth/gmail/callback</code> to Authorized redirect URIs.</li>
+          <li>Enable the Gmail API for the project.</li>
+        </ol>
+      </section>
+
+      <section class="panel" aria-label="Local env">
+        <h2>Local environment</h2>
+        <p>Copy the client values into <code>.env</code> and restart the API.</p>
+        <pre><code>GMAIL_CLIENT_ID=your-google-client-id
+GMAIL_CLIENT_SECRET=your-google-client-secret
+GMAIL_REDIRECT_URI=http://localhost:3000/v1/auth/gmail/callback
+GMAIL_OAUTH_SCOPES=https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email
+WEB_ORIGIN=http://localhost:5173</code></pre>
+      </section>
+
+      <section class="panel" aria-label="Manual test">
+        <h2>Manual test</h2>
+        <ol>
+          <li>Run <code>bun run dev:api</code> and <code>bun run dev:web</code>.</li>
+          <li>Open <code>http://localhost:5173/login</code>.</li>
+          <li>Select <strong>Continue with Google</strong>.</li>
+          <li>Approve the read-only Gmail grant.</li>
+          <li>Confirm Orca returns to <code>/settings/integrations/gmail?status=success</code>.</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

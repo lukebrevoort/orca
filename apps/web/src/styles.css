@@ -57,6 +57,185 @@ textarea {
   position: relative;
 }
 
+.oauth-page {
+  background:
+    radial-gradient(circle at 18% 16%, rgba(92, 107, 120, 0.18), transparent 28rem),
+    linear-gradient(135deg, var(--orca-paper) 0%, var(--orca-canvas) 100%);
+  color: var(--orca-ink);
+  min-height: 100vh;
+  padding: clamp(18px, 4vw, 52px);
+}
+
+.oauth-shell {
+  display: grid;
+  gap: clamp(28px, 5vw, 80px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  margin: 0 auto;
+  max-width: 1120px;
+  min-height: calc(100vh - clamp(36px, 8vw, 104px));
+  position: relative;
+}
+
+.oauth-brand {
+  align-items: center;
+  display: inline-flex;
+  font-family: var(--orca-font-display);
+  font-size: 26px;
+  gap: 10px;
+  left: 0;
+  position: absolute;
+  top: 0;
+}
+
+.oauth-brand-mark {
+  align-items: center;
+  background: var(--orca-ink);
+  border-radius: 8px;
+  color: var(--orca-paper);
+  display: inline-flex;
+  font-family: var(--orca-font-body);
+  font-size: 13px;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.oauth-hero {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  max-width: 680px;
+  padding-top: 64px;
+}
+
+.oauth-eyebrow {
+  color: var(--orca-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0 0 16px;
+  text-transform: uppercase;
+}
+
+.oauth-hero h1 {
+  font-family: var(--orca-font-display);
+  font-size: clamp(54px, 9vw, 112px);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  margin: 0;
+  max-width: 760px;
+}
+
+.oauth-hero > p:not(.oauth-eyebrow):not(.oauth-fine-print) {
+  color: color-mix(in srgb, var(--orca-ink) 74%, transparent);
+  font-size: clamp(17px, 2vw, 22px);
+  line-height: 1.5;
+  margin: 24px 0 0;
+  max-width: 580px;
+}
+
+.oauth-google-button {
+  align-items: center;
+  background: var(--orca-ink);
+  border: 0;
+  border-radius: 8px;
+  color: var(--orca-paper);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+  min-height: 52px;
+  padding: 0 20px;
+  width: min(100%, 300px);
+}
+
+.oauth-google-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.oauth-google-button svg {
+  background: #fff;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  padding: 2px;
+}
+
+.oauth-fine-print {
+  color: var(--orca-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 16px 0 0;
+  max-width: 460px;
+}
+
+.oauth-notice {
+  border: 1px solid var(--orca-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 5px;
+  line-height: 1.45;
+  margin-top: 24px;
+  max-width: 520px;
+  padding: 14px 16px;
+}
+
+.oauth-notice strong {
+  font-size: 14px;
+}
+
+.oauth-notice span {
+  color: color-mix(in srgb, var(--orca-ink) 72%, transparent);
+  font-size: 14px;
+}
+
+.oauth-notice-success {
+  background: rgba(52, 168, 83, 0.1);
+}
+
+.oauth-notice-error {
+  background: rgba(234, 67, 53, 0.1);
+}
+
+.oauth-setup-panel {
+  align-self: end;
+  border-left: 1px solid var(--orca-border);
+  display: grid;
+  gap: 18px;
+  margin-bottom: clamp(0px, 8vh, 72px);
+  padding-left: 28px;
+}
+
+.oauth-setup-panel h2 {
+  font-family: var(--orca-font-display);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin: 0;
+}
+
+.oauth-setup-panel ol {
+  color: color-mix(in srgb, var(--orca-ink) 76%, transparent);
+  display: grid;
+  gap: 12px;
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.oauth-setup-panel a {
+  color: var(--orca-ink);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -1089,6 +1268,31 @@ textarea {
 }
 
 @media (max-width: 760px) {
+  .oauth-page {
+    padding: 18px;
+  }
+
+  .oauth-shell {
+    grid-template-columns: 1fr;
+    min-height: calc(100vh - 36px);
+  }
+
+  .oauth-brand {
+    position: static;
+  }
+
+  .oauth-hero {
+    padding-top: 40px;
+  }
+
+  .oauth-setup-panel {
+    align-self: start;
+    border-left: 0;
+    border-top: 1px solid var(--orca-border);
+    margin-bottom: 0;
+    padding: 22px 0 0;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
