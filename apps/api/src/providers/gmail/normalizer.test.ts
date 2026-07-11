@@ -80,6 +80,21 @@ describe("Gmail normalizer", () => {
     assert.equal(normalizeGmailLabel({ id: "Label_42", name: "Customers" }).type, "user");
   });
 
+  test("accepts an angle-bracket address without a display name", () => {
+    const normalized = normalizeGmailMessage({
+      ...gmailMessage,
+      payload: {
+        ...gmailMessage.payload,
+        headers: [
+          { name: "From", value: "<news@example.com>" },
+          { name: "To", value: "<luke@example.com>" },
+        ],
+      },
+    }, { accountId: "acct_123" });
+
+    assert.deepEqual(normalized.from, { name: null, email: "news@example.com" });
+  });
+
   test("maps normalized messages to a normalized thread", () => {
     const message = normalizeGmailMessage(gmailMessage, {
       accountId: "acct_123",

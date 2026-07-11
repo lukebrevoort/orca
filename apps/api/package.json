@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json",
     "test": "bun test",
     "lint": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun src/db/migrate.ts",
-    "db:verify": "bun src/db/verify.ts"
+    "db:migrate": "bun --env-file=../../.env src/db/migrate.ts",
+    "db:verify": "bun --env-file=../../.env src/db/verify.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.15.0",

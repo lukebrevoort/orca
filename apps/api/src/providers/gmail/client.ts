@@ -46,10 +46,13 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
     async listInboxMessagePage({ accessToken, cursor, pageSize = defaultPageSize, since }) {
       const params = new URLSearchParams({
         includeSpamTrash: "false",
-        labelIds: "INBOX",
         maxResults: String(pageSize),
-        q: buildInboxQuery(since),
       });
+
+      const query = buildInboxQuery(since);
+      if (query) {
+        params.set("q", query);
+      }
 
       if (cursor) {
         params.set("pageToken", cursor);
@@ -98,6 +101,10 @@ async function gmailRequest<T>(
 }
 
 function buildInboxQuery(since: Date) {
+  if (since.getTime() <= 0) {
+    return null;
+  }
+
   const unixSeconds = Math.floor(since.getTime() / 1000);
   return `after:${unixSeconds}`;
 }

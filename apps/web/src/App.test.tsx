@@ -3,15 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { App } from "./App";
 
 describe("App", () => {
-  test("renders the foundational inbox shell", () => {
+  test("checks for a session before rendering the inbox", () => {
     const html = renderToStaticMarkup(<App />);
 
     expect(html).toContain("Orca");
-    expect(html).toContain("Compose");
-    expect(html).toContain("Inbox");
-    expect(html).toContain("Loading inbox");
-    expect(html).toContain("Connecting to the read-only API");
-    expect(html).toContain("Connecting account...");
+    expect(html).toContain("Checking your key.");
+    expect(html).not.toContain("Compose");
   });
 
   test("renders the Gmail OAuth login page on auth routes", () => {
@@ -48,9 +45,9 @@ describe("App", () => {
     try {
       const html = renderToStaticMarkup(<App />);
 
-      expect(html).toContain("Connect your Gmail inbox");
+      expect(html).toContain("Make room for the people.");
       expect(html).toContain("Continue with Google");
-      expect(html).toContain("Google setup checklist");
+      expect(html).toContain("What happens next");
     } finally {
       Object.defineProperty(globalThis, "window", {
         configurable: true,

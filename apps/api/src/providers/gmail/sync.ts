@@ -2,6 +2,8 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
+import { loadGmailOAuthConfig } from "../../auth/gmail/config.ts";
+import { decryptSecret } from "../../auth/gmail/crypto.ts";
 import { readProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
@@ -72,7 +74,7 @@ export async function syncGmailAccountPage(
   const gmailClient = options.gmailClient ?? createGmailClient();
   const account = getGmailAccount(db, options.accountId);
 
-  const tokenRecord = await readProviderTokens(db, account.id);
+  const tokenRecord = await readGmailProviderTokens(db, account.id);
   if (!tokenRecord?.accessToken) {
     throw new GmailSyncError("Connected Gmail account is missing provider credentials", "sync_conflict");
   }
@@ -103,11 +105,7 @@ export async function syncGmailAccountPage(
 
   let gmailMessages;
   try {
-    gmailMessages = await Promise.all(
-      page.messageIds.map((messageId) =>
-        gmailClient.getMessage(tokenRecord.accessToken as string, messageId),
-      ),
-    );
+    gmailMessages = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, page.messageIds);
   } catch (error) {
     throw mapGmailError(error);
   }
@@ -155,6 +153,22 @@ export async function syncGmailAccountPage(
   };
 }
 
+async function fetchMessageDetails(
+  gmailClient: GmailClient,
+  accessToken: string,
+  messageIds: string[],
+) {
+  const messages = [];
+  const concurrentRequests = 5;
+
+  for (let index = 0; index < messageIds.length; index += concurrentRequests) {
+    const batch = messageIds.slice(index, index + concurrentRequests);
+    messages.push(...await Promise.all(batch.map((messageId) => gmailClient.getMessage(accessToken, messageId))));
+  }
+
+  return messages;
+}
+
 function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRecord {
   const account = db
     .select({
@@ -175,6 +189,35 @@ function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRec
   }
 
   return account;
+}
+
+async function readGmailProviderTokens(db: DatabaseClient, accountId: string) {
+  const account = db.select({
+    accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
+    refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    tokenExpiry: oauthAccounts.tokenExpiry,
+  }).from(oauthAccounts).where(eq(oauthAccounts.id, accountId)).get();
+
+  if (!account?.accessTokenEncrypted) {
+    return null;
+  }
+
+  if (!account.accessTokenEncrypted.startsWith("v1:")) {
+    return readProviderTokens(db, accountId);
+  }
+
+  try {
+    const config = loadGmailOAuthConfig();
+    return {
+      accessToken: decryptSecret(account.accessTokenEncrypted, config.tokenEncryptionKey),
+      refreshToken: account.refreshTokenEncrypted
+        ? decryptSecret(account.refreshTokenEncrypted, config.tokenEncryptionKey)
+        : null,
+      tokenExpiry: account.tokenExpiry,
+    };
+  } catch {
+    throw new GmailSyncError("Gmail credentials can no longer be decrypted", "provider_auth_error");
+  }
 }
 
 function buildPersistedLabels(
@@ -493,7 +536,7 @@ function resolveSyncCursorState(input: {
 
   return {
     pageToken: null,
-    startedAt: new Date(input.now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    startedAt: new Date(0).toISOString(),
   };
 }
 

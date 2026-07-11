@@ -3,11 +3,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
-import {
-  accountFixture,
-  authSessionFixture,
-  inboxResponseSchema,
-} from "@orca/shared";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
@@ -17,29 +12,22 @@ import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
 describe("Orca API", () => {
-  test("returns the current auth session fixture", async () => {
+  test("requires a session before returning auth state", async () => {
     const response = await app.request("/v1/auth/session");
 
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), authSessionFixture);
+    assert.equal(response.status, 401);
   });
 
-  test("returns the current account fixture", async () => {
+  test("requires a session before returning an account", async () => {
     const response = await app.request("/v1/me");
 
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), accountFixture);
+    assert.equal(response.status, 401);
   });
 
-  test("returns the inbox fixture with the shared response shape", async () => {
+  test("requires a session before returning inbox data", async () => {
     const response = await app.request("/v1/inbox");
-    const body = await response.json();
 
-    assert.equal(response.status, 200);
-    assert.deepEqual(inboxResponseSchema.parse(body), body);
-    assert.deepEqual(body.account, accountFixture);
-    assert.equal(body.messages.length, 1);
-    assert.equal(body.nextCursor, null);
+    assert.equal(response.status, 401);
   });
 
   test("rejects blank inbox cursors", async () => {
@@ -114,6 +102,7 @@ describe("Orca API", () => {
         contactCount: 2,
         nextCursor: null,
         lastSyncedAt: "2026-07-08T12:00:00.000Z",
+        pages: 1,
       });
       assert.deepEqual(syncCalls, ["acct_1"]);
     } finally {

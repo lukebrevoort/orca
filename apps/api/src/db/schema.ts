@@ -9,6 +9,7 @@ export const users = sqliteTable(
     id: text("id").primaryKey(),
     email: text("email").notNull(),
     displayName: text("display_name"),
+    authenticatedAt: integer("authenticated_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(createdAtDefault),

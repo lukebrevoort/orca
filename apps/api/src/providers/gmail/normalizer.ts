@@ -136,7 +136,7 @@ function parseContact(value: string | undefined): MailContact {
 
   const [, name, email] = match;
   return {
-    name: name.trim() || null,
+    name: name?.trim() || null,
     email: email.trim(),
   };
 }
