@@ -406,29 +406,35 @@ textarea {
   gap: 4px;
 }
 
-.nav-list a {
+.mailbox-tab {
   align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 8px;
   color: var(--orca-ink);
+  cursor: pointer;
   display: flex;
+  font-size: 14px;
   justify-content: space-between;
   min-height: 36px;
   opacity: 0.82;
   padding: 0 10px;
+  text-align: left;
   transition: background 0.15s ease, opacity 0.15s ease;
+  width: 100%;
 }
 
-.nav-list small {
+.mailbox-tab small {
   color: var(--orca-muted);
   font-size: 12px;
 }
 
-.nav-list a:hover {
+.mailbox-tab:hover {
   background: var(--orca-surface-hover);
   opacity: 1;
 }
 
-.nav-list a[aria-current="page"] {
+.mailbox-tab[aria-current="page"] {
   background: var(--orca-surface);
   border: 1px solid var(--orca-border);
   font-weight: 600;
@@ -539,6 +545,35 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.refresh-button {
+  align-items: center;
+  align-self: flex-end;
+  background: transparent;
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  color: var(--orca-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: var(--orca-surface-hover);
+  color: var(--orca-ink);
+}
+
+.refresh-button:disabled {
+  cursor: wait;
+}
+
+.refresh-button-active span {
+  animation: refresh-turn 0.9s linear infinite;
 }
 
 .account-chip {
@@ -749,6 +784,10 @@ textarea {
 .empty-state span {
   color: var(--orca-muted);
   line-height: 1.6;
+}
+
+@keyframes refresh-turn {
+  to { transform: rotate(360deg); }
 }
 
 .thread-view {

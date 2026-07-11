@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { App } from "./App";
+import { App, getMessagesForMailbox } from "./App";
+import { demoMessages } from "./demo-data";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -54,5 +55,12 @@ describe("App", () => {
         value: originalWindow,
       });
     }
+  });
+
+  test("separates Gmail system labels into functional mailbox tabs", () => {
+    expect(getMessagesForMailbox(demoMessages, "inbox")).toHaveLength(6);
+    expect(getMessagesForMailbox(demoMessages, "sent")).toHaveLength(1);
+    expect(getMessagesForMailbox(demoMessages, "spam")).toHaveLength(0);
+    expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
   });
 });
