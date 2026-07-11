@@ -19,6 +19,9 @@ Copy the example environment file before running the API:
 cp .env.example .env
 ```
 
+The API scripts load this workspace-root `.env` file automatically, including
+when they run from `apps/api`.
+
 ## Development
 
 Run both apps:
