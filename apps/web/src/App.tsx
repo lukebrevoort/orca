@@ -16,10 +16,12 @@ import { getContactSignature, type ContactSignature } from "./contact-signature"
 
 type Theme = "light" | "dark";
 
+type Mailbox = "inbox" | "sent" | "spam" | "all";
+
 type MailboxItem = {
+  id: Mailbox;
   label: string;
-  count?: number;
-  active?: boolean;
+  gmailLabel?: string;
 };
 
 type PersonItem = {
@@ -40,10 +42,10 @@ const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
 
 const mailboxes: MailboxItem[] = [
-  { label: "Inbox", active: true },
-  { label: "Sent" },
-  { label: "Spam", count: 2 },
-  { label: "All Mail" },
+  { id: "inbox", label: "Inbox", gmailLabel: "INBOX" },
+  { id: "sent", label: "Sent", gmailLabel: "SENT" },
+  { id: "spam", label: "Spam", gmailLabel: "SPAM" },
+  { id: "all", label: "All Mail" },
 ];
 
 export function App() {
@@ -87,6 +89,8 @@ function InboxApp({
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -110,7 +114,7 @@ function InboxApp({
     const abortController = new AbortController();
 
     async function loadInbox() {
-      setStatus("loading");
+      setStatus(messages.length > 0 ? "syncing" : "loading");
       setErrorMessage(null);
 
       try {
@@ -147,17 +151,21 @@ function InboxApp({
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [refreshKey]);
 
   const pinnedPeople = useMemo(() => buildPinnedPeople(messages), [messages]);
 
-  const visibleMessages = useMemo(() => {
-    if (!personFilter) {
-      return messages;
-    }
+  const mailboxMessages = useMemo(
+    () => getMessagesForMailbox(messages, activeMailbox),
+    [activeMailbox, messages],
+  );
 
-    return messages.filter((message) => messageIncludesPerson(message, personFilter));
-  }, [messages, personFilter]);
+  const visibleMessages = useMemo(
+    () => personFilter
+      ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
+      : mailboxMessages,
+    [mailboxMessages, personFilter],
+  );
 
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
@@ -174,24 +182,16 @@ function InboxApp({
 
   const mailboxItems = useMemo(
     () =>
-      mailboxes.map((mailbox) =>
-        mailbox.label === "Inbox"
-          ? {
-              ...mailbox,
-              count:
-                status === "ready"
-                  ? personFilter
-                    ? visibleMessages.length
-                    : messages.length
-                  : undefined,
-            }
-          : mailbox,
-      ),
-    [messages.length, personFilter, status, visibleMessages.length],
+      mailboxes.map((mailbox) => ({
+        ...mailbox,
+        count: status === "ready" ? getMessagesForMailbox(messages, mailbox.id).length : undefined,
+      })),
+    [messages, status],
   );
 
-  const inboxTitle = personFilter ? personFilter : "Inbox";
-  const inboxEyebrow = personFilter ? "Filtered inbox" : "Human inbox";
+  const activeMailboxLabel = mailboxes.find((item) => item.id === activeMailbox)?.label ?? "Inbox";
+  const inboxTitle = personFilter ? personFilter : activeMailboxLabel;
+  const inboxEyebrow = personFilter ? `Filtered ${activeMailboxLabel.toLowerCase()}` : "Gmail mailbox";
 
   if (status === "signedout") {
     return <LoginRequiredScreen />;
@@ -284,6 +284,12 @@ function InboxApp({
     closePanel();
   }
 
+  function selectMailbox(mailbox: Mailbox) {
+    setActiveMailbox(mailbox);
+    setPersonFilter(null);
+    setSelectedThreadId(null);
+  }
+
   return (
     <div className="app-root">
       <main className="app-shell">
@@ -314,14 +320,16 @@ function InboxApp({
             <h2>Mailboxes</h2>
             <nav className="nav-list">
               {mailboxItems.map((mailbox) => (
-                <a
-                  aria-current={mailbox.active ? "page" : undefined}
-                  href={`/${mailbox.label.toLowerCase().replaceAll(" ", "-")}`}
+                <button
+                  aria-current={mailbox.id === activeMailbox ? "page" : undefined}
+                  className="mailbox-tab"
+                  onClick={() => selectMailbox(mailbox.id)}
                   key={mailbox.label}
+                  type="button"
                 >
                   <span>{mailbox.label}</span>
-                  {mailbox.count ? <small>{mailbox.count}</small> : null}
-                </a>
+                  {mailbox.count !== undefined ? <small>{mailbox.count}</small> : null}
+                </button>
               ))}
             </nav>
           </section>
@@ -352,6 +360,8 @@ function InboxApp({
               onOpenThread={openThread}
               personFilter={personFilter}
               status={status}
+              isRefreshing={status === "syncing" && messages.length > 0}
+              onRefresh={() => setRefreshKey((key) => key + 1)}
             />
           )}
         </section>
@@ -593,8 +603,10 @@ function InboxView({
   messages,
   personFilter,
   status,
+  isRefreshing,
   onClearFilter,
   onOpenThread,
+  onRefresh,
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
@@ -603,8 +615,10 @@ function InboxView({
   messages: InboxMessage[];
   personFilter: string | null;
   status: "loading" | "syncing" | "ready" | "error";
+  isRefreshing: boolean;
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
+  onRefresh: () => void;
 }) {
   return (
     <>
@@ -614,6 +628,15 @@ function InboxView({
           <h1>{inboxTitle}</h1>
         </div>
         <div className="pane-header-meta">
+          <button
+            className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
+            disabled={isRefreshing}
+            onClick={onRefresh}
+            type="button"
+          >
+            <span aria-hidden="true">↻</span>
+            {isRefreshing ? "Refreshing Gmail" : "Refresh"}
+          </button>
           {personFilter ? (
             <div className="filter-chip">
               <span className="filter-chip-label">Showing threads with</span>
@@ -636,7 +659,7 @@ function InboxView({
       </header>
 
       <section className="inbox-body" aria-live="polite">
-        {status === "loading" || status === "syncing" ? (
+        {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
             description={status === "syncing" ? "Reading your Gmail inbox and bringing the latest conversations into Orca." : "Checking your Orca session."}
             eyebrow={status === "syncing" ? "Syncing Gmail" : "Opening Orca"}
@@ -1081,6 +1104,13 @@ function InboxStatusState({
       <span>{description}</span>
     </div>
   );
+}
+
+export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox) {
+  const mailbox = mailboxes.find((item) => item.id === mailboxId);
+  return mailbox?.gmailLabel
+    ? messages.filter((message) => message.labels.includes(mailbox.gmailLabel!))
+    : messages;
 }
 
 type JsonSchema<T> = {
