@@ -158,6 +158,10 @@ textarea {
   opacity: 0.72;
 }
 
+.oauth-enter-button {
+  text-decoration: none;
+}
+
 .oauth-google-button svg {
   background: #fff;
   border-radius: 999px;

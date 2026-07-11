@@ -51,6 +51,10 @@ export type SessionCookieOptions = {
   secure?: boolean;
 };
 
+export function getSessionCookieOptions(): SessionCookieOptions {
+  return { secure: process.env.NODE_ENV === "production" };
+}
+
 export function buildSessionCookie(
   token: string,
   expiresAt: Date,

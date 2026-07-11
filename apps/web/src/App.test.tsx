@@ -48,9 +48,9 @@ describe("App", () => {
     try {
       const html = renderToStaticMarkup(<App />);
 
-      expect(html).toContain("Connect your Gmail inbox");
+      expect(html).toContain("Make room for the people.");
       expect(html).toContain("Continue with Google");
-      expect(html).toContain("Google setup checklist");
+      expect(html).toContain("What happens next");
     } finally {
       Object.defineProperty(globalThis, "window", {
         configurable: true,

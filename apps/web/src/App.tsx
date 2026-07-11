@@ -431,6 +431,8 @@ function GmailOAuthLoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
   const connectInFlightRef = useRef(false);
+  const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
+  const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
 
   async function connectGmail() {
     if (connectInFlightRef.current || connectStatus === "loading") {
@@ -443,12 +445,11 @@ function GmailOAuthLoginPage() {
     setErrorMessage(null);
 
     try {
-      const returnTo =
-        typeof window === "undefined"
-          ? "/settings/integrations/gmail"
-          : `${window.location.origin}/settings/integrations/gmail`;
+      const returnTo = typeof window === "undefined"
+        ? "/onboarding"
+        : `${window.location.origin}/${isLogin ? "onboarding" : "settings/integrations/gmail"}`;
       const response = await fetch(
-        `/v1/auth/gmail/connect?returnTo=${encodeURIComponent(returnTo)}`,
+        `/v1/auth/gmail/${isLogin ? "login" : "connect"}?returnTo=${encodeURIComponent(returnTo)}`,
         {
           credentials: "include",
         },
@@ -487,11 +488,18 @@ function GmailOAuthLoginPage() {
         </div>
 
         <div className="oauth-hero">
-          <p className="oauth-eyebrow">Gmail OAuth</p>
-          <h1 id="gmail-oauth-title">Connect your Gmail inbox</h1>
+          <p className="oauth-eyebrow">{isOnboarding ? "Your workspace is ready" : isLogin ? "A quieter way to email" : "Gmail connection"}</p>
+          <h1 id="gmail-oauth-title">
+            {isOnboarding && returnStatus?.kind === "success"
+              ? "Welcome aboard."
+              : isLogin
+                ? "Make room for the people."
+                : "Connect your Gmail inbox"}
+          </h1>
           <p>
-            Give Orca read-only access to Gmail so it can sync human mail without
-            sending, deleting, or modifying messages.
+            {isOnboarding && returnStatus?.kind === "success"
+              ? "Orca is now connected to your Gmail account. Your first inbox sync can begin when you enter your workspace."
+              : "Orca uses Google to sign you in, then asks only for read-only Gmail access to build a calmer inbox—never to send, delete, or modify your messages."}
           </p>
 
           {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -502,29 +510,38 @@ function GmailOAuthLoginPage() {
             </div>
           ) : null}
 
-          <button
-            className="oauth-google-button"
-            disabled={connectStatus === "loading"}
-            onClick={connectGmail}
-            type="button"
-          >
-            <GoogleGlyph />
-            <span>{connectStatus === "loading" ? "Opening Google..." : "Continue with Google"}</span>
-          </button>
+          {isOnboarding && returnStatus?.kind === "success" ? (
+            <a className="oauth-google-button oauth-enter-button" href="/">Enter Orca <span aria-hidden="true">→</span></a>
+          ) : (
+            <button
+              className="oauth-google-button"
+              disabled={connectStatus === "loading"}
+              onClick={connectGmail}
+              type="button"
+            >
+              <GoogleGlyph />
+              <span>{connectStatus === "loading" ? "Opening Google..." : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
+            </button>
+          )}
 
           <p className="oauth-fine-print">
-            Uses the `gmail.readonly` and `userinfo.email` scopes. You can revoke
-            access later in your Google Account security settings.
+            Uses `gmail.readonly` and `userinfo.email`. You can revoke access at any time in your Google Account security settings.
           </p>
         </div>
 
         <aside className="oauth-setup-panel" aria-label="Google OAuth setup checklist">
-          <h2>Google setup checklist</h2>
+          <h2>{isLogin ? "What happens next" : "Google setup checklist"}</h2>
           <ol>
-            <li>Create a Google Cloud OAuth client for a web application.</li>
-            <li>Add `http://localhost:5173` as an authorized JavaScript origin.</li>
-            <li>Add `http://localhost:3000/v1/auth/gmail/callback` as the redirect URI.</li>
-            <li>Copy the client ID and secret into `.env`, then restart the API.</li>
+            {isLogin ? <>
+              <li>Choose the Google account you want to bring to Orca.</li>
+              <li>Review the read-only permission on Google’s secure screen.</li>
+              <li>Return here to enter your new human-first inbox.</li>
+            </> : <>
+              <li>Create a Google Cloud OAuth client for a web application.</li>
+              <li>Add `http://localhost:5173` as an authorized JavaScript origin.</li>
+              <li>Add `http://localhost:3000/v1/auth/gmail/callback` as the redirect URI.</li>
+              <li>Copy the client ID and secret into `.env`, then restart the API.</li>
+            </>}
           </ol>
           <a href="/docs/gmail-oauth-setup.html">Open setup guide</a>
         </aside>
@@ -1104,7 +1121,7 @@ function isOAuthLoginRoute() {
     return false;
   }
 
-  return window.location.pathname === "/login" || window.location.pathname === "/settings/integrations/gmail";
+  return ["/login", "/onboarding", "/settings/integrations/gmail"].includes(window.location.pathname);
 }
 
 function readOAuthReturnStatus(): OAuthReturnStatus {

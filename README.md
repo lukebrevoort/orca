@@ -92,7 +92,7 @@ Local validation notes:
 
 ## Gmail OAuth Login
 
-The web app includes a Gmail connection page at `/login` and `/settings/integrations/gmail`.
+The web app includes a complete Google sign-in and Gmail connection flow at `/login`. It creates a pending, short-lived Orca session only to safely complete the OAuth return; the user account is promoted only after Google returns the verified account identity and Gmail grant. The callback then lands at `/onboarding`, where the user can enter Orca. Existing signed-in users can connect or reconnect an account at `/settings/integrations/gmail`.
 Selecting **Continue with Google** calls `/v1/auth/gmail/connect`, receives the Google
 authorization URL from the API, and redirects the browser into Google's OAuth consent flow.
 The callback returns to `/settings/integrations/gmail` with `status=success` or
