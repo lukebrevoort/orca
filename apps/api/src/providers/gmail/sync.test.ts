@@ -295,8 +295,8 @@ describe("syncGmailAccountPage", () => {
       });
 
       assert.deepEqual(sinceValues, [
-        "first:2026-07-01T12:00:00.000Z",
-        "page-2:2026-07-01T12:00:00.000Z",
+        "first:1970-01-01T00:00:00.000Z",
+        "page-2:1970-01-01T00:00:00.000Z",
       ]);
 
       const storedCursor = sqlite

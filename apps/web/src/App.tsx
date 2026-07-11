@@ -9,8 +9,6 @@ import {
 import type { InboxMessage, MailAccount } from "@orca/shared";
 import { inboxResponseSchema, meResponseSchema } from "@orca/shared";
 import {
-  demoAccount,
-  demoMessages,
   messageIncludesPerson,
   messageBodies,
 } from "./demo-data";
@@ -41,12 +39,6 @@ type OAuthReturnStatus =
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
 
-const pinnedPeople: PersonItem[] = [
-  { initials: "MC", name: "Maya Chen", context: "Launch notes", unread: true },
-  { initials: "JR", name: "Jon Rivera", context: "Product review" },
-  { initials: "AL", name: "Anika Lee", context: "Design direction" },
-];
-
 const mailboxes: MailboxItem[] = [
   { label: "Inbox", active: true },
   { label: "Sent" },
@@ -56,15 +48,30 @@ const mailboxes: MailboxItem[] = [
 
 export function App() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+  const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("orca-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (isOAuthLoginRoute()) return;
+    const abortController = new AbortController();
+    fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
+      .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
+      .catch(() => {
+        if (!abortController.signal.aborted) setAccess("signedout");
+      });
+    return () => abortController.abort();
+  }, []);
+
   if (isOAuthLoginRoute()) {
     return <GmailOAuthLoginPage />;
   }
+
+  if (access === "checking") return <SessionCheckingScreen />;
+  if (access === "signedout") return <LoginRequiredScreen />;
 
   return <InboxApp theme={theme} setTheme={setTheme} />;
 }
@@ -78,7 +85,7 @@ function InboxApp({
 }) {
   const [account, setAccount] = useState<MailAccount | null>(null);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
-  const [status, setStatus] = useState<"loading" | "ready">("loading");
+  const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -107,46 +114,30 @@ function InboxApp({
       setErrorMessage(null);
 
       try {
-        const [meResult, inboxResult] = await Promise.allSettled([
-          fetchJson("/v1/me", meResponseSchema, abortController.signal),
-          fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal),
-        ]);
+        const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
+        if (abortController.signal.aborted) return;
+        setAccount(currentAccount);
 
-        if (abortController.signal.aborted) {
-          return;
+        setStatus("syncing");
+        try {
+          await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
+        } catch (error) {
+          if (abortController.signal.aborted) return;
+          setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
         }
 
-        if (meResult.status === "fulfilled") {
-          setAccount(meResult.value);
-        }
-
-        if (inboxResult.status === "fulfilled") {
-          setAccount((currentAccount) => currentAccount ?? inboxResult.value.account);
-          setMessages(
-            inboxResult.value.messages.length > 0
-              ? inboxResult.value.messages
-              : demoMessages,
-          );
-          setStatus("ready");
-          return;
-        }
-
-        setAccount(demoAccount);
-        setMessages(demoMessages);
+        const inbox = await fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal);
+        if (abortController.signal.aborted) return;
+        setAccount(inbox.account);
+        setMessages(inbox.messages);
         setStatus("ready");
-        setErrorMessage(
-          meResult.status === "rejected"
-            ? getErrorMessage(meResult.reason)
-            : getErrorMessage(inboxResult.reason),
-        );
       } catch (error) {
-        if (abortController.signal.aborted) {
+        if (abortController.signal.aborted) return;
+        if (error instanceof ApiRequestError && error.status === 401) {
+          setStatus("signedout");
           return;
         }
-
-        setAccount(demoAccount);
-        setMessages(demoMessages);
-        setStatus("ready");
+        setStatus("error");
         setErrorMessage(getErrorMessage(error));
       }
     }
@@ -157,6 +148,8 @@ function InboxApp({
       abortController.abort();
     };
   }, []);
+
+  const pinnedPeople = useMemo(() => buildPinnedPeople(messages), [messages]);
 
   const visibleMessages = useMemo(() => {
     if (!personFilter) {
@@ -199,6 +192,10 @@ function InboxApp({
 
   const inboxTitle = personFilter ? personFilter : "Inbox";
   const inboxEyebrow = personFilter ? "Filtered inbox" : "Human inbox";
+
+  if (status === "signedout") {
+    return <LoginRequiredScreen />;
+  }
 
   function openCompose() {
     if (panelClosing) {
@@ -605,7 +602,7 @@ function InboxView({
   inboxTitle: string;
   messages: InboxMessage[];
   personFilter: string | null;
-  status: "loading" | "ready";
+  status: "loading" | "syncing" | "ready" | "error";
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
 }) {
@@ -639,12 +636,16 @@ function InboxView({
       </header>
 
       <section className="inbox-body" aria-live="polite">
-        {status === "loading" ? (
+        {status === "loading" || status === "syncing" ? (
           <InboxStatusState
-            description="Pulling your account and inbox list into Orca."
-            eyebrow="Loading inbox"
-            title="Connecting to the read-only API"
+            description={status === "syncing" ? "Reading your Gmail inbox and bringing the latest conversations into Orca." : "Checking your Orca session."}
+            eyebrow={status === "syncing" ? "Syncing Gmail" : "Opening Orca"}
+            title={status === "syncing" ? "Making room for your mail" : "Checking your key"}
           />
+        ) : null}
+
+        {status === "error" ? (
+          <InboxStatusState description={errorMessage ?? "Please try again."} eyebrow="Could not open inbox" title="Your mailbox is safe—Orca just could not reach it." />
         ) : null}
 
         {status === "ready" && messages.length === 0 ? (
@@ -699,9 +700,9 @@ function InboxView({
         ) : null}
       </section>
 
-      {errorMessage ? (
+      {errorMessage && status === "ready" ? (
         <p className="filter-chip-label" style={{ marginTop: 12 }}>
-          Previewing demo inbox — {errorMessage}
+          {errorMessage} <a className="inbox-reconnect-link" href="/settings/integrations/gmail">Reconnect Gmail</a>
         </p>
       ) : null}
     </>
@@ -1090,14 +1091,65 @@ async function fetchJson<T>(
   input: string,
   schema: JsonSchema<T>,
   signal?: AbortSignal,
+  init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, { signal });
+  const response = await fetch(input, { ...init, credentials: "include", signal });
 
   if (!response.ok) {
-    throw new Error(`Request failed with ${response.status} ${response.statusText}`.trim());
+    throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
   }
 
   return schema.parse(await response.json());
+}
+
+class ApiRequestError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
+}
+
+function buildPinnedPeople(messages: InboxMessage[]): PersonItem[] {
+  const seen = new Set<string>();
+  const people: PersonItem[] = [];
+  for (const message of messages) {
+    const name = message.from.name ?? message.from.email;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    people.push({
+      initials: name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+      name,
+      context: message.subject || "No subject",
+      unread: message.unread,
+    });
+    if (people.length === 3) break;
+  }
+  return people;
+}
+
+function LoginRequiredScreen() {
+  return (
+    <main className="oauth-page login-required-page">
+      <section className="login-required-shell">
+        <div className="oauth-brand"><span className="oauth-brand-mark">O</span><span>Orca</span></div>
+        <p className="oauth-eyebrow">A private workspace</p>
+        <h1>Your inbox waits for its person.</h1>
+        <p>Sign in with Google to open the Gmail account you connected to Orca.</p>
+        <a className="oauth-google-button oauth-enter-button" href="/login"><GoogleGlyph />Continue with Google</a>
+      </section>
+    </main>
+  );
+}
+
+function SessionCheckingScreen() {
+  return (
+    <main className="oauth-page login-required-page">
+      <section className="login-required-shell" aria-live="polite">
+        <div className="oauth-brand"><span className="oauth-brand-mark">O</span><span>Orca</span></div>
+        <p className="oauth-eyebrow">Opening your private workspace</p>
+        <h1>Checking your key.</h1>
+      </section>
+    </main>
+  );
 }
 
 async function readJsonObject(response: Response): Promise<Record<string, unknown>> {

@@ -162,6 +162,48 @@ textarea {
   text-decoration: none;
 }
 
+.login-required-page {
+  display: grid;
+  place-items: center;
+}
+
+.login-required-shell {
+  display: grid;
+  max-width: 680px;
+  min-height: 70vh;
+  place-content: center start;
+}
+
+.login-required-shell .oauth-brand {
+  left: auto;
+  position: relative;
+  top: auto;
+  margin-bottom: clamp(72px, 12vh, 130px);
+}
+
+.login-required-shell h1 {
+  font-family: var(--orca-font-display);
+  font-size: clamp(54px, 8vw, 96px);
+  font-weight: 400;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+  margin: 0;
+}
+
+.login-required-shell > p:not(.oauth-eyebrow) {
+  color: color-mix(in srgb, var(--orca-ink) 72%, transparent);
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 24px 0 0;
+  max-width: 500px;
+}
+
+.inbox-reconnect-link {
+  color: var(--orca-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .oauth-google-button svg {
   background: #fff;
   border-radius: 999px;

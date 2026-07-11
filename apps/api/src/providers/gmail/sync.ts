@@ -493,7 +493,7 @@ function resolveSyncCursorState(input: {
 
   return {
     pageToken: null,
-    startedAt: new Date(input.now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    startedAt: new Date(0).toISOString(),
   };
 }
 
