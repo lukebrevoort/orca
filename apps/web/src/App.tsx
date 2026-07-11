@@ -444,7 +444,7 @@ function GmailOAuthLoginPage() {
     try {
       const returnTo = typeof window === "undefined"
         ? "/onboarding"
-        : `${window.location.origin}/${isLogin ? "onboarding" : "settings/integrations/gmail"}`;
+        : `${window.location.origin}/${isLogin ? "onboarding" : ""}`;
       const response = await fetch(
         `/v1/auth/gmail/${isLogin ? "login" : "connect"}?returnTo=${encodeURIComponent(returnTo)}`,
         {

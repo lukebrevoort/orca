@@ -177,14 +177,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           );
         }
 
-        let result = await syncPage(db, { accountId: account.id, pageSize: 100 });
+        let result = await syncPage(db, { accountId: account.id, pageSize: 25 });
         let pages = 1;
         let emailCount = result.emailCount;
         let threadCount = result.threadCount;
         let labelCount = result.labelCount;
         let contactCount = result.contactCount;
         while (result.nextCursor && pages < 20) {
-          result = await syncPage(db, { accountId: account.id, pageSize: 100 });
+          result = await syncPage(db, { accountId: account.id, pageSize: 25 });
           pages += 1;
           emailCount += result.emailCount;
           threadCount += result.threadCount;
