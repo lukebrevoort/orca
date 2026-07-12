@@ -1115,25 +1115,20 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
 
   return (
     <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
-      <button aria-expanded={expanded} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
+      <button aria-expanded={expanded} aria-label="Rate sender" className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
         {compact ? "•••" : "Rate sender"}
       </button>
       {expanded ? (
         <section className="sender-attention-menu" role="dialog" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
             <div>
-              <p className="sender-attention-kicker">How should mail from {senderName} feel?</p>
-              <span>{address}</span>
+              <p className="sender-attention-kicker">Set delivery for <strong>{senderName}</strong></p>
+              <span>{address} · choose one, then save</span>
             </div>
             <button aria-label="Close sender rating" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
           </div>
           {status === "loading" ? <p>Loading current handling…</p> : null}
           {status !== "loading" ? <>
-            <p className="sender-attention-explainer" aria-live="polite">
-              {resolution?.rule
-                ? `You are seeing this because of a ${resolution.rule.scope} rule for ${resolution.rule.value}.`
-                : "You are seeing this because no sender rule is set yet; Orca is using its normal default."}
-            </p>
             <div className="sender-attention-choices">
               {(["notify", "focus", "normal", "quiet", "hidden"] as const).map((behavior) => (
                 <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => setSelectedBehavior(behavior)} type="button">
@@ -1143,7 +1138,7 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
             </div>
             <div className="sender-attention-actions">
               {domain ? <label className="sender-attention-domain"><input checked={applyToDomain} onChange={(event) => setApplyToDomain(event.target.checked)} type="checkbox" /> Apply to all {domain} mail</label> : null}
-              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : "Save choice"}</button>
+              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : "Save"}</button>
               {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Reset</button> : null}
             </div>
           </> : null}
