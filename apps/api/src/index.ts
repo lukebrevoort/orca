@@ -246,14 +246,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         ensureViewSettings(db, account.id);
         const current = db.select().from(attentionViewSettings).where(and(eq(attentionViewSettings.accountId, account.id), eq(attentionViewSettings.behavior, behavior.data))).get()!;
         const input = c.req.valid("json");
-        if (input.position !== undefined && input.position !== current.position) reorderViewSettings(db, account.id, current, input.position);
-        db.update(attentionViewSettings).set({
-          displayName: input.displayName ?? current.displayName,
-          icon: input.icon ?? current.icon,
-          color: input.color ?? current.color,
-          position: input.position ?? current.position,
-          updatedAt: new Date(),
-        }).where(eq(attentionViewSettings.id, current.id)).run();
+        updateViewSetting(db, account.id, current, input);
         const updated = db.select().from(attentionViewSettings).where(eq(attentionViewSettings.id, current.id)).get()!;
         return jsonWithSchema(c, attentionViewSettingSchema, toViewSetting(updated));
       } finally {
@@ -517,21 +510,36 @@ function toViewSetting(setting: ViewSettingRecord) {
   };
 }
 
-function reorderViewSettings(db: Database, accountId: string, current: ViewSettingRecord, nextPosition: number) {
+function updateViewSetting(
+  db: Database,
+  accountId: string,
+  current: ViewSettingRecord,
+  input: { displayName?: string; icon?: string; color?: string; position?: number },
+) {
+  const nextPosition = input.position ?? current.position;
   db.transaction((tx) => {
-    tx.update(attentionViewSettings).set({ position: -1 })
-      .where(eq(attentionViewSettings.id, current.id)).run();
-    if (nextPosition < current.position) {
-      for (let position = current.position - 1; position >= nextPosition; position -= 1) {
-        tx.update(attentionViewSettings).set({ position: position + 1 })
-          .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
-      }
-    } else {
-      for (let position = current.position + 1; position <= nextPosition; position += 1) {
-        tx.update(attentionViewSettings).set({ position: position - 1 })
-          .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
+    if (nextPosition !== current.position) {
+      tx.update(attentionViewSettings).set({ position: -1 })
+        .where(eq(attentionViewSettings.id, current.id)).run();
+      if (nextPosition < current.position) {
+        for (let position = current.position - 1; position >= nextPosition; position -= 1) {
+          tx.update(attentionViewSettings).set({ position: position + 1 })
+            .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
+        }
+      } else {
+        for (let position = current.position + 1; position <= nextPosition; position += 1) {
+          tx.update(attentionViewSettings).set({ position: position - 1 })
+            .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
+        }
       }
     }
+    tx.update(attentionViewSettings).set({
+      displayName: input.displayName ?? current.displayName,
+      icon: input.icon ?? current.icon,
+      color: input.color ?? current.color,
+      position: nextPosition,
+      updatedAt: new Date(),
+    }).where(eq(attentionViewSettings.id, current.id)).run();
   });
 }
 
