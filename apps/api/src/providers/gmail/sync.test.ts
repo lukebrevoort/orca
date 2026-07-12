@@ -251,7 +251,7 @@ describe("syncGmailAccountPage", () => {
 
         return {
           messageIds: ["msg-1"],
-          nextCursor: cursor ? null : "page-2",
+          nextCursor: cursor || since.getTime() > 0 ? null : "page-2",
         };
       },
 
@@ -294,9 +294,25 @@ describe("syncGmailAccountPage", () => {
         now: new Date("2026-07-09T15:30:00.000Z"),
       });
 
+      const completedCheckpoint = sqlite
+        .query("select last_synced_at from oauth_accounts where id = 'acct_gmail_1'")
+        .get() as { last_synced_at: number };
+
+      assert.equal(
+        new Date(completedCheckpoint.last_synced_at).toISOString(),
+        "2026-07-08T12:00:00.000Z",
+      );
+
+      await syncGmailAccountPage(db, {
+        accountId: "acct_gmail_1",
+        gmailClient,
+        now: new Date("2026-07-10T09:00:00.000Z"),
+      });
+
       assert.deepEqual(sinceValues, [
         "first:1970-01-01T00:00:00.000Z",
         "page-2:1970-01-01T00:00:00.000Z",
+        "first:2026-07-08T12:00:00.000Z",
       ]);
 
       const storedCursor = sqlite

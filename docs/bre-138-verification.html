@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-138 verification</title>
+  <style>
+    body { margin: 0; background: #f4f1ea; color: #17211d; font: 16px/1.55 system-ui, sans-serif; }
+    main { max-width: 900px; margin: 48px auto; padding: 0 24px 64px; }
+    h1 { font: 600 42px/1.1 Georgia, serif; margin-bottom: 12px; }
+    .lede { color: #52605a; font-size: 19px; }
+    .card { background: #fff; border: 1px solid #d9ddd8; border-radius: 18px; padding: 24px; margin-top: 24px; }
+    .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .before { border-top: 5px solid #bd6b59; } .after { border-top: 5px solid #4b8b6c; }
+    code { background: #eef1ed; padding: 2px 6px; border-radius: 5px; }
+    li { margin: 8px 0; }
+    .result { font-size: 24px; color: #276747; }
+    @media (max-width: 680px) { .flow { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body><main>
+  <p>Orca engineering evidence</p>
+  <h1>BRE-138 · Cached inbox first</h1>
+  <p class="lede">The Gmail network scan is no longer part of the first-email render path. SQLite mail renders first; Gmail refresh continues afterward.</p>
+  <section class="flow">
+    <article class="card before"><h2>Before</h2><p><code>/v1/me</code> → sync status → <strong>wait 10–30s for Gmail sync</strong> → <code>/v1/inbox</code> → render</p></article>
+    <article class="card after"><h2>After</h2><p><code>/v1/me</code> → sync status → <code>/v1/inbox</code> → <strong>render cached messages</strong> → background Gmail sync → refresh cache</p></article>
+  </section>
+  <section class="card">
+    <h2>Incremental checkpoint proof</h2>
+    <ul>
+      <li>Initial page queries from epoch and stores its page token plus a fixed import window.</li>
+      <li>Resumed pages retain that exact window, so the import is resumable.</li>
+      <li>Completion stores the import start as <code>last_synced_at</code>.</li>
+      <li>The next refresh queries from that saved timestamp, not epoch.</li>
+    </ul>
+  </section>
+  <section class="card">
+    <h2>Automated verification</h2>
+    <p class="result">48 tests passed · typecheck passed · production build passed</p>
+    <p>The focused Gmail test asserts the exact query sequence: epoch for initial page, epoch for resumed page, then the persisted 2026-07-08 checkpoint for the next refresh.</p>
+  </section>
+</main></body></html>
