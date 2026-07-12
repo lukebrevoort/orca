@@ -7,8 +7,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, InboxMessage, MailAccount, MailContact, ResolvedSenderAttention, SyncStatus, ThreadDetail } from "@orca/shared";
-import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, InboxMessage, MailAccount, MailContact, Pin, ResolvedSenderAttention, SyncStatus, ThreadDetail } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, inboxResponseSchema, meResponseSchema, pinSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -70,6 +70,19 @@ const mailboxes: MailboxItem[] = [
   { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
   { id: "all", label: "All mail", description: "Every message, by attention" },
 ];
+
+const demoCollections: Collection[] = [
+  { id: "collection_demo_work", accountId: demoAccount.id, name: "Orca launch", position: 0, threadIds: ["thread_1", "thread_4"], createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "collection_demo_life", accountId: demoAccount.id, name: "Life admin", position: 1, threadIds: ["thread_2", "thread_3"], createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+];
+
+const demoPins: Pin[] = [
+  { id: "pin_demo_sender", accountId: demoAccount.id, kind: "sender", targetId: "maya@example.com", label: "Maya Chen", position: 0, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_thread", accountId: demoAccount.id, kind: "thread", targetId: "thread_3", label: "Dinner on Sunday?", position: 1, createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+];
+
+const collectionsResponseSchema: JsonSchema<Collection[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => collectionSchema.parse(item)) : (() => { throw new Error("Collections response was not a list."); })() };
+const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => pinSchema.parse(item)) : (() => { throw new Error("Pins response was not a list."); })() };
 
 export function App() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
@@ -340,6 +353,11 @@ function InboxApp({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
+  const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
+  const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
+  const [organizationError, setOrganizationError] = useState<string | null>(null);
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -434,6 +452,22 @@ function InboxApp({
   }, [demoMode, refreshKey]);
 
   useEffect(() => {
+    if (demoMode || !account || status !== "ready") return;
+    const controller = new AbortController();
+    void Promise.all([
+      fetchJson("/v1/collections", collectionsResponseSchema, controller.signal),
+      fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
+    ]).then(([nextCollections, nextPins]) => {
+      if (controller.signal.aborted) return;
+      setCollections(nextCollections);
+      setPins(nextPins);
+    }).catch((error) => {
+      if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
+    });
+    return () => controller.abort();
+  }, [account, demoMode, status]);
+
+  useEffect(() => {
     const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
     if (demoMode) {
       setAttentionByAddress(Object.fromEntries(addresses.map((address) => [
@@ -455,21 +489,21 @@ function InboxApp({
     return () => controller.abort();
   }, [demoMode, messages, status]);
 
-  const pinnedPeople = useMemo(
-    () => buildPinnedPeople(applySenderAttention(messages, attentionByAddress)),
-    [attentionByAddress, messages],
-  );
-
   const mailboxMessages = useMemo(
-    () => getMessagesForMailbox(messages, activeMailbox, attentionByAddress),
-    [activeMailbox, attentionByAddress, messages],
+    () => {
+      const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
+      return activeCollection
+        ? messages.filter((message) => activeCollection.threadIds.includes(message.threadId))
+        : getMessagesForMailbox(messages, activeMailbox, attentionByAddress);
+    },
+    [activeCollectionId, activeMailbox, attentionByAddress, collections, messages],
   );
 
   const visibleMessages = useMemo(() => {
     let filtered = personFilter
       ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
       : mailboxMessages;
-    if (activeMailbox === "inbox" && inboxFilter !== "all") {
+    if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
         const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
         return behavior === inboxFilter;
@@ -479,7 +513,7 @@ function InboxApp({
       ...message,
       attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
     }));
-  }, [activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
+  }, [activeCollectionId, activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
 
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
@@ -548,11 +582,14 @@ function InboxApp({
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
+  const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
   const activeMailboxLabel = activeMailboxItem.label;
-  const inboxTitle = personFilter ? personFilter : activeMailboxLabel;
+  const inboxTitle = personFilter ? personFilter : activeCollection?.name ?? activeMailboxLabel;
   const inboxEyebrow = personFilter
-    ? `Filtered ${activeMailboxLabel.toLowerCase()}`
-    : activeMailboxItem.description;
+    ? `Filtered ${(activeCollection?.name ?? activeMailboxLabel).toLowerCase()}`
+    : activeCollection
+      ? `Collection · ${activeCollection.threadIds.length} ${activeCollection.threadIds.length === 1 ? "thread" : "threads"}`
+      : activeMailboxItem.description;
 
   if (status === "signedout") {
     return <LoginRequiredScreen />;
@@ -650,6 +687,7 @@ function InboxApp({
   function togglePersonFilter(name: string) {
     runUiTransition("content", () => {
       setPersonFilter((current) => (current === name ? null : name));
+      setActiveCollectionId(null);
       setSelectedThreadId(null);
       closePanel();
     });
@@ -658,10 +696,122 @@ function InboxApp({
   function selectMailbox(mailbox: Mailbox) {
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
+      setActiveCollectionId(null);
       setInboxFilter("all");
       setPersonFilter(null);
       setSelectedThreadId(null);
     });
+  }
+
+  function selectCollection(id: string) {
+    runUiTransition("content", () => {
+      setActiveCollectionId(id);
+      setPersonFilter(null);
+      setSelectedThreadId(null);
+      setInboxFilter("all");
+    });
+  }
+
+  async function createCollection(name: string, activate = true): Promise<Collection | null> {
+    const trimmed = name.trim();
+    if (!trimmed || !account) return null;
+    setOrganizationError(null);
+    try {
+      const created = demoMode
+        ? collectionSchema.parse({ id: `collection_demo_${Date.now()}`, accountId: account.id, name: trimmed, position: collections.length, threadIds: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+        : await fetchJson("/v1/collections", collectionSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: trimmed }) });
+      setCollections((current) => [...current, created]);
+      if (activate) setActiveCollectionId(created.id);
+      return created;
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+      return null;
+    }
+  }
+
+  async function updateCollection(collection: Collection, patch: { name?: string; position?: number }) {
+    setOrganizationError(null);
+    try {
+      if (demoMode) {
+        setCollections((current) => reorderItems(current.map((item) => item.id === collection.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item), collection.id, patch.position));
+      } else {
+        await fetchJson(`/v1/collections/${encodeURIComponent(collection.id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
+        setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
+      }
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function deleteCollection(collection: Collection) {
+    setOrganizationError(null);
+    try {
+      if (!demoMode) await fetchNoContent(`/v1/collections/${encodeURIComponent(collection.id)}`, { method: "DELETE" });
+      setCollections((current) => current.filter((item) => item.id !== collection.id).map((item, position) => ({ ...item, position })));
+      if (activeCollectionId === collection.id) setActiveCollectionId(null);
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function toggleCollectionMembership(collection: Collection, threadId: string) {
+    const hasThread = collection.threadIds.includes(threadId);
+    setOrganizationError(null);
+    try {
+      if (!demoMode) await fetchNoContent(`/v1/collections/${encodeURIComponent(collection.id)}/threads/${encodeURIComponent(threadId)}`, { method: hasThread ? "DELETE" : "PUT" }, !hasThread);
+      setCollections((current) => current.map((item) => item.id === collection.id ? {
+        ...item,
+        threadIds: hasThread ? item.threadIds.filter((id) => id !== threadId) : [...item.threadIds, threadId],
+        updatedAt: new Date().toISOString(),
+      } : item));
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function createPin(input: Pick<Pin, "kind" | "targetId" | "label">) {
+    if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return;
+    setOrganizationError(null);
+    try {
+      const created = demoMode
+        ? pinSchema.parse({ ...input, id: `pin_demo_${Date.now()}`, accountId: account.id, position: pins.length, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+        : await fetchJson("/v1/pins", pinSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+      setPins((current) => [...current, created]);
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function movePin(pin: Pin, direction: -1 | 1) {
+    const position = pin.position + direction;
+    if (position < 0 || position >= pins.length) return;
+    try {
+      if (demoMode) setPins((current) => reorderItems(current, pin.id, position));
+      else {
+        await fetchJson(`/v1/pins/${encodeURIComponent(pin.id)}`, pinSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
+        setPins(await fetchJson("/v1/pins", pinsResponseSchema));
+      }
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function deletePin(pin: Pin) {
+    try {
+      if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
+      setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  function selectPin(pin: Pin) {
+    if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
+    if (pin.kind === "sender") togglePersonFilter(pin.targetId);
+    if (pin.kind === "thread") {
+      const message = messages.find((item) => item.threadId === pin.targetId);
+      if (message) openThread(message);
+    }
   }
 
   function selectInboxFilter(filter: InboxFilter) {
@@ -738,11 +888,21 @@ function InboxApp({
             <span aria-hidden="true">⚙</span> Attention views
           </a>
 
-          <SidebarSection
-            activePerson={personFilter}
-            items={pinnedPeople}
-            onSelectPerson={togglePersonFilter}
-            title="Pinned People"
+          <OrganizationSidebar
+            activeCollectionId={activeCollectionId}
+            collections={collections}
+            currentView={activeMailboxItem}
+            error={organizationError}
+            onCreateCollection={createCollection}
+            onDeleteCollection={deleteCollection}
+            onDeletePin={deletePin}
+            onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
+            onMovePin={(pin, direction) => void movePin(pin, direction)}
+            onPinView={() => void createPin({ kind: "view", targetId: activeMailbox, label: activeMailboxLabel })}
+            onRenameCollection={(collection, name) => void updateCollection(collection, { name })}
+            onSelectCollection={selectCollection}
+            onSelectPin={selectPin}
+            pins={pins}
           />
         </aside>
 
@@ -765,6 +925,7 @@ function InboxApp({
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
+              isCollectionView={Boolean(activeCollection)}
               messages={visibleMessages}
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
@@ -776,11 +937,27 @@ function InboxApp({
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onInboxFilterChange={selectInboxFilter}
-              showInboxFilters={activeMailbox === "inbox" && !personFilter}
+              onOpenOrganizer={setOrganizerMessage}
+              showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
             />
           )}
         </section>
       </main>
+
+      {organizerMessage ? (
+        <ThreadOrganizer
+          collections={collections}
+          message={organizerMessage}
+          onClose={() => setOrganizerMessage(null)}
+          onCreateCollection={async (name) => {
+            const created = await createCollection(name, false);
+            if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
+          }}
+          onPin={(input) => void createPin(input)}
+          onToggleCollection={(collection) => void toggleCollectionMembership(collection, organizerMessage.threadId)}
+          pins={pins}
+        />
+      ) : null}
 
       {panelMode ? (
         <>
@@ -1016,6 +1193,7 @@ function InboxView({
   inboxEyebrow,
   inboxFilter,
   inboxTitle,
+  isCollectionView,
   messages,
   personFilter,
   status,
@@ -1026,6 +1204,7 @@ function InboxView({
   onRefresh,
   onAttentionChange,
   onInboxFilterChange,
+  onOpenOrganizer,
   showInboxFilters,
   rowRefs,
 }: {
@@ -1034,6 +1213,7 @@ function InboxView({
   inboxEyebrow: string;
   inboxFilter: InboxFilter;
   inboxTitle: string;
+  isCollectionView: boolean;
   messages: InboxMessage[];
   personFilter: string | null;
   status: "loading" | "syncing" | "ready" | "error";
@@ -1044,6 +1224,7 @@ function InboxView({
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
+  onOpenOrganizer: (message: InboxMessage) => void;
   showInboxFilters: boolean;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
@@ -1128,10 +1309,12 @@ function InboxView({
             description={
               personFilter
                 ? `No threads in your inbox include ${personFilter} yet.`
+                : isCollectionView
+                  ? "Use Keep on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
                 : "When synced mail arrives, your inbox list will appear here."
             }
-            eyebrow={personFilter ? "No matches" : "Inbox empty"}
-            title={personFilter ? "Nothing from this person" : "No messages yet"}
+            eyebrow={personFilter ? "No matches" : isCollectionView ? "Collection empty" : "Inbox empty"}
+            title={personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : "No messages yet"}
           />
         ) : null}
 
@@ -1175,6 +1358,9 @@ function InboxView({
                         </div>
                         <p>{message.snippet}</p>
                       </div>
+                    </button>
+                    <button className="keep-thread-button" onClick={() => onOpenOrganizer(message)} type="button">
+                      <span aria-hidden="true">＋</span> Keep
                     </button>
                     <SenderAttentionControl compact message={message} onBehaviorChange={onAttentionChange} />
                   </div>
@@ -1502,6 +1688,169 @@ function ContactGlyph({ variant }: { variant: number }) {
         </svg>
       );
   }
+}
+
+function OrganizationSidebar({
+  activeCollectionId,
+  collections,
+  currentView,
+  error,
+  onCreateCollection,
+  onDeleteCollection,
+  onDeletePin,
+  onMoveCollection,
+  onMovePin,
+  onPinView,
+  onRenameCollection,
+  onSelectCollection,
+  onSelectPin,
+  pins,
+}: {
+  activeCollectionId: string | null;
+  collections: Collection[];
+  currentView: MailboxItem;
+  error: string | null;
+  onCreateCollection: (name: string) => Promise<Collection | null>;
+  onDeleteCollection: (collection: Collection) => Promise<void>;
+  onDeletePin: (pin: Pin) => Promise<void>;
+  onMoveCollection: (collection: Collection, direction: -1 | 1) => void;
+  onMovePin: (pin: Pin, direction: -1 | 1) => void;
+  onPinView: () => void;
+  onRenameCollection: (collection: Collection, name: string) => void;
+  onSelectCollection: (id: string) => void;
+  onSelectPin: (pin: Pin) => void;
+  pins: Pin[];
+}) {
+  const [addingCollection, setAddingCollection] = useState(false);
+  const [collectionName, setCollectionName] = useState("");
+
+  async function submitCollection(event: React.FormEvent) {
+    event.preventDefault();
+    if (!collectionName.trim()) return;
+    await onCreateCollection(collectionName);
+    setCollectionName("");
+    setAddingCollection(false);
+  }
+
+  return (
+    <section className="keep-zone" aria-labelledby="keep-zone-title">
+      <header className="keep-zone-heading">
+        <div><span aria-hidden="true">◇</span><h2 id="keep-zone-title">Keep</h2></div>
+        <small>Optional</small>
+      </header>
+      <p className="keep-zone-note">A personal layer. Nothing moves out of your inbox.</p>
+
+      <div className="keep-group">
+        <div className="keep-group-heading">
+          <h3>Pins</h3>
+          <button aria-label={`Pin ${currentView.label} view`} disabled={pins.some((pin) => pin.kind === "view" && pin.targetId === currentView.id)} onClick={onPinView} title={`Pin ${currentView.label}`} type="button">＋</button>
+        </div>
+        {pins.length ? (
+          <div className="keep-list">
+            {pins.map((pin, index) => (
+              <div className="keep-row" key={pin.id}>
+                <button className="keep-row-main" onClick={() => onSelectPin(pin)} type="button">
+                  <span className={`pin-kind pin-kind-${pin.kind}`} aria-hidden="true">{pin.kind === "sender" ? "@" : pin.kind === "thread" ? "↗" : "◫"}</span>
+                  <span><strong>{pin.label}</strong><small>{pin.kind}</small></span>
+                </button>
+                <div className="keep-row-actions">
+                  <button aria-label={`Move ${pin.label} up`} disabled={index === 0} onClick={() => onMovePin(pin, -1)} type="button">↑</button>
+                  <button aria-label={`Move ${pin.label} down`} disabled={index === pins.length - 1} onClick={() => onMovePin(pin, 1)} type="button">↓</button>
+                  <button aria-label={`Remove ${pin.label} pin`} onClick={() => void onDeletePin(pin)} type="button">×</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="keep-empty">Pin a view, person, or conversation for quick return.</p>}
+      </div>
+
+      <div className="keep-group collection-group">
+        <div className="keep-group-heading">
+          <h3>Collections</h3>
+          <button aria-expanded={addingCollection} aria-label="New collection" onClick={() => setAddingCollection((current) => !current)} title="New collection" type="button">＋</button>
+        </div>
+        {addingCollection ? (
+          <form className="collection-create" onSubmit={submitCollection}>
+            <input aria-label="Collection name" autoFocus maxLength={80} onChange={(event) => setCollectionName(event.target.value)} placeholder="Name this collection" value={collectionName} />
+            <button disabled={!collectionName.trim()} type="submit">Add</button>
+          </form>
+        ) : null}
+        {collections.length ? (
+          <div className="keep-list">
+            {collections.map((collection, index) => (
+              <div className={`keep-row collection-row${activeCollectionId === collection.id ? " collection-row-active" : ""}`} key={collection.id}>
+                <button aria-current={activeCollectionId === collection.id ? "page" : undefined} className="keep-row-main" onClick={() => onSelectCollection(collection.id)} type="button">
+                  <span className="collection-mark" aria-hidden="true" />
+                  <span><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
+                </button>
+                <div className="keep-row-actions">
+                  <button aria-label={`Move ${collection.name} up`} disabled={index === 0} onClick={() => onMoveCollection(collection, -1)} type="button">↑</button>
+                  <button aria-label={`Move ${collection.name} down`} disabled={index === collections.length - 1} onClick={() => onMoveCollection(collection, 1)} type="button">↓</button>
+                  <button aria-label={`More options for ${collection.name}`} onClick={() => {
+                    const nextName = window.prompt("Rename collection", collection.name);
+                    if (nextName?.trim() && nextName.trim() !== collection.name) onRenameCollection(collection, nextName.trim());
+                  }} type="button">···</button>
+                  <button aria-label={`Delete ${collection.name}`} onClick={() => {
+                    if (window.confirm(`Delete “${collection.name}”? Messages and Gmail labels will stay untouched.`)) void onDeleteCollection(collection);
+                  }} type="button">×</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="keep-empty">Create a collection when a project deserves its own record.</p>}
+      </div>
+      {error ? <p className="keep-error" role="alert">{error}</p> : null}
+    </section>
+  );
+}
+
+function ThreadOrganizer({ collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+  collections: Collection[];
+  message: InboxMessage;
+  onClose: () => void;
+  onCreateCollection: (name: string) => Promise<void>;
+  onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
+  onToggleCollection: (collection: Collection) => void;
+  pins: Pin[];
+}) {
+  const [name, setName] = useState("");
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
+  const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
+  return (
+    <div className="organizer-layer" role="presentation">
+      <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
+      <section aria-labelledby="organizer-title" aria-modal="true" className="thread-organizer" role="dialog">
+        <header>
+          <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
+          <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
+        </header>
+        <div className="organizer-thread-preview"><span>Conversation</span><strong>{message.subject || "(no subject)"}</strong><small>{message.from.name ?? message.from.email}</small></div>
+        <div className="organizer-pin-grid">
+          <button aria-pressed={senderPinned} disabled={senderPinned} onClick={() => onPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })} type="button"><span>@</span><strong>{senderPinned ? "Person pinned" : "Pin person"}</strong><small>{message.from.email}</small></button>
+          <button aria-pressed={threadPinned} disabled={threadPinned} onClick={() => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" })} type="button"><span>↗</span><strong>{threadPinned ? "Thread pinned" : "Pin thread"}</strong><small>Return straight here</small></button>
+        </div>
+        <div className="organizer-collections">
+          <h3>Add to collections</h3>
+          {collections.map((collection) => {
+            const included = collection.threadIds.includes(message.threadId);
+            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
+          })}
+          <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
+            <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />
+            <button disabled={!name.trim()} type="submit">Create</button>
+          </form>
+        </div>
+        <footer>Threads can live in several collections. Attention placement never changes.</footer>
+      </section>
+    </div>
+  );
 }
 
 function SidebarSection({
@@ -1847,6 +2196,21 @@ async function fetchJson<T>(
   return schema.parse(await response.json());
 }
 
+async function fetchNoContent(input: string, init: RequestInit, _acceptsJson = false) {
+  const response = await fetch(input, { ...init, credentials: "include" });
+  if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
+}
+
+function reorderItems<T extends { id: string; position: number }>(items: T[], id: string, requestedPosition?: number) {
+  if (requestedPosition === undefined) return items;
+  const currentIndex = items.findIndex((item) => item.id === id);
+  if (currentIndex < 0) return items;
+  const next = [...items];
+  const [item] = next.splice(currentIndex, 1);
+  next.splice(Math.max(0, Math.min(requestedPosition, next.length)), 0, item);
+  return next.map((entry, position) => ({ ...entry, position }));
+}
+
 class ApiRequestError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -1925,13 +2289,14 @@ function isAttentionSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/attention-views";
 }
 
-export function isDevPreviewPath(pathname: string, isDevelopment: boolean) {
-  return isDevelopment && pathname === "/dev/inbox";
+export function isDevPreviewPath(pathname: string, isDevelopment: boolean, isDemoBuild = false) {
+  return (isDevelopment && pathname === "/dev/inbox")
+    || (isDemoBuild && (pathname === "/" || pathname === "/dev/inbox"));
 }
 
 function isDevPreviewRoute() {
   return typeof window !== "undefined"
-    && isDevPreviewPath(window.location.pathname, import.meta.env.DEV);
+    && isDevPreviewPath(window.location.pathname, import.meta.env.DEV, import.meta.env.VITE_ORCA_DEMO === "true");
 }
 
 function readOAuthReturnStatus(): OAuthReturnStatus {
