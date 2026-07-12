@@ -337,6 +337,13 @@ textarea {
   padding: 28px 0;
 }
 
+.attention-unsaved-note {
+  color: var(--orca-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 12px 0 -1px;
+}
+
 .attention-error { color: #c75b4b; }
 .attention-error button { background: transparent; border-radius: 6px; margin-left: 8px; padding: 4px 7px; }
 

@@ -77,7 +77,7 @@ export function App() {
   if (access === "signedout") return <LoginRequiredScreen />;
 
   if (isAttentionSettingsRoute()) {
-    return <AttentionViewSettingsPage theme={theme} setTheme={setTheme} />;
+    return <AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} />;
   }
 
   return <InboxApp theme={theme} setTheme={setTheme} />;
@@ -105,9 +105,11 @@ function getAttentionIconGlyph(icon: string) {
 }
 
 function AttentionViewSettingsPage({
+  onSessionExpired,
   theme,
   setTheme,
 }: {
+  onSessionExpired: () => void;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
@@ -116,6 +118,8 @@ function AttentionViewSettingsPage({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [savedBehavior, setSavedBehavior] = useState<string | null>(null);
+  const [dirtyBehaviors, setDirtyBehaviors] = useState<Set<string>>(() => new Set());
+  const hasUnsavedChanges = dirtyBehaviors.size > 0;
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -130,6 +134,10 @@ function AttentionViewSettingsPage({
       })
       .catch((error) => {
         if (abortController.signal.aborted) return;
+        if (error instanceof ApiRequestError && error.status === 401) {
+          onSessionExpired();
+          return;
+        }
         setStatus("error");
         setErrorMessage(getErrorMessage(error));
       });
@@ -139,6 +147,7 @@ function AttentionViewSettingsPage({
 
   function updateDraft(behavior: string, patch: Partial<AttentionViewSetting>) {
     setSavedBehavior(null);
+    setDirtyBehaviors((current) => new Set(current).add(behavior));
     setSettings((current) => current.map((setting) => (
       setting.behavior === behavior ? { ...setting, ...patch } : setting
     )));
@@ -164,8 +173,17 @@ function AttentionViewSettingsPage({
         },
       );
       setSettings((current) => current.map((item) => item.behavior === updated.behavior ? updated : item));
+      setDirtyBehaviors((current) => {
+        const next = new Set(current);
+        next.delete(updated.behavior);
+        return next;
+      });
       setSavedBehavior(updated.behavior);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        onSessionExpired();
+        return;
+      }
       setErrorMessage(`Could not save ${setting.displayName}. ${getErrorMessage(error)}`);
     } finally {
       setSaving(null);
@@ -189,6 +207,10 @@ function AttentionViewSettingsPage({
       setSettings(reorderedSettings);
       setSavedBehavior(updated.behavior);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
+        onSessionExpired();
+        return;
+      }
       setErrorMessage(`Could not move ${setting.displayName}. ${getErrorMessage(error)}`);
     } finally {
       setSaving(null);
@@ -225,6 +247,8 @@ function AttentionViewSettingsPage({
             <span>{status === "ready" ? `${settings.length} views` : ""}</span>
           </div>
 
+          {hasUnsavedChanges ? <p className="attention-unsaved-note" role="status">Save your edits before changing the order.</p> : null}
+
           {status === "loading" ? <div className="attention-loading">Loading your attention views…</div> : null}
           {status === "error" ? <div className="attention-error" role="alert">{errorMessage ?? "Could not load your attention views."} <button onClick={() => window.location.reload()} type="button">Try again</button></div> : null}
           {status === "ready" ? settings.map((setting, index) => (
@@ -238,23 +262,23 @@ function AttentionViewSettingsPage({
                 <div className="attention-setting-fields">
                   <label>
                     <span>View name</span>
-                    <input aria-label={`${setting.behavior} view name`} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { displayName: event.target.value })} value={setting.displayName} />
+                    <input aria-label={`${setting.behavior} view name`} disabled={saving !== null} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { displayName: event.target.value })} value={setting.displayName} />
                   </label>
                   <label>
                     <span>Icon label</span>
-                    <input aria-label={`${setting.behavior} icon`} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { icon: event.target.value })} value={setting.icon} />
+                    <input aria-label={`${setting.behavior} icon`} disabled={saving !== null} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { icon: event.target.value })} value={setting.icon} />
                   </label>
                   <label className="attention-color-field">
                     <span>Color</span>
-                    <input aria-label={`${setting.behavior} color`} onChange={(event) => updateDraft(setting.behavior, { color: event.target.value })} type="color" value={setting.color} />
+                    <input aria-label={`${setting.behavior} color`} disabled={saving !== null} onChange={(event) => updateDraft(setting.behavior, { color: event.target.value })} type="color" value={setting.color} />
                     <code>{setting.color}</code>
                   </label>
                 </div>
               </div>
               <div className="attention-setting-actions">
                 <div className="attention-move-controls" aria-label={`Move ${setting.displayName}`}>
-                  <button aria-label={`Move ${setting.displayName} up`} disabled={index === 0 || saving !== null} onClick={() => void moveSetting(setting, -1)} type="button">↑</button>
-                  <button aria-label={`Move ${setting.displayName} down`} disabled={index === settings.length - 1 || saving !== null} onClick={() => void moveSetting(setting, 1)} type="button">↓</button>
+                  <button aria-label={`Move ${setting.displayName} up`} disabled={index === 0 || saving !== null || hasUnsavedChanges} onClick={() => void moveSetting(setting, -1)} type="button">↑</button>
+                  <button aria-label={`Move ${setting.displayName} down`} disabled={index === settings.length - 1 || saving !== null || hasUnsavedChanges} onClick={() => void moveSetting(setting, 1)} type="button">↓</button>
                 </div>
                 <button className="attention-save-button" disabled={saving !== null || !setting.displayName.trim() || !setting.icon.trim()} onClick={() => void saveSetting(setting)} type="button">
                   {saving === setting.behavior ? "Saving…" : savedBehavior === setting.behavior ? "Saved" : "Save"}
