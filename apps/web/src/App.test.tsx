@@ -58,8 +58,8 @@ describe("App", () => {
   });
 
   test("separates attention treatments into recoverable inbox views", () => {
+    expect(getMessagesForMailbox(demoMessages, "inbox")).toHaveLength(5);
     expect(getMessagesForMailbox(demoMessages, "focus")).toHaveLength(3);
-    expect(getMessagesForMailbox(demoMessages, "normal")).toHaveLength(2);
     expect(getMessagesForMailbox(demoMessages, "quiet")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "hidden")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);

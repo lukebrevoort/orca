@@ -951,6 +951,53 @@ textarea {
   width: 22px;
 }
 
+.inbox-filter-bar {
+  align-items: center;
+  border-bottom: 1px solid var(--orca-border);
+  display: flex;
+  gap: 18px;
+  min-height: 54px;
+  padding: 8px 28px;
+}
+
+.inbox-filter-bar > span {
+  color: var(--orca-muted);
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.inbox-filter-bar > div {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.inbox-filter-bar button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--orca-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 11px;
+  white-space: nowrap;
+}
+
+.inbox-filter-bar button:hover {
+  background: var(--orca-surface-hover);
+  color: var(--orca-ink);
+}
+
+.inbox-filter-bar button[aria-pressed="true"] {
+  background: var(--orca-ink);
+  color: var(--orca-bg);
+}
+
 .inbox-body {
   display: flex;
   flex: 1;

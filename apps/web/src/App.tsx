@@ -19,7 +19,8 @@ import { getContactSignature, type ContactSignature } from "./contact-signature"
 
 type Theme = "light" | "dark";
 
-type Mailbox = "focus" | "normal" | "quiet" | "hidden" | "all";
+type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all";
+type InboxFilter = "all" | "notify" | "focus" | "normal";
 
 type MailboxItem = {
   id: Mailbox;
@@ -46,8 +47,8 @@ const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
 
 const mailboxes: MailboxItem[] = [
+  { id: "inbox", label: "Inbox", description: "What deserves your attention now" },
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
-  { id: "normal", label: "Flow", description: "Your everyday correspondence" },
   { id: "quiet", label: "Quiet", description: "Available when you choose" },
   { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
   { id: "all", label: "All mail", description: "Every message, by attention" },
@@ -322,7 +323,8 @@ function InboxApp({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
-  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("focus");
+  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -441,14 +443,20 @@ function InboxApp({
   );
 
   const visibleMessages = useMemo(() => {
-    const filtered = personFilter
+    let filtered = personFilter
       ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
       : mailboxMessages;
+    if (activeMailbox === "inbox" && inboxFilter !== "all") {
+      filtered = filtered.filter((message) => {
+        const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+        return behavior === inboxFilter;
+      });
+    }
     return sortMessagesByAttention(filtered, attentionByAddress).map((message) => ({
       ...message,
       attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
     }));
-  }, [attentionByAddress, mailboxMessages, personFilter]);
+  }, [activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
 
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
@@ -572,6 +580,7 @@ function InboxApp({
 
   function selectMailbox(mailbox: Mailbox) {
     setActiveMailbox(mailbox);
+    setInboxFilter("all");
     setPersonFilter(null);
     setSelectedThreadId(null);
   }
@@ -667,6 +676,7 @@ function InboxApp({
               account={account}
               errorMessage={errorMessage}
               inboxEyebrow={inboxEyebrow}
+              inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
               messages={visibleMessages}
               onClearFilter={() => setPersonFilter(null)}
@@ -677,6 +687,8 @@ function InboxApp({
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
+              onInboxFilterChange={setInboxFilter}
+              showInboxFilters={activeMailbox === "inbox" && !personFilter}
             />
           )}
         </section>
@@ -914,6 +926,7 @@ function InboxView({
   account,
   errorMessage,
   inboxEyebrow,
+  inboxFilter,
   inboxTitle,
   messages,
   personFilter,
@@ -924,10 +937,13 @@ function InboxView({
   onOpenThread,
   onRefresh,
   onAttentionChange,
+  onInboxFilterChange,
+  showInboxFilters,
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
   inboxEyebrow: string;
+  inboxFilter: InboxFilter;
   inboxTitle: string;
   messages: InboxMessage[];
   personFilter: string | null;
@@ -938,7 +954,15 @@ function InboxView({
   onOpenThread: (message: InboxMessage) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
+  onInboxFilterChange: (filter: InboxFilter) => void;
+  showInboxFilters: boolean;
 }) {
+  const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
+    { id: "all", label: "Everything" },
+    { id: "notify", label: "Notify me" },
+    { id: "focus", label: "Keep in focus" },
+    { id: "normal", label: "Flow" },
+  ];
   return (
     <>
       <header className="pane-header">
@@ -977,6 +1001,24 @@ function InboxView({
           <SyncStatusChip status={syncStatus?.accounts.find((item) => item.id === account?.id) ?? null} />
         </div>
       </header>
+
+      {showInboxFilters ? (
+        <nav aria-label="Filter Inbox by attention treatment" className="inbox-filter-bar">
+          <span>Within Inbox</span>
+          <div role="group" aria-label="Inbox attention filters">
+            {inboxFilters.map((filter) => (
+              <button
+                aria-pressed={inboxFilter === filter.id}
+                key={filter.id}
+                onClick={() => onInboxFilterChange(filter.id)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      ) : null}
 
       <section className="inbox-body" aria-live="polite">
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
@@ -1613,6 +1655,7 @@ export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailb
   if (mailboxId === "all") return messages;
   return messages.filter((message) => {
     const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+    if (mailboxId === "inbox") return behavior !== "quiet" && behavior !== "hidden";
     return mailboxId === "focus" ? behavior === "notify" || behavior === "focus" : behavior === mailboxId;
   });
 }
