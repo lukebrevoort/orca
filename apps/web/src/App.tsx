@@ -559,17 +559,19 @@ function InboxApp({
   async function updateSenderAttention(address: string, behavior?: AttentionBehavior) {
     if (behavior) {
       setAttentionByAddress((current) => ({ ...current, [address]: behavior }));
-      return;
+      return behavior;
     }
     if (demoMode) {
       setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
-      return;
+      return "normal" as const;
     }
     try {
       const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
       setAttentionByAddress((current) => ({ ...current, [address]: resolved.behavior }));
+      return resolved.behavior;
     } catch {
       setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
+      return "normal" as const;
     }
   }
 
@@ -636,7 +638,7 @@ function InboxApp({
           {selectedThreadId && selectedThreadLatestMessage ? (
             <ThreadView
               messages={selectedThreadMessages}
-              onAttentionChange={(address, behavior) => void updateSenderAttention(address, behavior)}
+              onAttentionChange={updateSenderAttention}
               onBack={closeThread}
               title={selectedThreadLatestMessage.subject || "(no subject)"}
             />
@@ -654,7 +656,7 @@ function InboxApp({
               syncStatus={syncStatus}
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
-              onAttentionChange={(address, behavior) => void updateSenderAttention(address, behavior)}
+              onAttentionChange={updateSenderAttention}
             />
           )}
         </section>
@@ -915,7 +917,7 @@ function InboxView({
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
   onRefresh: () => void;
-  onAttentionChange: (address: string, behavior?: AttentionBehavior) => void;
+  onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
 }) {
   return (
     <>
@@ -1053,7 +1055,7 @@ function ThreadView({
   messages: InboxMessage[];
   title: string;
   onBack: () => void;
-  onAttentionChange: (address: string, behavior?: AttentionBehavior) => void;
+  onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
 }) {
   return (
     <article className="thread-view">
@@ -1090,7 +1092,7 @@ function ThreadView({
   );
 }
 
-function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => void }) {
+function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
@@ -1141,14 +1143,12 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
     (selectedChoice ?? menuRef.current?.querySelector<HTMLButtonElement>(".sender-attention-choices button:not([disabled])"))?.focus();
     function dismissOnOutsidePointer(event: PointerEvent) {
       if (controlRef.current && !controlRef.current.contains(event.target as Node)) {
-        setExpanded(false);
-        triggerRef.current?.focus();
+        closeAndRestoreFocus();
       }
     }
     function dismissOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setExpanded(false);
-        triggerRef.current?.focus();
+        closeAndRestoreFocus();
       }
     }
     window.addEventListener("pointerdown", dismissOnOutsidePointer);
@@ -1164,15 +1164,23 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
     menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]')?.focus();
   }, [expanded, selectedBehavior, status]);
 
+  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
+    setExpanded(false);
+    requestAnimationFrame(() => {
+      if (behavior === "hidden" || !triggerRef.current?.isConnected) {
+        document.querySelector<HTMLButtonElement>(".message-row")?.focus();
+      } else {
+        triggerRef.current.focus();
+      }
+    });
+  }
+
   async function saveRule(behavior: AttentionViewSetting["behavior"]) {
     if (!address) return;
     setSelectedBehavior(behavior);
     if (isDevPreviewRoute()) {
-      onBehaviorChange(address, behavior);
-      setExpanded(false);
-      requestAnimationFrame(() => behavior === "hidden"
-        ? document.querySelector<HTMLButtonElement>(".message-row")?.focus()
-        : triggerRef.current?.focus());
+      const appliedBehavior = await onBehaviorChange(address, behavior);
+      closeAndRestoreFocus(appliedBehavior);
       return;
     }
     setStatus("saving");
@@ -1187,11 +1195,8 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
         body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
       });
       setResolution(null);
-      onBehaviorChange(address, behavior);
-      setExpanded(false);
-      requestAnimationFrame(() => behavior === "hidden"
-        ? document.querySelector<HTMLButtonElement>(".message-row")?.focus()
-        : triggerRef.current?.focus());
+      const appliedBehavior = await onBehaviorChange(address, behavior);
+      closeAndRestoreFocus(appliedBehavior);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1207,9 +1212,8 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
       const response = await fetch(`/v1/attention/rules/${resolution.rule.id}`, { method: "DELETE", credentials: "include" });
       if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
       setResolution(null);
-      onBehaviorChange(address);
-      setExpanded(false);
-      triggerRef.current?.focus();
+      const inheritedBehavior = await onBehaviorChange(address);
+      closeAndRestoreFocus(inheritedBehavior);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1219,14 +1223,14 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
 
   return (
     <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
-      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} ref={triggerRef} type="button">
+      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} type="button">
         <span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}
       </button>
       {expanded ? (
         <section className="sender-attention-menu" id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
             <p className="sender-attention-kicker">All mail from <strong>{senderName}</strong></p>
-            <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
+            <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => closeAndRestoreFocus()} type="button">×</button>
           </div>
           {status === "loading" ? <p>Loading…</p> : null}
           {status !== "loading" ? <>
