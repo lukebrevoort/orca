@@ -29,6 +29,20 @@
       "when": 1783872000000,
       "tag": "0003_google_login",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783872000001,
+      "tag": "0004_hard_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783872000002,
+      "tag": "0005_yellow_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

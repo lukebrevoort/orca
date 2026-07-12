@@ -116,6 +116,50 @@ export const normalizedMessageSchema = inboxMessageSchema
   .strict();
 export type NormalizedMessage = z.infer<typeof normalizedMessageSchema>;
 
+export const mailAttachmentSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    filename: nonEmptyStringSchema,
+    mimeType: nonEmptyStringSchema,
+    size: z.number().int().nonnegative(),
+  })
+  .strict();
+export type MailAttachment = z.infer<typeof mailAttachmentSchema>;
+
+export const threadReadStateSchema = z.enum(["read", "unread"]);
+export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
+
+export const threadAttentionSchema = z
+  .object({
+    hasUnread: z.boolean(),
+    hasStarred: z.boolean(),
+    hasDraft: z.boolean(),
+    humanSignal: z.number().int().nullable(),
+  })
+  .strict();
+export type ThreadAttention = z.infer<typeof threadAttentionSchema>;
+
+export const threadDetailMessageSchema = normalizedMessageSchema
+  .omit({ threadId: true, raw: true })
+  .extend({
+    attachments: z.array(mailAttachmentSchema),
+  })
+  .strict();
+export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
+
+export const threadDetailSchema = z
+  .object({
+    account: mailAccountSchema,
+    thread: normalizedThreadSchema.extend({
+      participants: z.array(mailContactSchema),
+      readState: threadReadStateSchema,
+      attention: threadAttentionSchema,
+    }).strict(),
+    messages: z.array(threadDetailMessageSchema),
+  })
+  .strict();
+export type ThreadDetail = z.infer<typeof threadDetailSchema>;
+
 export const authUserSchema = z
   .object({
     id: nonEmptyStringSchema,
@@ -144,6 +188,13 @@ export const inboxQuerySchema = z
   })
   .strict();
 export type InboxQuery = z.infer<typeof inboxQuerySchema>;
+
+export const threadQuerySchema = z
+  .object({
+    accountId: nonEmptyStringSchema,
+  })
+  .strict();
+export type ThreadQuery = z.infer<typeof threadQuerySchema>;
 
 const providerPageFields = {
   items: z.array(z.unknown()),

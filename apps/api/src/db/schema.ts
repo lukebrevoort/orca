@@ -120,6 +120,9 @@ export const emails = sqliteTable(
     providerMessageId: text("provider_message_id").notNull(),
     fromAddress: text("from_address"),
     fromName: text("from_name"),
+    toRecipients: text("to_recipients"),
+    ccRecipients: text("cc_recipients"),
+    bccRecipients: text("bcc_recipients"),
     subject: text("subject"),
     snippet: text("snippet"),
     bodyText: text("body_text"),
@@ -170,6 +173,33 @@ export const emailLabels = sqliteTable(
       table.labelId,
     ),
     labelIdx: index("email_labels_label_idx").on(table.labelId),
+  }),
+);
+
+export const emailAttachments = sqliteTable(
+  "email_attachments",
+  {
+    id: text("id").primaryKey(),
+    emailId: text("email_id")
+      .notNull()
+      .references(() => emails.id, { onDelete: "cascade" }),
+    providerAttachmentId: text("provider_attachment_id").notNull(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    emailIdx: index("email_attachments_email_idx").on(table.emailId),
+    providerAttachmentUniqueIdx: uniqueIndex("email_attachments_provider_attachment_unique_idx").on(
+      table.emailId,
+      table.providerAttachmentId,
+    ),
   }),
 );
 

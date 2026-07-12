@@ -8,13 +8,14 @@ import { readProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   contacts,
+  emailAttachments,
   emailLabels,
   emails,
   labels,
   oauthAccounts,
   threads,
 } from "../../db/schema.ts";
-import { normalizeGmailLabel, normalizeGmailMessage } from "./normalizer.ts";
+import { normalizeGmailLabel, normalizeGmailMessage, type NormalizedGmailMessage } from "./normalizer.ts";
 import { createGmailClient, GmailApiError, type GmailClient } from "./client.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
@@ -122,6 +123,7 @@ export async function syncGmailAccountPage(
     upsertLabels(tx, account.id, persistedLabels, nowDate);
     upsertThreads(tx, normalizedMessages, nowDate);
     upsertEmails(tx, normalizedMessages, nowDate);
+    upsertAttachments(tx, normalizedMessages, nowDate);
     upsertEmailLabels(tx, normalizedMessages, persistedLabels, nowDate);
     upsertContacts(tx, account.id, normalizedMessages, nowDate);
     refreshThreads(tx, threadIds, nowDate);
@@ -341,6 +343,9 @@ function upsertEmails(
         providerMessageId: message.providerMessageId,
         fromAddress: message.from.email || null,
         fromName: message.from.name,
+        toRecipients: JSON.stringify(message.to),
+        ccRecipients: JSON.stringify(message.cc),
+        bccRecipients: JSON.stringify(message.bcc),
         subject: message.subject,
         snippet: message.snippet,
         bodyText: message.bodyText,
@@ -359,6 +364,9 @@ function upsertEmails(
           threadId: message.threadId,
           fromAddress: message.from.email || null,
           fromName: message.from.name,
+          toRecipients: JSON.stringify(message.to),
+          ccRecipients: JSON.stringify(message.cc),
+          bccRecipients: JSON.stringify(message.bcc),
           subject: message.subject,
           snippet: message.snippet,
           bodyText: message.bodyText,
@@ -372,6 +380,32 @@ function upsertEmails(
         },
       })
       .run();
+  }
+}
+
+function upsertAttachments(
+  db: DatabaseExecutor,
+  normalizedMessages: NormalizedGmailMessage[],
+  now: Date,
+) {
+  for (const message of normalizedMessages) {
+    db.delete(emailAttachments).where(eq(emailAttachments.emailId, message.id)).run();
+
+    for (const attachment of message.attachments) {
+      const providerAttachmentId = attachment.id.split(":attachment:").at(-1);
+      if (!providerAttachmentId) continue;
+
+      db.insert(emailAttachments).values({
+        id: attachment.id,
+        emailId: message.id,
+        providerAttachmentId,
+        filename: attachment.filename,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+        createdAt: now,
+        updatedAt: now,
+      }).run();
+    }
   }
 }
 

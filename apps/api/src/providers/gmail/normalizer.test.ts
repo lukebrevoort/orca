@@ -65,6 +65,26 @@ describe("Gmail normalizer", () => {
     assert.deepEqual(normalized.from, { name: null, email: "news@example.com" });
   });
 
+  test("extracts attachment metadata without fetching attachment content", () => {
+    const normalized = normalizeGmailMessage({
+      ...gmailMessageFixture,
+      payload: {
+        ...gmailMessageFixture.payload,
+        parts: [
+          ...(gmailMessageFixture.payload?.parts ?? []),
+          { mimeType: "application/pdf", filename: "notes.pdf", body: { attachmentId: "attachment_1", size: 42 } },
+        ],
+      },
+    }, { accountId: "acct_123" });
+
+    assert.deepEqual(normalized.attachments, [{
+      id: "gmail:acct_123:msg_123:attachment:attachment_1",
+      filename: "notes.pdf",
+      mimeType: "application/pdf",
+      size: 42,
+    }]);
+  });
+
   test("maps normalized messages to a normalized thread", () => {
     const message = normalizeGmailMessage(gmailMessageFixture, {
       accountId: "acct_123",

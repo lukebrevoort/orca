@@ -10,6 +10,7 @@ export {
   inboxResponseSchema,
   mailAccountPageSchema,
   mailAccountSchema,
+  mailAttachmentSchema,
   mailContactSchema,
   mailProviderSchema,
   meResponseSchema,
@@ -23,6 +24,11 @@ export {
   providerPageShapeSchema,
   syncStateSchema,
   syncStatusSchema,
+  threadAttentionSchema,
+  threadDetailMessageSchema,
+  threadDetailSchema,
+  threadQuerySchema,
+  threadReadStateSchema,
 } from "./schemas.ts";
 
 export type {
@@ -33,6 +39,7 @@ export type {
   InboxQuery,
   InboxResponse,
   MailAccount,
+  MailAttachment,
   MailAccountPage,
   MailContact,
   MailProvider,
@@ -48,4 +55,9 @@ export type {
   ProviderPage,
   SyncState,
   SyncStatus,
+  ThreadAttention,
+  ThreadDetail,
+  ThreadDetailMessage,
+  ThreadReadState,
+  ThreadQuery,
 } from "./schemas.ts";

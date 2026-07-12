@@ -6,6 +6,7 @@ export type GmailHeader = {
 export type GmailMessagePartBody = {
   data?: string;
   size?: number;
+  attachmentId?: string;
 };
 
 export type GmailMessagePart = {
