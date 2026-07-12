@@ -50,6 +50,13 @@ bun run build
 bun run test
 ```
 
+Run the focused API smoke test (session auth, Gmail sync trigger, and a seeded
+inbox response):
+
+```bash
+bun run test:smoke
+```
+
 ## Database Foundation
 
 The API workspace now includes a Drizzle + SQLite persistence foundation for
