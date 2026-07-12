@@ -25,11 +25,13 @@ type GmailAccountRecord = {
   id: string;
   provider: string;
   syncCursor: string | null;
+  lastSyncedAt: Date | null;
 };
 
 type SyncCursorState = {
   pageToken: string | null;
   startedAt: string;
+  checkpointAt: string;
 };
 
 export type GmailSyncResult = {
@@ -82,6 +84,7 @@ export async function syncGmailAccountPage(
 
   const syncState = resolveSyncCursorState({
     explicitCursor: options.cursor,
+    lastSyncedAt: account.lastSyncedAt,
     now,
     storedCursor: account.syncCursor,
   });
@@ -135,9 +138,13 @@ export async function syncGmailAccountPage(
           ? JSON.stringify({
               pageToken: page.nextCursor,
               startedAt: syncState.startedAt,
+              checkpointAt: syncState.checkpointAt,
             } satisfies SyncCursorState)
           : null,
-        lastSyncedAt: nowDate,
+        // A completed page sequence advances the durable high-water mark. While
+        // pagination is in progress we keep the previous checkpoint so a failed
+        // import can safely resume without skipping mail.
+        lastSyncedAt: page.nextCursor ? account.lastSyncedAt : new Date(syncState.checkpointAt),
         updatedAt: nowDate,
       })
       .where(eq(oauthAccounts.id, account.id))
@@ -177,6 +184,7 @@ function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRec
       id: oauthAccounts.id,
       provider: oauthAccounts.provider,
       syncCursor: oauthAccounts.syncCursor,
+      lastSyncedAt: oauthAccounts.lastSyncedAt,
     })
     .from(oauthAccounts)
     .where(eq(oauthAccounts.id, accountId))
@@ -546,6 +554,7 @@ function buildContactId(accountId: string, email: string) {
 
 function resolveSyncCursorState(input: {
   explicitCursor?: string | null;
+  lastSyncedAt: Date | null;
   now: Date;
   storedCursor: string | null;
 }): SyncCursorState {
@@ -553,6 +562,7 @@ function resolveSyncCursorState(input: {
     return {
       pageToken: input.explicitCursor,
       startedAt: input.now.toISOString(),
+      checkpointAt: input.now.toISOString(),
     };
   }
 
@@ -565,12 +575,14 @@ function resolveSyncCursorState(input: {
     return {
       pageToken: input.storedCursor,
       startedAt: input.now.toISOString(),
+      checkpointAt: input.now.toISOString(),
     };
   }
 
   return {
     pageToken: null,
-    startedAt: new Date(0).toISOString(),
+    startedAt: input.lastSyncedAt?.toISOString() ?? new Date(0).toISOString(),
+    checkpointAt: input.now.toISOString(),
   };
 }
 
@@ -585,6 +597,9 @@ function parseStoredSyncCursor(value: string): SyncCursorState | null {
       return {
         pageToken: parsed.pageToken,
         startedAt: parsed.startedAt,
+        checkpointAt: typeof parsed.checkpointAt === "string" && !Number.isNaN(Date.parse(parsed.checkpointAt))
+          ? parsed.checkpointAt
+          : parsed.startedAt,
       };
     }
   } catch {

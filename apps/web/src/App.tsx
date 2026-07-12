@@ -354,7 +354,7 @@ function InboxApp({
     const abortController = new AbortController();
 
     async function loadInbox() {
-      setStatus(messages.length > 0 ? "syncing" : "loading");
+      setStatus(messages.length > 0 ? "ready" : "loading");
       setErrorMessage(null);
 
       try {
@@ -363,20 +363,15 @@ function InboxApp({
         setAccount(currentAccount);
         setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
 
-        setStatus("syncing");
-        try {
-          await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
-          setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
-        } catch (error) {
-          if (abortController.signal.aborted) return;
-          setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
-        }
-
         const inbox = await fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal);
         if (abortController.signal.aborted) return;
         setAccount(inbox.account);
         setMessages(inbox.messages);
         setStatus("ready");
+
+        // Cached SQLite mail is now visible. Refresh Gmail without putting the
+        // network round trip on the inbox's first-render path.
+        void refreshGmailInBackground();
       } catch (error) {
         if (abortController.signal.aborted) return;
         if (error instanceof ApiRequestError && error.status === 401) {
@@ -385,6 +380,23 @@ function InboxApp({
         }
         setStatus("error");
         setErrorMessage(getErrorMessage(error));
+      }
+    }
+
+    async function refreshGmailInBackground() {
+      try {
+        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
+        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
+        const [nextStatus, refreshedInbox] = await Promise.all([
+          fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
+          fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal),
+        ]);
+        if (abortController.signal.aborted) return;
+        setSyncStatus(nextStatus);
+        setMessages(refreshedInbox.messages);
+      } catch (error) {
+        if (abortController.signal.aborted) return;
+        setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
       }
     }
 
