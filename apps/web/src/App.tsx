@@ -1024,8 +1024,11 @@ function ThreadView({
 function SenderAttentionControl({ message, compact = false }: { message: InboxMessage; compact?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
+  const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
+  const [applyToDomain, setApplyToDomain] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const controlRef = useRef<HTMLDivElement>(null);
   const address = message.from.email.trim().toLowerCase();
   const domain = address.split("@")[1] ?? "";
   const senderName = message.from.name ?? address;
@@ -1038,6 +1041,7 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
       .then((nextResolution) => {
         if (!controller.signal.aborted) {
           setResolution(nextResolution);
+          setSelectedBehavior(nextResolution.behavior);
           setStatus("idle");
         }
       })
@@ -1050,7 +1054,28 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
     return () => controller.abort();
   }, [address, expanded, resolution]);
 
-  async function saveRule(scope: "address" | "domain", behavior: AttentionViewSetting["behavior"]) {
+  useEffect(() => {
+    if (!expanded) return;
+    function dismissOnOutsidePointer(event: PointerEvent) {
+      if (controlRef.current && !controlRef.current.contains(event.target as Node)) {
+        setExpanded(false);
+      }
+    }
+    function dismissOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setExpanded(false);
+    }
+    window.addEventListener("pointerdown", dismissOnOutsidePointer);
+    window.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      window.removeEventListener("pointerdown", dismissOnOutsidePointer);
+      window.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [expanded]);
+
+  async function saveRule() {
+    if (!selectedBehavior) return;
+    const scope = applyToDomain ? "domain" : "address";
+    const behavior = selectedBehavior;
     const value = scope === "address" ? address : domain;
     if (!value) return;
     setStatus("saving");
@@ -1089,34 +1114,41 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
   }
 
   return (
-    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}`}>
+    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
       <button aria-expanded={expanded} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
-        {compact ? "•••" : "Sender controls"}
+        {compact ? "•••" : "Rate sender"}
       </button>
       {expanded ? (
-        <div className="sender-attention-menu" role="dialog" aria-label={`Mail handling for ${senderName}`}>
-          <p className="sender-attention-kicker">When mail arrives from</p>
-          <strong>{senderName}</strong>
-          <span>{address}</span>
+        <section className="sender-attention-menu" role="dialog" aria-label={`Mail handling for ${senderName}`}>
+          <div className="sender-attention-heading">
+            <div>
+              <p className="sender-attention-kicker">How should mail from {senderName} feel?</p>
+              <span>{address}</span>
+            </div>
+            <button aria-label="Close sender rating" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
+          </div>
           {status === "loading" ? <p>Loading current handling…</p> : null}
           {status !== "loading" ? <>
-            <p className="sender-attention-explainer">
+            <p className="sender-attention-explainer" aria-live="polite">
               {resolution?.rule
                 ? `You are seeing this because of a ${resolution.rule.scope} rule for ${resolution.rule.value}.`
                 : "You are seeing this because no sender rule is set yet; Orca is using its normal default."}
             </p>
             <div className="sender-attention-choices">
               {(["notify", "focus", "normal", "quiet", "hidden"] as const).map((behavior) => (
-                <button aria-pressed={resolution?.behavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule("address", behavior)} type="button">
+                <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => setSelectedBehavior(behavior)} type="button">
                   {behavior}
                 </button>
               ))}
             </div>
-            {domain ? <button className="sender-attention-domain" disabled={status === "saving"} onClick={() => void saveRule("domain", resolution?.behavior ?? "normal")} type="button">Also apply to {domain}</button> : null}
-            {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Reset to default</button> : null}
+            <div className="sender-attention-actions">
+              {domain ? <label className="sender-attention-domain"><input checked={applyToDomain} onChange={(event) => setApplyToDomain(event.target.checked)} type="checkbox" /> Apply to all {domain} mail</label> : null}
+              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : "Save choice"}</button>
+              {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Reset</button> : null}
+            </div>
           </> : null}
           {status === "error" ? <p className="sender-attention-error" role="alert">Could not update handling. {errorMessage}</p> : null}
-        </div>
+        </section>
       ) : null}
     </div>
   );
