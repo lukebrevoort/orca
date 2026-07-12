@@ -938,6 +938,7 @@ function InboxApp({
               onAttentionChange={updateSenderAttention}
               onInboxFilterChange={selectInboxFilter}
               onOpenOrganizer={setOrganizerMessage}
+              onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
             />
           )}
@@ -1205,6 +1206,7 @@ function InboxView({
   onAttentionChange,
   onInboxFilterChange,
   onOpenOrganizer,
+  onRemoveFromCollection,
   showInboxFilters,
   rowRefs,
 }: {
@@ -1225,6 +1227,7 @@ function InboxView({
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
+  onRemoveFromCollection?: (message: InboxMessage) => void;
   showInboxFilters: boolean;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
@@ -1359,8 +1362,12 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                     </button>
-                    <button className="keep-thread-button" onClick={() => onOpenOrganizer(message)} type="button">
-                      <span aria-hidden="true">＋</span> Keep
+                    <button
+                      className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
+                      onClick={() => onRemoveFromCollection ? onRemoveFromCollection(message) : onOpenOrganizer(message)}
+                      type="button"
+                    >
+                      <span aria-hidden="true">{onRemoveFromCollection ? "−" : "＋"}</span> {onRemoveFromCollection ? "Remove" : "Keep"}
                     </button>
                     <SenderAttentionControl compact message={message} onBehaviorChange={onAttentionChange} />
                   </div>
@@ -1724,6 +1731,15 @@ function OrganizationSidebar({
   const [addingCollection, setAddingCollection] = useState(false);
   const [collectionName, setCollectionName] = useState("");
 
+  useEffect(() => {
+    const closeMenus = (event: PointerEvent) => {
+      if ((event.target as HTMLElement).closest(".keep-row-menu")) return;
+      document.querySelectorAll<HTMLDetailsElement>(".keep-row-menu[open]").forEach((menu) => { menu.open = false; });
+    };
+    document.addEventListener("pointerdown", closeMenus);
+    return () => document.removeEventListener("pointerdown", closeMenus);
+  }, []);
+
   async function submitCollection(event: React.FormEvent) {
     event.preventDefault();
     if (!collectionName.trim()) return;
@@ -1743,7 +1759,7 @@ function OrganizationSidebar({
       <div className="keep-group">
         <div className="keep-group-heading">
           <h3>Pins</h3>
-          <button aria-label={`Pin ${currentView.label} view`} disabled={pins.some((pin) => pin.kind === "view" && pin.targetId === currentView.id)} onClick={onPinView} title={`Pin ${currentView.label}`} type="button">＋</button>
+          <button className="keep-group-action" disabled={pins.some((pin) => pin.kind === "view" && pin.targetId === currentView.id)} onClick={onPinView} type="button"><span aria-hidden="true">＋</span>{pins.some((pin) => pin.kind === "view" && pin.targetId === currentView.id) ? "View pinned" : `Pin ${currentView.label}`}</button>
         </div>
         {pins.length ? (
           <div className="keep-list">
@@ -1753,11 +1769,14 @@ function OrganizationSidebar({
                   <span className={`pin-kind pin-kind-${pin.kind}`} aria-hidden="true">{pin.kind === "sender" ? "@" : pin.kind === "thread" ? "↗" : "◫"}</span>
                   <span><strong>{pin.label}</strong><small>{pin.kind}</small></span>
                 </button>
-                <div className="keep-row-actions">
-                  <button aria-label={`Move ${pin.label} up`} disabled={index === 0} onClick={() => onMovePin(pin, -1)} type="button">↑</button>
-                  <button aria-label={`Move ${pin.label} down`} disabled={index === pins.length - 1} onClick={() => onMovePin(pin, 1)} type="button">↓</button>
-                  <button aria-label={`Remove ${pin.label} pin`} onClick={() => void onDeletePin(pin)} type="button">×</button>
-                </div>
+                <details className="keep-row-menu">
+                  <summary aria-label={`Options for ${pin.label}`}>•••</summary>
+                  <div onClick={(event) => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}>
+                    <button disabled={index === 0} onClick={() => onMovePin(pin, -1)} type="button">↑ Move up</button>
+                    <button disabled={index === pins.length - 1} onClick={() => onMovePin(pin, 1)} type="button">↓ Move down</button>
+                    <button className="keep-menu-danger" onClick={() => void onDeletePin(pin)} type="button">× Remove pin</button>
+                  </div>
+                </details>
               </div>
             ))}
           </div>
@@ -1767,7 +1786,7 @@ function OrganizationSidebar({
       <div className="keep-group collection-group">
         <div className="keep-group-heading">
           <h3>Collections</h3>
-          <button aria-expanded={addingCollection} aria-label="New collection" onClick={() => setAddingCollection((current) => !current)} title="New collection" type="button">＋</button>
+          <button aria-expanded={addingCollection} className="keep-group-action" onClick={() => setAddingCollection((current) => !current)} type="button"><span aria-hidden="true">＋</span>New collection</button>
         </div>
         {addingCollection ? (
           <form className="collection-create" onSubmit={submitCollection}>
@@ -1783,17 +1802,20 @@ function OrganizationSidebar({
                   <span className="collection-mark" aria-hidden="true" />
                   <span><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
                 </button>
-                <div className="keep-row-actions">
-                  <button aria-label={`Move ${collection.name} up`} disabled={index === 0} onClick={() => onMoveCollection(collection, -1)} type="button">↑</button>
-                  <button aria-label={`Move ${collection.name} down`} disabled={index === collections.length - 1} onClick={() => onMoveCollection(collection, 1)} type="button">↓</button>
-                  <button aria-label={`More options for ${collection.name}`} onClick={() => {
-                    const nextName = window.prompt("Rename collection", collection.name);
-                    if (nextName?.trim() && nextName.trim() !== collection.name) onRenameCollection(collection, nextName.trim());
-                  }} type="button">···</button>
-                  <button aria-label={`Delete ${collection.name}`} onClick={() => {
-                    if (window.confirm(`Delete “${collection.name}”? Messages and Gmail labels will stay untouched.`)) void onDeleteCollection(collection);
-                  }} type="button">×</button>
-                </div>
+                <details className="keep-row-menu">
+                  <summary aria-label={`Options for ${collection.name}`}>•••</summary>
+                  <div onClick={(event) => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}>
+                    <button disabled={index === 0} onClick={() => onMoveCollection(collection, -1)} type="button">↑ Move up</button>
+                    <button disabled={index === collections.length - 1} onClick={() => onMoveCollection(collection, 1)} type="button">↓ Move down</button>
+                    <button onClick={() => {
+                      const nextName = window.prompt("Rename collection", collection.name);
+                      if (nextName?.trim() && nextName.trim() !== collection.name) onRenameCollection(collection, nextName.trim());
+                    }} type="button">✎ Rename</button>
+                    <button className="keep-menu-danger" onClick={() => {
+                      if (window.confirm(`Delete “${collection.name}”? Messages and Gmail labels will stay untouched.`)) void onDeleteCollection(collection);
+                    }} type="button">× Delete</button>
+                  </div>
+                </details>
               </div>
             ))}
           </div>
