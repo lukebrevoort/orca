@@ -92,6 +92,18 @@ const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
   },
 };
 
+const attentionIconGlyphs: Record<string, string> = {
+  bell: "●",
+  sparkles: "✦",
+  inbox: "↓",
+  moon: "◒",
+  "eye-off": "—",
+};
+
+function getAttentionIconGlyph(icon: string) {
+  return attentionIconGlyphs[icon.toLowerCase()] ?? (icon.trim().slice(0, 1).toUpperCase() || "•");
+}
+
 function AttentionViewSettingsPage({
   theme,
   setTheme,
@@ -221,7 +233,7 @@ function AttentionViewSettingsPage({
               <div className="attention-setting-main">
                 <div className="attention-setting-preview">
                   <span className="attention-setting-dot" />
-                  <span>{setting.icon || "•"}</span>
+                  <span aria-hidden="true" className="attention-setting-glyph">{getAttentionIconGlyph(setting.icon)}</span>
                 </div>
                 <div className="attention-setting-fields">
                   <label>
