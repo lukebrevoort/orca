@@ -57,10 +57,11 @@ describe("App", () => {
     }
   });
 
-  test("separates Gmail system labels into functional mailbox tabs", () => {
-    expect(getMessagesForMailbox(demoMessages, "inbox")).toHaveLength(6);
-    expect(getMessagesForMailbox(demoMessages, "sent")).toHaveLength(1);
-    expect(getMessagesForMailbox(demoMessages, "spam")).toHaveLength(0);
+  test("separates attention treatments into recoverable inbox views", () => {
+    expect(getMessagesForMailbox(demoMessages, "focus")).toHaveLength(3);
+    expect(getMessagesForMailbox(demoMessages, "normal")).toHaveLength(2);
+    expect(getMessagesForMailbox(demoMessages, "quiet")).toHaveLength(1);
+    expect(getMessagesForMailbox(demoMessages, "hidden")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
   });
 
@@ -77,8 +78,11 @@ describe("App", () => {
 
     expect(applySenderAttention(all, { "maya@example.com": "hidden" }).some((message) => message.from.email === "maya@example.com")).toBe(false);
     const quiet = applySenderAttention(all, { "maya@example.com": "quiet" });
-    expect(quiet.slice(-historical.length - 1).every((message) => message.from.email === "maya@example.com")).toBe(true);
+    expect(quiet.filter((message) => message.from.email === "maya@example.com").map((message) => message.receivedAt))
+      .toEqual([...historical, future].map((message) => message.receivedAt).sort().reverse());
     const priority = applySenderAttention(all, { "maya@example.com": "focus" });
-    expect(priority.slice(0, historical.length + 1).every((message) => message.from.email === "maya@example.com")).toBe(true);
+    const lastMaya = priority.map((message) => message.from.email).lastIndexOf("maya@example.com");
+    const firstNormal = priority.findIndex((message) => message.attentionBehavior === "normal");
+    expect(lastMaya).toBeLessThan(firstNormal);
   });
 });

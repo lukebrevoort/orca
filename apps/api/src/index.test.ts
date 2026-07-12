@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { emailAttachments, emails, oauthAccounts, threads, users } from "./db/schema.ts";
+import { emailAttachments, emails, oauthAccounts, senderAttentionRules, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -103,6 +103,49 @@ describe("Orca API", () => {
       assert.equal(unknown.status, 404);
       const missingAccount = await testApp.request("/v1/threads/thread_1", { headers: { cookie: `orca_session=${session.token}` } });
       assert.equal(missingAccount.status, 400);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("filters and deterministically sorts explainable attention views", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-inbox-test-"));
+    const dbPath = join(tempDir, "attention.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com", displayName: "Luke" }).run();
+      db.insert(oauthAccounts).values({ id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" }).run();
+      db.insert(threads).values(["bank", "family", "news", "hidden"].map((id) => ({ id: `thread_${id}`, accountId: "acct_1", providerThreadId: id, subject: id, latestReceivedAt: new Date("2026-07-08T13:00:00.000Z"), messageCount: 1, isRead: false }))).run();
+      db.insert(emails).values([
+        { id: "email_bank", accountId: "acct_1", threadId: "thread_bank", providerMessageId: "bank", fromAddress: "alerts@bank.example", subject: "Bank", receivedAt: new Date("2026-07-08T12:00:00.000Z"), isRead: false, humanSignal: 0 },
+        { id: "email_family", accountId: "acct_1", threadId: "thread_family", providerMessageId: "family", fromAddress: "family@example.com", subject: "Family", receivedAt: new Date("2026-07-08T11:00:00.000Z"), isRead: false, humanSignal: 10 },
+        { id: "email_news", accountId: "acct_1", threadId: "thread_news", providerMessageId: "news", fromAddress: "daily@news.example", subject: "News", receivedAt: new Date("2026-07-08T14:00:00.000Z"), isRead: false, humanSignal: 0 },
+        { id: "email_hidden", accountId: "acct_1", threadId: "thread_hidden", providerMessageId: "hidden", fromAddress: "robot@hidden.example", subject: "Hidden", receivedAt: new Date("2026-07-08T15:00:00.000Z"), isRead: false, humanSignal: 0 },
+      ]).run();
+      const now = new Date("2026-07-08T16:00:00.000Z");
+      db.insert(senderAttentionRules).values([
+        { id: "rule_bank", accountId: "acct_1", scope: "address", value: "alerts@bank.example", behavior: "focus", source: "user_choice", createdAt: now, updatedAt: now },
+        { id: "rule_family", accountId: "acct_1", scope: "address", value: "family@example.com", behavior: "notify", source: "user_choice", createdAt: now, updatedAt: now },
+        { id: "rule_news", accountId: "acct_1", scope: "domain", value: "news.example", behavior: "quiet", source: "user_choice", createdAt: now, updatedAt: now },
+        { id: "rule_hidden", accountId: "acct_1", scope: "domain", value: "hidden.example", behavior: "hidden", source: "user_choice", createdAt: now, updatedAt: now },
+      ]).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const request = (view: string) => testApp.request(`/v1/inbox?view=${view}`, { headers: { cookie: `orca_session=${session.token}` } });
+
+      const focus = await (await request("focus")).json();
+      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["email_family", "email_bank"]);
+      assert.equal(focus.messages[0].humanSignal, 10);
+      assert.equal(focus.messages[1].humanSignal, 0);
+      assert.deepEqual(focus.counts, { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 });
+      assert.deepEqual((await (await request("quiet")).json()).messages.map((message: { id: string }) => message.id), ["email_news"]);
+      assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden"]);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

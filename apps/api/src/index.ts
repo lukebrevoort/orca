@@ -6,6 +6,7 @@ import { cors } from "hono/cors";
 import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
+  type AttentionBehavior,
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
@@ -282,7 +283,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      c.req.valid("query");
+      const { view } = c.req.valid("query");
       const { db, sqlite } = dbFactory();
       try {
         const account = getConnectedAccount(db, c.get("auth").userId);
@@ -299,6 +300,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           snippet: emails.snippet,
           receivedAt: emails.receivedAt,
           isRead: emails.isRead,
+          humanSignal: emails.humanSignal,
           labelName: labels.name,
         }).from(emails)
           .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
@@ -307,7 +309,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           .orderBy(desc(emails.receivedAt))
           .limit(100)
           .all();
-        const byId = new Map<string, { id: string; providerMessageId: string; threadId: string; fromAddress: string | null; fromName: string | null; subject: string | null; snippet: string | null; receivedAt: Date | null; isRead: boolean; labels: string[] }>();
+        const byId = new Map<string, { id: string; providerMessageId: string; threadId: string; fromAddress: string | null; fromName: string | null; subject: string | null; snippet: string | null; receivedAt: Date | null; isRead: boolean; humanSignal: number | null; labels: string[] }>();
         for (const row of rows) {
           const message = byId.get(row.id) ?? {
             ...row,
@@ -316,9 +318,26 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           if (row.labelName) message.labels.push(row.labelName);
           byId.set(row.id, message);
         }
+        const rules = listSenderRules(db, account.id);
+        const resolved = [...byId.values()].map((message) => ({
+          ...message,
+          attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
+        }));
+        const counts = {
+          focus: resolved.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
+          normal: resolved.filter((message) => message.attentionBehavior === "normal").length,
+          quiet: resolved.filter((message) => message.attentionBehavior === "quiet").length,
+          hidden: resolved.filter((message) => message.attentionBehavior === "hidden").length,
+          all: resolved.length,
+        };
+        const filtered = resolved.filter((message) => matchesAttentionView(message.attentionBehavior, view));
+        const attentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
+        filtered.sort((a, b) => attentionRank[a.attentionBehavior] - attentionRank[b.attentionBehavior]
+          || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
+          || a.id.localeCompare(b.id));
         return jsonWithSchema(c, inboxResponseSchema, {
           account: toMailAccount(account),
-          messages: [...byId.values()].map((message) => ({
+          messages: filtered.map((message) => ({
             id: message.id,
             provider: "gmail",
             providerMessageId: message.providerMessageId,
@@ -329,7 +348,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
             unread: !message.isRead,
             labels: message.labels,
+            attentionBehavior: message.attentionBehavior,
+            humanSignal: message.humanSignal,
           })),
+          counts,
           nextCursor: null,
         });
       } finally {
@@ -547,6 +569,21 @@ function listSenderRules(db: Database, accountId: string) {
   return db.select().from(senderAttentionRules)
     .where(eq(senderAttentionRules.accountId, accountId))
     .orderBy(asc(senderAttentionRules.scope), asc(senderAttentionRules.value)).all();
+}
+
+function resolveAttentionBehavior(address: string | null, rules: SenderRuleRecord[]): AttentionBehavior {
+  const normalized = address?.trim().toLowerCase() ?? "";
+  const addressRule = rules.find((rule) => rule.scope === "address" && rule.value === normalized);
+  if (addressRule) return attentionBehaviorSchema.parse(addressRule.behavior);
+  const domain = normalized.split("@")[1];
+  return attentionBehaviorSchema.parse(rules.find((rule) => rule.scope === "domain" && rule.value === domain)?.behavior ?? "normal");
+}
+
+function matchesAttentionView(behavior: AttentionBehavior, view?: "focus" | "normal" | "quiet" | "hidden" | "all") {
+  if (!view) return behavior !== "quiet" && behavior !== "hidden";
+  if (view === "all") return true;
+  if (view === "focus") return behavior === "notify" || behavior === "focus";
+  return behavior === view;
 }
 
 function uniqueRuleError(c: Context, error: unknown) {

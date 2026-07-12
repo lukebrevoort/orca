@@ -19,12 +19,12 @@ import { getContactSignature, type ContactSignature } from "./contact-signature"
 
 type Theme = "light" | "dark";
 
-type Mailbox = "inbox" | "sent" | "spam" | "all";
+type Mailbox = "focus" | "normal" | "quiet" | "hidden" | "all";
 
 type MailboxItem = {
   id: Mailbox;
   label: string;
-  gmailLabel?: string;
+  description: string;
 };
 
 type PersonItem = {
@@ -46,10 +46,11 @@ const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
 
 const mailboxes: MailboxItem[] = [
-  { id: "inbox", label: "Inbox", gmailLabel: "INBOX" },
-  { id: "sent", label: "Sent", gmailLabel: "SENT" },
-  { id: "spam", label: "Spam", gmailLabel: "SPAM" },
-  { id: "all", label: "All Mail" },
+  { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
+  { id: "normal", label: "Flow", description: "Your everyday correspondence" },
+  { id: "quiet", label: "Quiet", description: "Available when you choose" },
+  { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
+  { id: "all", label: "All mail", description: "Every message, by attention" },
 ];
 
 export function App() {
@@ -321,7 +322,7 @@ function InboxApp({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
-  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
+  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("focus");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
@@ -363,7 +364,7 @@ function InboxApp({
         setAccount(currentAccount);
         setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
 
-        const inbox = await fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal);
+        const inbox = await fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal);
         if (abortController.signal.aborted) return;
         setAccount(inbox.account);
         setMessages(inbox.messages);
@@ -389,7 +390,7 @@ function InboxApp({
         await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
         const [nextStatus, refreshedInbox] = await Promise.all([
           fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
-          fetchJson("/v1/inbox", inboxResponseSchema, abortController.signal),
+          fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal),
         ]);
         if (abortController.signal.aborted) return;
         setSyncStatus(nextStatus);
@@ -410,7 +411,10 @@ function InboxApp({
   useEffect(() => {
     const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
     if (demoMode) {
-      setAttentionByAddress(Object.fromEntries(addresses.map((address) => [address, "normal"])));
+      setAttentionByAddress(Object.fromEntries(addresses.map((address) => [
+        address,
+        messages.find((message) => message.from.email.trim().toLowerCase() === address)?.attentionBehavior ?? "normal",
+      ])));
       return;
     }
     if (status !== "ready" || addresses.length === 0) return;
@@ -432,15 +436,18 @@ function InboxApp({
   );
 
   const mailboxMessages = useMemo(
-    () => getMessagesForMailbox(messages, activeMailbox),
-    [activeMailbox, messages],
+    () => getMessagesForMailbox(messages, activeMailbox, attentionByAddress),
+    [activeMailbox, attentionByAddress, messages],
   );
 
   const visibleMessages = useMemo(() => {
     const filtered = personFilter
       ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
       : mailboxMessages;
-    return applySenderAttention(filtered, attentionByAddress);
+    return sortMessagesByAttention(filtered, attentionByAddress).map((message) => ({
+      ...message,
+      attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
+    }));
   }, [attentionByAddress, mailboxMessages, personFilter]);
 
   const selectedThreadMessages = useMemo(() => {
@@ -460,16 +467,17 @@ function InboxApp({
     () =>
       mailboxes.map((mailbox) => ({
         ...mailbox,
-        count: status === "ready" ? applySenderAttention(getMessagesForMailbox(messages, mailbox.id), attentionByAddress).length : undefined,
+        count: status === "ready" ? getMessagesForMailbox(messages, mailbox.id, attentionByAddress).length : undefined,
       })),
     [attentionByAddress, messages, status],
   );
 
-  const activeMailboxLabel = mailboxes.find((item) => item.id === activeMailbox)?.label ?? "Inbox";
+  const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
+  const activeMailboxLabel = activeMailboxItem.label;
   const inboxTitle = personFilter ? personFilter : activeMailboxLabel;
   const inboxEyebrow = personFilter
     ? `Filtered ${activeMailboxLabel.toLowerCase()}`
-    : demoMode ? "Development preview" : "Gmail mailbox";
+    : activeMailboxItem.description;
 
   if (status === "signedout") {
     return <LoginRequiredScreen />;
@@ -1020,6 +1028,9 @@ function InboxView({
                       <div className="message-copy">
                         <div className="message-meta">
                           <strong>{message.from.name ?? message.from.email}</strong>
+                          <span className={`attention-badge attention-badge-${message.attentionBehavior}`} title={`Attention treatment: ${message.attentionBehavior}. Human signal (${message.humanSignal ?? "unknown"}) is a separate estimate, not a routing rule.`}>
+                            {message.attentionBehavior === "notify" ? "Notify me" : message.attentionBehavior === "focus" ? "Keep in focus" : message.attentionBehavior}
+                          </span>
                           <span>{formatReceivedAt(message.receivedAt)}</span>
                         </div>
                         <div className="message-subject-row">
@@ -1126,7 +1137,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
   useEffect(() => {
     if (!expanded || resolution || !address) return;
     if (isDevPreviewRoute()) {
-      setSelectedBehavior((current) => current ?? "normal");
+      setSelectedBehavior((current) => current ?? message.attentionBehavior);
       setStatus("idle");
       return;
     }
@@ -1147,7 +1158,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
         }
       });
     return () => controller.abort();
-  }, [address, expanded, resolution]);
+  }, [address, expanded, message.attentionBehavior, resolution]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -1248,6 +1259,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
           {status !== "loading" ? <>
             <div aria-label="Destination for all sender mail" className="sender-attention-choices" role="group">
               <span className="sender-attention-choice-label">Send to</span>
+              <p className="sender-attention-explainer">This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination.</p>
               <div className="sender-attention-choice-grid">
                 {attentionChoices.map(({ behavior, label }) => (
                   <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule(behavior)} type="button">
@@ -1597,22 +1609,28 @@ function InboxStatusState({
   );
 }
 
-export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox) {
-  const mailbox = mailboxes.find((item) => item.id === mailboxId);
-  return mailbox?.gmailLabel
-    ? messages.filter((message) => message.labels.includes(mailbox.gmailLabel!))
-    : messages;
+export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox, attentionByAddress: Record<string, AttentionBehavior> = {}) {
+  if (mailboxId === "all") return messages;
+  return messages.filter((message) => {
+    const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+    return mailboxId === "focus" ? behavior === "notify" || behavior === "focus" : behavior === mailboxId;
+  });
 }
 
 export function applySenderAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
+  return sortMessagesByAttention(messages.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) !== "hidden"), attentionByAddress);
+}
+
+export function sortMessagesByAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
   const rank: Record<AttentionBehavior, number> = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 };
   return messages
-    .filter((message) => attentionByAddress[message.from.email.trim().toLowerCase()] !== "hidden")
-    .map((message, index) => ({ message, index }))
+    .map((message) => ({ message }))
     .sort((a, b) => {
-      const aBehavior = attentionByAddress[a.message.from.email.trim().toLowerCase()] ?? "normal";
-      const bBehavior = attentionByAddress[b.message.from.email.trim().toLowerCase()] ?? "normal";
-      return rank[aBehavior] - rank[bBehavior] || a.index - b.index;
+      const aBehavior = attentionByAddress[a.message.from.email.trim().toLowerCase()] ?? a.message.attentionBehavior;
+      const bBehavior = attentionByAddress[b.message.from.email.trim().toLowerCase()] ?? b.message.attentionBehavior;
+      return rank[aBehavior] - rank[bBehavior]
+        || b.message.receivedAt.localeCompare(a.message.receivedAt)
+        || a.message.id.localeCompare(b.message.id);
     })
     .map(({ message }) => message);
 }
