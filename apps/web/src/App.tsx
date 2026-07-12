@@ -1242,6 +1242,10 @@ export function splitQuotedContent(body: string) {
   };
 }
 
+export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: number) {
+  return scrollY > Math.max(360, viewportHeight * 0.4);
+}
+
 export function MessageReader({
   detail,
   error,
@@ -1263,6 +1267,7 @@ export function MessageReader({
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
+  const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
   const newestMessage = messages[messages.length - 1];
@@ -1275,11 +1280,27 @@ export function MessageReader({
     if (status === "ready") headingRef.current?.focus();
   }, [status]);
 
+  useEffect(() => {
+    if (status !== "ready") return;
+    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(window.scrollY, window.innerHeight));
+    updateJumpToTop();
+    window.addEventListener("scroll", updateJumpToTop, { passive: true });
+    return () => window.removeEventListener("scroll", updateJumpToTop);
+  }, [status]);
+
   function jumpToNewest() {
     if (!jumpTarget) return;
     const node = messageRefs.current.get(jumpTarget.id);
     node?.scrollIntoView({ behavior: "smooth", block: "start" });
     node?.focus({ preventScroll: true });
+  }
+
+  function jumpToTop() {
+    headingRef.current?.focus({ preventScroll: true });
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
   }
 
   return (
@@ -1291,6 +1312,15 @@ export function MessageReader({
         </button>
         <span className="reader-escape-hint" aria-hidden="true">esc</span>
       </nav>
+      <button
+        className="reader-jump reader-jump-top"
+        hidden={!showJumpToTop}
+        onClick={jumpToTop}
+        type="button"
+      >
+        <span>Jump to top</span>
+        <span aria-hidden="true">↑</span>
+      </button>
 
       {status === "loading" || status === "idle" ? <ReaderLoading title={fallbackTitle} messages={fallbackMessages} /> : null}
       {status === "error" ? (

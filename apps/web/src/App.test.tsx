@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, MessageReader, applySenderAttention, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, sortThreadMessages, splitQuotedContent } from "./App";
+import { App, MessageReader, applySenderAttention, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent } from "./App";
 import { demoMessages } from "./demo-data";
 
 describe("App", () => {
@@ -98,6 +98,13 @@ describe("App", () => {
     expect(groups.map((group) => group.messages.map((message) => message.id))).toEqual([["oldest"], ["middle", "newest"]]);
   });
 
+  test("reveals the top jump after meaningful reader scrolling", () => {
+    expect(shouldShowReaderJumpToTop(360, 800)).toBe(false);
+    expect(shouldShowReaderJumpToTop(361, 800)).toBe(true);
+    expect(shouldShowReaderJumpToTop(500, 1400)).toBe(false);
+    expect(shouldShowReaderJumpToTop(561, 1400)).toBe(true);
+  });
+
   test("keeps quoted history recoverable behind a closed disclosure", () => {
     const split = splitQuotedContent("Fresh reply\n\nOn Jul 11, Maya wrote:\n> Earlier note");
     expect(split).toEqual({ current: "Fresh reply", quoted: "On Jul 11, Maya wrote:\n> Earlier note" });
@@ -122,6 +129,8 @@ describe("App", () => {
     );
 
     expect(html).toContain("Jump to newest unread");
+    expect(html).toContain("Jump to top");
+    expect(html).toContain("reader-jump-top\" hidden=\"\"");
     expect(html).toContain("Unread messages");
     expect(html).toContain("Newest");
     expect(html).toContain("Message details");
