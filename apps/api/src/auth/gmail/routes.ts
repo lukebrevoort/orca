@@ -125,6 +125,12 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
           db.delete(users).where(eq(users.id, auth.userId)).run();
           const session = await createSession(db, existingUser.id);
           c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+
+          // A returning user should land in their workspace, not the first-time
+          // onboarding screen that initiated the OAuth flow.
+          if (result.redirectUrl) {
+            return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
+          }
         } else {
           db.update(users)
             .set({ email: result.account.providerEmail, authenticatedAt: new Date() })
@@ -166,4 +172,10 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
   });
 
   return app;
+}
+
+export function redirectReturningUserToWorkspace(redirectUrl: string): string {
+  const url = new URL(redirectUrl);
+  url.pathname = "/";
+  return url.toString();
 }

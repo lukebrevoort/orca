@@ -5,7 +5,7 @@ import type { AuthVariables } from "../middleware.ts";
 import type { GmailOAuthConfig } from "./config.ts";
 import { decryptSecret } from "./crypto.ts";
 import { InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
-import { createGmailAuthApp } from "./routes.ts";
+import { createGmailAuthApp, redirectReturningUserToWorkspace } from "./routes.ts";
 
 const config: GmailOAuthConfig = {
   clientId: "client-id",
@@ -33,6 +33,14 @@ const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c
 };
 
 describe("Gmail auth routes", () => {
+  test("sends returning users to their workspace while retaining callback status", () => {
+    expect(
+      redirectReturningUserToWorkspace(
+        "https://orca.example/onboarding?status=success&email=luke%40example.com",
+      ),
+    ).toBe("https://orca.example/?status=success&email=luke%40example.com");
+  });
+
   test("connect returns a Google authorization URL", async () => {
     const app = createGmailAuthApp({
       authMiddleware,
