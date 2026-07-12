@@ -235,7 +235,7 @@ function AttentionViewSettingsPage({
             onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
             type="button"
           >
-            {theme === "dark" ? "☀" : "☾"}
+            {theme === "dark" ? "☾" : "☀"}
           </button>
         </div>
       </header>
@@ -526,7 +526,7 @@ function InboxApp({
                 onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
                 type="button"
               >
-                {theme === "dark" ? "☀" : "☾"}
+                {theme === "dark" ? "☾" : "☀"}
               </button>
               <button className="compose-button" onClick={openCompose} type="button">
                 Compose
