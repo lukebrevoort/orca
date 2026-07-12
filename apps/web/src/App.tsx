@@ -46,6 +46,23 @@ type OAuthReturnStatus =
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
 
+type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
+
+function runUiTransition(name: OrcaTransition, update: () => void) {
+  const transitionDocument = document as Document & {
+    startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+  };
+  if (!transitionDocument.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    update();
+    return;
+  }
+  document.documentElement.dataset.orcaTransition = name;
+  const transition = transitionDocument.startViewTransition(update);
+  void transition.finished.finally(() => {
+    delete document.documentElement.dataset.orcaTransition;
+  });
+}
+
 const mailboxes: MailboxItem[] = [
   { id: "inbox", label: "Inbox", description: "What deserves your attention now" },
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
@@ -560,16 +577,20 @@ function InboxApp({
       return;
     }
 
-    setPanelClosing(false);
-    setZenClosing(false);
-    originMessageIdRef.current = message.id;
-    setSelectedThreadId(message.threadId);
+    runUiTransition("reader-forward", () => {
+      setPanelClosing(false);
+      setZenClosing(false);
+      originMessageIdRef.current = message.id;
+      setSelectedThreadId(message.threadId);
+    });
   }
 
   function closeThread() {
-    setSelectedThreadId(null);
-    setThreadDetail(null);
-    setReaderStatus("idle");
+    runUiTransition("reader-back", () => {
+      setSelectedThreadId(null);
+      setThreadDetail(null);
+      setReaderStatus("idle");
+    });
     window.requestAnimationFrame(() => messageRowRefs.current.get(originMessageIdRef.current ?? "")?.focus());
   }
 
@@ -627,16 +648,24 @@ function InboxApp({
   }
 
   function togglePersonFilter(name: string) {
-    setPersonFilter((current) => (current === name ? null : name));
-    setSelectedThreadId(null);
-    closePanel();
+    runUiTransition("content", () => {
+      setPersonFilter((current) => (current === name ? null : name));
+      setSelectedThreadId(null);
+      closePanel();
+    });
   }
 
   function selectMailbox(mailbox: Mailbox) {
-    setActiveMailbox(mailbox);
-    setInboxFilter("all");
-    setPersonFilter(null);
-    setSelectedThreadId(null);
+    runUiTransition("content", () => {
+      setActiveMailbox(mailbox);
+      setInboxFilter("all");
+      setPersonFilter(null);
+      setSelectedThreadId(null);
+    });
+  }
+
+  function selectInboxFilter(filter: InboxFilter) {
+    runUiTransition("content", () => setInboxFilter(filter));
   }
 
   async function updateSenderAttention(address: string, behavior?: AttentionBehavior) {
@@ -671,7 +700,7 @@ function InboxApp({
               <button
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 className="theme-toggle"
-                onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+                onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
                 type="button"
               >
                 {theme === "dark" ? "☾" : "☀"}
@@ -746,7 +775,7 @@ function InboxApp({
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
-              onInboxFilterChange={setInboxFilter}
+              onInboxFilterChange={selectInboxFilter}
               showInboxFilters={activeMailbox === "inbox" && !personFilter}
             />
           )}

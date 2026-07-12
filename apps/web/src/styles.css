@@ -43,6 +43,52 @@
   box-sizing: border-box;
 }
 
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 360ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(.2, .75, .25, 1);
+}
+
+::view-transition-old(root) { animation-name: orca-view-out; }
+::view-transition-new(root) { animation-name: orca-view-in; }
+
+html[data-orca-transition="reader-forward"]::view-transition-old(root) { animation-name: orca-reader-out; }
+html[data-orca-transition="reader-forward"]::view-transition-new(root) { animation-name: orca-reader-in; }
+html[data-orca-transition="reader-back"]::view-transition-old(root) { animation-name: orca-reader-back-out; }
+html[data-orca-transition="reader-back"]::view-transition-new(root) { animation-name: orca-reader-back-in; }
+html[data-orca-transition="theme"]::view-transition-old(root) { animation-duration: 420ms; animation-name: orca-theme-out; }
+html[data-orca-transition="theme"]::view-transition-new(root) { animation-duration: 420ms; animation-name: orca-theme-in; }
+html[data-orca-transition="content"]::view-transition-old(root),
+html[data-orca-transition="content"]::view-transition-new(root) { animation: none; }
+html[data-orca-transition="content"] .content-pane { view-transition-name: orca-content; }
+
+::view-transition-group(orca-content) { animation-duration: 220ms; }
+::view-transition-old(orca-content) { animation: orca-content-out 130ms ease-out both; }
+::view-transition-new(orca-content) { animation: orca-content-in 220ms cubic-bezier(.2, .75, .25, 1) both; }
+
+@keyframes orca-view-out { to { opacity: 0; transform: translateY(-5px) scale(.998); } }
+@keyframes orca-view-in { from { opacity: 0; transform: translateY(8px) scale(.998); } }
+@keyframes orca-reader-out { to { opacity: 0; transform: translateX(-18px) scale(.992); } }
+@keyframes orca-reader-in { from { opacity: 0; transform: translateX(24px) scale(.992); } }
+@keyframes orca-reader-back-out { to { opacity: 0; transform: translateX(20px) scale(.994); } }
+@keyframes orca-reader-back-in { from { opacity: 0; transform: translateX(-14px) scale(.994); } }
+@keyframes orca-theme-out { to { opacity: 0; } }
+@keyframes orca-theme-in { from { opacity: 0; } }
+@keyframes orca-content-out { to { opacity: 0; } }
+@keyframes orca-content-in { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(orca-content),
+  ::view-transition-new(orca-content) { animation-duration: .01ms !important; }
+}
+
 body {
   margin: 0;
 }
