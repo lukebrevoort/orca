@@ -82,8 +82,9 @@ describe("first-slice API smoke test", () => {
       assert.deepEqual(inbox.messages, [{
         id: "email_smoke", provider: "gmail", providerMessageId: "message-smoke", threadId: "thread_smoke",
         from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Smoke coverage", snippet: "A seeded inbox message",
-        receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"],
+        receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"], attentionBehavior: "normal", humanSignal: null,
       }]);
+      assert.deepEqual(inbox.counts, { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 });
     } finally {
       sqlite.close();
     }

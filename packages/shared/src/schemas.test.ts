@@ -14,11 +14,13 @@ describe("shared API schemas", () => {
       inboxResponseSchema.parse({
         account: accountFixture,
         messages: inboxFixture,
+        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
         nextCursor: null,
       }),
       {
         account: accountFixture,
         messages: inboxFixture,
+        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
         nextCursor: null,
       },
     );

@@ -65,6 +65,8 @@ export const inboxMessageSchema = z
     receivedAt: isoDateTimeStringSchema,
     unread: z.boolean(),
     labels: labelListSchema,
+    attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]),
+    humanSignal: z.number().int().nullable(),
   })
   .strict();
 export type InboxMessage = z.infer<typeof inboxMessageSchema>;
@@ -105,6 +107,7 @@ export const normalizedMessageRawSchema = z
 export type NormalizedMessageRaw = z.infer<typeof normalizedMessageRawSchema>;
 
 export const normalizedMessageSchema = inboxMessageSchema
+  .omit({ attentionBehavior: true, humanSignal: true })
   .extend({
     to: z.array(mailContactSchema),
     cc: z.array(mailContactSchema),
@@ -177,6 +180,7 @@ export type AuthSession = z.infer<typeof authSessionSchema>;
 export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),
+    view: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
   })
   .strict();
 export type InboxQuery = z.infer<typeof inboxQuerySchema>;
@@ -301,6 +305,13 @@ export const inboxResponseSchema = z
   .object({
     account: mailAccountSchema,
     messages: z.array(inboxMessageSchema),
+    counts: z.object({
+      focus: z.number().int().nonnegative(),
+      normal: z.number().int().nonnegative(),
+      quiet: z.number().int().nonnegative(),
+      hidden: z.number().int().nonnegative(),
+      all: z.number().int().nonnegative(),
+    }).strict(),
     nextCursor: z.string().nullable(),
   })
   .strict();

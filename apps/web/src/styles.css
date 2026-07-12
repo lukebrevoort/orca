@@ -951,6 +951,54 @@ textarea {
   width: 22px;
 }
 
+.inbox-filter-bar {
+  align-items: center;
+  border-bottom: 1px solid var(--orca-border);
+  display: flex;
+  gap: 18px;
+  min-height: 54px;
+  padding: 8px 28px;
+}
+
+.inbox-filter-bar > span {
+  color: var(--orca-muted);
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.inbox-filter-bar > div {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.inbox-filter-bar button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--orca-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 11px;
+  white-space: nowrap;
+}
+
+.inbox-filter-bar button:hover {
+  background: var(--orca-surface-hover);
+  color: var(--orca-ink);
+}
+
+.inbox-filter-bar button[aria-pressed="true"] {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  color: var(--orca-ink);
+}
+
 .inbox-body {
   display: flex;
   flex: 1;
@@ -1083,6 +1131,25 @@ textarea {
   flex-shrink: 0;
   font-size: 12px;
 }
+
+.message-meta .attention-badge {
+  background: color-mix(in srgb, var(--orca-ink) 7%, transparent);
+  border-radius: 999px;
+  color: var(--orca-muted);
+  font-size: 10px;
+  letter-spacing: .035em;
+  margin-left: auto;
+  padding: 4px 8px;
+  text-transform: capitalize;
+}
+
+.message-meta .attention-badge-notify,
+.message-meta .attention-badge-focus {
+  background: color-mix(in srgb, var(--message-rail) 14%, transparent);
+  color: var(--orca-ink);
+}
+
+.message-meta .attention-badge + span { margin-left: 0; }
 
 .message-subject-row h2 {
   color: var(--orca-ink);

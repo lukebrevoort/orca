@@ -109,6 +109,12 @@ bun run lint        # type-level linting (tsc)
 - Tests live next to source files (`*.test.ts`) and run via `bun test`.
 - The API validates request shape at the edge using Hono's `validator` + shared Zod schemas.
 
+### Theme-Safe UI Controls
+
+- Interactive selected, active, and pressed states must remain visibly labeled in both light and dark mode. Prefer the established `Tune` treatment: `background: var(--orca-surface-hover)`, `border-color: var(--orca-border)`, and `color: var(--orca-ink)`.
+- Do not create selected controls by pairing `background: var(--orca-ink)` with an assumed inverse background variable. This has repeatedly produced solid “hole” controls with missing or unreadable labels when theme variables change.
+- Before completing UI work, visually verify every default, hover, focus, selected/pressed, and disabled control state in both themes. A shape without a readable label is a release-blocking contrast bug.
+
 ### Verifying Workspace
 
 The most important thing to do when completing a ticket or creating a PR is give

@@ -33,5 +33,7 @@ export const inboxFixture = z.array(inboxMessageSchema).parse([
     receivedAt: "2026-06-28T17:30:00.000Z",
     unread: true,
     labels: ["INBOX"],
+    attentionBehavior: "normal",
+    humanSignal: 9,
   },
 ]);
