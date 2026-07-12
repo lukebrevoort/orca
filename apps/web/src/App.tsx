@@ -6,8 +6,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { InboxMessage, MailAccount } from "@orca/shared";
-import { inboxResponseSchema, meResponseSchema } from "@orca/shared";
+import type { InboxMessage, MailAccount, SyncStatus } from "@orca/shared";
+import { inboxResponseSchema, meResponseSchema, syncStatusSchema } from "@orca/shared";
 import {
   messageIncludesPerson,
   messageBodies,
@@ -89,6 +89,7 @@ function InboxApp({
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
@@ -121,10 +122,12 @@ function InboxApp({
         const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
         if (abortController.signal.aborted) return;
         setAccount(currentAccount);
+        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
 
         setStatus("syncing");
         try {
           await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
+          setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
         } catch (error) {
           if (abortController.signal.aborted) return;
           setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
@@ -360,6 +363,7 @@ function InboxApp({
               onOpenThread={openThread}
               personFilter={personFilter}
               status={status}
+              syncStatus={syncStatus}
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
             />
@@ -603,6 +607,7 @@ function InboxView({
   messages,
   personFilter,
   status,
+  syncStatus,
   isRefreshing,
   onClearFilter,
   onOpenThread,
@@ -615,6 +620,7 @@ function InboxView({
   messages: InboxMessage[];
   personFilter: string | null;
   status: "loading" | "syncing" | "ready" | "error";
+  syncStatus: SyncStatus | null;
   isRefreshing: boolean;
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
@@ -655,6 +661,7 @@ function InboxView({
               ? `${formatProvider(account.provider)} · ${account.email}`
               : "Connecting account..."}
           </div>
+          <SyncStatusChip status={syncStatus?.accounts.find((item) => item.id === account?.id) ?? null} />
         </div>
       </header>
 
@@ -730,6 +737,17 @@ function InboxView({
       ) : null}
     </>
   );
+}
+
+function SyncStatusChip({ status }: { status: SyncStatus["accounts"][number] | null }) {
+  if (!status) return null;
+  const labels = {
+    idle: status.lastSyncedAt ? `Synced ${formatReceivedAt(status.lastSyncedAt)}` : "Ready to sync",
+    syncing: "Syncing Gmail…",
+    auth_needed: "Gmail reconnect needed",
+    error: status.error ?? "Gmail sync error",
+  } as const;
+  return <span className={`sync-status-chip sync-status-${status.state}`} role="status">{labels[status.state]}</span>;
 }
 
 function ThreadView({

@@ -113,6 +113,40 @@ describe("Orca API", () => {
     }
   });
 
+  test("reports per-account sync status and last successful sync time", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-index-test-"));
+    const dbPath = join(tempDir, "index.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com", displayName: "Luke" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+        accessTokenEncrypted: "access", refreshTokenEncrypted: "refresh", lastSyncedAt: new Date("2026-07-08T12:00:00.000Z"),
+      }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+
+      const response = await testApp.request("/api/sync/status", { headers: { cookie: `orca_session=${session.token}` } });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        accounts: [{
+          id: "acct_1", provider: "gmail", email: "luke@example.com", displayName: "Luke",
+          state: "idle", lastSyncedAt: "2026-07-08T12:00:00.000Z", error: null,
+        }],
+      });
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("maps provider sync failures to a bounded public error response", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");

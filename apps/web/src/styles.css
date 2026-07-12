@@ -585,6 +585,18 @@ textarea {
   white-space: nowrap;
 }
 
+.sync-status-chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  padding: 0.42rem 0.62rem;
+  white-space: nowrap;
+}
+
+.sync-status-syncing { color: var(--accent); }
+.sync-status-auth_needed, .sync-status-error { color: #bd5a32; }
+
 .filter-chip {
   align-items: center;
   background: var(--orca-accent-soft);
