@@ -108,11 +108,26 @@ export const demoMessages: InboxMessage[] = [
   },
 ];
 
+export const demoThreadHistoryExtras: InboxMessage[] = [
+  { id: "msg_1_followup", provider: "gmail", providerMessageId: "gmail_1_followup", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "Exactly. I tightened the reader notes around quoted replies and metadata.", receivedAt: "2026-07-04T15:02:00.000Z", unread: false, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9 },
+  { id: "msg_1_reply_2", provider: "gmail", providerMessageId: "gmail_1_reply_2", threadId: "thread_1", from: { name: "Luke Brevoort", email: "luke@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "The calmer metadata treatment works. Can we make long threads easier to scan?", receivedAt: "2026-07-05T18:44:00.000Z", unread: false, labels: ["SENT"], attentionBehavior: "normal", humanSignal: 10 },
+  { id: "msg_1_unread", provider: "gmail", providerMessageId: "gmail_1_unread", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "I grouped the history by day and kept every quoted reply recoverable.", receivedAt: "2026-07-06T16:20:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9 },
+  { id: "msg_1_latest", provider: "gmail", providerMessageId: "gmail_1_latest", threadId: "thread_1", from: { name: "Anika Lee", email: "anika@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "One last pass: the unread boundary should be unmistakable in either theme.", receivedAt: "2026-07-07T19:08:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 8 },
+];
+
 export const messageBodies: Record<string, string> = {
   msg_1:
     "Hey Luke,\n\nHere are the launch notes for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.\n\nLet me know what you think.\n\n— Maya",
   msg_1_reply:
     "I like the pinned people direction. Let's keep the first version read-only and make sure the thread view never assumes HTML is safe to render.\n\n— Luke",
+  msg_1_followup:
+    "Exactly. I tightened the reader notes around quoted replies and metadata.\n\nOn Jul 3, 2026, at 10:12 AM, Luke Brevoort wrote:\n> I like the pinned people direction.\n> Let's keep the first version read-only.",
+  msg_1_reply_2:
+    "The calmer metadata treatment works. Can we make long threads easier to scan?\n\nOn Jul 4, 2026, at 8:02 AM, Maya Chen wrote:\n> I tightened the reader notes around quoted replies and metadata.",
+  msg_1_unread:
+    "I grouped the history by day and kept every quoted reply recoverable. The newest relevant message is now one action away.\n\nOn Jul 5, 2026, at 11:44 AM, Luke Brevoort wrote:\n> Can we make long threads easier to scan?",
+  msg_1_latest:
+    "One last pass: the unread boundary should be unmistakable in either theme. The text label does the work; color is only reinforcement.\n\nOn Jul 6, 2026, at 9:20 AM, Maya Chen wrote:\n> I grouped the history by day.\n> Every quoted reply remains recoverable.",
   msg_2: "Your June statement is ready to view. No action is required; this automated notice is kept in focus because you chose it.\n\n— Harbor Bank",
   msg_3:
     "Your sister is visiting this weekend. Can you make it over for dinner around six on Sunday?\n\nLove, Mom",

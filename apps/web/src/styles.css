@@ -2205,15 +2205,101 @@ textarea {
   margin: 0;
 }
 
+.reader-participants {
+  color: var(--orca-muted);
+  font-family: var(--orca-font-display);
+  font-size: 15px;
+  margin: 22px 0 0;
+}
+
+.reader-jump {
+  align-items: center;
+  background: var(--orca-surface-hover);
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  color: var(--orca-ink);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 750;
+  gap: 12px;
+  margin: 18px 0 -15px auto;
+  padding: 9px 13px;
+  position: sticky;
+  top: 18px;
+  width: fit-content;
+  z-index: 3;
+}
+
+.reader-jump:hover { box-shadow: 0 7px 22px color-mix(in srgb, var(--orca-canvas-ink) 9%, transparent); transform: translateY(-1px); }
+.reader-jump:focus-visible,
+.reader-message article:focus-visible,
+.reader-quoted summary:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 4px; }
+
 .reader-message-list {
+  margin: 0;
+}
+
+.reader-day-group > ol {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+.reader-day {
+  align-items: center;
+  color: var(--orca-muted);
+  display: flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 14px;
+  letter-spacing: .13em;
+  margin: 38px 0 0;
+  text-transform: uppercase;
+}
+
+.reader-day::after {
+  background: var(--orca-border);
+  content: "";
+  flex: 1;
+  height: 1px;
+}
+
 .reader-message {
   border-bottom: 1px solid var(--orca-border);
   padding: clamp(38px, 7vh, 68px) 0;
+  position: relative;
+}
+
+.reader-message-unread::before {
+  background: var(--orca-accent);
+  border-radius: 999px;
+  content: "";
+  height: calc(100% - 42px);
+  left: -24px;
+  position: absolute;
+  top: 21px;
+  width: 2px;
+}
+
+.reader-unread-divider {
+  align-items: center;
+  color: var(--orca-canvas-ink);
+  display: flex;
+  font-size: 10px;
+  font-weight: 850;
+  gap: 12px;
+  letter-spacing: .12em;
+  margin: calc(clamp(38px, 7vh, 68px) * -1) 0 38px;
+  text-transform: uppercase;
+}
+
+.reader-unread-divider::before,
+.reader-unread-divider::after { background: var(--orca-accent); content: ""; flex: 1; height: 1px; }
+.reader-unread-divider span { border: 1px solid var(--orca-border); border-radius: 999px; padding: 5px 9px; }
+
+.reader-message article {
+  border-radius: 6px;
 }
 
 .reader-sender {
@@ -2227,7 +2313,9 @@ textarea {
 
 .reader-sender .message-mark { height: 38px; margin: 0; width: 38px; }
 .reader-sender-copy { min-width: 0; }
-.reader-sender h2 { font-size: 15px; font-weight: 700; margin: 0 0 5px; }
+.reader-sender-line { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 5px; }
+.reader-sender h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.reader-status-label { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 9px; font-weight: 800; letter-spacing: .06em; padding: 3px 6px; text-transform: uppercase; }
 .reader-sender details { color: var(--orca-muted); font-size: 12px; }
 .reader-sender summary { cursor: pointer; list-style: none; width: fit-content; }
 .reader-sender summary::-webkit-details-marker { display: none; }
@@ -2247,6 +2335,31 @@ textarea {
   max-width: 68ch;
   white-space: pre-wrap;
 }
+
+.reader-quoted {
+  color: var(--orca-muted);
+  font-size: 12px;
+  margin-top: 28px;
+  max-width: 68ch;
+}
+
+.reader-quoted summary {
+  align-items: center;
+  background: var(--orca-surface-hover);
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  color: var(--orca-ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 750;
+  list-style: none;
+  padding: 7px 11px;
+}
+
+.reader-quoted summary::-webkit-details-marker { display: none; }
+.reader-quoted summary::before { content: "+"; font-weight: 900; margin-right: 7px; }
+.reader-quoted[open] summary::before { content: "−"; }
+.reader-quoted > div { border-left: 2px solid var(--orca-border); line-height: 1.65; margin-top: 18px; padding: 4px 0 4px 18px; white-space: pre-wrap; }
 
 .reader-no-body {
   border-left: 2px solid var(--orca-border);
@@ -2300,6 +2413,8 @@ textarea {
   .reader-heading { padding-bottom: 38px; }
   .reader-heading h1 { font-size: clamp(42px, 13vw, 60px); }
   .reader-message { padding: 38px 0; }
+  .reader-message-unread::before { left: -12px; }
+  .reader-jump { top: 12px; }
   .reader-sender { grid-template-columns: 38px minmax(0, 1fr); }
   .reader-sender .sender-attention-control { grid-column: 2; justify-self: start; }
   .reader-body { font-size: 18px; line-height: 1.72; }

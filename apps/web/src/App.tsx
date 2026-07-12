@@ -7,11 +7,12 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, InboxMessage, MailAccount, MailContact, ResolvedSenderAttention, SyncStatus, ThreadDetail } from "@orca/shared";
+import type { AttentionViewSetting, InboxMessage, MailAccount, MailContact, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
+  demoThreadHistoryExtras,
   messageIncludesPerson,
   messageBodies,
 } from "./demo-data";
@@ -1205,7 +1206,43 @@ function SyncStatusChip({ status }: { status: SyncStatus["accounts"][number] | n
   return <span className={`sync-status-chip sync-status-${status.state}`} role="status">{labels[status.state]}</span>;
 }
 
-function MessageReader({
+export function sortThreadMessages(messages: ThreadDetailMessage[]) {
+  return [...messages].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt) || a.id.localeCompare(b.id));
+}
+
+export function groupThreadMessages(messages: ThreadDetailMessage[]) {
+  return sortThreadMessages(messages).reduce<Array<{ key: string; label: string; messages: ThreadDetailMessage[] }>>((groups, message) => {
+    const date = new Date(message.receivedAt);
+    const key = Number.isNaN(date.getTime()) ? "unknown" : date.toISOString().slice(0, 10);
+    const existing = groups[groups.length - 1];
+    if (existing?.key === key) {
+      existing.messages.push(message);
+      return groups;
+    }
+    groups.push({
+      key,
+      label: Number.isNaN(date.getTime())
+        ? "Date unavailable"
+        : new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(date),
+      messages: [message],
+    });
+    return groups;
+  }, []);
+}
+
+export function splitQuotedContent(body: string) {
+  const lines = body.replace(/\r\n/g, "\n").split("\n");
+  const quoteStart = lines.findIndex((line, index) =>
+    index > 0 && (/^\s*>/.test(line) || /^\s*On .+wrote:\s*$/i.test(line) || /^\s*-{2,}\s*Forwarded message\s*-{2,}\s*$/i.test(line)),
+  );
+  if (quoteStart < 0) return { current: body.trim(), quoted: null };
+  return {
+    current: lines.slice(0, quoteStart).join("\n").trim(),
+    quoted: lines.slice(quoteStart).join("\n").trim(),
+  };
+}
+
+export function MessageReader({
   detail,
   error,
   fallbackMessages,
@@ -1225,12 +1262,25 @@ function MessageReader({
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const messages = detail?.messages ?? [];
+  const messageRefs = useRef(new Map<string, HTMLElement>());
+  const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
+  const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const newestMessage = messages[messages.length - 1];
+  const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
+  const firstUnreadMessage = messages.find((message) => message.unread);
+  const jumpTarget = newestUnreadMessage ?? newestMessage;
   const title = detail?.thread.subject || fallbackTitle;
 
   useEffect(() => {
     if (status === "ready") headingRef.current?.focus();
   }, [status]);
+
+  function jumpToNewest() {
+    if (!jumpTarget) return;
+    const node = messageRefs.current.get(jumpTarget.id);
+    node?.scrollIntoView({ behavior: "smooth", block: "start" });
+    node?.focus({ preventScroll: true });
+  }
 
   return (
     <article className="message-reader" aria-labelledby="reader-title">
@@ -1256,32 +1306,68 @@ function MessageReader({
           <header className="reader-heading">
             <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
+            <p className="reader-participants">With {formatThreadParticipants(detail.thread.participants, detail.account.email)}</p>
           </header>
 
-          <ol className="reader-message-list" aria-label="Messages in conversation">
-            {messages.map((message, index) => {
-              const signature = getContactSignature(message.from);
-              const recipients = [...message.to, ...message.cc, ...message.bcc];
-              return (
-                <li className="reader-message" key={message.id}>
-                  <article aria-labelledby={`reader-sender-${message.id}`}>
+          {messages.length >= 5 && jumpTarget ? (
+            <button className="reader-jump" onClick={jumpToNewest} type="button">
+              <span>{newestUnreadMessage ? "Jump to newest unread" : "Jump to newest"}</span>
+              <span aria-hidden="true">↓</span>
+            </button>
+          ) : null}
+
+          <div className="reader-message-list" aria-label="Messages in conversation">
+            {messageGroups.map((group) => (
+              <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
+                <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
+                <ol>
+                  {group.messages.map((message) => {
+                    const signature = getContactSignature(message.from);
+                    const body = message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
+                    const isNewest = message.id === newestMessage?.id;
+                    const isFirstUnread = message.id === firstUnreadMessage?.id;
+                    return (
+                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={message.id}>
+                        {isFirstUnread ? <div className="reader-unread-divider" role="separator"><span>Unread messages</span></div> : null}
+                        <article
+                          aria-labelledby={`reader-sender-${message.id}`}
+                          ref={(node) => {
+                            if (node) messageRefs.current.set(message.id, node);
+                            else messageRefs.current.delete(message.id);
+                          }}
+                          tabIndex={-1}
+                        >
                     <header className="reader-sender">
                       <MessageMark signature={signature} unread={message.unread} />
                       <div className="reader-sender-copy">
-                        <h2 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h2>
+                        <div className="reader-sender-line">
+                          <h3 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
+                          {message.unread ? <span className="reader-status-label">Unread</span> : null}
+                          {isNewest ? <span className="reader-status-label">Newest</span> : null}
+                        </div>
                         <details>
-                          <summary>{formatFullReceivedAt(message.receivedAt)} · to {formatRecipients(recipients)}</summary>
+                          <summary>Message details</summary>
                           <dl>
+                            <div><dt>Sent</dt><dd><time dateTime={message.receivedAt}>{formatFullReceivedAt(message.receivedAt)}</time></dd></div>
                             <div><dt>From</dt><dd>{message.from.email}</dd></div>
                             <div><dt>To</dt><dd>{formatRecipientAddresses(message.to)}</dd></div>
                             {message.cc.length ? <div><dt>Cc</dt><dd>{formatRecipientAddresses(message.cc)}</dd></div> : null}
+                            {message.bcc.length ? <div><dt>Bcc</dt><dd>{formatRecipientAddresses(message.bcc)}</dd></div> : null}
                           </dl>
                         </details>
                       </div>
-                      {index === messages.length - 1 && fallbackMessages.length ? <SenderAttentionControl compact message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
+                      {isNewest && fallbackMessages.length ? <SenderAttentionControl compact message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
                     </header>
-                    {message.bodyText?.trim() ? (
-                      <div className="reader-body">{message.bodyText}</div>
+                    {body ? (
+                      <>
+                        <div className="reader-body">{body.current}</div>
+                        {body.quoted ? (
+                          <details className="reader-quoted">
+                            <summary>Show quoted history</summary>
+                            <div>{body.quoted}</div>
+                          </details>
+                        ) : null}
+                      </>
                     ) : (
                       <p className="reader-no-body">This message has no readable text body.</p>
                     )}
@@ -1291,11 +1377,14 @@ function MessageReader({
                         <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div></li>)}</ul>
                       </section>
                     ) : null}
-                  </article>
-                </li>
-              );
-            })}
-          </ol>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            ))}
+          </div>
           <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
         </div>
       ) : null}
@@ -1999,10 +2088,16 @@ function formatFullReceivedAt(receivedAt: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function formatRecipients(recipients: MailContact[]) {
-  if (!recipients.length) return "undisclosed recipients";
-  if (recipients.length === 1) return recipients[0].name ?? recipients[0].email;
-  return `${recipients[0].name ?? recipients[0].email} +${recipients.length - 1}`;
+function formatThreadParticipants(participants: MailContact[], accountEmail: string) {
+  const names = [...new Map(
+    participants
+      .filter((participant) => participant.email.toLowerCase() !== accountEmail.toLowerCase())
+      .map((participant) => [participant.email.toLowerCase(), participant.name ?? participant.email]),
+  ).values()];
+  if (!names.length) return "yourself";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`;
 }
 
 function formatRecipientAddresses(recipients: MailContact[]) {
@@ -2016,7 +2111,10 @@ function formatFileSize(bytes: number) {
 }
 
 function createDemoThreadDetail(account: MailAccount, threadId: string, messages: InboxMessage[]): ThreadDetail {
-  const latest = messages[messages.length - 1];
+  const demoMessagesForThread = threadId === "thread_1"
+    ? [...messages, ...demoThreadHistoryExtras].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
+    : messages;
+  const latest = demoMessagesForThread[demoMessagesForThread.length - 1];
   const recipients = [{ name: account.displayName, email: account.email }];
   return {
     account,
@@ -2026,13 +2124,13 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       providerThreadId: threadId,
       subject: latest?.subject.replace(/^Re:\s*/i, "") ?? "",
       latestReceivedAt: latest?.receivedAt ?? new Date(0).toISOString(),
-      messageCount: messages.length,
-      labels: [...new Set(messages.flatMap((message) => message.labels))],
-      participants: [...messages.map((message) => message.from), ...recipients],
-      readState: messages.some((message) => message.unread) ? "unread" : "read",
-      attention: { hasUnread: messages.some((message) => message.unread), hasStarred: false, hasDraft: false, humanSignal: 100 },
+      messageCount: demoMessagesForThread.length,
+      labels: [...new Set(demoMessagesForThread.flatMap((message) => message.labels))],
+      participants: [...demoMessagesForThread.map((message) => message.from), ...recipients],
+      readState: demoMessagesForThread.some((message) => message.unread) ? "unread" : "read",
+      attention: { hasUnread: demoMessagesForThread.some((message) => message.unread), hasStarred: false, hasDraft: false, humanSignal: 100 },
     },
-    messages: messages.map((message) => ({
+    messages: demoMessagesForThread.map((message) => ({
       ...message,
       to: message.labels.includes("SENT") ? [{ name: "Maya Chen", email: "maya@example.com" }] : recipients,
       cc: [],
