@@ -113,12 +113,12 @@ export const messageBodies: Record<string, string> = {
     "Hey Luke,\n\nHere are the launch notes for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.\n\nLet me know what you think.\n\n— Maya",
   msg_1_reply:
     "I like the pinned people direction. Let's keep the first version read-only and make sure the thread view never assumes HTML is safe to render.\n\n— Luke",
-  msg_2: "Updated the deck with the blur treatment on the full shell — sidebar included.\n\n— Maya",
+  msg_2: "Your June statement is ready to view. No action is required; this automated notice is kept in focus because you chose it.\n\n— Harbor Bank",
   msg_3:
-    "Thursday works for me. I'd like to see the compose canvas feel more like a blank page than a reply bar.\n\n— Jon",
+    "Your sister is visiting this weekend. Can you make it over for dinner around six on Sunday?\n\nLove, Mom",
   msg_4: "Keeping the palette orca-simple: black or white surfaces, one accent at most.\n\n— Anika",
   msg_5: "Adding you to the thread about inbox filtering — Maya had great notes.\n\n— Dana",
-  msg_6: "Any time Tuesday or Wednesday morning works.\n\n— Maya",
+  msg_6: "Seven stories from the product community, collected in your weekly digest.\n\n— Product Dispatch",
 };
 
 export function messageIncludesPerson(message: InboxMessage, personName: string) {

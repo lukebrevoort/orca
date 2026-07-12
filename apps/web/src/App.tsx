@@ -7,8 +7,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, InboxMessage, MailAccount, ResolvedSenderAttention, SyncStatus } from "@orca/shared";
-import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema } from "@orca/shared";
+import type { AttentionViewSetting, InboxMessage, MailAccount, MailContact, ResolvedSenderAttention, SyncStatus, ThreadDetail } from "@orca/shared";
+import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -329,6 +329,12 @@ function InboxApp({
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
+  const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [readerError, setReaderError] = useState<string | null>(null);
+  const [readerRefreshKey, setReaderRefreshKey] = useState(0);
+  const originMessageIdRef = useRef<string | null>(null);
+  const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [draft, setDraft] = useState("");
@@ -471,6 +477,50 @@ function InboxApp({
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
 
+  useEffect(() => {
+    if (!selectedThreadId || !account) {
+      setThreadDetail(null);
+      setReaderStatus("idle");
+      return;
+    }
+
+    if (demoMode) {
+      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages));
+      setReaderStatus("ready");
+      setReaderError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setThreadDetail(null);
+    setReaderStatus("loading");
+    setReaderError(null);
+    fetchJson(`/v1/threads/${encodeURIComponent(selectedThreadId)}?accountId=${encodeURIComponent(account.id)}`, threadDetailSchema, controller.signal)
+      .then((detail) => {
+        if (controller.signal.aborted) return;
+        setThreadDetail(detail);
+        setReaderStatus("ready");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setReaderStatus("error");
+        setReaderError(getErrorMessage(error));
+      });
+    return () => controller.abort();
+  }, [account, demoMode, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
+
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeThread();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedThreadId]);
+
   const mailboxItems = useMemo(
     () =>
       mailboxes.map((mailbox) => ({
@@ -512,11 +562,15 @@ function InboxApp({
 
     setPanelClosing(false);
     setZenClosing(false);
+    originMessageIdRef.current = message.id;
     setSelectedThreadId(message.threadId);
   }
 
   function closeThread() {
     setSelectedThreadId(null);
+    setThreadDetail(null);
+    setReaderStatus("idle");
+    window.requestAnimationFrame(() => messageRowRefs.current.get(originMessageIdRef.current ?? "")?.focus());
   }
 
   function closePanel() {
@@ -663,13 +717,17 @@ function InboxApp({
           />
         </aside>
 
-        <section className="content-pane" aria-label={selectedThreadId ? "Thread" : "Inbox"}>
-          {selectedThreadId && selectedThreadLatestMessage ? (
-            <ThreadView
-              messages={selectedThreadMessages}
+        <section className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} aria-label={selectedThreadId ? "Message reader" : "Inbox"}>
+          {selectedThreadId ? (
+            <MessageReader
+              detail={threadDetail}
+              error={readerError}
+              fallbackMessages={selectedThreadMessages}
+              fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
               onAttentionChange={updateSenderAttention}
               onBack={closeThread}
-              title={selectedThreadLatestMessage.subject || "(no subject)"}
+              onRetry={() => setReaderRefreshKey((key) => key + 1)}
+              status={readerStatus}
             />
           ) : (
             <InboxView
@@ -681,6 +739,7 @@ function InboxApp({
               messages={visibleMessages}
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
+              rowRefs={messageRowRefs}
               personFilter={personFilter}
               status={status}
               syncStatus={syncStatus}
@@ -939,6 +998,7 @@ function InboxView({
   onAttentionChange,
   onInboxFilterChange,
   showInboxFilters,
+  rowRefs,
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
@@ -956,6 +1016,7 @@ function InboxView({
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   showInboxFilters: boolean;
+  rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
   const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
     { id: "all", label: "Everything" },
@@ -1057,6 +1118,10 @@ function InboxView({
                     <button
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
                       onClick={() => onOpenThread(message)}
+                      ref={(node) => {
+                        if (node) rowRefs.current.set(message.id, node);
+                        else rowRefs.current.delete(message.id);
+                      }}
                       style={
                         {
                           "--message-rail": signature.palette.rail,
@@ -1111,50 +1176,106 @@ function SyncStatusChip({ status }: { status: SyncStatus["accounts"][number] | n
   return <span className={`sync-status-chip sync-status-${status.state}`} role="status">{labels[status.state]}</span>;
 }
 
-function ThreadView({
-  messages,
-  title,
+function MessageReader({
+  detail,
+  error,
+  fallbackMessages,
+  fallbackTitle,
   onBack,
+  onRetry,
+  status,
   onAttentionChange,
 }: {
-  messages: InboxMessage[];
-  title: string;
+  detail: ThreadDetail | null;
+  error: string | null;
+  fallbackMessages: InboxMessage[];
+  fallbackTitle: string;
   onBack: () => void;
+  onRetry: () => void;
+  status: "idle" | "loading" | "ready" | "error";
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
 }) {
-  return (
-    <article className="thread-view">
-      <header className="thread-view-header">
-        <button className="thread-back" onClick={onBack} type="button">
-          <ArrowGlyph direction="left" />
-          <span>Inbox</span>
-        </button>
-        <div>
-          <p>Thread</p>
-          <h1>{title}</h1>
-          <span>
-            {messages.length} {messages.length === 1 ? "message" : "messages"}
-          </span>
-        </div>
-        {messages.length > 0 ? <SenderAttentionControl message={messages[messages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
-      </header>
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const messages = detail?.messages ?? [];
+  const title = detail?.thread.subject || fallbackTitle;
 
-      <ol className="thread-message-list">
-        {messages.map((message) => (
-          <li className="thread-message" key={message.id}>
-            <div className="thread-message-meta">
-              <div>
-                <strong>{message.from.name ?? message.from.email}</strong>
-                <span>{message.from.email}</span>
-              </div>
-              <time dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time>
-            </div>
-            <div className="thread-body">{getThreadBody(message)}</div>
-          </li>
-        ))}
-      </ol>
+  useEffect(() => {
+    if (status === "ready") headingRef.current?.focus();
+  }, [status]);
+
+  return (
+    <article className="message-reader" aria-labelledby="reader-title">
+      <nav className="reader-nav" aria-label="Reader controls">
+        <button className="reader-back" onClick={onBack} type="button">
+          <ArrowGlyph direction="left" />
+          <span>Back to inbox</span>
+        </button>
+        <span className="reader-escape-hint" aria-hidden="true">esc</span>
+      </nav>
+
+      {status === "loading" || status === "idle" ? <ReaderLoading title={fallbackTitle} messages={fallbackMessages} /> : null}
+      {status === "error" ? (
+        <section className="reader-state" role="alert">
+          <p>Message unavailable</p>
+          <h1 id="reader-title">This conversation couldn’t open.</h1>
+          <span>{error ?? "Orca could not load the message body."}</span>
+          <button onClick={onRetry} type="button">Try again</button>
+        </section>
+      ) : null}
+      {status === "ready" && detail ? (
+        <div className="reader-document">
+          <header className="reader-heading">
+            <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
+          </header>
+
+          <ol className="reader-message-list" aria-label="Messages in conversation">
+            {messages.map((message, index) => {
+              const signature = getContactSignature(message.from);
+              const recipients = [...message.to, ...message.cc, ...message.bcc];
+              return (
+                <li className="reader-message" key={message.id}>
+                  <article aria-labelledby={`reader-sender-${message.id}`}>
+                    <header className="reader-sender">
+                      <MessageMark signature={signature} unread={message.unread} />
+                      <div className="reader-sender-copy">
+                        <h2 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h2>
+                        <details>
+                          <summary>{formatFullReceivedAt(message.receivedAt)} · to {formatRecipients(recipients)}</summary>
+                          <dl>
+                            <div><dt>From</dt><dd>{message.from.email}</dd></div>
+                            <div><dt>To</dt><dd>{formatRecipientAddresses(message.to)}</dd></div>
+                            {message.cc.length ? <div><dt>Cc</dt><dd>{formatRecipientAddresses(message.cc)}</dd></div> : null}
+                          </dl>
+                        </details>
+                      </div>
+                      {index === messages.length - 1 && fallbackMessages.length ? <SenderAttentionControl compact message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
+                    </header>
+                    {message.bodyText?.trim() ? (
+                      <div className="reader-body">{message.bodyText}</div>
+                    ) : (
+                      <p className="reader-no-body">This message has no readable text body.</p>
+                    )}
+                    {message.attachments.length ? (
+                      <section className="reader-attachments" aria-label={`${message.attachments.length} attachments`}>
+                        <h3>Attachments</h3>
+                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div></li>)}</ul>
+                      </section>
+                    ) : null}
+                  </article>
+                </li>
+              );
+            })}
+          </ol>
+          <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
+        </div>
+      ) : null}
     </article>
   );
+}
+
+function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
+  return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
 function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
@@ -1841,6 +1962,57 @@ function formatReceivedAt(receivedAt: string) {
       : { month: "short", day: "numeric" };
 
   return new Intl.DateTimeFormat(undefined, options).format(date);
+}
+
+function formatFullReceivedAt(receivedAt: string) {
+  const date = new Date(receivedAt);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function formatRecipients(recipients: MailContact[]) {
+  if (!recipients.length) return "undisclosed recipients";
+  if (recipients.length === 1) return recipients[0].name ?? recipients[0].email;
+  return `${recipients[0].name ?? recipients[0].email} +${recipients.length - 1}`;
+}
+
+function formatRecipientAddresses(recipients: MailContact[]) {
+  return recipients.length ? recipients.map((recipient) => recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email).join(", ") : "None";
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function createDemoThreadDetail(account: MailAccount, threadId: string, messages: InboxMessage[]): ThreadDetail {
+  const latest = messages[messages.length - 1];
+  const recipients = [{ name: account.displayName, email: account.email }];
+  return {
+    account,
+    thread: {
+      id: threadId,
+      provider: "gmail",
+      providerThreadId: threadId,
+      subject: latest?.subject.replace(/^Re:\s*/i, "") ?? "",
+      latestReceivedAt: latest?.receivedAt ?? new Date(0).toISOString(),
+      messageCount: messages.length,
+      labels: [...new Set(messages.flatMap((message) => message.labels))],
+      participants: [...messages.map((message) => message.from), ...recipients],
+      readState: messages.some((message) => message.unread) ? "unread" : "read",
+      attention: { hasUnread: messages.some((message) => message.unread), hasStarred: false, hasDraft: false, humanSignal: 100 },
+    },
+    messages: messages.map((message) => ({
+      ...message,
+      to: message.labels.includes("SENT") ? [{ name: "Maya Chen", email: "maya@example.com" }] : recipients,
+      cc: [],
+      bcc: [],
+      bodyText: (messageBodies[message.id] ?? message.snippet) || null,
+      bodyHtml: null,
+      attachments: message.id === "msg_2" ? [{ id: "attachment_demo", filename: "Orca-reader-notes.pdf", mimeType: "application/pdf", size: 2483200 }] : [],
+    })),
+  };
 }
 
 function getThreadBody(message: InboxMessage) {
