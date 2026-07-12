@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { App, getMessagesForMailbox } from "./App";
+import { App, applySenderAttention, getMessagesForMailbox, isDevPreviewPath } from "./App";
 import { demoMessages } from "./demo-data";
 
 describe("App", () => {
@@ -62,5 +62,23 @@ describe("App", () => {
     expect(getMessagesForMailbox(demoMessages, "sent")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "spam")).toHaveLength(0);
     expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
+  });
+
+  test("only exposes the fake inbox preview route during development", () => {
+    expect(isDevPreviewPath("/dev/inbox", true)).toBe(true);
+    expect(isDevPreviewPath("/dev/inbox", false)).toBe(false);
+    expect(isDevPreviewPath("/", true)).toBe(false);
+  });
+
+  test("applies sender attention to historical and newly synced messages", () => {
+    const historical = demoMessages.filter((message) => message.from.email === "maya@example.com");
+    const future = { ...historical[0], id: "future", providerMessageId: "future" };
+    const all = [...demoMessages, future];
+
+    expect(applySenderAttention(all, { "maya@example.com": "hidden" }).some((message) => message.from.email === "maya@example.com")).toBe(false);
+    const quiet = applySenderAttention(all, { "maya@example.com": "quiet" });
+    expect(quiet.slice(-historical.length - 1).every((message) => message.from.email === "maya@example.com")).toBe(true);
+    const priority = applySenderAttention(all, { "maya@example.com": "focus" });
+    expect(priority.slice(0, historical.length + 1).every((message) => message.from.email === "maya@example.com")).toBe(true);
   });
 });
