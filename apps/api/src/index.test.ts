@@ -311,4 +311,97 @@ describe("Orca API", () => {
       delete process.env.TOKEN_ENCRYPTION_KEY;
     }
   });
+
+  test("persists account-scoped sender rules, resolves precedence, and resets to the next rule", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-test-"));
+    const dbPath = join(tempDir, "attention.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+      }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      const domainResponse = await testApp.request("/v1/attention/rules", {
+        method: "POST", headers,
+        body: JSON.stringify({ scope: "domain", value: "Example.COM", behavior: "quiet", source: "user_choice" }),
+      });
+      assert.equal(domainResponse.status, 200);
+      assert.equal((await domainResponse.json()).value, "example.com");
+
+      const addressResponse = await testApp.request("/v1/attention/rules", {
+        method: "POST", headers,
+        body: JSON.stringify({ scope: "address", value: "Maya@Example.com", behavior: "focus", source: "suggestion_accepted" }),
+      });
+      const addressRule = await addressResponse.json();
+      assert.equal(addressResponse.status, 200);
+
+      const exact = await testApp.request("/v1/attention/resolve?address=maya%40example.com", { headers });
+      assert.deepEqual(await exact.json(), {
+        behavior: "focus",
+        rule: { ...addressRule, value: "maya@example.com" },
+      });
+      const domain = await testApp.request("/v1/attention/resolve?address=other%40example.com", { headers });
+      assert.equal((await domain.json()).behavior, "quiet");
+
+      const reset = await testApp.request(`/v1/attention/rules/${addressRule.id}`, { method: "DELETE", headers });
+      assert.equal(reset.status, 204);
+      const afterReset = await testApp.request("/v1/attention/resolve?address=maya%40example.com", { headers });
+      assert.equal((await afterReset.json()).behavior, "quiet");
+      const defaultRule = await testApp.request("/v1/attention/resolve?address=elsewhere%40other.example", { headers });
+      assert.deepEqual(await defaultRule.json(), { behavior: "normal", rule: null });
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("persists presentation independently of attention behavior", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-views-test-"));
+    const dbPath = join(tempDir, "views.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+      }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      const listed = await testApp.request("/v1/attention/view-settings", { headers });
+      assert.equal(listed.status, 200);
+      assert.equal((await listed.json()).length, 5);
+      const updated = await testApp.request("/v1/attention/view-settings/normal", {
+        method: "PATCH", headers,
+        body: JSON.stringify({ displayName: "Everyday", icon: "mail", color: "#123456", position: 0 }),
+      });
+      assert.deepEqual(await updated.json(), {
+        behavior: "normal", displayName: "Everyday", icon: "mail", color: "#123456", position: 0,
+      });
+      const settings = await testApp.request("/v1/attention/view-settings", { headers });
+      const values = await settings.json();
+      assert.deepEqual(values.map((value: { behavior: string; position: number }) => [value.behavior, value.position]), [
+        ["normal", 0], ["notify", 1], ["focus", 2], ["quiet", 3], ["hidden", 4],
+      ]);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
 });

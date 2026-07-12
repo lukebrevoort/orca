@@ -228,6 +228,65 @@ export const contacts = sqliteTable(
   }),
 );
 
+export const senderAttentionRules = sqliteTable(
+  "sender_attention_rules",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    scope: text("scope").notNull(),
+    value: text("value").notNull(),
+    behavior: text("behavior").notNull(),
+    source: text("source").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    accountScopeValueUniqueIdx: uniqueIndex("sender_attention_rules_account_scope_value_unique_idx").on(
+      table.accountId,
+      table.scope,
+      table.value,
+    ),
+    accountIdx: index("sender_attention_rules_account_idx").on(table.accountId),
+  }),
+);
+
+export const attentionViewSettings = sqliteTable(
+  "attention_view_settings",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    behavior: text("behavior").notNull(),
+    displayName: text("display_name").notNull(),
+    icon: text("icon").notNull(),
+    color: text("color").notNull(),
+    position: integer("position").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    accountBehaviorUniqueIdx: uniqueIndex("attention_view_settings_account_behavior_unique_idx").on(
+      table.accountId,
+      table.behavior,
+    ),
+    accountPositionUniqueIdx: uniqueIndex("attention_view_settings_account_position_unique_idx").on(
+      table.accountId,
+      table.position,
+    ),
+  }),
+);
+
 export const sessions = sqliteTable(
   "sessions",
   {

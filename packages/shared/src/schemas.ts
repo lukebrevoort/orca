@@ -116,48 +116,40 @@ export const normalizedMessageSchema = inboxMessageSchema
   .strict();
 export type NormalizedMessage = z.infer<typeof normalizedMessageSchema>;
 
-export const mailAttachmentSchema = z
-  .object({
-    id: nonEmptyStringSchema,
-    filename: nonEmptyStringSchema,
-    mimeType: nonEmptyStringSchema,
-    size: z.number().int().nonnegative(),
-  })
-  .strict();
+export const mailAttachmentSchema = z.object({
+  id: nonEmptyStringSchema,
+  filename: nonEmptyStringSchema,
+  mimeType: nonEmptyStringSchema,
+  size: z.number().int().nonnegative(),
+}).strict();
 export type MailAttachment = z.infer<typeof mailAttachmentSchema>;
 
 export const threadReadStateSchema = z.enum(["read", "unread"]);
 export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
 
-export const threadAttentionSchema = z
-  .object({
-    hasUnread: z.boolean(),
-    hasStarred: z.boolean(),
-    hasDraft: z.boolean(),
-    humanSignal: z.number().int().nullable(),
-  })
-  .strict();
+export const threadAttentionSchema = z.object({
+  hasUnread: z.boolean(),
+  hasStarred: z.boolean(),
+  hasDraft: z.boolean(),
+  humanSignal: z.number().int().nullable(),
+}).strict();
 export type ThreadAttention = z.infer<typeof threadAttentionSchema>;
 
 export const threadDetailMessageSchema = normalizedMessageSchema
   .omit({ threadId: true, raw: true })
-  .extend({
-    attachments: z.array(mailAttachmentSchema),
-  })
+  .extend({ attachments: z.array(mailAttachmentSchema) })
   .strict();
 export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
 
-export const threadDetailSchema = z
-  .object({
-    account: mailAccountSchema,
-    thread: normalizedThreadSchema.extend({
-      participants: z.array(mailContactSchema),
-      readState: threadReadStateSchema,
-      attention: threadAttentionSchema,
-    }).strict(),
-    messages: z.array(threadDetailMessageSchema),
-  })
-  .strict();
+export const threadDetailSchema = z.object({
+  account: mailAccountSchema,
+  thread: normalizedThreadSchema.extend({
+    participants: z.array(mailContactSchema),
+    readState: threadReadStateSchema,
+    attention: threadAttentionSchema,
+  }).strict(),
+  messages: z.array(threadDetailMessageSchema),
+}).strict();
 export type ThreadDetail = z.infer<typeof threadDetailSchema>;
 
 export const authUserSchema = z
@@ -189,12 +181,85 @@ export const inboxQuerySchema = z
   .strict();
 export type InboxQuery = z.infer<typeof inboxQuerySchema>;
 
-export const threadQuerySchema = z
-  .object({
-    accountId: nonEmptyStringSchema,
-  })
-  .strict();
+export const threadQuerySchema = z.object({ accountId: nonEmptyStringSchema }).strict();
 export type ThreadQuery = z.infer<typeof threadQuerySchema>;
+
+export const attentionBehaviorSchema = z.enum(["notify", "focus", "normal", "quiet", "hidden"]);
+export type AttentionBehavior = z.infer<typeof attentionBehaviorSchema>;
+
+export const senderRuleScopeSchema = z.enum(["address", "domain"]);
+export type SenderRuleScope = z.infer<typeof senderRuleScopeSchema>;
+
+export const senderRuleSourceSchema = z.enum(["user_choice", "imported_label", "suggestion_accepted"]);
+export type SenderRuleSource = z.infer<typeof senderRuleSourceSchema>;
+
+const senderRuleValueSchema = z.string().trim().min(1).max(320);
+
+export const senderAttentionRuleSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  scope: senderRuleScopeSchema,
+  value: senderRuleValueSchema,
+  behavior: attentionBehaviorSchema,
+  source: senderRuleSourceSchema,
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type SenderAttentionRule = z.infer<typeof senderAttentionRuleSchema>;
+
+const senderAttentionRuleInputSchema = senderAttentionRuleSchema.pick({
+  scope: true,
+  value: true,
+  behavior: true,
+  source: true,
+}).strict();
+
+export const createSenderAttentionRuleSchema = senderAttentionRuleInputSchema.superRefine((rule, context) => {
+  if (rule.scope === "address" && !z.string().email().safeParse(rule.value).success) {
+    context.addIssue({ code: "custom", path: ["value"], message: "Expected an email address for address rules" });
+  }
+  if (rule.scope === "domain" && !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(rule.value)) {
+    context.addIssue({ code: "custom", path: ["value"], message: "Expected a domain name for domain rules" });
+  }
+});
+export type CreateSenderAttentionRule = z.infer<typeof createSenderAttentionRuleSchema>;
+
+export const updateSenderAttentionRuleSchema = senderAttentionRuleInputSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  "Expected at least one field to update",
+);
+export type UpdateSenderAttentionRule = z.infer<typeof updateSenderAttentionRuleSchema>;
+
+export const resolveSenderAttentionSchema = z.object({
+  address: z.string().trim().email().max(320),
+}).strict();
+export type ResolveSenderAttention = z.infer<typeof resolveSenderAttentionSchema>;
+
+export const resolvedSenderAttentionSchema = z.object({
+  behavior: attentionBehaviorSchema,
+  rule: senderAttentionRuleSchema.nullable(),
+}).strict();
+export type ResolvedSenderAttention = z.infer<typeof resolvedSenderAttentionSchema>;
+
+export const attentionViewSettingSchema = z.object({
+  behavior: attentionBehaviorSchema,
+  displayName: z.string().trim().min(1).max(80),
+  icon: z.string().trim().min(1).max(80),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
+  position: z.number().int().min(0).max(4),
+}).strict();
+export type AttentionViewSetting = z.infer<typeof attentionViewSettingSchema>;
+
+export const updateAttentionViewSettingSchema = attentionViewSettingSchema.pick({
+  displayName: true,
+  icon: true,
+  color: true,
+  position: true,
+}).partial().refine(
+  (value) => Object.keys(value).length > 0,
+  "Expected at least one field to update",
+);
+export type UpdateAttentionViewSetting = z.infer<typeof updateAttentionViewSettingSchema>;
 
 const providerPageFields = {
   items: z.array(z.unknown()),

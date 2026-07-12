@@ -5,13 +5,29 @@ import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
-import { authSessionSchema, inboxQuerySchema, inboxResponseSchema, mailAccountSchema, syncStatusSchema, threadDetailSchema, threadQuerySchema } from "@orca/shared";
+import {
+  attentionBehaviorSchema,
+  attentionViewSettingSchema,
+  authSessionSchema,
+  createSenderAttentionRuleSchema,
+  inboxQuerySchema,
+  inboxResponseSchema,
+  mailAccountSchema,
+  resolveSenderAttentionSchema,
+  resolvedSenderAttentionSchema,
+  senderAttentionRuleSchema,
+  syncStatusSchema,
+  threadDetailSchema,
+  threadQuerySchema,
+  updateAttentionViewSettingSchema,
+  updateSenderAttentionRuleSchema,
+} from "@orca/shared";
 
 import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { emailAttachments, emailLabels, emails, labels, oauthAccounts, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, emailAttachments, emailLabels, emails, labels, oauthAccounts, senderAttentionRules, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -22,6 +38,14 @@ type CreateAppOptions = {
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
+
+const defaultViewSettings = [
+  { behavior: "notify", displayName: "Notify", icon: "bell", color: "#dc2626", position: 0 },
+  { behavior: "focus", displayName: "Focus", icon: "sparkles", color: "#2563eb", position: 1 },
+  { behavior: "normal", displayName: "Normal", icon: "inbox", color: "#64748b", position: 2 },
+  { behavior: "quiet", displayName: "Quiet", icon: "moon", color: "#7c3aed", position: 3 },
+  { behavior: "hidden", displayName: "Hidden", icon: "eye-off", color: "#475569", position: 4 },
+] as const;
 
 export function createApp(options: CreateAppOptions = {}): Hono<{
   Variables: AuthVariables;
@@ -99,6 +123,140 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   };
   app.get("/v1/sync/status", requireAuth({ dbFactory }), getSyncStatus);
   app.get("/api/sync/status", requireAuth({ dbFactory }), getSyncStatus);
+
+  app.get("/v1/attention/rules", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      return c.json(listSenderRules(db, account.id).map(toSenderRule));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post(
+    "/v1/attention/rules",
+    validator("json", (value, c) => validateJson(c, createSenderAttentionRuleSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const input = normalizeRuleInput(c.req.valid("json"));
+        const id = `sender-rule:${crypto.randomUUID()}`;
+        db.insert(senderAttentionRules).values({ id, accountId: account.id, ...input }).run();
+        return jsonWithSchema(c, senderAttentionRuleSchema, toSenderRule(getSenderRule(db, account.id, id)!));
+      } catch (error) {
+        return uniqueRuleError(c, error);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.patch(
+    "/v1/attention/rules/:id",
+    validator("json", (value, c) => validateJson(c, updateSenderAttentionRuleSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const existing = getSenderRule(db, account.id, c.req.param("id"));
+        if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
+        const input = normalizeRuleInput({ ...existing, ...c.req.valid("json") });
+        db.update(senderAttentionRules).set({ ...input, updatedAt: new Date() })
+          .where(and(eq(senderAttentionRules.accountId, account.id), eq(senderAttentionRules.id, existing.id))).run();
+        return jsonWithSchema(c, senderAttentionRuleSchema, toSenderRule(getSenderRule(db, account.id, existing.id)!));
+      } catch (error) {
+        return uniqueRuleError(c, error);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.delete("/v1/attention/rules/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const existing = getSenderRule(db, account.id, c.req.param("id"));
+      if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
+      db.delete(senderAttentionRules).where(eq(senderAttentionRules.id, existing.id)).run();
+      return c.body(null, 204);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get(
+    "/v1/attention/resolve",
+    validator("query", (value, c) => validateJson(c, resolveSenderAttentionSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const address = c.req.valid("query").address.toLowerCase();
+        const domain = address.split("@")[1]!;
+        const rule = db.select().from(senderAttentionRules).where(and(
+          eq(senderAttentionRules.accountId, account.id),
+          eq(senderAttentionRules.scope, "address"),
+          eq(senderAttentionRules.value, address),
+        )).get() ?? db.select().from(senderAttentionRules).where(and(
+          eq(senderAttentionRules.accountId, account.id),
+          eq(senderAttentionRules.scope, "domain"),
+          eq(senderAttentionRules.value, domain),
+        )).get();
+        return jsonWithSchema(c, resolvedSenderAttentionSchema, {
+          behavior: rule?.behavior ?? "normal",
+          rule: rule ? toSenderRule(rule) : null,
+        });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.get("/v1/attention/view-settings", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      ensureViewSettings(db, account.id);
+      return c.json(listViewSettings(db, account.id).map(toViewSetting));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.patch(
+    "/v1/attention/view-settings/:behavior",
+    validator("json", (value, c) => validateJson(c, updateAttentionViewSettingSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const behavior = attentionBehaviorSchema.safeParse(c.req.param("behavior"));
+      if (!behavior.success) return c.json({ error: { code: "validation_error", message: "Unknown attention behavior" } }, 400);
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        ensureViewSettings(db, account.id);
+        const current = db.select().from(attentionViewSettings).where(and(eq(attentionViewSettings.accountId, account.id), eq(attentionViewSettings.behavior, behavior.data))).get()!;
+        const input = c.req.valid("json");
+        updateViewSetting(db, account.id, current, input);
+        const updated = db.select().from(attentionViewSettings).where(eq(attentionViewSettings.id, current.id)).get()!;
+        return jsonWithSchema(c, attentionViewSettingSchema, toViewSetting(updated));
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
 
   app.get(
     "/v1/inbox",
@@ -184,9 +342,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     "/v1/threads/:threadId",
     validator("query", (value, c) => {
       const result = threadQuerySchema.safeParse(value);
-      if (!result.success) {
-        return c.json({ error: { code: "validation_error", message: "An accountId is required to read a thread" } }, 400);
-      }
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to read a thread" } }, 400);
       return result.data;
     }),
     requireAuth({ dbFactory }),
@@ -194,107 +350,63 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const { db, sqlite } = dbFactory();
       try {
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
-      if (!account) {
-        return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-      }
+        if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+        const thread = db.select().from(threads)
+          .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
+        if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
 
-      // Account scope is part of the lookup so a valid ID from another account
-      // is indistinguishable from an unknown thread.
-      const thread = db.select().from(threads)
-        .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id)))
-        .get();
-      if (!thread) {
-        return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-      }
-
-      const messageRows = db.select({
-        id: emails.id,
-        providerMessageId: emails.providerMessageId,
-        fromAddress: emails.fromAddress,
-        fromName: emails.fromName,
-        toRecipients: emails.toRecipients,
-        ccRecipients: emails.ccRecipients,
-        bccRecipients: emails.bccRecipients,
-        subject: emails.subject,
-        snippet: emails.snippet,
-        bodyText: emails.bodyText,
-        bodyHtml: emails.bodyHtml,
-        receivedAt: emails.receivedAt,
-        isRead: emails.isRead,
-        isStarred: emails.isStarred,
-        isDraft: emails.isDraft,
-        humanSignal: emails.humanSignal,
-        labelName: labels.name,
-      }).from(emails)
-        .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
-        .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-        .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
-        .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id))
-        .all();
-      const attachments = db.select().from(emailAttachments)
-        .innerJoin(emails, eq(emails.id, emailAttachments.emailId))
-        .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
-        .all();
-
-      const labelsByMessage = new Map<string, string[]>();
-      const messagesById = new Map<string, typeof messageRows[number]>();
-      for (const row of messageRows) {
-        messagesById.set(row.id, row);
-        const names = labelsByMessage.get(row.id) ?? [];
-        if (row.labelName) names.push(row.labelName);
-        labelsByMessage.set(row.id, names);
-      }
-      const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
-      for (const { email_attachments: attachment } of attachments) {
-        const values = attachmentsByMessage.get(attachment.emailId) ?? [];
-        values.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
-        attachmentsByMessage.set(attachment.emailId, values);
-      }
-
-      const messages = [...messagesById.values()].map((message) => {
-        const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
-        return {
-          id: message.id,
-          provider: "gmail" as const,
-          providerMessageId: message.providerMessageId,
-          from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
-          to: parseContacts(message.toRecipients),
-          cc: parseContacts(message.ccRecipients),
-          bcc: parseContacts(message.bccRecipients),
-          subject: message.subject ?? "",
-          snippet: message.snippet ?? "",
-          receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
-          unread: !message.isRead,
-          labels: labelsByMessage.get(message.id) ?? [],
-          bodyText: message.bodyText ?? htmlToText(bodyHtml),
-          bodyHtml,
-          attachments: attachmentsByMessage.get(message.id) ?? [],
-        };
-      });
-      const participants = dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc]));
-      const allLabels = [...new Set(messages.flatMap((message) => message.labels))];
-      const signals = [...messagesById.values()].map((message) => message.humanSignal).filter((value): value is number => value !== null);
-
+        const messageRows = db.select({
+          id: emails.id, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
+          toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
+          subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
+          receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
+          humanSignal: emails.humanSignal, labelName: labels.name,
+        }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
+          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
+          .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
+        const attachmentRows = db.select().from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
+          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
+        const messagesById = new Map<string, typeof messageRows[number]>();
+        const labelsByMessage = new Map<string, string[]>();
+        for (const row of messageRows) {
+          messagesById.set(row.id, row);
+          const names = labelsByMessage.get(row.id) ?? [];
+          if (row.labelName) names.push(row.labelName);
+          labelsByMessage.set(row.id, names);
+        }
+        const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
+        for (const { email_attachments: attachment } of attachmentRows) {
+          const attachments = attachmentsByMessage.get(attachment.emailId) ?? [];
+          attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
+          attachmentsByMessage.set(attachment.emailId, attachments);
+        }
+        const messages = [...messagesById.values()].map((message) => {
+          const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+          return {
+            id: message.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
+            from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
+            to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
+            subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
+            unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
+            attachments: attachmentsByMessage.get(message.id) ?? [],
+          };
+        });
+        const sourceMessages = [...messagesById.values()];
         return jsonWithSchema(c, threadDetailSchema, {
-        account: toMailAccount(account),
-        thread: {
-          id: thread.id,
-          provider: "gmail",
-          providerThreadId: thread.providerThreadId,
-          subject: thread.subject ?? "",
-          latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(),
-          messageCount: thread.messageCount,
-          labels: allLabels,
-          participants,
-          readState: thread.isRead ? "read" : "unread",
-          attention: {
-            hasUnread: messages.some((message) => message.unread),
-            hasStarred: [...messagesById.values()].some((message) => message.isStarred),
-            hasDraft: [...messagesById.values()].some((message) => message.isDraft),
-            humanSignal: signals.length ? Math.max(...signals) : null,
+          account: toMailAccount(account),
+          thread: {
+            id: thread.id, provider: "gmail", providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
+            latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
+            labels: [...new Set(messages.flatMap((message) => message.labels))],
+            participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
+            readState: thread.isRead ? "read" : "unread",
+            attention: {
+              hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
+              hasDraft: sourceMessages.some((message) => message.isDraft),
+              humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),
+            },
           },
-        },
-        messages,
+          messages,
         });
       } finally {
         sqlite.close();
@@ -382,15 +494,139 @@ type ConnectedAccount = {
   lastSyncedAt: Date | null;
 };
 
+type Database = ReturnType<typeof createDatabaseClient>["db"];
+type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
+type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
+
+function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } } }, value: unknown) {
+  const result = schema.safeParse(value);
+  if (result.success) return result.data;
+  return c.json({
+    error: {
+      code: "validation_error",
+      message: "Invalid request data",
+      issues: result.error.issues.map((issue) => ({ path: issue.path.join(".") || "body", message: issue.message })),
+    },
+  }, 400);
+}
+
+function noConnectedAccount(c: Context) {
+  return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
+}
+
+function normalizeRuleInput(input: { scope: string; value: string; behavior: string; source: string }) {
+  return createSenderAttentionRuleSchema.parse({
+    scope: input.scope,
+    value: input.value.trim().toLowerCase(),
+    behavior: input.behavior,
+    source: input.source,
+  });
+}
+
+function toSenderRule(rule: SenderRuleRecord) {
+  return {
+    id: rule.id,
+    accountId: rule.accountId,
+    scope: rule.scope,
+    value: rule.value,
+    behavior: rule.behavior,
+    source: rule.source,
+    createdAt: rule.createdAt.toISOString(),
+    updatedAt: rule.updatedAt.toISOString(),
+  };
+}
+
+function getSenderRule(db: Database, accountId: string, id: string) {
+  return db.select().from(senderAttentionRules).where(and(
+    eq(senderAttentionRules.accountId, accountId),
+    eq(senderAttentionRules.id, id),
+  )).get();
+}
+
+function listSenderRules(db: Database, accountId: string) {
+  return db.select().from(senderAttentionRules)
+    .where(eq(senderAttentionRules.accountId, accountId))
+    .orderBy(asc(senderAttentionRules.scope), asc(senderAttentionRules.value)).all();
+}
+
+function uniqueRuleError(c: Context, error: unknown) {
+  if (error instanceof Error && error.name === "ZodError") {
+    return c.json({ error: { code: "validation_error", message: "Invalid request data" } }, 400);
+  }
+  if (error instanceof Error && /UNIQUE constraint failed: sender_attention_rules/.test(error.message)) {
+    return c.json({ error: { code: "conflict", message: "A rule already exists for this sender scope" } }, 409);
+  }
+  throw error;
+}
+
+function ensureViewSettings(db: Database, accountId: string) {
+  const existing = db.select({ behavior: attentionViewSettings.behavior }).from(attentionViewSettings)
+    .where(eq(attentionViewSettings.accountId, accountId)).all();
+  const existingBehaviors = new Set(existing.map((setting) => setting.behavior));
+  const missing = defaultViewSettings.filter((setting) => !existingBehaviors.has(setting.behavior));
+  if (missing.length > 0) {
+    db.insert(attentionViewSettings).values(missing.map((setting) => ({
+      id: `attention-view:${accountId}:${setting.behavior}`,
+      accountId,
+      ...setting,
+    }))).run();
+  }
+}
+
+function listViewSettings(db: Database, accountId: string) {
+  return db.select().from(attentionViewSettings)
+    .where(eq(attentionViewSettings.accountId, accountId))
+    .orderBy(asc(attentionViewSettings.position)).all();
+}
+
+function toViewSetting(setting: ViewSettingRecord) {
+  return {
+    behavior: setting.behavior,
+    displayName: setting.displayName,
+    icon: setting.icon,
+    color: setting.color,
+    position: setting.position,
+  };
+}
+
+function updateViewSetting(
+  db: Database,
+  accountId: string,
+  current: ViewSettingRecord,
+  input: { displayName?: string; icon?: string; color?: string; position?: number },
+) {
+  const nextPosition = input.position ?? current.position;
+  db.transaction((tx) => {
+    if (nextPosition !== current.position) {
+      tx.update(attentionViewSettings).set({ position: -1 })
+        .where(eq(attentionViewSettings.id, current.id)).run();
+      if (nextPosition < current.position) {
+        for (let position = current.position - 1; position >= nextPosition; position -= 1) {
+          tx.update(attentionViewSettings).set({ position: position + 1 })
+            .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
+        }
+      } else {
+        for (let position = current.position + 1; position <= nextPosition; position += 1) {
+          tx.update(attentionViewSettings).set({ position: position - 1 })
+            .where(and(eq(attentionViewSettings.accountId, accountId), eq(attentionViewSettings.position, position))).run();
+        }
+      }
+    }
+    tx.update(attentionViewSettings).set({
+      displayName: input.displayName ?? current.displayName,
+      icon: input.icon ?? current.icon,
+      color: input.color ?? current.color,
+      position: nextPosition,
+      updatedAt: new Date(),
+    }).where(eq(attentionViewSettings.id, current.id)).run();
+  });
+}
+
 function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount | undefined {
   return getConnectedAccounts(db, userId)[0];
 }
 
-function getConnectedAccountById(
-  db: ReturnType<typeof createDatabaseClient>["db"],
-  userId: string,
-  accountId: string,
-): ConnectedAccount | undefined {
+function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db"], userId: string, accountId: string) {
   return getConnectedAccounts(db, userId).find((account) => account.id === accountId);
 }
 
@@ -425,40 +661,41 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
   disallowedTagsMode: "discard",
 };
 
-function sanitizeProviderHtml(value: string | null): string | null {
-  if (value === null) return null;
-  return sanitizeHtml(value, providerHtmlPolicy) || null;
+function sanitizeProviderHtml(value: string | null) {
+  return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
 }
 
-function htmlToText(value: string | null): string | null {
+function htmlToText(value: string | null) {
   if (value === null) return null;
   const text = sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
   return text || null;
-}
-
-function dedupeContacts(contacts: Array<{ name: string | null; email: string }>) {
-  const unique = new Map<string, { name: string | null; email: string }>();
-  for (const contact of contacts) {
-    if (!contact.email || contact.email === "unknown@invalid") continue;
-    const key = contact.email.toLowerCase();
-    const prior = unique.get(key);
-    if (!prior || (!prior.name && contact.name)) unique.set(key, contact);
-  }
-  return [...unique.values()];
 }
 
 function parseContacts(value: string | null) {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((contact): contact is { name: string | null; email: string } =>
-      typeof contact === "object" && contact !== null &&
-      (typeof contact.name === "string" || contact.name === null) && typeof contact.email === "string",
-    );
+    return Array.isArray(parsed) ? parsed.filter((contact): contact is { name: string | null; email: string } =>
+      typeof contact === "object" && contact !== null && (typeof contact.name === "string" || contact.name === null) && typeof contact.email === "string",
+    ) : [];
   } catch {
     return [];
   }
+}
+
+function dedupeContacts(contacts: Array<{ name: string | null; email: string }>) {
+  const unique = new Map<string, { name: string | null; email: string }>();
+  for (const contact of contacts) {
+    if (!contact.email || contact.email === "unknown@invalid") continue;
+    const prior = unique.get(contact.email.toLowerCase());
+    if (!prior || (!prior.name && contact.name)) unique.set(contact.email.toLowerCase(), contact);
+  }
+  return [...unique.values()];
+}
+
+function maxHumanSignal(signals: Array<number | null>) {
+  const values = signals.filter((value): value is number => value !== null);
+  return values.length ? Math.max(...values) : null;
 }
 
 export const app = createApp();
