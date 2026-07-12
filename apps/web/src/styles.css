@@ -994,8 +994,9 @@ textarea {
 }
 
 .inbox-filter-bar button[aria-pressed="true"] {
-  background: var(--orca-ink);
-  color: var(--orca-bg);
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  color: var(--orca-ink);
 }
 
 .inbox-body {
