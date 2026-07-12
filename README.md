@@ -37,6 +37,9 @@ bun run dev:api
 bun run dev:web
 ```
 
+The API applies any pending local SQLite migrations before it starts. This
+makes a fresh or reset development database ready for auth and OAuth flows.
+
 Default local URLs:
 
 - API: `http://localhost:3000`
