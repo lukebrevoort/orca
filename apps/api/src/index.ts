@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { validator } from "hono/validator";
+import sanitizeHtml from "sanitize-html";
 import {
   attentionBehaviorSchema,
   attentionViewSettingSchema,
@@ -16,6 +17,8 @@ import {
   resolvedSenderAttentionSchema,
   senderAttentionRuleSchema,
   syncStatusSchema,
+  threadDetailSchema,
+  threadQuerySchema,
   updateAttentionViewSettingSchema,
   updateSenderAttentionRuleSchema,
 } from "@orca/shared";
@@ -24,7 +27,7 @@ import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, emailLabels, emails, labels, oauthAccounts, senderAttentionRules, users } from "./db/schema.ts";
+import { attentionViewSettings, emailAttachments, emailLabels, emails, labels, oauthAccounts, senderAttentionRules, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -335,6 +338,82 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     },
   );
 
+  app.get(
+    "/v1/threads/:threadId",
+    validator("query", (value, c) => {
+      const result = threadQuerySchema.safeParse(value);
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to read a thread" } }, 400);
+      return result.data;
+    }),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
+        if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+        const thread = db.select().from(threads)
+          .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
+        if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+
+        const messageRows = db.select({
+          id: emails.id, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
+          toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
+          subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
+          receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
+          humanSignal: emails.humanSignal, labelName: labels.name,
+        }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
+          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
+          .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
+        const attachmentRows = db.select().from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
+          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
+        const messagesById = new Map<string, typeof messageRows[number]>();
+        const labelsByMessage = new Map<string, string[]>();
+        for (const row of messageRows) {
+          messagesById.set(row.id, row);
+          const names = labelsByMessage.get(row.id) ?? [];
+          if (row.labelName) names.push(row.labelName);
+          labelsByMessage.set(row.id, names);
+        }
+        const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
+        for (const { email_attachments: attachment } of attachmentRows) {
+          const attachments = attachmentsByMessage.get(attachment.emailId) ?? [];
+          attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
+          attachmentsByMessage.set(attachment.emailId, attachments);
+        }
+        const messages = [...messagesById.values()].map((message) => {
+          const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+          return {
+            id: message.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
+            from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
+            to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
+            subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
+            unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
+            attachments: attachmentsByMessage.get(message.id) ?? [],
+          };
+        });
+        const sourceMessages = [...messagesById.values()];
+        return jsonWithSchema(c, threadDetailSchema, {
+          account: toMailAccount(account),
+          thread: {
+            id: thread.id, provider: "gmail", providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
+            latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
+            labels: [...new Set(messages.flatMap((message) => message.labels))],
+            participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
+            readState: thread.isRead ? "read" : "unread",
+            attention: {
+              hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
+              hasDraft: sourceMessages.some((message) => message.isDraft),
+              humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),
+            },
+          },
+          messages,
+        });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   app.route("/v1/auth/gmail", createGmailAuthApp());
 
   app.post(
@@ -547,6 +626,10 @@ function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], 
   return getConnectedAccounts(db, userId)[0];
 }
 
+function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db"], userId: string, accountId: string) {
+  return getConnectedAccounts(db, userId).find((account) => account.id === accountId);
+}
+
 function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
   return db.select({
     id: oauthAccounts.id,
@@ -569,6 +652,50 @@ function toMailAccount(account: ConnectedAccount) {
     email: account.providerEmail,
     displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
   };
+}
+
+const providerHtmlPolicy: sanitizeHtml.IOptions = {
+  allowedTags: ["a", "b", "blockquote", "br", "code", "div", "em", "i", "li", "ol", "p", "pre", "span", "strong", "ul"],
+  allowedAttributes: { a: ["href", "title"] },
+  allowedSchemes: ["http", "https", "mailto"],
+  disallowedTagsMode: "discard",
+};
+
+function sanitizeProviderHtml(value: string | null) {
+  return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
+}
+
+function htmlToText(value: string | null) {
+  if (value === null) return null;
+  const text = sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
+  return text || null;
+}
+
+function parseContacts(value: string | null) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((contact): contact is { name: string | null; email: string } =>
+      typeof contact === "object" && contact !== null && (typeof contact.name === "string" || contact.name === null) && typeof contact.email === "string",
+    ) : [];
+  } catch {
+    return [];
+  }
+}
+
+function dedupeContacts(contacts: Array<{ name: string | null; email: string }>) {
+  const unique = new Map<string, { name: string | null; email: string }>();
+  for (const contact of contacts) {
+    if (!contact.email || contact.email === "unknown@invalid") continue;
+    const prior = unique.get(contact.email.toLowerCase());
+    if (!prior || (!prior.name && contact.name)) unique.set(contact.email.toLowerCase(), contact);
+  }
+  return [...unique.values()];
+}
+
+function maxHumanSignal(signals: Array<number | null>) {
+  const values = signals.filter((value): value is number => value !== null);
+  return values.length ? Math.max(...values) : null;
 }
 
 export const app = createApp();

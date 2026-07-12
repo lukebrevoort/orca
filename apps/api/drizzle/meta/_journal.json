@@ -36,6 +36,20 @@
       "when": 1783875600000,
       "tag": "0004_sender_attention_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783875600001,
+      "tag": "0005_hard_ted_forrester",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783875600002,
+      "tag": "0006_yellow_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }

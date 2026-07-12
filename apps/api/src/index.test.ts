@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { oauthAccounts, users } from "./db/schema.ts";
+import { emailAttachments, emails, oauthAccounts, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -40,6 +40,115 @@ describe("Orca API", () => {
     assert.equal(body.error.issues.length, 1);
     assert.equal(body.error.issues[0].path, "cursor");
     assert.match(body.error.issues[0].message, /1 character/);
+  });
+
+  test("returns an account-scoped, chronological reader snapshot with sanitized HTML", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-index-test-"));
+    const dbPath = join(tempDir, "index.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values([
+        { id: "user_1", email: "luke@example.com", displayName: "Luke" },
+        { id: "user_2", email: "other@example.com", displayName: "Other" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" },
+        { id: "acct_2", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-user-2" },
+        { id: "acct_3", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-user-3" },
+      ]).run();
+      db.insert(threads).values([
+        { id: "thread_1", accountId: "acct_1", providerThreadId: "provider-thread-1", subject: "Reader contract", latestReceivedAt: new Date("2026-07-08T13:00:00.000Z"), messageCount: 2, isRead: false },
+        { id: "thread_2", accountId: "acct_2", providerThreadId: "provider-thread-2", subject: "Second account", latestReceivedAt: new Date(), messageCount: 0, isRead: true },
+        { id: "thread_3", accountId: "acct_3", providerThreadId: "provider-thread-3", subject: "Private", latestReceivedAt: new Date(), messageCount: 1, isRead: true },
+      ]).run();
+      db.insert(emails).values([
+        {
+          id: "email_old", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-old",
+          fromAddress: "maya@example.com", fromName: "Maya", toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]",
+          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<p>Hello <strong>Luke</strong><script>alert(1)</script></p>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
+        },
+        {
+          id: "email_new", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-new",
+          fromAddress: "luke@example.com", fromName: "Luke", toRecipients: JSON.stringify([{ name: "Maya", email: "maya@example.com" }]), ccRecipients: null, bccRecipients: null,
+          subject: "Reader contract", snippet: "Second", bodyText: null, bodyHtml: null, receivedAt: new Date("2026-07-08T13:00:00.000Z"), internalDate: new Date("2026-07-08T13:00:00.000Z"), isRead: false, isStarred: true, humanSignal: 7,
+        },
+      ]).run();
+      db.insert(emailAttachments).values({ id: "attachment_1", emailId: "email_old", providerAttachmentId: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+
+      const response = await testApp.request("/v1/threads/thread_1?accountId=acct_1", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.deepEqual(body.messages.map((message: { id: string }) => message.id), ["email_old", "email_new"]);
+      assert.equal(body.messages[0].bodyHtml, "<p>Hello <strong>Luke</strong></p>");
+      assert.equal(body.messages[0].bodyText, "Hello Luke");
+      assert.equal(body.messages[1].bodyHtml, null);
+      assert.equal(body.messages[1].bodyText, null);
+      assert.deepEqual(body.messages[0].attachments, [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }]);
+      assert.deepEqual(body.thread.participants, [{ name: "Maya", email: "maya@example.com" }, { name: "Luke", email: "luke@example.com" }]);
+      assert.deepEqual(body.thread.attention, { hasUnread: true, hasStarred: true, hasDraft: false, humanSignal: 7 });
+
+      const secondOwnedAccount = await testApp.request("/v1/threads/thread_2?accountId=acct_2", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(secondOwnedAccount.status, 200);
+      const wrongOwnedAccount = await testApp.request("/v1/threads/thread_1?accountId=acct_2", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(wrongOwnedAccount.status, 404);
+      const crossAccount = await testApp.request("/v1/threads/thread_3?accountId=acct_3", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(crossAccount.status, 404);
+      const unknown = await testApp.request("/v1/threads/missing?accountId=acct_1", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(unknown.status, 404);
+      const missingAccount = await testApp.request("/v1/threads/thread_1", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(missingAccount.status, 400);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("upgrades a database at migration 0003 with the reader storage migrations", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-migration-upgrade-test-"));
+    const dbPath = join(tempDir, "upgrade.sqlite");
+    const partialMigrations = join(tempDir, "migrations");
+    const fullMigrations = resolve(import.meta.dir, "../drizzle");
+    mkdirSync(join(partialMigrations, "meta"), { recursive: true });
+
+    try {
+      const initialMigrationNames = [
+        "0000_melted_fenris.sql",
+        "0001_legal_tempest.sql",
+        "0002_overjoyed_lockjaw.sql",
+        "0003_google_login.sql",
+      ];
+      for (const name of initialMigrationNames) {
+        writeFileSync(join(partialMigrations, name), readFileSync(join(fullMigrations, name)));
+      }
+      const journal = JSON.parse(readFileSync(join(fullMigrations, "meta/_journal.json"), "utf8"));
+      writeFileSync(join(partialMigrations, "meta/_journal.json"), JSON.stringify({
+        ...journal,
+        entries: journal.entries.slice(0, 4),
+      }));
+
+      const { db, sqlite } = createDatabaseClient(dbPath);
+      try {
+        migrate(db, { migrationsFolder: partialMigrations });
+        migrate(db, { migrationsFolder: fullMigrations });
+
+        const tables = sqlite.query("select name from sqlite_master where type = 'table'").all() as Array<{ name: string }>;
+        assert.ok(tables.some((table) => table.name === "email_attachments"));
+        const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
+        assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
+      } finally {
+        sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test("runs the manual Gmail sync endpoint for an authenticated user", async () => {

@@ -1,4 +1,5 @@
 import type {
+  MailAttachment,
   MailContact,
   NormalizedLabel,
   NormalizedMessage,
@@ -15,10 +16,14 @@ type NormalizeOptions = {
   accountId: string;
 };
 
+export type NormalizedGmailMessage = NormalizedMessage & {
+  attachments: MailAttachment[];
+};
+
 export function normalizeGmailMessage(
   message: GmailMessage,
   options: NormalizeOptions,
-): NormalizedMessage {
+): NormalizedGmailMessage {
   const headers = getHeaders(message.payload);
   const subject = headers.get("subject") ?? "(No subject)";
   const receivedAt = normalizeInternalDate(message.internalDate);
@@ -40,6 +45,7 @@ export function normalizeGmailMessage(
     labels: labelIds,
     bodyText: findBodyPart(message.payload, "text/plain"),
     bodyHtml: findBodyPart(message.payload, "text/html"),
+    attachments: findAttachments(message.payload, options.accountId, message.id),
     raw: {
       provider: "gmail",
       accountId: options.accountId,
@@ -48,6 +54,25 @@ export function normalizeGmailMessage(
       labelIds,
     },
   };
+}
+
+function findAttachments(
+  part: GmailMessagePart | undefined,
+  accountId: string,
+  messageId: string,
+): MailAttachment[] {
+  if (!part) return [];
+
+  const attachment = part.filename && part.body?.attachmentId
+    ? [{
+      id: `gmail:${accountId}:${messageId}:attachment:${part.body.attachmentId}`,
+      filename: part.filename,
+      mimeType: part.mimeType ?? "application/octet-stream",
+      size: part.body.size ?? 0,
+    }]
+    : [];
+
+  return [...attachment, ...(part.parts ?? []).flatMap((child) => findAttachments(child, accountId, messageId))];
 }
 
 export function normalizeGmailThread(messages: NormalizedMessage[]): NormalizedThread {
