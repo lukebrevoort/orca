@@ -3,11 +3,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { InboxMessage, MailAccount, SyncStatus } from "@orca/shared";
-import { inboxResponseSchema, meResponseSchema, syncStatusSchema } from "@orca/shared";
+import type { AttentionViewSetting, InboxMessage, MailAccount, SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, syncStatusSchema } from "@orca/shared";
 import {
   messageIncludesPerson,
   messageBodies,
@@ -75,7 +76,184 @@ export function App() {
   if (access === "checking") return <SessionCheckingScreen />;
   if (access === "signedout") return <LoginRequiredScreen />;
 
+  if (isAttentionSettingsRoute()) {
+    return <AttentionViewSettingsPage theme={theme} setTheme={setTheme} />;
+  }
+
   return <InboxApp theme={theme} setTheme={setTheme} />;
+}
+
+const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
+  parse(value: unknown) {
+    if (!Array.isArray(value)) {
+      throw new Error("Attention view settings response was not a list.");
+    }
+    return value.map((setting) => attentionViewSettingSchema.parse(setting));
+  },
+};
+
+function AttentionViewSettingsPage({
+  theme,
+  setTheme,
+}: {
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+}) {
+  const [settings, setSettings] = useState<AttentionViewSetting[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [savedBehavior, setSavedBehavior] = useState<string | null>(null);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    setStatus("loading");
+    setErrorMessage(null);
+
+    fetchJson("/v1/attention/view-settings", attentionViewSettingsSchema, abortController.signal)
+      .then((nextSettings) => {
+        if (abortController.signal.aborted) return;
+        setSettings(nextSettings);
+        setStatus("ready");
+      })
+      .catch((error) => {
+        if (abortController.signal.aborted) return;
+        setStatus("error");
+        setErrorMessage(getErrorMessage(error));
+      });
+
+    return () => abortController.abort();
+  }, []);
+
+  function updateDraft(behavior: string, patch: Partial<AttentionViewSetting>) {
+    setSavedBehavior(null);
+    setSettings((current) => current.map((setting) => (
+      setting.behavior === behavior ? { ...setting, ...patch } : setting
+    )));
+  }
+
+  async function saveSetting(setting: AttentionViewSetting) {
+    setSaving(setting.behavior);
+    setErrorMessage(null);
+    try {
+      const updated = await fetchJson(
+        `/v1/attention/view-settings/${setting.behavior}`,
+        attentionViewSettingSchema,
+        undefined,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            displayName: setting.displayName.trim(),
+            icon: setting.icon.trim(),
+            color: setting.color,
+            position: setting.position,
+          }),
+        },
+      );
+      setSettings((current) => current.map((item) => item.behavior === updated.behavior ? updated : item));
+      setSavedBehavior(updated.behavior);
+    } catch (error) {
+      setErrorMessage(`Could not save ${setting.displayName}. ${getErrorMessage(error)}`);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function moveSetting(setting: AttentionViewSetting, direction: -1 | 1) {
+    const nextPosition = setting.position + direction;
+    if (nextPosition < 0 || nextPosition >= settings.length) return;
+    setSavedBehavior(null);
+    setSaving(setting.behavior);
+    setErrorMessage(null);
+    try {
+      const updated = await fetchJson(
+        `/v1/attention/view-settings/${setting.behavior}`,
+        attentionViewSettingSchema,
+        undefined,
+        { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position: nextPosition }) },
+      );
+      const reorderedSettings = await fetchJson("/v1/attention/view-settings", attentionViewSettingsSchema);
+      setSettings(reorderedSettings);
+      setSavedBehavior(updated.behavior);
+    } catch (error) {
+      setErrorMessage(`Could not move ${setting.displayName}. ${getErrorMessage(error)}`);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <main className="attention-settings-page">
+      <header className="attention-settings-topbar">
+        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <div className="settings-topbar-actions">
+          <a className="settings-back-link" href="/">← Inbox</a>
+          <button
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="theme-toggle"
+            onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
+            type="button"
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+        </div>
+      </header>
+
+      <section className="attention-settings-shell" aria-labelledby="attention-settings-title">
+        <header className="attention-settings-intro">
+          <p className="settings-eyebrow">Settings / Attention views</p>
+          <h1 id="attention-settings-title">Shape your<br /><em>attention.</em></h1>
+          <p>Choose how each kind of message appears in your inbox. These names, marks, colors, and positions stay yours.</p>
+        </header>
+
+        <section aria-label="Attention view settings" className="attention-settings-list">
+          <div className="attention-list-heading">
+            <span>Your views</span>
+            <span>{status === "ready" ? `${settings.length} views` : ""}</span>
+          </div>
+
+          {status === "loading" ? <div className="attention-loading">Loading your attention views…</div> : null}
+          {status === "error" ? <div className="attention-error" role="alert">{errorMessage ?? "Could not load your attention views."} <button onClick={() => window.location.reload()} type="button">Try again</button></div> : null}
+          {status === "ready" ? settings.map((setting, index) => (
+            <article className="attention-setting-card" key={setting.behavior} style={{ "--view-color": setting.color } as CSSProperties}>
+              <div className="attention-setting-number" aria-hidden="true">0{index + 1}</div>
+              <div className="attention-setting-main">
+                <div className="attention-setting-preview">
+                  <span className="attention-setting-dot" />
+                  <span>{setting.icon || "•"}</span>
+                </div>
+                <div className="attention-setting-fields">
+                  <label>
+                    <span>View name</span>
+                    <input aria-label={`${setting.behavior} view name`} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { displayName: event.target.value })} value={setting.displayName} />
+                  </label>
+                  <label>
+                    <span>Icon label</span>
+                    <input aria-label={`${setting.behavior} icon`} maxLength={80} onChange={(event) => updateDraft(setting.behavior, { icon: event.target.value })} value={setting.icon} />
+                  </label>
+                  <label className="attention-color-field">
+                    <span>Color</span>
+                    <input aria-label={`${setting.behavior} color`} onChange={(event) => updateDraft(setting.behavior, { color: event.target.value })} type="color" value={setting.color} />
+                    <code>{setting.color}</code>
+                  </label>
+                </div>
+              </div>
+              <div className="attention-setting-actions">
+                <div className="attention-move-controls" aria-label={`Move ${setting.displayName}`}>
+                  <button aria-label={`Move ${setting.displayName} up`} disabled={index === 0 || saving !== null} onClick={() => void moveSetting(setting, -1)} type="button">↑</button>
+                  <button aria-label={`Move ${setting.displayName} down`} disabled={index === settings.length - 1 || saving !== null} onClick={() => void moveSetting(setting, 1)} type="button">↓</button>
+                </div>
+                <button className="attention-save-button" disabled={saving !== null || !setting.displayName.trim() || !setting.icon.trim()} onClick={() => void saveSetting(setting)} type="button">
+                  {saving === setting.behavior ? "Saving…" : savedBehavior === setting.behavior ? "Saved" : "Save"}
+                </button>
+              </div>
+            </article>
+          )) : null}
+        </section>
+      </section>
+    </main>
+  );
 }
 
 function InboxApp({
@@ -1222,6 +1400,10 @@ function isOAuthLoginRoute() {
   }
 
   return ["/login", "/onboarding", "/settings/integrations/gmail"].includes(window.location.pathname);
+}
+
+function isAttentionSettingsRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/attention-views";
 }
 
 function readOAuthReturnStatus(): OAuthReturnStatus {
