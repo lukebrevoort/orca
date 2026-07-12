@@ -37,6 +37,12 @@ bun run dev:api
 bun run dev:web
 ```
 
+### Preview the UI without Gmail
+
+During local development, open `http://localhost:5173/dev/inbox` to review the full
+inbox with fake email data. This route bypasses OAuth only in Vite development mode;
+production builds keep the inbox protected by the normal session check.
+
 The API applies any pending local SQLite migrations before it starts. This
 makes a fresh or reset development database ready for auth and OAuth flows.
 

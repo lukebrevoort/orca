@@ -10,6 +10,8 @@ import {
 import type { AttentionViewSetting, InboxMessage, MailAccount, ResolvedSenderAttention, SyncStatus } from "@orca/shared";
 import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema } from "@orca/shared";
 import {
+  demoAccount,
+  demoMessages,
   messageIncludesPerson,
   messageBodies,
 } from "./demo-data";
@@ -33,6 +35,7 @@ type PersonItem = {
 };
 
 type PanelMode = "compose" | null;
+type AttentionBehavior = AttentionViewSetting["behavior"];
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
   | { kind: "success"; email: string | null }
@@ -52,6 +55,7 @@ const mailboxes: MailboxItem[] = [
 export function App() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
+  const devPreview = isDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -59,7 +63,7 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
-    if (isOAuthLoginRoute()) return;
+    if (isOAuthLoginRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -67,7 +71,11 @@ export function App() {
         if (!abortController.signal.aborted) setAccess("signedout");
       });
     return () => abortController.abort();
-  }, []);
+  }, [devPreview]);
+
+  if (devPreview) {
+    return <InboxApp demoMode theme={theme} setTheme={setTheme} />;
+  }
 
   if (isOAuthLoginRoute()) {
     return <GmailOAuthLoginPage />;
@@ -299,17 +307,20 @@ function AttentionViewSettingsPage({
 }
 
 function InboxApp({
+  demoMode = false,
   theme,
   setTheme,
 }: {
+  demoMode?: boolean;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
-  const [account, setAccount] = useState<MailAccount | null>(null);
-  const [messages, setMessages] = useState<InboxMessage[]>([]);
-  const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">("loading");
+  const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
+  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessages : []);
+  const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">(demoMode ? "ready" : "loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
@@ -332,6 +343,14 @@ function InboxApp({
   }, []);
 
   useEffect(() => {
+    if (demoMode) {
+      setAccount(demoAccount);
+      setMessages(demoMessages);
+      setStatus("ready");
+      setErrorMessage(null);
+      return;
+    }
+
     const abortController = new AbortController();
 
     async function loadInbox() {
@@ -374,21 +393,43 @@ function InboxApp({
     return () => {
       abortController.abort();
     };
-  }, [refreshKey]);
+  }, [demoMode, refreshKey]);
 
-  const pinnedPeople = useMemo(() => buildPinnedPeople(messages), [messages]);
+  useEffect(() => {
+    const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
+    if (demoMode) {
+      setAttentionByAddress(Object.fromEntries(addresses.map((address) => [address, "normal"])));
+      return;
+    }
+    if (status !== "ready" || addresses.length === 0) return;
+    const controller = new AbortController();
+    void Promise.all(addresses.map(async (address) => {
+      const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal);
+      return [address, resolved.behavior] as const;
+    })).then((entries) => {
+      if (!controller.signal.aborted) setAttentionByAddress(Object.fromEntries(entries));
+    }).catch(() => {
+      // Inbox mail remains visible if attention preferences cannot be loaded.
+    });
+    return () => controller.abort();
+  }, [demoMode, messages, status]);
+
+  const pinnedPeople = useMemo(
+    () => buildPinnedPeople(applySenderAttention(messages, attentionByAddress)),
+    [attentionByAddress, messages],
+  );
 
   const mailboxMessages = useMemo(
     () => getMessagesForMailbox(messages, activeMailbox),
     [activeMailbox, messages],
   );
 
-  const visibleMessages = useMemo(
-    () => personFilter
+  const visibleMessages = useMemo(() => {
+    const filtered = personFilter
       ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
-      : mailboxMessages,
-    [mailboxMessages, personFilter],
-  );
+      : mailboxMessages;
+    return applySenderAttention(filtered, attentionByAddress);
+  }, [attentionByAddress, mailboxMessages, personFilter]);
 
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
@@ -407,14 +448,16 @@ function InboxApp({
     () =>
       mailboxes.map((mailbox) => ({
         ...mailbox,
-        count: status === "ready" ? getMessagesForMailbox(messages, mailbox.id).length : undefined,
+        count: status === "ready" ? applySenderAttention(getMessagesForMailbox(messages, mailbox.id), attentionByAddress).length : undefined,
       })),
-    [messages, status],
+    [attentionByAddress, messages, status],
   );
 
   const activeMailboxLabel = mailboxes.find((item) => item.id === activeMailbox)?.label ?? "Inbox";
   const inboxTitle = personFilter ? personFilter : activeMailboxLabel;
-  const inboxEyebrow = personFilter ? `Filtered ${activeMailboxLabel.toLowerCase()}` : "Gmail mailbox";
+  const inboxEyebrow = personFilter
+    ? `Filtered ${activeMailboxLabel.toLowerCase()}`
+    : demoMode ? "Development preview" : "Gmail mailbox";
 
   if (status === "signedout") {
     return <LoginRequiredScreen />;
@@ -513,12 +556,32 @@ function InboxApp({
     setSelectedThreadId(null);
   }
 
+  async function updateSenderAttention(address: string, behavior?: AttentionBehavior) {
+    if (behavior) {
+      setAttentionByAddress((current) => ({ ...current, [address]: behavior }));
+      return;
+    }
+    if (demoMode) {
+      setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
+      return;
+    }
+    try {
+      const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
+      setAttentionByAddress((current) => ({ ...current, [address]: resolved.behavior }));
+    } catch {
+      setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
+    }
+  }
+
   return (
     <div className="app-root">
       <main className="app-shell">
         <aside className="sidebar" aria-label="Mailbox navigation">
           <header className="sidebar-header">
-            <div className="brand">Orca</div>
+            <div className="brand-wrap">
+              <div className="brand">Orca</div>
+              {demoMode ? <span className="dev-preview-badge">Preview</span> : null}
+            </div>
             <div className="header-actions">
               <button
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
@@ -573,6 +636,7 @@ function InboxApp({
           {selectedThreadId && selectedThreadLatestMessage ? (
             <ThreadView
               messages={selectedThreadMessages}
+              onAttentionChange={(address, behavior) => void updateSenderAttention(address, behavior)}
               onBack={closeThread}
               title={selectedThreadLatestMessage.subject || "(no subject)"}
             />
@@ -590,6 +654,7 @@ function InboxApp({
               syncStatus={syncStatus}
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
+              onAttentionChange={(address, behavior) => void updateSenderAttention(address, behavior)}
             />
           )}
         </section>
@@ -836,6 +901,7 @@ function InboxView({
   onClearFilter,
   onOpenThread,
   onRefresh,
+  onAttentionChange,
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
@@ -849,6 +915,7 @@ function InboxView({
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
   onRefresh: () => void;
+  onAttentionChange: (address: string, behavior?: AttentionBehavior) => void;
 }) {
   return (
     <>
@@ -948,7 +1015,7 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                     </button>
-                    <SenderAttentionControl compact message={message} />
+                    <SenderAttentionControl compact message={message} onBehaviorChange={onAttentionChange} />
                   </div>
                 </li>
               );
@@ -981,10 +1048,12 @@ function ThreadView({
   messages,
   title,
   onBack,
+  onAttentionChange,
 }: {
   messages: InboxMessage[];
   title: string;
   onBack: () => void;
+  onAttentionChange: (address: string, behavior?: AttentionBehavior) => void;
 }) {
   return (
     <article className="thread-view">
@@ -1000,7 +1069,7 @@ function ThreadView({
             {messages.length} {messages.length === 1 ? "message" : "messages"}
           </span>
         </div>
-        {messages.length > 0 ? <SenderAttentionControl message={messages[messages.length - 1]} /> : null}
+        {messages.length > 0 ? <SenderAttentionControl message={messages[messages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
       </header>
 
       <ol className="thread-message-list">
@@ -1021,27 +1090,32 @@ function ThreadView({
   );
 }
 
-function SenderAttentionControl({ message, compact = false }: { message: InboxMessage; compact?: boolean }) {
+function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
-  const [applyToDomain, setApplyToDomain] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const controlRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
   const address = message.from.email.trim().toLowerCase();
-  const domain = address.split("@")[1] ?? "";
   const senderName = message.from.name ?? address;
-  const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string; description: string }> = [
-    { behavior: "notify", label: "Notify me", description: "Make this hard to miss" },
-    { behavior: "focus", label: "Prioritize", description: "Keep it near the top" },
-    { behavior: "normal", label: "Keep in inbox", description: "Treat it like regular mail" },
-    { behavior: "quiet", label: "Quiet", description: "Keep it out of the way" },
-    { behavior: "hidden", label: "Hide", description: "Remove it from your attention" },
+  const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string }> = [
+    { behavior: "notify", label: "Notify me" },
+    { behavior: "focus", label: "Prioritize" },
+    { behavior: "normal", label: "Keep in inbox" },
+    { behavior: "quiet", label: "Quiet" },
+    { behavior: "hidden", label: "Hide" },
   ];
 
   useEffect(() => {
     if (!expanded || resolution || !address) return;
+    if (isDevPreviewRoute()) {
+      setSelectedBehavior((current) => current ?? "normal");
+      setStatus("idle");
+      return;
+    }
     const controller = new AbortController();
     setStatus("loading");
     fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal)
@@ -1063,13 +1137,19 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
 
   useEffect(() => {
     if (!expanded) return;
+    const selectedChoice = menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]');
+    (selectedChoice ?? menuRef.current?.querySelector<HTMLButtonElement>(".sender-attention-choices button:not([disabled])"))?.focus();
     function dismissOnOutsidePointer(event: PointerEvent) {
       if (controlRef.current && !controlRef.current.contains(event.target as Node)) {
         setExpanded(false);
+        triggerRef.current?.focus();
       }
     }
     function dismissOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setExpanded(false);
+      if (event.key === "Escape") {
+        setExpanded(false);
+        triggerRef.current?.focus();
+      }
     }
     window.addEventListener("pointerdown", dismissOnOutsidePointer);
     window.addEventListener("keydown", dismissOnEscape);
@@ -1079,25 +1159,39 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
     };
   }, [expanded]);
 
-  async function saveRule() {
-    if (!selectedBehavior) return;
-    const scope = applyToDomain ? "domain" : "address";
-    const behavior = selectedBehavior;
-    const value = scope === "address" ? address : domain;
-    if (!value) return;
+  useEffect(() => {
+    if (!expanded || status !== "idle" || !selectedBehavior) return;
+    menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]')?.focus();
+  }, [expanded, selectedBehavior, status]);
+
+  async function saveRule(behavior: AttentionViewSetting["behavior"]) {
+    if (!address) return;
+    setSelectedBehavior(behavior);
+    if (isDevPreviewRoute()) {
+      onBehaviorChange(address, behavior);
+      setExpanded(false);
+      requestAnimationFrame(() => behavior === "hidden"
+        ? document.querySelector<HTMLButtonElement>(".message-row")?.focus()
+        : triggerRef.current?.focus());
+      return;
+    }
     setStatus("saving");
     setErrorMessage(null);
     try {
-      const existingRule = resolution?.rule?.scope === scope && resolution.rule.value === value
+      const existingRule = resolution?.rule?.scope === "address" && resolution.rule.value === address
         ? resolution.rule
         : null;
       await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
         method: existingRule ? "PATCH" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(existingRule ? { behavior } : { scope, value, behavior, source: "user_choice" }),
+        body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
       });
       setResolution(null);
+      onBehaviorChange(address, behavior);
       setExpanded(false);
+      requestAnimationFrame(() => behavior === "hidden"
+        ? document.querySelector<HTMLButtonElement>(".message-row")?.focus()
+        : triggerRef.current?.focus());
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1106,13 +1200,16 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
   }
 
   async function resetRule() {
-    if (!resolution?.rule) return;
+    if (resolution?.rule?.scope !== "address") return;
     setStatus("saving");
+    setErrorMessage(null);
     try {
       const response = await fetch(`/v1/attention/rules/${resolution.rule.id}`, { method: "DELETE", credentials: "include" });
       if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
       setResolution(null);
+      onBehaviorChange(address);
       setExpanded(false);
+      triggerRef.current?.focus();
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1122,37 +1219,30 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
 
   return (
     <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
-      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
+      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} ref={triggerRef} type="button">
         <span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}
       </button>
       {expanded ? (
-        <section className="sender-attention-menu" id={`sender-attention-${message.id}`} role="dialog" aria-label={`Mail handling for ${senderName}`}>
+        <section className="sender-attention-menu" id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
-            <div>
-              <p className="sender-attention-kicker">Mail from <strong>{senderName}</strong></p>
-              <span>{address}</span>
-            </div>
+            <p className="sender-attention-kicker">All mail from <strong>{senderName}</strong></p>
             <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
           </div>
-          {status === "loading" ? <p>Loading current handling…</p> : null}
+          {status === "loading" ? <p>Loading…</p> : null}
           {status !== "loading" ? <>
-            <fieldset className="sender-attention-choices" disabled={status === "saving"}>
-              <legend>Where should mail from this sender go?</legend>
+            <div aria-label="Destination for all sender mail" className="sender-attention-choices" role="group">
+              <span className="sender-attention-choice-label">Send to</span>
               <div className="sender-attention-choice-grid">
-                {attentionChoices.map(({ behavior, label, description }) => (
-                  <button aria-pressed={selectedBehavior === behavior} key={behavior} onClick={() => setSelectedBehavior(behavior)} type="button">
-                    <strong>{label}</strong>
-                    <span>{description}</span>
+                {attentionChoices.map(({ behavior, label }) => (
+                  <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule(behavior)} type="button">
+                    {status === "saving" && selectedBehavior === behavior ? "Saving…" : label}
                   </button>
                 ))}
               </div>
-            </fieldset>
-            <div className="sender-attention-actions">
-              {domain ? <label className="sender-attention-domain"><input checked={applyToDomain} onChange={(event) => setApplyToDomain(event.target.checked)} type="checkbox" /> Also apply to everyone at <strong>{domain}</strong></label> : null}
-              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : applyToDomain ? "Save for domain" : "Save for sender"}</button>
-              {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Use default</button> : null}
+              {resolution?.rule?.scope === "address" ? <button className="sender-attention-default" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Use default</button> : null}
             </div>
           </> : null}
+          <span aria-live="polite" className="visually-hidden">{status === "loading" ? "Loading sender preference" : status === "saving" ? "Saving sender preference" : ""}</span>
           {status === "error" ? <p className="sender-attention-error" role="alert">Could not update handling. {errorMessage}</p> : null}
         </section>
       ) : null}
@@ -1498,6 +1588,19 @@ export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailb
     : messages;
 }
 
+export function applySenderAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
+  const rank: Record<AttentionBehavior, number> = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 };
+  return messages
+    .filter((message) => attentionByAddress[message.from.email.trim().toLowerCase()] !== "hidden")
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const aBehavior = attentionByAddress[a.message.from.email.trim().toLowerCase()] ?? "normal";
+      const bBehavior = attentionByAddress[b.message.from.email.trim().toLowerCase()] ?? "normal";
+      return rank[aBehavior] - rank[bBehavior] || a.index - b.index;
+    })
+    .map(({ message }) => message);
+}
+
 type JsonSchema<T> = {
   parse(value: unknown): T;
 };
@@ -1593,6 +1696,15 @@ function isOAuthLoginRoute() {
 
 function isAttentionSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/attention-views";
+}
+
+export function isDevPreviewPath(pathname: string, isDevelopment: boolean) {
+  return isDevelopment && pathname === "/dev/inbox";
+}
+
+function isDevPreviewRoute() {
+  return typeof window !== "undefined"
+    && isDevPreviewPath(window.location.pathname, import.meta.env.DEV);
 }
 
 function readOAuthReturnStatus(): OAuthReturnStatus {
