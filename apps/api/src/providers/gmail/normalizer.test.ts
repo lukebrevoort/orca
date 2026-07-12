@@ -5,41 +5,11 @@ import {
   normalizeGmailMessage,
   normalizeGmailThread,
 } from "./normalizer.ts";
-import type { GmailMessage } from "./types.ts";
-
-const gmailMessage: GmailMessage = {
-  id: "msg_123",
-  threadId: "thread_123",
-  labelIds: ["INBOX", "UNREAD", "Label_42"],
-  snippet: "A useful preview",
-  internalDate: "1782671400000",
-  payload: {
-    mimeType: "multipart/alternative",
-    headers: [
-      { name: "From", value: "Maya Chen <maya@example.com>" },
-      { name: "To", value: "Luke Brevoort <luke@example.com>" },
-      { name: "Subject", value: "Provider test" },
-    ],
-    parts: [
-      {
-        mimeType: "text/plain",
-        body: {
-          data: "SGVsbG8gZnJvbSBHbWFpbA==",
-        },
-      },
-      {
-        mimeType: "text/html",
-        body: {
-          data: "PHA-SGVsbG88L3A-",
-        },
-      },
-    ],
-  },
-};
+import { gmailMessageFixture } from "./fixtures/message.fixture.ts";
 
 describe("Gmail normalizer", () => {
   test("maps Gmail messages to normalized Orca messages", () => {
-    const normalized = normalizeGmailMessage(gmailMessage, {
+    const normalized = normalizeGmailMessage(gmailMessageFixture, {
       accountId: "acct_123",
     });
 
@@ -82,9 +52,9 @@ describe("Gmail normalizer", () => {
 
   test("accepts an angle-bracket address without a display name", () => {
     const normalized = normalizeGmailMessage({
-      ...gmailMessage,
+      ...gmailMessageFixture,
       payload: {
-        ...gmailMessage.payload,
+        ...gmailMessageFixture.payload,
         headers: [
           { name: "From", value: "<news@example.com>" },
           { name: "To", value: "<luke@example.com>" },
@@ -96,7 +66,7 @@ describe("Gmail normalizer", () => {
   });
 
   test("maps normalized messages to a normalized thread", () => {
-    const message = normalizeGmailMessage(gmailMessage, {
+    const message = normalizeGmailMessage(gmailMessageFixture, {
       accountId: "acct_123",
     });
 
