@@ -7,8 +7,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, InboxMessage, MailAccount, SyncStatus } from "@orca/shared";
-import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, syncStatusSchema } from "@orca/shared";
+import type { AttentionViewSetting, InboxMessage, MailAccount, ResolvedSenderAttention, SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, inboxResponseSchema, meResponseSchema, resolvedSenderAttentionSchema, syncStatusSchema } from "@orca/shared";
 import {
   messageIncludesPerson,
   messageBodies,
@@ -89,6 +89,12 @@ const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
       throw new Error("Attention view settings response was not a list.");
     }
     return value.map((setting) => attentionViewSettingSchema.parse(setting));
+  },
+};
+
+const resolvedSenderAttentionResponseSchema: JsonSchema<ResolvedSenderAttention> = {
+  parse(value: unknown) {
+    return resolvedSenderAttentionSchema.parse(value);
   },
 };
 
@@ -551,6 +557,10 @@ function InboxApp({
             </nav>
           </section>
 
+          <a className="settings-link" href="/settings/attention-views">
+            <span aria-hidden="true">⚙</span> Attention views
+          </a>
+
           <SidebarSection
             activePerson={personFilter}
             items={pinnedPeople}
@@ -912,31 +922,34 @@ function InboxView({
 
               return (
                 <li key={message.id}>
-                  <button
-                    className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                    onClick={() => onOpenThread(message)}
-                    style={
-                      {
-                        "--message-rail": signature.palette.rail,
-                        "--message-mark-bg": signature.palette.bg,
-                        "--message-mark-fg": signature.palette.fg,
-                      } as React.CSSProperties
-                    }
-                    type="button"
-                  >
-                    <MessageMark signature={signature} unread={message.unread} />
-                    <div className="message-copy">
-                      <div className="message-meta">
-                        <strong>{message.from.name ?? message.from.email}</strong>
-                        <span>{formatReceivedAt(message.receivedAt)}</span>
+                  <div className="message-row-wrap">
+                    <button
+                      className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
+                      onClick={() => onOpenThread(message)}
+                      style={
+                        {
+                          "--message-rail": signature.palette.rail,
+                          "--message-mark-bg": signature.palette.bg,
+                          "--message-mark-fg": signature.palette.fg,
+                        } as React.CSSProperties
+                      }
+                      type="button"
+                    >
+                      <MessageMark signature={signature} unread={message.unread} />
+                      <div className="message-copy">
+                        <div className="message-meta">
+                          <strong>{message.from.name ?? message.from.email}</strong>
+                          <span>{formatReceivedAt(message.receivedAt)}</span>
+                        </div>
+                        <div className="message-subject-row">
+                          <h2>{message.subject || "(no subject)"}</h2>
+                          {message.unread ? <span className="message-unread-dot" /> : null}
+                        </div>
+                        <p>{message.snippet}</p>
                       </div>
-                      <div className="message-subject-row">
-                        <h2>{message.subject || "(no subject)"}</h2>
-                        {message.unread ? <span className="message-unread-dot" /> : null}
-                      </div>
-                      <p>{message.snippet}</p>
-                    </div>
-                  </button>
+                    </button>
+                    <SenderAttentionControl compact message={message} />
+                  </div>
                 </li>
               );
             })}
@@ -987,6 +1000,7 @@ function ThreadView({
             {messages.length} {messages.length === 1 ? "message" : "messages"}
           </span>
         </div>
+        {messages.length > 0 ? <SenderAttentionControl message={messages[messages.length - 1]} /> : null}
       </header>
 
       <ol className="thread-message-list">
@@ -1004,6 +1018,107 @@ function ThreadView({
         ))}
       </ol>
     </article>
+  );
+}
+
+function SenderAttentionControl({ message, compact = false }: { message: InboxMessage; compact?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const address = message.from.email.trim().toLowerCase();
+  const domain = address.split("@")[1] ?? "";
+  const senderName = message.from.name ?? address;
+
+  useEffect(() => {
+    if (!expanded || resolution || !address) return;
+    const controller = new AbortController();
+    setStatus("loading");
+    fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal)
+      .then((nextResolution) => {
+        if (!controller.signal.aborted) {
+          setResolution(nextResolution);
+          setStatus("idle");
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setStatus("error");
+          setErrorMessage(getErrorMessage(error));
+        }
+      });
+    return () => controller.abort();
+  }, [address, expanded, resolution]);
+
+  async function saveRule(scope: "address" | "domain", behavior: AttentionViewSetting["behavior"]) {
+    const value = scope === "address" ? address : domain;
+    if (!value) return;
+    setStatus("saving");
+    setErrorMessage(null);
+    try {
+      const existingRule = resolution?.rule?.scope === scope && resolution.rule.value === value
+        ? resolution.rule
+        : null;
+      await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
+        method: existingRule ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(existingRule ? { behavior } : { scope, value, behavior, source: "user_choice" }),
+      });
+      setResolution(null);
+      setExpanded(false);
+      setStatus("idle");
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage(getErrorMessage(error));
+    }
+  }
+
+  async function resetRule() {
+    if (!resolution?.rule) return;
+    setStatus("saving");
+    try {
+      const response = await fetch(`/v1/attention/rules/${resolution.rule.id}`, { method: "DELETE", credentials: "include" });
+      if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
+      setResolution(null);
+      setExpanded(false);
+      setStatus("idle");
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage(getErrorMessage(error));
+    }
+  }
+
+  return (
+    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}`}>
+      <button aria-expanded={expanded} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
+        {compact ? "•••" : "Sender controls"}
+      </button>
+      {expanded ? (
+        <div className="sender-attention-menu" role="dialog" aria-label={`Mail handling for ${senderName}`}>
+          <p className="sender-attention-kicker">When mail arrives from</p>
+          <strong>{senderName}</strong>
+          <span>{address}</span>
+          {status === "loading" ? <p>Loading current handling…</p> : null}
+          {status !== "loading" ? <>
+            <p className="sender-attention-explainer">
+              {resolution?.rule
+                ? `You are seeing this because of a ${resolution.rule.scope} rule for ${resolution.rule.value}.`
+                : "You are seeing this because no sender rule is set yet; Orca is using its normal default."}
+            </p>
+            <div className="sender-attention-choices">
+              {(["notify", "focus", "normal", "quiet", "hidden"] as const).map((behavior) => (
+                <button aria-pressed={resolution?.behavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule("address", behavior)} type="button">
+                  {behavior}
+                </button>
+              ))}
+            </div>
+            {domain ? <button className="sender-attention-domain" disabled={status === "saving"} onClick={() => void saveRule("domain", resolution?.behavior ?? "normal")} type="button">Also apply to {domain}</button> : null}
+            {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Reset to default</button> : null}
+          </> : null}
+          {status === "error" ? <p className="sender-attention-error" role="alert">Could not update handling. {errorMessage}</p> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
