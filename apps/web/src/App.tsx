@@ -1032,6 +1032,13 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
   const address = message.from.email.trim().toLowerCase();
   const domain = address.split("@")[1] ?? "";
   const senderName = message.from.name ?? address;
+  const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string; description: string }> = [
+    { behavior: "notify", label: "Notify me", description: "Make this hard to miss" },
+    { behavior: "focus", label: "Prioritize", description: "Keep it near the top" },
+    { behavior: "normal", label: "Keep in inbox", description: "Treat it like regular mail" },
+    { behavior: "quiet", label: "Quiet", description: "Keep it out of the way" },
+    { behavior: "hidden", label: "Hide", description: "Remove it from your attention" },
+  ];
 
   useEffect(() => {
     if (!expanded || resolution || !address) return;
@@ -1115,31 +1122,35 @@ function SenderAttentionControl({ message, compact = false }: { message: InboxMe
 
   return (
     <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
-      <button aria-expanded={expanded} aria-label="Rate sender" className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
-        {compact ? "•••" : "Rate sender"}
+      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => setExpanded((current) => !current)} type="button">
+        <span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}
       </button>
       {expanded ? (
-        <section className="sender-attention-menu" role="dialog" aria-label={`Mail handling for ${senderName}`}>
+        <section className="sender-attention-menu" id={`sender-attention-${message.id}`} role="dialog" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
             <div>
-              <p className="sender-attention-kicker">Set delivery for <strong>{senderName}</strong></p>
-              <span>{address} · choose one, then save</span>
+              <p className="sender-attention-kicker">Mail from <strong>{senderName}</strong></p>
+              <span>{address}</span>
             </div>
-            <button aria-label="Close sender rating" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
+            <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => setExpanded(false)} type="button">×</button>
           </div>
           {status === "loading" ? <p>Loading current handling…</p> : null}
           {status !== "loading" ? <>
-            <div className="sender-attention-choices">
-              {(["notify", "focus", "normal", "quiet", "hidden"] as const).map((behavior) => (
-                <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => setSelectedBehavior(behavior)} type="button">
-                  {behavior}
-                </button>
-              ))}
-            </div>
+            <fieldset className="sender-attention-choices" disabled={status === "saving"}>
+              <legend>Where should mail from this sender go?</legend>
+              <div className="sender-attention-choice-grid">
+                {attentionChoices.map(({ behavior, label, description }) => (
+                  <button aria-pressed={selectedBehavior === behavior} key={behavior} onClick={() => setSelectedBehavior(behavior)} type="button">
+                    <strong>{label}</strong>
+                    <span>{description}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <div className="sender-attention-actions">
-              {domain ? <label className="sender-attention-domain"><input checked={applyToDomain} onChange={(event) => setApplyToDomain(event.target.checked)} type="checkbox" /> Apply to all {domain} mail</label> : null}
-              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : "Save"}</button>
-              {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Reset</button> : null}
+              {domain ? <label className="sender-attention-domain"><input checked={applyToDomain} onChange={(event) => setApplyToDomain(event.target.checked)} type="checkbox" /> Also apply to everyone at <strong>{domain}</strong></label> : null}
+              <button className="sender-attention-save" disabled={status === "saving" || !selectedBehavior} onClick={() => void saveRule()} type="button">{status === "saving" ? "Saving…" : applyToDomain ? "Save for domain" : "Save for sender"}</button>
+              {resolution?.rule ? <button className="sender-attention-reset" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Use default</button> : null}
             </div>
           </> : null}
           {status === "error" ? <p className="sender-attention-error" role="alert">Could not update handling. {errorMessage}</p> : null}
