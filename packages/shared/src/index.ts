@@ -21,6 +21,8 @@ export {
   normalizedThreadPageSchema,
   normalizedThreadSchema,
   providerPageShapeSchema,
+  syncStateSchema,
+  syncStatusSchema,
 } from "./schemas.ts";
 
 export type {
@@ -44,4 +46,6 @@ export type {
   NormalizedThread,
   NormalizedThreadPage,
   ProviderPage,
+  SyncState,
+  SyncStatus,
 } from "./schemas.ts";

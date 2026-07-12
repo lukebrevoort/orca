@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { validator } from "hono/validator";
-import { authSessionSchema, inboxQuerySchema, inboxResponseSchema, mailAccountSchema } from "@orca/shared";
+import { authSessionSchema, inboxQuerySchema, inboxResponseSchema, mailAccountSchema, syncStatusSchema } from "@orca/shared";
 
 import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
@@ -20,11 +20,14 @@ type CreateAppOptions = {
   syncPage?: typeof syncGmailAccountPage;
 };
 
+type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
+
 export function createApp(options: CreateAppOptions = {}): Hono<{
   Variables: AuthVariables;
 }> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const syncPage = options.syncPage ?? syncGmailAccountPage;
+  const syncStatuses = new Map<string, SyncStatusRecord>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -72,6 +75,29 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       sqlite.close();
     }
   });
+
+  const getSyncStatus = (c: Context<{ Variables: AuthVariables }>) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const accounts = getConnectedAccounts(db, c.get("auth").userId);
+      return jsonWithSchema(c, syncStatusSchema, {
+        accounts: accounts.map((account) => {
+          const activeStatus = syncStatuses.get(account.id);
+          const authNeeded = !account.accessTokenEncrypted || !account.refreshTokenEncrypted;
+          return {
+            ...toMailAccount(account),
+            state: activeStatus?.state ?? (authNeeded ? "auth_needed" : "idle"),
+            lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
+            error: activeStatus?.error ?? null,
+          };
+        }),
+      });
+    } finally {
+      sqlite.close();
+    }
+  };
+  app.get("/v1/sync/status", requireAuth({ dbFactory }), getSyncStatus);
+  app.get("/api/sync/status", requireAuth({ dbFactory }), getSyncStatus);
 
   app.get(
     "/v1/inbox",
@@ -161,9 +187,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     async (c) => {
       const auth = c.get("auth");
       const { db, sqlite } = dbFactory();
+      let account: ConnectedAccount | undefined;
 
       try {
-        const account = getConnectedAccount(db, auth.userId);
+        account = getConnectedAccount(db, auth.userId);
 
         if (!account) {
           return c.json(
@@ -177,6 +204,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           );
         }
 
+        syncStatuses.set(account.id, { state: "syncing", error: null });
         let result = await syncPage(db, { accountId: account.id, pageSize: 25 });
         let pages = 1;
         let emailCount = result.emailCount;
@@ -191,6 +219,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           labelCount += result.labelCount;
           contactCount += result.contactCount;
         }
+        syncStatuses.delete(account.id);
         return c.json({ ...result, emailCount, threadCount, labelCount, contactCount, pages }, 200);
       } catch (error) {
         console.error("Gmail sync failed", {
@@ -199,6 +228,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         });
 
         const publicError = toPublicSyncError(error);
+        if (account?.id) {
+          syncStatuses.set(account.id, { state: "error", error: publicError.message });
+        }
 
         return c.json(
           {
@@ -222,14 +254,28 @@ type ConnectedAccount = {
   id: string;
   providerEmail: string;
   displayName: string | null;
+  accessTokenEncrypted: string | null;
+  refreshTokenEncrypted: string | null;
+  lastSyncedAt: Date | null;
 };
 
 function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount | undefined {
-  return db.select({ id: oauthAccounts.id, providerEmail: oauthAccounts.providerEmail, displayName: users.displayName })
+  return getConnectedAccounts(db, userId)[0];
+}
+
+function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
+  return db.select({
+    id: oauthAccounts.id,
+    providerEmail: oauthAccounts.providerEmail,
+    displayName: users.displayName,
+    accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
+    refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    lastSyncedAt: oauthAccounts.lastSyncedAt,
+  })
     .from(oauthAccounts)
     .innerJoin(users, eq(users.id, oauthAccounts.userId))
     .where(and(eq(oauthAccounts.userId, userId), eq(oauthAccounts.provider, "gmail")))
-    .get();
+    .all();
 }
 
 function toMailAccount(account: ConnectedAccount) {

@@ -37,6 +37,22 @@ export type MailAccount = z.infer<typeof mailAccountSchema>;
 export const meResponseSchema = mailAccountSchema;
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
+export const syncStateSchema = z.enum(["idle", "syncing", "auth_needed", "error"]);
+export type SyncState = z.infer<typeof syncStateSchema>;
+
+export const syncStatusSchema = z
+  .object({
+    accounts: z.array(
+      mailAccountSchema.extend({
+        state: syncStateSchema,
+        lastSyncedAt: isoDateTimeStringSchema.nullable(),
+        error: z.string().nullable(),
+      }).strict(),
+    ),
+  })
+  .strict();
+export type SyncStatus = z.infer<typeof syncStatusSchema>;
+
 export const inboxMessageSchema = z
   .object({
     id: nonEmptyStringSchema,
