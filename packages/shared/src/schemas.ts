@@ -309,6 +309,43 @@ export const updatePinSchema = pinSchema.pick({ label: true, position: true }).p
   .refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
 export type UpdatePin = z.infer<typeof updatePinSchema>;
 
+export const reminderStatusSchema = z.enum(["scheduled", "resurfaced", "completed", "cancelled"]);
+export type ReminderStatus = z.infer<typeof reminderStatusSchema>;
+
+export const reminderSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  threadId: nonEmptyStringSchema,
+  scheduledFor: isoDateTimeStringSchema,
+  timezone: z.string().trim().min(1).max(100),
+  notify: z.boolean(),
+  status: reminderStatusSchema,
+  resurfacedAt: isoDateTimeStringSchema.nullable(),
+  completedAt: isoDateTimeStringSchema.nullable(),
+  cancelledAt: isoDateTimeStringSchema.nullable(),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type Reminder = z.infer<typeof reminderSchema>;
+
+export const createReminderSchema = z.object({
+  threadId: nonEmptyStringSchema,
+  scheduledFor: isoDateTimeStringSchema,
+  timezone: z.string().trim().min(1).max(100),
+  notify: z.boolean().optional(),
+}).strict();
+export type CreateReminder = z.infer<typeof createReminderSchema>;
+
+export const updateReminderSchema = z.object({
+  scheduledFor: isoDateTimeStringSchema.optional(),
+  timezone: z.string().trim().min(1).max(100).optional(),
+  notify: z.boolean().optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
+export type UpdateReminder = z.infer<typeof updateReminderSchema>;
+
+export const reminderViewSettingsSchema = z.object({ displayName: z.string().trim().min(1).max(80) }).strict();
+export type ReminderViewSettings = z.infer<typeof reminderViewSettingsSchema>;
+
 const providerPageFields = {
   items: z.array(z.unknown()),
   nextCursor: z.string().nullable(),

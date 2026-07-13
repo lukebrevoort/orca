@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -13,6 +13,7 @@ import {
   collectionSchema,
   createCollectionSchema,
   createPinSchema,
+  createReminderSchema,
   createSenderAttentionRuleSchema,
   inboxQuerySchema,
   inboxResponseSchema,
@@ -20,6 +21,8 @@ import {
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
   pinSchema,
+  reminderSchema,
+  reminderViewSettingsSchema,
   senderAttentionRuleSchema,
   syncStatusSchema,
   threadDetailSchema,
@@ -27,6 +30,7 @@ import {
   updateAttentionViewSettingSchema,
   updateCollectionSchema,
   updatePinSchema,
+  updateReminderSchema,
   updateSenderAttentionRuleSchema,
 } from "@orca/shared";
 
@@ -34,7 +38,7 @@ import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -42,6 +46,7 @@ const serverConfig = getServerConfig();
 type CreateAppOptions = {
   dbFactory?: typeof createDatabaseClient;
   syncPage?: typeof syncGmailAccountPage;
+  now?: () => Date;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -59,6 +64,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 }> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const syncPage = options.syncPage ?? syncGmailAccountPage;
+  const now = options.now ?? (() => new Date());
   const syncStatuses = new Map<string, SyncStatusRecord>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -439,6 +445,75 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
+  app.get("/v1/reminders/view-settings", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      return jsonWithSchema(c, reminderViewSettingsSchema, getReminderViewSettings(db, account.id));
+    } finally { sqlite.close(); }
+  });
+
+  app.patch("/v1/reminders/view-settings", validator("json", (value, c) => validateJson(c, reminderViewSettingsSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const setting = c.req.valid("json");
+      db.insert(reminderViewSettings).values({ accountId: account.id, displayName: setting.displayName })
+        .onConflictDoUpdate({ target: reminderViewSettings.accountId, set: { displayName: setting.displayName, updatedAt: now() } }).run();
+      return jsonWithSchema(c, reminderViewSettingsSchema, getReminderViewSettings(db, account.id));
+    } finally { sqlite.close(); }
+  });
+
+  app.get("/v1/reminders", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      resurfaceDueReminders(db, account.id, now());
+      const records = db.select().from(threadReminders).where(eq(threadReminders.accountId, account.id)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
+      return c.json(records.map(toReminder));
+    } finally { sqlite.close(); }
+  });
+
+  app.post("/v1/reminders", validator("json", (value, c) => validateJson(c, createReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const input = c.req.valid("json");
+      const scheduledFor = validateReminderTime(c, input.scheduledFor, input.timezone, now());
+      if (!scheduledFor) return c.json({ error: { code: "validation_error", message: "Choose a future time in a valid timezone" } }, 400);
+      const thread = db.select().from(threads).where(and(eq(threads.id, input.threadId), eq(threads.accountId, account.id))).get();
+      if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+      const existing = db.select().from(threadReminders).where(and(eq(threadReminders.accountId, account.id), eq(threadReminders.threadId, input.threadId), eq(threadReminders.status, "scheduled"))).get();
+      const id = existing?.id ?? `reminder:${crypto.randomUUID()}`;
+      db.insert(threadReminders).values({ id, accountId: account.id, threadId: input.threadId, scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled" })
+        .onConflictDoUpdate({ target: threadReminders.id, set: { scheduledFor, timezone: input.timezone, notify: input.notify ?? false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, updatedAt: now() } }).run();
+      return jsonWithSchema(c, reminderSchema, toReminder(db.select().from(threadReminders).where(eq(threadReminders.id, id)).get()!));
+    } finally { sqlite.close(); }
+  });
+
+  app.patch("/v1/reminders/:id", validator("json", (value, c) => validateJson(c, updateReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), eq(threadReminders.accountId, account.id))).get();
+      if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
+      const input = c.req.valid("json");
+      const timezone = input.timezone ?? record.timezone;
+      const scheduledFor = input.scheduledFor ? validateReminderTime(c, input.scheduledFor, timezone, now()) : record.scheduledFor;
+      if (!scheduledFor) return c.json({ error: { code: "validation_error", message: "Choose a future time in a valid timezone" } }, 400);
+      db.update(threadReminders).set({ scheduledFor, timezone, notify: input.notify ?? record.notify, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, updatedAt: now() }).where(eq(threadReminders.id, record.id)).run();
+      return jsonWithSchema(c, reminderSchema, toReminder(db.select().from(threadReminders).where(eq(threadReminders.id, record.id)).get()!));
+    } finally { sqlite.close(); }
+  });
+
+  app.post("/v1/reminders/:id/done", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "completed"));
+  app.delete("/v1/reminders/:id", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "cancelled"));
+
   app.get(
     "/v1/inbox",
     validator("query", (value, c) => {
@@ -701,6 +776,7 @@ type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
 type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
 type CollectionRecord = typeof collections.$inferSelect;
 type PinRecord = typeof pins.$inferSelect;
+type ReminderRecord = typeof threadReminders.$inferSelect;
 
 class OrganizationTargetError extends Error {}
 
@@ -718,6 +794,61 @@ function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { succ
 
 function noConnectedAccount(c: Context) {
   return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
+}
+
+function getReminderViewSettings(db: Database, accountId: string) {
+  const setting = db.select().from(reminderViewSettings).where(eq(reminderViewSettings.accountId, accountId)).get();
+  return { displayName: setting?.displayName ?? "Later" };
+}
+
+function isValidTimeZone(timezone: string) {
+  try { Intl.DateTimeFormat(undefined, { timeZone: timezone }); return true; } catch { return false; }
+}
+
+function validateReminderTime(_c: Context, isoTime: string, timezone: string, currentTime: Date) {
+  const scheduledFor = new Date(isoTime);
+  if (!isValidTimeZone(timezone) || Number.isNaN(scheduledFor.getTime()) || scheduledFor.getTime() <= currentTime.getTime()) return null;
+  return scheduledFor;
+}
+
+function toReminder(reminder: ReminderRecord) {
+  return {
+    id: reminder.id, accountId: reminder.accountId, threadId: reminder.threadId,
+    scheduledFor: reminder.scheduledFor.toISOString(), timezone: reminder.timezone, notify: reminder.notify,
+    status: reminder.status as "scheduled" | "resurfaced" | "completed" | "cancelled",
+    resurfacedAt: reminder.resurfacedAt?.toISOString() ?? null,
+    completedAt: reminder.completedAt?.toISOString() ?? null,
+    cancelledAt: reminder.cancelledAt?.toISOString() ?? null,
+    createdAt: reminder.createdAt.toISOString(), updatedAt: reminder.updatedAt.toISOString(),
+  };
+}
+
+function resurfaceDueReminders(db: Database, accountId: string, currentTime: Date) {
+  db.update(threadReminders).set({ status: "resurfaced", resurfacedAt: currentTime, updatedAt: currentTime })
+    .where(and(eq(threadReminders.accountId, accountId), eq(threadReminders.status, "scheduled"), sql`${threadReminders.scheduledFor} <= ${currentTime.getTime()}`)).run();
+}
+
+function updateReminderTerminal(
+  c: Context<{ Variables: AuthVariables }>,
+  dbFactory: typeof createDatabaseClient,
+  now: () => Date,
+  status: "completed" | "cancelled",
+) {
+  const { db, sqlite } = dbFactory();
+  try {
+    const account = getConnectedAccount(db, c.get("auth").userId);
+    if (!account) return noConnectedAccount(c);
+    const reminderId = c.req.param("id");
+    if (!reminderId) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
+    const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, reminderId), eq(threadReminders.accountId, account.id))).get();
+    if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
+    if (record.status !== status) {
+      const timestamp = now();
+      db.update(threadReminders).set({ status, completedAt: status === "completed" ? timestamp : record.completedAt, cancelledAt: status === "cancelled" ? timestamp : record.cancelledAt, updatedAt: timestamp }).where(eq(threadReminders.id, record.id)).run();
+    }
+    const updated = db.select().from(threadReminders).where(eq(threadReminders.id, record.id)).get()!;
+    return status === "cancelled" ? c.body(null, 204) : jsonWithSchema(c, reminderSchema, toReminder(updated));
+  } finally { sqlite.close(); }
 }
 
 function normalizeRuleInput(input: { scope: string; value: string; behavior: string; source: string }) {
