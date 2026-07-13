@@ -1673,7 +1673,7 @@ export function MessageReader({
 
 function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: string; reminder: Reminder | null; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
-  const [hours, setHours] = useState(4);
+  const [delayStep, setDelayStep] = useState(0);
   const [notify, setNotify] = useState(false);
   const [saving, setSaving] = useState(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -1682,11 +1682,12 @@ function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: s
     try { await onSave({ threadId, scheduledFor: date.toISOString(), timezone, notify }); setExpanded(false); }
     finally { setSaving(false); }
   };
-  const preset = (days: number) => {
-    const date = new Date(); date.setDate(date.getDate() + days); date.setHours(9, 0, 0, 0); void save(date);
-  };
+  const delayHours = delayStep <= 12 ? delayStep : (delayStep - 12) * 24;
+  const delayLabel = delayStep <= 12
+    ? `${delayStep} ${delayStep === 1 ? "hour" : "hours"}`
+    : `${delayStep - 12} ${delayStep === 13 ? "day" : "days"}`;
   if (reminder) return <div className="remind-control remind-control-active"><span>↻ {reminder.status === "resurfaced" ? "Ready now" : `Returns ${formatFullReceivedAt(reminder.scheduledFor)}`}</span><button onClick={() => void onFinish(reminder)} type="button">Done</button><button onClick={() => void onFinish(reminder, true)} type="button">Cancel</button></div>;
-  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><button className="remind-tomorrow" onClick={() => preset(1)} disabled={saving} type="button">Tomorrow · 9 AM</button><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One hour less" disabled={hours === 1 || saving} onClick={() => setHours((current) => current - 1)} type="button">−</button><strong>In {hours} {hours === 1 ? "hour" : "hours"}</strong><button aria-label="One hour more" disabled={hours === 168 || saving} onClick={() => setHours((current) => current + 1)} type="button">+</button></div><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving} onClick={() => void save(new Date(Date.now() + hours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
+  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button><strong>In {delayLabel}</strong><button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button></div><small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {

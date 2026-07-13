@@ -2463,7 +2463,6 @@ textarea {
 .remind-menu .remind-notify { display: flex; align-items: center; gap: 7px; color: var(--orca-ink); }
 .remind-custom-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .remind-menu-hours { grid-template-columns: 1fr; }
-.remind-tomorrow { width: 100%; }
 .remind-hours { align-items: center; display: grid; gap: 6px; grid-template-columns: 34px 1fr 34px; text-align: center; }
 .remind-hours strong { font-size: .88rem; font-weight: 600; }
 .remind-hours button { border-radius: 8px; font-size: 1.05rem; line-height: 1; padding: 7px; }
