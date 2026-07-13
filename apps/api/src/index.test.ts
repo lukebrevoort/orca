@@ -175,10 +175,13 @@ describe("Orca API", () => {
       const createCollection = (name: string) => testApp.request("/v1/collections", { method: "POST", headers, body: JSON.stringify({ name }) });
       const work = await (await createCollection("Work")).json();
       const reference = await (await createCollection("Reference")).json();
+      const recolored = await (await testApp.request(`/v1/collections/${work.id}`, { method: "PATCH", headers, body: JSON.stringify({ color: "#83728d" }) })).json();
+      assert.equal(recolored.color, "#83728d");
       assert.equal((await testApp.request(`/v1/collections/${work.id}/threads/thread_1`, { method: "PUT", headers })).status, 200);
       assert.equal((await testApp.request(`/v1/collections/${reference.id}/threads/thread_1`, { method: "PUT", headers })).status, 200);
       const both = await (await testApp.request("/v1/collections", { headers })).json();
       assert.deepEqual(both.map((item: { threadIds: string[] }) => item.threadIds), [["thread_1"], ["thread_1"]]);
+      assert.deepEqual(both.map((item: { color: string }) => item.color), ["#83728d", "#70867d"]);
 
       const firstPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "sender", targetId: "maya@example.com", label: "Maya" }) })).json();
       const secondPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "thread", targetId: "thread_1", label: "Additive" }) })).json();

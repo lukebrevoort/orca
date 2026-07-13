@@ -269,6 +269,7 @@ export const collectionSchema = z.object({
   id: nonEmptyStringSchema,
   accountId: nonEmptyStringSchema,
   name: z.string().trim().min(1).max(80),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
   position: z.number().int().nonnegative(),
   threadIds: z.array(nonEmptyStringSchema),
   createdAt: isoDateTimeStringSchema,
@@ -276,11 +277,12 @@ export const collectionSchema = z.object({
 }).strict();
 export type Collection = z.infer<typeof collectionSchema>;
 
-export const createCollectionSchema = collectionSchema.pick({ name: true }).strict();
+export const createCollectionSchema = collectionSchema.pick({ name: true, color: true }).partial({ color: true }).strict();
 export type CreateCollection = z.infer<typeof createCollectionSchema>;
 
 export const updateCollectionSchema = collectionSchema.pick({
   name: true,
+  color: true,
   position: true,
 }).partial().refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
 export type UpdateCollection = z.infer<typeof updateCollectionSchema>;

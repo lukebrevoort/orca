@@ -293,6 +293,7 @@ export const collections = sqliteTable(
     id: text("id").primaryKey(),
     accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),

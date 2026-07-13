@@ -285,9 +285,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       try {
         const account = getConnectedAccount(db, c.get("auth").userId);
         if (!account) return noConnectedAccount(c);
-        const name = c.req.valid("json").name.trim();
+        const input = c.req.valid("json");
+        const name = input.name.trim();
         const id = `collection:${crypto.randomUUID()}`;
-        db.insert(collections).values({ id, accountId: account.id, name, position: listCollectionRecords(db, account.id).length }).run();
+        db.insert(collections).values({ id, accountId: account.id, name, color: input.color ?? "#70867d", position: listCollectionRecords(db, account.id).length }).run();
         return c.json(collectionSchema.parse(listCollections(db, account.id).find((item) => item.id === id)!), 201);
       } catch (error) {
         return organizationConflict(c, error, "A collection with that name already exists");
@@ -860,6 +861,7 @@ function listCollections(db: Database, accountId: string) {
     id: collection.id,
     accountId: collection.accountId,
     name: collection.name,
+    color: collection.color,
     position: collection.position,
     threadIds: threadIdsByCollection.get(collection.id) ?? [],
     createdAt: collection.createdAt.toISOString(),
@@ -871,7 +873,7 @@ function getCollection(db: Database, accountId: string, id: string) {
   return db.select().from(collections).where(and(eq(collections.accountId, accountId), eq(collections.id, id))).get();
 }
 
-function updateCollectionRecord(db: Database, accountId: string, current: CollectionRecord, input: { name?: string; position?: number }) {
+function updateCollectionRecord(db: Database, accountId: string, current: CollectionRecord, input: { name?: string; color?: string; position?: number }) {
   const records = listCollectionRecords(db, accountId);
   const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
   db.transaction((tx) => {
@@ -886,7 +888,7 @@ function updateCollectionRecord(db: Database, accountId: string, current: Collec
         tx.update(collections).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(collections.id, item.id)).run();
       }
     }
-    tx.update(collections).set({ name: input.name?.trim() ?? current.name, position: nextPosition, updatedAt: new Date() }).where(eq(collections.id, current.id)).run();
+    tx.update(collections).set({ name: input.name?.trim() ?? current.name, color: input.color ?? current.color, position: nextPosition, updatedAt: new Date() }).where(eq(collections.id, current.id)).run();
   });
 }
 

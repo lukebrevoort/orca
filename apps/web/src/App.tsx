@@ -73,9 +73,18 @@ const mailboxes: MailboxItem[] = [
 ];
 
 const demoCollections: Collection[] = [
-  { id: "collection_demo_work", accountId: demoAccount.id, name: "Orca launch", position: 0, threadIds: ["thread_1", "thread_4"], createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "collection_demo_life", accountId: demoAccount.id, name: "Life admin", position: 1, threadIds: ["thread_2", "thread_3"], createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+  { id: "collection_demo_work", accountId: demoAccount.id, name: "Orca launch", color: "#70867d", position: 0, threadIds: ["thread_1", "thread_4"], createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "collection_demo_life", accountId: demoAccount.id, name: "Life admin", color: "#a87360", position: 1, threadIds: ["thread_2", "thread_3"], createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
 ];
+
+const collectionColors = [
+  { name: "Moss", value: "#70867d" },
+  { name: "Clay", value: "#a87360" },
+  { name: "Harbor", value: "#6c8195" },
+  { name: "Plum", value: "#83728d" },
+  { name: "Ochre", value: "#a18757" },
+  { name: "Stone", value: "#6d716f" },
+] as const;
 
 const demoPins: Pin[] = [
   { id: "pin_demo_sender", accountId: demoAccount.id, kind: "sender", targetId: "maya@example.com", label: "Maya Chen", position: 0, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
@@ -718,9 +727,10 @@ function InboxApp({
     if (!trimmed || !account) return null;
     setOrganizationError(null);
     try {
+      const color = collectionColors[collections.length % collectionColors.length].value;
       const created = demoMode
-        ? collectionSchema.parse({ id: `collection_demo_${Date.now()}`, accountId: account.id, name: trimmed, position: collections.length, threadIds: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
-        : await fetchJson("/v1/collections", collectionSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: trimmed }) });
+        ? collectionSchema.parse({ id: `collection_demo_${Date.now()}`, accountId: account.id, name: trimmed, color, position: collections.length, threadIds: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+        : await fetchJson("/v1/collections", collectionSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: trimmed, color }) });
       setCollections((current) => [...current, created]);
       if (activate) setActiveCollectionId(created.id);
       return created;
@@ -730,7 +740,7 @@ function InboxApp({
     }
   }
 
-  async function updateCollection(collection: Collection, patch: { name?: string; position?: number }) {
+  async function updateCollection(collection: Collection, patch: { name?: string; color?: string; position?: number }) {
     setOrganizationError(null);
     try {
       if (demoMode) {
@@ -897,6 +907,7 @@ function InboxApp({
             onCreateCollection={createCollection}
             onDeleteCollection={deleteCollection}
             onDeletePin={deletePin}
+            onColorCollection={(collection, color) => void updateCollection(collection, { color })}
             onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
             onMovePin={(pin, direction) => void movePin(pin, direction)}
             onPinView={() => void createPin({ kind: "view", targetId: activeMailbox, label: activeMailboxLabel })}
@@ -1822,6 +1833,7 @@ function OrganizationSidebar({
   currentView,
   error,
   onCreateCollection,
+  onColorCollection,
   onDeleteCollection,
   onDeletePin,
   onMoveCollection,
@@ -1837,6 +1849,7 @@ function OrganizationSidebar({
   currentView: MailboxItem;
   error: string | null;
   onCreateCollection: (name: string) => Promise<Collection | null>;
+  onColorCollection: (collection: Collection, color: string) => void;
   onDeleteCollection: (collection: Collection) => Promise<void>;
   onDeletePin: (pin: Pin) => Promise<void>;
   onMoveCollection: (collection: Collection, direction: -1 | 1) => void;
@@ -1918,7 +1931,7 @@ function OrganizationSidebar({
             {collections.map((collection, index) => (
               <div className={`keep-row collection-row${activeCollectionId === collection.id ? " collection-row-active" : ""}`} key={collection.id}>
                 <button aria-current={activeCollectionId === collection.id ? "page" : undefined} className="keep-row-main" onClick={() => onSelectCollection(collection.id)} type="button">
-                  <span className="collection-mark" aria-hidden="true" />
+                  <span className="collection-mark" aria-hidden="true" style={{ "--collection-color": collection.color } as CSSProperties} />
                   <span><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
                 </button>
                 <details className="keep-row-menu">
@@ -1930,6 +1943,23 @@ function OrganizationSidebar({
                       const nextName = window.prompt("Rename collection", collection.name);
                       if (nextName?.trim() && nextName.trim() !== collection.name) onRenameCollection(collection, nextName.trim());
                     }} type="button">✎ Rename</button>
+                    <div aria-label={`Color for ${collection.name}`} className="collection-color-picker" role="group">
+                      <span>Color</span>
+                      <div>
+                        {collectionColors.map((color) => (
+                          <button
+                            aria-label={`${color.name}${collection.color === color.value ? ", selected" : ""}`}
+                            aria-pressed={collection.color === color.value}
+                            className="collection-color-swatch"
+                            key={color.value}
+                            onClick={() => onColorCollection(collection, color.value)}
+                            style={{ "--swatch-color": color.value } as CSSProperties}
+                            title={color.name}
+                            type="button"
+                          />
+                        ))}
+                      </div>
+                    </div>
                     <button className="keep-menu-danger" onClick={() => {
                       if (window.confirm(`Delete “${collection.name}”? Messages and Gmail labels will stay untouched.`)) void onDeleteCollection(collection);
                     }} type="button">× Delete</button>
@@ -1981,7 +2011,7 @@ function ThreadOrganizer({ collections, message, onClose, onCreateCollection, on
           <h3>Add to collections</h3>
           {collections.map((collection) => {
             const included = collection.threadIds.includes(message.threadId);
-            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
+            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
           })}
           <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
             <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />

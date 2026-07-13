@@ -2,6 +2,7 @@ CREATE TABLE `collections` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
 	`name` text NOT NULL,
+	`color` text DEFAULT '#70867d' NOT NULL,
 	`position` integer NOT NULL,
 	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch() * 1000) NOT NULL,
