@@ -1332,8 +1332,12 @@ textarea {
   background: var(--message-rail, var(--orca-accent));
   border-radius: 999px;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--message-rail, var(--orca-accent)) 20%, transparent);
-  flex-shrink: 0;
   height: 9px;
+  pointer-events: none;
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 9px;
 }
 
