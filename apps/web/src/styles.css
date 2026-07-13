@@ -2457,10 +2457,11 @@ textarea {
 .remind-control { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; position: relative; }
 .remind-control > button, .remind-menu button { border: 1px solid var(--orca-border); background: var(--orca-surface-hover); color: var(--orca-ink); border-radius: 999px; padding: 7px 11px; font: inherit; font-size: .84rem; cursor: pointer; }
 .remind-control-active > span { font-size: .86rem; color: var(--orca-muted); margin-right: 3px; }
-.remind-menu { width: min(360px, 100%); display: grid; grid-template-columns: auto auto; gap: 8px; padding: 12px; border: 1px solid var(--orca-border); border-radius: 12px; background: var(--orca-surface); box-shadow: 0 10px 28px rgb(0 0 0 / .12); }
+.remind-menu { flex-basis: 100%; width: min(310px, 100%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; border: 1px solid var(--orca-border); border-radius: 10px; background: var(--orca-surface); box-shadow: 0 8px 22px rgb(0 0 0 / .1); }
 .remind-menu label, .remind-menu small { grid-column: 1 / -1; display: grid; gap: 5px; font-size: .82rem; color: var(--orca-muted); }
 .remind-menu input[type="datetime-local"] { border: 1px solid var(--orca-border); color: var(--orca-ink); background: var(--orca-surface); border-radius: 7px; padding: 7px; font: inherit; }
 .remind-menu .remind-notify { display: flex; align-items: center; gap: 7px; color: var(--orca-ink); }
+.remind-custom-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .later-rename { margin: 8px 0 0; border: 0; background: transparent; color: var(--orca-muted); font: inherit; font-size: .78rem; cursor: pointer; text-align: left; padding: 4px 8px; }
 .later-rename:hover, .later-rename:focus-visible { color: var(--orca-ink); text-decoration: underline; }
 
