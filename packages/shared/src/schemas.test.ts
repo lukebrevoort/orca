@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   authSessionSchema,
+  createCollectionSchema,
+  createPinSchema,
   inboxQuerySchema,
   inboxResponseSchema,
   threadDetailSchema,
+  updateCollectionSchema,
 } from "./index.ts";
 import { accountFixture, inboxFixture } from "./fixtures.ts";
 
@@ -58,5 +61,14 @@ describe("shared API schemas", () => {
       }],
     });
     assert.equal(result.success, true);
+  });
+
+  test("validates organization inputs without move semantics", () => {
+    assert.deepEqual(createCollectionSchema.parse({ name: "Orca launch" }), { name: "Orca launch" });
+    assert.deepEqual(createCollectionSchema.parse({ name: "Orca launch", color: "#70867d" }), { name: "Orca launch", color: "#70867d" });
+    assert.deepEqual(createPinSchema.parse({ kind: "thread", targetId: "thread_1", label: "Launch notes" }), { kind: "thread", targetId: "thread_1", label: "Launch notes" });
+    assert.equal(updateCollectionSchema.safeParse({}).success, false);
+    assert.equal(updateCollectionSchema.safeParse({ color: "moss" }).success, false);
+    assert.equal(createPinSchema.safeParse({ kind: "folder", targetId: "thread_1", label: "Nope" }).success, false);
   });
 });

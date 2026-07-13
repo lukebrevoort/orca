@@ -50,6 +50,13 @@
       "when": 1783875600002,
       "tag": "0006_yellow_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783896000000,
+      "tag": "0007_additive_collections_and_pins",
+      "breakpoints": true
     }
   ]
 }

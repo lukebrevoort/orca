@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { emailAttachments, emails, oauthAccounts, senderAttentionRules, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -154,6 +154,62 @@ describe("Orca API", () => {
     }
   });
 
+  test("keeps collections additive, orders pins deterministically, and deletes only organization metadata", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-collections-test-"));
+    const dbPath = join(tempDir, "collections.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com", displayName: "Luke" }).run();
+      db.insert(oauthAccounts).values({ id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" }).run();
+      db.insert(threads).values({ id: "thread_1", accountId: "acct_1", providerThreadId: "provider-thread-1", subject: "Additive", latestReceivedAt: new Date(), messageCount: 1, isRead: false }).run();
+      db.insert(emails).values({ id: "email_1", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-email-1", fromAddress: "maya@example.com", subject: "Additive", receivedAt: new Date(), isRead: false }).run();
+      db.insert(labels).values({ id: "label_1", accountId: "acct_1", providerLabelId: "INBOX", name: "INBOX", type: "system" }).run();
+      db.insert(emailLabels).values({ id: "email-label_1", emailId: "email_1", labelId: "label_1" }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      const createCollection = (name: string) => testApp.request("/v1/collections", { method: "POST", headers, body: JSON.stringify({ name }) });
+      const work = await (await createCollection("Work")).json();
+      const reference = await (await createCollection("Reference")).json();
+      const recolored = await (await testApp.request(`/v1/collections/${work.id}`, { method: "PATCH", headers, body: JSON.stringify({ color: "#83728d" }) })).json();
+      assert.equal(recolored.color, "#83728d");
+      assert.equal((await testApp.request(`/v1/collections/${work.id}/threads/thread_1`, { method: "PUT", headers })).status, 200);
+      assert.equal((await testApp.request(`/v1/collections/${reference.id}/threads/thread_1`, { method: "PUT", headers })).status, 200);
+      const both = await (await testApp.request("/v1/collections", { headers })).json();
+      assert.deepEqual(both.map((item: { threadIds: string[] }) => item.threadIds), [["thread_1"], ["thread_1"]]);
+      assert.deepEqual(both.map((item: { color: string }) => item.color), ["#83728d", "#70867d"]);
+
+      const firstPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "sender", targetId: "maya@example.com", label: "Maya" }) })).json();
+      const secondPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "thread", targetId: "thread_1", label: "Additive" }) })).json();
+      await testApp.request(`/v1/pins/${secondPin.id}`, { method: "PATCH", headers, body: JSON.stringify({ position: 0 }) });
+      const orderedPins = await (await testApp.request("/v1/pins", { headers })).json();
+      assert.deepEqual(orderedPins.map((item: { id: string; position: number }) => [item.id, item.position]), [[secondPin.id, 0], [firstPin.id, 1]]);
+
+      assert.equal((await testApp.request(`/v1/collections/${work.id}`, { method: "DELETE", headers })).status, 204);
+      const verification = createDatabaseClient(dbPath);
+      try {
+        assert.equal(verification.db.select().from(collections).all().length, 1);
+        assert.equal(verification.db.select().from(collectionThreads).all().length, 1);
+        assert.equal(verification.db.select().from(threads).all().length, 1);
+        assert.equal(verification.db.select().from(emails).all().length, 1);
+        assert.equal(verification.db.select().from(labels).all().length, 1);
+        assert.equal(verification.db.select().from(emailLabels).all().length, 1);
+        assert.equal(verification.db.select().from(pins).all().length, 2);
+      } finally {
+        verification.sqlite.close();
+      }
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("upgrades a database at migration 0003 with the reader storage migrations", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "orca-migration-upgrade-test-"));
     const dbPath = join(tempDir, "upgrade.sqlite");
@@ -184,6 +240,9 @@ describe("Orca API", () => {
 
         const tables = sqlite.query("select name from sqlite_master where type = 'table'").all() as Array<{ name: string }>;
         assert.ok(tables.some((table) => table.name === "email_attachments"));
+        assert.ok(tables.some((table) => table.name === "collections"));
+        assert.ok(tables.some((table) => table.name === "collection_threads"));
+        assert.ok(tables.some((table) => table.name === "pins"));
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
       } finally {

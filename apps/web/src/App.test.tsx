@@ -70,6 +70,7 @@ describe("App", () => {
     expect(isDevPreviewPath("/dev/inbox", true)).toBe(true);
     expect(isDevPreviewPath("/dev/inbox", false)).toBe(false);
     expect(isDevPreviewPath("/", true)).toBe(false);
+    expect(isDevPreviewPath("/", false, true)).toBe(true);
   });
 
   test("applies sender attention to historical and newly synced messages", () => {

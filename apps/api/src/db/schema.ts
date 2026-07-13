@@ -287,6 +287,55 @@ export const attentionViewSettings = sqliteTable(
   }),
 );
 
+export const collections = sqliteTable(
+  "collections",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull().default("#70867d"),
+    position: integer("position").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountNameUniqueIdx: uniqueIndex("collections_account_name_unique_idx").on(table.accountId, table.name),
+    accountPositionUniqueIdx: uniqueIndex("collections_account_position_unique_idx").on(table.accountId, table.position),
+  }),
+);
+
+export const collectionThreads = sqliteTable(
+  "collection_threads",
+  {
+    id: text("id").primaryKey(),
+    collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+    threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    membershipUniqueIdx: uniqueIndex("collection_threads_membership_unique_idx").on(table.collectionId, table.threadId),
+    threadIdx: index("collection_threads_thread_idx").on(table.threadId),
+  }),
+);
+
+export const pins = sqliteTable(
+  "pins",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    targetId: text("target_id").notNull(),
+    label: text("label").notNull(),
+    position: integer("position").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountTargetUniqueIdx: uniqueIndex("pins_account_target_unique_idx").on(table.accountId, table.kind, table.targetId),
+    accountPositionUniqueIdx: uniqueIndex("pins_account_position_unique_idx").on(table.accountId, table.position),
+  }),
+);
+
 export const sessions = sqliteTable(
   "sessions",
   {

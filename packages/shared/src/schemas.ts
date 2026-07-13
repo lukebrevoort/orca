@@ -265,6 +265,50 @@ export const updateAttentionViewSettingSchema = attentionViewSettingSchema.pick(
 );
 export type UpdateAttentionViewSetting = z.infer<typeof updateAttentionViewSettingSchema>;
 
+export const collectionSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  name: z.string().trim().min(1).max(80),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
+  position: z.number().int().nonnegative(),
+  threadIds: z.array(nonEmptyStringSchema),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type Collection = z.infer<typeof collectionSchema>;
+
+export const createCollectionSchema = collectionSchema.pick({ name: true, color: true }).partial({ color: true }).strict();
+export type CreateCollection = z.infer<typeof createCollectionSchema>;
+
+export const updateCollectionSchema = collectionSchema.pick({
+  name: true,
+  color: true,
+  position: true,
+}).partial().refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
+export type UpdateCollection = z.infer<typeof updateCollectionSchema>;
+
+export const pinKindSchema = z.enum(["sender", "thread", "view"]);
+export type PinKind = z.infer<typeof pinKindSchema>;
+
+export const pinSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  kind: pinKindSchema,
+  targetId: z.string().trim().min(1).max(500),
+  label: z.string().trim().min(1).max(120),
+  position: z.number().int().nonnegative(),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type Pin = z.infer<typeof pinSchema>;
+
+export const createPinSchema = pinSchema.pick({ kind: true, targetId: true, label: true }).strict();
+export type CreatePin = z.infer<typeof createPinSchema>;
+
+export const updatePinSchema = pinSchema.pick({ label: true, position: true }).partial()
+  .refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
+export type UpdatePin = z.infer<typeof updatePinSchema>;
+
 const providerPageFields = {
   items: z.array(z.unknown()),
   nextCursor: z.string().nullable(),

@@ -10,17 +10,23 @@ import {
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
+  collectionSchema,
+  createCollectionSchema,
+  createPinSchema,
   createSenderAttentionRuleSchema,
   inboxQuerySchema,
   inboxResponseSchema,
   mailAccountSchema,
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
+  pinSchema,
   senderAttentionRuleSchema,
   syncStatusSchema,
   threadDetailSchema,
   threadQuerySchema,
   updateAttentionViewSettingSchema,
+  updateCollectionSchema,
+  updatePinSchema,
   updateSenderAttentionRuleSchema,
 } from "@orca/shared";
 
@@ -28,7 +34,7 @@ import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, emailAttachments, emailLabels, emails, labels, oauthAccounts, senderAttentionRules, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -258,6 +264,180 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       }
     },
   );
+
+  app.get("/v1/collections", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      return c.json(listCollections(db, account.id).map((collection) => collectionSchema.parse(collection)));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post(
+    "/v1/collections",
+    validator("json", (value, c) => validateJson(c, createCollectionSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const input = c.req.valid("json");
+        const name = input.name.trim();
+        const id = `collection:${crypto.randomUUID()}`;
+        db.insert(collections).values({ id, accountId: account.id, name, color: input.color ?? "#70867d", position: listCollectionRecords(db, account.id).length }).run();
+        return c.json(collectionSchema.parse(listCollections(db, account.id).find((item) => item.id === id)!), 201);
+      } catch (error) {
+        return organizationConflict(c, error, "A collection with that name already exists");
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.patch(
+    "/v1/collections/:id",
+    validator("json", (value, c) => validateJson(c, updateCollectionSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const current = getCollection(db, account.id, c.req.param("id"));
+        if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
+        updateCollectionRecord(db, account.id, current, c.req.valid("json"));
+        return jsonWithSchema(c, collectionSchema, listCollections(db, account.id).find((item) => item.id === current.id)!);
+      } catch (error) {
+        return organizationConflict(c, error, "A collection with that name already exists");
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.delete("/v1/collections/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const current = getCollection(db, account.id, c.req.param("id"));
+      if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
+      db.transaction((tx) => {
+        tx.delete(collections).where(eq(collections.id, current.id)).run();
+        for (const item of tx.select().from(collections).where(eq(collections.accountId, account.id)).orderBy(asc(collections.position)).all()) {
+          if (item.position > current.position) tx.update(collections).set({ position: item.position - 1 }).where(eq(collections.id, item.id)).run();
+        }
+      });
+      return c.body(null, 204);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.put("/v1/collections/:id/threads/:threadId", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const collection = getCollection(db, account.id, c.req.param("id"));
+      const thread = db.select().from(threads).where(and(eq(threads.accountId, account.id), eq(threads.id, c.req.param("threadId")))).get();
+      if (!collection || !thread) return c.json({ error: { code: "not_found", message: "Collection or thread not found" } }, 404);
+      db.insert(collectionThreads).values({ id: `collection-thread:${crypto.randomUUID()}`, collectionId: collection.id, threadId: thread.id }).onConflictDoNothing().run();
+      return jsonWithSchema(c, collectionSchema, listCollections(db, account.id).find((item) => item.id === collection.id)!);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.delete("/v1/collections/:id/threads/:threadId", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const collection = getCollection(db, account.id, c.req.param("id"));
+      if (!collection) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
+      db.delete(collectionThreads).where(and(eq(collectionThreads.collectionId, collection.id), eq(collectionThreads.threadId, c.req.param("threadId")))).run();
+      return c.body(null, 204);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/pins", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      return c.json(listPins(db, account.id).map(toPin));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post(
+    "/v1/pins",
+    validator("json", (value, c) => validateJson(c, createPinSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const input = c.req.valid("json");
+        validatePinTarget(db, account.id, input.kind, input.targetId);
+        const id = `pin:${crypto.randomUUID()}`;
+        db.insert(pins).values({ id, accountId: account.id, kind: input.kind, targetId: input.targetId.trim(), label: input.label.trim(), position: listPins(db, account.id).length }).run();
+        return c.json(pinSchema.parse(toPin(db.select().from(pins).where(eq(pins.id, id)).get()!)), 201);
+      } catch (error) {
+        if (error instanceof OrganizationTargetError) return c.json({ error: { code: "validation_error", message: error.message } }, 400);
+        return organizationConflict(c, error, "That item is already pinned");
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.patch(
+    "/v1/pins/:id",
+    validator("json", (value, c) => validateJson(c, updatePinSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const current = getPin(db, account.id, c.req.param("id"));
+        if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+        updatePinRecord(db, account.id, current, c.req.valid("json"));
+        return jsonWithSchema(c, pinSchema, toPin(getPin(db, account.id, current.id)!));
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.delete("/v1/pins/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const current = getPin(db, account.id, c.req.param("id"));
+      if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+      db.transaction((tx) => {
+        tx.delete(pins).where(eq(pins.id, current.id)).run();
+        for (const item of tx.select().from(pins).where(eq(pins.accountId, account.id)).orderBy(asc(pins.position)).all()) {
+          if (item.position > current.position) tx.update(pins).set({ position: item.position - 1 }).where(eq(pins.id, item.id)).run();
+        }
+      });
+      return c.body(null, 204);
+    } finally {
+      sqlite.close();
+    }
+  });
 
   app.get(
     "/v1/inbox",
@@ -519,6 +699,10 @@ type ConnectedAccount = {
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
 type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
+type CollectionRecord = typeof collections.$inferSelect;
+type PinRecord = typeof pins.$inferSelect;
+
+class OrganizationTargetError extends Error {}
 
 function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } } }, value: unknown) {
   const result = schema.safeParse(value);
@@ -657,6 +841,109 @@ function updateViewSetting(
       updatedAt: new Date(),
     }).where(eq(attentionViewSettings.id, current.id)).run();
   });
+}
+
+function listCollectionRecords(db: Database, accountId: string) {
+  return db.select().from(collections).where(eq(collections.accountId, accountId)).orderBy(asc(collections.position)).all();
+}
+
+function listCollections(db: Database, accountId: string) {
+  const memberships = db.select({ collectionId: collectionThreads.collectionId, threadId: collectionThreads.threadId })
+    .from(collectionThreads).innerJoin(collections, eq(collections.id, collectionThreads.collectionId))
+    .where(eq(collections.accountId, accountId)).orderBy(asc(collectionThreads.createdAt), asc(collectionThreads.id)).all();
+  const threadIdsByCollection = new Map<string, string[]>();
+  for (const membership of memberships) {
+    const threadIds = threadIdsByCollection.get(membership.collectionId) ?? [];
+    threadIds.push(membership.threadId);
+    threadIdsByCollection.set(membership.collectionId, threadIds);
+  }
+  return listCollectionRecords(db, accountId).map((collection) => ({
+    id: collection.id,
+    accountId: collection.accountId,
+    name: collection.name,
+    color: collection.color,
+    position: collection.position,
+    threadIds: threadIdsByCollection.get(collection.id) ?? [],
+    createdAt: collection.createdAt.toISOString(),
+    updatedAt: collection.updatedAt.toISOString(),
+  }));
+}
+
+function getCollection(db: Database, accountId: string, id: string) {
+  return db.select().from(collections).where(and(eq(collections.accountId, accountId), eq(collections.id, id))).get();
+}
+
+function updateCollectionRecord(db: Database, accountId: string, current: CollectionRecord, input: { name?: string; color?: string; position?: number }) {
+  const records = listCollectionRecords(db, accountId);
+  const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
+  db.transaction((tx) => {
+    if (nextPosition !== current.position) {
+      tx.update(collections).set({ position: -1 }).where(eq(collections.id, current.id)).run();
+      const moving = records.filter((item) => item.id !== current.id && (
+        nextPosition < current.position
+          ? item.position >= nextPosition && item.position < current.position
+          : item.position > current.position && item.position <= nextPosition
+      ));
+      for (const item of moving.sort((a, b) => nextPosition < current.position ? b.position - a.position : a.position - b.position)) {
+        tx.update(collections).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(collections.id, item.id)).run();
+      }
+    }
+    tx.update(collections).set({ name: input.name?.trim() ?? current.name, color: input.color ?? current.color, position: nextPosition, updatedAt: new Date() }).where(eq(collections.id, current.id)).run();
+  });
+}
+
+function listPins(db: Database, accountId: string) {
+  return db.select().from(pins).where(eq(pins.accountId, accountId)).orderBy(asc(pins.position)).all();
+}
+
+function getPin(db: Database, accountId: string, id: string) {
+  return db.select().from(pins).where(and(eq(pins.accountId, accountId), eq(pins.id, id))).get();
+}
+
+function toPin(pin: PinRecord) {
+  return pinSchema.parse({
+    id: pin.id, accountId: pin.accountId, kind: pin.kind, targetId: pin.targetId, label: pin.label,
+    position: pin.position, createdAt: pin.createdAt.toISOString(), updatedAt: pin.updatedAt.toISOString(),
+  });
+}
+
+function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; position?: number }) {
+  const records = listPins(db, accountId);
+  const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
+  db.transaction((tx) => {
+    if (nextPosition !== current.position) {
+      tx.update(pins).set({ position: -1 }).where(eq(pins.id, current.id)).run();
+      const moving = records.filter((item) => item.id !== current.id && (
+        nextPosition < current.position
+          ? item.position >= nextPosition && item.position < current.position
+          : item.position > current.position && item.position <= nextPosition
+      ));
+      for (const item of moving.sort((a, b) => nextPosition < current.position ? b.position - a.position : a.position - b.position)) {
+        tx.update(pins).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(pins.id, item.id)).run();
+      }
+    }
+    tx.update(pins).set({ label: input.label?.trim() ?? current.label, position: nextPosition, updatedAt: new Date() }).where(eq(pins.id, current.id)).run();
+  });
+}
+
+function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view", targetId: string) {
+  const target = targetId.trim();
+  if (kind === "thread" && !db.select({ id: threads.id }).from(threads).where(and(eq(threads.accountId, accountId), eq(threads.id, target))).get()) {
+    throw new OrganizationTargetError("Thread pins must refer to a thread in this account");
+  }
+  if (kind === "sender" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
+    throw new OrganizationTargetError("Sender pins must contain an email address");
+  }
+  if (kind === "view" && !["inbox", "focus", "quiet", "hidden", "all"].includes(target)) {
+    throw new OrganizationTargetError("View pins must refer to an Orca attention view");
+  }
+}
+
+function organizationConflict(c: Context, error: unknown, message: string) {
+  if (error instanceof Error && /UNIQUE constraint failed/.test(error.message)) {
+    return c.json({ error: { code: "conflict", message } }, 409);
+  }
+  throw error;
 }
 
 function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount | undefined {
