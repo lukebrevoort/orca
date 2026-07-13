@@ -1673,8 +1673,7 @@ export function MessageReader({
 
 function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: string; reminder: Reminder | null; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
-  const [custom, setCustom] = useState(false);
-  const [when, setWhen] = useState("");
+  const [hours, setHours] = useState(4);
   const [notify, setNotify] = useState(false);
   const [saving, setSaving] = useState(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -1687,7 +1686,7 @@ function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: s
     const date = new Date(); date.setDate(date.getDate() + days); date.setHours(9, 0, 0, 0); void save(date);
   };
   if (reminder) return <div className="remind-control remind-control-active"><span>↻ {reminder.status === "resurfaced" ? "Ready now" : `Returns ${formatFullReceivedAt(reminder.scheduledFor)}`}</span><button onClick={() => void onFinish(reminder)} type="button">Done</button><button onClick={() => void onFinish(reminder, true)} type="button">Cancel</button></div>;
-  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => { setExpanded((current) => !current); setCustom(false); }} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu"><button onClick={() => preset(1)} disabled={saving} type="button">Tomorrow</button><button onClick={() => preset(7)} disabled={saving} type="button">Next week</button><button onClick={() => setCustom(true)} disabled={saving} type="button">Custom</button>{custom ? <><label>Custom date and time<input aria-label="Custom reminder time" type="datetime-local" value={when} onChange={(event) => setWhen(event.target.value)} /></label><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={!when || saving} onClick={() => { const date = new Date(when); if (!Number.isNaN(date.getTime())) void save(date); }} type="button">{saving ? "Saving…" : "Schedule"}</button></div><small>Uses {timezone}.</small></> : null}</div> : null}</div>;
+  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><button className="remind-tomorrow" onClick={() => preset(1)} disabled={saving} type="button">Tomorrow · 9 AM</button><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One hour less" disabled={hours === 1 || saving} onClick={() => setHours((current) => current - 1)} type="button">−</button><strong>In {hours} {hours === 1 ? "hour" : "hours"}</strong><button aria-label="One hour more" disabled={hours === 168 || saving} onClick={() => setHours((current) => current + 1)} type="button">+</button></div><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving} onClick={() => void save(new Date(Date.now() + hours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {

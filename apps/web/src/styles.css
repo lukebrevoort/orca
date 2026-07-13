@@ -2462,6 +2462,11 @@ textarea {
 .remind-menu input[type="datetime-local"] { border: 1px solid var(--orca-border); color: var(--orca-ink); background: var(--orca-surface); border-radius: 7px; padding: 7px; font: inherit; }
 .remind-menu .remind-notify { display: flex; align-items: center; gap: 7px; color: var(--orca-ink); }
 .remind-custom-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.remind-menu-hours { grid-template-columns: 1fr; }
+.remind-tomorrow { width: 100%; }
+.remind-hours { align-items: center; display: grid; gap: 6px; grid-template-columns: 34px 1fr 34px; text-align: center; }
+.remind-hours strong { font-size: .88rem; font-weight: 600; }
+.remind-hours button { border-radius: 8px; font-size: 1.05rem; line-height: 1; padding: 7px; }
 .later-rename { margin: 8px 0 0; border: 0; background: transparent; color: var(--orca-muted); font: inherit; font-size: .78rem; cursor: pointer; text-align: left; padding: 4px 8px; }
 .later-rename:hover, .later-rename:focus-visible { color: var(--orca-ink); text-decoration: underline; }
 
