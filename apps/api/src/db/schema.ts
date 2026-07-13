@@ -336,6 +336,38 @@ export const pins = sqliteTable(
   }),
 );
 
+export const threadReminders = sqliteTable(
+  "thread_reminders",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+    scheduledFor: integer("scheduled_for", { mode: "timestamp_ms" }).notNull(),
+    timezone: text("timezone").notNull(),
+    notify: integer("notify", { mode: "boolean" }).notNull().default(false),
+    status: text("status").notNull().default("scheduled"),
+    resurfacedAt: integer("resurfaced_at", { mode: "timestamp_ms" }),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountThreadIdx: index("thread_reminders_account_thread_idx").on(table.accountId, table.threadId),
+    accountScheduledForIdx: index("thread_reminders_account_scheduled_for_idx").on(table.accountId, table.scheduledFor),
+  }),
+);
+
+export const reminderViewSettings = sqliteTable(
+  "reminder_view_settings",
+  {
+    accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull().default("Later"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
 export const sessions = sqliteTable(
   "sessions",
   {

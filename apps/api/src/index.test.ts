@@ -7,7 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -202,6 +202,47 @@ describe("Orca API", () => {
       } finally {
         verification.sqlite.close();
       }
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("schedules, resurfaces, completes, and cancels thread reminders with a controllable clock", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-reminders-test-"));
+    const dbPath = join(tempDir, "reminders.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    let clock = new Date("2026-07-12T16:00:00.000Z");
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" }).run();
+      db.insert(threads).values({ id: "thread_1", accountId: "acct_1", providerThreadId: "provider-thread-1", subject: "Later", latestReceivedAt: clock, messageCount: 1, isRead: false }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => clock });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      const schedule = async (scheduledFor: string) => testApp.request("/v1/reminders", { method: "POST", headers, body: JSON.stringify({ threadId: "thread_1", scheduledFor, timezone: "America/Los_Angeles", notify: true }) });
+
+      assert.equal((await schedule("2026-07-12T15:00:00.000Z")).status, 400);
+      assert.equal((await testApp.request("/v1/reminders", { method: "POST", headers, body: JSON.stringify({ threadId: "thread_1", scheduledFor: "2026-07-13T16:00:00.000Z", timezone: "No/Such_Zone" }) })).status, 400);
+      const created = await (await schedule("2026-07-13T16:00:00.000Z")).json();
+      assert.equal(created.status, "scheduled");
+      assert.equal(created.notify, true);
+      assert.equal((await (await testApp.request("/v1/reminders", { headers })).json())[0].status, "scheduled");
+
+      clock = new Date("2026-07-14T16:00:00.000Z");
+      const due = await (await testApp.request("/v1/reminders", { headers })).json();
+      assert.equal(due[0].status, "resurfaced");
+      assert.equal(due[0].resurfacedAt, clock.toISOString());
+      const done = await (await testApp.request(`/v1/reminders/${created.id}/done`, { method: "POST", headers })).json();
+      assert.equal(done.status, "completed");
+      assert.equal((await testApp.request(`/v1/reminders/${created.id}`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await testApp.request(`/v1/reminders/${created.id}`, { method: "DELETE", headers })).status, 204);
+      assert.equal(db.select().from(threadReminders).all().length, 1);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

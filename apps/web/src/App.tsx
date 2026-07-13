@@ -7,8 +7,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, InboxMessage, MailAccount, MailContact, Pin, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { attentionViewSettingSchema, collectionSchema, inboxResponseSchema, meResponseSchema, pinSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -20,7 +20,7 @@ import { getContactSignature, type ContactSignature } from "./contact-signature"
 
 type Theme = "light" | "dark";
 
-type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all";
+type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 
 type MailboxItem = {
@@ -69,6 +69,7 @@ const mailboxes: MailboxItem[] = [
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
   { id: "quiet", label: "Quiet", description: "Available when you choose" },
   { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
+  { id: "later", label: "Later", description: "Threads you chose to revisit" },
   { id: "all", label: "All mail", description: "Every message, by attention" },
 ];
 
@@ -93,6 +94,7 @@ const demoPins: Pin[] = [
 
 const collectionsResponseSchema: JsonSchema<Collection[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => collectionSchema.parse(item)) : (() => { throw new Error("Collections response was not a list."); })() };
 const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => pinSchema.parse(item)) : (() => { throw new Error("Pins response was not a list."); })() };
+const remindersResponseSchema: JsonSchema<Reminder[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => reminderSchema.parse(item)) : (() => { throw new Error("Reminders response was not a list."); })() };
 
 export function App() {
   const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
@@ -365,6 +367,8 @@ function InboxApp({
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
@@ -467,10 +471,14 @@ function InboxApp({
     void Promise.all([
       fetchJson("/v1/collections", collectionsResponseSchema, controller.signal),
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
-    ]).then(([nextCollections, nextPins]) => {
+      fetchJson("/v1/reminders", remindersResponseSchema, controller.signal),
+      fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, controller.signal),
+    ]).then(([nextCollections, nextPins, nextReminders, viewSettings]) => {
       if (controller.signal.aborted) return;
       setCollections(nextCollections);
       setPins(nextPins);
+      setReminders(nextReminders);
+      setLaterLabel(viewSettings.displayName);
     }).catch((error) => {
       if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
     });
@@ -504,9 +512,11 @@ function InboxApp({
       const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
       return activeCollection
         ? messages.filter((message) => activeCollection.threadIds.includes(message.threadId))
+        : activeMailbox === "later"
+          ? messages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
         : getMessagesForMailbox(messages, activeMailbox, attentionByAddress);
     },
-    [activeCollectionId, activeMailbox, attentionByAddress, collections, messages],
+    [activeCollectionId, activeMailbox, attentionByAddress, collections, messages, reminders],
   );
 
   const visibleMessages = useMemo(() => {
@@ -586,9 +596,12 @@ function InboxApp({
     () =>
       mailboxes.map((mailbox) => ({
         ...mailbox,
-        count: status === "ready" ? getMessagesForMailbox(messages, mailbox.id, attentionByAddress).length : undefined,
+        label: mailbox.id === "later" ? laterLabel : mailbox.label,
+        count: status === "ready" ? mailbox.id === "later"
+          ? new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size
+          : getMessagesForMailbox(messages, mailbox.id, attentionByAddress).length : undefined,
       })),
-    [attentionByAddress, messages, status],
+    [attentionByAddress, laterLabel, messages, reminders, status],
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
@@ -848,6 +861,27 @@ function InboxApp({
     }
   }
 
+  async function saveReminder(input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) {
+    if (!account) return;
+    const saved = demoMode
+      ? reminderSchema.parse({ id: `reminder_demo_${input.threadId}`, accountId: account.id, ...input, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+      : await fetchJson("/v1/reminders", reminderSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+    setReminders((current) => [...current.filter((item) => item.threadId !== saved.threadId || !["scheduled", "resurfaced"].includes(item.status)), saved]);
+  }
+
+  async function finishReminder(reminder: Reminder, cancelled = false) {
+    if (!demoMode && cancelled) await fetchNoContent(`/v1/reminders/${encodeURIComponent(reminder.id)}`, { method: "DELETE" });
+    if (!demoMode && !cancelled) await fetchJson(`/v1/reminders/${encodeURIComponent(reminder.id)}/done`, reminderSchema, undefined, { method: "POST" });
+    setReminders((current) => current.map((item) => item.id === reminder.id ? { ...item, status: cancelled ? "cancelled" : "completed", updatedAt: new Date().toISOString() } : item));
+  }
+
+  async function renameLaterView() {
+    const displayName = window.prompt("Name this reminder view", laterLabel)?.trim();
+    if (!displayName) return;
+    if (!demoMode) await fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName }) });
+    setLaterLabel(displayName);
+  }
+
   return (
     <div className="app-root">
       <main className="app-shell">
@@ -893,6 +927,7 @@ function InboxApp({
                 </button>
               ))}
             </nav>
+            {activeMailbox === "later" ? <button className="later-rename" onClick={() => void renameLaterView()} type="button">Rename {laterLabel}</button> : null}
           </section>
 
           <a className="settings-link" href="/settings/attention-views">
@@ -926,6 +961,9 @@ function InboxApp({
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
               onAttentionChange={updateSenderAttention}
+              reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
+              onSaveReminder={saveReminder}
+              onFinishReminder={finishReminder}
               onBack={closeThread}
               onRetry={() => setReaderRefreshKey((key) => key + 1)}
               status={readerStatus}
@@ -1459,6 +1497,9 @@ export function MessageReader({
   onRetry,
   status,
   onAttentionChange,
+  reminder = null,
+  onSaveReminder = async () => {},
+  onFinishReminder = async () => {},
 }: {
   detail: ThreadDetail | null;
   error: string | null;
@@ -1468,6 +1509,9 @@ export function MessageReader({
   onRetry: () => void;
   status: "idle" | "loading" | "ready" | "error";
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
+  reminder?: Reminder | null;
+  onSaveReminder?: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>;
+  onFinishReminder?: (reminder: Reminder, cancelled?: boolean) => Promise<void>;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
@@ -1541,6 +1585,7 @@ export function MessageReader({
             <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">With {formatThreadParticipants(detail.thread.participants, detail.account.email)}</p>
+            <RemindMeControl threadId={detail.thread.id} reminder={reminder} onSave={onSaveReminder} onFinish={onFinishReminder} />
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -1624,6 +1669,25 @@ export function MessageReader({
       ) : null}
     </article>
   );
+}
+
+function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: string; reminder: Reminder | null; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
+  const [expanded, setExpanded] = useState(false);
+  const [delayStep, setDelayStep] = useState(0);
+  const [notify, setNotify] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const save = async (date: Date) => {
+    setSaving(true);
+    try { await onSave({ threadId, scheduledFor: date.toISOString(), timezone, notify }); setExpanded(false); }
+    finally { setSaving(false); }
+  };
+  const delayHours = delayStep <= 12 ? delayStep : (delayStep - 12) * 24;
+  const delayLabel = delayStep <= 12
+    ? `${delayStep} ${delayStep === 1 ? "hour" : "hours"}`
+    : `${delayStep - 12} ${delayStep === 13 ? "day" : "days"}`;
+  if (reminder) return <div className="remind-control remind-control-active"><span>↻ {reminder.status === "resurfaced" ? "Ready now" : `Returns ${formatFullReceivedAt(reminder.scheduledFor)}`}</span><button onClick={() => void onFinish(reminder)} type="button">Done</button><button onClick={() => void onFinish(reminder, true)} type="button">Cancel</button></div>;
+  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button><strong>In {delayLabel}</strong><button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button></div><small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
