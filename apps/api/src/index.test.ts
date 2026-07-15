@@ -4,10 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -210,6 +211,87 @@ describe("Orca API", () => {
     }
   });
 
+  test("imports selected Gmail labels once, supports skip, and handles accounts with no user labels", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-label-migration-test-"));
+    const dbPath = join(tempDir, "label-migration.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "user_import", email: "import@example.com" },
+        { id: "user_skip", email: "skip@example.com" },
+        { id: "user_empty", email: "empty@example.com" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "acct_import", userId: "user_import", provider: "gmail", providerEmail: "import@example.com", providerId: "gmail-import", lastSyncedAt: new Date() },
+        { id: "acct_skip", userId: "user_skip", provider: "gmail", providerEmail: "skip@example.com", providerId: "gmail-skip", lastSyncedAt: new Date() },
+        { id: "acct_empty", userId: "user_empty", provider: "gmail", providerEmail: "empty@example.com", providerId: "gmail-empty", lastSyncedAt: new Date() },
+      ]).run();
+      db.insert(threads).values([
+        { id: "thread_import_1", accountId: "acct_import", providerThreadId: "provider-thread-1", subject: "One", messageCount: 2 },
+        { id: "thread_import_2", accountId: "acct_import", providerThreadId: "provider-thread-2", subject: "Two", messageCount: 1 },
+      ]).run();
+      db.insert(emails).values([
+        { id: "email_import_1", accountId: "acct_import", threadId: "thread_import_1", providerMessageId: "provider-email-1" },
+        { id: "email_import_2", accountId: "acct_import", threadId: "thread_import_1", providerMessageId: "provider-email-2" },
+        { id: "email_import_3", accountId: "acct_import", threadId: "thread_import_2", providerMessageId: "provider-email-3" },
+      ]).run();
+      db.insert(labels).values([
+        { id: "label_work", accountId: "acct_import", providerLabelId: "Label_1", name: "Work", type: "user" },
+        { id: "label_travel", accountId: "acct_import", providerLabelId: "Label_2", name: "Travel", type: "user" },
+        { id: "label_inbox", accountId: "acct_import", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+        { id: "label_skip", accountId: "acct_skip", providerLabelId: "Label_3", name: "Receipts", type: "user" },
+      ]).run();
+      db.insert(emailLabels).values([
+        { id: "join_1", emailId: "email_import_1", labelId: "label_work" },
+        { id: "join_2", emailId: "email_import_2", labelId: "label_work" },
+        { id: "join_3", emailId: "email_import_3", labelId: "label_travel" },
+        { id: "join_4", emailId: "email_import_1", labelId: "label_inbox" },
+      ]).run();
+
+      const sessions = {
+        import: await createSession(db, "user_import"),
+        skip: await createSession(db, "user_skip"),
+        empty: await createSession(db, "user_empty"),
+      };
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headersFor = (token: string) => ({ cookie: `orca_session=${token}`, "content-type": "application/json" });
+
+      const preview = await (await testApp.request("/v1/gmail-label-migration", { headers: headersFor(sessions.import.token) })).json();
+      assert.deepEqual(preview.labels.map((label: { name: string; threadCount: number }) => [label.name, label.threadCount]), [["Travel", 1], ["Work", 1]]);
+      assert.equal((await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_inbox"] }) })).status, 400);
+
+      const importRequest = () => testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_work", "label_travel"] }) });
+      const imported = await (await importRequest()).json();
+      assert.equal(imported.status, "completed");
+      assert.deepEqual(imported.labels.map((label: { imported: boolean }) => label.imported), [true, true]);
+      assert.equal((await importRequest()).status, 200);
+      assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_import")).all().length, 2);
+      assert.equal(db.select().from(collectionThreads).all().length, 2);
+      assert.equal(db.select().from(gmailLabelCollectionImports).all().length, 2);
+
+      const skipped = await (await testApp.request("/v1/gmail-label-migration/skip", { method: "POST", headers: headersFor(sessions.skip.token) })).json();
+      assert.equal(skipped.status, "skipped");
+      assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_skip")).all().length, 0);
+      const importedLater = await (await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.skip.token), body: JSON.stringify({ labelIds: ["label_skip"] }) })).json();
+      assert.equal(importedLater.status, "completed");
+      assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_skip")).all().length, 1);
+
+      const emptyPreview = await (await testApp.request("/v1/gmail-label-migration", { headers: headersFor(sessions.empty.token) })).json();
+      assert.deepEqual(emptyPreview.labels, []);
+      const emptyImport = await (await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.empty.token), body: JSON.stringify({ labelIds: [] }) })).json();
+      assert.equal(emptyImport.status, "completed");
+      assert.equal(db.select().from(gmailLabelMigrations).all().length, 3);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("schedules, resurfaces, completes, and cancels thread reminders with a controllable clock", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
@@ -284,6 +366,8 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "collections"));
         assert.ok(tables.some((table) => table.name === "collection_threads"));
         assert.ok(tables.some((table) => table.name === "pins"));
+        assert.ok(tables.some((table) => table.name === "gmail_label_migrations"));
+        assert.ok(tables.some((table) => table.name === "gmail_label_collection_imports"));
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
       } finally {

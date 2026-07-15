@@ -280,6 +280,27 @@ export type Collection = z.infer<typeof collectionSchema>;
 export const createCollectionSchema = collectionSchema.pick({ name: true, color: true }).partial({ color: true }).strict();
 export type CreateCollection = z.infer<typeof createCollectionSchema>;
 
+export const gmailLabelMigrationLabelSchema = z.object({
+  id: nonEmptyStringSchema,
+  name: nonEmptyStringSchema,
+  threadCount: z.number().int().nonnegative(),
+  imported: z.boolean(),
+}).strict();
+export type GmailLabelMigrationLabel = z.infer<typeof gmailLabelMigrationLabelSchema>;
+
+export const gmailLabelMigrationSchema = z.object({
+  status: z.enum(["pending", "skipped", "completed"]),
+  ready: z.boolean(),
+  labels: z.array(gmailLabelMigrationLabelSchema),
+  completedAt: isoDateTimeStringSchema.nullable(),
+}).strict();
+export type GmailLabelMigration = z.infer<typeof gmailLabelMigrationSchema>;
+
+export const importGmailLabelsSchema = z.object({
+  labelIds: z.array(nonEmptyStringSchema),
+}).strict();
+export type ImportGmailLabels = z.infer<typeof importGmailLabelsSchema>;
+
 export const updateCollectionSchema = collectionSchema.pick({
   name: true,
   color: true,
