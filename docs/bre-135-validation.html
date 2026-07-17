@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-135 · M2 reader validation</title>
+  <style>
+    :root{--paper:#f4f2ec;--ink:#171816;--muted:#65685f;--line:#d6d2c7;--accent:#536b62;--card:#fffefa}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 ui-sans-serif,system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:clamp(28px,6vw,80px)}header{border-bottom:1px solid var(--line);padding-bottom:42px}small{color:var(--accent);font-weight:800;letter-spacing:.13em;text-transform:uppercase}h1,h2{font-family:Georgia,serif;font-weight:400;letter-spacing:-.035em}h1{font-size:clamp(48px,8vw,84px);line-height:.92;margin:18px 0}header p{color:var(--muted);font-size:19px;max-width:720px}.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));margin:34px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}.card h2{font-size:28px;margin:0 0 10px}.card p{color:var(--muted);margin:0 0 14px}.card ol{margin:0;padding-left:20px}.card li+li{margin-top:8px}.pass{background:#e8eee9;border-radius:999px;color:#31483e;display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;margin-bottom:12px;padding:5px 9px;text-transform:uppercase}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:12px;text-align:left;vertical-align:top}th{font-size:12px;letter-spacing:.08em;text-transform:uppercase}@media(max-width:620px){main{padding:24px 16px}.grid{grid-template-columns:1fr}table{font-size:13px}}
+  </style>
+</head>
+<body><main>
+  <header><small>BRE-135 · Repeatable review guide</small><h1>The full M2<br>reading journey.</h1><p>Use the demo inbox at <code>/dev/inbox</code> and the reading settings at <code>/settings/reading</code>. Complete every card with mouse and keyboard, then repeat the visual checks in light/dark and narrow/wide viewports.</p></header>
+  <section class="grid">
+    <article class="card"><span class="pass">Reader</span><h2>Find and read</h2><p>Inbox → conversation → return without losing place.</p><ol><li>Open a thread and confirm the subject receives focus.</li><li>Check chronological messages, unread/newest labels, details disclosure, quoted-history disclosure, and attachments.</li><li>Use jump-to-newest/top on a long thread.</li><li>Press Escape or Back to inbox; confirm focus returns to the originating row.</li></ol></article>
+    <article class="card"><span class="pass">Attention</span><h2>Change and explain</h2><p>Every sender treatment remains legible, understandable, and reversible.</p><ol><li>Open Tune for a sender and inspect the explanation.</li><li>Move the sender to Notify, Focus, Quiet, and Hidden.</li><li>Confirm the destination view immediately and recover the sender from each view.</li><li>Restore Keep in inbox and confirm the selected label remains readable in both themes.</li></ol></article>
+    <article class="card"><span class="pass">Reminder</span><h2>Defer and return</h2><p>A reminder is editable and never removes the thread permanently.</p><ol><li>Choose Remind me and adjust hours/days using keyboard controls.</li><li>Confirm the notification checkbox follows the reading preference default.</li><li>Save, open Later, and verify the return time.</li><li>Complete and cancel reminders; confirm both actions remove the thread from Later without deleting mail.</li></ol></article>
+    <article class="card"><span class="pass">Collections</span><h2>Organize safely</h2><p>Collections and pins are reversible views over existing mail.</p><ol><li>Create, rename, recolor, and reorder a collection.</li><li>Add/remove a thread and verify membership counts.</li><li>Pin a view, sender, and thread; reorder and remove each.</li><li>Confirm no action changes or deletes the Gmail source.</li></ol></article>
+    <article class="card"><span class="pass">Migration</span><h2>Bring labels forward</h2><p>Gmail remains read-only throughout migration.</p><ol><li>Open Gmail labels settings and wait for the ready state.</li><li>Select labels by keyboard; confirm count and selected labels in both themes.</li><li>Import and verify one collection per selected label.</li><li>Confirm the page explicitly says labels are never renamed, removed, or edited.</li></ol></article>
+    <article class="card"><span class="pass">Preferences</span><h2>Read your way</h2><p>Device defaults are honored until explicitly overridden.</p><ol><li>Start with system defaults; change OS light/dark and reduced motion.</li><li>Override theme, standard/large text, calm/compact density, and system/reduced/full motion.</li><li>Reload after each choice and confirm it persists.</li><li>Use system defaults and verify all preferences reset together.</li></ol></article>
+  </section>
+  <h2>Required viewport and input matrix</h2>
+  <table><thead><tr><th>Pass</th><th>Width</th><th>Input</th><th>Evidence</th></tr></thead><tbody>
+    <tr><td>Wide light</td><td>1440 × 1000</td><td>Pointer + keyboard</td><td>Inbox, reader, Tune, reminder, collection, migration, preferences</td></tr>
+    <tr><td>Wide dark</td><td>1440 × 1000</td><td>Keyboard only</td><td>Default, hover, focus, selected, pressed, and disabled labels remain readable</td></tr>
+    <tr><td>Narrow light</td><td>390 × 844</td><td>Keyboard</td><td>No horizontal clipping; reader controls stay visible</td></tr>
+    <tr><td>Narrow dark + reduced</td><td>390 × 844</td><td>Keyboard</td><td>No non-essential transitions; focus order follows reading order</td></tr>
+  </tbody></table>
+  <h2>Automated gate</h2><p><code>bun run typecheck</code> · <code>bun run test</code> · <code>bun run build</code> · API sanitizer/account isolation tests · headless browser console and journey checks.</p>
+</main></body></html>

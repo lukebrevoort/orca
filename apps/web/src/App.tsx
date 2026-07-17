@@ -19,6 +19,21 @@ import {
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 
 type Theme = "light" | "dark";
+export type ReaderPreferences = {
+  theme: "system" | Theme;
+  textSize: "standard" | "large";
+  density: "calm" | "compact";
+  motion: "system" | "reduced" | "full";
+  notifyByDefault: boolean;
+};
+
+export const defaultReaderPreferences: ReaderPreferences = {
+  theme: "system",
+  textSize: "standard",
+  density: "calm",
+  motion: "system",
+  notifyByDefault: false,
+};
 
 type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
@@ -53,7 +68,7 @@ function runUiTransition(name: OrcaTransition, update: () => void) {
   const transitionDocument = document as Document & {
     startViewTransition?: (callback: () => void) => { finished: Promise<void> };
   };
-  if (!transitionDocument.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (!transitionDocument.startViewTransition || shouldReduceMotion()) {
     update();
     return;
   }
@@ -62,6 +77,12 @@ function runUiTransition(name: OrcaTransition, update: () => void) {
   void transition.finished.finally(() => {
     delete document.documentElement.dataset.orcaTransition;
   });
+}
+
+function shouldReduceMotion() {
+  const preference = document.documentElement.dataset.motion;
+  return preference === "reduced"
+    || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
 const mailboxes: MailboxItem[] = [
@@ -97,17 +118,36 @@ const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(
 const remindersResponseSchema: JsonSchema<Reminder[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => reminderSchema.parse(item)) : (() => { throw new Error("Reminders response was not a list."); })() };
 
 export function App() {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+  const [preferences, setPreferences] = useState<ReaderPreferences>(() => readStoredPreferences());
+  const [systemTheme, setSystemTheme] = useState<Theme>(() => getSystemTheme());
+  const theme = preferences.theme === "system" ? systemTheme : preferences.theme;
+  const setTheme: Dispatch<SetStateAction<Theme>> = (value) => {
+    setPreferences((current) => ({
+      ...current,
+      theme: typeof value === "function" ? value(current.theme === "system" ? getSystemTheme() : current.theme) : value,
+    }));
+  };
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
   const devPreview = isDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("orca-theme", theme);
-  }, [theme]);
+    document.documentElement.dataset.readerSize = preferences.textSize;
+    document.documentElement.dataset.readerDensity = preferences.density;
+    document.documentElement.dataset.motion = preferences.motion;
+    window.localStorage.setItem("orca-reader-preferences", JSON.stringify(preferences));
+  }, [preferences, theme]);
 
   useEffect(() => {
-    if (isLoginRoute() || devPreview) return;
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemTheme(query.matches ? "dark" : "light");
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (isLoginRoute() || isReaderPreferencesRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -118,11 +158,15 @@ export function App() {
   }, [devPreview]);
 
   if (devPreview) {
-    return <InboxApp demoMode theme={theme} setTheme={setTheme} />;
+    return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
   }
 
   if (isLoginRoute()) {
     return <GmailOAuthLoginPage />;
+  }
+
+  if (isReaderPreferencesRoute()) {
+    return <ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -136,7 +180,50 @@ export function App() {
     return <AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} />;
   }
 
-  return <InboxApp theme={theme} setTheme={setTheme} />;
+  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
+}
+
+export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme }: {
+  preferences: ReaderPreferences;
+  setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
+  systemTheme: Theme;
+}) {
+  const update = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => {
+    setPreferences((current) => ({ ...current, [key]: value }));
+  };
+  return (
+    <main className="preferences-page">
+      <header className="attention-settings-topbar">
+        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-back-link" href="/">← Inbox</a>
+      </header>
+      <section className="preferences-shell" aria-labelledby="preferences-title">
+        <header className="preferences-intro">
+          <p className="settings-eyebrow">Settings / Reading</p>
+          <h1 id="preferences-title">Read at<br /><em>your pace.</em></h1>
+          <p>Orca follows your device until you make a choice. Every setting stays on this device and can be returned to system defaults.</p>
+          <button className="preferences-reset" onClick={() => setPreferences(defaultReaderPreferences)} type="button">Use system defaults</button>
+        </header>
+        <div className="preferences-groups">
+          <PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="theme" value={preferences.theme} onChange={(value) => update("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
+          <PreferenceChoice label="Reader text" hint="Changes message text without enlarging navigation." name="text-size" value={preferences.textSize} onChange={(value) => update("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} />
+          <PreferenceChoice label="Conversation spacing" hint="Calm gives each message more room; compact keeps more history visible." name="density" value={preferences.density} onChange={(value) => update("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} />
+          <PreferenceChoice label="Motion" hint="System honors your device’s reduced-motion setting." name="motion" value={preferences.motion} onChange={(value) => update("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} />
+          <fieldset className="preference-group">
+            <legend>Reminder notifications</legend>
+            <label className="preference-switch">
+              <input checked={preferences.notifyByDefault} onChange={(event) => update("notifyByDefault", event.target.checked)} type="checkbox" />
+              <span><strong>Notify me by default</strong><small>New reminders start with notifications checked. You can still change each reminder.</small></span>
+            </label>
+          </fieldset>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PreferenceChoice({ label, hint, name, value, onChange, options }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }> }) {
+  return <fieldset className="preference-group"><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
 }
 
 const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
@@ -356,10 +443,12 @@ function AttentionViewSettingsPage({
 
 function InboxApp({
   demoMode = false,
+  preferences = defaultReaderPreferences,
   theme,
   setTheme,
 }: {
   demoMode?: boolean;
+  preferences?: ReaderPreferences;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
@@ -940,6 +1029,9 @@ function InboxApp({
           <a className="settings-link" href="/settings/integrations/gmail">
             <span aria-hidden="true">↳</span> Gmail labels
           </a>
+          <a className="settings-link" href="/settings/reading">
+            <span aria-hidden="true">Aa</span> Reading preferences
+          </a>
 
           <OrganizationSidebar
             activeCollectionId={activeCollectionId}
@@ -968,6 +1060,7 @@ function InboxApp({
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
               onAttentionChange={updateSenderAttention}
+              notifyByDefault={preferences.notifyByDefault}
               reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
               onSaveReminder={saveReminder}
               onFinishReminder={finishReminder}
@@ -1637,6 +1730,7 @@ export function MessageReader({
   reminder = null,
   onSaveReminder = async () => {},
   onFinishReminder = async () => {},
+  notifyByDefault = false,
 }: {
   detail: ThreadDetail | null;
   error: string | null;
@@ -1649,6 +1743,7 @@ export function MessageReader({
   reminder?: Reminder | null;
   onSaveReminder?: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>;
   onFinishReminder?: (reminder: Reminder, cancelled?: boolean) => Promise<void>;
+  notifyByDefault?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
@@ -1676,7 +1771,7 @@ export function MessageReader({
   function jumpToNewest() {
     if (!jumpTarget) return;
     const node = messageRefs.current.get(jumpTarget.id);
-    node?.scrollIntoView({ behavior: "smooth", block: "start" });
+    node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
     node?.focus({ preventScroll: true });
   }
 
@@ -1684,7 +1779,7 @@ export function MessageReader({
     headingRef.current?.focus({ preventScroll: true });
     window.scrollTo({
       top: 0,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      behavior: shouldReduceMotion() ? "auto" : "smooth",
     });
   }
 
@@ -1722,7 +1817,7 @@ export function MessageReader({
             <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">With {formatThreadParticipants(detail.thread.participants, detail.account.email)}</p>
-            <RemindMeControl threadId={detail.thread.id} reminder={reminder} onSave={onSaveReminder} onFinish={onFinishReminder} />
+            <RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} />
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -1808,10 +1903,10 @@ export function MessageReader({
   );
 }
 
-function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: string; reminder: Reminder | null; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
+function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish }: { threadId: string; reminder: Reminder | null; notifyByDefault: boolean; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
   const [delayStep, setDelayStep] = useState(0);
-  const [notify, setNotify] = useState(false);
+  const [notify, setNotify] = useState(notifyByDefault);
   const [saving, setSaving] = useState(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const save = async (date: Date) => {
@@ -2668,6 +2763,10 @@ function isAttentionSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/attention-views";
 }
 
+function isReaderPreferencesRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/reading";
+}
+
 export function isDevPreviewPath(pathname: string, isDevelopment: boolean, isDemoBuild = false) {
   return (isDevelopment && pathname === "/dev/inbox")
     || (isDemoBuild && (pathname === "/" || pathname === "/dev/inbox"));
@@ -2704,17 +2803,30 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
   return null;
 }
 
-function readStoredTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "dark";
-  }
-
+export function readStoredPreferences(storage?: Pick<Storage, "getItem">): ReaderPreferences {
+  const source = storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+  if (!source) return defaultReaderPreferences;
   try {
-    const stored = window.localStorage.getItem("orca-theme");
-    return stored === "light" ? "light" : "dark";
+    const stored = source.getItem("orca-reader-preferences");
+    if (stored) {
+      const value = JSON.parse(stored) as Partial<ReaderPreferences>;
+      return {
+        theme: ["system", "light", "dark"].includes(value.theme ?? "") ? value.theme! : "system",
+        textSize: ["standard", "large"].includes(value.textSize ?? "") ? value.textSize! : "standard",
+        density: ["calm", "compact"].includes(value.density ?? "") ? value.density! : "calm",
+        motion: ["system", "reduced", "full"].includes(value.motion ?? "") ? value.motion! : "system",
+        notifyByDefault: value.notifyByDefault === true,
+      };
+    }
+    const legacyTheme = source.getItem("orca-theme");
+    return legacyTheme === "light" || legacyTheme === "dark" ? { ...defaultReaderPreferences, theme: legacyTheme } : defaultReaderPreferences;
   } catch {
-    return "dark";
+    return defaultReaderPreferences;
   }
+}
+
+function getSystemTheme(): Theme {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function formatProvider(provider: MailAccount["provider"]) {
