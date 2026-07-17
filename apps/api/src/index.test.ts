@@ -261,6 +261,12 @@ describe("Orca API", () => {
 
       const preview = await (await testApp.request("/v1/gmail-label-migration", { headers: headersFor(sessions.import.token) })).json();
       assert.deepEqual(preview.labels.map((label: { name: string; threadCount: number }) => [label.name, label.threadCount]), [["Travel", 1], ["Work", 1]]);
+      db.update(oauthAccounts).set({ lastSyncedAt: null }).where(eq(oauthAccounts.id, "acct_import")).run();
+      const preSyncImport = await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: [] }) });
+      assert.equal(preSyncImport.status, 409);
+      assert.deepEqual(await preSyncImport.json(), { error: { code: "sync_incomplete", message: "Gmail must finish its initial sync before labels can be imported" } });
+      assert.equal(db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, "acct_import")).get(), undefined);
+      db.update(oauthAccounts).set({ lastSyncedAt: new Date() }).where(eq(oauthAccounts.id, "acct_import")).run();
       assert.equal((await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_inbox"] }) })).status, 400);
 
       const importRequest = () => testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_work", "label_travel"] }) });

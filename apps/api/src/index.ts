@@ -323,6 +323,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       try {
         const account = getConnectedAccount(db, c.get("auth").userId);
         if (!account) return noConnectedAccount(c);
+        if (!account.lastSyncedAt) {
+          return c.json({ error: { code: "sync_incomplete", message: "Gmail must finish its initial sync before labels can be imported" } }, 409);
+        }
         const current = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
         if (current?.status === "completed") {
           return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));

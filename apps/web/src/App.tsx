@@ -1104,8 +1104,11 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
         }
         if (!next.ready) {
           setStatus("syncing");
-          await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, controller.signal, { method: "POST" });
-          next = await fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal);
+          next = await syncGmailLabelsUntilReady(
+            next,
+            () => fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, controller.signal, { method: "POST" }),
+            () => fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal),
+          );
         }
         if (!controller.signal.aborted) {
           setMigration(next);
@@ -1195,6 +1198,19 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
       </section>
     </main>
   );
+}
+
+export async function syncGmailLabelsUntilReady(
+  initial: GmailLabelMigration,
+  sync: () => Promise<unknown>,
+  reload: () => Promise<GmailLabelMigration>,
+) {
+  let migration = initial;
+  while (!migration.ready) {
+    await sync();
+    migration = await reload();
+  }
+  return migration;
 }
 
 function GmailOAuthLoginPage() {
