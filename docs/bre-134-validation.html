@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BRE-134 validation · Orca</title>
+  <style>
+    :root { color-scheme: light dark; --paper:#f7f7f5; --ink:#171716; --muted:#6e706c; --line:#d9d9d4; --accent:#536b62; --card:#ffffff; }
+    @media (prefers-color-scheme:dark) { :root { --paper:#191918; --ink:#ecece8; --muted:#a0a09a; --line:#383836; --accent:#9bafa7; --card:#222220; } }
+    * { box-sizing:border-box; }
+    body { background:var(--paper); color:var(--ink); font:16px/1.6 ui-sans-serif,system-ui,sans-serif; margin:0; }
+    main { margin:0 auto; max-width:920px; padding:64px 24px 96px; }
+    header { border-bottom:1px solid var(--line); margin-bottom:40px; padding-bottom:32px; }
+    small { color:var(--accent); font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { font:400 clamp(44px,8vw,76px)/.98 Georgia,serif; letter-spacing:-.04em; margin:14px 0 18px; }
+    header p { color:var(--muted); font-size:18px; max-width:680px; }
+    section { background:var(--card); border:1px solid var(--line); border-radius:16px; margin:18px 0; padding:24px; }
+    h2 { font:400 28px/1.2 Georgia,serif; margin:0 0 14px; }
+    ol, ul { margin-bottom:0; padding-left:22px; }
+    li { margin:9px 0; }
+    code { background:color-mix(in srgb,var(--ink) 7%,transparent); border-radius:5px; padding:2px 6px; }
+    pre { background:#111; border-radius:10px; color:#eee; overflow:auto; padding:16px; }
+    .pass { border-left:3px solid var(--accent); color:var(--muted); padding-left:14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <small>BRE-134 · reviewer guide</small>
+      <h1>Gmail label migration</h1>
+      <p>Verify that Orca offers a one-time, opt-in copy from user-created Gmail labels to Collections without changing Gmail.</p>
+    </header>
+
+    <section>
+      <h2>Start the app</h2>
+      <pre><code>bun install
+bun run db:migrate
+bun run dev</code></pre>
+      <p>Open <code>http://localhost:5173/login</code>, connect a Gmail account, and finish Google’s read-only OAuth flow.</p>
+    </section>
+
+    <section>
+      <h2>Onboarding flow</h2>
+      <ol>
+        <li>After OAuth returns to Orca, wait for the first sync to finish.</li>
+        <li>Confirm the picker shows only user-created Gmail labels; Inbox, Sent, Drafts, and other system labels must be absent.</li>
+        <li>Select two labels. Confirm the selected count, membership count, checkmarks, and <strong>Import selected</strong> action remain readable in both themes.</li>
+        <li>Import. Confirm one Collection per selected label appears in the inbox sidebar and contains the matching current threads.</li>
+        <li>Reload <code>/onboarding</code>. It should return to the inbox instead of repeating onboarding.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Skip and later import</h2>
+      <ol>
+        <li>With a fresh connected account, choose <strong>Start clean</strong>. No Collections should be created.</li>
+        <li>Open <code>/settings/integrations/gmail</code> or use <strong>Gmail labels</strong> in the sidebar.</li>
+        <li>Import a label there and confirm it creates exactly one Collection.</li>
+        <li>Reopen Settings and confirm the completion state; no duplicate Collection or membership should appear.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Read-only safety</h2>
+      <p class="pass">Before and after import, compare the selected labels in Gmail. Their names, message memberships, and message data must be unchanged.</p>
+      <p>The API only reads normalized local label/message data and writes Orca migration, Collection, and Collection membership records.</p>
+    </section>
+
+    <section>
+      <h2>Automated proof</h2>
+      <pre><code>bun run test
+bun run typecheck
+bun run build
+bun run lint
+bun run --cwd apps/api db:verify</code></pre>
+      <p>The API test named <code>imports selected Gmail labels once, supports skip, and handles accounts with no user labels</code> covers selection, skip, no-label, later-import, and repeat-import behavior.</p>
+    </section>
+  </main>
+</body>
+</html>

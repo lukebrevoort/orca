@@ -12,6 +12,8 @@ import {
   authSessionSchema,
   collectionSchema,
   createCollectionSchema,
+  gmailLabelMigrationSchema,
+  importGmailLabelsSchema,
   createPinSchema,
   createReminderSchema,
   createSenderAttentionRuleSchema,
@@ -38,7 +40,7 @@ import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, labels, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -58,6 +60,8 @@ const defaultViewSettings = [
   { behavior: "quiet", displayName: "Quiet", icon: "moon", color: "#7c3aed", position: 3 },
   { behavior: "hidden", displayName: "Hidden", icon: "eye-off", color: "#475569", position: 4 },
 ] as const;
+
+const collectionColors = ["#70867d", "#a87360", "#6c8195", "#83728d", "#a18757", "#6d716f"] as const;
 
 export function createApp(options: CreateAppOptions = {}): Hono<{
   Variables: AuthVariables;
@@ -281,6 +285,86 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       sqlite.close();
     }
   });
+
+  app.get("/v1/gmail-label-migration", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post("/v1/gmail-label-migration/skip", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const current = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
+      if (current?.status !== "completed") {
+        const timestamp = now();
+        db.insert(gmailLabelMigrations).values({ accountId: account.id, status: "skipped", updatedAt: timestamp })
+          .onConflictDoUpdate({ target: gmailLabelMigrations.accountId, set: { status: "skipped", completedAt: null, updatedAt: timestamp } }).run();
+      }
+      return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post(
+    "/v1/gmail-label-migration/import",
+    validator("json", (value, c) => validateJson(c, importGmailLabelsSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        if (!account.lastSyncedAt) {
+          return c.json({ error: { code: "sync_incomplete", message: "Gmail must finish its initial sync before labels can be imported" } }, 409);
+        }
+        const current = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
+        if (current?.status === "completed") {
+          return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
+        }
+
+        const selectedIds = [...new Set(c.req.valid("json").labelIds)];
+        const userLabels = db.select().from(labels).where(and(eq(labels.accountId, account.id), eq(labels.type, "user"))).all();
+        const selectedLabels = selectedIds.map((id) => userLabels.find((label) => label.id === id));
+        if (selectedLabels.some((label) => !label)) {
+          return c.json({ error: { code: "validation_error", message: "Only user-created labels from this Gmail account can be imported" } }, 400);
+        }
+
+        const timestamp = now();
+        const existingNames = new Set(db.select({ name: collections.name }).from(collections).where(eq(collections.accountId, account.id)).all().map((item) => item.name));
+        let position = listCollectionRecords(db, account.id).length;
+        db.transaction((tx) => {
+          selectedLabels.forEach((label, index) => {
+            if (!label) return;
+            const name = uniqueImportedCollectionName(label.name, existingNames);
+            const collectionId = `collection:${crypto.randomUUID()}`;
+            tx.insert(collections).values({ id: collectionId, accountId: account.id, name, color: collectionColors[index % collectionColors.length], position }).run();
+            position += 1;
+            existingNames.add(name);
+            tx.insert(gmailLabelCollectionImports).values({ labelId: label.id, collectionId }).onConflictDoNothing().run();
+            const memberships = tx.select({ threadId: emails.threadId }).from(emailLabels)
+              .innerJoin(emails, eq(emails.id, emailLabels.emailId)).where(eq(emailLabels.labelId, label.id)).all();
+            for (const threadId of new Set(memberships.map((membership) => membership.threadId))) {
+              tx.insert(collectionThreads).values({ id: `collection-thread:${crypto.randomUUID()}`, collectionId, threadId }).onConflictDoNothing().run();
+            }
+          });
+          tx.insert(gmailLabelMigrations).values({ accountId: account.id, status: "completed", completedAt: timestamp, updatedAt: timestamp })
+            .onConflictDoUpdate({ target: gmailLabelMigrations.accountId, set: { status: "completed", completedAt: timestamp, updatedAt: timestamp } }).run();
+        });
+        return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
 
   app.post(
     "/v1/collections",
@@ -976,6 +1060,52 @@ function updateViewSetting(
 
 function listCollectionRecords(db: Database, accountId: string) {
   return db.select().from(collections).where(eq(collections.accountId, accountId)).orderBy(asc(collections.position)).all();
+}
+
+function getGmailLabelMigration(db: Database, account: ConnectedAccount) {
+  const userLabels = db.select().from(labels)
+    .where(and(eq(labels.accountId, account.id), eq(labels.type, "user")))
+    .orderBy(asc(labels.name), asc(labels.id)).all();
+  const importedLabelIds = new Set(db.select({ labelId: gmailLabelCollectionImports.labelId }).from(gmailLabelCollectionImports)
+    .innerJoin(labels, eq(labels.id, gmailLabelCollectionImports.labelId))
+    .where(eq(labels.accountId, account.id)).all().map((item) => item.labelId));
+  const membershipRows = db.select({ labelId: emailLabels.labelId, threadId: emails.threadId }).from(emailLabels)
+    .innerJoin(emails, eq(emails.id, emailLabels.emailId))
+    .where(eq(emails.accountId, account.id)).all();
+  const threadIdsByLabel = new Map<string, Set<string>>();
+  for (const membership of membershipRows) {
+    const threadIds = threadIdsByLabel.get(membership.labelId) ?? new Set<string>();
+    threadIds.add(membership.threadId);
+    threadIdsByLabel.set(membership.labelId, threadIds);
+  }
+  const migration = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
+  return {
+    status: migration?.status ?? "pending",
+    ready: account.lastSyncedAt !== null,
+    labels: userLabels.map((label) => ({
+      id: label.id,
+      name: label.name,
+      threadCount: threadIdsByLabel.get(label.id)?.size ?? 0,
+      imported: importedLabelIds.has(label.id),
+    })),
+    completedAt: migration?.completedAt?.toISOString() ?? null,
+  };
+}
+
+function uniqueImportedCollectionName(labelName: string, existingNames: Set<string>) {
+  const base = labelName.trim().slice(0, 80) || "Imported label";
+  if (!existingNames.has(base)) return base;
+  const suffix = " (Gmail)";
+  const gmailName = `${base.slice(0, 80 - suffix.length)}${suffix}`;
+  if (!existingNames.has(gmailName)) return gmailName;
+  let sequence = 2;
+  while (sequence < 10_000) {
+    const numberedSuffix = ` (Gmail ${sequence})`;
+    const candidate = `${base.slice(0, 80 - numberedSuffix.length)}${numberedSuffix}`;
+    if (!existingNames.has(candidate)) return candidate;
+    sequence += 1;
+  }
+  throw new Error("Could not create a unique Collection name for the Gmail label");
 }
 
 function listCollections(db: Database, accountId: string) {

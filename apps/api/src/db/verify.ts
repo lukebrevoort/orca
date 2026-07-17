@@ -17,6 +17,10 @@ const requiredTables = [
   "labels",
   "emails",
   "email_labels",
+  "collections",
+  "collection_threads",
+  "gmail_label_migrations",
+  "gmail_label_collection_imports",
   "contacts",
 ];
 

@@ -318,6 +318,29 @@ export const collectionThreads = sqliteTable(
   }),
 );
 
+export const gmailLabelMigrations = sqliteTable(
+  "gmail_label_migrations",
+  {
+    accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    status: text("status").notNull(),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
+export const gmailLabelCollectionImports = sqliteTable(
+  "gmail_label_collection_imports",
+  {
+    labelId: text("label_id").primaryKey().references(() => labels.id, { onDelete: "cascade" }),
+    collectionId: text("collection_id").notNull().references(() => collections.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    collectionUniqueIdx: uniqueIndex("gmail_label_collection_imports_collection_unique_idx").on(table.collectionId),
+  }),
+);
+
 export const pins = sqliteTable(
   "pins",
   {

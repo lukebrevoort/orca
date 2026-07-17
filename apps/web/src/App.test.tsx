@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, MessageReader, applySenderAttention, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, applySenderAttention, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 
 describe("App", () => {
@@ -56,6 +56,31 @@ describe("App", () => {
         value: originalWindow,
       });
     }
+  });
+
+  test("explains the read-only Gmail label migration while it loads", () => {
+    const html = renderToStaticMarkup(<GmailLabelMigrationPage mode="settings" setTheme={() => {}} theme="light" />);
+
+    expect(html).toContain("Keep the labels");
+    expect(html).toContain("nothing in Gmail is changed");
+    expect(html).toContain("Labels are never renamed, removed, or edited");
+    expect(html).toContain("Checking your Gmail organization");
+  });
+
+  test("resumes Gmail sync until label migration data is ready", async () => {
+    const pending = { status: "pending" as const, ready: false, labels: [], completedAt: null };
+    const ready = { ...pending, ready: true };
+    const previews = [pending, ready];
+    let syncCalls = 0;
+
+    const result = await syncGmailLabelsUntilReady(
+      pending,
+      async () => { syncCalls += 1; },
+      async () => previews.shift() ?? ready,
+    );
+
+    expect(syncCalls).toBe(2);
+    expect(result.ready).toBe(true);
   });
 
   test("separates attention treatments into recoverable inbox views", () => {
