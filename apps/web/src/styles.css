@@ -3219,7 +3219,7 @@ textarea {
 .compose-recipient-chip button:hover { background: var(--orca-paper); color: var(--orca-ink); }
 .compose-recipient-suggestions { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 10px; box-shadow: var(--orca-shadow); display: grid; left: 0; max-height: 240px; overflow: auto; padding: 5px; position: absolute; right: 0; top: calc(100% + 5px); z-index: 5; }
 .compose-recipient-suggestions button { background: transparent; border: 0; border-radius: 7px; color: var(--orca-ink); cursor: pointer; display: grid; gap: 2px; padding: 9px 10px; text-align: left; }
-.compose-recipient-suggestions button:hover, .compose-recipient-suggestions button:focus-visible { background: var(--orca-surface-hover); outline: 0; }
+.compose-recipient-suggestions button:hover, .compose-recipient-suggestions button:focus-visible, .compose-recipient-suggestions button[aria-selected="true"] { background: var(--orca-surface-hover); color: var(--orca-ink); outline: 0; }
 .compose-recipient-suggestions strong { font-size: 13px; font-weight: 650; }
 .compose-recipient-suggestions span { color: var(--orca-muted); font-size: 11px; }
 .compose-carbon-toggle { background: transparent; border: 0; color: var(--orca-muted); cursor: pointer; font-size: 11px; padding: 6px 0 6px 38px; }
@@ -3251,6 +3251,7 @@ textarea {
 .compose-command-menu button > span { color: var(--orca-muted); font-family: ui-monospace, monospace; font-size: 9px; grid-column: 2; grid-row: 1 / 3; }
 .compose-command-menu strong { font-size: 11px; font-weight: 700; grid-column: 1; grid-row: 1; }
 .compose-command-menu small { color: var(--orca-muted); font-size: 9px; grid-column: 1; grid-row: 2; }
+.compose-command-empty { color: var(--orca-muted); font-size: 10px; padding: 8px; }
 
 .compose-delivery-bar { align-items: center; border-top: 1px solid var(--orca-border); display: grid; gap: 6px 16px; grid-template-columns: 1fr auto; padding-top: 16px; }
 .compose-delivery-bar > div:first-child { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }

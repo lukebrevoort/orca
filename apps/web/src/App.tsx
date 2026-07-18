@@ -1995,7 +1995,13 @@ export function normalizeReplySubject(subject: string) {
 
 export function getReplyRecipient(detail: ThreadDetail, newestMessage?: ThreadDetailMessage) {
   const accountEmail = detail.account.email.trim().toLowerCase();
-  if (newestMessage && newestMessage.from.email.trim().toLowerCase() !== accountEmail) return newestMessage.from;
+  const messages = newestMessage && !detail.messages.some((message) => message.id === newestMessage.id)
+    ? [...detail.messages, newestMessage]
+    : detail.messages;
+  const newestExternalMessage = [...messages]
+    .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+    .find((message) => message.from.email.trim().toLowerCase() !== accountEmail);
+  if (newestExternalMessage) return newestExternalMessage.from;
   return detail.thread.participants.find((participant) => participant.email.trim().toLowerCase() !== accountEmail) ?? null;
 }
 

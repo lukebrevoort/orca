@@ -288,10 +288,12 @@ describe("App", () => {
 
   test("targets replies at the newest external sender and preserves an existing Re prefix", () => {
     const detail = makeThreadDetail([
-      makeThreadMessage("incoming", "2026-07-12T18:00:00.000Z"),
+      makeThreadMessage("maya", "2026-07-12T18:00:00.000Z"),
+      { ...makeThreadMessage("anika", "2026-07-12T18:30:00.000Z"), from: { name: "Anika Lee", email: "anika@example.com" } },
       { ...makeThreadMessage("outgoing", "2026-07-12T19:00:00.000Z"), from: { name: "Luke Brevoort", email: "luke@example.com" } },
     ]);
-    expect(getReplyRecipient(detail, detail.messages[1])).toEqual({ name: "Maya Chen", email: "maya@example.com" });
+    detail.thread.participants = [{ name: "Maya Chen", email: "maya@example.com" }, { name: "Anika Lee", email: "anika@example.com" }];
+    expect(getReplyRecipient(detail, detail.messages[2])).toEqual({ name: "Anika Lee", email: "anika@example.com" });
     expect(normalizeReplySubject("Reader test")).toBe("Re: Reader test");
     expect(normalizeReplySubject("Re: Reader test")).toBe("Re: Reader test");
   });

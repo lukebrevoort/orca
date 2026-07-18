@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -117,32 +118,51 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
   const persistedDraftRef = useRef(JSON.stringify(draft));
   const storageScopeRef = useRef(`${accountId}:${scope}`);
+  const pendingDraftRef = useRef<{ key: string; serialized: string } | null>(null);
+  const skipPersistenceRef = useRef(false);
+
+  const flushPendingDraft = useCallback(() => {
+    const pending = pendingDraftRef.current;
+    if (!pending || typeof window === "undefined") return true;
+    try {
+      window.localStorage.setItem(pending.key, pending.serialized);
+      persistedDraftRef.current = pending.serialized;
+      pendingDraftRef.current = null;
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     const nextScope = `${accountId}:${scope}`;
     if (storageScopeRef.current === nextScope) return;
+    flushPendingDraft();
     storageScopeRef.current = nextScope;
+    skipPersistenceRef.current = true;
     const restored = readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
     persistedDraftRef.current = JSON.stringify(restored);
     setDraft(restored);
     setSaveStatus("saved");
-  }, [accountId, scope]);
+  }, [accountId, flushPendingDraft, scope]);
 
   useEffect(() => {
+    if (skipPersistenceRef.current) {
+      skipPersistenceRef.current = false;
+      return;
+    }
     const serialized = JSON.stringify(draft);
     if (serialized === persistedDraftRef.current) return;
+    pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
     setSaveStatus("saving");
     const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(draftStorageKey(accountId, scope), serialized);
-        persistedDraftRef.current = serialized;
-        setSaveStatus("saved");
-      } catch {
-        setSaveStatus("failed");
-      }
+      setSaveStatus(flushPendingDraft() ? "saved" : "failed");
     }, SAVE_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [accountId, draft, scope]);
+    return () => {
+      window.clearTimeout(timer);
+      flushPendingDraft();
+    };
+  }, [accountId, draft, flushPendingDraft, scope]);
 
   const hasContent = hasComposeContent(draft);
   useEffect(() => {
@@ -161,6 +181,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
 
   function discardDraft() {
     const empty = createEmptyComposeDraft(accountId);
+    pendingDraftRef.current = null;
     window.localStorage.removeItem(draftStorageKey(accountId, scope));
     persistedDraftRef.current = JSON.stringify(empty);
     setDraft(empty);
@@ -367,7 +388,13 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
   }
 
   function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (slash && commands.length) {
+    if (slash) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSlash(null);
+        return;
+      }
+      if (!commands.length) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setActiveCommand((current) => (current + 1) % commands.length);
@@ -383,10 +410,6 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
         runCommand(commands[activeCommand] ?? commands[0]!);
         return;
       }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSlash(null);
-      }
     }
   }
 
@@ -401,8 +424,8 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
       </div>
       <div
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
-        aria-autocomplete="list"
-        aria-controls={commandListId}
+        aria-autocomplete={slash && commands.length ? "list" : undefined}
+        aria-controls={slash ? commandListId : undefined}
         aria-label="Message body"
         aria-multiline="true"
         className="compose-writing-area compose-block-editor"
@@ -419,14 +442,14 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
         spellCheck
         suppressContentEditableWarning
       />
-      {slash && commands.length ? (
-        <div aria-label="Writing commands" className="compose-command-menu" id={commandListId} role="listbox" style={{ top: slash.top }}>
+      {slash ? (
+        <div aria-label="Writing commands" className="compose-command-menu" id={commandListId} role={commands.length ? "listbox" : "status"} style={{ top: slash.top }}>
           <p>Shape this block <span>↑↓ to move · ↵ to select</span></p>
-          {commands.map((command, index) => (
+          {commands.length ? commands.map((command, index) => (
             <button aria-selected={index === activeCommand} id={`${commandListId}-${command.id}`} key={command.id} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand(command)} role="option" type="button">
               <span>/{command.id}</span><strong>{command.label}</strong><small>{command.hint}</small>
             </button>
-          ))}
+          )) : <span className="compose-command-empty">No commands found · Esc to close</span>}
         </div>
       ) : null}
       <span className="sr-only">Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands.</span>
@@ -558,7 +581,11 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
 }) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+  const labelId = useId();
+  const suggestionListId = useId();
   const recipientEmails = useMemo(() => new Set(recipients.map((recipient) => recipient.email.toLowerCase())), [recipients]);
   const suggestions = query.trim().length === 0 ? [] : contacts.filter((contact) => {
     const needle = query.toLowerCase();
@@ -566,6 +593,11 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
   }).slice(0, 5);
 
   useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
+  useEffect(() => { setActiveSuggestion((current) => suggestions.length ? Math.min(current, suggestions.length - 1) : 0); }, [suggestions.length]);
+  useEffect(() => {
+    if (!suggestions.length || !suggestionsOpen) return;
+    document.getElementById(`${suggestionListId}-${activeSuggestion}`)?.scrollIntoView({ block: "nearest" });
+  }, [activeSuggestion, suggestionListId, suggestions.length, suggestionsOpen]);
 
   function addContacts(next: MailContact[]) {
     const merged = [...recipients];
@@ -578,6 +610,8 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
     }
     onChange(merged);
     setQuery("");
+    setActiveSuggestion(0);
+    setSuggestionsOpen(false);
     setError(null);
   }
 
@@ -603,8 +637,8 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
 
   return (
     <div className="compose-recipient-row">
-      <span className="compose-recipient-label" id={`${kind}-label`}>{label}</span>
-      <div aria-labelledby={`${kind}-label`} className={`compose-recipient-box${error ? " compose-recipient-box-error" : ""}`}>
+      <span className="compose-recipient-label" id={labelId}>{label}</span>
+      <div aria-labelledby={labelId} className={`compose-recipient-box${error ? " compose-recipient-box-error" : ""}`}>
         {recipients.map((recipient) => (
           <span className="compose-recipient-chip" key={recipient.email}>
             <span>{recipient.name ?? recipient.email}</span>
@@ -614,14 +648,19 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
         <input
           aria-label={`Add ${label} recipient`}
           aria-autocomplete="list"
-          aria-expanded={suggestions.length > 0}
+          aria-activedescendant={suggestionsOpen && suggestions.length ? `${suggestionListId}-${activeSuggestion}` : undefined}
+          aria-controls={suggestionsOpen && suggestions.length ? suggestionListId : undefined}
+          aria-expanded={suggestionsOpen && suggestions.length > 0}
           aria-invalid={Boolean(error)}
           autoComplete="off"
           name={`${kind}-recipient`}
           onBlur={() => { if (query.trim() && suggestions.length === 0) commitQuery(); }}
-          onChange={(event) => { setQuery(event.target.value); setError(null); }}
+          onChange={(event) => { setQuery(event.target.value); setActiveSuggestion(0); setSuggestionsOpen(true); setError(null); }}
           onKeyDown={(event) => {
-            if ((event.key === "Enter" || event.key === "," || event.key === ";") && query.trim()) { event.preventDefault(); suggestions[0] ? addContacts([suggestions[0]]) : commitQuery(); }
+            if (suggestionsOpen && suggestions.length && event.key === "ArrowDown") { event.preventDefault(); setActiveSuggestion((current) => (current + 1) % suggestions.length); return; }
+            if (suggestionsOpen && suggestions.length && event.key === "ArrowUp") { event.preventDefault(); setActiveSuggestion((current) => (current - 1 + suggestions.length) % suggestions.length); return; }
+            if (event.key === "Escape" && suggestionsOpen && suggestions.length) { event.preventDefault(); setSuggestionsOpen(false); return; }
+            if ((event.key === "Enter" || event.key === "," || event.key === ";") && query.trim()) { event.preventDefault(); suggestionsOpen && suggestions.length ? addContacts([suggestions[activeSuggestion] ?? suggestions[0]!]) : commitQuery(); }
             if (event.key === "Backspace" && !query && recipients.length) onChange(recipients.slice(0, -1));
           }}
           onPaste={onPaste}
@@ -631,9 +670,9 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
           type="email"
           value={query}
         />
-        {suggestions.length > 0 ? (
-          <div className="compose-recipient-suggestions" role="listbox">
-            {suggestions.map((contact) => <button aria-selected="false" key={contact.email} onMouseDown={(event) => event.preventDefault()} onClick={() => addContacts([contact])} role="option" type="button"><strong>{contact.name ?? contact.email}</strong><span>{contact.email}</span></button>)}
+        {suggestionsOpen && suggestions.length > 0 ? (
+          <div className="compose-recipient-suggestions" id={suggestionListId} role="listbox">
+            {suggestions.map((contact, index) => <button aria-selected={index === activeSuggestion} id={`${suggestionListId}-${index}`} key={contact.email} onMouseEnter={() => setActiveSuggestion(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => addContacts([contact])} role="option" type="button"><strong>{contact.name ?? contact.email}</strong><span>{contact.email}</span></button>)}
           </div>
         ) : null}
       </div>
