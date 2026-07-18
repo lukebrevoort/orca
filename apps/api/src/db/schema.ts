@@ -391,6 +391,34 @@ export const reminderViewSettings = sqliteTable(
   },
 );
 
+export const messageDrafts = sqliteTable(
+  "message_drafts",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    toRecipients: text("to_recipients").notNull().default("[]"),
+    ccRecipients: text("cc_recipients").notNull().default("[]"),
+    bccRecipients: text("bcc_recipients").notNull().default("[]"),
+    subject: text("subject").notNull().default(""),
+    bodyText: text("body_text").notNull().default(""),
+    bodyHtml: text("body_html"),
+    context: text("context"),
+    attachments: text("attachments").notNull().default("[]"),
+    providerDraftId: text("provider_draft_id"),
+    providerMessageId: text("provider_message_id"),
+    providerThreadId: text("provider_thread_id"),
+    revision: integer("revision").notNull().default(0),
+    deliveryStatus: text("delivery_status").notNull().default("draft"),
+    sendIdempotencyKey: text("send_idempotency_key"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountUpdatedAtIdx: index("message_drafts_account_updated_at_idx").on(table.accountId, table.updatedAt),
+    accountIdempotencyUniqueIdx: uniqueIndex("message_drafts_account_idempotency_unique_idx").on(table.accountId, table.sendIdempotencyKey),
+  }),
+);
+
 export const sessions = sqliteTable(
   "sessions",
   {

@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -29,6 +29,110 @@ describe("Orca API", () => {
     const response = await app.request("/v1/inbox");
 
     assert.equal(response.status, 401);
+  });
+
+  test("creates account-owned drafts with revisions and a safe delivery boundary", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-drafts-test-"));
+    const dbPath = join(tempDir, "drafts.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "draft_user", email: "writer@example.com" },
+        { id: "other_user", email: "other@example.com" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "draft_account", userId: "draft_user", provider: "gmail", providerEmail: "writer@example.com", providerId: "gmail-writer" },
+        { id: "other_account", userId: "other_user", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-other" },
+      ]).run();
+      const writer = await createSession(db, "draft_user");
+      const other = await createSession(db, "other_user");
+      let reserveDraftId: string | null = null;
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        now: () => {
+          if (reserveDraftId) {
+            const draftId = reserveDraftId;
+            reserveDraftId = null;
+            db.update(messageDrafts).set({ deliveryStatus: "sending", sendIdempotencyKey: "worker-reserved-key" }).where(eq(messageDrafts.id, draftId)).run();
+          }
+          return new Date("2026-07-18T20:00:00.000Z");
+        },
+      });
+      const headers = { cookie: `orca_session=${writer.token}`, "content-type": "application/json" };
+
+      const createdResponse = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          to: [{ name: "Maya Chen", email: "MAYA@EXAMPLE.COM" }], subject: "Launch notes",
+          body: { text: "Hi Maya", html: "<p>Hi <strong>Maya</strong><script>nope()</script></p>" },
+          context: { kind: "reply", threadId: "thread_1", messageId: "message_1" },
+        }),
+      });
+      assert.equal(createdResponse.status, 201);
+      const created = await createdResponse.json();
+      assert.equal(created.revision, 0);
+      assert.equal(created.to[0].email, "maya@example.com");
+      assert.equal(created.body.html.includes("script"), false);
+
+      const reloaded = await (await testApp.request(`/v1/drafts/${created.id}`, { headers })).json();
+      assert.equal(reloaded.subject, "Launch notes");
+      assert.equal((await (await testApp.request("/v1/drafts", { headers })).json()).length, 1);
+
+      const updatedResponse = await testApp.request(`/v1/drafts/${created.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "Updated launch notes" }),
+      });
+      assert.equal(updatedResponse.status, 200);
+      const updated = await updatedResponse.json();
+      assert.equal(updated.revision, 1);
+      assert.equal(updated.subject, "Updated launch notes");
+
+      const stale = await testApp.request(`/v1/drafts/${created.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "Too late" }),
+      });
+      assert.equal(stale.status, 409);
+      assert.equal((await stale.json()).error.code, "stale_draft");
+
+      const crossAccount = await testApp.request(`/v1/drafts/${created.id}`, {
+        headers: { cookie: `orca_session=${other.token}` },
+      });
+      assert.equal(crossAccount.status, 404);
+
+      const tooLarge = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({ attachments: [{ id: "file_1", filename: "large.zip", mimeType: "application/zip", size: 26 * 1024 * 1024 }] }),
+      });
+      assert.equal(tooLarge.status, 400);
+      assert.equal((await tooLarge.json()).error.code, "attachment_limit");
+
+      const send = await testApp.request(`/v1/drafts/${created.id}/send`, {
+        method: "POST", headers, body: JSON.stringify({ revision: 1, idempotencyKey: "a-safe-send-command-key" }),
+      });
+      assert.equal(send.status, 501);
+      assert.equal((await send.json()).error.code, "missing_capability");
+
+      assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { headers })).status, 404);
+
+      const reserved = await (await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ subject: "Reserved draft" }) })).json();
+      reserveDraftId = reserved.id;
+      const racingUpdate = await testApp.request(`/v1/drafts/${reserved.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "Must not save" }),
+      });
+      assert.equal(racingUpdate.status, 409);
+      assert.equal((await racingUpdate.json()).error.code, "ambiguous_delivery");
+      const reservedRecord = db.select().from(messageDrafts).where(eq(messageDrafts.id, reserved.id)).get()!;
+      assert.equal(reservedRecord.subject, "Reserved draft");
+      assert.equal(reservedRecord.deliveryStatus, "sending");
+      assert.equal((await testApp.request(`/v1/drafts/${reserved.id}`, { method: "DELETE", headers })).status, 409);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
   });
 
   test("rejects blank inbox cursors", async () => {
@@ -374,6 +478,7 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "pins"));
         assert.ok(tables.some((table) => table.name === "gmail_label_migrations"));
         assert.ok(tables.some((table) => table.name === "gmail_label_collection_imports"));
+        assert.ok(tables.some((table) => table.name === "message_drafts"));
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
       } finally {

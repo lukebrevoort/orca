@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -12,6 +12,8 @@ import {
   authSessionSchema,
   collectionSchema,
   createCollectionSchema,
+  createMessageDraftSchema,
+  deliveryResultSchema,
   gmailLabelMigrationSchema,
   importGmailLabelsSchema,
   createPinSchema,
@@ -20,6 +22,7 @@ import {
   inboxQuerySchema,
   inboxResponseSchema,
   mailAccountSchema,
+  messageDraftSchema,
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
   pinSchema,
@@ -27,12 +30,14 @@ import {
   reminderViewSettingsSchema,
   senderAttentionRuleSchema,
   syncStatusSchema,
+  sendMessageDraftSchema,
   threadDetailSchema,
   threadQuerySchema,
   updateAttentionViewSettingSchema,
   updateCollectionSchema,
   updatePinSchema,
   updateReminderSchema,
+  updateMessageDraftSchema,
   updateSenderAttentionRuleSchema,
 } from "@orca/shared";
 
@@ -40,7 +45,7 @@ import { createGmailAuthApp } from "./auth/gmail/routes.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 
 const serverConfig = getServerConfig();
@@ -598,6 +603,125 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/reminders/:id/done", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "completed"));
   app.delete("/v1/reminders/:id", requireAuth({ dbFactory }), (c) => updateReminderTerminal(c, dbFactory, now, "cancelled"));
 
+  app.get("/v1/drafts", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const drafts = db.select().from(messageDrafts)
+        .where(eq(messageDrafts.accountId, account.id))
+        .orderBy(desc(messageDrafts.updatedAt), asc(messageDrafts.id)).all();
+      return c.json(drafts.map(toMessageDraft));
+    } finally { sqlite.close(); }
+  });
+
+  app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const id = crypto.randomUUID();
+      const input = c.req.valid("json");
+      db.insert(messageDrafts).values({ id, accountId: account.id, ...draftStorage(input) }).run();
+      return c.json(messageDraftSchema.parse(toMessageDraft(getMessageDraft(db, account.id, id)!)), 201);
+    } finally { sqlite.close(); }
+  });
+
+  app.get("/v1/drafts/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const draft = getMessageDraft(db, account.id, c.req.param("id"));
+      if (!draft) return noDraft(c);
+      return jsonWithSchema(c, messageDraftSchema, toMessageDraft(draft));
+    } finally { sqlite.close(); }
+  });
+
+  app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const draft = getMessageDraft(db, account.id, c.req.param("id"));
+      if (!draft) return noDraft(c);
+      const update = c.req.valid("json");
+      if (draft.revision !== update.revision) return staleDraft(c, draft.revision);
+      if (draft.deliveryStatus !== "draft") {
+        return c.json({ error: { code: "ambiguous_delivery", message: "A draft that has begun delivery cannot be edited", retryable: false } }, 409);
+      }
+      const current = toMessageDraft(draft);
+      const content = createMessageDraftSchema.parse({
+        to: update.to ?? current.to,
+        cc: update.cc ?? current.cc,
+        bcc: update.bcc ?? current.bcc,
+        subject: update.subject ?? current.subject,
+        body: update.body ?? current.body,
+        context: update.context ?? current.context,
+        attachments: update.attachments ?? current.attachments,
+      });
+      const result = db.update(messageDrafts).set({ ...draftStorage(content), revision: sql`${messageDrafts.revision} + 1`, updatedAt: now() })
+        .where(and(
+          eq(messageDrafts.id, draft.id),
+          eq(messageDrafts.accountId, account.id),
+          eq(messageDrafts.revision, update.revision),
+          eq(messageDrafts.deliveryStatus, "draft"),
+          isNull(messageDrafts.sendIdempotencyKey),
+        ))
+        .returning({ id: messageDrafts.id }).get();
+      if (!result) {
+        const latest = getMessageDraft(db, account.id, draft.id);
+        if (!latest) return noDraft(c);
+        if (latest.revision !== update.revision) return staleDraft(c, latest.revision);
+        return deliveryStarted(c);
+      }
+      return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
+    } finally { sqlite.close(); }
+  });
+
+  app.delete("/v1/drafts/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const draft = getMessageDraft(db, account.id, c.req.param("id"));
+      if (!draft) return noDraft(c);
+      if (draft.deliveryStatus !== "draft" || draft.sendIdempotencyKey !== null) return deliveryStarted(c);
+      const deleted = db.delete(messageDrafts)
+        .where(and(
+          eq(messageDrafts.id, draft.id),
+          eq(messageDrafts.accountId, account.id),
+          eq(messageDrafts.deliveryStatus, "draft"),
+          isNull(messageDrafts.sendIdempotencyKey),
+        ))
+        .returning({ id: messageDrafts.id }).get();
+      if (!deleted) {
+        const latest = getMessageDraft(db, account.id, draft.id);
+        return latest ? deliveryStarted(c) : noDraft(c);
+      }
+      return c.body(null, 204);
+    } finally { sqlite.close(); }
+  });
+
+  app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccount(db, c.get("auth").userId);
+      if (!account) return noConnectedAccount(c);
+      const draft = getMessageDraft(db, account.id, c.req.param("id"));
+      if (!draft) return noDraft(c);
+      const command = c.req.valid("json");
+      if (draft.revision !== command.revision) return staleDraft(c, draft.revision);
+      if (draft.sendIdempotencyKey) {
+        if (draft.sendIdempotencyKey !== command.idempotencyKey) {
+          return c.json({ error: { code: "ambiguous_delivery", message: "This draft already has a delivery command; inspect its status before retrying", retryable: false } }, 409);
+        }
+        return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(draft));
+      }
+      return c.json({ error: { code: "missing_capability", message: "The connected Gmail account has read-only access and cannot deliver mail", retryable: false } }, 501);
+    } finally { sqlite.close(); }
+  });
+
   app.get(
     "/v1/inbox",
     validator("query", (value, c) => {
@@ -861,16 +985,19 @@ type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
 type CollectionRecord = typeof collections.$inferSelect;
 type PinRecord = typeof pins.$inferSelect;
 type ReminderRecord = typeof threadReminders.$inferSelect;
+type MessageDraftRecord = typeof messageDrafts.$inferSelect;
 
 class OrganizationTargetError extends Error {}
 
 function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { success: true; data: T } | { success: false; error: { issues: Array<{ path: PropertyKey[]; message: string }> } } }, value: unknown) {
   const result = schema.safeParse(value);
   if (result.success) return result.data;
+  const attachmentLimit = result.error.issues.some((issue) => issue.message.includes("Attachments exceed the 25 MB delivery limit"));
   return c.json({
     error: {
-      code: "validation_error",
-      message: "Invalid request data",
+      code: attachmentLimit ? "attachment_limit" : "validation_error",
+      message: attachmentLimit ? "Attachments exceed the 25 MB delivery limit" : "Invalid request data",
+      ...(attachmentLimit ? { retryable: false } : {}),
       issues: result.error.issues.map((issue) => ({ path: issue.path.join(".") || "body", message: issue.message })),
     },
   }, 400);
@@ -878,6 +1005,90 @@ function validateJson<T>(c: Context, schema: { safeParse(value: unknown): { succ
 
 function noConnectedAccount(c: Context) {
   return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
+}
+
+function noDraft(c: Context) {
+  return c.json({ error: { code: "not_found", message: "Draft not found" } }, 404);
+}
+
+function staleDraft(c: Context, currentRevision: number) {
+  return c.json({
+    error: {
+      code: "stale_draft",
+      message: "This draft changed somewhere else. Reload it before saving again.",
+      retryable: true,
+      currentRevision,
+    },
+  }, 409);
+}
+
+function deliveryStarted(c: Context) {
+  return c.json({
+    error: {
+      code: "ambiguous_delivery",
+      message: "A draft with a reserved delivery command cannot be changed or discarded",
+      retryable: false,
+    },
+  }, 409);
+}
+
+function getMessageDraft(db: Database, accountId: string, id: string) {
+  return db.select().from(messageDrafts)
+    .where(and(eq(messageDrafts.id, id), eq(messageDrafts.accountId, accountId))).get();
+}
+
+function draftStorage(input: ReturnType<typeof createMessageDraftSchema.parse>) {
+  return {
+    toRecipients: JSON.stringify(input.to),
+    ccRecipients: JSON.stringify(input.cc),
+    bccRecipients: JSON.stringify(input.bcc),
+    subject: input.subject,
+    bodyText: input.body.text,
+    bodyHtml: sanitizeOutboundHtml(input.body.html),
+    context: input.context ? JSON.stringify(input.context) : null,
+    attachments: JSON.stringify(input.attachments),
+  };
+}
+
+function toMessageDraft(draft: MessageDraftRecord): ReturnType<typeof messageDraftSchema.parse> {
+  return messageDraftSchema.parse({
+    id: draft.id,
+    accountId: draft.accountId,
+    to: parseDraftJson(draft.toRecipients, []),
+    cc: parseDraftJson(draft.ccRecipients, []),
+    bcc: parseDraftJson(draft.bccRecipients, []),
+    subject: draft.subject,
+    body: { text: draft.bodyText, html: draft.bodyHtml },
+    context: parseDraftJson(draft.context, null),
+    attachments: parseDraftJson(draft.attachments, []),
+    revision: draft.revision,
+    deliveryStatus: draft.deliveryStatus,
+    providerDraftId: draft.providerDraftId,
+    providerMessageId: draft.providerMessageId,
+    providerThreadId: draft.providerThreadId,
+    createdAt: draft.createdAt.toISOString(),
+    updatedAt: draft.updatedAt.toISOString(),
+  });
+}
+
+function parseDraftJson(value: string | null, fallback: unknown) {
+  if (!value) return fallback;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
+function toDeliveryResult(draft: MessageDraftRecord) {
+  const error = draft.deliveryStatus === "rejected"
+    ? { code: "provider_rejected" as const, message: "The provider rejected this delivery", retryable: false }
+    : draft.deliveryStatus === "ambiguous"
+      ? { code: "ambiguous_delivery" as const, message: "The provider outcome could not be confirmed", retryable: false }
+      : null;
+  return {
+    draftId: draft.id,
+    status: draft.deliveryStatus as "draft" | "queued" | "sending" | "sent" | "rejected" | "ambiguous",
+    providerMessageId: draft.providerMessageId,
+    providerThreadId: draft.providerThreadId,
+    error,
+  };
 }
 
 function getReminderViewSettings(db: Database, accountId: string) {
@@ -1248,6 +1459,10 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
 
 function sanitizeProviderHtml(value: string | null) {
   return value === null ? null : sanitizeHtml(value, providerHtmlPolicy) || null;
+}
+
+function sanitizeOutboundHtml(value: string | null) {
+  return sanitizeProviderHtml(value);
 }
 
 function htmlToText(value: string | null) {
