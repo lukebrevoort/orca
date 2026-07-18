@@ -62,6 +62,7 @@ type OAuthReturnStatus =
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
+const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
 
@@ -84,6 +85,33 @@ function shouldReduceMotion() {
   const preference = document.documentElement.dataset.motion;
   return preference === "reduced"
     || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
+  const [rendered, setRendered] = useState(visible);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      setClosing(false);
+      return;
+    }
+    if (!rendered) return;
+    if (shouldReduceMotion()) {
+      setRendered(false);
+      setClosing(false);
+      return;
+    }
+    setClosing(true);
+    const timer = window.setTimeout(() => {
+      setRendered(false);
+      setClosing(false);
+    }, duration);
+    return () => window.clearTimeout(timer);
+  }, [duration, rendered, visible]);
+
+  return { closing, rendered };
 }
 
 const mailboxes: MailboxItem[] = [
@@ -466,6 +494,7 @@ function InboxApp({
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
+  const [organizerClosing, setOrganizerClosing] = useState(false);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -485,11 +514,15 @@ function InboxApp({
   const [panelClosing, setPanelClosing] = useState(false);
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) {
         clearTimeout(closeTimerRef.current);
+      }
+      if (organizerCloseTimerRef.current) {
+        clearTimeout(organizerCloseTimerRef.current);
       }
     };
   }, []);
@@ -724,6 +757,29 @@ function InboxApp({
     setComposeSubject("");
     setDraft("");
     setZen(false);
+  }
+
+  function openOrganizer(message: InboxMessage) {
+    if (organizerCloseTimerRef.current) {
+      clearTimeout(organizerCloseTimerRef.current);
+      organizerCloseTimerRef.current = null;
+    }
+    setOrganizerClosing(false);
+    setOrganizerMessage(message);
+  }
+
+  function closeOrganizer() {
+    if (!organizerMessage || organizerClosing) return;
+    if (shouldReduceMotion()) {
+      setOrganizerMessage(null);
+      return;
+    }
+    setOrganizerClosing(true);
+    organizerCloseTimerRef.current = setTimeout(() => {
+      setOrganizerMessage(null);
+      setOrganizerClosing(false);
+      organizerCloseTimerRef.current = null;
+    }, 220);
   }
 
   function openThread(message: InboxMessage) {
@@ -1088,7 +1144,7 @@ function InboxApp({
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onInboxFilterChange={selectInboxFilter}
-              onOpenOrganizer={setOrganizerMessage}
+              onOpenOrganizer={openOrganizer}
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
             />
@@ -1098,9 +1154,10 @@ function InboxApp({
 
       {organizerMessage ? (
         <ThreadOrganizer
+          closing={organizerClosing}
           collections={collections}
           message={organizerMessage}
-          onClose={() => setOrganizerMessage(null)}
+          onClose={closeOrganizer}
           onCreateCollection={async (name) => {
             const created = await createCollection(name, false);
             if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
@@ -1907,6 +1964,7 @@ export function MessageReader({
 
 function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish }: { threadId: string; reminder: Reminder | null; notifyByDefault: boolean; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
+  const presence = useExitPresence(expanded);
   const [delayStep, setDelayStep] = useState(0);
   const [notify, setNotify] = useState(notifyByDefault);
   const [saving, setSaving] = useState(false);
@@ -1921,7 +1979,25 @@ function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish
     ? `${delayStep} ${delayStep === 1 ? "hour" : "hours"}`
     : `${delayStep - 12} ${delayStep === 13 ? "day" : "days"}`;
   if (reminder) return <div className="remind-control remind-control-active"><span>↻ {reminder.status === "resurfaced" ? "Ready now" : `Returns ${formatFullReceivedAt(reminder.scheduledFor)}`}</span><button onClick={() => void onFinish(reminder)} type="button">Done</button><button onClick={() => void onFinish(reminder, true)} type="button">Cancel</button></div>;
-  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button><strong>In {delayLabel}</strong><button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button></div><small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
+  return (
+    <div className="remind-control">
+      <button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>
+      {presence.rendered ? (
+        <div className={`remind-menu remind-menu-hours${presence.closing ? " remind-menu-closing" : ""}`}>
+          <div className="remind-hours" aria-label="Reminder delay">
+            <button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button>
+            <strong>In {delayLabel}</strong>
+            <button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button>
+          </div>
+          <small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small>
+          <div className="remind-custom-actions">
+            <label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label>
+            <button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
@@ -1930,6 +2006,7 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
 
 function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
+  const presence = useExitPresence(expanded);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
@@ -1937,6 +2014,7 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
   const controlRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
+  const focusAfterCloseRef = useRef<{ behavior?: AttentionBehavior } | null>(null);
   const address = message.from.email.trim().toLowerCase();
   const senderName = message.from.name ?? address;
   const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string }> = [
@@ -1974,7 +2052,7 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
   }, [address, expanded, initialBehavior, resolution]);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!presence.rendered || presence.closing) return;
     const selectedChoice = menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]');
     (selectedChoice ?? menuRef.current?.querySelector<HTMLButtonElement>(".sender-attention-choices button:not([disabled])"))?.focus();
     function dismissOnOutsidePointer(event: PointerEvent) {
@@ -1995,15 +2073,17 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
       window.removeEventListener("pointerdown", dismissOnOutsidePointer);
       window.removeEventListener("keydown", dismissOnEscape);
     };
-  }, [expanded]);
+  }, [presence.closing, presence.rendered]);
 
   useEffect(() => {
-    if (!expanded || status !== "idle" || !selectedBehavior) return;
+    if (!expanded || presence.closing || status !== "idle" || !selectedBehavior) return;
     menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]')?.focus();
-  }, [expanded, selectedBehavior, status]);
+  }, [expanded, presence.closing, selectedBehavior, status]);
 
-  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
-    setExpanded(false);
+  useEffect(() => {
+    if (presence.rendered || !focusAfterCloseRef.current) return;
+    const { behavior } = focusAfterCloseRef.current;
+    focusAfterCloseRef.current = null;
     requestAnimationFrame(() => {
       if (behavior === "hidden" && !reader) {
         document.querySelector<HTMLButtonElement>(".message-row")?.focus();
@@ -2013,6 +2093,12 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
         document.querySelector<HTMLButtonElement>(reader ? ".reader-back" : ".message-row")?.focus();
       }
     });
+  }, [presence.rendered, reader]);
+
+  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
+    if (!expanded || presence.closing) return;
+    focusAfterCloseRef.current = { behavior };
+    setExpanded(false);
   }
 
   async function saveRule(behavior: AttentionViewSetting["behavior"]) {
@@ -2062,12 +2148,12 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
   }
 
   return (
-    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
+    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${presence.rendered ? " sender-attention-control-expanded" : ""}${presence.closing ? " sender-attention-control-closing" : ""}`} ref={controlRef}>
       <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} type="button">
         {reader ? "Attention" : <><span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}</>}
       </button>
-      {expanded ? (
-        <section className="sender-attention-menu" id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
+      {presence.rendered ? (
+        <section className={`sender-attention-menu${presence.closing ? " sender-attention-menu-closing" : ""}`} id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
             <p className="sender-attention-kicker">All mail from <strong>{senderName}</strong></p>
             <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => closeAndRestoreFocus()} type="button">×</button>
@@ -2162,6 +2248,7 @@ function OrganizationSidebar({
   pins: Pin[];
 }) {
   const [addingCollection, setAddingCollection] = useState(false);
+  const collectionPresence = useExitPresence(addingCollection);
   const [collectionName, setCollectionName] = useState("");
 
   useEffect(() => {
@@ -2221,8 +2308,8 @@ function OrganizationSidebar({
           <h3>Collections</h3>
           <button aria-expanded={addingCollection} className="keep-group-action" onClick={() => setAddingCollection((current) => !current)} type="button"><span aria-hidden="true">＋</span>New collection</button>
         </div>
-        {addingCollection ? (
-          <form className="collection-create" onSubmit={submitCollection}>
+        {collectionPresence.rendered ? (
+          <form className={`collection-create${collectionPresence.closing ? " collection-create-closing" : ""}`} onSubmit={submitCollection}>
             <input aria-label="Collection name" autoFocus maxLength={80} onChange={(event) => setCollectionName(event.target.value)} placeholder="Name this collection" value={collectionName} />
             <button disabled={!collectionName.trim()} type="submit">Add</button>
           </form>
@@ -2276,7 +2363,8 @@ function OrganizationSidebar({
   );
 }
 
-function ThreadOrganizer({ collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+function ThreadOrganizer({ closing, collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+  closing: boolean;
   collections: Collection[];
   message: InboxMessage;
   onClose: () => void;
@@ -2296,9 +2384,9 @@ function ThreadOrganizer({ collections, message, onClose, onCreateCollection, on
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
   return (
-    <div className="organizer-layer" role="presentation">
+    <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
       <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-labelledby="organizer-title" aria-modal="true" className="thread-organizer" role="dialog">
+      <section aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} role="dialog">
         <header>
           <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
           <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
