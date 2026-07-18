@@ -3032,10 +3032,6 @@ textarea {
 .reader-body-html pre { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 8px; font-size: .75em; line-height: 1.6; overflow-x: auto; padding: 1em; white-space: pre; }
 .reader-body-html pre code { background: transparent; padding: 0; }
 .reader-body-html hr { border: 0; border-top: 1px solid var(--orca-border); margin: 2em 0; }
-.reader-body-html table { border-collapse: collapse; display: block; font-family: var(--orca-font-body); font-size: .75em; margin: 1.5em 0; max-width: 100%; overflow-x: auto; }
-.reader-body-html th,
-.reader-body-html td { border: 1px solid var(--orca-border); padding: .55em .7em; text-align: left; vertical-align: top; }
-.reader-body-html th { background: var(--orca-surface-hover); color: var(--orca-canvas-ink); font-weight: 750; }
 
 :root[data-reader-size="large"] .reader-body { font-size: clamp(21px, 1.9vw, 25px); line-height: 1.82; }
 :root[data-reader-density="compact"] .reader-heading { padding-bottom: 30px; }

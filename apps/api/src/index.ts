@@ -1242,9 +1242,9 @@ function toMailAccount(account: ConnectedAccount) {
 const providerHtmlPolicy: sanitizeHtml.IOptions = {
   allowedTags: [
     "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "li", "ol", "p", "pre", "span", "strong",
-    "table", "tbody", "td", "tfoot", "th", "thead", "tr", "ul",
+    "ul",
   ],
-  allowedAttributes: { a: ["href", "title", "target", "rel"], td: ["colspan", "rowspan"], th: ["colspan", "rowspan", "scope"] },
+  allowedAttributes: { a: ["href", "title", "target", "rel"] },
   allowedSchemes: ["http", "https", "mailto"],
   disallowedTagsMode: "discard",
   transformTags: {
