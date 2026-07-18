@@ -1867,7 +1867,7 @@ export function MessageReader({
                           </dl>
                         </details>
                       </div>
-                      {isNewest && fallbackMessages.length ? <SenderAttentionControl compact message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
+                      {isNewest && fallbackMessages.length ? <SenderAttentionControl compact reader message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
                     </header>
                     {body ? (
                       <>
@@ -1926,7 +1926,7 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+function SenderAttentionControl({ message, compact = false, reader = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
@@ -2056,9 +2056,9 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
   }
 
   return (
-    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
+    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
       <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} type="button">
-        <span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}
+        {reader ? "Attention" : <><span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}</>}
       </button>
       {expanded ? (
         <section className="sender-attention-menu" id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>

@@ -1689,6 +1689,35 @@ textarea {
   margin-top: 4px;
 }
 
+.reader-sender .sender-attention-control-reader {
+  min-height: 28px;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-trigger {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  color: var(--orca-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .11em;
+  min-height: 28px;
+  padding: 1px 1px 0;
+  text-transform: uppercase;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-trigger:hover,
+.reader-sender .sender-attention-control-reader .sender-attention-trigger:focus-visible {
+  background: transparent;
+  border-bottom-color: var(--orca-accent);
+  color: var(--orca-ink);
+}
+
+.reader-sender .sender-attention-control-reader.sender-attention-control-expanded > .sender-attention-trigger {
+  display: none;
+}
+
 .sender-attention-trigger {
   align-items: center;
   background: transparent;
