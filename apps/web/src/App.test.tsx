@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
+import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -180,6 +181,8 @@ describe("App", () => {
     expect(html).toContain("Newest");
     expect(html).toContain("Message details");
     expect(html).toContain("Show quoted history");
+    expect(html).toContain("Continue the conversation");
+    expect(html).toContain(">Reply</button>");
     expect(html).toContain("Earlier note");
     expect(html).not.toContain("<details open=\"\"");
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
@@ -227,6 +230,72 @@ describe("App", () => {
 
     expect(html).toContain('aria-label="Manage mail from Anika Lee"');
     expect(html).not.toContain('aria-label="Manage mail from Maya Chen"');
+  });
+
+  test("normalizes realistic recipient paste and rejects incomplete addresses", () => {
+    expect(parseRecipientText("Maya Chen <MAYA@example.com>, dana@example.com\nno-address")).toEqual([
+      { name: "Maya Chen", email: "maya@example.com" },
+      { name: null, email: "dana@example.com" },
+    ]);
+    expect(isValidEmail("anika@example.com")).toBe(true);
+    expect(isValidEmail("anika@")).toBe(false);
+  });
+
+  test("keeps compose suggestions scoped to people in the active account inbox", () => {
+    expect(collectComposeContacts(demoMessages, "luke@example.com").map((contact) => contact.email)).toEqual([
+      "anika@example.com",
+      "dana@example.com",
+      "alerts@harborbank.example",
+      "maya@example.com",
+      "family@example.com",
+      "digest@dispatch.example",
+    ]);
+  });
+
+  test("restores a durable compose draft and falls back safely when storage is corrupt", () => {
+    const draft = { ...createEmptyComposeDraft("account"), subject: "A durable thought", body: "Hello Maya" };
+    const storage = { getItem: () => JSON.stringify(draft) };
+    expect(readComposeDraft("account", storage)).toMatchObject({ subject: "A durable thought", body: "Hello Maya" });
+    expect(hasComposeContent(readComposeDraft("account", storage))).toBe(true);
+    expect(readComposeDraft("account", { getItem: () => "not-json" })).toMatchObject({ accountId: "account", subject: "", body: "" });
+  });
+
+  test("renders the write-first controls, delivery explanation, and labeled saved state", () => {
+    const draft = { ...createEmptyComposeDraft("account"), to: [{ name: "Maya Chen", email: "maya@example.com" }], subject: "Launch notes", body: "A human note." };
+    const html = renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[{ name: "Maya Chen", email: "maya@example.com" }]}
+        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
+      />,
+    );
+    expect(html).toContain("compose-workspace-intro");
+    expect(html).toContain("Saved on this device");
+    expect(html).toContain("Type / for structure · ↑↓ to choose");
+    expect(html).toContain("Gmail send access");
+    expect(html).toContain("disabled=\"\"");
+    expect(html).toContain("Remove Maya Chen from To");
+  });
+
+  test("renders supported Markdown as semantic writing blocks", () => {
+    const html = markdownToEditorHtml("## Direction\n\nA **human** note with _care_.\n- First thought\n- Second thought\n> Keep this\n---");
+    expect(html).toContain("<h2>Direction</h2>");
+    expect(html).toContain("<strong>human</strong>");
+    expect(html).toContain("<em>care</em>");
+    expect(html).toContain("<ul><li>First thought</li><li>Second thought</li></ul>");
+    expect(html).toContain("<blockquote>Keep this</blockquote>");
+    expect(html).toContain("<hr>");
+  });
+
+  test("targets replies at the newest external sender and preserves an existing Re prefix", () => {
+    const detail = makeThreadDetail([
+      makeThreadMessage("maya", "2026-07-12T18:00:00.000Z"),
+      { ...makeThreadMessage("anika", "2026-07-12T18:30:00.000Z"), from: { name: "Anika Lee", email: "anika@example.com" } },
+      { ...makeThreadMessage("outgoing", "2026-07-12T19:00:00.000Z"), from: { name: "Luke Brevoort", email: "luke@example.com" } },
+    ]);
+    detail.thread.participants = [{ name: "Maya Chen", email: "maya@example.com" }, { name: "Anika Lee", email: "anika@example.com" }];
+    expect(getReplyRecipient(detail, detail.messages[2])).toEqual({ name: "Anika Lee", email: "anika@example.com" });
+    expect(normalizeReplySubject("Reader test")).toBe("Re: Reader test");
+    expect(normalizeReplySubject("Re: Reader test")).toBe("Re: Reader test");
   });
 });
 
