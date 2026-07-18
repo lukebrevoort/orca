@@ -2980,8 +2980,58 @@ textarea {
   font-size: clamp(18px, 1.55vw, 21px);
   line-height: 1.78;
   max-width: 68ch;
+  overflow-wrap: anywhere;
+}
+
+.reader-body-plain {
   white-space: pre-wrap;
 }
+
+.reader-body-html :first-child { margin-top: 0; }
+.reader-body-html :last-child { margin-bottom: 0; }
+.reader-body-html p { margin: 0 0 1.15em; }
+.reader-body-html h1,
+.reader-body-html h2,
+.reader-body-html h3,
+.reader-body-html h4,
+.reader-body-html h5,
+.reader-body-html h6 {
+  color: var(--orca-canvas-ink);
+  font-family: var(--orca-font-body);
+  font-weight: 750;
+  letter-spacing: -.02em;
+  line-height: 1.22;
+  margin: 1.8em 0 .65em;
+}
+.reader-body-html h1 { font-size: 1.55em; }
+.reader-body-html h2 { font-size: 1.3em; }
+.reader-body-html h3 { font-size: 1.12em; }
+.reader-body-html h4,
+.reader-body-html h5,
+.reader-body-html h6 { font-size: 1em; }
+.reader-body-html ul,
+.reader-body-html ol { margin: .75em 0 1.25em; padding-left: 1.35em; }
+.reader-body-html li { margin: .3em 0; padding-left: .2em; }
+.reader-body-html blockquote {
+  border-left: 2px solid var(--orca-border);
+  color: var(--orca-muted);
+  margin: 1.5em 0;
+  padding: .15em 0 .15em 1.1em;
+}
+.reader-body-html a {
+  color: var(--orca-accent);
+  text-decoration-color: color-mix(in srgb, var(--orca-accent) 42%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: .2em;
+}
+.reader-body-html a:hover { text-decoration-color: currentColor; }
+.reader-body-html a:focus-visible { border-radius: 2px; outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.reader-body-html code,
+.reader-body-html pre { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
+.reader-body-html code { background: var(--orca-surface-hover); border-radius: 4px; font-size: .82em; padding: .12em .3em; }
+.reader-body-html pre { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 8px; font-size: .75em; line-height: 1.6; overflow-x: auto; padding: 1em; white-space: pre; }
+.reader-body-html pre code { background: transparent; padding: 0; }
+.reader-body-html hr { border: 0; border-top: 1px solid var(--orca-border); margin: 2em 0; }
 
 :root[data-reader-size="large"] .reader-body { font-size: clamp(21px, 1.9vw, 25px); line-height: 1.82; }
 :root[data-reader-density="compact"] .reader-heading { padding-bottom: 30px; }

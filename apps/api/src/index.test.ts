@@ -174,7 +174,7 @@ describe("Orca API", () => {
         {
           id: "email_old", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-old",
           fromAddress: "maya@example.com", fromName: "Maya", toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]",
-          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<p>Hello <strong>Luke</strong><script>alert(1)</script></p>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
+          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<h2>Hello <strong>Luke</strong></h2><table role=\"presentation\"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\"><script>alert(1)</script>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
         },
         {
           id: "email_new", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-new",
@@ -190,8 +190,8 @@ describe("Orca API", () => {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.deepEqual(body.messages.map((message: { id: string }) => message.id), ["email_old", "email_new"]);
-      assert.equal(body.messages[0].bodyHtml, "<p>Hello <strong>Luke</strong></p>");
-      assert.equal(body.messages[0].bodyText, "Hello Luke");
+      assert.equal(body.messages[0].bodyHtml, "<h2>Hello <strong>Luke</strong></h2><p>Readable layout copy</p><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p>");
+      assert.equal(body.messages[0].bodyText, "Hello LukeReadable layout copyRead more");
       assert.equal(body.messages[1].bodyHtml, null);
       assert.equal(body.messages[1].bodyText, null);
       assert.deepEqual(body.messages[0].attachments, [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }]);
