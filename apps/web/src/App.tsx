@@ -1108,6 +1108,7 @@ function InboxApp({
           {selectedThreadId ? (
             <MessageReader
               detail={threadDetail}
+              contacts={composeContacts}
               error={readerError}
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
@@ -1766,6 +1767,7 @@ export function shouldShowReaderJumpToTop(scrollY: number, viewportHeight: numbe
 
 export function MessageReader({
   detail,
+  contacts = [],
   error,
   fallbackMessages,
   fallbackTitle,
@@ -1779,6 +1781,7 @@ export function MessageReader({
   notifyByDefault = false,
 }: {
   detail: ThreadDetail | null;
+  contacts?: MailContact[];
   error: string | null;
   fallbackMessages: InboxMessage[];
   fallbackTitle: string;
@@ -1945,11 +1948,55 @@ export function MessageReader({
               </section>
             ))}
           </div>
+          <ThreadReplyComposer
+            account={detail.account}
+            contacts={contacts}
+            recipient={getReplyRecipient(detail, newestMessage)}
+            subject={normalizeReplySubject(title)}
+            threadId={detail.thread.id}
+          />
           <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
         </div>
       ) : null}
     </article>
   );
+}
+
+function ThreadReplyComposer({ account, contacts, recipient, subject, threadId }: { account: MailAccount; contacts: MailContact[]; recipient: MailContact | null; subject: string; threadId: string }) {
+  const controller = useComposeDraft(account.id, `reply:${threadId}`);
+  const [expanded, setExpanded] = useState(controller.hasContent);
+
+  function openReply() {
+    if (!controller.hasContent) controller.updateDraft({ to: recipient ? [recipient] : [], subject });
+    setExpanded(true);
+  }
+
+  if (!expanded) {
+    return (
+      <section aria-label="Reply to conversation" className="reader-reply reader-reply-collapsed">
+        <div><span aria-hidden="true">↩</span><div><strong>Continue the conversation</strong><p>Write back without leaving the thread.</p></div></div>
+        <button onClick={openReply} type="button">Reply</button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="reader-reply reader-reply-expanded">
+      <div className="reader-reply-heading"><span>Continue the conversation</span><button aria-label="Collapse reply" onClick={() => setExpanded(false)} type="button">−</button></div>
+      <ComposeWorkspace contacts={contacts} controller={controller} onClose={() => setExpanded(false)} replyLabel={recipient?.name ?? recipient?.email ?? "this conversation"} variant="reply" />
+    </section>
+  );
+}
+
+export function normalizeReplySubject(subject: string) {
+  const trimmed = subject.trim();
+  return /^re:/i.test(trimmed) ? trimmed : `Re: ${trimmed || "(no subject)"}`;
+}
+
+export function getReplyRecipient(detail: ThreadDetail, newestMessage?: ThreadDetailMessage) {
+  const accountEmail = detail.account.email.trim().toLowerCase();
+  if (newestMessage && newestMessage.from.email.trim().toLowerCase() !== accountEmail) return newestMessage.from;
+  return detail.thread.participants.find((participant) => participant.email.trim().toLowerCase() !== accountEmail) ?? null;
 }
 
 function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish }: { threadId: string; reminder: Reminder | null; notifyByDefault: boolean; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
