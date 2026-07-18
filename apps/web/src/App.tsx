@@ -2070,7 +2070,7 @@ function SenderAttentionControl({ message, compact = false, reader = false, onBe
           {status !== "loading" ? <>
             <div aria-label="Destination for all sender mail" className="sender-attention-choices" role="group">
               <span className="sender-attention-choice-label">Send to</span>
-              <p className="sender-attention-explainer">{reader ? "Choose where future mail from this sender lands." : "This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination."}</p>
+              <p className="sender-attention-explainer">{compact ? "Choose where future mail from this sender lands." : "This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination."}</p>
               <div className="sender-attention-choice-grid">
                 {attentionChoices.map(({ behavior, label }) => (
                   <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule(behavior)} type="button">

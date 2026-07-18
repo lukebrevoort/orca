@@ -1763,7 +1763,71 @@ textarea {
 }
 
 .reader-sender .sender-attention-control-reader .sender-attention-close {
+  align-items: center;
+  display: inline-flex;
   font-size: 18px;
+  justify-content: center;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.message-row-wrap > .sender-attention-control-compact.sender-attention-control-expanded > .sender-attention-trigger {
+  display: none;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-menu {
+  gap: 8px;
+  padding: 10px 12px 11px;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-kicker,
+.message-row-wrap > .sender-attention-control-compact .sender-attention-explainer {
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-kicker strong {
+  font-size: 11px;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choices {
+  align-items: baseline;
+  display: grid;
+  gap: 5px 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choice-label {
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  grid-column: 1 / -1;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choices button {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 10px;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 11px;
+  text-align: center;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-close {
+  align-items: center;
+  display: inline-flex;
+  font-size: 18px;
+  justify-content: center;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0;
 }
 
 .sender-attention-trigger {
