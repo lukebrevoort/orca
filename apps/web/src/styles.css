@@ -1683,6 +1683,12 @@ textarea {
   width: 100%;
 }
 
+.reader-sender .sender-attention-control-compact.sender-attention-control-expanded {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin-top: 4px;
+}
+
 .sender-attention-trigger {
   align-items: center;
   background: transparent;
@@ -1722,7 +1728,10 @@ textarea {
 }
 
 .sender-attention-control-compact .sender-attention-menu {
-  padding: 14px 12px 0;
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 @keyframes sender-reveal {
@@ -1852,25 +1861,25 @@ textarea {
 .sender-attention-error { color: #c75b4b; font-size: 12px; margin: 0; }
 
 @media (min-width: 1180px) {
-  .sender-attention-menu {
+  .sender-attention-control:not(.sender-attention-control-compact) .sender-attention-menu {
     align-items: end;
     column-gap: 24px;
     grid-template-columns: minmax(190px, .75fr) minmax(530px, 2fr) minmax(250px, .8fr);
   }
 
-  .sender-attention-heading {
+  .sender-attention-control:not(.sender-attention-control-compact) .sender-attention-heading {
     align-self: start;
   }
 
-  .sender-attention-choice-grid {
+  .sender-attention-control:not(.sender-attention-control-compact) .sender-attention-choice-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .sender-attention-actions {
+  .sender-attention-control:not(.sender-attention-control-compact) .sender-attention-actions {
     justify-content: flex-end;
   }
 
-  .sender-attention-domain {
+  .sender-attention-control:not(.sender-attention-control-compact) .sender-attention-domain {
     flex-basis: 100%;
   }
 }
@@ -2805,8 +2814,9 @@ textarea {
   .reader-document { padding: 38px 22px 72px; }
   .reader-heading { padding-bottom: 38px; }
   .reader-heading h1 { font-size: clamp(42px, 13vw, 60px); }
-  .reader-message { padding: 38px 0; }
+  .reader-message { padding: 24px 0 38px; }
   .reader-message-unread::before { left: -12px; }
+  .reader-unread-divider { margin: 0 0 28px; }
   .reader-jump { top: 12px; }
   .reader-jump-top { bottom: 18px; right: 18px; top: auto; }
   .reader-sender { grid-template-columns: 38px minmax(0, 1fr); }
@@ -2814,128 +2824,8 @@ textarea {
   .reader-body { font-size: 18px; line-height: 1.72; }
 }
 
-/* Tune stays intentionally lean: one sender scope, one immediate destination choice. */
-.sender-attention-menu {
-  align-items: center;
-  border-bottom: 1px solid var(--orca-border);
-  border-top: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 8px 0 6px;
-}
-
-.sender-attention-control-compact .sender-attention-menu {
-  padding: 8px 10px 6px;
-}
-
 .message-row-wrap:has(.sender-attention-control-expanded) .message-row {
   border-bottom-color: transparent;
-}
-
-.sender-attention-heading {
-  flex: 0 0 auto;
-  gap: 8px;
-}
-
-.sender-attention-kicker {
-  font-size: 10.5px;
-  font-weight: 400;
-  line-height: 24px;
-  white-space: nowrap;
-}
-
-.sender-attention-kicker strong {
-  font-size: inherit;
-  font-weight: 600;
-}
-
-.sender-attention-close {
-  font-size: 16px;
-  opacity: .72;
-}
-
-.sender-attention-choices {
-  align-items: center;
-  display: flex;
-  flex: 1 1 440px;
-  gap: 6px;
-  width: auto;
-}
-
-.sender-attention-choice-label {
-  color: var(--orca-muted);
-  flex: 0 0 auto;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-
-.sender-attention-choice-grid {
-  display: flex;
-  flex: 1 1 auto;
-  gap: 1px;
-}
-
-.sender-attention-choice-grid button:last-child {
-  grid-column: auto;
-}
-
-.sender-attention-choices button {
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  border-radius: 0;
-  display: inline-flex;
-  flex: 0 0 auto;
-  font-size: 10.5px;
-  font-weight: 600;
-  justify-content: center;
-  margin-bottom: -7px;
-  min-height: 31px;
-  padding: 0 7px 6px;
-  white-space: nowrap;
-}
-
-.sender-attention-choices button:hover,
-.sender-attention-choices button[aria-pressed="true"] {
-  background: transparent;
-  box-shadow: none;
-  color: var(--orca-ink);
-}
-
-.sender-attention-choices button[aria-pressed="true"] {
-  border-bottom-color: var(--orca-accent);
-}
-
-.sender-attention-menu > p,
-.sender-attention-error {
-  flex: 1 0 100%;
-}
-
-.sender-attention-trigger {
-  font-size: 10.5px;
-  font-weight: 600;
-  min-height: 28px;
-  padding: 0 8px;
-}
-
-.thread-view-header .sender-attention-kicker {
-  font-size: 10.5px;
-  font-weight: 400;
-  letter-spacing: 0;
-  line-height: 24px;
-  text-transform: none;
-}
-
-.thread-view-header .sender-attention-kicker strong {
-  font-size: inherit;
-  font-weight: 600;
-}
-
-.thread-view-header .sender-attention-choice-label {
-  font-size: 9px;
 }
 
 .sender-attention-default {
@@ -2980,7 +2870,7 @@ textarea {
     row-gap: 6px;
   }
 
-  .message-row {
-    padding-right: 116px;
-  }
+  .message-row { min-height: 112px; padding-right: 88px; }
+  .keep-thread-button { right: 8px; top: 10px; }
+  .message-row-wrap > .sender-attention-control-compact:not(.sender-attention-control-expanded) { right: 8px; top: 46px; }
 }
