@@ -2203,7 +2203,7 @@ function OrganizationSidebar({
                   <span><strong>{pin.label}</strong><small>{pin.kind}</small></span>
                 </button>
                 <details className="keep-row-menu">
-                  <summary aria-label={`Options for ${pin.label}`}>⋯</summary>
+                  <summary aria-label={`Options for ${pin.label}`}>•••</summary>
                   <div onClick={(event) => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}>
                     <button disabled={index === 0} onClick={() => onMovePin(pin, -1)} type="button">↑ Move up</button>
                     <button disabled={index === pins.length - 1} onClick={() => onMovePin(pin, 1)} type="button">↓ Move down</button>
@@ -2236,7 +2236,7 @@ function OrganizationSidebar({
                   <span><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
                 </button>
                 <details className="keep-row-menu">
-                  <summary aria-label={`Options for ${collection.name}`}>⋯</summary>
+                  <summary aria-label={`Options for ${collection.name}`}>•••</summary>
                   <div onClick={(event) => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}>
                     <button disabled={index === 0} onClick={() => onMoveCollection(collection, -1)} type="button">↑ Move up</button>
                     <button disabled={index === collections.length - 1} onClick={() => onMoveCollection(collection, 1)} type="button">↓ Move down</button>

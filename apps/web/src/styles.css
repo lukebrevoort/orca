@@ -1309,33 +1309,21 @@ textarea {
 .keep-row-menu { justify-self: end; position: relative; z-index: 6; }
 .keep-row-menu summary {
   align-items: center;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--orca-muted);
   cursor: pointer;
   display: flex;
-  font-family: var(--orca-font-display);
-  font-size: 17px;
-  font-weight: 500;
+  font-size: 10px;
   height: 26px;
   justify-content: center;
   list-style: none;
   margin-right: 3px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(2px);
-  transition: opacity 140ms ease, color 140ms ease, transform 140ms ease;
   width: 27px;
 }
 .keep-row-menu summary::-webkit-details-marker { display: none; }
-.keep-row:hover .keep-row-menu summary,
-.keep-row:focus-within .keep-row-menu summary,
-.keep-row-menu[open] summary {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
 .keep-row-menu summary:hover,
-.keep-row-menu[open] summary { color: var(--orca-ink); }
+.keep-row-menu[open] summary { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .keep-row-menu > div {
   background: var(--orca-paper);
   border: 1px solid var(--orca-border);
@@ -1365,12 +1353,6 @@ textarea {
 .keep-row-menu button:disabled { color: var(--orca-muted); cursor: default; opacity: .42; }
 .keep-row-menu .keep-menu-danger { color: color-mix(in srgb, #b4533c 78%, var(--orca-ink)); }
 
-@media (hover: none) {
-  .keep-row-menu summary {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
 .collection-mark {
   background: color-mix(in srgb, var(--collection-color, var(--orca-accent)) 34%, var(--orca-paper));
   border: 1px solid color-mix(in srgb, var(--collection-color, var(--orca-accent)) 68%, var(--orca-border));
@@ -1738,8 +1720,11 @@ textarea {
 }
 
 .reader-sender .sender-attention-control-reader .sender-attention-menu {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   gap: 8px;
-  padding: 10px 12px 11px;
+  padding: 8px 0 6px;
 }
 
 .reader-sender .sender-attention-control-reader .sender-attention-kicker,
@@ -1772,13 +1757,26 @@ textarea {
 }
 
 .reader-sender .sender-attention-control-reader .sender-attention-choices button {
-  border-radius: 999px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--orca-muted);
   display: inline-flex;
   font-size: 10px;
   justify-content: center;
   min-height: 30px;
   padding: 4px 11px;
   text-align: center;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-choices button:hover,
+.reader-sender .sender-attention-control-reader .sender-attention-choices button:focus-visible,
+.reader-sender .sender-attention-control-reader .sender-attention-choices button[aria-pressed="true"] {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  box-shadow: none;
+  color: var(--orca-ink);
 }
 
 .reader-sender .sender-attention-control-reader .sender-attention-close {
@@ -1796,8 +1794,11 @@ textarea {
 }
 
 .message-row-wrap > .sender-attention-control-compact .sender-attention-menu {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   gap: 8px;
-  padding: 10px 12px 11px;
+  padding: 8px 0 6px;
 }
 
 .message-row-wrap > .sender-attention-control-compact .sender-attention-kicker,
@@ -1830,13 +1831,26 @@ textarea {
 }
 
 .message-row-wrap > .sender-attention-control-compact .sender-attention-choices button {
-  border-radius: 999px;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--orca-muted);
   display: inline-flex;
   font-size: 10px;
   justify-content: center;
   min-height: 30px;
   padding: 4px 11px;
   text-align: center;
+}
+
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choices button:hover,
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choices button:focus-visible,
+.message-row-wrap > .sender-attention-control-compact .sender-attention-choices button[aria-pressed="true"] {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  box-shadow: none;
+  color: var(--orca-ink);
 }
 
 .message-row-wrap > .sender-attention-control-compact .sender-attention-close {
