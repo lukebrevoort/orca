@@ -1319,9 +1319,18 @@ textarea {
   justify-content: center;
   list-style: none;
   margin-right: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease;
   width: 27px;
 }
 .keep-row-menu summary::-webkit-details-marker { display: none; }
+.keep-row:hover .keep-row-menu summary,
+.keep-row:focus-within .keep-row-menu summary,
+.keep-row-menu[open] summary {
+  opacity: 1;
+  pointer-events: auto;
+}
 .keep-row-menu summary:hover,
 .keep-row-menu[open] summary { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .keep-row-menu > div {
@@ -1352,6 +1361,13 @@ textarea {
 .keep-row-menu button:hover:not(:disabled) { background: var(--orca-surface-hover); }
 .keep-row-menu button:disabled { color: var(--orca-muted); cursor: default; opacity: .42; }
 .keep-row-menu .keep-menu-danger { color: color-mix(in srgb, #b4533c 78%, var(--orca-ink)); }
+
+@media (hover: none) {
+  .keep-row-menu summary {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 .collection-mark {
   background: color-mix(in srgb, var(--collection-color, var(--orca-accent)) 34%, var(--orca-paper));
   border: 1px solid color-mix(in srgb, var(--collection-color, var(--orca-accent)) 68%, var(--orca-border));
