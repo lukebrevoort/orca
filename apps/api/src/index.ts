@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -661,11 +661,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         attachments: update.attachments ?? current.attachments,
       });
       const result = db.update(messageDrafts).set({ ...draftStorage(content), revision: sql`${messageDrafts.revision} + 1`, updatedAt: now() })
-        .where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.accountId, account.id), eq(messageDrafts.revision, update.revision)))
+        .where(and(
+          eq(messageDrafts.id, draft.id),
+          eq(messageDrafts.accountId, account.id),
+          eq(messageDrafts.revision, update.revision),
+          eq(messageDrafts.deliveryStatus, "draft"),
+          isNull(messageDrafts.sendIdempotencyKey),
+        ))
         .returning({ id: messageDrafts.id }).get();
       if (!result) {
         const latest = getMessageDraft(db, account.id, draft.id);
-        return staleDraft(c, latest?.revision ?? draft.revision);
+        if (!latest) return noDraft(c);
+        if (latest.revision !== update.revision) return staleDraft(c, latest.revision);
+        return deliveryStarted(c);
       }
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
     } finally { sqlite.close(); }
@@ -678,7 +686,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
-      db.delete(messageDrafts).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.accountId, account.id))).run();
+      if (draft.deliveryStatus !== "draft" || draft.sendIdempotencyKey !== null) return deliveryStarted(c);
+      const deleted = db.delete(messageDrafts)
+        .where(and(
+          eq(messageDrafts.id, draft.id),
+          eq(messageDrafts.accountId, account.id),
+          eq(messageDrafts.deliveryStatus, "draft"),
+          isNull(messageDrafts.sendIdempotencyKey),
+        ))
+        .returning({ id: messageDrafts.id }).get();
+      if (!deleted) {
+        const latest = getMessageDraft(db, account.id, draft.id);
+        return latest ? deliveryStarted(c) : noDraft(c);
+      }
       return c.body(null, 204);
     } finally { sqlite.close(); }
   });
@@ -998,6 +1018,16 @@ function staleDraft(c: Context, currentRevision: number) {
       message: "This draft changed somewhere else. Reload it before saving again.",
       retryable: true,
       currentRevision,
+    },
+  }, 409);
+}
+
+function deliveryStarted(c: Context) {
+  return c.json({
+    error: {
+      code: "ambiguous_delivery",
+      message: "A draft with a reserved delivery command cannot be changed or discarded",
+      retryable: false,
     },
   }, 409);
 }

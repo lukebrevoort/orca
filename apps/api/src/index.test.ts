@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 
@@ -49,7 +49,18 @@ describe("Orca API", () => {
       ]).run();
       const writer = await createSession(db, "draft_user");
       const other = await createSession(db, "other_user");
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => new Date("2026-07-18T20:00:00.000Z") });
+      let reserveDraftId: string | null = null;
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        now: () => {
+          if (reserveDraftId) {
+            const draftId = reserveDraftId;
+            reserveDraftId = null;
+            db.update(messageDrafts).set({ deliveryStatus: "sending", sendIdempotencyKey: "worker-reserved-key" }).where(eq(messageDrafts.id, draftId)).run();
+          }
+          return new Date("2026-07-18T20:00:00.000Z");
+        },
+      });
       const headers = { cookie: `orca_session=${writer.token}`, "content-type": "application/json" };
 
       const createdResponse = await testApp.request("/v1/drafts", {
@@ -104,6 +115,18 @@ describe("Orca API", () => {
 
       assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { method: "DELETE", headers })).status, 204);
       assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { headers })).status, 404);
+
+      const reserved = await (await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ subject: "Reserved draft" }) })).json();
+      reserveDraftId = reserved.id;
+      const racingUpdate = await testApp.request(`/v1/drafts/${reserved.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "Must not save" }),
+      });
+      assert.equal(racingUpdate.status, 409);
+      assert.equal((await racingUpdate.json()).error.code, "ambiguous_delivery");
+      const reservedRecord = db.select().from(messageDrafts).where(eq(messageDrafts.id, reserved.id)).get()!;
+      assert.equal(reservedRecord.subject, "Reserved draft");
+      assert.equal(reservedRecord.deliveryStatus, "sending");
+      assert.equal((await testApp.request(`/v1/drafts/${reserved.id}`, { method: "DELETE", headers })).status, 409);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
