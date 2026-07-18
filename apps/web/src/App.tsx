@@ -18,6 +18,7 @@ import {
   messageHtmlBodies,
 } from "./demo-data";
 import { getContactSignature, type ContactSignature } from "./contact-signature";
+import { collectComposeContacts, ComposeWorkspace, useComposeDraft } from "./compose-workspace";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -508,9 +509,7 @@ function InboxApp({
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
-  const [composeTo, setComposeTo] = useState("");
-  const [composeSubject, setComposeSubject] = useState("");
-  const [draft, setDraft] = useState("");
+  const composeDraft = useComposeDraft(account?.id ?? "preview");
   const [zen, setZen] = useState(false);
   const [panelClosing, setPanelClosing] = useState(false);
   const [zenClosing, setZenClosing] = useState(false);
@@ -733,6 +732,7 @@ function InboxApp({
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
+  const composeContacts = useMemo(() => collectComposeContacts(messages, account?.email ?? ""), [account?.email, messages]);
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
   const activeMailboxLabel = activeMailboxItem.label;
   const inboxTitle = personFilter ? personFilter : activeCollection?.name ?? activeMailboxLabel;
@@ -754,9 +754,6 @@ function InboxApp({
     setPanelClosing(false);
     setZenClosing(false);
     setPanelMode("compose");
-    setComposeTo("");
-    setComposeSubject("");
-    setDraft("");
     setZen(false);
   }
 
@@ -821,9 +818,6 @@ function InboxApp({
 
     closeTimerRef.current = setTimeout(() => {
       setPanelMode(null);
-      setComposeTo("");
-      setComposeSubject("");
-      setDraft("");
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
@@ -1173,14 +1167,18 @@ function InboxApp({
         <>
           <button
             aria-label="Close"
+            aria-hidden={zen || undefined}
             className={`overlay-backdrop${panelClosing ? " overlay-backdrop-closing" : ""}`}
+            inert={zen || undefined}
             onClick={closePanel}
             type="button"
           />
 
           <aside
+            aria-hidden={zen || undefined}
             aria-label="Compose message"
             className={`slide-panel slide-panel-open${panelClosing ? " slide-panel-closing" : ""}`}
+            inert={zen || undefined}
           >
             <header className="panel-header">
               <h2>New message</h2>
@@ -1201,32 +1199,21 @@ function InboxApp({
             </header>
 
             <div className="panel-body">
-              <ComposeFlow
+              <ComposeWorkspace
                 autoFocusTo={panelMode === "compose"}
-                context=""
-                draft={draft}
-                onDraftChange={setDraft}
-                onSubjectChange={setComposeSubject}
-                onToChange={setComposeTo}
-                showContext={false}
-                subject={composeSubject}
-                to={composeTo}
+                contacts={composeContacts}
+                controller={composeDraft}
+                onClose={closePanel}
               />
             </div>
           </aside>
 
           {zen ? (
-            <ZenWriter
-              closing={zenClosing}
-              context=""
-              draft={draft}
-              onDraftChange={setDraft}
-              onExit={exitZen}
-              onSubjectChange={setComposeSubject}
-              onToChange={setComposeTo}
-              showContext={false}
-              subject={composeSubject}
-              to={composeTo}
+            <ComposeWorkspace
+              contacts={composeContacts}
+              controller={composeDraft}
+              onExitZen={exitZen}
+              variant="zen"
             />
           ) : null}
         </>
@@ -2474,178 +2461,6 @@ function SidebarSection({
             {item.unread ? <span className="unread-dot" /> : null}
           </button>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function ComposeFlow({
-  to,
-  context,
-  subject,
-  draft,
-  showContext,
-  autoFocusTo,
-  onToChange,
-  onSubjectChange,
-  onDraftChange,
-}: {
-  to: string;
-  context: string;
-  subject: string;
-  draft: string;
-  showContext: boolean;
-  autoFocusTo: boolean;
-  onToChange: (value: string) => void;
-  onSubjectChange: (value: string) => void;
-  onDraftChange: (value: string) => void;
-}) {
-  const toInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (autoFocusTo) {
-      toInputRef.current?.focus();
-    }
-  }, [autoFocusTo]);
-
-  return (
-    <section aria-label="Compose message" className="compose-flow">
-      <label className="compose-field compose-field-who">
-        <span className="compose-label">Who</span>
-        <input
-          className="compose-input compose-input-who"
-          onChange={(event) => onToChange(event.target.value)}
-          placeholder="Name or email"
-          ref={toInputRef}
-          type="text"
-          value={to}
-        />
-      </label>
-
-      {showContext && context ? (
-        <div className="compose-field compose-field-context">
-          <span className="compose-label">Context</span>
-          <p className="compose-context">{context}</p>
-        </div>
-      ) : null}
-
-      <label className="compose-field compose-field-subject">
-        <span className="compose-label">Subject</span>
-        <input
-          className="compose-input compose-input-subject"
-          onChange={(event) => onSubjectChange(event.target.value)}
-          placeholder="Subject line"
-          type="text"
-          value={subject}
-        />
-      </label>
-
-      <label className="compose-field compose-field-write">
-        <span className="compose-label">Write</span>
-        <textarea
-          className="compose-input compose-input-write"
-          onChange={(event) => onDraftChange(event.target.value)}
-          placeholder="Start writing..."
-          value={draft}
-        />
-      </label>
-    </section>
-  );
-}
-
-function ZenWriter({
-  to,
-  context,
-  subject,
-  draft,
-  showContext,
-  closing,
-  onToChange,
-  onSubjectChange,
-  onDraftChange,
-  onExit,
-}: {
-  to: string;
-  context: string;
-  subject: string;
-  draft: string;
-  showContext: boolean;
-  closing: boolean;
-  onToChange: (value: string) => void;
-  onSubjectChange: (value: string) => void;
-  onDraftChange: (value: string) => void;
-  onExit: () => void;
-}) {
-  const writeRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    writeRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onExit();
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onExit]);
-
-  return (
-    <section
-      aria-label="Zen writing mode"
-      className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`}
-    >
-      <header className="zen-header">
-        <button className="zen-back" onClick={onExit} type="button">
-          <ArrowGlyph direction="right" />
-          <span>Exit Zen</span>
-        </button>
-      </header>
-
-      <div className="zen-stage">
-        <div className="zen-column">
-          <div className="zen-meta">
-            <input
-              aria-label="Who"
-              className="zen-meta-who"
-              onChange={(event) => onToChange(event.target.value)}
-              placeholder="Who"
-              type="text"
-              value={to}
-            />
-            {showContext && context ? (
-              <>
-                <span aria-hidden="true" className="zen-meta-sep">
-                  ·
-                </span>
-                <span className="zen-meta-context">{context}</span>
-              </>
-            ) : null}
-            <span aria-hidden="true" className="zen-meta-sep">
-              ·
-            </span>
-            <input
-              aria-label="Subject"
-              className="zen-meta-subject"
-              onChange={(event) => onSubjectChange(event.target.value)}
-              placeholder="Subject"
-              type="text"
-              value={subject}
-            />
-          </div>
-
-          <textarea
-            aria-label="Message body"
-            className="zen-write"
-            onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="Start writing..."
-            ref={writeRef}
-            value={draft}
-          />
-        </div>
       </div>
     </section>
   );
