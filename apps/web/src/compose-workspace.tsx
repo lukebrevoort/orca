@@ -288,6 +288,11 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
   const commands = slash === null ? [] : slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(slash.query));
 
   useEffect(() => {
+    if (!slash || !commands.length) return;
+    document.getElementById(`${commandListId}-${commands[activeCommand]?.id}`)?.scrollIntoView({ block: "nearest" });
+  }, [activeCommand, commandListId, commands, slash]);
+
+  useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
     if (editor.innerHTML === "" || (lastBodyRef.current !== body && document.activeElement !== editor)) {
@@ -319,8 +324,16 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
       setSlash(null);
       return;
     }
+    const query = match[1]!.toLowerCase();
+    const matchingCommandCount = slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(query)).length;
+    const estimatedMenuHeight = Math.min(240, 30 + matchingCommandCount * 38);
+    const fieldRect = editor.parentElement?.getBoundingClientRect();
+    const blockRect = block.getBoundingClientRect();
+    const topBelowLine = fieldRect ? blockRect.bottom - fieldRect.top + 6 : block.offsetTop + block.offsetHeight + 6;
+    const topAboveLine = fieldRect ? blockRect.top - fieldRect.top - estimatedMenuHeight - 6 : 0;
+    const hasRoomBelow = window.innerHeight - blockRect.bottom >= estimatedMenuHeight + 12;
     setActiveCommand(0);
-    setSlash({ query: match[1]!.toLowerCase(), top: block.offsetTop + block.offsetHeight + 6 });
+    setSlash({ query, top: hasRoomBelow ? topBelowLine : Math.max(0, topAboveLine) });
   }
 
   function onInput(_event: FormEvent<HTMLDivElement>) {
@@ -408,7 +421,7 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
       />
       {slash && commands.length ? (
         <div aria-label="Writing commands" className="compose-command-menu" id={commandListId} role="listbox" style={{ top: slash.top }}>
-          <p>Shape this block <span>↑↓</span></p>
+          <p>Shape this block <span>↑↓ to move · ↵ to select</span></p>
           {commands.map((command, index) => (
             <button aria-selected={index === activeCommand} id={`${commandListId}-${command.id}`} key={command.id} onMouseDown={(event) => event.preventDefault()} onClick={() => runCommand(command)} role="option" type="button">
               <span>/{command.id}</span><strong>{command.label}</strong><small>{command.hint}</small>

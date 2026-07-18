@@ -3243,15 +3243,14 @@ textarea {
 .compose-block-editor > li { margin: .2em 0; }
 .compose-block-editor > hr { border: 0; border-top: 1px solid var(--orca-border); margin: 1.6em 0; }
 .compose-block-editor > p:only-child:has(> br:only-child)::before { color: color-mix(in srgb, var(--orca-muted) 55%, transparent); content: attr(data-placeholder); pointer-events: none; }
-.compose-command-menu { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 12px; box-shadow: var(--orca-shadow); display: grid; left: 0; max-height: min(300px, 45vh); overflow: auto; padding: 6px; position: absolute; width: min(360px, 100%); z-index: 6; }
-.compose-command-menu > p { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; margin: 8px 9px 5px; text-transform: uppercase; }
-.compose-command-menu > p span { float: right; letter-spacing: .04em; }
-.compose-command-menu button { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--orca-ink); cursor: pointer; display: grid; gap: 3px 10px; grid-template-columns: 72px 1fr; padding: 9px; text-align: left; }
-.compose-command-menu button:hover, .compose-command-menu button:focus-visible { background: var(--orca-surface-hover); outline: 0; }
-.compose-command-menu button[aria-selected="true"] { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); color: var(--orca-ink); }
-.compose-command-menu button > span { color: var(--orca-accent); font-family: ui-monospace, monospace; font-size: 11px; grid-row: 1 / 3; }
-.compose-command-menu strong { font-size: 12px; font-weight: 700; }
-.compose-command-menu small { color: var(--orca-muted); font-size: 10px; }
+.compose-command-menu { background: color-mix(in srgb, var(--orca-paper) 96%, transparent); border: 1px solid color-mix(in srgb, var(--orca-border) 72%, transparent); border-radius: 10px; box-shadow: 0 12px 32px rgb(0 0 0 / .09); display: grid; left: 0; max-height: min(240px, 40vh); overflow: auto; padding: 4px; position: absolute; width: min(320px, 100%); z-index: 6; }
+.compose-command-menu > p { color: var(--orca-muted); font-size: 8px; font-weight: 800; letter-spacing: .12em; margin: 6px 8px 4px; text-transform: uppercase; }
+.compose-command-menu > p span { float: right; font-size: 8px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.compose-command-menu button { align-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--orca-ink); cursor: pointer; display: grid; gap: 1px 10px; grid-template-columns: minmax(0, 1fr) auto; min-height: 38px; padding: 5px 8px; text-align: left; width: 100%; }
+.compose-command-menu button:hover, .compose-command-menu button:focus-visible, .compose-command-menu button[aria-selected="true"] { background: var(--orca-surface-hover); color: var(--orca-ink); outline: 0; }
+.compose-command-menu button > span { color: var(--orca-muted); font-family: ui-monospace, monospace; font-size: 9px; grid-column: 2; grid-row: 1 / 3; }
+.compose-command-menu strong { font-size: 11px; font-weight: 700; grid-column: 1; grid-row: 1; }
+.compose-command-menu small { color: var(--orca-muted); font-size: 9px; grid-column: 1; grid-row: 2; }
 
 .compose-delivery-bar { align-items: center; border-top: 1px solid var(--orca-border); display: grid; gap: 6px 16px; grid-template-columns: 1fr auto; padding-top: 16px; }
 .compose-delivery-bar > div:first-child { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
@@ -3286,8 +3285,8 @@ textarea {
 .reader-reply-collapsed > div > span { align-items: center; background: var(--orca-surface-hover); border-radius: 50%; display: inline-flex; flex: none; height: 34px; justify-content: center; width: 34px; }
 .reader-reply-collapsed strong { display: block; font-family: var(--orca-font-display); font-size: 15px; font-weight: 600; }
 .reader-reply-collapsed p { color: var(--orca-muted); font-size: 11px; margin: 3px 0 0; }
-.reader-reply button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; padding: 8px 14px; }
-.reader-reply button:hover, .reader-reply button:focus-visible { border-color: var(--orca-muted); outline: 2px solid transparent; }
+.reader-reply-collapsed > button, .reader-reply-heading > button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; padding: 8px 14px; }
+.reader-reply-collapsed > button:hover, .reader-reply-collapsed > button:focus-visible, .reader-reply-heading > button:hover, .reader-reply-heading > button:focus-visible { border-color: var(--orca-muted); outline: 2px solid transparent; }
 .reader-reply-expanded { padding: 18px; }
 .reader-reply-heading { align-items: center; display: flex; justify-content: space-between; margin-bottom: 13px; }
 .reader-reply-heading > span { color: var(--orca-muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
