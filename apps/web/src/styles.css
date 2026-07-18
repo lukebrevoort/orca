@@ -1718,6 +1718,54 @@ textarea {
   display: none;
 }
 
+.reader-sender .sender-attention-control-reader .sender-attention-menu {
+  gap: 8px;
+  padding: 10px 12px 11px;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-kicker,
+.reader-sender .sender-attention-control-reader .sender-attention-explainer {
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-kicker strong {
+  font-size: 11px;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-choices {
+  align-items: baseline;
+  display: grid;
+  gap: 5px 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-choice-label {
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  grid-column: 1 / -1;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-choices button {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 10px;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 11px;
+  text-align: center;
+}
+
+.reader-sender .sender-attention-control-reader .sender-attention-close {
+  font-size: 18px;
+}
+
 .sender-attention-trigger {
   align-items: center;
   background: transparent;
