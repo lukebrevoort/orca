@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, applySenderAttention, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, groupThreadMessages, isDevPreviewPath, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 
 describe("App", () => {
@@ -65,6 +65,25 @@ describe("App", () => {
     expect(html).toContain("nothing in Gmail is changed");
     expect(html).toContain("Labels are never renamed, removed, or edited");
     expect(html).toContain("Checking your Gmail organization");
+  });
+
+  test("defaults reader preferences to OS behavior and safely restores saved choices", () => {
+    expect(readStoredPreferences({ getItem: () => null })).toEqual(defaultReaderPreferences);
+    expect(readStoredPreferences({ getItem: (key) => key === "orca-theme" ? "dark" : null })).toEqual({ ...defaultReaderPreferences, theme: "dark" });
+    expect(readStoredPreferences({ getItem: () => JSON.stringify({ theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true }) })).toEqual({
+      theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true,
+    });
+    expect(readStoredPreferences({ getItem: () => "not-json" })).toEqual(defaultReaderPreferences);
+  });
+
+  test("renders accessible reading preference groups with selected labels intact", () => {
+    const html = renderToStaticMarkup(<ReaderPreferencesPage preferences={{ ...defaultReaderPreferences, theme: "dark", notifyByDefault: true }} setPreferences={() => {}} systemTheme="light" />);
+
+    expect(html).toContain("Read at");
+    expect(html).toContain("System is currently light");
+    expect(html).toContain("preference-option preference-option-selected");
+    expect(html).toContain("Notify me by default");
+    expect(html).toContain("checked=\"\"");
   });
 
   test("resumes Gmail sync until label migration data is ready", async () => {
@@ -164,6 +183,29 @@ describe("App", () => {
     expect(html).toContain("Earlier note");
     expect(html).not.toContain("<details open=\"\"");
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
+  });
+
+  test("targets Attention at the sender shown in the newest reader message", () => {
+    const older = makeThreadMessage("older", "2026-07-11T08:00:00.000Z");
+    const newest = {
+      ...makeThreadMessage("newest", "2026-07-12T18:00:00.000Z"),
+      from: { name: "Anika Lee", email: "anika@example.com" },
+    };
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([older, newest])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).toContain('aria-label="Manage mail from Anika Lee"');
+    expect(html).not.toContain('aria-label="Manage mail from Maya Chen"');
   });
 });
 

@@ -19,6 +19,21 @@ import {
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 
 type Theme = "light" | "dark";
+export type ReaderPreferences = {
+  theme: "system" | Theme;
+  textSize: "standard" | "large";
+  density: "calm" | "compact";
+  motion: "system" | "reduced" | "full";
+  notifyByDefault: boolean;
+};
+
+export const defaultReaderPreferences: ReaderPreferences = {
+  theme: "system",
+  textSize: "standard",
+  density: "calm",
+  motion: "system",
+  notifyByDefault: false,
+};
 
 type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
@@ -38,6 +53,7 @@ type PersonItem = {
 
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
+type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
   | { kind: "success"; email: string | null }
@@ -46,6 +62,7 @@ type OAuthReturnStatus =
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 550;
+const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
 
@@ -53,7 +70,7 @@ function runUiTransition(name: OrcaTransition, update: () => void) {
   const transitionDocument = document as Document & {
     startViewTransition?: (callback: () => void) => { finished: Promise<void> };
   };
-  if (!transitionDocument.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (!transitionDocument.startViewTransition || shouldReduceMotion()) {
     update();
     return;
   }
@@ -62,6 +79,39 @@ function runUiTransition(name: OrcaTransition, update: () => void) {
   void transition.finished.finally(() => {
     delete document.documentElement.dataset.orcaTransition;
   });
+}
+
+function shouldReduceMotion() {
+  const preference = document.documentElement.dataset.motion;
+  return preference === "reduced"
+    || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
+  const [rendered, setRendered] = useState(visible);
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      setClosing(false);
+      return;
+    }
+    if (!rendered) return;
+    if (shouldReduceMotion()) {
+      setRendered(false);
+      setClosing(false);
+      return;
+    }
+    setClosing(true);
+    const timer = window.setTimeout(() => {
+      setRendered(false);
+      setClosing(false);
+    }, duration);
+    return () => window.clearTimeout(timer);
+  }, [duration, rendered, visible]);
+
+  return { closing, rendered };
 }
 
 const mailboxes: MailboxItem[] = [
@@ -97,17 +147,36 @@ const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(
 const remindersResponseSchema: JsonSchema<Reminder[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => reminderSchema.parse(item)) : (() => { throw new Error("Reminders response was not a list."); })() };
 
 export function App() {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme());
+  const [preferences, setPreferences] = useState<ReaderPreferences>(() => readStoredPreferences());
+  const [systemTheme, setSystemTheme] = useState<Theme>(() => getSystemTheme());
+  const theme = preferences.theme === "system" ? systemTheme : preferences.theme;
+  const setTheme: Dispatch<SetStateAction<Theme>> = (value) => {
+    setPreferences((current) => ({
+      ...current,
+      theme: typeof value === "function" ? value(current.theme === "system" ? getSystemTheme() : current.theme) : value,
+    }));
+  };
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
   const devPreview = isDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("orca-theme", theme);
-  }, [theme]);
+    document.documentElement.dataset.readerSize = preferences.textSize;
+    document.documentElement.dataset.readerDensity = preferences.density;
+    document.documentElement.dataset.motion = preferences.motion;
+    window.localStorage.setItem("orca-reader-preferences", JSON.stringify(preferences));
+  }, [preferences, theme]);
 
   useEffect(() => {
-    if (isLoginRoute() || devPreview) return;
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemTheme(query.matches ? "dark" : "light");
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (isLoginRoute() || isReaderPreferencesRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -118,11 +187,15 @@ export function App() {
   }, [devPreview]);
 
   if (devPreview) {
-    return <InboxApp demoMode theme={theme} setTheme={setTheme} />;
+    return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
   }
 
   if (isLoginRoute()) {
     return <GmailOAuthLoginPage />;
+  }
+
+  if (isReaderPreferencesRoute()) {
+    return <ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -136,7 +209,50 @@ export function App() {
     return <AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} />;
   }
 
-  return <InboxApp theme={theme} setTheme={setTheme} />;
+  return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
+}
+
+export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme }: {
+  preferences: ReaderPreferences;
+  setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
+  systemTheme: Theme;
+}) {
+  const update = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => {
+    setPreferences((current) => ({ ...current, [key]: value }));
+  };
+  return (
+    <main className="preferences-page">
+      <header className="attention-settings-topbar">
+        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-back-link" href="/">← Inbox</a>
+      </header>
+      <section className="preferences-shell" aria-labelledby="preferences-title">
+        <header className="preferences-intro">
+          <p className="settings-eyebrow">Settings / Reading</p>
+          <h1 id="preferences-title">Read at<br /><em>your pace.</em></h1>
+          <p>Orca follows your device until you make a choice. Every setting stays on this device and can be returned to system defaults.</p>
+          <button className="preferences-reset" onClick={() => setPreferences(defaultReaderPreferences)} type="button">Use system defaults</button>
+        </header>
+        <div className="preferences-groups">
+          <PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="theme" value={preferences.theme} onChange={(value) => update("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} />
+          <PreferenceChoice label="Reader text" hint="Changes message text without enlarging navigation." name="text-size" value={preferences.textSize} onChange={(value) => update("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} />
+          <PreferenceChoice label="Conversation spacing" hint="Calm gives each message more room; compact keeps more history visible." name="density" value={preferences.density} onChange={(value) => update("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} />
+          <PreferenceChoice label="Motion" hint="System honors your device’s reduced-motion setting." name="motion" value={preferences.motion} onChange={(value) => update("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} />
+          <fieldset className="preference-group">
+            <legend>Reminder notifications</legend>
+            <label className="preference-switch">
+              <input checked={preferences.notifyByDefault} onChange={(event) => update("notifyByDefault", event.target.checked)} type="checkbox" />
+              <span><strong>Notify me by default</strong><small>New reminders start with notifications checked. You can still change each reminder.</small></span>
+            </label>
+          </fieldset>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PreferenceChoice({ label, hint, name, value, onChange, options }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }> }) {
+  return <fieldset className="preference-group"><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
 }
 
 const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
@@ -356,10 +472,12 @@ function AttentionViewSettingsPage({
 
 function InboxApp({
   demoMode = false,
+  preferences = defaultReaderPreferences,
   theme,
   setTheme,
 }: {
   demoMode?: boolean;
+  preferences?: ReaderPreferences;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
@@ -376,6 +494,7 @@ function InboxApp({
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
+  const [organizerClosing, setOrganizerClosing] = useState(false);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -395,11 +514,15 @@ function InboxApp({
   const [panelClosing, setPanelClosing] = useState(false);
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) {
         clearTimeout(closeTimerRef.current);
+      }
+      if (organizerCloseTimerRef.current) {
+        clearTimeout(organizerCloseTimerRef.current);
       }
     };
   }, []);
@@ -587,7 +710,7 @@ function InboxApp({
   useEffect(() => {
     if (!selectedThreadId) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
         event.preventDefault();
         closeThread();
       }
@@ -634,6 +757,29 @@ function InboxApp({
     setComposeSubject("");
     setDraft("");
     setZen(false);
+  }
+
+  function openOrganizer(message: InboxMessage) {
+    if (organizerCloseTimerRef.current) {
+      clearTimeout(organizerCloseTimerRef.current);
+      organizerCloseTimerRef.current = null;
+    }
+    setOrganizerClosing(false);
+    setOrganizerMessage(message);
+  }
+
+  function closeOrganizer() {
+    if (!organizerMessage || organizerClosing) return;
+    if (shouldReduceMotion()) {
+      setOrganizerMessage(null);
+      return;
+    }
+    setOrganizerClosing(true);
+    organizerCloseTimerRef.current = setTimeout(() => {
+      setOrganizerMessage(null);
+      setOrganizerClosing(false);
+      organizerCloseTimerRef.current = null;
+    }, 220);
   }
 
   function openThread(message: InboxMessage) {
@@ -940,6 +1086,9 @@ function InboxApp({
           <a className="settings-link" href="/settings/integrations/gmail">
             <span aria-hidden="true">↳</span> Gmail labels
           </a>
+          <a className="settings-link" href="/settings/reading">
+            <span aria-hidden="true">Aa</span> Reading preferences
+          </a>
 
           <OrganizationSidebar
             activeCollectionId={activeCollectionId}
@@ -968,6 +1117,7 @@ function InboxApp({
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
               onAttentionChange={updateSenderAttention}
+              notifyByDefault={preferences.notifyByDefault}
               reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
               onSaveReminder={saveReminder}
               onFinishReminder={finishReminder}
@@ -994,7 +1144,7 @@ function InboxApp({
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onInboxFilterChange={selectInboxFilter}
-              onOpenOrganizer={setOrganizerMessage}
+              onOpenOrganizer={openOrganizer}
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
             />
@@ -1004,9 +1154,10 @@ function InboxApp({
 
       {organizerMessage ? (
         <ThreadOrganizer
+          closing={organizerClosing}
           collections={collections}
           message={organizerMessage}
-          onClose={() => setOrganizerMessage(null)}
+          onClose={closeOrganizer}
           onCreateCollection={async (name) => {
             const created = await createCollection(name, false);
             if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
@@ -1556,7 +1707,7 @@ function InboxView({
                     >
                       <span aria-hidden="true">{onRemoveFromCollection ? "−" : "＋"}</span> {onRemoveFromCollection ? "Remove" : "Keep"}
                     </button>
-                    <SenderAttentionControl compact message={message} onBehaviorChange={onAttentionChange} />
+                    <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} />
                   </div>
                 </li>
               );
@@ -1637,6 +1788,7 @@ export function MessageReader({
   reminder = null,
   onSaveReminder = async () => {},
   onFinishReminder = async () => {},
+  notifyByDefault = false,
 }: {
   detail: ThreadDetail | null;
   error: string | null;
@@ -1649,12 +1801,14 @@ export function MessageReader({
   reminder?: Reminder | null;
   onSaveReminder?: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>;
   onFinishReminder?: (reminder: Reminder, cancelled?: boolean) => Promise<void>;
+  notifyByDefault?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const fallbackAttentionByAddress = useMemo(() => new Map(fallbackMessages.map((message) => [message.from.email.trim().toLowerCase(), message.attentionBehavior])), [fallbackMessages]);
   const newestMessage = messages[messages.length - 1];
   const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
   const firstUnreadMessage = messages.find((message) => message.unread);
@@ -1676,7 +1830,7 @@ export function MessageReader({
   function jumpToNewest() {
     if (!jumpTarget) return;
     const node = messageRefs.current.get(jumpTarget.id);
-    node?.scrollIntoView({ behavior: "smooth", block: "start" });
+    node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
     node?.focus({ preventScroll: true });
   }
 
@@ -1684,7 +1838,7 @@ export function MessageReader({
     headingRef.current?.focus({ preventScroll: true });
     window.scrollTo({
       top: 0,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      behavior: shouldReduceMotion() ? "auto" : "smooth",
     });
   }
 
@@ -1722,7 +1876,7 @@ export function MessageReader({
             <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">With {formatThreadParticipants(detail.thread.participants, detail.account.email)}</p>
-            <RemindMeControl threadId={detail.thread.id} reminder={reminder} onSave={onSaveReminder} onFinish={onFinishReminder} />
+            <RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} />
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -1772,7 +1926,7 @@ export function MessageReader({
                           </dl>
                         </details>
                       </div>
-                      {isNewest && fallbackMessages.length ? <SenderAttentionControl compact message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
+                      {isNewest ? <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} /> : null}
                     </header>
                     {body ? (
                       <>
@@ -1808,10 +1962,11 @@ export function MessageReader({
   );
 }
 
-function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: string; reminder: Reminder | null; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
+function RemindMeControl({ threadId, reminder, notifyByDefault, onSave, onFinish }: { threadId: string; reminder: Reminder | null; notifyByDefault: boolean; onSave: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>; onFinish: (reminder: Reminder, cancelled?: boolean) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
+  const presence = useExitPresence(expanded);
   const [delayStep, setDelayStep] = useState(0);
-  const [notify, setNotify] = useState(false);
+  const [notify, setNotify] = useState(notifyByDefault);
   const [saving, setSaving] = useState(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const save = async (date: Date) => {
@@ -1824,15 +1979,34 @@ function RemindMeControl({ threadId, reminder, onSave, onFinish }: { threadId: s
     ? `${delayStep} ${delayStep === 1 ? "hour" : "hours"}`
     : `${delayStep - 12} ${delayStep === 13 ? "day" : "days"}`;
   if (reminder) return <div className="remind-control remind-control-active"><span>↻ {reminder.status === "resurfaced" ? "Ready now" : `Returns ${formatFullReceivedAt(reminder.scheduledFor)}`}</span><button onClick={() => void onFinish(reminder)} type="button">Done</button><button onClick={() => void onFinish(reminder, true)} type="button">Cancel</button></div>;
-  return <div className="remind-control"><button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>{expanded ? <div className="remind-menu remind-menu-hours"><div className="remind-hours" aria-label="Reminder delay"><button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button><strong>In {delayLabel}</strong><button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button></div><small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small><div className="remind-custom-actions"><label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label><button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button></div></div> : null}</div>;
+  return (
+    <div className="remind-control">
+      <button aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} type="button">↻ Remind me</button>
+      {presence.rendered ? (
+        <div className={`remind-menu remind-menu-hours${presence.closing ? " remind-menu-closing" : ""}`}>
+          <div className="remind-hours" aria-label="Reminder delay">
+            <button aria-label="One step less" disabled={delayStep === 0 || saving} onClick={() => setDelayStep((current) => current - 1)} type="button">−</button>
+            <strong>In {delayLabel}</strong>
+            <button aria-label="One step more" disabled={delayStep === 43 || saving} onClick={() => setDelayStep((current) => current + 1)} type="button">+</button>
+          </div>
+          <small>{delayStep < 12 ? "Increase up to 12 hours, then continue in days." : "Each step now adds one day."}</small>
+          <div className="remind-custom-actions">
+            <label className="remind-notify"><input checked={notify} onChange={(event) => setNotify(event.target.checked)} type="checkbox" /> Notify me</label>
+            <button disabled={saving || delayHours === 0} onClick={() => void save(new Date(Date.now() + delayHours * 60 * 60 * 1000))} type="button">{saving ? "Saving…" : "Set reminder"}</button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function ReaderLoading({ title, messages }: { title: string; messages: InboxMessage[] }) {
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
+  const presence = useExitPresence(expanded);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
@@ -1840,6 +2014,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
   const controlRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
+  const focusAfterCloseRef = useRef<{ behavior?: AttentionBehavior } | null>(null);
   const address = message.from.email.trim().toLowerCase();
   const senderName = message.from.name ?? address;
   const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string }> = [
@@ -1853,7 +2028,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
   useEffect(() => {
     if (!expanded || resolution || !address) return;
     if (isDevPreviewRoute()) {
-      setSelectedBehavior((current) => current ?? message.attentionBehavior);
+      setSelectedBehavior((current) => current ?? initialBehavior);
       setStatus("idle");
       return;
     }
@@ -1874,10 +2049,10 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
         }
       });
     return () => controller.abort();
-  }, [address, expanded, message.attentionBehavior, resolution]);
+  }, [address, expanded, initialBehavior, resolution]);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!presence.rendered || presence.closing) return;
     const selectedChoice = menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]');
     (selectedChoice ?? menuRef.current?.querySelector<HTMLButtonElement>(".sender-attention-choices button:not([disabled])"))?.focus();
     function dismissOnOutsidePointer(event: PointerEvent) {
@@ -1887,6 +2062,8 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
     }
     function dismissOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         closeAndRestoreFocus();
       }
     }
@@ -1896,30 +2073,66 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
       window.removeEventListener("pointerdown", dismissOnOutsidePointer);
       window.removeEventListener("keydown", dismissOnEscape);
     };
-  }, [expanded]);
+  }, [presence.closing, presence.rendered]);
 
   useEffect(() => {
-    if (!expanded || status !== "idle" || !selectedBehavior) return;
+    if (!expanded || presence.closing || status !== "idle" || !selectedBehavior) return;
     menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]')?.focus();
-  }, [expanded, selectedBehavior, status]);
+  }, [expanded, presence.closing, selectedBehavior, status]);
 
-  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
-    setExpanded(false);
+  useEffect(() => {
+    if (presence.rendered || !focusAfterCloseRef.current) return;
+    const { behavior } = focusAfterCloseRef.current;
+    focusAfterCloseRef.current = null;
     requestAnimationFrame(() => {
-      if (behavior === "hidden" || !triggerRef.current?.isConnected) {
+      if (behavior === "hidden" && !reader) {
         document.querySelector<HTMLButtonElement>(".message-row")?.focus();
-      } else {
+      } else if (triggerRef.current?.isConnected) {
         triggerRef.current.focus();
+      } else {
+        document.querySelector<HTMLButtonElement>(reader ? ".reader-back" : ".message-row")?.focus();
       }
     });
+  }, [presence.rendered, reader]);
+
+  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
+    if (!expanded || presence.closing) return;
+    focusAfterCloseRef.current = { behavior };
+    setExpanded(false);
+  }
+
+  function captureListFocusTarget() {
+    if (reader) return null;
+    const currentRow = controlRef.current?.closest<HTMLElement>(".message-row-wrap");
+    if (!currentRow) return null;
+    const rows = Array.from(document.querySelectorAll<HTMLElement>(".message-row-wrap"));
+    const currentIndex = rows.indexOf(currentRow);
+    const nextRow = rows[currentIndex + 1] ?? rows[currentIndex - 1];
+    return nextRow?.querySelector<HTMLButtonElement>(".message-row") ?? null;
+  }
+
+  function finishBehaviorChange(behavior: AttentionBehavior, listFocusTarget: HTMLButtonElement | null) {
+    if (!reader && !triggerRef.current?.isConnected) {
+      requestAnimationFrame(() => {
+        const target = listFocusTarget?.isConnected
+          ? listFocusTarget
+          : document.querySelector<HTMLButtonElement>(".message-row")
+            ?? document.querySelector<HTMLButtonElement>('[aria-label="Inbox attention filters"] button[aria-pressed="true"]')
+            ?? document.querySelector<HTMLButtonElement>('button[aria-current="page"]');
+        target?.focus();
+      });
+      return;
+    }
+    closeAndRestoreFocus(behavior);
   }
 
   async function saveRule(behavior: AttentionViewSetting["behavior"]) {
     if (!address) return;
     setSelectedBehavior(behavior);
+    const listFocusTarget = captureListFocusTarget();
     if (isDevPreviewRoute()) {
       const appliedBehavior = await onBehaviorChange(address, behavior);
-      closeAndRestoreFocus(appliedBehavior);
+      finishBehaviorChange(appliedBehavior, listFocusTarget);
       return;
     }
     setStatus("saving");
@@ -1935,7 +2148,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
       });
       setResolution(null);
       const appliedBehavior = await onBehaviorChange(address, behavior);
-      closeAndRestoreFocus(appliedBehavior);
+      finishBehaviorChange(appliedBehavior, listFocusTarget);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1945,6 +2158,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
 
   async function resetRule() {
     if (resolution?.rule?.scope !== "address") return;
+    const listFocusTarget = captureListFocusTarget();
     setStatus("saving");
     setErrorMessage(null);
     try {
@@ -1952,7 +2166,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
       if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
       setResolution(null);
       const inheritedBehavior = await onBehaviorChange(address);
-      closeAndRestoreFocus(inheritedBehavior);
+      finishBehaviorChange(inheritedBehavior, listFocusTarget);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -1961,12 +2175,12 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
   }
 
   return (
-    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${expanded ? " sender-attention-control-expanded" : ""}`} ref={controlRef}>
+    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${presence.rendered ? " sender-attention-control-expanded" : ""}${presence.closing ? " sender-attention-control-closing" : ""}`} ref={controlRef}>
       <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} type="button">
-        <span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}
+        {reader ? "Attention" : <><span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}</>}
       </button>
-      {expanded ? (
-        <section className="sender-attention-menu" id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
+      {presence.rendered ? (
+        <section className={`sender-attention-menu${presence.closing ? " sender-attention-menu-closing" : ""}`} id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
           <div className="sender-attention-heading">
             <p className="sender-attention-kicker">All mail from <strong>{senderName}</strong></p>
             <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => closeAndRestoreFocus()} type="button">×</button>
@@ -1974,8 +2188,7 @@ function SenderAttentionControl({ message, compact = false, onBehaviorChange }: 
           {status === "loading" ? <p>Loading…</p> : null}
           {status !== "loading" ? <>
             <div aria-label="Destination for all sender mail" className="sender-attention-choices" role="group">
-              <span className="sender-attention-choice-label">Send to</span>
-              <p className="sender-attention-explainer">This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination.</p>
+              {!compact ? <><span className="sender-attention-choice-label">Send to</span><p className="sender-attention-explainer">This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination.</p></> : null}
               <div className="sender-attention-choice-grid">
                 {attentionChoices.map(({ behavior, label }) => (
                   <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule(behavior)} type="button">
@@ -2062,6 +2275,7 @@ function OrganizationSidebar({
   pins: Pin[];
 }) {
   const [addingCollection, setAddingCollection] = useState(false);
+  const collectionPresence = useExitPresence(addingCollection);
   const [collectionName, setCollectionName] = useState("");
 
   useEffect(() => {
@@ -2121,8 +2335,8 @@ function OrganizationSidebar({
           <h3>Collections</h3>
           <button aria-expanded={addingCollection} className="keep-group-action" onClick={() => setAddingCollection((current) => !current)} type="button"><span aria-hidden="true">＋</span>New collection</button>
         </div>
-        {addingCollection ? (
-          <form className="collection-create" onSubmit={submitCollection}>
+        {collectionPresence.rendered ? (
+          <form className={`collection-create${collectionPresence.closing ? " collection-create-closing" : ""}`} onSubmit={submitCollection}>
             <input aria-label="Collection name" autoFocus maxLength={80} onChange={(event) => setCollectionName(event.target.value)} placeholder="Name this collection" value={collectionName} />
             <button disabled={!collectionName.trim()} type="submit">Add</button>
           </form>
@@ -2176,7 +2390,8 @@ function OrganizationSidebar({
   );
 }
 
-function ThreadOrganizer({ collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+function ThreadOrganizer({ closing, collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+  closing: boolean;
   collections: Collection[];
   message: InboxMessage;
   onClose: () => void;
@@ -2196,9 +2411,9 @@ function ThreadOrganizer({ collections, message, onClose, onCreateCollection, on
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
   return (
-    <div className="organizer-layer" role="presentation">
+    <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
       <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-labelledby="organizer-title" aria-modal="true" className="thread-organizer" role="dialog">
+      <section aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} role="dialog">
         <header>
           <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
           <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
@@ -2668,6 +2883,10 @@ function isAttentionSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/attention-views";
 }
 
+function isReaderPreferencesRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/reading";
+}
+
 export function isDevPreviewPath(pathname: string, isDevelopment: boolean, isDemoBuild = false) {
   return (isDevelopment && pathname === "/dev/inbox")
     || (isDemoBuild && (pathname === "/" || pathname === "/dev/inbox"));
@@ -2704,17 +2923,30 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
   return null;
 }
 
-function readStoredTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "dark";
-  }
-
+export function readStoredPreferences(storage?: Pick<Storage, "getItem">): ReaderPreferences {
+  const source = storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
+  if (!source) return defaultReaderPreferences;
   try {
-    const stored = window.localStorage.getItem("orca-theme");
-    return stored === "light" ? "light" : "dark";
+    const stored = source.getItem("orca-reader-preferences");
+    if (stored) {
+      const value = JSON.parse(stored) as Partial<ReaderPreferences>;
+      return {
+        theme: ["system", "light", "dark"].includes(value.theme ?? "") ? value.theme! : "system",
+        textSize: ["standard", "large"].includes(value.textSize ?? "") ? value.textSize! : "standard",
+        density: ["calm", "compact"].includes(value.density ?? "") ? value.density! : "calm",
+        motion: ["system", "reduced", "full"].includes(value.motion ?? "") ? value.motion! : "system",
+        notifyByDefault: value.notifyByDefault === true,
+      };
+    }
+    const legacyTheme = source.getItem("orca-theme");
+    return legacyTheme === "light" || legacyTheme === "dark" ? { ...defaultReaderPreferences, theme: legacyTheme } : defaultReaderPreferences;
   } catch {
-    return "dark";
+    return defaultReaderPreferences;
   }
+}
+
+function getSystemTheme(): Theme {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function formatProvider(provider: MailAccount["provider"]) {
