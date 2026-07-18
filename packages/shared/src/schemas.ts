@@ -24,12 +24,20 @@ export const mailContactSchema = z
   .strict();
 export type MailContact = z.infer<typeof mailContactSchema>;
 
+export const mailCapabilitiesSchema = z.object({
+  read: z.boolean(),
+  draft: z.boolean(),
+  send: z.boolean(),
+}).strict();
+export type MailCapabilities = z.infer<typeof mailCapabilitiesSchema>;
+
 export const mailAccountSchema = z
   .object({
     id: nonEmptyStringSchema,
     provider: mailProviderSchema,
     email: nonEmptyStringSchema,
     displayName: nonEmptyStringSchema,
+    capabilities: mailCapabilitiesSchema,
   })
   .strict();
 export type MailAccount = z.infer<typeof mailAccountSchema>;

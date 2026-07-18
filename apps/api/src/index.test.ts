@@ -571,7 +571,7 @@ describe("Orca API", () => {
     try {
       db.insert(users).values({ id: "user_1", email: "luke@example.com", displayName: "Luke" }).run();
       db.insert(oauthAccounts).values({
-        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1", scope: "https://www.googleapis.com/auth/gmail.readonly",
         accessTokenEncrypted: "access", refreshTokenEncrypted: "refresh", lastSyncedAt: new Date("2026-07-08T12:00:00.000Z"),
       }).run();
       const session = await createSession(db, "user_1");
@@ -583,6 +583,7 @@ describe("Orca API", () => {
       assert.deepEqual(await response.json(), {
         accounts: [{
           id: "acct_1", provider: "gmail", email: "luke@example.com", displayName: "Luke",
+          capabilities: { read: true, draft: false, send: false },
           state: "idle", lastSyncedAt: "2026-07-08T12:00:00.000Z", error: null,
         }],
       });

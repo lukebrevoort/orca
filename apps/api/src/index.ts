@@ -42,6 +42,7 @@ import {
 } from "@orca/shared";
 
 import { createGmailAuthApp } from "./auth/gmail/routes.ts";
+import { detectGmailCapabilities } from "./auth/gmail/capabilities.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
@@ -977,6 +978,7 @@ type ConnectedAccount = {
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
   lastSyncedAt: Date | null;
+  scope: string | null;
 };
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -1434,6 +1436,7 @@ function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"],
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
+    scope: oauthAccounts.scope,
   })
     .from(oauthAccounts)
     .innerJoin(users, eq(users.id, oauthAccounts.userId))
@@ -1447,6 +1450,7 @@ function toMailAccount(account: ConnectedAccount) {
     provider: "gmail" as const,
     email: account.providerEmail,
     displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
+    capabilities: detectGmailCapabilities(account.scope),
   };
 }
 

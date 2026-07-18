@@ -31,11 +31,21 @@ export type OAuthAccountUpsert = {
 };
 
 export interface OAuthAccountStore {
+  findById(userId: string, accountId: string): Promise<OAuthAccountRecord | null>;
+  findForUser(userId: string): Promise<OAuthAccountRecord | null>;
   upsert(input: OAuthAccountUpsert): Promise<OAuthAccountRecord>;
 }
 
 export class InMemoryOAuthAccountStore implements OAuthAccountStore {
   private readonly records = new Map<string, OAuthAccountRecord>();
+
+  async findById(userId: string, accountId: string): Promise<OAuthAccountRecord | null> {
+    return [...this.records.values()].find((record) => record.userId === userId && record.id === accountId) ?? null;
+  }
+
+  async findForUser(userId: string): Promise<OAuthAccountRecord | null> {
+    return [...this.records.values()].find((record) => record.userId === userId) ?? null;
+  }
 
   async upsert(input: OAuthAccountUpsert): Promise<OAuthAccountRecord> {
     const now = new Date();
@@ -43,6 +53,8 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
     const existing = this.records.get(key);
     const record: OAuthAccountRecord = {
       ...input,
+      grantedScopes: input.grantedScopes,
+      encryptedRefreshToken: input.encryptedRefreshToken ?? existing?.encryptedRefreshToken ?? null,
       id: existing?.id ?? `oauth_${crypto.randomUUID()}`,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
@@ -60,11 +72,43 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
 export class DatabaseOAuthAccountStore implements OAuthAccountStore {
   constructor(private readonly dbFactory: DatabaseFactory = createDatabaseClient) {}
 
+  async findById(userId: string, accountId: string): Promise<OAuthAccountRecord | null> {
+    const { db, sqlite } = this.dbFactory();
+    try {
+      const record = db.select().from(oauthAccounts).where(and(
+        eq(oauthAccounts.userId, userId),
+        eq(oauthAccounts.id, accountId),
+      )).get();
+      return record ? mapRecord(record) : null;
+    } finally {
+      sqlite.close();
+    }
+  }
+
+  async findForUser(userId: string): Promise<OAuthAccountRecord | null> {
+    const { db, sqlite } = this.dbFactory();
+    try {
+      const record = db.select().from(oauthAccounts).where(and(
+        eq(oauthAccounts.userId, userId),
+        eq(oauthAccounts.provider, "gmail"),
+      )).get();
+      return record ? mapRecord(record) : null;
+    } finally {
+      sqlite.close();
+    }
+  }
+
   async upsert(input: OAuthAccountUpsert): Promise<OAuthAccountRecord> {
     const { db, sqlite } = this.dbFactory();
     const now = new Date();
 
     try {
+      const existing = db.select().from(oauthAccounts).where(and(
+        eq(oauthAccounts.userId, input.userId),
+        eq(oauthAccounts.provider, input.provider),
+        eq(oauthAccounts.providerId, input.providerAccountId),
+      )).get();
+      const grantedScopes = input.grantedScopes;
       db
         .insert(oauthAccounts)
         .values({
@@ -74,9 +118,9 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           providerEmail: input.providerEmail,
           providerId: input.providerAccountId,
           accessTokenEncrypted: input.encryptedAccessToken,
-          refreshTokenEncrypted: input.encryptedRefreshToken,
+          refreshTokenEncrypted: input.encryptedRefreshToken ?? existing?.refreshTokenEncrypted ?? null,
           tokenExpiry: input.expiresAt,
-          scope: input.grantedScopes.join(" "),
+          scope: grantedScopes.join(" "),
           updatedAt: now,
         })
         .onConflictDoUpdate({
@@ -88,9 +132,9 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           set: {
             providerEmail: input.providerEmail,
             accessTokenEncrypted: input.encryptedAccessToken,
-            refreshTokenEncrypted: input.encryptedRefreshToken,
+            refreshTokenEncrypted: input.encryptedRefreshToken ?? existing?.refreshTokenEncrypted ?? null,
             tokenExpiry: input.expiresAt,
-            scope: input.grantedScopes.join(" "),
+            scope: grantedScopes.join(" "),
             updatedAt: now,
           },
         })

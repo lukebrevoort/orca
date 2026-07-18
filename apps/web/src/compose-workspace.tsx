@@ -215,6 +215,8 @@ export function ComposeWorkspace({
   onExitZen,
   onClose,
   replyLabel,
+  canSend = false,
+  onRequestSendAccess,
 }: {
   controller: ComposeDraftController;
   contacts: MailContact[];
@@ -223,6 +225,8 @@ export function ComposeWorkspace({
   onExitZen?: () => void;
   onClose?: () => void;
   replyLabel?: string;
+  canSend?: boolean;
+  onRequestSendAccess?: () => void;
 }) {
   const { draft, saveStatus, hasContent, updateDraft, discardDraft } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
@@ -230,7 +234,9 @@ export function ComposeWorkspace({
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
   const deliveryReason = draft.to.length === 0
     ? "Add at least one valid recipient to prepare this message."
-    : "Sending needs Gmail send access. This account is connected read-only, so your draft stays safely saved in Orca.";
+    : canSend
+      ? "Gmail has confirmed draft and send access. Delivery stays off until Orca's send transport is connected."
+      : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
 
   function closeOrDiscard() {
     if (!hasContent) {
@@ -283,7 +289,7 @@ export function ComposeWorkspace({
     return (
       <section aria-label="Reply to conversation" className="compose-workspace compose-workspace-reply">
         {editor}
-        <ComposeDeliveryBar controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} />
+        <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
       </section>
     );
   }
@@ -295,7 +301,7 @@ export function ComposeWorkspace({
         <span className="compose-contact-count">{contactsLabel}</span>
       </div>
       {editor}
-      <ComposeDeliveryBar controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} />
+      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
     </section>
   );
 }
@@ -457,7 +463,7 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
   );
 }
 
-function ComposeDeliveryBar({ controller, deliveryReason, onDiscard }: { controller: ComposeDraftController; deliveryReason: string; onDiscard: () => void }) {
+function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, onRequestSendAccess }: { canSend: boolean; controller: ComposeDraftController; deliveryReason: string; onDiscard: () => void; onRequestSendAccess?: () => void }) {
   const reasonId = useId();
   const { draft, hasContent, saveStatus } = controller;
   return (
@@ -465,7 +471,13 @@ function ComposeDeliveryBar({ controller, deliveryReason, onDiscard }: { control
       <div><DraftStatus status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
-        <button aria-describedby={reasonId} className="compose-send" disabled type="button">Send</button>
+        <button
+          aria-describedby={reasonId}
+          className="compose-send"
+          disabled={draft.to.length === 0 || canSend || !onRequestSendAccess}
+          onClick={onRequestSendAccess}
+          type="button"
+        >{canSend ? "Send" : "Enable sending"}</button>
       </div>
       <p id={reasonId}>{deliveryReason}</p>
     </footer>

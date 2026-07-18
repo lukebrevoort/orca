@@ -1,15 +1,23 @@
 const defaultWebOrigin = "http://localhost:5173";
 const defaultRedirectUri = "http://localhost:3000/v1/auth/gmail/callback";
-const defaultScopes = [
+export const gmailReadScopes = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
-];
+] as const;
+
+// gmail.compose is the narrowest single grant that covers creating and updating
+// drafts as well as sending new messages, replies, and forwards. gmail.modify
+// and the full mailbox scope are intentionally not requested.
+export const gmailComposeScopes = [
+  "https://www.googleapis.com/auth/gmail.compose",
+] as const;
 
 export type GmailOAuthConfig = {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
   scopes: string[];
+  composeScopes: string[];
   tokenEncryptionKey: string;
   stateSecret: string;
   successRedirectUrl: string | null;
@@ -28,6 +36,7 @@ export function loadGmailOAuthConfig(
       "GMAIL_REDIRECT_URI",
     ),
     scopes: parseScopes(env.GMAIL_OAUTH_SCOPES ?? env.GOOGLE_OAUTH_SCOPES),
+    composeScopes: [...gmailComposeScopes],
     tokenEncryptionKey: env.TOKEN_ENCRYPTION_KEY ?? env.OAUTH_TOKEN_ENCRYPTION_KEY ?? "",
     stateSecret: env.GMAIL_OAUTH_STATE_SECRET ?? env.GOOGLE_OAUTH_STATE_SECRET ?? env.SESSION_SECRET ?? "",
     successRedirectUrl: normalizeOptionalAbsoluteUrl(
@@ -70,7 +79,7 @@ export function validateGmailOAuthConfig(config: GmailOAuthConfig): string[] {
 
 function parseScopes(raw: string | undefined): string[] {
   if (!raw) {
-    return defaultScopes;
+    return [...gmailReadScopes];
   }
 
   return raw

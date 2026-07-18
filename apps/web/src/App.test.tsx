@@ -266,13 +266,15 @@ describe("App", () => {
       <ComposeWorkspace
         contacts={[{ name: "Maya Chen", email: "maya@example.com" }]}
         controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
+        onRequestSendAccess={() => {}}
       />,
     );
     expect(html).toContain("compose-workspace-intro");
     expect(html).toContain("Saved on this device");
     expect(html).toContain("Type / for structure · ↑↓ to choose");
-    expect(html).toContain("Gmail send access");
-    expect(html).toContain("disabled=\"\"");
+    expect(html).toContain("Enable Gmail compose access");
+    expect(html).toContain("Enable sending");
+    expect(html).not.toContain("class=\"compose-send\" disabled");
     expect(html).toContain("Remove Maya Chen from To");
   });
 
@@ -321,7 +323,7 @@ function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyT
 
 function makeThreadDetail(messages: ThreadDetailMessage[]): ThreadDetail {
   return {
-    account: { id: "account", provider: "gmail", email: "luke@example.com", displayName: "Luke Brevoort" },
+    account: { id: "account", provider: "gmail", email: "luke@example.com", displayName: "Luke Brevoort", capabilities: { read: true, draft: false, send: false } },
     thread: {
       id: "thread",
       provider: "gmail",

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BRE-151 · Compose authorization validation</title>
+  <style>
+    :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; background: #eef1ec; color: #17201c; }
+    body { margin: 0; }
+    main { margin: auto; max-width: 1080px; padding: 56px 22px 80px; }
+    h1, h2 { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.035em; }
+    h1 { font-size: clamp(44px, 8vw, 82px); line-height: .94; margin: 12px 0 22px; }
+    .lede { color: #526159; font-size: 18px; line-height: 1.65; max-width: 760px; }
+    .eyebrow { color: #587566; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .grid { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 42px; }
+    article { background: #fafbf8; border: 1px solid #cbd3cc; border-radius: 20px; padding: 26px; }
+    h2 { font-size: 28px; margin: 6px 0 12px; }
+    p, li { line-height: 1.6; }
+    code { background: #e8ede8; border-radius: 6px; color: #17201c; padding: 2px 6px; }
+    .pass { background: #e4eee7; border: 1px solid #b8ccbD; border-radius: 999px; display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .08em; padding: 6px 9px; text-transform: uppercase; }
+    .wide { grid-column: 1 / -1; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+    @media (prefers-color-scheme: dark) { :root { background: #111714; color: #edf2ee; } .lede { color: #abb8b0; } article { background: #18211c; border-color: #344139; } code { background: #26322b; color: #edf2ee; } .pass { background: #24362c; border-color: #476352; } }
+  </style>
+</head>
+<body><main>
+  <span class="eyebrow">BRE-151 · Local review card</span>
+  <h1>Upgrade permission.<br />Keep the inbox.</h1>
+  <p class="lede">This flow must add only Gmail compose access, preserve the current OAuth account and sync cursor, and leave reading functional when consent is denied or the wrong Google account is chosen.</p>
+  <section class="grid">
+    <article><span class="pass">Setup</span><h2>Start locally</h2><ol><li>Run <code>bun install</code>.</li><li>Configure <code>.env</code> from <code>.env.example</code>.</li><li>In Google Auth Platform Data Access, add <code>gmail.compose</code>.</li><li>Run <code>bun run dev</code>.</li><li>Open <code>http://localhost:5173/settings/integrations/gmail</code>.</li></ol></article>
+    <article><span class="pass">Baseline</span><h2>Confirm read-only</h2><ol><li>Connect a fresh test account from <code>/login</code>.</li><li>Confirm Settings labels the account Read-only.</li><li>Confirm Read inbox is Granted while Manage Gmail drafts and Send mail are Not granted.</li><li>Open the inbox and confirm sync still works.</li></ol></article>
+    <article><span class="pass">Upgrade</span><h2>Grant deliberately</h2><ol><li>Read the permission explanation in Settings.</li><li>Choose Enable drafts and sending.</li><li>Confirm Google requests Gmail draft/send access.</li><li>Approve using the same Google account.</li><li>Confirm Orca returns to the same page and all three capabilities read Granted.</li></ol></article>
+    <article><span class="pass">Origin</span><h2>Try from compose</h2><ol><li>Open Compose and add a valid recipient.</li><li>Choose Enable sending.</li><li>Confirm Orca explains the scope before redirecting.</li><li>Approve and confirm the draft is still present when Orca returns with Compose open.</li></ol></article>
+    <article><span class="pass">Recovery</span><h2>Deny safely</h2><ol><li>Start the upgrade again and deny it in Google.</li><li>Confirm Orca says Nothing changed.</li><li>Return to the inbox and refresh.</li><li>Confirm existing messages and sync remain usable.</li></ol></article>
+    <article><span class="pass">Isolation</span><h2>Choose the wrong account</h2><ol><li>Start an upgrade for account A.</li><li>Select account B in Google.</li><li>Confirm Orca asks you to choose account A.</li><li>Confirm no second account appears and account A remains read-capable.</li></ol></article>
+    <article class="wide"><span class="pass">Automated evidence</span><h2>Run the safety suite</h2><p><code>bun run typecheck</code> · <code>bun run test</code> · <code>bun run build</code></p><p>The OAuth tests cover minimum-scope construction, signed return paths, denial, identity isolation, capability merging, refresh-token preservation, and capability detection.</p></article>
+  </section>
+</main></body>
+</html>

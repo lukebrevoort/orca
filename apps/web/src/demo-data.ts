@@ -5,6 +5,7 @@ export const demoAccount: MailAccount = {
   provider: "gmail",
   email: "luke@example.com",
   displayName: "Luke Brevoort",
+  capabilities: { read: true, draft: true, send: true },
 };
 
 export const demoMessages: InboxMessage[] = [

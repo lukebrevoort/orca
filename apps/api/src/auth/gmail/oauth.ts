@@ -20,7 +20,11 @@ export type GmailOAuthErrorCode =
   | "token_exchange_failed"
   | "userinfo_failed"
   | "account_identity_missing"
+  | "account_mismatch"
+  | "upgrade_account_missing"
   | "account_persistence_failed";
+
+export type GmailOAuthIntent = "connect" | "upgrade";
 
 type TokenResponse = {
   access_token?: string;
@@ -38,10 +42,12 @@ type SignedStatePayload = {
   nonce: string;
   returnTo: string | null;
   issuedAt: string;
+  intent: GmailOAuthIntent;
+  accountId: string | null;
 };
 
 export type GmailOAuthService = {
-  getAuthorizationUrl(returnTo?: string | null): { url: string; state: string };
+  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null): { url: string; state: string; scopes: string[] };
   handleCallback(params: URLSearchParams, userId: string): Promise<GmailOAuthCallbackResult>;
 };
 
@@ -70,12 +76,15 @@ export function createGmailOAuthService(options: {
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    getAuthorizationUrl(returnTo) {
+    getAuthorizationUrl(returnTo, intent = "connect", accountId = null) {
+      const scopes = intent === "upgrade" ? options.config.composeScopes : options.config.scopes;
       const state = signState(
         {
           nonce: randomUUID(),
           returnTo: normalizeReturnTo(returnTo, options.config.webOrigin),
           issuedAt: new Date().toISOString(),
+          intent,
+          accountId: intent === "upgrade" ? accountId : null,
         },
         options.config.stateSecret,
       );
@@ -83,7 +92,7 @@ export function createGmailOAuthService(options: {
       url.searchParams.set("client_id", options.config.clientId);
       url.searchParams.set("redirect_uri", options.config.redirectUri);
       url.searchParams.set("response_type", "code");
-      url.searchParams.set("scope", options.config.scopes.join(" "));
+      url.searchParams.set("scope", scopes.join(" "));
       url.searchParams.set("access_type", "offline");
       url.searchParams.set("include_granted_scopes", "true");
       url.searchParams.set("prompt", "consent");
@@ -92,6 +101,7 @@ export function createGmailOAuthService(options: {
       return {
         url: url.toString(),
         state,
+        scopes,
       };
     },
 
@@ -116,6 +126,7 @@ export function createGmailOAuthService(options: {
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           "provider_error",
           `Google returned an OAuth error: ${providerError}.`,
+          decodedState.intent,
         );
       }
 
@@ -125,6 +136,7 @@ export function createGmailOAuthService(options: {
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           "missing_code",
           "Missing OAuth authorization code.",
+          decodedState.intent,
         );
       }
 
@@ -132,6 +144,7 @@ export function createGmailOAuthService(options: {
         code,
         config: options.config,
         fetchImpl,
+        requestedScopes: decodedState.intent === "upgrade" ? options.config.composeScopes : options.config.scopes,
       });
 
       if (!tokenResponse.ok) {
@@ -139,6 +152,7 @@ export function createGmailOAuthService(options: {
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           tokenResponse.code,
           tokenResponse.message,
+          decodedState.intent,
         );
       }
 
@@ -148,6 +162,7 @@ export function createGmailOAuthService(options: {
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           userInfoResponse.code,
           userInfoResponse.message,
+          decodedState.intent,
         );
       }
 
@@ -156,7 +171,37 @@ export function createGmailOAuthService(options: {
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           "account_identity_missing",
           "Google did not return an account id and email for this grant.",
+          decodedState.intent,
         );
+      }
+
+      let existingUpgradeAccount: Awaited<ReturnType<OAuthAccountStore["findById"]>> = null;
+      if (decodedState.intent === "upgrade") {
+        if (!decodedState.accountId) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            "upgrade_account_missing",
+            "The Gmail account to upgrade could not be identified. Reading access was not changed.",
+            decodedState.intent,
+          );
+        }
+        existingUpgradeAccount = await options.store.findById(userId, decodedState.accountId);
+        if (!existingUpgradeAccount) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            "upgrade_account_missing",
+            "The existing Gmail connection could not be found. Reading access was not changed.",
+            decodedState.intent,
+          );
+        }
+        if (existingUpgradeAccount.providerAccountId !== userInfoResponse.providerAccountId) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            "account_mismatch",
+            `Choose ${existingUpgradeAccount.providerEmail} in Google to upgrade this Orca connection. Reading access was not changed.`,
+            decodedState.intent,
+          );
+        }
       }
 
       try {
@@ -165,7 +210,10 @@ export function createGmailOAuthService(options: {
           provider: "gmail",
           providerAccountId: userInfoResponse.providerAccountId,
           providerEmail: userInfoResponse.providerEmail,
-          grantedScopes: tokenResponse.grantedScopes,
+          grantedScopes: [...new Set([
+            ...(existingUpgradeAccount?.grantedScopes ?? []),
+            ...tokenResponse.grantedScopes,
+          ])],
           encryptedAccessToken: encryptSecret(
             tokenResponse.accessToken,
             options.config.tokenEncryptionKey,
@@ -175,11 +223,12 @@ export function createGmailOAuthService(options: {
             : null,
           expiresAt: tokenResponse.expiresAt,
         });
-      } catch (error) {
+      } catch {
         return buildError(
           resolveReturnTo(decodedState, options.config.errorRedirectUrl),
           "account_persistence_failed",
-          error instanceof Error ? error.message : "Could not persist OAuth account data.",
+          "Could not safely update the Gmail connection. Reading access was not changed.",
+          decodedState.intent,
         );
       }
 
@@ -189,6 +238,7 @@ export function createGmailOAuthService(options: {
           provider: "gmail",
           status: "success",
           email: userInfoResponse.providerEmail,
+          intent: decodedState.intent,
         }),
         account: {
           providerEmail: userInfoResponse.providerEmail,
@@ -204,6 +254,7 @@ async function exchangeCode(options: {
   code: string;
   config: GmailOAuthConfig;
   fetchImpl: FetchLike;
+  requestedScopes: string[];
 }): Promise<
   | {
       ok: true;
@@ -251,11 +302,11 @@ async function exchangeCode(options: {
   }
 
   if (!response.ok) {
-    const detail = await response.text();
+    await response.body?.cancel();
     return {
       ok: false,
       code: "token_exchange_failed",
-      message: `Failed to exchange Gmail OAuth code (${response.status}): ${detail}`,
+      message: "Google did not accept the authorization response. Try the permission flow again.",
     };
   }
 
@@ -273,7 +324,7 @@ async function exchangeCode(options: {
     ok: true,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token ?? null,
-    grantedScopes: (tokens.scope ?? options.config.scopes.join(" "))
+    grantedScopes: (tokens.scope ?? options.requestedScopes.join(" "))
       .split(/\s+/)
       .map((scope) => scope.trim())
       .filter(Boolean),
@@ -316,11 +367,11 @@ async function fetchUserInfo(
   }
 
   if (!response.ok) {
-    const detail = await response.text();
+    await response.body?.cancel();
     return {
       ok: false,
       code: "userinfo_failed",
-      message: `Failed to fetch Gmail account identity (${response.status}): ${detail}`,
+      message: "Google could not confirm which account granted access. Try again with the connected account.",
     };
   }
 
@@ -360,6 +411,10 @@ function verifyState(value: string, secret: string): SignedStatePayload | null {
       return null;
     }
 
+    if (!(["connect", "upgrade"] as const).includes(payload.intent) || (payload.accountId !== null && typeof payload.accountId !== "string")) {
+      return null;
+    }
+
     return payload;
   } catch {
     return null;
@@ -389,6 +444,7 @@ function buildError(
   redirectBaseUrl: string | null,
   code: GmailOAuthErrorCode,
   message: string,
+  intent: GmailOAuthIntent = "connect",
 ): GmailOAuthCallbackResult {
   return {
     ok: false,
@@ -399,6 +455,7 @@ function buildError(
       status: "error",
       reason: code,
       message,
+      intent,
     }),
   };
 }

@@ -58,8 +58,8 @@ type AttentionBehavior = AttentionViewSetting["behavior"];
 type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
-  | { kind: "success"; email: string | null }
-  | { kind: "error"; reason: string | null; message: string | null }
+  | { kind: "success"; email: string | null; intent: string | null }
+  | { kind: "error"; reason: string | null; message: string | null; intent: string | null }
   | null;
 
 const PANEL_ANIM_MS = 650;
@@ -203,8 +203,12 @@ export function App() {
   if (access === "checking") return <SessionCheckingScreen />;
   if (access === "signedout") return isOnboardingRoute() ? <GmailOAuthLoginPage /> : <LoginRequiredScreen />;
 
-  if (isGmailLabelMigrationRoute()) {
+  if (isOnboardingRoute() || isGmailLabelMigrationRoute()) {
     return <GmailLabelMigrationPage mode={isOnboardingRoute() ? "onboarding" : "settings"} theme={theme} setTheme={setTheme} />;
+  }
+
+  if (isGmailSettingsRoute()) {
+    return <GmailConnectionSettingsPage theme={theme} setTheme={setTheme} />;
   }
 
   if (isAttentionSettingsRoute()) {
@@ -501,8 +505,8 @@ function InboxApp({
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
-  const [panelMode, setPanelMode] = useState<PanelMode>(null);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -512,6 +516,9 @@ function InboxApp({
   const composeDraft = useComposeDraft(account?.id ?? "preview");
   const [zen, setZen] = useState(false);
   const [panelClosing, setPanelClosing] = useState(false);
+  const [showSendPermission, setShowSendPermission] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1079,7 +1086,7 @@ function InboxApp({
             <span aria-hidden="true">⚙</span> Attention views
           </a>
           <a className="settings-link" href="/settings/integrations/gmail">
-            <span aria-hidden="true">↳</span> Gmail labels
+            <span aria-hidden="true">↳</span> Gmail connection
           </a>
           <a className="settings-link" href="/settings/reading">
             <span aria-hidden="true">Aa</span> Reading preferences
@@ -1202,25 +1209,147 @@ function InboxApp({
             <div className="panel-body">
               <ComposeWorkspace
                 autoFocusTo={panelMode === "compose"}
+                canSend={account?.capabilities.send ?? false}
                 contacts={composeContacts}
                 controller={composeDraft}
                 onClose={closePanel}
+                onRequestSendAccess={() => setShowSendPermission(true)}
               />
             </div>
           </aside>
 
           {zen ? (
             <ComposeWorkspace
+              canSend={account?.capabilities.send ?? false}
               contacts={composeContacts}
               controller={composeDraft}
               onExitZen={exitZen}
+              onRequestSendAccess={() => setShowSendPermission(true)}
               variant="zen"
+            />
+          ) : null}
+          {showSendPermission ? (
+            <GmailComposePermissionDialog
+              error={permissionError}
+              onCancel={() => { if (permissionStatus !== "loading") setShowSendPermission(false); }}
+              onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?compose=1`, setPermissionStatus, setPermissionError)}
+              status={permissionStatus}
             />
           ) : null}
         </>
       ) : null}
     </div>
   );
+}
+
+export function GmailConnectionSettingsPage({ theme, setTheme }: {
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+}) {
+  const [account, setAccount] = useState<MailAccount | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [authorizationStatus, setAuthorizationStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const returnStatus = readOAuthReturnStatus();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchJson("/v1/me", meResponseSchema, controller.signal)
+      .then((next) => { setAccount(next); setStatus("ready"); })
+      .catch((error) => { if (!controller.signal.aborted) { setStatus("error"); setErrorMessage(getErrorMessage(error)); } });
+    return () => controller.abort();
+  }, []);
+
+  const returnTo = typeof window === "undefined" ? "/settings/integrations/gmail" : `${window.location.origin}/settings/integrations/gmail`;
+
+  return (
+    <main className="gmail-settings-page">
+      <header className="attention-settings-topbar">
+        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <div className="settings-topbar-actions">
+          <a className="settings-back-link" href="/">← Inbox</a>
+          <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
+        </div>
+      </header>
+      <section className="gmail-settings-shell" aria-labelledby="gmail-settings-title">
+        <header className="gmail-settings-intro">
+          <p className="settings-eyebrow">Settings / Gmail connection</p>
+          <h1 id="gmail-settings-title">Permission<br /><em>with purpose.</em></h1>
+          <p>Your inbox connection stays readable while you deliberately decide whether Orca may create drafts and send mail.</p>
+        </header>
+
+        <section className="gmail-permission-card" aria-label="Gmail authorization state">
+          {status === "loading" ? <p>Checking the confirmed Google grant…</p> : null}
+          {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>Connection needs attention</strong><span>{errorMessage}</span></div> : null}
+          {returnStatus?.intent === "upgrade" ? <OAuthUpgradeReturnNotice status={returnStatus} /> : null}
+          {account ? <>
+            <div className="gmail-account-heading"><div><span>Connected account</span><strong>{account.email}</strong></div><span className="gmail-capability-badge">{account.capabilities.send ? "Compose + send" : "Read-only"}</span></div>
+            <div className="gmail-capability-grid">
+              <CapabilityRow active={account.capabilities.read} label="Read inbox" note="Keeps Orca synced with incoming mail." />
+              <CapabilityRow active={account.capabilities.draft} label="Manage Gmail drafts" note="Creates and updates only messages you write." />
+              <CapabilityRow active={account.capabilities.send} label="Send mail" note="Covers new messages, replies, and forwards." />
+            </div>
+            {!account.capabilities.send ? <div className="gmail-upgrade-explainer">
+              <span>Optional permission</span>
+              <h2>Let Orca finish what you write.</h2>
+              <p>Google will ask for <code>gmail.compose</code>. It is the minimum single scope that supports Gmail drafts and sending. Orca does not request delete, label-editing, or broad mailbox-modification access.</p>
+              <button disabled={authorizationStatus === "loading"} onClick={() => void beginGmailAuthorization("upgrade", returnTo, setAuthorizationStatus, setErrorMessage)} type="button">{authorizationStatus === "loading" ? "Opening Google…" : "Enable drafts and sending"}</button>
+            </div> : <div className="gmail-upgrade-confirmed"><span aria-hidden="true">✓</span><div><strong>Google confirmed compose access</strong><p>Orca can now use the future draft and delivery transport for this account.</p></div></div>}
+            {authorizationStatus === "error" ? <p className="gmail-authorization-error" role="alert">{errorMessage}</p> : null}
+            <footer className="gmail-settings-actions">
+              <button onClick={() => void beginGmailAuthorization("connect", returnTo, setAuthorizationStatus, setErrorMessage)} type="button">Reconnect Gmail</button>
+              <a href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
+            </footer>
+          </> : null}
+        </section>
+      </section>
+    </main>
+  );
+}
+
+function CapabilityRow({ active, label, note }: { active: boolean; label: string; note: string }) {
+  return <div className={`gmail-capability-row${active ? " gmail-capability-row-active" : ""}`}><span aria-hidden="true">{active ? "✓" : "—"}</span><div><strong>{label}</strong><p>{note}</p></div><small>{active ? "Granted" : "Not granted"}</small></div>;
+}
+
+function OAuthUpgradeReturnNotice({ status }: { status: Exclude<OAuthReturnStatus, null> }) {
+  return status.kind === "success"
+    ? <div className="oauth-notice oauth-notice-success" role="status"><strong>Sending access confirmed</strong><span>Your existing inbox connection stayed in place.</span></div>
+    : <div className="oauth-notice oauth-notice-error" role="alert"><strong>Nothing changed</strong><span>{status.reason === "provider_error" ? "Google permission was not granted. Your read-only inbox still works." : status.message ?? "The upgrade did not complete. Your read-only inbox still works."}</span></div>;
+}
+
+function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
+  const continueRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { continueRef.current?.focus(); }, []);
+
+  return <div className="gmail-permission-backdrop" role="presentation"><section aria-labelledby="gmail-permission-title" aria-modal="true" className="gmail-permission-dialog" onKeyDown={(event) => { if (event.key === "Escape") onCancel(); }} role="dialog">
+    <p className="settings-eyebrow">Before Google opens</p>
+    <h2 id="gmail-permission-title">Enable drafts and sending?</h2>
+    <p>Orca will request <code>gmail.compose</code> so it can create and update Gmail drafts, then send new messages, replies, and forwards. Reading continues even if you cancel or Google denies the request.</p>
+    <ul><li>No deleting mail</li><li>No changing labels</li><li>No broader mailbox modification</li></ul>
+    {error ? <p className="gmail-authorization-error" role="alert">{error}</p> : null}
+    <div><button disabled={status === "loading"} onClick={onCancel} type="button">Not now</button><button className="gmail-permission-continue" disabled={status === "loading"} onClick={onContinue} ref={continueRef} type="button">{status === "loading" ? "Opening Google…" : "Continue to Google"}</button></div>
+  </section></div>;
+}
+
+async function beginGmailAuthorization(
+  intent: "connect" | "upgrade",
+  returnTo: string,
+  setStatus: (status: "idle" | "loading" | "error") => void,
+  setError: (message: string | null) => void,
+) {
+  setStatus("loading");
+  setError(null);
+  try {
+    const response = await fetch(`/v1/auth/gmail/${intent === "upgrade" ? "upgrade" : "connect"}?returnTo=${encodeURIComponent(returnTo)}`, { credentials: "include" });
+    const body = await readJsonObject(response);
+    if (!response.ok) throw new Error(getStringField(body, "message") ?? `Could not start Gmail authorization (${response.status})`);
+    const authUrl = getStringField(body, "authUrl");
+    if (!authUrl) throw new Error("The Gmail authorization response did not include an authUrl.");
+    window.location.assign(authUrl);
+  } catch (error) {
+    setStatus("error");
+    setError(getErrorMessage(error));
+  }
 }
 
 export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
@@ -1965,6 +2094,9 @@ export function MessageReader({
 function ThreadReplyComposer({ account, contacts, recipient, subject, threadId }: { account: MailAccount; contacts: MailContact[]; recipient: MailContact | null; subject: string; threadId: string }) {
   const controller = useComposeDraft(account.id, `reply:${threadId}`);
   const [expanded, setExpanded] = useState(controller.hasContent);
+  const [showPermission, setShowPermission] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   function openReply() {
     if (!controller.hasContent) controller.updateDraft({ to: recipient ? [recipient] : [], subject });
@@ -1983,7 +2115,13 @@ function ThreadReplyComposer({ account, contacts, recipient, subject, threadId }
   return (
     <section className="reader-reply reader-reply-expanded">
       <div className="reader-reply-heading"><span>Continue the conversation</span><button aria-label="Collapse reply" onClick={() => setExpanded(false)} type="button">−</button></div>
-      <ComposeWorkspace contacts={contacts} controller={controller} onClose={() => setExpanded(false)} replyLabel={recipient?.name ?? recipient?.email ?? "this conversation"} variant="reply" />
+      <ComposeWorkspace canSend={account.capabilities.send} contacts={contacts} controller={controller} onClose={() => setExpanded(false)} onRequestSendAccess={() => setShowPermission(true)} replyLabel={recipient?.name ?? recipient?.email ?? "this conversation"} variant="reply" />
+      {showPermission ? <GmailComposePermissionDialog
+        error={permissionError}
+        onCancel={() => { if (permissionStatus !== "loading") setShowPermission(false); }}
+        onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?thread=${encodeURIComponent(threadId)}`, setPermissionStatus, setPermissionError)}
+        status={permissionStatus}
+      /> : null}
     </section>
   );
 }
@@ -2747,7 +2885,11 @@ function isOnboardingRoute() {
 }
 
 function isGmailLabelMigrationRoute() {
-  return typeof window !== "undefined" && ["/onboarding", "/settings/integrations/gmail"].includes(window.location.pathname);
+  return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/gmail/labels";
+}
+
+function isGmailSettingsRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/gmail";
 }
 
 function isAttentionSettingsRoute() {
@@ -2780,6 +2922,7 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
     return {
       kind: "success",
       email: params.get("email"),
+      intent: params.get("intent"),
     };
   }
 
@@ -2788,6 +2931,7 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
       kind: "error",
       reason: params.get("reason"),
       message: params.get("message"),
+      intent: params.get("intent"),
     };
   }
 
