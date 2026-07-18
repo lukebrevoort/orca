@@ -1449,12 +1449,11 @@ textarea {
 .collection-create button:disabled { opacity: .45; }
 
 .organizer-layer { inset: 0; position: fixed; z-index: 30; }
-.organizer-layer-closing { pointer-events: none; }
 .organizer-backdrop { animation: orca-fade-in 220ms var(--orca-ease-enter) both; backdrop-filter: blur(9px); background: var(--orca-blur-tint); border: 0; cursor: default; inset: 0; position: absolute; width: 100%; }
 .organizer-layer-closing .organizer-backdrop { animation: orca-fade-out 220ms var(--orca-ease-exit) both; }
 .thread-organizer { animation: organizer-in 320ms cubic-bezier(.2,.8,.2,1) both; background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 18px; box-shadow: var(--orca-shadow); left: 50%; max-height: min(760px, calc(100vh - 40px)); max-width: 560px; overflow: auto; padding: 24px; position: absolute; top: 50%; transform: translate(-50%, -50%); width: calc(100% - 36px); }
 @keyframes organizer-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 14px)) scale(.985); } }
-.thread-organizer-closing { animation: organizer-out 220ms var(--orca-ease-exit) both; }
+.thread-organizer-closing { animation: organizer-out 220ms var(--orca-ease-exit) both; pointer-events: none; }
 @keyframes organizer-out { to { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.99); } }
 @keyframes orca-fade-in { from { opacity: 0; } }
 @keyframes orca-fade-out { to { opacity: 0; } }

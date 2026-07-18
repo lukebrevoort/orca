@@ -2101,12 +2101,37 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
     setExpanded(false);
   }
 
+  function captureInboxFocusTarget() {
+    if (reader) return null;
+    const currentRow = controlRef.current?.closest<HTMLElement>(".message-row-wrap");
+    if (!currentRow) return null;
+    const rows = Array.from(document.querySelectorAll<HTMLElement>(".message-row-wrap"));
+    const currentIndex = rows.indexOf(currentRow);
+    const nextRow = rows[currentIndex + 1] ?? rows[currentIndex - 1];
+    return nextRow?.querySelector<HTMLButtonElement>(".message-row") ?? null;
+  }
+
+  function finishBehaviorChange(behavior: AttentionBehavior, inboxFocusTarget: HTMLButtonElement | null) {
+    if (!reader && !triggerRef.current?.isConnected) {
+      requestAnimationFrame(() => {
+        const target = inboxFocusTarget?.isConnected
+          ? inboxFocusTarget
+          : document.querySelector<HTMLButtonElement>(".message-row")
+            ?? document.querySelector<HTMLButtonElement>('[aria-label="Inbox attention filters"] button[aria-pressed="true"]');
+        target?.focus();
+      });
+      return;
+    }
+    closeAndRestoreFocus(behavior);
+  }
+
   async function saveRule(behavior: AttentionViewSetting["behavior"]) {
     if (!address) return;
     setSelectedBehavior(behavior);
+    const inboxFocusTarget = captureInboxFocusTarget();
     if (isDevPreviewRoute()) {
       const appliedBehavior = await onBehaviorChange(address, behavior);
-      closeAndRestoreFocus(appliedBehavior);
+      finishBehaviorChange(appliedBehavior, inboxFocusTarget);
       return;
     }
     setStatus("saving");
@@ -2122,7 +2147,7 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
       });
       setResolution(null);
       const appliedBehavior = await onBehaviorChange(address, behavior);
-      closeAndRestoreFocus(appliedBehavior);
+      finishBehaviorChange(appliedBehavior, inboxFocusTarget);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
@@ -2132,6 +2157,7 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
 
   async function resetRule() {
     if (resolution?.rule?.scope !== "address") return;
+    const inboxFocusTarget = captureInboxFocusTarget();
     setStatus("saving");
     setErrorMessage(null);
     try {
@@ -2139,7 +2165,7 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
       if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
       setResolution(null);
       const inheritedBehavior = await onBehaviorChange(address);
-      closeAndRestoreFocus(inheritedBehavior);
+      finishBehaviorChange(inheritedBehavior, inboxFocusTarget);
       setStatus("idle");
     } catch (error) {
       setStatus("error");
