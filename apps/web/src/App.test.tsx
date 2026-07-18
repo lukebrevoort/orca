@@ -185,6 +185,27 @@ describe("App", () => {
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
   });
 
+  test("prefers the formatted HTML alternative over plain text", () => {
+    const message = { ...makeThreadMessage("formatted", "2026-07-12T18:00:00.000Z", false, "Plain fallback"), bodyHtml: "<h2>Release notes</h2><p>Hello <strong>Luke</strong>.</p>" };
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([message])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).toContain('class="reader-body reader-body-html"');
+    expect(html).toContain("<h2>Release notes</h2>");
+    expect(html).toContain("<strong>Luke</strong>");
+    expect(html).not.toContain("Plain fallback");
+  });
+
   test("targets Attention at the sender shown in the newest reader message", () => {
     const older = makeThreadMessage("older", "2026-07-11T08:00:00.000Z");
     const newest = {

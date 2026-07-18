@@ -15,6 +15,7 @@ import {
   demoThreadHistoryExtras,
   messageIncludesPerson,
   messageBodies,
+  messageHtmlBodies,
 } from "./demo-data";
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 
@@ -1893,7 +1894,7 @@ export function MessageReader({
                 <ol>
                   {group.messages.map((message) => {
                     const signature = getContactSignature(message.from);
-                    const body = message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
+                    const plainBody = !message.bodyHtml && message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
                     const isNewest = message.id === newestMessage?.id;
                     const isFirstUnread = message.id === firstUnreadMessage?.id;
                     return (
@@ -1928,13 +1929,15 @@ export function MessageReader({
                       </div>
                       {isNewest ? <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} /> : null}
                     </header>
-                    {body ? (
+                    {message.bodyHtml ? (
+                      <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
+                    ) : plainBody ? (
                       <>
-                        <div className="reader-body">{body.current}</div>
-                        {body.quoted ? (
+                        <div className="reader-body reader-body-plain">{plainBody.current}</div>
+                        {plainBody.quoted ? (
                           <details className="reader-quoted">
                             <summary>Show quoted history</summary>
-                            <div>{body.quoted}</div>
+                            <div>{plainBody.quoted}</div>
                           </details>
                         ) : null}
                       </>
@@ -3023,7 +3026,7 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       cc: [],
       bcc: [],
       bodyText: (messageBodies[message.id] ?? message.snippet) || null,
-      bodyHtml: null,
+      bodyHtml: messageHtmlBodies[message.id] ?? null,
       attachments: message.id === "msg_2" ? [{ id: "attachment_demo", filename: "Orca-reader-notes.pdf", mimeType: "application/pdf", size: 2483200 }] : [],
     })),
   };
