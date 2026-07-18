@@ -53,6 +53,7 @@ type PersonItem = {
 
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
+type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
   | { kind: "success"; email: string | null }
@@ -676,7 +677,7 @@ function InboxApp({
   useEffect(() => {
     if (!selectedThreadId) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
         event.preventDefault();
         closeThread();
       }
@@ -1649,7 +1650,7 @@ function InboxView({
                     >
                       <span aria-hidden="true">{onRemoveFromCollection ? "−" : "＋"}</span> {onRemoveFromCollection ? "Remove" : "Keep"}
                     </button>
-                    <SenderAttentionControl compact message={message} onBehaviorChange={onAttentionChange} />
+                    <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} />
                   </div>
                 </li>
               );
@@ -1750,6 +1751,7 @@ export function MessageReader({
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
+  const fallbackAttentionByAddress = useMemo(() => new Map(fallbackMessages.map((message) => [message.from.email.trim().toLowerCase(), message.attentionBehavior])), [fallbackMessages]);
   const newestMessage = messages[messages.length - 1];
   const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
   const firstUnreadMessage = messages.find((message) => message.unread);
@@ -1867,7 +1869,7 @@ export function MessageReader({
                           </dl>
                         </details>
                       </div>
-                      {isNewest && fallbackMessages.length ? <SenderAttentionControl compact reader message={fallbackMessages[fallbackMessages.length - 1]} onBehaviorChange={onAttentionChange} /> : null}
+                      {isNewest ? <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} /> : null}
                     </header>
                     {body ? (
                       <>
@@ -1926,7 +1928,7 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, reader = false, onBehaviorChange }: { message: InboxMessage; compact?: boolean; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
   const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
@@ -1948,7 +1950,7 @@ function SenderAttentionControl({ message, compact = false, reader = false, onBe
   useEffect(() => {
     if (!expanded || resolution || !address) return;
     if (isDevPreviewRoute()) {
-      setSelectedBehavior((current) => current ?? message.attentionBehavior);
+      setSelectedBehavior((current) => current ?? initialBehavior);
       setStatus("idle");
       return;
     }
@@ -1969,7 +1971,7 @@ function SenderAttentionControl({ message, compact = false, reader = false, onBe
         }
       });
     return () => controller.abort();
-  }, [address, expanded, message.attentionBehavior, resolution]);
+  }, [address, expanded, initialBehavior, resolution]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -1982,6 +1984,8 @@ function SenderAttentionControl({ message, compact = false, reader = false, onBe
     }
     function dismissOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         closeAndRestoreFocus();
       }
     }
@@ -2001,10 +2005,12 @@ function SenderAttentionControl({ message, compact = false, reader = false, onBe
   function closeAndRestoreFocus(behavior?: AttentionBehavior) {
     setExpanded(false);
     requestAnimationFrame(() => {
-      if (behavior === "hidden" || !triggerRef.current?.isConnected) {
+      if (behavior === "hidden" && !reader) {
         document.querySelector<HTMLButtonElement>(".message-row")?.focus();
-      } else {
+      } else if (triggerRef.current?.isConnected) {
         triggerRef.current.focus();
+      } else {
+        document.querySelector<HTMLButtonElement>(reader ? ".reader-back" : ".message-row")?.focus();
       }
     });
   }

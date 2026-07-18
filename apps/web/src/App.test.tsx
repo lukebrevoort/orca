@@ -184,6 +184,29 @@ describe("App", () => {
     expect(html).not.toContain("<details open=\"\"");
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
   });
+
+  test("targets Attention at the sender shown in the newest reader message", () => {
+    const older = makeThreadMessage("older", "2026-07-11T08:00:00.000Z");
+    const newest = {
+      ...makeThreadMessage("newest", "2026-07-12T18:00:00.000Z"),
+      from: { name: "Anika Lee", email: "anika@example.com" },
+    };
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([older, newest])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).toContain('aria-label="Manage mail from Anika Lee"');
+    expect(html).not.toContain('aria-label="Manage mail from Maya Chen"');
+  });
 });
 
 function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyText = id): ThreadDetailMessage {
