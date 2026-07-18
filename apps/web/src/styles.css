@@ -1309,19 +1309,21 @@ textarea {
 .keep-row-menu { justify-self: end; position: relative; z-index: 6; }
 .keep-row-menu summary {
   align-items: center;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  border: 0;
   color: var(--orca-muted);
   cursor: pointer;
   display: flex;
-  font-size: 10px;
+  font-family: var(--orca-font-display);
+  font-size: 17px;
+  font-weight: 500;
   height: 26px;
   justify-content: center;
   list-style: none;
   margin-right: 3px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  transform: translateX(2px);
+  transition: opacity 140ms ease, color 140ms ease, transform 140ms ease;
   width: 27px;
 }
 .keep-row-menu summary::-webkit-details-marker { display: none; }
@@ -1330,9 +1332,10 @@ textarea {
 .keep-row-menu[open] summary {
   opacity: 1;
   pointer-events: auto;
+  transform: translateX(0);
 }
 .keep-row-menu summary:hover,
-.keep-row-menu[open] summary { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
+.keep-row-menu[open] summary { color: var(--orca-ink); }
 .keep-row-menu > div {
   background: var(--orca-paper);
   border: 1px solid var(--orca-border);
