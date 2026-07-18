@@ -4,9 +4,11 @@ import {
   authSessionSchema,
   createCollectionSchema,
   createPinSchema,
+  createMessageDraftSchema,
   inboxQuerySchema,
   inboxResponseSchema,
   threadDetailSchema,
+  updateMessageDraftSchema,
   updateCollectionSchema,
 } from "./index.ts";
 import { accountFixture, inboxFixture } from "./fixtures.ts";
@@ -70,5 +72,16 @@ describe("shared API schemas", () => {
     assert.equal(updateCollectionSchema.safeParse({}).success, false);
     assert.equal(updateCollectionSchema.safeParse({ color: "moss" }).success, false);
     assert.equal(createPinSchema.safeParse({ kind: "folder", targetId: "thread_1", label: "Nope" }).success, false);
+  });
+
+  test("normalizes outbound recipients and requires a revision to update drafts", () => {
+    const draft = createMessageDraftSchema.parse({
+      to: [{ name: "Maya", email: "MAYA@EXAMPLE.COM" }],
+      body: { text: "Hello", html: "<p>Hello</p>" },
+    });
+    assert.equal(draft.to[0]?.email, "maya@example.com");
+    assert.equal(draft.body.text, "Hello");
+    assert.equal(updateMessageDraftSchema.safeParse({ revision: 0 }).success, false);
+    assert.equal(updateMessageDraftSchema.safeParse({ revision: 0, subject: "Updated" }).success, true);
   });
 });

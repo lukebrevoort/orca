@@ -71,6 +71,13 @@
       "when": 1784059200000,
       "tag": "0009_gmail_label_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1784406237182,
+      "tag": "0010_tearful_randall_flagg",
+      "breakpoints": true
     }
   ]
 }

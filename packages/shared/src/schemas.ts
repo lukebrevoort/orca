@@ -127,6 +127,120 @@ export const mailAttachmentSchema = z.object({
 }).strict();
 export type MailAttachment = z.infer<typeof mailAttachmentSchema>;
 
+const outboundRecipientSchema = z.object({
+  name: z.string().trim().min(1).max(200).nullable(),
+  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+}).strict();
+export type OutboundRecipient = z.infer<typeof outboundRecipientSchema>;
+
+const outboundBodySchema = z.object({
+  text: z.string().max(100_000),
+  html: z.string().max(200_000).nullable(),
+}).strict();
+export type OutboundBody = z.infer<typeof outboundBodySchema>;
+
+const outboundContextSchema = z.object({
+  kind: z.enum(["reply", "reply_all", "forward"]),
+  threadId: nonEmptyStringSchema,
+  messageId: nonEmptyStringSchema,
+}).strict();
+export type OutboundContext = z.infer<typeof outboundContextSchema>;
+
+const outboundAttachmentSchema = z.object({
+  id: nonEmptyStringSchema,
+  filename: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().min(1).max(255),
+  size: z.number().int().positive().max(25 * 1024 * 1024),
+}).strict();
+export type OutboundAttachment = z.infer<typeof outboundAttachmentSchema>;
+
+const outboundContentSchema = z.object({
+  to: z.array(outboundRecipientSchema).max(100).default([]),
+  cc: z.array(outboundRecipientSchema).max(100).default([]),
+  bcc: z.array(outboundRecipientSchema).max(100).default([]),
+  subject: z.string().max(998).default(""),
+  body: outboundBodySchema.optional(),
+  context: outboundContextSchema.nullable().default(null),
+  attachments: z.array(outboundAttachmentSchema).max(25).default([]),
+}).strict().superRefine((value, context) => {
+  if (value.attachments.reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
+    context.addIssue({ code: "custom", path: ["attachments"], message: "Attachments exceed the 25 MB delivery limit" });
+  }
+});
+
+export const draftDeliveryStatusSchema = z.enum(["draft", "queued", "sending", "sent", "rejected", "ambiguous"]);
+export type DraftDeliveryStatus = z.infer<typeof draftDeliveryStatusSchema>;
+
+export const outboundErrorCodeSchema = z.enum([
+  "validation_error",
+  "stale_draft",
+  "missing_capability",
+  "provider_rejected",
+  "ambiguous_delivery",
+  "attachment_limit",
+]);
+export type OutboundErrorCode = z.infer<typeof outboundErrorCodeSchema>;
+
+export const outboundErrorSchema = z.object({
+  code: outboundErrorCodeSchema,
+  message: z.string(),
+  retryable: z.boolean(),
+}).strict();
+export type OutboundError = z.infer<typeof outboundErrorSchema>;
+
+export const messageDraftSchema = outboundContentSchema.safeExtend({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  body: outboundBodySchema,
+  revision: z.number().int().nonnegative(),
+  deliveryStatus: draftDeliveryStatusSchema,
+  providerDraftId: z.string().nullable(),
+  providerMessageId: z.string().nullable(),
+  providerThreadId: z.string().nullable(),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type MessageDraft = z.infer<typeof messageDraftSchema>;
+
+export const createMessageDraftSchema = outboundContentSchema.safeExtend({
+  body: outboundBodySchema.default({ text: "", html: null }),
+}).strict();
+export type CreateMessageDraft = z.infer<typeof createMessageDraftSchema>;
+
+export const updateMessageDraftSchema = z.object({
+  revision: z.number().int().nonnegative(),
+  to: z.array(outboundRecipientSchema).max(100).optional(),
+  cc: z.array(outboundRecipientSchema).max(100).optional(),
+  bcc: z.array(outboundRecipientSchema).max(100).optional(),
+  subject: z.string().max(998).optional(),
+  body: outboundBodySchema.optional(),
+  context: outboundContextSchema.nullable().optional(),
+  attachments: z.array(outboundAttachmentSchema).max(25).optional(),
+}).strict().superRefine((value, context) => {
+  if (Object.keys(value).length === 1) {
+    context.addIssue({ code: "custom", message: "Expected at least one draft field to update" });
+  }
+  if (value.attachments && value.attachments.reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
+    context.addIssue({ code: "custom", path: ["attachments"], message: "Attachments exceed the 25 MB delivery limit" });
+  }
+});
+export type UpdateMessageDraft = z.infer<typeof updateMessageDraftSchema>;
+
+export const sendMessageDraftSchema = z.object({
+  revision: z.number().int().nonnegative(),
+  idempotencyKey: z.string().trim().min(16).max(255),
+}).strict();
+export type SendMessageDraft = z.infer<typeof sendMessageDraftSchema>;
+
+export const deliveryResultSchema = z.object({
+  draftId: nonEmptyStringSchema,
+  status: draftDeliveryStatusSchema,
+  providerMessageId: z.string().nullable(),
+  providerThreadId: z.string().nullable(),
+  error: outboundErrorSchema.nullable(),
+}).strict();
+export type DeliveryResult = z.infer<typeof deliveryResultSchema>;
+
 export const threadReadStateSchema = z.enum(["read", "unread"]);
 export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
 
