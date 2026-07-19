@@ -15,6 +15,7 @@ const config: GmailOAuthConfig = {
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/userinfo.email",
   ],
+  composeScopes: ["https://www.googleapis.com/auth/gmail.compose"],
   tokenEncryptionKey: Buffer.alloc(32, 7).toString("base64"),
   stateSecret: "test-state-secret",
   successRedirectUrl: "http://localhost:5173/settings/integrations/gmail",
@@ -116,7 +117,7 @@ describe("Gmail auth routes", () => {
     expect(callbackResponse.status).toBe(302);
     const location = callbackResponse.headers.get("location");
     expect(location).toContain("status=success");
-    expect(location).toContain("email=luke%40gmail.com");
+    expect(location).not.toContain("email=");
 
     const records = store.getAll();
     expect(records).toHaveLength(1);
@@ -199,6 +200,170 @@ describe("Gmail auth routes", () => {
     const location = callbackResponse.headers.get("location");
     expect(location).toContain("status=error");
     expect(location).toContain("reason=provider_error");
-    expect(location).toContain("access_denied");
+    expect(location).not.toContain("access_denied");
+    expect(location).not.toContain("message=");
+  });
+
+  test("upgrade requests only gmail.compose and identifies the existing account", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const existing = await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({ authMiddleware, config, store });
+
+    const response = await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1");
+    expect(response.status).toBe(200);
+    const body = await response.json() as { accountId: string; scopes: string[]; authUrl: string };
+    expect(body.accountId).toBe(existing.id);
+    expect(body.scopes).toEqual(config.composeScopes);
+    const authUrl = new URL(body.authUrl);
+    expect(authUrl.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/gmail.compose");
+    expect(authUrl.searchParams.get("include_granted_scopes")).toBe("true");
+  });
+
+  test("denied upgrade leaves the existing read-only grant untouched", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const existing = await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({ authMiddleware, config, store });
+    const connect = await (await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1")).json() as { state: string };
+    const response = await app.request(`/callback?error=access_denied&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(response.headers.get("location")).toContain("intent=upgrade");
+    expect(await store.findById("user_1", existing.id)).toEqual(existing);
+  });
+
+  test("upgrade rejects a different Google account without creating or replacing a connection", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const existing = await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "compose-access", scope: config.composeScopes.join(" ") })
+        : Response.json({ id: "different-google-user", email: "other@gmail.com" }),
+    });
+    const connect = await (await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1")).json() as { state: string };
+    const response = await app.request(`/callback?code=upgrade-code&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(response.headers.get("location")).toContain("reason=account_mismatch");
+    expect(store.getAll()).toEqual([existing]);
+  });
+
+  test("successful upgrade merges capabilities and preserves the refresh grant", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const existing = await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "compose-access", scope: [...config.scopes, ...config.composeScopes].join(" ") })
+        : Response.json({ id: "google-user-1", email: "luke@gmail.com" }),
+    });
+    const connect = await (await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2F%3Fcompose%3D1")).json() as { state: string };
+    const response = await app.request(`/callback?code=upgrade-code&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+    const upgraded = store.getAll()[0]!;
+
+    expect(response.headers.get("location")).toContain("status=success");
+    expect(response.headers.get("location")).toContain("intent=upgrade");
+    expect(upgraded.id).toBe(existing.id);
+    expect(upgraded.grantedScopes).toEqual([...config.scopes, ...config.composeScopes]);
+    expect(upgraded.encryptedRefreshToken).toBe("encrypted-read-refresh");
+    expect(decryptSecret(upgraded.encryptedAccessToken, config.tokenEncryptionKey)).toBe("compose-access");
+  });
+
+  test("treats granular consent without gmail.compose as a recoverable denial", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const existing = await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "read-access", scope: config.scopes.join(" ") })
+        : Response.json({ id: "google-user-1", email: "luke@gmail.com" }),
+    });
+    const connect = await (await app.request("/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fsettings%2Fintegrations%2Fgmail")).json() as { state: string };
+    const response = await app.request(`/callback?code=partial-code&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(response.headers.get("location")).toContain("reason=compose_not_granted");
+    expect(response.headers.get("location")).not.toContain("message=");
+    expect(store.getAll()).toEqual([existing]);
+  });
+
+  test("trusts Google's returned scope set when an upgrade changes the current grant", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "compose-only-access", scope: config.composeScopes.join(" ") })
+        : Response.json({ id: "google-user-1", email: "luke@gmail.com" }),
+    });
+    const connect = await (await app.request("/upgrade")).json() as { state: string };
+    await app.request(`/callback?code=changed-grant&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(store.getAll()[0]?.grantedScopes).toEqual(config.composeScopes);
+  });
+
+  test("falls back to existing plus requested scopes when Google omits scope", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    await seedReadOnlyAccount(store);
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "scope-omitted-access" })
+        : Response.json({ id: "google-user-1", email: "luke@gmail.com" }),
+    });
+    const connect = await (await app.request("/upgrade")).json() as { state: string };
+    const response = await app.request(`/callback?code=no-scope&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(response.headers.get("location")).toContain("status=success");
+    expect(store.getAll()[0]?.grantedScopes).toEqual([...config.scopes, ...config.composeScopes]);
+  });
+
+  test("targets an explicitly selected account for multi-account users", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    await seedReadOnlyAccount(store);
+    const second = await store.upsert({
+      userId: "user_1", provider: "gmail", providerAccountId: "google-user-2", providerEmail: "work@gmail.com",
+      grantedScopes: config.scopes, encryptedAccessToken: "work-access", encryptedRefreshToken: "work-refresh", expiresAt: null,
+    });
+    const app = createGmailAuthApp({ authMiddleware, config, store });
+    const response = await app.request(`/upgrade?accountId=${encodeURIComponent(second.id)}`);
+    const body = await response.json() as { accountId: string };
+
+    expect(body.accountId).toBe(second.id);
+    expect((await app.request("/upgrade?accountId=someone-elses-account")).status).toBe(404);
+  });
+
+  test("a replayed callback cannot mutate the account after Google rejects the used code", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    await seedReadOnlyAccount(store);
+    let tokenCalls = 0;
+    const app = createGmailAuthApp({
+      authMiddleware, config, store,
+      fetch: async (input) => {
+        if (input.toString().includes("token")) {
+          tokenCalls += 1;
+          return tokenCalls === 1
+            ? Response.json({ access_token: "first-access", scope: [...config.scopes, ...config.composeScopes].join(" ") })
+            : new Response(null, { status: 400 });
+        }
+        return Response.json({ id: "google-user-1", email: "luke@gmail.com" });
+      },
+    });
+    const connect = await (await app.request("/upgrade")).json() as { state: string };
+    const callback = `/callback?code=one-time-code&state=${encodeURIComponent(connect.state)}`;
+    expect((await app.request(callback, { redirect: "manual" })).headers.get("location")).toContain("status=success");
+    const afterSuccess = store.getAll()[0];
+    expect((await app.request(callback, { redirect: "manual" })).headers.get("location")).toContain("reason=token_exchange_failed");
+    expect(store.getAll()[0]).toEqual(afterSuccess);
   });
 });
+
+async function seedReadOnlyAccount(store: InMemoryOAuthAccountStore) {
+  return store.upsert({
+    userId: "user_1",
+    provider: "gmail",
+    providerAccountId: "google-user-1",
+    providerEmail: "luke@gmail.com",
+    grantedScopes: config.scopes,
+    encryptedAccessToken: "encrypted-read-access",
+    encryptedRefreshToken: "encrypted-read-refresh",
+    expiresAt: null,
+  });
+}

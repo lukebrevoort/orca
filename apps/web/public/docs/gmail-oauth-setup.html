@@ -91,7 +91,7 @@
       <h1>Gmail OAuth for local development</h1>
       <p>
         Use these values when creating the Google Cloud OAuth client that backs
-        Orca's Gmail read-only connection flow.
+        Orca's read-first Gmail connection and deliberate compose-access upgrade.
       </p>
 
       <section class="panel" aria-label="Google Cloud setup">
@@ -103,7 +103,15 @@
           <li>Add <code>http://localhost:5173</code> to Authorized JavaScript origins.</li>
           <li>Add <code>http://localhost:3000/v1/auth/gmail/callback</code> to Authorized redirect URIs.</li>
           <li>Enable the Gmail API for the project.</li>
+          <li>Open <strong>Google Auth Platform → Data Access</strong> and add <code>https://www.googleapis.com/auth/gmail.compose</code>. Keep <code>gmail.readonly</code> and <code>userinfo.email</code>; do not add <code>gmail.modify</code> or <code>mail.google.com</code>.</li>
+          <li>Keep the app in Testing and add every local Google account as a test user. For public use, complete Google's restricted-scope verification before requesting the new scope.</li>
         </ol>
+      </section>
+
+      <section class="panel" aria-label="Permission model">
+        <h2>Why this exact scope</h2>
+        <p><code>gmail.compose</code> is the narrowest single Gmail scope that can manage drafts and send messages. Orca requests it only after a signed-in user chooses <strong>Enable drafts and sending</strong>. Google currently classifies it as restricted, so production use has verification and secure-data-handling requirements.</p>
+        <p>The baseline <code>GMAIL_OAUTH_SCOPES</code> stays read-only. Do not add <code>gmail.compose</code> to that environment variable: doing so would make first login ask for sending access prematurely.</p>
       </section>
 
       <section class="panel" aria-label="Local env">
@@ -123,7 +131,10 @@ WEB_ORIGIN=http://localhost:5173</code></pre>
           <li>Open <code>http://localhost:5173/login</code>.</li>
           <li>Select <strong>Continue with Google</strong>.</li>
           <li>Approve the read-only Gmail grant.</li>
-          <li>Confirm Orca returns to <code>/settings/integrations/gmail?status=success</code>.</li>
+          <li>Confirm Orca returns to onboarding with a read-only capability state.</li>
+          <li>Open <code>/settings/integrations/gmail</code>, read the explanation, and choose <strong>Enable drafts and sending</strong>.</li>
+          <li>Approve the incremental grant and confirm Orca shows Read inbox, Manage Gmail drafts, and Send mail as Granted.</li>
+          <li>Repeat and deny the Google prompt; confirm the inbox remains readable and Orca presents a recoverable message.</li>
         </ol>
       </section>
     </main>

@@ -125,10 +125,16 @@ Google Cloud setup:
 4. Add `http://localhost:5173` as an Authorized JavaScript origin.
 5. Add `http://localhost:3000/v1/auth/gmail/callback` as an Authorized redirect URI.
 6. Enable the Gmail API.
-7. Copy the client ID and secret into `.env`, then restart the API.
+7. Under **Google Auth Platform → Data Access**, add `https://www.googleapis.com/auth/gmail.compose` alongside the existing read-only scopes. Do not add `gmail.modify` or `mail.google.com`.
+8. Keep the app in Testing and add local test users, or complete Google's restricted-scope verification before broader use. Google classifies both `gmail.readonly` and `gmail.compose` as restricted scopes.
+9. Copy the client ID and secret into `.env`, then restart the API.
+
+Orca requests `gmail.compose` only through the incremental upgrade action. It is intentionally absent from `GMAIL_OAUTH_SCOPES`, so login and reconnect remain read-first. The scope is the narrowest single Gmail grant that covers creating/updating drafts plus sending new mail, replies, and forwards.
 
 The same setup guide is available as a local HTML page at
 `http://localhost:5173/docs/gmail-oauth-setup.html` when the web dev server is running.
+The BRE-151 manual verification card is available at
+`http://localhost:5173/docs/bre-151-validation.html`.
 
 ## Workspace Layout
 

@@ -6,6 +6,7 @@ export const accountFixture = mailAccountSchema.parse({
   provider: "gmail",
   email: "luke@example.com",
   displayName: "Luke Brevoort",
+  capabilities: { read: true, draft: false, send: false },
 });
 
 export const authSessionFixture = authSessionSchema.parse({

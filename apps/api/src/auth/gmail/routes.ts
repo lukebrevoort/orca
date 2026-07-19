@@ -62,7 +62,33 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
       authUrl: result.url,
       state: result.state,
       redirectUri: config.redirectUri,
-      scopes: config.scopes,
+      scopes: result.scopes,
+    });
+  });
+
+  app.get("/upgrade", authMiddleware, async (c) => {
+    const configErrors = validateGmailOAuthConfig(config);
+    if (configErrors.length > 0) {
+      return c.json({ error: "gmail_oauth_not_configured", message: `Missing Gmail OAuth configuration: ${configErrors.join(", ")}` }, 503);
+    }
+
+    const auth = c.get("auth");
+    const requestedAccountId = c.req.query("accountId");
+    const account = requestedAccountId
+      ? await store.findById(auth.userId, requestedAccountId)
+      : await store.findForUser(auth.userId);
+    if (!account) {
+      return c.json({ error: "gmail_account_not_found", message: "Connect Gmail read-only before enabling compose and send." }, 404);
+    }
+    const result = service.getAuthorizationUrl(c.req.query("returnTo"), "upgrade", account.id);
+    return c.json({
+      provider: "gmail",
+      intent: "upgrade",
+      accountId: account.id,
+      authUrl: result.url,
+      state: result.state,
+      redirectUri: config.redirectUri,
+      scopes: result.scopes,
     });
   });
 
@@ -83,7 +109,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
       c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
       const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
       const result = service.getAuthorizationUrl(returnTo);
-      return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: config.scopes });
+      return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
     } finally {
       sqlite.close();
     }
