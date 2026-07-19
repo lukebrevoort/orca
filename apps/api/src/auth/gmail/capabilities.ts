@@ -9,6 +9,11 @@ const gmailScopes = {
 } as const;
 
 export function detectGmailCapabilities(scopes: string | string[] | null): MailCapabilities {
+  // Scope was nullable before capability reporting existed. Those legacy rows
+  // represent the original read-only Gmail connection rather than no grant.
+  if (scopes === null) {
+    return { read: true, draft: false, send: false };
+  }
   const granted = new Set(
     (Array.isArray(scopes) ? scopes : scopes?.split(/\s+/) ?? []).filter(Boolean),
   );

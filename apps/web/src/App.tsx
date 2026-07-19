@@ -1232,7 +1232,7 @@ function InboxApp({
             <GmailComposePermissionDialog
               error={permissionError}
               onCancel={() => { if (permissionStatus !== "loading") setShowSendPermission(false); }}
-              onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?compose=1`, setPermissionStatus, setPermissionError)}
+              onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?compose=1`, account?.id ?? null, setPermissionStatus, setPermissionError)}
               status={permissionStatus}
             />
           ) : null}
@@ -1293,11 +1293,11 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
               <span>Optional permission</span>
               <h2>Let Orca finish what you write.</h2>
               <p>Google will ask for <code>gmail.compose</code>. It is the minimum single scope that supports Gmail drafts and sending. Orca does not request delete, label-editing, or broad mailbox-modification access.</p>
-              <button disabled={authorizationStatus === "loading"} onClick={() => void beginGmailAuthorization("upgrade", returnTo, setAuthorizationStatus, setErrorMessage)} type="button">{authorizationStatus === "loading" ? "Opening Google…" : "Enable drafts and sending"}</button>
+              <button disabled={authorizationStatus === "loading"} onClick={() => void beginGmailAuthorization("upgrade", returnTo, account.id, setAuthorizationStatus, setErrorMessage)} type="button">{authorizationStatus === "loading" ? "Opening Google…" : "Enable drafts and sending"}</button>
             </div> : <div className="gmail-upgrade-confirmed"><span aria-hidden="true">✓</span><div><strong>Google confirmed compose access</strong><p>Orca can now use the future draft and delivery transport for this account.</p></div></div>}
             {authorizationStatus === "error" ? <p className="gmail-authorization-error" role="alert">{errorMessage}</p> : null}
             <footer className="gmail-settings-actions">
-              <button onClick={() => void beginGmailAuthorization("connect", returnTo, setAuthorizationStatus, setErrorMessage)} type="button">Reconnect Gmail</button>
+              <button onClick={() => void beginGmailAuthorization("connect", returnTo, account.id, setAuthorizationStatus, setErrorMessage)} type="button">Reconnect Gmail</button>
               <a href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
             </footer>
           </> : null}
@@ -1314,7 +1314,7 @@ function CapabilityRow({ active, label, note }: { active: boolean; label: string
 function OAuthUpgradeReturnNotice({ status }: { status: Exclude<OAuthReturnStatus, null> }) {
   return status.kind === "success"
     ? <div className="oauth-notice oauth-notice-success" role="status"><strong>Sending access confirmed</strong><span>Your existing inbox connection stayed in place.</span></div>
-    : <div className="oauth-notice oauth-notice-error" role="alert"><strong>Nothing changed</strong><span>{status.reason === "provider_error" ? "Google permission was not granted. Your read-only inbox still works." : status.message ?? "The upgrade did not complete. Your read-only inbox still works."}</span></div>;
+    : <div className="oauth-notice oauth-notice-error" role="alert"><strong>Nothing changed</strong><span>{oauthErrorMessage(status.reason, true)}</span></div>;
 }
 
 function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
@@ -1334,13 +1334,16 @@ function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: {
 async function beginGmailAuthorization(
   intent: "connect" | "upgrade",
   returnTo: string,
+  accountId: string | null,
   setStatus: (status: "idle" | "loading" | "error") => void,
   setError: (message: string | null) => void,
 ) {
   setStatus("loading");
   setError(null);
   try {
-    const response = await fetch(`/v1/auth/gmail/${intent === "upgrade" ? "upgrade" : "connect"}?returnTo=${encodeURIComponent(returnTo)}`, { credentials: "include" });
+    const query = new URLSearchParams({ returnTo });
+    if (intent === "upgrade" && accountId) query.set("accountId", accountId);
+    const response = await fetch(`/v1/auth/gmail/${intent === "upgrade" ? "upgrade" : "connect"}?${query}`, { credentials: "include" });
     const body = await readJsonObject(response);
     if (!response.ok) throw new Error(getStringField(body, "message") ?? `Could not start Gmail authorization (${response.status})`);
     const authUrl = getStringField(body, "authUrl");
@@ -1627,9 +1630,24 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
   return (
     <div className="oauth-notice oauth-notice-error" role="alert">
       <strong>Google returned an error</strong>
-      <span>{status.message ?? status.reason ?? "The Gmail OAuth flow did not complete."}</span>
+      <span>{oauthErrorMessage(status.reason, false)}</span>
     </div>
   );
+}
+
+function oauthErrorMessage(reason: string | null, preserveReading: boolean) {
+  const suffix = preserveReading ? " Your read-only inbox still works." : "";
+  switch (reason) {
+    case "provider_error": return `Google permission was not granted.${suffix}`;
+    case "compose_not_granted": return `Google did not grant Gmail draft and send access.${suffix}`;
+    case "account_mismatch": return `Choose the same Google account that is already connected to Orca.${suffix}`;
+    case "upgrade_account_missing": return `Orca could not find the Gmail connection to upgrade.${suffix}`;
+    case "invalid_state":
+    case "missing_state": return "The authorization return could not be verified. Start again from Orca.";
+    case "token_exchange_failed":
+    case "userinfo_failed": return `Google could not confirm the authorization. Try again.${suffix}`;
+    default: return `The Gmail authorization flow did not complete.${suffix}`;
+  }
 }
 
 function MessageMark({ signature, unread }: { signature: ContactSignature; unread: boolean }) {
@@ -2119,7 +2137,7 @@ function ThreadReplyComposer({ account, contacts, recipient, subject, threadId }
       {showPermission ? <GmailComposePermissionDialog
         error={permissionError}
         onCancel={() => { if (permissionStatus !== "loading") setShowPermission(false); }}
-        onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?thread=${encodeURIComponent(threadId)}`, setPermissionStatus, setPermissionError)}
+        onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?thread=${encodeURIComponent(threadId)}`, account.id, setPermissionStatus, setPermissionError)}
         status={permissionStatus}
       /> : null}
     </section>

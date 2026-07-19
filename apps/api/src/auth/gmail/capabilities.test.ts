@@ -3,6 +3,11 @@ import { describe, expect, test } from "bun:test";
 import { detectGmailCapabilities } from "./capabilities.ts";
 
 describe("Gmail capabilities", () => {
+  test("treats a legacy null scope as the original read-only grant", () => {
+    expect(detectGmailCapabilities(null)).toEqual({ read: true, draft: false, send: false });
+    expect(detectGmailCapabilities("")).toEqual({ read: false, draft: false, send: false });
+  });
+
   test("keeps a read-only connection unable to draft or send", () => {
     expect(detectGmailCapabilities("https://www.googleapis.com/auth/gmail.readonly")).toEqual({
       read: true,

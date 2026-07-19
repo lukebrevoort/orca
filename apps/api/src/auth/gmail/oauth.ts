@@ -21,6 +21,7 @@ export type GmailOAuthErrorCode =
   | "userinfo_failed"
   | "account_identity_missing"
   | "account_mismatch"
+  | "compose_not_granted"
   | "upgrade_account_missing"
   | "account_persistence_failed";
 
@@ -198,7 +199,16 @@ export function createGmailOAuthService(options: {
           return buildError(
             resolveReturnTo(decodedState, options.config.errorRedirectUrl),
             "account_mismatch",
-            `Choose ${existingUpgradeAccount.providerEmail} in Google to upgrade this Orca connection. Reading access was not changed.`,
+            "Choose the same Google account that is already connected to Orca. Reading access was not changed.",
+            decodedState.intent,
+          );
+        }
+        const missingScopes = options.config.composeScopes.filter((scope) => !tokenResponse.grantedScopes.includes(scope));
+        if (tokenResponse.scopeReturned && missingScopes.length > 0) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            "compose_not_granted",
+            "Google did not grant Gmail compose access. Reading access was not changed.",
             decodedState.intent,
           );
         }
@@ -210,10 +220,9 @@ export function createGmailOAuthService(options: {
           provider: "gmail",
           providerAccountId: userInfoResponse.providerAccountId,
           providerEmail: userInfoResponse.providerEmail,
-          grantedScopes: [...new Set([
-            ...(existingUpgradeAccount?.grantedScopes ?? []),
-            ...tokenResponse.grantedScopes,
-          ])],
+          grantedScopes: tokenResponse.scopeReturned
+            ? tokenResponse.grantedScopes
+            : [...new Set([...(existingUpgradeAccount?.grantedScopes ?? []), ...tokenResponse.grantedScopes])],
           encryptedAccessToken: encryptSecret(
             tokenResponse.accessToken,
             options.config.tokenEncryptionKey,
@@ -237,7 +246,6 @@ export function createGmailOAuthService(options: {
         redirectUrl: appendStatus(resolveReturnTo(decodedState, options.config.successRedirectUrl), {
           provider: "gmail",
           status: "success",
-          email: userInfoResponse.providerEmail,
           intent: decodedState.intent,
         }),
         account: {
@@ -261,6 +269,7 @@ async function exchangeCode(options: {
       accessToken: string;
       refreshToken: string | null;
       grantedScopes: string[];
+      scopeReturned: boolean;
       expiresAt: Date | null;
     }
   | {
@@ -328,6 +337,7 @@ async function exchangeCode(options: {
       .split(/\s+/)
       .map((scope) => scope.trim())
       .filter(Boolean),
+    scopeReturned: typeof tokens.scope === "string",
     expiresAt:
       typeof tokens.expires_in === "number"
         ? new Date(Date.now() + tokens.expires_in * 1000)
@@ -454,7 +464,6 @@ function buildError(
       provider: "gmail",
       status: "error",
       reason: code,
-      message,
       intent,
     }),
   };

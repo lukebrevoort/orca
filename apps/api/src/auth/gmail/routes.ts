@@ -73,7 +73,10 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     }
 
     const auth = c.get("auth");
-    const account = await store.findForUser(auth.userId);
+    const requestedAccountId = c.req.query("accountId");
+    const account = requestedAccountId
+      ? await store.findById(auth.userId, requestedAccountId)
+      : await store.findForUser(auth.userId);
     if (!account) {
       return c.json({ error: "gmail_account_not_found", message: "Connect Gmail read-only before enabling compose and send." }, 404);
     }

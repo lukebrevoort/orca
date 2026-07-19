@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts } from "../../db/schema.ts";
@@ -44,7 +44,9 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
   }
 
   async findForUser(userId: string): Promise<OAuthAccountRecord | null> {
-    return [...this.records.values()].find((record) => record.userId === userId) ?? null;
+    return [...this.records.values()]
+      .filter((record) => record.userId === userId && record.provider === "gmail")
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime() || left.id.localeCompare(right.id))[0] ?? null;
   }
 
   async upsert(input: OAuthAccountUpsert): Promise<OAuthAccountRecord> {
@@ -91,7 +93,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
       const record = db.select().from(oauthAccounts).where(and(
         eq(oauthAccounts.userId, userId),
         eq(oauthAccounts.provider, "gmail"),
-      )).get();
+      )).orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id)).get();
       return record ? mapRecord(record) : null;
     } finally {
       sqlite.close();
@@ -103,11 +105,6 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
     const now = new Date();
 
     try {
-      const existing = db.select().from(oauthAccounts).where(and(
-        eq(oauthAccounts.userId, input.userId),
-        eq(oauthAccounts.provider, input.provider),
-        eq(oauthAccounts.providerId, input.providerAccountId),
-      )).get();
       const grantedScopes = input.grantedScopes;
       db
         .insert(oauthAccounts)
@@ -118,7 +115,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           providerEmail: input.providerEmail,
           providerId: input.providerAccountId,
           accessTokenEncrypted: input.encryptedAccessToken,
-          refreshTokenEncrypted: input.encryptedRefreshToken ?? existing?.refreshTokenEncrypted ?? null,
+          refreshTokenEncrypted: input.encryptedRefreshToken,
           tokenExpiry: input.expiresAt,
           scope: grantedScopes.join(" "),
           updatedAt: now,
@@ -132,7 +129,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           set: {
             providerEmail: input.providerEmail,
             accessTokenEncrypted: input.encryptedAccessToken,
-            refreshTokenEncrypted: input.encryptedRefreshToken ?? existing?.refreshTokenEncrypted ?? null,
+            refreshTokenEncrypted: sql<string | null>`coalesce(excluded.refresh_token_encrypted, ${oauthAccounts.refreshTokenEncrypted})`,
             tokenExpiry: input.expiresAt,
             scope: grantedScopes.join(" "),
             updatedAt: now,
