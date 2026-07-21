@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
-import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft } from "./compose-workspace";
+import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -265,17 +265,121 @@ describe("App", () => {
     const html = renderToStaticMarkup(
       <ComposeWorkspace
         contacts={[{ name: "Maya Chen", email: "maya@example.com" }]}
-        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
+        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, attachFiles: () => ({ accepted: [], rejected: [] }), removeAttachment() {}, discardDraft() {} }}
         onRequestSendAccess={() => {}}
       />,
     );
     expect(html).toContain("compose-workspace-intro");
     expect(html).toContain("Saved on this device");
-    expect(html).toContain("Type / for structure · ↑↓ to choose");
+    expect(html).toContain("Type / for structure · drop anywhere to attach");
     expect(html).toContain("Enable Gmail compose access");
     expect(html).toContain("Enable sending");
+    expect(html).toContain("aria-label=\"Attach files\"");
+    expect(html).not.toContain("Attachments");
     expect(html).not.toContain("class=\"compose-send\" disabled");
     expect(html).toContain("Remove Maya Chen from To");
+  });
+
+  test("sanitizes attachment names and enforces safe compose attachment limits", () => {
+    const urls: string[] = [];
+    const createObjectUrl = () => {
+      const url = `blob:preview-${urls.length}`;
+      urls.push(url);
+      return url;
+    };
+    expect(sanitizeAttachmentFilename("../../secret\\notes.pdf")).toBe("notes.pdf");
+    expect(sanitizeAttachmentFilename("")).toBe("attachment");
+
+    const image = new File([new Uint8Array(12)], "photo.png", { type: "image/png" });
+    const pdf = new File([new Uint8Array(24)], "brief.pdf", { type: "application/pdf" });
+    const empty = new File([], "empty.txt", { type: "text/plain" });
+    const huge = { name: "huge.bin", type: "application/octet-stream", size: MAX_COMPOSE_ATTACHMENT_BYTES + 1 } as File;
+
+    const acceptedBatch = acceptComposeFiles([], [image, pdf], createObjectUrl);
+    expect(acceptedBatch.accepted).toHaveLength(2);
+    expect(acceptedBatch.accepted[0]).toMatchObject({ filename: "photo.png", mimeType: "image/png", size: 12, previewUrl: "blob:preview-0", file: image });
+    expect(acceptedBatch.accepted[1]).toMatchObject({ filename: "brief.pdf", mimeType: "application/pdf", size: 24, previewUrl: null, file: pdf });
+    expect(acceptedBatch.accepted[1]!.file).toBe(pdf);
+    expect(acceptedBatch.rejected).toEqual([]);
+
+    const rejectedBatch = acceptComposeFiles(acceptedBatch.accepted, [empty, huge], createObjectUrl);
+    expect(rejectedBatch.accepted).toEqual([]);
+    expect(rejectedBatch.rejected.map((item) => item.filename)).toEqual(["empty.txt", "huge.bin"]);
+
+    const filled = Array.from({ length: MAX_COMPOSE_ATTACHMENTS }, (_, index) => ({
+      id: `file-${index}`,
+      filename: `file-${index}.txt`,
+      mimeType: "text/plain",
+      size: 1,
+      file: new File([new Uint8Array(1)], `file-${index}.txt`, { type: "text/plain" }),
+      previewUrl: null,
+    }));
+    const overCount = acceptComposeFiles(filled, [new File([new Uint8Array(1)], "one-more.txt", { type: "text/plain" })], createObjectUrl);
+    expect(overCount.accepted).toEqual([]);
+    expect(overCount.rejected[0]?.reason).toContain("25");
+  });
+
+  test("treats draft attachments as content and never restores binary attachments from storage", () => {
+    const withAttachment = {
+      ...createEmptyComposeDraft("account"),
+      attachments: [{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, file: new File([new Uint8Array(12)], "notes.pdf", { type: "application/pdf" }), previewUrl: null }],
+    };
+    expect(hasComposeContent(withAttachment)).toBe(true);
+    const storage = {
+      getItem: () => JSON.stringify({
+        ...withAttachment,
+        attachments: [{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, previewUrl: "blob:should-not-restore" }],
+      }),
+    };
+    expect(readComposeDraft("account", storage).attachments).toEqual([]);
+  });
+
+  test("renders attachment chips with labeled remove controls only when files are present", () => {
+    const noopController = { updateDraft() {}, attachFiles: () => ({ accepted: [], rejected: [] }), removeAttachment() {}, discardDraft() {} };
+    const emptyHtml = renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{ draft: createEmptyComposeDraft("account"), saveStatus: "saved", hasContent: false, ...noopController }}
+      />,
+    );
+    expect(emptyHtml).not.toContain("compose-attachment-chips");
+    expect(emptyHtml).not.toContain("0 B of 25.0 MB");
+    expect(emptyHtml).toContain("Saved on this device");
+
+    const sketch = new File([new Uint8Array(8)], "sketch.png", { type: "image/png" });
+    const notes = new File([new Uint8Array(16)], "notes.pdf", { type: "application/pdf" });
+    const draft = {
+      ...createEmptyComposeDraft("account"),
+      attachments: [
+        { id: "img", filename: "sketch.png", mimeType: "image/png", size: 2048, file: sketch, previewUrl: "blob:sketch" },
+        { id: "pdf", filename: "notes.pdf", mimeType: "application/pdf", size: 4096, file: notes, previewUrl: null },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{ draft, saveStatus: "saved", hasContent: true, ...noopController }}
+      />,
+    );
+    expect(html).toContain("2 attachments");
+    expect(html).toContain("sketch.png");
+    expect(html).toContain("notes.pdf");
+    expect(html).toContain("src=\"blob:sketch\"");
+    expect(html).toContain("Remove sketch.png");
+    expect(html).toContain("Remove notes.pdf");
+    expect(html).toContain("Text saved · attachments stay until you close this tab");
+    expect(html).not.toContain("Saved on this device");
+    expect(renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{
+          draft: { ...createEmptyComposeDraft("account"), attachments: [draft.attachments[0]!] },
+          saveStatus: "saved",
+          hasContent: true,
+          ...noopController,
+        }}
+      />,
+    )).toContain("1 attachment");
   });
 
   test("renders supported Markdown as semantic writing blocks", () => {
