@@ -6,6 +6,7 @@ import {
   useState,
   useId,
   type ClipboardEvent,
+  type DragEvent,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -13,6 +14,14 @@ import type { InboxMessage, MailContact } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
+
+export type ComposeAttachment = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  previewUrl: string | null;
+};
 
 export type ComposeDraft = {
   id: string;
@@ -22,16 +31,32 @@ export type ComposeDraft = {
   bcc: MailContact[];
   subject: string;
   body: string;
+  attachments: ComposeAttachment[];
   updatedAt: string;
 };
+
+export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "attachments">;
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
   saveStatus: ComposeSaveStatus;
   hasContent: boolean;
-  updateDraft: (update: Partial<Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body">>) => void;
+  updateDraft: (update: Partial<ComposeDraftFields>) => void;
   discardDraft: () => void;
 };
+
+export type ComposeAttachmentRejection = {
+  filename: string;
+  reason: string;
+};
+
+export type ComposeAttachmentAcceptance = {
+  accepted: ComposeAttachment[];
+  rejected: ComposeAttachmentRejection[];
+};
+
+export const MAX_COMPOSE_ATTACHMENTS = 25;
+export const MAX_COMPOSE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const SAVE_DELAY_MS = 420;
@@ -49,6 +74,7 @@ export function createEmptyComposeDraft(accountId: string): ComposeDraft {
     bcc: [],
     subject: "",
     body: "",
+    attachments: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -56,7 +82,77 @@ export function createEmptyComposeDraft(accountId: string): ComposeDraft {
 export function hasComposeContent(draft: ComposeDraft) {
   return draft.to.length + draft.cc.length + draft.bcc.length > 0
     || Boolean(draft.subject.trim())
-    || Boolean(draft.body.trim());
+    || Boolean(draft.body.trim())
+    || draft.attachments.length > 0;
+}
+
+export function sanitizeAttachmentFilename(filename: string) {
+  const base = filename.replace(/\\/g, "/").split("/").pop()?.trim() || "attachment";
+  const cleaned = base.replace(/[\u0000-\u001f\u007f]/g, "").replace(/^\.+/, "").trim() || "attachment";
+  return cleaned.slice(0, 255);
+}
+
+export function formatAttachmentSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function revokeComposeAttachment(attachment: ComposeAttachment) {
+  if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+}
+
+export function revokeComposeAttachments(attachments: ComposeAttachment[]) {
+  for (const attachment of attachments) revokeComposeAttachment(attachment);
+}
+
+export function acceptComposeFiles(
+  existing: ComposeAttachment[],
+  files: Iterable<File>,
+  createObjectUrl: (file: File) => string = (file) => URL.createObjectURL(file),
+): ComposeAttachmentAcceptance {
+  const accepted: ComposeAttachment[] = [];
+  const rejected: ComposeAttachmentRejection[] = [];
+  let totalBytes = existing.reduce((sum, attachment) => sum + attachment.size, 0);
+  let remainingSlots = MAX_COMPOSE_ATTACHMENTS - existing.length;
+
+  for (const file of files) {
+    const filename = sanitizeAttachmentFilename(file.name);
+    if (remainingSlots <= 0) {
+      rejected.push({ filename, reason: `You can attach up to ${MAX_COMPOSE_ATTACHMENTS} files.` });
+      continue;
+    }
+    if (!Number.isFinite(file.size) || file.size <= 0) {
+      rejected.push({ filename, reason: "Empty files can’t be attached." });
+      continue;
+    }
+    if (file.size > MAX_COMPOSE_ATTACHMENT_BYTES) {
+      rejected.push({ filename, reason: `Each file must be ${formatAttachmentSize(MAX_COMPOSE_ATTACHMENT_BYTES)} or smaller.` });
+      continue;
+    }
+    if (totalBytes + file.size > MAX_COMPOSE_ATTACHMENT_BYTES) {
+      rejected.push({ filename, reason: `Attachments together must stay under ${formatAttachmentSize(MAX_COMPOSE_ATTACHMENT_BYTES)}.` });
+      continue;
+    }
+    const mimeType = file.type.trim() || "application/octet-stream";
+    const previewUrl = mimeType.startsWith("image/") ? createObjectUrl(file) : null;
+    accepted.push({
+      id: globalThis.crypto?.randomUUID?.() ?? `attachment-${Date.now()}-${accepted.length}`,
+      filename,
+      mimeType,
+      size: file.size,
+      previewUrl,
+    });
+    totalBytes += file.size;
+    remainingSlots -= 1;
+  }
+
+  return { accepted, rejected };
+}
+
+function persistableDraft(draft: ComposeDraft) {
+  const { attachments: _attachments, ...rest } = draft;
+  return rest;
 }
 
 export function isValidEmail(value: string) {
@@ -107,6 +203,8 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
       bcc: Array.isArray(parsed.bcc) ? parsed.bcc.filter((contact) => isValidEmail(contact.email)) : [],
       subject: typeof parsed.subject === "string" ? parsed.subject : "",
       body: typeof parsed.body === "string" ? parsed.body : "",
+      // Attachment bytes are kept in memory only — never round-trip through localStorage.
+      attachments: [],
     };
   } catch {
     return fallback;
@@ -116,10 +214,19 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
 export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftController {
   const [draft, setDraft] = useState(() => readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope));
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
-  const persistedDraftRef = useRef(JSON.stringify(draft));
+  const persistedDraftRef = useRef(JSON.stringify(persistableDraft(draft)));
   const storageScopeRef = useRef(`${accountId}:${scope}`);
   const pendingDraftRef = useRef<{ key: string; serialized: string } | null>(null);
   const skipPersistenceRef = useRef(false);
+  const attachmentsRef = useRef(draft.attachments);
+
+  useEffect(() => {
+    attachmentsRef.current = draft.attachments;
+  }, [draft.attachments]);
+
+  useEffect(() => () => {
+    revokeComposeAttachments(attachmentsRef.current);
+  }, []);
 
   const flushPendingDraft = useCallback(() => {
     const pending = pendingDraftRef.current;
@@ -140,8 +247,9 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
     flushPendingDraft();
     storageScopeRef.current = nextScope;
     skipPersistenceRef.current = true;
+    revokeComposeAttachments(attachmentsRef.current);
     const restored = readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
-    persistedDraftRef.current = JSON.stringify(restored);
+    persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
     setDraft(restored);
     setSaveStatus("saved");
   }, [accountId, flushPendingDraft, scope]);
@@ -151,7 +259,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
       skipPersistenceRef.current = false;
       return;
     }
-    const serialized = JSON.stringify(draft);
+    const serialized = JSON.stringify(persistableDraft(draft));
     if (serialized === persistedDraftRef.current) return;
     pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
     setSaveStatus("saving");
@@ -175,15 +283,24 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [hasContent, saveStatus]);
 
-  function updateDraft(update: Partial<Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body">>) {
-    setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
+  function updateDraft(update: Partial<ComposeDraftFields>) {
+    setDraft((current) => {
+      if (update.attachments) {
+        const nextIds = new Set(update.attachments.map((attachment) => attachment.id));
+        for (const attachment of current.attachments) {
+          if (!nextIds.has(attachment.id)) revokeComposeAttachment(attachment);
+        }
+      }
+      return { ...current, ...update, updatedAt: new Date().toISOString() };
+    });
   }
 
   function discardDraft() {
     const empty = createEmptyComposeDraft(accountId);
     pendingDraftRef.current = null;
+    revokeComposeAttachments(attachmentsRef.current);
     window.localStorage.removeItem(draftStorageKey(accountId, scope));
-    persistedDraftRef.current = JSON.stringify(empty);
+    persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
     setDraft(empty);
     setSaveStatus("saved");
   }
@@ -230,6 +347,7 @@ export function ComposeWorkspace({
 }) {
   const { draft, saveStatus, hasContent, updateDraft, discardDraft } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
   const deliveryReason = draft.to.length === 0
@@ -247,6 +365,17 @@ export function ComposeWorkspace({
       discardDraft();
       onClose?.();
     }
+  }
+
+  function applyFiles(fileList: Iterable<File>) {
+    const { accepted, rejected } = acceptComposeFiles(draft.attachments, fileList);
+    if (accepted.length) updateDraft({ attachments: [...draft.attachments, ...accepted] });
+    setAttachmentError(rejected.length ? rejected.map((item) => `${item.filename}: ${item.reason}`).join(" ") : null);
+  }
+
+  function removeAttachment(attachmentId: string) {
+    updateDraft({ attachments: draft.attachments.filter((attachment) => attachment.id !== attachmentId) });
+    setAttachmentError(null);
   }
 
   const editor = (
@@ -269,7 +398,13 @@ export function ComposeWorkspace({
         <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
 
-      <RenderedBlockEditor autoFocus={variant === "zen" || variant === "reply"} body={draft.body} onChange={(body) => updateDraft({ body })} placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"} />
+      <RenderedBlockEditor autoFocus={variant === "zen" || variant === "reply"} body={draft.body} onChange={(body) => updateDraft({ body })} onFilesDropped={applyFiles} placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"} />
+      <ComposeAttachmentTray
+        attachments={draft.attachments}
+        error={attachmentError}
+        onAttach={applyFiles}
+        onRemove={removeAttachment}
+      />
     </>
   );
 
@@ -306,12 +441,19 @@ export function ComposeWorkspace({
   );
 }
 
-function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoFocus: boolean; body: string; onChange: (body: string) => void; placeholder: string }) {
+function RenderedBlockEditor({ autoFocus, body, onChange, onFilesDropped, placeholder }: {
+  autoFocus: boolean;
+  body: string;
+  onChange: (body: string) => void;
+  onFilesDropped?: (files: File[]) => void;
+  placeholder: string;
+}) {
   const editorRef = useRef<HTMLDivElement>(null);
   const commandListId = useId();
   const lastBodyRef = useRef(body);
   const [slash, setSlash] = useState<{ query: string; top: number } | null>(null);
   const [activeCommand, setActiveCommand] = useState(0);
+  const [draggingFiles, setDraggingFiles] = useState(false);
   const commands = slash === null ? [] : slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(slash.query));
 
   useEffect(() => {
@@ -419,14 +561,44 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
     }
   }
 
+  function hasFilePayload(event: DragEvent) {
+    return [...(event.dataTransfer?.types ?? [])].includes("Files");
+  }
+
+  function onDragOver(event: DragEvent<HTMLDivElement>) {
+    if (!onFilesDropped || !hasFilePayload(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDraggingFiles(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (!onFilesDropped) return;
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDraggingFiles(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLDivElement>) {
+    if (!onFilesDropped || !hasFilePayload(event)) return;
+    event.preventDefault();
+    setDraggingFiles(false);
+    const files = [...(event.dataTransfer.files ?? [])];
+    if (files.length) onFilesDropped(files);
+  }
+
   return (
-    <div className="compose-writing-field">
+    <div
+      className={`compose-writing-field${draggingFiles ? " compose-writing-field-drop" : ""}`}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <div aria-label="Formatting" className="compose-formatting" role="toolbar">
         <button aria-label="Bold, Command B" onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
         <button aria-label="Italic, Command I" onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
         <button aria-label="Bulleted list" onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
         <button aria-label="Quote" onClick={() => runToolbar("blockquote")} type="button">Quote</button>
-        <span>Type / for structure · ↑↓ to choose</span>
+        <span>Type / for structure · ↑↓ to choose · drop files to attach</span>
       </div>
       <div
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
@@ -460,6 +632,78 @@ function RenderedBlockEditor({ autoFocus, body, onChange, placeholder }: { autoF
       ) : null}
       <span className="sr-only">Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands.</span>
     </div>
+  );
+}
+
+function ComposeAttachmentTray({
+  attachments,
+  error,
+  onAttach,
+  onRemove,
+}: {
+  attachments: ComposeAttachment[];
+  error: string | null;
+  onAttach: (files: File[]) => void;
+  onRemove: (attachmentId: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const totalBytes = attachments.reduce((sum, attachment) => sum + attachment.size, 0);
+  const remaining = MAX_COMPOSE_ATTACHMENTS - attachments.length;
+
+  return (
+    <section aria-label="Attachments" className="compose-attachments">
+      <div className="compose-attachments-header">
+        <div>
+          <strong>{attachments.length ? `${attachments.length} attached` : "Attachments"}</strong>
+          <span>{formatAttachmentSize(totalBytes)} of {formatAttachmentSize(MAX_COMPOSE_ATTACHMENT_BYTES)} · up to {MAX_COMPOSE_ATTACHMENTS} files</span>
+        </div>
+        <button
+          className="compose-attach-button"
+          disabled={remaining <= 0}
+          onClick={() => inputRef.current?.click()}
+          type="button"
+        >
+          Attach
+        </button>
+        <input
+          accept="*/*"
+          aria-hidden="true"
+          className="sr-only"
+          multiple
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])];
+            event.target.value = "";
+            if (files.length) onAttach(files);
+          }}
+          ref={inputRef}
+          tabIndex={-1}
+          type="file"
+        />
+      </div>
+      {attachments.length ? (
+        <ul className="compose-attachment-list">
+          {attachments.map((attachment) => (
+            <li key={attachment.id}>
+              {attachment.previewUrl ? (
+                <img alt="" className="compose-attachment-preview" src={attachment.previewUrl} />
+              ) : (
+                <span aria-hidden="true" className="compose-attachment-glyph">↳</span>
+              )}
+              <div>
+                <strong title={attachment.filename}>{attachment.filename}</strong>
+                <small>{formatAttachmentSize(attachment.size)} · {attachment.mimeType}</small>
+              </div>
+              <button aria-label={`Remove ${attachment.filename}`} className="compose-attachment-remove" onClick={() => onRemove(attachment.id)} type="button">
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="compose-attachments-empty">Attach files here, or drop them onto the writing area. Previews stay on this device until you send.</p>
+      )}
+      {error ? <p className="compose-attachments-error" role="alert">{error}</p> : null}
+    </section>
   );
 }
 
