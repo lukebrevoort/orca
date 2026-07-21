@@ -20,6 +20,7 @@ export type ComposeAttachment = {
   filename: string;
   mimeType: string;
   size: number;
+  file: File;
   previewUrl: string | null;
 };
 
@@ -35,13 +36,15 @@ export type ComposeDraft = {
   updatedAt: string;
 };
 
-export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "attachments">;
+export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body">;
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
   saveStatus: ComposeSaveStatus;
   hasContent: boolean;
   updateDraft: (update: Partial<ComposeDraftFields>) => void;
+  attachFiles: (files: Iterable<File>) => ComposeAttachmentAcceptance;
+  removeAttachment: (attachmentId: string) => void;
   discardDraft: () => void;
 };
 
@@ -141,6 +144,7 @@ export function acceptComposeFiles(
       filename,
       mimeType,
       size: file.size,
+      file,
       previewUrl,
     });
     totalBytes += file.size;
@@ -273,25 +277,45 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
   }, [accountId, draft, flushPendingDraft, scope]);
 
   const hasContent = hasComposeContent(draft);
+  const hasSessionAttachments = draft.attachments.length > 0;
   useEffect(() => {
-    if (!hasContent || saveStatus === "saved") return;
+    // Text can be durable on device, but attachment bytes are session-only.
+    if (!hasContent) return;
+    if (saveStatus === "saved" && !hasSessionAttachments) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
-  }, [hasContent, saveStatus]);
+  }, [hasContent, hasSessionAttachments, saveStatus]);
 
   function updateDraft(update: Partial<ComposeDraftFields>) {
+    setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
+  }
+
+  function attachFiles(files: Iterable<File>): ComposeAttachmentAcceptance {
+    let acceptance: ComposeAttachmentAcceptance = { accepted: [], rejected: [] };
     setDraft((current) => {
-      if (update.attachments) {
-        const nextIds = new Set(update.attachments.map((attachment) => attachment.id));
-        for (const attachment of current.attachments) {
-          if (!nextIds.has(attachment.id)) revokeComposeAttachment(attachment);
-        }
+      acceptance = acceptComposeFiles(current.attachments, files);
+      if (!acceptance.accepted.length) return current;
+      return {
+        ...current,
+        attachments: [...current.attachments, ...acceptance.accepted],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    return acceptance;
+  }
+
+  function removeAttachment(attachmentId: string) {
+    setDraft((current) => {
+      const remaining = current.attachments.filter((attachment) => attachment.id !== attachmentId);
+      if (remaining.length === current.attachments.length) return current;
+      for (const attachment of current.attachments) {
+        if (attachment.id === attachmentId) revokeComposeAttachment(attachment);
       }
-      return { ...current, ...update, updatedAt: new Date().toISOString() };
+      return { ...current, attachments: remaining, updatedAt: new Date().toISOString() };
     });
   }
 
@@ -305,7 +329,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
     setSaveStatus("saved");
   }
 
-  return { draft, saveStatus, hasContent, updateDraft, discardDraft };
+  return { draft, saveStatus, hasContent, updateDraft, attachFiles, removeAttachment, discardDraft };
 }
 
 const slashCommands = [
@@ -345,7 +369,7 @@ export function ComposeWorkspace({
   canSend?: boolean;
   onRequestSendAccess?: () => void;
 }) {
-  const { draft, saveStatus, hasContent, updateDraft, discardDraft } = controller;
+  const { draft, saveStatus, hasContent, updateDraft, attachFiles, removeAttachment, discardDraft } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [draggingFiles, setDraggingFiles] = useState(false);
@@ -370,13 +394,14 @@ export function ComposeWorkspace({
   }
 
   function applyFiles(fileList: Iterable<File>) {
-    const { accepted, rejected } = acceptComposeFiles(draft.attachments, fileList);
-    if (accepted.length) updateDraft({ attachments: [...draft.attachments, ...accepted] });
-    setAttachmentError(rejected.length ? rejected.map((item) => `${item.filename}: ${item.reason}`).join(" ") : null);
+    const { accepted, rejected } = attachFiles(fileList);
+    if (accepted.length || rejected.length) {
+      setAttachmentError(rejected.length ? rejected.map((item) => `${item.filename}: ${item.reason}`).join(" ") : null);
+    }
   }
 
-  function removeAttachment(attachmentId: string) {
-    updateDraft({ attachments: draft.attachments.filter((attachment) => attachment.id !== attachmentId) });
+  function onRemoveAttachment(attachmentId: string) {
+    removeAttachment(attachmentId);
     setAttachmentError(null);
   }
 
@@ -434,7 +459,7 @@ export function ComposeWorkspace({
         canAttach={draft.attachments.length < MAX_COMPOSE_ATTACHMENTS}
         onAttachClick={() => fileInputRef.current?.click()}
         onChange={(body) => updateDraft({ body })}
-        onRemoveAttachment={removeAttachment}
+        onRemoveAttachment={onRemoveAttachment}
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"}
       />
       {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
@@ -460,7 +485,7 @@ export function ComposeWorkspace({
       <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Return to compose</span></button>
-          <DraftStatus status={saveStatus} />
+          <DraftStatus hasSessionAttachments={draft.attachments.length > 0} status={saveStatus} />
         </header>
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
@@ -703,7 +728,7 @@ function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, on
   const { draft, hasContent, saveStatus } = controller;
   return (
     <footer className="compose-delivery-bar">
-      <div><DraftStatus status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
+      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
         <button
@@ -928,8 +953,19 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
   );
 }
 
-function DraftStatus({ status }: { status: ComposeSaveStatus }) {
-  return <span aria-live="polite" className={`compose-save-status compose-save-status-${status}`}><span aria-hidden="true" />{status === "saved" ? "Saved on this device" : status === "saving" ? "Saving…" : "Couldn’t save — keep this tab open"}</span>;
+function DraftStatus({ hasSessionAttachments, status }: { hasSessionAttachments: boolean; status: ComposeSaveStatus }) {
+  const label = hasSessionAttachments
+    ? status === "saving"
+      ? "Saving text…"
+      : status === "failed"
+        ? "Couldn’t save — keep this tab open"
+        : "Text saved · attachments stay until you close this tab"
+    : status === "saved"
+      ? "Saved on this device"
+      : status === "saving"
+        ? "Saving…"
+        : "Couldn’t save — keep this tab open";
+  return <span aria-live="polite" className={`compose-save-status compose-save-status-${status}`}><span aria-hidden="true" />{label}</span>;
 }
 
 function getSlashQuery(body: string, cursor: number) {

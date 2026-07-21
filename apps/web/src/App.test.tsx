@@ -265,7 +265,7 @@ describe("App", () => {
     const html = renderToStaticMarkup(
       <ComposeWorkspace
         contacts={[{ name: "Maya Chen", email: "maya@example.com" }]}
-        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
+        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, attachFiles: () => ({ accepted: [], rejected: [] }), removeAttachment() {}, discardDraft() {} }}
         onRequestSendAccess={() => {}}
       />,
     );
@@ -297,8 +297,9 @@ describe("App", () => {
 
     const acceptedBatch = acceptComposeFiles([], [image, pdf], createObjectUrl);
     expect(acceptedBatch.accepted).toHaveLength(2);
-    expect(acceptedBatch.accepted[0]).toMatchObject({ filename: "photo.png", mimeType: "image/png", size: 12, previewUrl: "blob:preview-0" });
-    expect(acceptedBatch.accepted[1]).toMatchObject({ filename: "brief.pdf", mimeType: "application/pdf", size: 24, previewUrl: null });
+    expect(acceptedBatch.accepted[0]).toMatchObject({ filename: "photo.png", mimeType: "image/png", size: 12, previewUrl: "blob:preview-0", file: image });
+    expect(acceptedBatch.accepted[1]).toMatchObject({ filename: "brief.pdf", mimeType: "application/pdf", size: 24, previewUrl: null, file: pdf });
+    expect(acceptedBatch.accepted[1]!.file).toBe(pdf);
     expect(acceptedBatch.rejected).toEqual([]);
 
     const rejectedBatch = acceptComposeFiles(acceptedBatch.accepted, [empty, huge], createObjectUrl);
@@ -310,6 +311,7 @@ describe("App", () => {
       filename: `file-${index}.txt`,
       mimeType: "text/plain",
       size: 1,
+      file: new File([new Uint8Array(1)], `file-${index}.txt`, { type: "text/plain" }),
       previewUrl: null,
     }));
     const overCount = acceptComposeFiles(filled, [new File([new Uint8Array(1)], "one-more.txt", { type: "text/plain" })], createObjectUrl);
@@ -320,7 +322,7 @@ describe("App", () => {
   test("treats draft attachments as content and never restores binary attachments from storage", () => {
     const withAttachment = {
       ...createEmptyComposeDraft("account"),
-      attachments: [{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, previewUrl: null }],
+      attachments: [{ id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, file: new File([new Uint8Array(12)], "notes.pdf", { type: "application/pdf" }), previewUrl: null }],
     };
     expect(hasComposeContent(withAttachment)).toBe(true);
     const storage = {
@@ -333,26 +335,30 @@ describe("App", () => {
   });
 
   test("renders attachment chips with labeled remove controls only when files are present", () => {
+    const noopController = { updateDraft() {}, attachFiles: () => ({ accepted: [], rejected: [] }), removeAttachment() {}, discardDraft() {} };
     const emptyHtml = renderToStaticMarkup(
       <ComposeWorkspace
         contacts={[]}
-        controller={{ draft: createEmptyComposeDraft("account"), saveStatus: "saved", hasContent: false, updateDraft() {}, discardDraft() {} }}
+        controller={{ draft: createEmptyComposeDraft("account"), saveStatus: "saved", hasContent: false, ...noopController }}
       />,
     );
     expect(emptyHtml).not.toContain("compose-attachment-chips");
     expect(emptyHtml).not.toContain("0 B of 25.0 MB");
+    expect(emptyHtml).toContain("Saved on this device");
 
+    const sketch = new File([new Uint8Array(8)], "sketch.png", { type: "image/png" });
+    const notes = new File([new Uint8Array(16)], "notes.pdf", { type: "application/pdf" });
     const draft = {
       ...createEmptyComposeDraft("account"),
       attachments: [
-        { id: "img", filename: "sketch.png", mimeType: "image/png", size: 2048, previewUrl: "blob:sketch" },
-        { id: "pdf", filename: "notes.pdf", mimeType: "application/pdf", size: 4096, previewUrl: null },
+        { id: "img", filename: "sketch.png", mimeType: "image/png", size: 2048, file: sketch, previewUrl: "blob:sketch" },
+        { id: "pdf", filename: "notes.pdf", mimeType: "application/pdf", size: 4096, file: notes, previewUrl: null },
       ],
     };
     const html = renderToStaticMarkup(
       <ComposeWorkspace
         contacts={[]}
-        controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
+        controller={{ draft, saveStatus: "saved", hasContent: true, ...noopController }}
       />,
     );
     expect(html).toContain("2 attachments");
@@ -361,6 +367,8 @@ describe("App", () => {
     expect(html).toContain("src=\"blob:sketch\"");
     expect(html).toContain("Remove sketch.png");
     expect(html).toContain("Remove notes.pdf");
+    expect(html).toContain("Text saved · attachments stay until you close this tab");
+    expect(html).not.toContain("Saved on this device");
     expect(renderToStaticMarkup(
       <ComposeWorkspace
         contacts={[]}
@@ -368,8 +376,7 @@ describe("App", () => {
           draft: { ...createEmptyComposeDraft("account"), attachments: [draft.attachments[0]!] },
           saveStatus: "saved",
           hasContent: true,
-          updateDraft() {},
-          discardDraft() {},
+          ...noopController,
         }}
       />,
     )).toContain("1 attachment");
