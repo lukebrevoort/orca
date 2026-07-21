@@ -271,11 +271,11 @@ describe("App", () => {
     );
     expect(html).toContain("compose-workspace-intro");
     expect(html).toContain("Saved on this device");
-    expect(html).toContain("Type / for structure · ↑↓ to choose · drop files to attach");
+    expect(html).toContain("Type / for structure · drop anywhere to attach");
     expect(html).toContain("Enable Gmail compose access");
     expect(html).toContain("Enable sending");
-    expect(html).toContain("Attach");
-    expect(html).toContain("Attachments");
+    expect(html).toContain("aria-label=\"Attach files\"");
+    expect(html).not.toContain("Attachments");
     expect(html).not.toContain("class=\"compose-send\" disabled");
     expect(html).toContain("Remove Maya Chen from To");
   });
@@ -332,7 +332,16 @@ describe("App", () => {
     expect(readComposeDraft("account", storage).attachments).toEqual([]);
   });
 
-  test("renders attachment previews with labeled remove controls", () => {
+  test("renders attachment chips with labeled remove controls only when files are present", () => {
+    const emptyHtml = renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{ draft: createEmptyComposeDraft("account"), saveStatus: "saved", hasContent: false, updateDraft() {}, discardDraft() {} }}
+      />,
+    );
+    expect(emptyHtml).not.toContain("compose-attachment-chips");
+    expect(emptyHtml).not.toContain("0 B of 25.0 MB");
+
     const draft = {
       ...createEmptyComposeDraft("account"),
       attachments: [
@@ -346,12 +355,24 @@ describe("App", () => {
         controller={{ draft, saveStatus: "saved", hasContent: true, updateDraft() {}, discardDraft() {} }}
       />,
     );
-    expect(html).toContain("2 attached");
+    expect(html).toContain("2 attachments");
     expect(html).toContain("sketch.png");
     expect(html).toContain("notes.pdf");
     expect(html).toContain("src=\"blob:sketch\"");
     expect(html).toContain("Remove sketch.png");
     expect(html).toContain("Remove notes.pdf");
+    expect(renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{
+          draft: { ...createEmptyComposeDraft("account"), attachments: [draft.attachments[0]!] },
+          saveStatus: "saved",
+          hasContent: true,
+          updateDraft() {},
+          discardDraft() {},
+        }}
+      />,
+    )).toContain("1 attachment");
   });
 
   test("renders supported Markdown as semantic writing blocks", () => {

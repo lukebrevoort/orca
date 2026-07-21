@@ -348,6 +348,8 @@ export function ComposeWorkspace({
   const { draft, saveStatus, hasContent, updateDraft, discardDraft } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [draggingFiles, setDraggingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
   const deliveryReason = draft.to.length === 0
@@ -378,6 +380,33 @@ export function ComposeWorkspace({
     setAttachmentError(null);
   }
 
+  function hasFilePayload(event: DragEvent) {
+    return [...(event.dataTransfer?.types ?? [])].includes("Files");
+  }
+
+  function onDragOver(event: DragEvent<HTMLElement>) {
+    if (!hasFilePayload(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDraggingFiles(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLElement>) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setDraggingFiles(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLElement>) {
+    if (!hasFilePayload(event)) return;
+    event.preventDefault();
+    setDraggingFiles(false);
+    const files = [...(event.dataTransfer.files ?? [])];
+    if (files.length) applyFiles(files);
+  }
+
+  const dropHandlers = { onDragLeave, onDragOver, onDrop };
+  const workspaceClass = `compose-workspace${draggingFiles ? " compose-workspace-drop" : ""}`;
+
   const editor = (
     <>
       {variant !== "reply" ? <div className="compose-addressing">
@@ -398,54 +427,91 @@ export function ComposeWorkspace({
         <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
 
-      <RenderedBlockEditor autoFocus={variant === "zen" || variant === "reply"} body={draft.body} onChange={(body) => updateDraft({ body })} onFilesDropped={applyFiles} placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"} />
-      <ComposeAttachmentTray
+      <RenderedBlockEditor
         attachments={draft.attachments}
-        error={attachmentError}
-        onAttach={applyFiles}
-        onRemove={removeAttachment}
+        autoFocus={variant === "zen" || variant === "reply"}
+        body={draft.body}
+        canAttach={draft.attachments.length < MAX_COMPOSE_ATTACHMENTS}
+        onAttachClick={() => fileInputRef.current?.click()}
+        onChange={(body) => updateDraft({ body })}
+        onRemoveAttachment={removeAttachment}
+        placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"}
+      />
+      {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
+      <input
+        accept="*/*"
+        aria-hidden="true"
+        className="sr-only"
+        multiple
+        onChange={(event) => {
+          const files = [...(event.target.files ?? [])];
+          event.target.value = "";
+          if (files.length) applyFiles(files);
+        }}
+        ref={fileInputRef}
+        tabIndex={-1}
+        type="file"
       />
     </>
   );
 
   if (variant === "zen") {
     return (
-      <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog">
+      <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Return to compose</span></button>
           <DraftStatus status={saveStatus} />
         </header>
-        <div className="zen-stage"><div className="zen-column compose-workspace compose-workspace-zen">{editor}</div></div>
+        <div className="zen-stage">
+          <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
+            {editor}
+            {draggingFiles ? <ComposeDropOverlay /> : null}
+          </div>
+        </div>
       </section>
     );
   }
 
   if (variant === "reply") {
     return (
-      <section aria-label="Reply to conversation" className="compose-workspace compose-workspace-reply">
+      <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
         <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
+        {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
     );
   }
 
   return (
-    <section aria-label="Compose message" className="compose-workspace compose-workspace-panel">
+    <section aria-label="Compose message" className={`${workspaceClass} compose-workspace-panel`} {...dropHandlers}>
       <div className="compose-workspace-intro">
         <div><span className="compose-kicker">{intro.kicker}</span><h3>{intro.title}</h3></div>
         <span className="compose-contact-count">{contactsLabel}</span>
       </div>
       {editor}
       <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
+      {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
   );
 }
 
-function RenderedBlockEditor({ autoFocus, body, onChange, onFilesDropped, placeholder }: {
+function RenderedBlockEditor({
+  attachments,
+  autoFocus,
+  body,
+  canAttach,
+  onAttachClick,
+  onChange,
+  onRemoveAttachment,
+  placeholder,
+}: {
+  attachments: ComposeAttachment[];
   autoFocus: boolean;
   body: string;
+  canAttach: boolean;
+  onAttachClick: () => void;
   onChange: (body: string) => void;
-  onFilesDropped?: (files: File[]) => void;
+  onRemoveAttachment: (attachmentId: string) => void;
   placeholder: string;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -453,7 +519,6 @@ function RenderedBlockEditor({ autoFocus, body, onChange, onFilesDropped, placeh
   const lastBodyRef = useRef(body);
   const [slash, setSlash] = useState<{ query: string; top: number } | null>(null);
   const [activeCommand, setActiveCommand] = useState(0);
-  const [draggingFiles, setDraggingFiles] = useState(false);
   const commands = slash === null ? [] : slashCommands.filter((command) => `${command.id} ${command.label}`.toLowerCase().includes(slash.query));
 
   useEffect(() => {
@@ -561,44 +626,15 @@ function RenderedBlockEditor({ autoFocus, body, onChange, onFilesDropped, placeh
     }
   }
 
-  function hasFilePayload(event: DragEvent) {
-    return [...(event.dataTransfer?.types ?? [])].includes("Files");
-  }
-
-  function onDragOver(event: DragEvent<HTMLDivElement>) {
-    if (!onFilesDropped || !hasFilePayload(event)) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-    setDraggingFiles(true);
-  }
-
-  function onDragLeave(event: DragEvent<HTMLDivElement>) {
-    if (!onFilesDropped) return;
-    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-    setDraggingFiles(false);
-  }
-
-  function onDrop(event: DragEvent<HTMLDivElement>) {
-    if (!onFilesDropped || !hasFilePayload(event)) return;
-    event.preventDefault();
-    setDraggingFiles(false);
-    const files = [...(event.dataTransfer.files ?? [])];
-    if (files.length) onFilesDropped(files);
-  }
-
   return (
-    <div
-      className={`compose-writing-field${draggingFiles ? " compose-writing-field-drop" : ""}`}
-      onDragLeave={onDragLeave}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-    >
+    <div className="compose-writing-field">
       <div aria-label="Formatting" className="compose-formatting" role="toolbar">
         <button aria-label="Bold, Command B" onClick={() => runToolbar("bold")} type="button"><strong>B</strong></button>
         <button aria-label="Italic, Command I" onClick={() => runToolbar("italic")} type="button"><em>I</em></button>
         <button aria-label="Bulleted list" onClick={() => runToolbar("insertUnorderedList")} type="button">List</button>
         <button aria-label="Quote" onClick={() => runToolbar("blockquote")} type="button">Quote</button>
-        <span>Type / for structure · ↑↓ to choose · drop files to attach</span>
+        <button aria-label="Attach files" className="compose-attach-quiet" disabled={!canAttach} onClick={onAttachClick} type="button">Attach</button>
+        <span>Type / for structure · drop anywhere to attach</span>
       </div>
       <div
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
@@ -630,80 +666,35 @@ function RenderedBlockEditor({ autoFocus, body, onChange, onFilesDropped, placeh
           )) : <span className="compose-command-empty">No commands found · Esc to close</span>}
         </div>
       ) : null}
-      <span className="sr-only">Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands.</span>
+      {attachments.length ? (
+        <ul aria-label={attachments.length === 1 ? "1 attachment" : `${attachments.length} attachments`} className="compose-attachment-chips">
+          {attachments.map((attachment) => (
+            <li key={attachment.id}>
+              {attachment.previewUrl ? (
+                <img alt="" className="compose-attachment-chip-preview" src={attachment.previewUrl} />
+              ) : (
+                <span aria-hidden="true" className="compose-attachment-chip-glyph">↳</span>
+              )}
+              <span className="compose-attachment-chip-meta">
+                <strong title={attachment.filename}>{attachment.filename}</strong>
+                <small>{formatAttachmentSize(attachment.size)}</small>
+              </span>
+              <button aria-label={`Remove ${attachment.filename}`} onClick={() => onRemoveAttachment(attachment.id)} type="button">×</button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <span className="sr-only">Use Command B for bold, Command I for italic, Command Z to undo, and arrow keys to move through slash commands. Drop files onto the compose canvas to attach them.</span>
     </div>
   );
 }
 
-function ComposeAttachmentTray({
-  attachments,
-  error,
-  onAttach,
-  onRemove,
-}: {
-  attachments: ComposeAttachment[];
-  error: string | null;
-  onAttach: (files: File[]) => void;
-  onRemove: (attachmentId: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const totalBytes = attachments.reduce((sum, attachment) => sum + attachment.size, 0);
-  const remaining = MAX_COMPOSE_ATTACHMENTS - attachments.length;
-
+function ComposeDropOverlay() {
   return (
-    <section aria-label="Attachments" className="compose-attachments">
-      <div className="compose-attachments-header">
-        <div>
-          <strong>{attachments.length ? `${attachments.length} attached` : "Attachments"}</strong>
-          <span>{formatAttachmentSize(totalBytes)} of {formatAttachmentSize(MAX_COMPOSE_ATTACHMENT_BYTES)} · up to {MAX_COMPOSE_ATTACHMENTS} files</span>
-        </div>
-        <button
-          className="compose-attach-button"
-          disabled={remaining <= 0}
-          onClick={() => inputRef.current?.click()}
-          type="button"
-        >
-          Attach
-        </button>
-        <input
-          accept="*/*"
-          aria-hidden="true"
-          className="sr-only"
-          multiple
-          onChange={(event) => {
-            const files = [...(event.target.files ?? [])];
-            event.target.value = "";
-            if (files.length) onAttach(files);
-          }}
-          ref={inputRef}
-          tabIndex={-1}
-          type="file"
-        />
-      </div>
-      {attachments.length ? (
-        <ul className="compose-attachment-list">
-          {attachments.map((attachment) => (
-            <li key={attachment.id}>
-              {attachment.previewUrl ? (
-                <img alt="" className="compose-attachment-preview" src={attachment.previewUrl} />
-              ) : (
-                <span aria-hidden="true" className="compose-attachment-glyph">↳</span>
-              )}
-              <div>
-                <strong title={attachment.filename}>{attachment.filename}</strong>
-                <small>{formatAttachmentSize(attachment.size)} · {attachment.mimeType}</small>
-              </div>
-              <button aria-label={`Remove ${attachment.filename}`} className="compose-attachment-remove" onClick={() => onRemove(attachment.id)} type="button">
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="compose-attachments-empty">Attach files here, or drop them onto the writing area. Previews stay on this device until you send.</p>
-      )}
-      {error ? <p className="compose-attachments-error" role="alert">{error}</p> : null}
-    </section>
+    <div aria-hidden="true" className="compose-drop-overlay">
+      <strong>Drop to attach</strong>
+      <span>Images and files land here — the writing canvas stays clear until then.</span>
+    </div>
   );
 }
 
