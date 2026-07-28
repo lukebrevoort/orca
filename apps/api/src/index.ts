@@ -39,6 +39,8 @@ import {
   updateReminderSchema,
   updateMessageDraftSchema,
   updateSenderAttentionRuleSchema,
+  updateUserPreferencesSchema,
+  userPreferencesSchema,
 } from "@orca/shared";
 
 import { createGmailAuthApp } from "./auth/gmail/routes.ts";
@@ -46,7 +48,7 @@ import { detectGmailCapabilities } from "./auth/gmail/capabilities.ts";
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 import { createGmailTransport, GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 
@@ -125,6 +127,26 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally {
       sqlite.close();
     }
+  });
+
+  app.get("/v1/preferences", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const preference = db.select().from(userPreferences).where(eq(userPreferences.userId, c.get("auth").userId)).get();
+      return jsonWithSchema(c, userPreferencesSchema, preference ?? { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
+    } finally { sqlite.close(); }
+  });
+
+  app.patch("/v1/preferences", validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const input = c.req.valid("json");
+      const userId = c.get("auth").userId;
+      const current = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get();
+      const next = { signature: current?.signature ?? "", composeFormat: current?.composeFormat ?? "plain", replyBehavior: current?.replyBehavior ?? "reply", notifyByDefault: current?.notifyByDefault ?? false, ...input };
+      db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, updatedAt: now() } }).run();
+      return jsonWithSchema(c, userPreferencesSchema, next);
+    } finally { sqlite.close(); }
   });
 
   const getSyncStatus = (c: Context<{ Variables: AuthVariables }>) => {

@@ -19,6 +19,18 @@ export const users = sqliteTable(
   }),
 );
 
+export const userPreferences = sqliteTable(
+  "user_preferences",
+  {
+    userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    signature: text("signature").notNull().default(""),
+    composeFormat: text("compose_format").notNull().default("plain"),
+    replyBehavior: text("reply_behavior").notNull().default("reply"),
+    notifyByDefault: integer("notify_by_default", { mode: "boolean" }).notNull().default(false),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
 export const oauthAccounts = sqliteTable(
   "oauth_accounts",
   {
