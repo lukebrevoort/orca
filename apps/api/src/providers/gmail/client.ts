@@ -27,6 +27,16 @@ export type GmailClient = {
   listLabels(accessToken: string): Promise<GmailLabel[]>;
 };
 
+export type GmailTransportClient = {
+  createDraft(input: { accessToken: string; raw: string; threadId?: string | null }): Promise<GmailDraftResponse>;
+  updateDraft(input: { accessToken: string; draftId: string; raw: string; threadId?: string | null }): Promise<GmailDraftResponse>;
+  deleteDraft(accessToken: string, draftId: string): Promise<void>;
+  sendMessage(input: { accessToken: string; raw: string; threadId?: string | null }): Promise<GmailSentMessage>;
+};
+
+export type GmailDraftResponse = { id: string; message: GmailSentMessage };
+export type GmailSentMessage = { id: string; threadId: string };
+
 export class GmailApiError extends Error {
   constructor(
     message: string,
@@ -37,7 +47,7 @@ export class GmailApiError extends Error {
   }
 }
 
-export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient {
+export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient & GmailTransportClient {
   return {
     async getMessage(accessToken, messageId) {
       return gmailRequest<GmailMessage>(fetchImpl, accessToken, `/messages/${messageId}?format=full`);
@@ -79,6 +89,28 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
 
       return response.labels ?? [];
     },
+
+    async createDraft({ accessToken, raw, threadId }) {
+      return gmailRequest<GmailDraftResponse>(fetchImpl, accessToken, "/drafts", {
+        method: "POST", body: { message: { raw, ...(threadId ? { threadId } : {}) } },
+      });
+    },
+
+    async updateDraft({ accessToken, draftId, raw, threadId }) {
+      return gmailRequest<GmailDraftResponse>(fetchImpl, accessToken, `/drafts/${draftId}`, {
+        method: "PUT", body: { id: draftId, message: { raw, ...(threadId ? { threadId } : {}) } },
+      });
+    },
+
+    async deleteDraft(accessToken, draftId) {
+      await gmailRequest<void>(fetchImpl, accessToken, `/drafts/${draftId}`, { method: "DELETE" });
+    },
+
+    async sendMessage({ accessToken, raw, threadId }) {
+      return gmailRequest<GmailSentMessage>(fetchImpl, accessToken, "/messages/send", {
+        method: "POST", body: { raw, ...(threadId ? { threadId } : {}) },
+      });
+    },
   };
 }
 
@@ -86,17 +118,22 @@ async function gmailRequest<T>(
   fetchImpl: typeof fetch,
   accessToken: string,
   path: string,
+  options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
   const response = await fetchImpl(`${gmailApiBaseUrl}${path}`, {
+    method: options.method,
     headers: {
       authorization: `Bearer ${accessToken}`,
+      ...(options.body === undefined ? {} : { "content-type": "application/json" }),
     },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
   if (!response.ok) {
     throw new GmailApiError("Gmail API request failed", response.status);
   }
 
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 

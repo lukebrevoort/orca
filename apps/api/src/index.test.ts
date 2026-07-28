@@ -11,6 +11,7 @@ import { createDatabaseClient } from "./db/client.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
+import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 
 describe("Orca API", () => {
   test("requires a session before returning auth state", async () => {
@@ -132,6 +133,67 @@ describe("Orca API", () => {
       rmSync(tempDir, { recursive: true, force: true });
       delete process.env.SESSION_SECRET;
       delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("persists Gmail drafts and sends exactly once after reserving the idempotency key", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-gmail-transport-test-"));
+    const dbPath = join(tempDir, "transport.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "user", email: "writer@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "account", userId: "user", provider: "gmail", providerEmail: "writer@example.com", providerId: "gmail-writer", scope: "https://www.googleapis.com/auth/gmail.compose" }).run();
+      const calls: string[] = [];
+      const transport: GmailTransport = {
+        async saveDraft(_db, _accountId, draft) { calls.push(`save:${draft.providerDraftId ?? "new"}`); return { providerDraftId: "gmail-draft-1" }; },
+        async deleteDraft() { calls.push("delete"); },
+        async send() { calls.push("send"); return { providerMessageId: "gmail-message-1", providerThreadId: "gmail-thread-1" }; },
+      };
+      const session = await createSession(db, "user");
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), gmailTransport: transport });
+      const createdResponse = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ to: [{ name: null, email: "maya@example.com" }], subject: "Hi", body: { text: "Hello", html: null } }) });
+      assert.equal(createdResponse.status, 201);
+      const created = await createdResponse.json();
+      assert.equal(created.providerDraftId, "gmail-draft-1");
+      const sent = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: 0, idempotencyKey: "idempotency-key-123" }) });
+      assert.equal(sent.status, 200);
+      assert.deepEqual(await sent.json(), { draftId: created.id, status: "sent", providerMessageId: "gmail-message-1", providerThreadId: "gmail-thread-1", error: null });
+      const repeated = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: 0, idempotencyKey: "idempotency-key-123" }) });
+      assert.equal(repeated.status, 200);
+      assert.deepEqual(calls, ["save:new", "send"]);
+    } finally {
+      sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("marks an unconfirmed Gmail send as ambiguous instead of retrying it", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-ambiguous-send-test-"));
+    const dbPath = join(tempDir, "ambiguous.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "user", email: "writer@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "account", userId: "user", provider: "gmail", providerEmail: "writer@example.com", providerId: "gmail-writer", scope: "https://www.googleapis.com/auth/gmail.compose" }).run();
+      const transport: GmailTransport = {
+        async saveDraft() { return { providerDraftId: "gmail-draft-1" }; }, async deleteDraft() {},
+        async send() { throw new GmailTransportError("The delivery outcome could not be confirmed", "ambiguous", true); },
+      };
+      const session = await createSession(db, "user"); const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), gmailTransport: transport });
+      const createdResponse = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ to: [{ name: null, email: "maya@example.com" }] }) });
+      assert.equal(createdResponse.status, 201);
+      const created = await createdResponse.json();
+      const response = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: 0, idempotencyKey: "idempotency-key-456" }) });
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).status, "ambiguous");
+    } finally {
+      sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY;
     }
   });
 

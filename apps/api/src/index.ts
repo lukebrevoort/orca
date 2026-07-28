@@ -48,12 +48,14 @@ import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
+import { createGmailTransport, GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 
 const serverConfig = getServerConfig();
 
 type CreateAppOptions = {
   dbFactory?: typeof createDatabaseClient;
   syncPage?: typeof syncGmailAccountPage;
+  gmailTransport?: GmailTransport;
   now?: () => Date;
 };
 
@@ -74,6 +76,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 }> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const syncPage = options.syncPage ?? syncGmailAccountPage;
+  const gmailTransport = options.gmailTransport ?? createGmailTransport();
   const now = options.now ?? (() => new Date());
   const syncStatuses = new Map<string, SyncStatusRecord>();
 
@@ -616,7 +619,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccount(db, c.get("auth").userId);
@@ -624,6 +627,13 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const id = crypto.randomUUID();
       const input = c.req.valid("json");
       db.insert(messageDrafts).values({ id, accountId: account.id, ...draftStorage(input) }).run();
+      const local = toMessageDraft(getMessageDraft(db, account.id, id)!);
+      if (detectGmailCapabilities(account.scope).draft) {
+        try {
+          const provider = await gmailTransport.saveDraft(db, account.id, local);
+          db.update(messageDrafts).set({ providerDraftId: provider.providerDraftId, updatedAt: now() }).where(eq(messageDrafts.id, id)).run();
+        } catch (error) { return transportError(c, error); }
+      }
       return c.json(messageDraftSchema.parse(toMessageDraft(getMessageDraft(db, account.id, id)!)), 201);
     } finally { sqlite.close(); }
   });
@@ -639,7 +649,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccount(db, c.get("auth").userId);
@@ -676,11 +686,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (latest.revision !== update.revision) return staleDraft(c, latest.revision);
         return deliveryStarted(c);
       }
+      const updated = toMessageDraft(getMessageDraft(db, account.id, draft.id)!);
+      if (detectGmailCapabilities(account.scope).draft) {
+        try {
+          const provider = await gmailTransport.saveDraft(db, account.id, updated);
+          db.update(messageDrafts).set({ providerDraftId: provider.providerDraftId, updatedAt: now() }).where(eq(messageDrafts.id, draft.id)).run();
+        } catch (error) { return transportError(c, error); }
+      }
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
     } finally { sqlite.close(); }
   });
 
-  app.delete("/v1/drafts/:id", requireAuth({ dbFactory }), (c) => {
+  app.delete("/v1/drafts/:id", requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccount(db, c.get("auth").userId);
@@ -688,6 +705,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
       if (draft.deliveryStatus !== "draft" || draft.sendIdempotencyKey !== null) return deliveryStarted(c);
+      if (draft.providerDraftId && detectGmailCapabilities(account.scope).draft) {
+        try { await gmailTransport.deleteDraft(db, account.id, draft.providerDraftId); }
+        catch (error) { return transportError(c, error); }
+      }
       const deleted = db.delete(messageDrafts)
         .where(and(
           eq(messageDrafts.id, draft.id),
@@ -704,7 +725,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccount(db, c.get("auth").userId);
@@ -719,7 +740,25 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
         return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(draft));
       }
-      return c.json({ error: { code: "missing_capability", message: "The connected Gmail account has read-only access and cannot deliver mail", retryable: false } }, 501);
+      if (!detectGmailCapabilities(account.scope).send) {
+        return c.json({ error: { code: "missing_capability", message: "The connected Gmail account has read-only access and cannot deliver mail", retryable: false } }, 501);
+      }
+      if (toMessageDraft(draft).attachments.length > 0) {
+        return c.json({ error: { code: "provider_rejected", message: "Attachments must finish uploading before this message can be delivered", retryable: false } }, 409);
+      }
+      const reserved = db.update(messageDrafts).set({ deliveryStatus: "sending", sendIdempotencyKey: command.idempotencyKey, updatedAt: now() })
+        .where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.accountId, account.id), eq(messageDrafts.revision, command.revision), isNull(messageDrafts.sendIdempotencyKey), eq(messageDrafts.deliveryStatus, "draft")))
+        .returning({ id: messageDrafts.id }).get();
+      if (!reserved) return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(getMessageDraft(db, account.id, draft.id)!));
+      const sending = toMessageDraft(getMessageDraft(db, account.id, draft.id)!);
+      try {
+        const provider = await gmailTransport.send(db, account.id, sending);
+        db.update(messageDrafts).set({ deliveryStatus: "sent", providerMessageId: provider.providerMessageId, providerThreadId: provider.providerThreadId, updatedAt: now() }).where(eq(messageDrafts.id, draft.id)).run();
+      } catch (error) {
+        const transport = asTransportError(error);
+        db.update(messageDrafts).set({ deliveryStatus: transport.kind === "rejected" || transport.kind === "auth" ? "rejected" : "ambiguous", updatedAt: now() }).where(eq(messageDrafts.id, draft.id)).run();
+      }
+      return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(getMessageDraft(db, account.id, draft.id)!));
     } finally { sqlite.close(); }
   });
 
@@ -1032,6 +1071,19 @@ function deliveryStarted(c: Context) {
       retryable: false,
     },
   }, 409);
+}
+
+function asTransportError(error: unknown) {
+  return error instanceof GmailTransportError
+    ? error
+    : new GmailTransportError("The delivery outcome could not be confirmed", "ambiguous", true);
+}
+
+function transportError(c: Context, error: unknown) {
+  const transport = asTransportError(error);
+  const code = transport.kind === "ambiguous" ? "ambiguous_delivery" : "provider_rejected";
+  const status = transport.kind === "auth" ? 401 : transport.kind === "rate_limit" ? 429 : transport.kind === "ambiguous" ? 503 : 422;
+  return c.json({ error: { code, message: transport.message, retryable: transport.retryable } }, status);
 }
 
 function getMessageDraft(db: Database, accountId: string, id: string) {
