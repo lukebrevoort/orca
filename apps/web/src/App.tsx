@@ -578,7 +578,7 @@ function InboxApp({
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
-  const composeDraft = useComposeDraft(account?.id ?? "preview");
+  const composeDraft = useComposeDraft(account?.id ?? "preview", "new", demoMode);
   const [zen, setZen] = useState(false);
   const [panelClosing, setPanelClosing] = useState(false);
   const [showSendPermission, setShowSendPermission] = useState(false);
@@ -1175,6 +1175,7 @@ function InboxApp({
             <MessageReader
               detail={threadDetail}
               contacts={composeContacts}
+              demoMode={demoMode}
               error={readerError}
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
@@ -1985,6 +1986,7 @@ export function MessageReader({
   onSaveReminder = async () => {},
   onFinishReminder = async () => {},
   notifyByDefault = false,
+  demoMode = false,
 }: {
   detail: ThreadDetail | null;
   contacts?: MailContact[];
@@ -1999,6 +2001,7 @@ export function MessageReader({
   onSaveReminder?: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>;
   onFinishReminder?: (reminder: Reminder, cancelled?: boolean) => Promise<void>;
   notifyByDefault?: boolean;
+  demoMode?: boolean;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
@@ -2157,6 +2160,7 @@ export function MessageReader({
           <ThreadReplyComposer
             account={detail.account}
             contacts={contacts}
+            demoMode={demoMode}
             recipient={getReplyRecipient(detail, newestMessage)}
             subject={normalizeReplySubject(title)}
             threadId={detail.thread.id}
@@ -2168,8 +2172,8 @@ export function MessageReader({
   );
 }
 
-function ThreadReplyComposer({ account, contacts, recipient, subject, threadId }: { account: MailAccount; contacts: MailContact[]; recipient: MailContact | null; subject: string; threadId: string }) {
-  const controller = useComposeDraft(account.id, `reply:${threadId}`);
+function ThreadReplyComposer({ account, contacts, recipient, subject, threadId, demoMode = false }: { account: MailAccount; contacts: MailContact[]; recipient: MailContact | null; subject: string; threadId: string; demoMode?: boolean }) {
+  const controller = useComposeDraft(account.id, `reply:${threadId}`, demoMode);
   const [expanded, setExpanded] = useState(controller.hasContent);
   const [showPermission, setShowPermission] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<"idle" | "loading" | "error">("idle");

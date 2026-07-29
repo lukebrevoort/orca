@@ -294,7 +294,7 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
   }
 }
 
-export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftController {
+export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean): ComposeDraftController {
   const scopeKey = `${accountId}:${scope}`;
   const [draft, setDraft] = useState(() => readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope));
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
@@ -353,6 +353,13 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
   }, [accountId, flushPendingDraft, scope, scopeKey]);
 
   useEffect(() => {
+    if (demoMode) {
+      setHydratedScope(scopeKey);
+      if (hasComposeContent(draft)) {
+        setSaveMessage("Saved on this device");
+      }
+      return;
+    }
     let cancelled = false;
     void requestDraft("/v1/drafts", messageDraftListSchema).then((drafts) => {
       if (cancelled) return;
@@ -396,7 +403,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
       }
     });
     return () => { cancelled = true; };
-  }, [accountId, scope, scopeKey]);
+  }, [accountId, demoMode, scope, scopeKey]);
 
   const pollProviderStatus = useCallback((draftId: string) => {
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
@@ -462,7 +469,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
   useEffect(() => {
     const serialized = JSON.stringify(persistableDraft(draft));
     if (serialized === persistedDraftRef.current && retryToken === processedRetryTokenRef.current) return;
-    const needsRemoteSave = hasComposeContent(draft) && (
+    const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
       !serverIdRef.current
       || remoteContentSignature(draft) !== lastRemoteSignatureRef.current
       || retryToken !== processedRetryTokenRef.current
@@ -492,7 +499,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
       window.clearTimeout(timer);
       flushPendingDraft();
     };
-  }, [accountId, conflict, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey]);
+  }, [accountId, conflict, demoMode, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey]);
 
   useEffect(() => {
     const retry = () => setRetryToken((current) => current + 1);
