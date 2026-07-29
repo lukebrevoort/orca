@@ -417,6 +417,8 @@ export const messageDrafts = sqliteTable(
     context: text("context"),
     attachments: text("attachments").notNull().default("[]"),
     providerDraftId: text("provider_draft_id"),
+    providerSyncStatus: text("provider_sync_status").notNull().default("not_applicable"),
+    providerSyncError: text("provider_sync_error"),
     providerMessageId: text("provider_message_id"),
     providerThreadId: text("provider_thread_id"),
     revision: integer("revision").notNull().default(0),

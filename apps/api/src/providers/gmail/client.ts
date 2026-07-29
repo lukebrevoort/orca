@@ -27,6 +27,20 @@ export type GmailClient = {
   listLabels(accessToken: string): Promise<GmailLabel[]>;
 };
 
+export type GmailDraft = {
+  id: string;
+  message?: {
+    id?: string;
+    threadId?: string;
+  };
+};
+
+export type GmailDraftClient = {
+  createDraft(accessToken: string, raw: string, threadId?: string | null): Promise<GmailDraft>;
+  updateDraft(accessToken: string, draftId: string, raw: string, threadId?: string | null): Promise<GmailDraft>;
+  deleteDraft(accessToken: string, draftId: string): Promise<void>;
+};
+
 export type GmailTransportClient = {
   createDraft(input: { accessToken: string; raw: string; threadId?: string | null }): Promise<GmailDraftResponse>;
   updateDraft(input: { accessToken: string; draftId: string; raw: string; threadId?: string | null }): Promise<GmailDraftResponse>;
@@ -114,6 +128,27 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
   };
 }
 
+export function createGmailDraftClient(fetchImpl: typeof fetch = fetch): GmailDraftClient {
+  return {
+    createDraft(accessToken, raw, threadId) {
+      return gmailMutation<GmailDraft>(fetchImpl, accessToken, "/drafts", "POST", {
+        message: { raw, ...(threadId ? { threadId } : {}) },
+      });
+    },
+
+    updateDraft(accessToken, draftId, raw, threadId) {
+      return gmailMutation<GmailDraft>(fetchImpl, accessToken, `/drafts/${encodeURIComponent(draftId)}`, "PUT", {
+        id: draftId,
+        message: { raw, ...(threadId ? { threadId } : {}) },
+      });
+    },
+
+    async deleteDraft(accessToken, draftId) {
+      await gmailMutation<undefined>(fetchImpl, accessToken, `/drafts/${encodeURIComponent(draftId)}`, "DELETE");
+    },
+  };
+}
+
 async function gmailRequest<T>(
   fetchImpl: typeof fetch,
   accessToken: string,
@@ -135,6 +170,29 @@ async function gmailRequest<T>(
 
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+async function gmailMutation<T>(
+  fetchImpl: typeof fetch,
+  accessToken: string,
+  path: string,
+  method: "POST" | "PUT" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const response = await fetchImpl(`${gmailApiBaseUrl}${path}`, {
+    method,
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      ...(body ? { "content-type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  if (!response.ok) {
+    throw new GmailApiError("Gmail draft request failed", response.status);
+  }
+
+  return response.status === 204 ? undefined as T : await response.json() as T;
 }
 
 function buildInboxQuery(since: Date) {

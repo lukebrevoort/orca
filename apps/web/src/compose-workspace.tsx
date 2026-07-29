@@ -10,7 +10,7 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import type { InboxMessage, MailContact } from "@orca/shared";
+import { messageDraftSchema, type InboxMessage, type MailContact, type MessageDraft } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
@@ -27,6 +27,9 @@ export type ComposeAttachment = {
 export type ComposeDraft = {
   id: string;
   accountId: string;
+  revision: number | null;
+  providerSyncStatus: MessageDraft["providerSyncStatus"] | null;
+  providerSyncError: string | null;
   to: MailContact[];
   cc: MailContact[];
   bcc: MailContact[];
@@ -41,11 +44,20 @@ export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subje
 export type ComposeDraftController = {
   draft: ComposeDraft;
   saveStatus: ComposeSaveStatus;
+  saveMessage?: string;
+  conflict?: ComposeDraftConflict | null;
   hasContent: boolean;
   updateDraft: (update: Partial<ComposeDraftFields>) => void;
   attachFiles: (files: Iterable<File>) => ComposeAttachmentAcceptance;
   removeAttachment: (attachmentId: string) => void;
-  discardDraft: () => void;
+  discardDraft: () => Promise<boolean> | void;
+  retrySave?: () => void;
+  resolveConflict?: (choice: "server" | "local") => Promise<void>;
+};
+
+export type ComposeDraftConflict = {
+  server: MessageDraft;
+  local: ComposeDraft;
 };
 
 export type ComposeAttachmentRejection = {
@@ -62,7 +74,8 @@ export const MAX_COMPOSE_ATTACHMENTS = 25;
 export const MAX_COMPOSE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
-const SAVE_DELAY_MS = 420;
+export const COMPOSE_AUTOSAVE_DELAY_MS = 420;
+const PROVIDER_POLL_DELAY_MS = 500;
 
 function draftStorageKey(accountId: string, scope = "new") {
   return `orca-compose-draft:${accountId}:${scope}`;
@@ -72,6 +85,9 @@ export function createEmptyComposeDraft(accountId: string): ComposeDraft {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `draft-${Date.now()}`,
     accountId,
+    revision: null,
+    providerSyncStatus: null,
+    providerSyncError: null,
     to: [],
     cc: [],
     bcc: [],
@@ -159,6 +175,69 @@ function persistableDraft(draft: ComposeDraft) {
   return rest;
 }
 
+function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "attachments">) {
+  return JSON.stringify({
+    to: draft.to,
+    cc: draft.cc,
+    bcc: draft.bcc,
+    subject: draft.subject,
+    body: draft.body,
+    attachments: draft.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size })),
+  });
+}
+
+function scopeContext(scope: string) {
+  if (!scope.startsWith("reply:")) return null;
+  const threadId = scope.slice("reply:".length);
+  return { kind: "reply" as const, threadId, messageId: threadId };
+}
+
+function draftMatchesScope(draft: MessageDraft, scope: string) {
+  return scope.startsWith("reply:")
+    ? draft.context?.threadId === scope.slice("reply:".length)
+    : draft.context === null;
+}
+
+function fromMessageDraft(draft: MessageDraft): ComposeDraft {
+  return {
+    id: draft.id,
+    accountId: draft.accountId,
+    revision: draft.revision,
+    providerSyncStatus: draft.providerSyncStatus,
+    providerSyncError: draft.providerSyncError,
+    to: draft.to,
+    cc: draft.cc,
+    bcc: draft.bcc,
+    subject: draft.subject,
+    body: draft.body.text,
+    attachments: [],
+    updatedAt: draft.updatedAt,
+  };
+}
+
+const messageDraftListSchema = {
+  parse(value: unknown) {
+    if (!Array.isArray(value)) throw new Error("Draft response was not a list");
+    return value.map((item) => messageDraftSchema.parse(item));
+  },
+};
+
+class DraftRequestError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+  }
+}
+
+async function requestDraft<T>(path: string, schema: { parse(value: unknown): T }, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init);
+  const value = response.status === 204 ? null : await response.json();
+  if (!response.ok) {
+    const error = value as { error?: { code?: string; message?: string } };
+    throw new DraftRequestError(response.status, error.error?.code ?? "request_failed", error.error?.message ?? "Draft request failed");
+  }
+  return schema.parse(value);
+}
+
 export function isValidEmail(value: string) {
   return EMAIL_PATTERN.test(value.trim());
 }
@@ -215,14 +294,24 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
   }
 }
 
-export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftController {
+export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean): ComposeDraftController {
+  const scopeKey = `${accountId}:${scope}`;
   const [draft, setDraft] = useState(() => readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope));
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
+  const [saveMessage, setSaveMessage] = useState("Not saved yet");
+  const [conflict, setConflict] = useState<ComposeDraftConflict | null>(null);
+  const [hydratedScope, setHydratedScope] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const storageScopeRef = useRef(scopeKey);
   const persistedDraftRef = useRef(JSON.stringify(persistableDraft(draft)));
-  const storageScopeRef = useRef(`${accountId}:${scope}`);
   const pendingDraftRef = useRef<{ key: string; serialized: string } | null>(null);
-  const skipPersistenceRef = useRef(false);
   const attachmentsRef = useRef(draft.attachments);
+  const serverIdRef = useRef(draft.revision === null ? null : draft.id);
+  const serverRevisionRef = useRef(draft.revision);
+  const lastRemoteSignatureRef = useRef<string | null>(null);
+  const saveSequenceRef = useRef<Promise<void>>(Promise.resolve());
+  const processedRetryTokenRef = useRef(0);
+  const pollTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     attachmentsRef.current = draft.attachments;
@@ -230,6 +319,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
 
   useEffect(() => () => {
     revokeComposeAttachments(attachmentsRef.current);
+    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
   }, []);
 
   const flushPendingDraft = useCallback(() => {
@@ -246,49 +336,187 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
   }, []);
 
   useEffect(() => {
-    const nextScope = `${accountId}:${scope}`;
-    if (storageScopeRef.current === nextScope) return;
+    if (storageScopeRef.current === scopeKey) return;
     flushPendingDraft();
-    storageScopeRef.current = nextScope;
-    skipPersistenceRef.current = true;
+    storageScopeRef.current = scopeKey;
     revokeComposeAttachments(attachmentsRef.current);
     const restored = readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
     persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
+    serverIdRef.current = restored.revision === null ? null : restored.id;
+    serverRevisionRef.current = restored.revision;
+    lastRemoteSignatureRef.current = null;
+    setConflict(null);
+    setHydratedScope(null);
     setDraft(restored);
     setSaveStatus("saved");
-  }, [accountId, flushPendingDraft, scope]);
+    setSaveMessage(hasComposeContent(restored) ? "Recovered from this device" : "Not saved yet");
+  }, [accountId, flushPendingDraft, scope, scopeKey]);
 
   useEffect(() => {
-    if (skipPersistenceRef.current) {
-      skipPersistenceRef.current = false;
+    if (demoMode) {
+      setHydratedScope(scopeKey);
+      if (hasComposeContent(draft)) {
+        setSaveMessage("Saved on this device");
+      }
       return;
     }
-    const serialized = JSON.stringify(persistableDraft(draft));
-    if (serialized === persistedDraftRef.current) return;
-    pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
+    let cancelled = false;
+    void requestDraft("/v1/drafts", messageDraftListSchema).then((drafts) => {
+      if (cancelled) return;
+      const local = readComposeDraft(accountId, window.localStorage, scope);
+      const sameDraft = local.revision === null ? null : drafts.find((item) => item.id === local.id);
+      const latest = sameDraft ?? drafts.find((item) => draftMatchesScope(item, scope)) ?? null;
+      if (!hasComposeContent(local) && latest) {
+        const restored = fromMessageDraft(latest);
+        serverIdRef.current = latest.id;
+        serverRevisionRef.current = latest.revision;
+        lastRemoteSignatureRef.current = remoteContentSignature(restored);
+        persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
+        window.localStorage.setItem(draftStorageKey(accountId, scope), persistedDraftRef.current);
+        setDraft(restored);
+        setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
+        setSaveMessage(providerSaveMessage(latest));
+      } else if (hasComposeContent(local) && latest) {
+        const serverDraft = fromMessageDraft(latest);
+        serverIdRef.current = latest.id;
+        serverRevisionRef.current = latest.revision;
+        lastRemoteSignatureRef.current = remoteContentSignature(serverDraft);
+        if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.revision === null || latest.revision > local.revision)) {
+          setConflict({ server: latest, local });
+          setSaveStatus("failed");
+          setSaveMessage("Another version was saved — choose which one to keep");
+        } else {
+          setDraft((current) => ({ ...current, id: latest.id, revision: latest.revision, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError }));
+          setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
+          setSaveMessage(providerSaveMessage(latest));
+        }
+      } else if (hasComposeContent(local)) {
+        setRetryToken((current) => current + 1);
+      }
+      setHydratedScope(scopeKey);
+    }).catch(() => {
+      if (cancelled) return;
+      setHydratedScope(scopeKey);
+      if (hasComposeContent(draft)) {
+        setSaveStatus("failed");
+        setSaveMessage("Saved on this device · Orca will retry when connected");
+      }
+    });
+    return () => { cancelled = true; };
+  }, [accountId, demoMode, scope, scopeKey]);
+
+  const pollProviderStatus = useCallback((draftId: string) => {
+    if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);
+    pollTimerRef.current = window.setTimeout(() => {
+      void requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema).then((latest) => {
+        if (serverIdRef.current !== latest.id || serverRevisionRef.current !== latest.revision) return;
+        setDraft((current) => ({ ...current, providerSyncStatus: latest.providerSyncStatus, providerSyncError: latest.providerSyncError }));
+        setSaveStatus(latest.providerSyncStatus === "failed" ? "failed" : latest.providerSyncStatus === "pending" ? "saving" : "saved");
+        setSaveMessage(providerSaveMessage(latest));
+        if (latest.providerSyncStatus === "pending") pollProviderStatus(latest.id);
+      }).catch(() => {
+        setSaveStatus("failed");
+        setSaveMessage("Saved on this device · provider status is unavailable");
+      });
+    }, PROVIDER_POLL_DELAY_MS);
+  }, []);
+
+  const persistRemote = useCallback(async (snapshot: ComposeDraft, force = false) => {
+    if (!hasComposeContent(snapshot) || conflict) return;
+    const signature = remoteContentSignature(snapshot);
+    if (!force && signature === lastRemoteSignatureRef.current && serverIdRef.current) return;
     setSaveStatus("saving");
+    setSaveMessage("Saving to Orca…");
+    const attachments = snapshot.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size }));
+    const content = { to: snapshot.to, cc: snapshot.cc, bcc: snapshot.bcc, subject: snapshot.subject, body: { text: snapshot.body, html: null }, context: scopeContext(scope), attachments };
+    try {
+      const serverId = serverIdRef.current;
+      const revision = serverRevisionRef.current;
+      const saved = serverId !== null && revision !== null
+        ? await requestDraft(`/v1/drafts/${encodeURIComponent(serverId)}`, messageDraftSchema, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ revision, ...content }),
+          })
+        : await requestDraft("/v1/drafts", messageDraftSchema, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(content),
+          });
+      serverIdRef.current = saved.id;
+      serverRevisionRef.current = saved.revision;
+      lastRemoteSignatureRef.current = signature;
+      setDraft((current) => ({ ...current, id: saved.id, revision: saved.revision, providerSyncStatus: saved.providerSyncStatus, providerSyncError: saved.providerSyncError }));
+      setSaveStatus(saved.providerSyncStatus === "pending" ? "saving" : saved.providerSyncStatus === "failed" ? "failed" : "saved");
+      setSaveMessage(providerSaveMessage(saved));
+      if (saved.providerSyncStatus === "pending") pollProviderStatus(saved.id);
+    } catch (error) {
+      if (error instanceof DraftRequestError && error.code === "stale_draft" && serverIdRef.current) {
+        try {
+          const server = await requestDraft(`/v1/drafts/${encodeURIComponent(serverIdRef.current)}`, messageDraftSchema);
+          setConflict({ server, local: snapshot });
+          setSaveMessage("Another version was saved — choose which one to keep");
+        } catch {
+          setSaveMessage("Saved on this device · Orca will retry when connected");
+        }
+      } else {
+        setSaveMessage("Saved on this device · Orca will retry when connected");
+      }
+      setSaveStatus("failed");
+    }
+  }, [conflict, pollProviderStatus, scope]);
+
+  useEffect(() => {
+    const serialized = JSON.stringify(persistableDraft(draft));
+    if (serialized === persistedDraftRef.current && retryToken === processedRetryTokenRef.current) return;
+    const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
+      !serverIdRef.current
+      || remoteContentSignature(draft) !== lastRemoteSignatureRef.current
+      || retryToken !== processedRetryTokenRef.current
+    );
+    const forceRemoteSave = retryToken !== processedRetryTokenRef.current;
+    pendingDraftRef.current = { key: draftStorageKey(accountId, scope), serialized };
+    if (needsRemoteSave) {
+      setSaveStatus("saving");
+      setSaveMessage("Saving…");
+    }
     const timer = window.setTimeout(() => {
-      setSaveStatus(flushPendingDraft() ? "saved" : "failed");
-    }, SAVE_DELAY_MS);
+      processedRetryTokenRef.current = retryToken;
+      const localSaved = flushPendingDraft();
+      if (!localSaved) {
+        setSaveStatus("failed");
+        setSaveMessage("Couldn’t save on this device — keep this tab open");
+        return;
+      }
+      if (hydratedScope === scopeKey && needsRemoteSave && !conflict) {
+        saveSequenceRef.current = saveSequenceRef.current.then(() => persistRemote(draft, forceRemoteSave));
+      } else if (!hasComposeContent(draft)) {
+        setSaveStatus("saved");
+        setSaveMessage("Not saved yet");
+      }
+    }, COMPOSE_AUTOSAVE_DELAY_MS);
     return () => {
       window.clearTimeout(timer);
       flushPendingDraft();
     };
-  }, [accountId, draft, flushPendingDraft, scope]);
+  }, [accountId, conflict, demoMode, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey]);
+
+  useEffect(() => {
+    const retry = () => setRetryToken((current) => current + 1);
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, []);
 
   const hasContent = hasComposeContent(draft);
-  const hasSessionAttachments = draft.attachments.length > 0;
   useEffect(() => {
-    // Text can be durable on device, but attachment bytes are session-only.
-    if (!hasContent) return;
-    if (saveStatus === "saved" && !hasSessionAttachments) return;
+    if (!draft.attachments.length) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warnBeforeUnload);
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
-  }, [hasContent, hasSessionAttachments, saveStatus]);
+  }, [draft.attachments.length]);
 
   function updateDraft(update: Partial<ComposeDraftFields>) {
     setDraft((current) => ({ ...current, ...update, updatedAt: new Date().toISOString() }));
@@ -299,11 +527,7 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
     setDraft((current) => {
       acceptance = acceptComposeFiles(current.attachments, files);
       if (!acceptance.accepted.length) return current;
-      return {
-        ...current,
-        attachments: [...current.attachments, ...acceptance.accepted],
-        updatedAt: new Date().toISOString(),
-      };
+      return { ...current, attachments: [...current.attachments, ...acceptance.accepted], updatedAt: new Date().toISOString() };
     });
     return acceptance;
   }
@@ -312,24 +536,78 @@ export function useComposeDraft(accountId: string, scope = "new"): ComposeDraftC
     setDraft((current) => {
       const remaining = current.attachments.filter((attachment) => attachment.id !== attachmentId);
       if (remaining.length === current.attachments.length) return current;
-      for (const attachment of current.attachments) {
-        if (attachment.id === attachmentId) revokeComposeAttachment(attachment);
-      }
+      for (const attachment of current.attachments) if (attachment.id === attachmentId) revokeComposeAttachment(attachment);
       return { ...current, attachments: remaining, updatedAt: new Date().toISOString() };
     });
   }
 
-  function discardDraft() {
+  async function discardDraft() {
+    try {
+      if (serverIdRef.current) {
+        await requestDraft(`/v1/drafts/${encodeURIComponent(serverIdRef.current)}`, { parse: () => null }, { method: "DELETE" });
+      }
+    } catch (error) {
+      setSaveStatus("failed");
+      setSaveMessage(error instanceof DraftRequestError ? error.message : "Couldn’t discard this draft. It is still safe.");
+      return false;
+    }
     const empty = createEmptyComposeDraft(accountId);
     pendingDraftRef.current = null;
     revokeComposeAttachments(attachmentsRef.current);
     window.localStorage.removeItem(draftStorageKey(accountId, scope));
     persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
+    serverIdRef.current = null;
+    serverRevisionRef.current = null;
+    lastRemoteSignatureRef.current = null;
+    setConflict(null);
     setDraft(empty);
     setSaveStatus("saved");
+    setSaveMessage("Draft discarded");
+    return true;
   }
 
-  return { draft, saveStatus, hasContent, updateDraft, attachFiles, removeAttachment, discardDraft };
+  async function resolveConflict(choice: "server" | "local") {
+    if (!conflict) return;
+    if (choice === "server") {
+      const restored = fromMessageDraft(conflict.server);
+      serverIdRef.current = conflict.server.id;
+      serverRevisionRef.current = conflict.server.revision;
+      lastRemoteSignatureRef.current = remoteContentSignature(restored);
+      setDraft(restored);
+      setConflict(null);
+      setSaveStatus(conflict.server.providerSyncStatus === "failed" ? "failed" : "saved");
+      setSaveMessage(providerSaveMessage(conflict.server));
+      return;
+    }
+    const local = { ...conflict.local, id: crypto.randomUUID(), revision: null, providerSyncStatus: null, providerSyncError: null, updatedAt: new Date().toISOString() };
+    serverIdRef.current = null;
+    serverRevisionRef.current = null;
+    lastRemoteSignatureRef.current = null;
+    setConflict(null);
+    setDraft(local);
+    setRetryToken((current) => current + 1);
+  }
+
+  return {
+    draft,
+    saveStatus,
+    saveMessage,
+    conflict,
+    hasContent,
+    updateDraft,
+    attachFiles,
+    removeAttachment,
+    discardDraft,
+    retrySave: () => setRetryToken((current) => current + 1),
+    resolveConflict,
+  };
+}
+
+function providerSaveMessage(draft: MessageDraft) {
+  if (draft.providerSyncStatus === "pending") return "Saved to Orca · syncing with Gmail…";
+  if (draft.providerSyncStatus === "failed") return `Saved to Orca · ${draft.providerSyncError ?? "Gmail retry needed"}`;
+  if (draft.providerSyncStatus === "synced") return "Saved to Orca and Gmail";
+  return "Saved to Orca";
 }
 
 const slashCommands = [
@@ -369,7 +647,19 @@ export function ComposeWorkspace({
   canSend?: boolean;
   onRequestSendAccess?: () => void;
 }) {
-  const { draft, saveStatus, hasContent, updateDraft, attachFiles, removeAttachment, discardDraft } = controller;
+  const {
+    draft,
+    saveStatus,
+    saveMessage = saveStatus === "saved" ? (draft.attachments.length ? "Text saved" : "Saved on this device") : saveStatus === "saving" ? "Saving…" : "Couldn’t save — keep this tab open",
+    conflict = null,
+    hasContent,
+    updateDraft,
+    attachFiles,
+    removeAttachment,
+    discardDraft,
+    retrySave = () => {},
+    resolveConflict = async () => {},
+  } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [draggingFiles, setDraggingFiles] = useState(false);
@@ -382,14 +672,14 @@ export function ComposeWorkspace({
       ? "Gmail has confirmed draft and send access. Delivery stays off until Orca's send transport is connected."
       : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
 
-  function closeOrDiscard() {
+  async function closeOrDiscard() {
     if (!hasContent) {
       onClose?.();
       return;
     }
-    if (window.confirm("Discard this saved draft? This cannot be undone.")) {
-      discardDraft();
-      onClose?.();
+    if (window.confirm("Discard this draft from Orca and Gmail?")) {
+      const discarded = await discardDraft();
+      if (discarded !== false) onClose?.();
     }
   }
 
@@ -485,11 +775,12 @@ export function ComposeWorkspace({
       <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Return to compose</span></button>
-          <DraftStatus hasSessionAttachments={draft.attachments.length > 0} status={saveStatus} />
+          <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
         </header>
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
             {editor}
+            {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
         </div>
@@ -501,7 +792,8 @@ export function ComposeWorkspace({
     return (
       <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
-        <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
+        {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+        <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={() => void closeOrDiscard()} onRequestSendAccess={onRequestSendAccess} />
         {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
     );
@@ -514,7 +806,8 @@ export function ComposeWorkspace({
         <span className="compose-contact-count">{contactsLabel}</span>
       </div>
       {editor}
-      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} />
+      {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={() => void closeOrDiscard()} onRequestSendAccess={onRequestSendAccess} />
       {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
   );
@@ -725,10 +1018,16 @@ function ComposeDropOverlay() {
 
 function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, onRequestSendAccess }: { canSend: boolean; controller: ComposeDraftController; deliveryReason: string; onDiscard: () => void; onRequestSendAccess?: () => void }) {
   const reasonId = useId();
-  const { draft, hasContent, saveStatus } = controller;
+  const {
+    draft,
+    hasContent,
+    saveStatus,
+    saveMessage = saveStatus === "saved" ? (draft.attachments.length ? "Text saved" : "Saved on this device") : saveStatus === "saving" ? "Saving…" : "Couldn’t save — keep this tab open",
+    retrySave = () => {},
+  } = controller;
   return (
     <footer className="compose-delivery-bar">
-      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
+      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
         <button
@@ -741,6 +1040,21 @@ function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, on
       </div>
       <p id={reasonId}>{deliveryReason}</p>
     </footer>
+  );
+}
+
+function DraftConflictNotice({ conflict, onResolve }: { conflict: ComposeDraftConflict; onResolve: (choice: "server" | "local") => Promise<void> }) {
+  return (
+    <section aria-label="Draft recovery choice" className="compose-conflict" role="alert">
+      <div>
+        <strong>This draft changed in another tab.</strong>
+        <span>The newer saved copy is from {new Date(conflict.server.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Your words are still safe on this device.</span>
+      </div>
+      <div>
+        <button onClick={() => void onResolve("server")} type="button">Use newer version</button>
+        <button onClick={() => void onResolve("local")} type="button">Keep mine as a new draft</button>
+      </div>
+    </section>
   );
 }
 
@@ -910,7 +1224,7 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
   return (
     <div className="compose-recipient-row">
       <span className="compose-recipient-label" id={labelId}>{label}</span>
-      <div aria-labelledby={labelId} className={`compose-recipient-box${error ? " compose-recipient-box-error" : ""}`}>
+      <div className={`compose-recipient-box${error ? " compose-recipient-box-error" : ""}`}>
         {recipients.map((recipient) => (
           <span className="compose-recipient-chip" key={recipient.email}>
             <span>{recipient.name ?? recipient.email}</span>
@@ -938,6 +1252,7 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
           onPaste={onPaste}
           placeholder={recipients.length ? "Add another…" : "maya@example.com…"}
           ref={inputRef}
+          role="combobox"
           spellCheck={false}
           type="email"
           value={query}
@@ -953,19 +1268,17 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
   );
 }
 
-function DraftStatus({ hasSessionAttachments, status }: { hasSessionAttachments: boolean; status: ComposeSaveStatus }) {
-  const label = hasSessionAttachments
-    ? status === "saving"
-      ? "Saving text…"
-      : status === "failed"
-        ? "Couldn’t save — keep this tab open"
-        : "Text saved · attachments stay until you close this tab"
-    : status === "saved"
-      ? "Saved on this device"
-      : status === "saving"
-        ? "Saving…"
-        : "Couldn’t save — keep this tab open";
-  return <span aria-live="polite" className={`compose-save-status compose-save-status-${status}`}><span aria-hidden="true" />{label}</span>;
+function DraftStatus({ hasSessionAttachments, message, onRetry, status }: { hasSessionAttachments: boolean; message: string; onRetry: () => void; status: ComposeSaveStatus }) {
+  const label = hasSessionAttachments && status === "saved"
+    ? `${message} · attachments stay until you close this tab`
+    : message;
+  return (
+    <span aria-live="polite" className={`compose-save-status compose-save-status-${status}`}>
+      <span aria-hidden="true" />
+      {label}
+      {status === "failed" ? <button className="compose-save-retry" onClick={onRetry} type="button">Retry</button> : null}
+    </span>
+  );
 }
 
 function getSlashQuery(body: string, cursor: number) {
