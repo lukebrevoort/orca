@@ -201,7 +201,7 @@ function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRec
   return account;
 }
 
-async function readGmailProviderTokens(db: DatabaseClient, accountId: string) {
+export async function readGmailProviderTokens(db: DatabaseClient, accountId: string) {
   const account = db.select({
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
