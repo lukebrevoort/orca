@@ -63,6 +63,8 @@ export {
   updateReminderSchema,
   updateMessageDraftSchema,
   updateSenderAttentionRuleSchema,
+  updateUserPreferencesSchema,
+  userPreferencesSchema,
 } from "./schemas.ts";
 
 export type {
@@ -132,4 +134,6 @@ export type {
   UpdateReminder,
   UpdateMessageDraft,
   UpdateSenderAttentionRule,
+  UpdateUserPreferences,
+  UserPreferences,
 } from "./schemas.ts";

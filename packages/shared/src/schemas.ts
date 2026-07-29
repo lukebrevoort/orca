@@ -45,6 +45,20 @@ export type MailAccount = z.infer<typeof mailAccountSchema>;
 export const meResponseSchema = mailAccountSchema;
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
+export const userPreferencesSchema = z.object({
+  signature: z.string().max(10_000),
+  composeFormat: z.enum(["plain", "rich"]),
+  replyBehavior: z.enum(["reply", "reply_all"]),
+  notifyByDefault: z.boolean(),
+}).strict();
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+
+export const updateUserPreferencesSchema = userPreferencesSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "Expected at least one preference" },
+);
+export type UpdateUserPreferences = z.infer<typeof updateUserPreferencesSchema>;
+
 export const syncStateSchema = z.enum(["idle", "syncing", "auth_needed", "error"]);
 export type SyncState = z.infer<typeof syncStateSchema>;
 

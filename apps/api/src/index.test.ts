@@ -32,6 +32,32 @@ describe("Orca API", () => {
     assert.equal(response.status, 401);
   });
 
+  test("persists account-level writing and reminder preferences", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-preferences-test-"));
+    const dbPath = join(tempDir, "preferences.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "preferences_user", email: "preferences@example.com" }).run();
+      const session = await createSession(db, "preferences_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      assert.deepEqual(await (await testApp.request("/v1/preferences", { headers })).json(), { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
+      const saved = await testApp.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({ signature: "Warmly,\nLuke", composeFormat: "rich", replyBehavior: "reply_all", notifyByDefault: true }) });
+      assert.equal(saved.status, 200);
+      assert.deepEqual(await saved.json(), { signature: "Warmly,\nLuke", composeFormat: "rich", replyBehavior: "reply_all", notifyByDefault: true });
+      assert.equal((await testApp.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({}) })).status, 400);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("creates account-owned drafts with revisions and a safe delivery boundary", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");

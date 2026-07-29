@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -85,6 +85,19 @@ describe("App", () => {
     expect(html).toContain("preference-option preference-option-selected");
     expect(html).toContain("Notify me by default");
     expect(html).toContain("checked=\"\"");
+  });
+
+  test("gives every settings category a discoverable home and preserves legacy destinations", () => {
+    const html = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="light" />);
+
+    expect(html).toContain("Make Orca");
+    expect(html).toContain("Appearance &amp; reading");
+    expect(html).toContain("Inbox &amp; attention");
+    expect(html).toContain("/settings/attention-views");
+    expect(html).toContain("/settings/integrations/gmail");
+    expect(html).toContain("Writing");
+    expect(html).toContain("Privacy &amp; data");
+    expect(html).toContain("Save account choices");
   });
 
   test("resumes Gmail sync until label migration data is ready", async () => {

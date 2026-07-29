@@ -5,10 +5,11 @@ import {
   useState,
   type CSSProperties,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { attentionViewSettingSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -188,6 +189,9 @@ export function App() {
     return () => abortController.abort();
   }, [devPreview]);
 
+  if (isSettingsDevPreviewRoute()) {
+    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} demoMode />;
+  }
   if (devPreview) {
     return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
   }
@@ -198,6 +202,10 @@ export function App() {
 
   if (isReaderPreferencesRoute()) {
     return <ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} />;
+  }
+
+  if (isSettingsRoute()) {
+    return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -217,6 +225,63 @@ export function App() {
 
   return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
 }
+
+const defaultAccountPreferences: UserPreferences = { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false };
+
+export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
+  preferences: ReaderPreferences;
+  setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
+  systemTheme: Theme;
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+  demoMode?: boolean;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [accountPreferences, setAccountPreferences] = useState<UserPreferences>(defaultAccountPreferences);
+  const [accountStatus, setAccountStatus] = useState<"loading" | "ready" | "saving" | "error">(demoMode ? "ready" : "loading");
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { titleRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (demoMode) return;
+    const controller = new AbortController();
+    fetchJson("/v1/preferences", userPreferencesSchema, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) { setAccountPreferences(value); setAccountStatus("ready"); } })
+      .catch((error) => { if (!controller.signal.aborted) { setAccountStatus("error"); setAccountError(getErrorMessage(error)); } });
+    return () => controller.abort();
+  }, [demoMode]);
+
+  const updateReader = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => setPreferences((current) => ({ ...current, [key]: value }));
+  const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => { setSaved(false); setAccountPreferences((current) => ({ ...current, [key]: value })); };
+  async function saveAccountPreferences() {
+    if (accountPreferences.signature.length > 10_000) { setAccountError("Your signature must be 10,000 characters or fewer."); return; }
+    if (demoMode) { setSaved(true); return; }
+    setAccountStatus("saving"); setAccountError(null);
+    try { setAccountPreferences(await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(accountPreferences) })); setSaved(true); setAccountStatus("ready"); }
+    catch (error) { setAccountError(`Could not save your preferences. ${getErrorMessage(error)}`); setAccountStatus("error"); }
+  }
+
+  return <main className="settings-home-page">
+    <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
+    <div className="settings-home-layout">
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#privacy">Privacy & data</a></aside>
+      <section className="settings-home-content" aria-labelledby="settings-title">
+        <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
+        <SettingsSection id="account" title="Account" note="Account-level"><div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected Gmail account.</span></div><a className="settings-row-link" href="/settings/integrations/gmail">Review connected account →</a></SettingsSection>
+        <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Conversation spacing" hint="Choose the amount of room around each message." name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
+        <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
+        <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="connected" title="Connected accounts" note="Provider access"><p className="settings-section-copy">See Gmail capabilities, connection health, last sync, and safely reconnect or import labels.</p><a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a><a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a></SettingsSection>
+        <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores your normalized mail locally and only requests the Gmail permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a></SettingsSection>
+        <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices follow your account."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
+      </section>
+    </div>
+  </main>;
+}
+
+function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
 
 export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme }: {
   preferences: ReaderPreferences;
@@ -1082,14 +1147,8 @@ function InboxApp({
             {activeMailbox === "later" ? <button className="later-rename" onClick={() => void renameLaterView()} type="button">Rename {laterLabel}</button> : null}
           </section>
 
-          <a className="settings-link" href="/settings/attention-views">
-            <span aria-hidden="true">⚙</span> Attention views
-          </a>
-          <a className="settings-link" href="/settings/integrations/gmail">
-            <span aria-hidden="true">↳</span> Gmail connection
-          </a>
-          <a className="settings-link" href="/settings/reading">
-            <span aria-hidden="true">Aa</span> Reading preferences
+          <a className="settings-link" href="/settings">
+            <span aria-hidden="true">⚙</span> Settings
           </a>
 
           <OrganizationSidebar
@@ -2917,6 +2976,9 @@ function isAttentionSettingsRoute() {
 function isReaderPreferencesRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/reading";
 }
+
+function isSettingsRoute() { return typeof window !== "undefined" && window.location.pathname === "/settings"; }
+function isSettingsDevPreviewRoute() { return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/settings"; }
 
 export function isDevPreviewPath(pathname: string, isDevelopment: boolean, isDemoBuild = false) {
   return (isDevelopment && pathname === "/dev/inbox")
