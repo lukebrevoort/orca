@@ -866,7 +866,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!detectGmailCapabilities(account.scope).send) {
         return c.json({ error: { code: "missing_capability", message: "The connected Gmail account has read-only access and cannot deliver mail", retryable: false } }, 501);
       }
-      if (toMessageDraft(draft).attachments.length > 0) {
+      if (toMessageDraft(draft).attachments.some((attachment) => !attachment.contentBase64)) {
         return c.json({ error: { code: "provider_rejected", message: "Attachments must finish uploading before this message can be delivered", retryable: false } }, 409);
       }
       const reserved = db.update(messageDrafts).set({ deliveryStatus: "sending", sendIdempotencyKey: command.idempotencyKey, updatedAt: now() })
@@ -1007,6 +1007,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           id: emails.id, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
           toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
           subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
+          internetMessageId: emails.internetMessageId, references: emails.references,
           receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
           humanSignal: emails.humanSignal, labelName: labels.name,
         }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
@@ -1036,6 +1037,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
             unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
+            internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
             attachments: attachmentsByMessage.get(message.id) ?? [],
           };
         });

@@ -45,6 +45,8 @@ export function normalizeGmailMessage(
     labels: labelIds,
     bodyText: findBodyPart(message.payload, "text/plain"),
     bodyHtml: findBodyPart(message.payload, "text/html"),
+    internetMessageId: headers.get("message-id")?.trim() || null,
+    references: parseReferences(headers.get("references")),
     attachments: findAttachments(message.payload, options.accountId, message.id),
     raw: {
       provider: "gmail",
@@ -54,6 +56,11 @@ export function normalizeGmailMessage(
       labelIds,
     },
   };
+}
+
+function parseReferences(value: string | undefined): string[] {
+  if (!value) return [];
+  return value.match(/<[^<>]+>/g) ?? value.split(/\s+/).map((item) => item.trim()).filter(Boolean);
 }
 
 function findAttachments(

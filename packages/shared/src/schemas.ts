@@ -136,6 +136,8 @@ export const normalizedMessageSchema = inboxMessageSchema
     bcc: z.array(mailContactSchema),
     bodyText: z.string().nullable(),
     bodyHtml: z.string().nullable(),
+    internetMessageId: z.string().nullable(),
+    references: z.array(z.string()),
     raw: normalizedMessageRawSchema,
   })
   .strict();
@@ -165,14 +167,19 @@ const outboundContextSchema = z.object({
   kind: z.enum(["reply", "reply_all", "forward"]),
   threadId: nonEmptyStringSchema,
   messageId: nonEmptyStringSchema,
+  providerMessageId: nonEmptyStringSchema,
+  providerThreadId: nonEmptyStringSchema,
+  inReplyTo: z.string().regex(/^<[^<>\s\r\n]+>$/).nullable(),
+  references: z.array(z.string().regex(/^<[^<>\s\r\n]+>$/)).max(100),
 }).strict();
 export type OutboundContext = z.infer<typeof outboundContextSchema>;
 
 const outboundAttachmentSchema = z.object({
   id: nonEmptyStringSchema,
   filename: z.string().trim().min(1).max(255),
-  mimeType: z.string().trim().min(1).max(255),
+  mimeType: z.string().trim().max(255).regex(/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/),
   size: z.number().int().positive().max(25 * 1024 * 1024),
+  contentBase64: z.string().max(36 * 1024 * 1024).nullable().default(null),
 }).strict();
 export type OutboundAttachment = z.infer<typeof outboundAttachmentSchema>;
 

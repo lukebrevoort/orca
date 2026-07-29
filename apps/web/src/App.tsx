@@ -6,9 +6,10 @@ import {
   type CSSProperties,
   type Dispatch,
   type ReactNode,
+  type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
 import { attentionViewSettingSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
@@ -19,7 +20,7 @@ import {
   messageHtmlBodies,
 } from "./demo-data";
 import { getContactSignature, type ContactSignature } from "./contact-signature";
-import { collectComposeContacts, ComposeWorkspace, useComposeDraft } from "./compose-workspace";
+import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -874,6 +875,15 @@ function InboxApp({
     window.requestAnimationFrame(() => messageRowRefs.current.get(originMessageIdRef.current ?? "")?.focus());
   }
 
+  async function reconcileSentMessage() {
+    if (demoMode) {
+      setReaderRefreshKey((key) => key + 1);
+      return;
+    }
+    await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, undefined, { method: "POST" });
+    setReaderRefreshKey((key) => key + 1);
+  }
+
   function closePanel() {
     if (!panelMode || panelClosing) {
       return;
@@ -1186,6 +1196,7 @@ function InboxApp({
               onFinishReminder={finishReminder}
               onBack={closeThread}
               onRetry={() => setReaderRefreshKey((key) => key + 1)}
+              onSent={reconcileSentMessage}
               status={readerStatus}
             />
           ) : (
@@ -1274,6 +1285,7 @@ function InboxApp({
                 controller={composeDraft}
                 onClose={closePanel}
                 onRequestSendAccess={() => setShowSendPermission(true)}
+                onSent={closePanel}
               />
             </div>
           </aside>
@@ -1980,6 +1992,7 @@ export function MessageReader({
   fallbackTitle,
   onBack,
   onRetry,
+  onSent = () => {},
   status,
   onAttentionChange,
   reminder = null,
@@ -1995,6 +2008,7 @@ export function MessageReader({
   fallbackTitle: string;
   onBack: () => void;
   onRetry: () => void;
+  onSent?: (result: DeliveryResult) => Promise<void> | void;
   status: "idle" | "loading" | "ready" | "error";
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   reminder?: Reminder | null;
@@ -2161,9 +2175,9 @@ export function MessageReader({
             account={detail.account}
             contacts={contacts}
             demoMode={demoMode}
-            recipient={getReplyRecipient(detail, newestMessage)}
-            subject={normalizeReplySubject(title)}
-            threadId={detail.thread.id}
+            detail={detail}
+            message={newestMessage}
+            onSent={onSent}
           />
           <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
         </div>
@@ -2172,39 +2186,132 @@ export function MessageReader({
   );
 }
 
-function ThreadReplyComposer({ account, contacts, recipient, subject, threadId, demoMode = false }: { account: MailAccount; contacts: MailContact[]; recipient: MailContact | null; subject: string; threadId: string; demoMode?: boolean }) {
-  const controller = useComposeDraft(account.id, `reply:${threadId}`, demoMode);
-  const [expanded, setExpanded] = useState(controller.hasContent);
+export type ReaderMessageAction = "reply" | "reply_all" | "forward";
+
+function ThreadReplyComposer({ account, contacts, demoMode = false, detail, message, onSent }: { account: MailAccount; contacts: MailContact[]; demoMode?: boolean; detail: ThreadDetail; message?: ThreadDetailMessage; onSent: (result: DeliveryResult) => Promise<void> | void }) {
+  const [action, setAction] = useState<ReaderMessageAction | null>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [reconciliationError, setReconciliationError] = useState<string | null>(null);
   const [showPermission, setShowPermission] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<"idle" | "loading" | "error">("idle");
   const [permissionError, setPermissionError] = useState<string | null>(null);
 
-  function openReply() {
-    if (!controller.hasContent) controller.updateDraft({ to: recipient ? [recipient] : [], subject });
-    setExpanded(true);
-  }
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
+      const next = event.key.toLowerCase() === "r" ? "reply" : event.key.toLowerCase() === "a" ? "reply_all" : event.key.toLowerCase() === "f" ? "forward" : null;
+      if (!next) return;
+      event.preventDefault();
+      setReconciliationError(null);
+      setAction(next);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
-  if (!expanded) {
+  if (!action || !message) {
     return (
       <section aria-label="Reply to conversation" className="reader-reply reader-reply-collapsed">
         <div><span aria-hidden="true">↩</span><div><strong>Continue the conversation</strong><p>Write back without leaving the thread.</p></div></div>
-        <button onClick={openReply} type="button">Reply</button>
+        {reconciliationError ? <p className="compose-delivery-error" role="alert">{reconciliationError}</p> : null}
+        <ReaderActionButtons active={null} onSelect={(next) => { setReconciliationError(null); setAction(next); }} ref={actionsRef} />
       </section>
     );
   }
 
   return (
     <section className="reader-reply reader-reply-expanded">
-      <div className="reader-reply-heading"><span>Continue the conversation</span><button aria-label="Collapse reply" onClick={() => setExpanded(false)} type="button">−</button></div>
-      <ComposeWorkspace canSend={account.capabilities.send} contacts={contacts} controller={controller} onClose={() => setExpanded(false)} onRequestSendAccess={() => setShowPermission(true)} replyLabel={recipient?.name ?? recipient?.email ?? "this conversation"} variant="reply" />
+      <div className="reader-reply-heading"><ReaderActionButtons active={action} onSelect={setAction} ref={actionsRef} /><button aria-label={`Collapse ${readerActionLabel(action).toLowerCase()}`} onClick={() => setAction(null)} type="button">−</button></div>
+      <ThreadActionWorkspace action={action} account={account} contacts={contacts} demoMode={demoMode} detail={detail} key={action} message={message} onRequestSendAccess={() => setShowPermission(true)} onSent={async (result) => {
+        setAction(null);
+        window.requestAnimationFrame(() => actionsRef.current?.querySelector<HTMLButtonElement>("button")?.focus());
+        try {
+          await onSent(result);
+        } catch {
+          setReconciliationError("Message sent, but Orca could not refresh the conversation. Refresh to see the delivered message.");
+        }
+      }} />
       {showPermission ? <GmailComposePermissionDialog
         error={permissionError}
         onCancel={() => { if (permissionStatus !== "loading") setShowPermission(false); }}
-        onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?thread=${encodeURIComponent(threadId)}`, account.id, setPermissionStatus, setPermissionError)}
+        onContinue={() => void beginGmailAuthorization("upgrade", `${window.location.origin}/?thread=${encodeURIComponent(detail.thread.id)}`, account.id, setPermissionStatus, setPermissionError)}
         status={permissionStatus}
       /> : null}
     </section>
   );
+}
+
+const ReaderActionButtons = function ReaderActionButtons({ active, onSelect, ref }: { active: ReaderMessageAction | null; onSelect: (action: ReaderMessageAction) => void; ref?: Ref<HTMLDivElement> }) {
+  return <div aria-label="Message actions" className="reader-reply-actions" ref={ref} role="toolbar">
+    {(["reply", "reply_all", "forward"] as const).map((action) => <button aria-keyshortcuts={action === "reply" ? "R" : action === "reply_all" ? "A" : "F"} aria-pressed={active === action} key={action} onClick={() => onSelect(action)} title={`${readerActionLabel(action)} (${action === "reply" ? "R" : action === "reply_all" ? "A" : "F"})`} type="button">{readerActionLabel(action)}</button>)}
+  </div>;
+};
+
+function ThreadActionWorkspace({ action, account, contacts, demoMode, detail, message, onRequestSendAccess, onSent }: { action: ReaderMessageAction; account: MailAccount; contacts: MailContact[]; demoMode: boolean; detail: ThreadDetail; message: ThreadDetailMessage; onRequestSendAccess: () => void; onSent: (result: DeliveryResult) => Promise<void> | void }) {
+  const controller = useComposeDraft(account.id, `${action}:${detail.thread.id}:${message.id}`, demoMode);
+  const fields = useMemo(() => buildReaderActionDraft(detail, message, action), [action, detail, message]);
+  useEffect(() => {
+    if (controller.isHydrated !== false && !controller.hasContent) controller.updateDraft(fields);
+  }, [controller.hasContent, controller.isHydrated, fields]);
+  const recipients = [...fields.to, ...fields.cc];
+  return <ComposeWorkspace
+    actionLabel={readerActionLabel(action)}
+    canSend={account.capabilities.send}
+    contacts={contacts}
+    controller={controller}
+    onRequestSendAccess={onRequestSendAccess}
+    onSent={onSent}
+    replyLabel={recipients.map((recipient) => recipient.name ?? recipient.email).join(", ") || "new recipients"}
+    variant="reply"
+  />;
+}
+
+function readerActionLabel(action: ReaderMessageAction): "Reply" | "Reply all" | "Forward" {
+  return action === "reply_all" ? "Reply all" : action === "forward" ? "Forward" : "Reply";
+}
+
+export function buildReaderActionDraft(detail: ThreadDetail, message: ThreadDetailMessage, action: ReaderMessageAction): ComposeDraftFields {
+  const owned = new Set([detail.account.email.trim().toLowerCase()]);
+  if (message.labels.some((label) => label.toUpperCase() === "SENT")) owned.add(message.from.email.trim().toLowerCase());
+  const dedupe = (contacts: MailContact[], excluded = new Set<string>()) => {
+    const seen = new Set(excluded);
+    return contacts.filter((contact) => {
+      const email = contact.email.trim().toLowerCase();
+      if (!email || owned.has(email) || seen.has(email)) return false;
+      seen.add(email);
+      return true;
+    });
+  };
+  const context = {
+    kind: action,
+    threadId: detail.thread.id,
+    messageId: message.id,
+    providerMessageId: message.providerMessageId,
+    providerThreadId: detail.thread.providerThreadId,
+    inReplyTo: message.internetMessageId,
+    references: message.references,
+  } as const;
+  if (action === "forward") {
+    return { to: [], cc: [], bcc: [], subject: normalizeForwardSubject(message.subject), body: forwardedMessageBody(message), context };
+  }
+  const sender = dedupe([message.from]);
+  const to = action === "reply"
+    ? (sender.length ? sender : dedupe([...message.to, ...message.cc]))
+    : dedupe([...sender, ...message.to]);
+  const cc = action === "reply_all" ? dedupe(message.cc, new Set(to.map((contact) => contact.email.trim().toLowerCase()))) : [];
+  return { to, cc, bcc: [], subject: normalizeReplySubject(message.subject), body: "", context };
+}
+
+export function normalizeForwardSubject(subject: string) {
+  const trimmed = subject.trim();
+  return /^(fwd?|forward):/i.test(trimmed) ? trimmed : `Fwd: ${trimmed || "(no subject)"}`;
+}
+
+function forwardedMessageBody(message: ThreadDetailMessage) {
+  const body = message.bodyText?.trim() || message.snippet.trim() || "(No readable message body)";
+  const attachmentLine = message.attachments.length ? `\nOriginal attachments (not included automatically): ${message.attachments.map((attachment) => attachment.filename).join(", ")}` : "";
+  return `\n\n---------- Forwarded message ----------\nFrom: ${message.from.name ? `${message.from.name} <${message.from.email}>` : message.from.email}\nDate: ${formatFullReceivedAt(message.receivedAt)}\nSubject: ${message.subject || "(no subject)"}\nTo: ${formatRecipientAddresses(message.to)}${message.cc.length ? `\nCc: ${formatRecipientAddresses(message.cc)}` : ""}${attachmentLine}\n\n${body}`;
 }
 
 export function normalizeReplySubject(subject: string) {
@@ -3123,6 +3230,8 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       bcc: [],
       bodyText: (messageBodies[message.id] ?? message.snippet) || null,
       bodyHtml: messageHtmlBodies[message.id] ?? null,
+      internetMessageId: `<${message.providerMessageId}@mail.gmail.com>`,
+      references: [],
       attachments: message.id === "msg_2" ? [{ id: "attachment_demo", filename: "Orca-reader-notes.pdf", mimeType: "application/pdf", size: 2483200 }] : [],
     })),
   };

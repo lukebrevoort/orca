@@ -10,10 +10,11 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { messageDraftSchema, type InboxMessage, type MailContact, type MessageDraft } from "@orca/shared";
+import { deliveryResultSchema, messageDraftSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
+export type ComposeDeliveryStatus = "idle" | "sending" | "sent" | "error";
 
 export type ComposeAttachment = {
   id: string;
@@ -35,22 +36,25 @@ export type ComposeDraft = {
   bcc: MailContact[];
   subject: string;
   body: string;
+  context: OutboundContext | null;
   attachments: ComposeAttachment[];
   updatedAt: string;
 };
 
-export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body">;
+export type ComposeDraftFields = Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context">;
 
 export type ComposeDraftController = {
   draft: ComposeDraft;
   saveStatus: ComposeSaveStatus;
   saveMessage?: string;
   conflict?: ComposeDraftConflict | null;
+  isHydrated?: boolean;
   hasContent: boolean;
   updateDraft: (update: Partial<ComposeDraftFields>) => void;
   attachFiles: (files: Iterable<File>) => ComposeAttachmentAcceptance;
   removeAttachment: (attachmentId: string) => void;
   discardDraft: () => Promise<boolean> | void;
+  sendDraft?: () => Promise<DeliveryResult>;
   retrySave?: () => void;
   resolveConflict?: (choice: "server" | "local") => Promise<void>;
 };
@@ -93,6 +97,7 @@ export function createEmptyComposeDraft(accountId: string): ComposeDraft {
     bcc: [],
     subject: "",
     body: "",
+    context: null,
     attachments: [],
     updatedAt: new Date().toISOString(),
   };
@@ -175,27 +180,22 @@ function persistableDraft(draft: ComposeDraft) {
   return rest;
 }
 
-function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "attachments">) {
+function remoteContentSignature(draft: Pick<ComposeDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "attachments">) {
   return JSON.stringify({
     to: draft.to,
     cc: draft.cc,
     bcc: draft.bcc,
     subject: draft.subject,
     body: draft.body,
+    context: draft.context,
     attachments: draft.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size })),
   });
 }
 
-function scopeContext(scope: string) {
-  if (!scope.startsWith("reply:")) return null;
-  const threadId = scope.slice("reply:".length);
-  return { kind: "reply" as const, threadId, messageId: threadId };
-}
-
 function draftMatchesScope(draft: MessageDraft, scope: string) {
-  return scope.startsWith("reply:")
-    ? draft.context?.threadId === scope.slice("reply:".length)
-    : draft.context === null;
+  if (scope === "new") return draft.context === null;
+  if (!draft.context) return false;
+  return scope === `${draft.context.kind}:${draft.context.threadId}:${draft.context.messageId}`;
 }
 
 function fromMessageDraft(draft: MessageDraft): ComposeDraft {
@@ -210,6 +210,7 @@ function fromMessageDraft(draft: MessageDraft): ComposeDraft {
     bcc: draft.bcc,
     subject: draft.subject,
     body: draft.body.text,
+    context: draft.context,
     attachments: [],
     updatedAt: draft.updatedAt,
   };
@@ -236,6 +237,72 @@ async function requestDraft<T>(path: string, schema: { parse(value: unknown): T 
     throw new DraftRequestError(response.status, error.error?.code ?? "request_failed", error.error?.message ?? "Draft request failed");
   }
   return schema.parse(value);
+}
+
+type DurableDraftContent = Pick<MessageDraft, "to" | "cc" | "bcc" | "subject" | "body" | "context" | "attachments">;
+
+type DurableDraftDeliveryOperations = {
+  inspect(draftId: string): Promise<MessageDraft>;
+  create(content: DurableDraftContent): Promise<MessageDraft>;
+  update(draftId: string, revision: number, content: DurableDraftContent): Promise<MessageDraft>;
+  send(draftId: string, revision: number, idempotencyKey: string): Promise<DeliveryResult>;
+};
+
+export async function deliverDurableDraft(
+  input: {
+    serverId: string | null;
+    revision: number | null;
+    content: DurableDraftContent;
+    idempotencyKeyFor: (draftId: string) => string;
+  },
+  operations: DurableDraftDeliveryOperations,
+): Promise<{ draft: MessageDraft; result: DeliveryResult }> {
+  let saved: MessageDraft;
+  if (input.serverId !== null && input.revision !== null) {
+    const current = await operations.inspect(input.serverId);
+    if (current.deliveryStatus !== "draft") {
+      const result = current.deliveryStatus === "sent"
+        ? sentDeliveryResult(current)
+        : await operations.send(current.id, current.revision, input.idempotencyKeyFor(current.id));
+      return { draft: current, result };
+    }
+    saved = await operations.update(current.id, current.revision, input.content);
+  } else {
+    saved = await operations.create(input.content);
+  }
+
+  const idempotencyKey = input.idempotencyKeyFor(saved.id);
+  try {
+    return {
+      draft: saved,
+      result: await operations.send(saved.id, saved.revision, idempotencyKey),
+    };
+  } catch (sendError) {
+    try {
+      const latest = await operations.inspect(saved.id);
+      if (latest.deliveryStatus === "sent") return { draft: latest, result: sentDeliveryResult(latest) };
+      if (latest.deliveryStatus !== "draft") {
+        return {
+          draft: latest,
+          result: await operations.send(latest.id, latest.revision, idempotencyKey),
+        };
+      }
+    } catch {
+      // Preserve the original ambiguous send failure. A later retry inspects
+      // the durable draft before updating and reuses the same key.
+    }
+    throw sendError;
+  }
+}
+
+function sentDeliveryResult(draft: MessageDraft): DeliveryResult {
+  return {
+    draftId: draft.id,
+    status: "sent",
+    providerMessageId: draft.providerMessageId,
+    providerThreadId: draft.providerThreadId,
+    error: null,
+  };
 }
 
 export function isValidEmail(value: string) {
@@ -312,6 +379,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const saveSequenceRef = useRef<Promise<void>>(Promise.resolve());
   const processedRetryTokenRef = useRef(0);
   const pollTimerRef = useRef<number | null>(null);
+  const autosaveTimerRef = useRef<number | null>(null);
+  const sendingRef = useRef(false);
+  const sendIdempotencyKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     attachmentsRef.current = draft.attachments;
@@ -363,9 +433,10 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     let cancelled = false;
     void requestDraft("/v1/drafts", messageDraftListSchema).then((drafts) => {
       if (cancelled) return;
+      const editableDrafts = drafts.filter((item) => item.deliveryStatus === "draft");
       const local = readComposeDraft(accountId, window.localStorage, scope);
-      const sameDraft = local.revision === null ? null : drafts.find((item) => item.id === local.id);
-      const latest = sameDraft ?? drafts.find((item) => draftMatchesScope(item, scope)) ?? null;
+      const sameDraft = local.revision === null ? null : editableDrafts.find((item) => item.id === local.id);
+      const latest = sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
       if (!hasComposeContent(local) && latest) {
         const restored = fromMessageDraft(latest);
         serverIdRef.current = latest.id;
@@ -428,7 +499,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setSaveStatus("saving");
     setSaveMessage("Saving to Orca…");
     const attachments = snapshot.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size }));
-    const content = { to: snapshot.to, cc: snapshot.cc, bcc: snapshot.bcc, subject: snapshot.subject, body: { text: snapshot.body, html: null }, context: scopeContext(scope), attachments };
+    const content = { to: snapshot.to, cc: snapshot.cc, bcc: snapshot.bcc, subject: snapshot.subject, body: { text: snapshot.body, html: null }, context: snapshot.context, attachments };
     try {
       const serverId = serverIdRef.current;
       const revision = serverRevisionRef.current;
@@ -467,6 +538,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   }, [conflict, pollProviderStatus, scope]);
 
   useEffect(() => {
+    if (sendingRef.current) return;
     const serialized = JSON.stringify(persistableDraft(draft));
     if (serialized === persistedDraftRef.current && retryToken === processedRetryTokenRef.current) return;
     const needsRemoteSave = !demoMode && hasComposeContent(draft) && (
@@ -481,6 +553,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       setSaveMessage("Saving…");
     }
     const timer = window.setTimeout(() => {
+      autosaveTimerRef.current = null;
       processedRetryTokenRef.current = retryToken;
       const localSaved = flushPendingDraft();
       if (!localSaved) {
@@ -495,8 +568,10 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         setSaveMessage("Not saved yet");
       }
     }, COMPOSE_AUTOSAVE_DELAY_MS);
+    autosaveTimerRef.current = timer;
     return () => {
       window.clearTimeout(timer);
+      if (autosaveTimerRef.current === timer) autosaveTimerRef.current = null;
       flushPendingDraft();
     };
   }, [accountId, conflict, demoMode, draft, flushPendingDraft, hydratedScope, persistRemote, retryToken, scope, scopeKey]);
@@ -588,16 +663,117 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setRetryToken((current) => current + 1);
   }
 
+  async function sendDraft(): Promise<DeliveryResult> {
+    if (demoMode) {
+      clearSentDraftStorage();
+      return { draftId: draft.id, status: "sent", providerMessageId: `demo-${draft.id}`, providerThreadId: draft.context?.providerThreadId ?? null, error: null };
+    }
+    if (conflict) throw new Error("Resolve the saved draft conflict before sending.");
+    sendingRef.current = true;
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    if (pollTimerRef.current) {
+      window.clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    flushPendingDraft();
+    try {
+      await saveSequenceRef.current;
+      if (pollTimerRef.current) {
+        window.clearTimeout(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      const content = {
+        to: draft.to,
+        cc: draft.cc,
+        bcc: draft.bcc,
+        subject: draft.subject,
+        body: { text: draft.body, html: draft.body.trim() ? markdownToEditorHtml(draft.body) : null },
+        context: draft.context,
+        attachments: await Promise.all(draft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
+          id,
+          filename,
+          mimeType,
+          size,
+          contentBase64: await fileToBase64(file),
+        }))),
+      };
+      const idempotencyKeyFor = (draftId: string) => {
+        const storageKey = `orca-compose-send:${accountId}:${scope}:${draftId}`;
+        const key = sendIdempotencyKeyRef.current
+          ?? window.localStorage.getItem(storageKey)
+          ?? crypto.randomUUID();
+        sendIdempotencyKeyRef.current = key;
+        window.localStorage.setItem(storageKey, key);
+        return key;
+      };
+      const delivery = await deliverDurableDraft({
+        serverId: serverIdRef.current,
+        revision: serverRevisionRef.current,
+        content,
+        idempotencyKeyFor,
+      }, {
+        inspect: (draftId) => requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema),
+        create: async (nextContent) => {
+          const saved = await requestDraft("/v1/drafts", messageDraftSchema, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(nextContent),
+          });
+          serverIdRef.current = saved.id;
+          serverRevisionRef.current = saved.revision;
+          return saved;
+        },
+        update: async (draftId, revision, nextContent) => {
+          const saved = await requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}`, messageDraftSchema, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ revision, ...nextContent }),
+          });
+          serverIdRef.current = saved.id;
+          serverRevisionRef.current = saved.revision;
+          return saved;
+        },
+        send: (draftId, revision, idempotencyKey) => requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}/send`, deliveryResultSchema, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ revision, idempotencyKey }),
+        }),
+      });
+      serverIdRef.current = delivery.draft.id;
+      serverRevisionRef.current = delivery.draft.revision;
+      const idempotencyStorageKey = `orca-compose-send:${accountId}:${scope}:${delivery.draft.id}`;
+      const result = delivery.result;
+      if (result.status === "sent") {
+        clearSentDraftStorage();
+        window.localStorage.removeItem(idempotencyStorageKey);
+      }
+      return result;
+    } finally {
+      sendingRef.current = false;
+    }
+  }
+
+  function clearSentDraftStorage() {
+    pendingDraftRef.current = null;
+    persistedDraftRef.current = JSON.stringify(persistableDraft(createEmptyComposeDraft(accountId)));
+    window.localStorage.removeItem(draftStorageKey(accountId, scope));
+  }
+
   return {
     draft,
     saveStatus,
     saveMessage,
     conflict,
+    isHydrated: hydratedScope === scopeKey,
     hasContent,
     updateDraft,
     attachFiles,
     removeAttachment,
     discardDraft,
+    sendDraft,
     retrySave: () => setRetryToken((current) => current + 1),
     resolveConflict,
   };
@@ -634,8 +810,10 @@ export function ComposeWorkspace({
   onExitZen,
   onClose,
   replyLabel,
+  actionLabel = "Reply",
   canSend = false,
   onRequestSendAccess,
+  onSent,
 }: {
   controller: ComposeDraftController;
   contacts: MailContact[];
@@ -644,8 +822,10 @@ export function ComposeWorkspace({
   onExitZen?: () => void;
   onClose?: () => void;
   replyLabel?: string;
+  actionLabel?: "Reply" | "Reply all" | "Forward";
   canSend?: boolean;
   onRequestSendAccess?: () => void;
+  onSent?: (result: DeliveryResult) => Promise<void> | void;
 }) {
   const {
     draft,
@@ -657,19 +837,23 @@ export function ComposeWorkspace({
     attachFiles,
     removeAttachment,
     discardDraft,
+    sendDraft = async () => { throw new Error("This draft is not ready to send."); },
     retrySave = () => {},
     resolveConflict = async () => {},
   } = controller;
   const [showCarbonCopy, setShowCarbonCopy] = useState(draft.cc.length + draft.bcc.length > 0);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [draggingFiles, setDraggingFiles] = useState(false);
+  const [editReplyDetails, setEditReplyDetails] = useState(actionLabel === "Forward");
+  const [deliveryStatus, setDeliveryStatus] = useState<ComposeDeliveryStatus>("idle");
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
   const deliveryReason = draft.to.length === 0
     ? "Add at least one valid recipient to prepare this message."
     : canSend
-      ? "Gmail has confirmed draft and send access. Delivery stays off until Orca's send transport is connected."
+      ? "Gmail has confirmed draft and send access. Orca will save the draft first, then deliver it once."
       : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
 
   async function closeOrDiscard() {
@@ -680,6 +864,24 @@ export function ComposeWorkspace({
     if (window.confirm("Discard this draft from Orca and Gmail?")) {
       const discarded = await discardDraft();
       if (discarded !== false) onClose?.();
+    }
+  }
+
+  async function sendCurrentDraft() {
+    setDeliveryStatus("sending");
+    setDeliveryError(null);
+    try {
+      const result = await sendDraft();
+      if (result.status !== "sent") throw new Error(result.error?.message ?? "Gmail did not confirm delivery. Check Drafts before retrying.");
+      setDeliveryStatus("sent");
+      try {
+        await onSent?.(result);
+      } catch {
+        setDeliveryError("Sent, but Orca could not refresh the conversation. Refresh to see the delivered message.");
+      }
+    } catch (error) {
+      setDeliveryStatus("error");
+      setDeliveryError(error instanceof Error ? error.message : "Orca could not confirm delivery.");
     }
   }
 
@@ -724,7 +926,7 @@ export function ComposeWorkspace({
 
   const editor = (
     <>
-      {variant !== "reply" ? <div className="compose-addressing">
+      {variant !== "reply" || editReplyDetails ? <div className="compose-addressing">
         <RecipientField autoFocus={autoFocusTo && variant === "panel"} contacts={contacts} kind="to" label="To" onChange={(to) => updateDraft({ to })} recipients={draft.to} />
         {showCarbonCopy ? (
           <>
@@ -735,9 +937,9 @@ export function ComposeWorkspace({
         <button aria-expanded={showCarbonCopy} className="compose-carbon-toggle" onClick={() => setShowCarbonCopy((shown) => !shown)} type="button">
           {showCarbonCopy ? "Hide Cc and Bcc" : "Add Cc or Bcc"}
         </button>
-      </div> : <div className="compose-reply-context"><span>Replying to</span><strong>{replyLabel ?? draft.to.map((recipient) => recipient.name ?? recipient.email).join(", ")}</strong><span>{draft.subject}</span></div>}
+      </div> : <div className="compose-reply-context"><span>{actionLabel === "Reply all" ? "Replying to everyone" : "Replying to"}</span><strong>{replyLabel ?? draft.to.map((recipient) => recipient.name ?? recipient.email).join(", ")}</strong><span>{draft.subject}</span><button onClick={() => setEditReplyDetails(true)} type="button">Edit recipients</button></div>}
 
-      {variant !== "reply" ? <label className="compose-subject-field">
+      {variant !== "reply" || editReplyDetails ? <label className="compose-subject-field">
         <span className="sr-only">Subject</span>
         <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
@@ -750,7 +952,7 @@ export function ComposeWorkspace({
         onAttachClick={() => fileInputRef.current?.click()}
         onChange={(body) => updateDraft({ body })}
         onRemoveAttachment={onRemoveAttachment}
-        placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? "Write a reply…" : "Start with the human part…"}
+        placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
       {attachmentError ? <p className="compose-attachment-error" role="alert">{attachmentError}</p> : null}
       <input
@@ -793,7 +995,7 @@ export function ComposeWorkspace({
       <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
         {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
-        <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={() => void closeOrDiscard()} onRequestSendAccess={onRequestSendAccess} />
+        <ComposeDeliveryBar actionLabel={actionLabel} canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
         {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
     );
@@ -807,7 +1009,7 @@ export function ComposeWorkspace({
       </div>
       {editor}
       {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
-      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryReason={deliveryReason} onDiscard={() => void closeOrDiscard()} onRequestSendAccess={onRequestSendAccess} />
+      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
       {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
   );
@@ -847,7 +1049,8 @@ function RenderedBlockEditor({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
-    if (editor.innerHTML === "" || (lastBodyRef.current !== body && document.activeElement !== editor)) {
+    const externallyFilledEmptyEditor = Boolean(body.trim()) && !editor.textContent?.trim();
+    if (editor.innerHTML === "" || externallyFilledEmptyEditor || (lastBodyRef.current !== body && document.activeElement !== editor)) {
       editor.innerHTML = markdownToEditorHtml(body);
       if (!body.trim() && editor.firstElementChild) (editor.firstElementChild as HTMLElement).dataset.placeholder = placeholder;
       lastBodyRef.current = body;
@@ -1016,7 +1219,7 @@ function ComposeDropOverlay() {
   );
 }
 
-function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, onRequestSendAccess }: { canSend: boolean; controller: ComposeDraftController; deliveryReason: string; onDiscard: () => void; onRequestSendAccess?: () => void }) {
+function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliveryError, deliveryReason, deliveryStatus = "idle", onDiscard, onRequestSendAccess, onSend }: { actionLabel?: string; canSend: boolean; controller: ComposeDraftController; deliveryError?: string | null; deliveryReason: string; deliveryStatus?: ComposeDeliveryStatus; onDiscard: () => void; onRequestSendAccess?: () => void; onSend?: () => Promise<void> }) {
   const reasonId = useId();
   const {
     draft,
@@ -1033,12 +1236,12 @@ function ComposeDeliveryBar({ canSend, controller, deliveryReason, onDiscard, on
         <button
           aria-describedby={reasonId}
           className="compose-send"
-          disabled={draft.to.length === 0 || canSend || !onRequestSendAccess}
-          onClick={onRequestSendAccess}
+          disabled={draft.to.length === 0 || deliveryStatus === "sending" || deliveryStatus === "sent" || (!canSend && !onRequestSendAccess)}
+          onClick={() => { if (canSend) void onSend?.(); else onRequestSendAccess?.(); }}
           type="button"
-        >{canSend ? "Send" : "Enable sending"}</button>
+        >{deliveryStatus === "sending" ? "Sending…" : canSend ? actionLabel === "Send" ? "Send" : `Send ${actionLabel.toLowerCase()}` : "Enable sending"}</button>
       </div>
-      <p id={reasonId}>{deliveryReason}</p>
+      <p className={deliveryError ? "compose-delivery-error" : undefined} id={reasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? "Sent. The conversation is refreshing." : deliveryReason)}</p>
     </footer>
   );
 }
@@ -1056,6 +1259,16 @@ function DraftConflictNotice({ conflict, onResolve }: { conflict: ComposeDraftCo
       </div>
     </section>
   );
+}
+
+async function fileToBase64(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function hashText(value: string) {

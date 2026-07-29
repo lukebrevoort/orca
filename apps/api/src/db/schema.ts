@@ -139,6 +139,8 @@ export const emails = sqliteTable(
     snippet: text("snippet"),
     bodyText: text("body_text"),
     bodyHtml: text("body_html"),
+    internetMessageId: text("internet_message_id"),
+    references: text("references"),
     receivedAt: integer("received_at", { mode: "timestamp_ms" }),
     internalDate: integer("internal_date", { mode: "timestamp_ms" }),
     isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
