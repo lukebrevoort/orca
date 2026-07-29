@@ -13,6 +13,14 @@ import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 
+async function waitFor(predicate: () => boolean, timeoutMs = 1_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("Timed out waiting for asynchronous draft work");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 describe("Orca API", () => {
   test("requires a session before returning auth state", async () => {
     const response = await app.request("/v1/auth/session");
@@ -174,23 +182,33 @@ describe("Orca API", () => {
       db.insert(oauthAccounts).values({ id: "account", userId: "user", provider: "gmail", providerEmail: "writer@example.com", providerId: "gmail-writer", scope: "https://www.googleapis.com/auth/gmail.compose" }).run();
       const calls: string[] = [];
       const transport: GmailTransport = {
-        async saveDraft(_db, _accountId, draft) { calls.push(`save:${draft.providerDraftId ?? "new"}`); return { providerDraftId: "gmail-draft-1" }; },
-        async deleteDraft() { calls.push("delete"); },
+        async saveDraft() { return { providerDraftId: "gmail-draft-1" }; },
+        async deleteDraft() {},
         async send() { calls.push("send"); return { providerMessageId: "gmail-message-1", providerThreadId: "gmail-thread-1" }; },
       };
       const session = await createSession(db, "user");
       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), gmailTransport: transport });
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        gmailTransport: transport,
+        mirrorDraft: async (_db, input) => {
+          calls.push(`mirror:${input.providerDraftId ?? "new"}`);
+          return { providerDraftId: "gmail-draft-1", providerMessageId: null, providerThreadId: input.content.context?.threadId ?? null };
+        },
+      });
       const createdResponse = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ to: [{ name: null, email: "maya@example.com" }], subject: "Hi", body: { text: "Hello", html: null } }) });
       assert.equal(createdResponse.status, 201);
       const created = await createdResponse.json();
-      assert.equal(created.providerDraftId, "gmail-draft-1");
-      const sent = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: 0, idempotencyKey: "idempotency-key-123" }) });
+      assert.equal(created.providerSyncStatus, "pending");
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, created.id)).get()?.providerSyncStatus === "synced");
+      const synced = await (await testApp.request(`/v1/drafts/${created.id}`, { headers })).json();
+      assert.equal(synced.providerDraftId, "gmail-draft-1");
+      const sent = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: synced.revision, idempotencyKey: "idempotency-key-123" }) });
       assert.equal(sent.status, 200);
       assert.deepEqual(await sent.json(), { draftId: created.id, status: "sent", providerMessageId: "gmail-message-1", providerThreadId: "gmail-thread-1", error: null });
-      const repeated = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: 0, idempotencyKey: "idempotency-key-123" }) });
+      const repeated = await testApp.request(`/v1/drafts/${created.id}/send`, { method: "POST", headers, body: JSON.stringify({ revision: synced.revision, idempotencyKey: "idempotency-key-123" }) });
       assert.equal(repeated.status, 200);
-      assert.deepEqual(calls, ["save:new", "send"]);
+      assert.deepEqual(calls, ["mirror:new", "send"]);
     } finally {
       sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY;
     }
@@ -220,6 +238,109 @@ describe("Orca API", () => {
       assert.equal((await response.json()).status, "ambiguous");
     } finally {
       sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 14).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-draft-mirror-test-"));
+    const dbPath = join(tempDir, "draft-mirror.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "mirror_user", email: "mirror@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "mirror_account",
+        userId: "mirror_user",
+        provider: "gmail",
+        providerEmail: "mirror@example.com",
+        providerId: "gmail-mirror",
+        scope: "https://www.googleapis.com/auth/gmail.compose",
+      }).run();
+      const session = await createSession(db, "mirror_user");
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      let failMirror = false;
+      let failDelete = true;
+      let holdMirror = false;
+      const mirrorGate: { release: (() => void) | null } = { release: null };
+      const mirroredSubjects: string[] = [];
+      const mirroredProviderIds: Array<string | null> = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        mirrorDraft: async (_database, input) => {
+          mirroredSubjects.push(input.content.subject);
+          mirroredProviderIds.push(input.providerDraftId);
+          if (holdMirror) await new Promise<void>((resolve) => { mirrorGate.release = resolve; });
+          if (failMirror) throw new Error("Gmail is temporarily unavailable");
+          return { providerDraftId: input.providerDraftId ?? "gmail-draft-1", providerMessageId: "gmail-message-1", providerThreadId: null };
+        },
+        deleteProviderDraft: async () => {
+          if (failDelete) throw new Error("Gmail delete failed");
+        },
+      });
+
+      const empty = await testApp.request("/v1/drafts", { method: "POST", headers, body: "{}" });
+      assert.equal(empty.status, 400);
+      assert.equal(db.select().from(messageDrafts).all().length, 0);
+
+      const createdResponse = await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ subject: "Mirrored thought", body: { text: "Safe immediately", html: null } }),
+      });
+      assert.equal(createdResponse.status, 201);
+      const created = await createdResponse.json();
+      assert.equal(created.providerSyncStatus, "pending");
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, created.id)).get()?.providerSyncStatus === "synced");
+      assert.deepEqual(mirroredSubjects, ["Mirrored thought"]);
+
+      failMirror = true;
+      const updatedResponse = await testApp.request(`/v1/drafts/${created.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ revision: 0, subject: "Still durable" }),
+      });
+      assert.equal(updatedResponse.status, 200);
+      assert.equal((await updatedResponse.json()).providerSyncStatus, "pending");
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, created.id)).get()?.providerSyncStatus === "failed");
+      const failed = await (await testApp.request(`/v1/drafts/${created.id}`, { headers })).json();
+      assert.equal(failed.subject, "Still durable");
+      assert.equal(failed.providerSyncStatus, "failed");
+      assert.equal(failed.providerDraftId, "gmail-draft-1");
+
+      const failedDiscard = await testApp.request(`/v1/drafts/${created.id}`, { method: "DELETE", headers });
+      assert.equal(failedDiscard.status, 502);
+      assert.equal((await failedDiscard.json()).error.retryable, true);
+      assert.ok(db.select().from(messageDrafts).where(eq(messageDrafts.id, created.id)).get());
+
+      failDelete = false;
+      assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { method: "DELETE", headers })).status, 204);
+      assert.equal(db.select().from(messageDrafts).where(eq(messageDrafts.id, created.id)).get(), undefined);
+
+      failMirror = false;
+      holdMirror = true;
+      const racingCreated = await (await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ subject: "Race one" }),
+      })).json();
+      await waitFor(() => mirroredSubjects.includes("Race one"));
+      assert.equal((await testApp.request(`/v1/drafts/${racingCreated.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ revision: 0, subject: "Race two" }),
+      })).status, 200);
+      holdMirror = false;
+      mirrorGate.release?.();
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, racingCreated.id)).get()?.providerSyncStatus === "synced");
+      assert.deepEqual(mirroredSubjects.slice(-2), ["Race one", "Race two"]);
+      assert.equal(mirroredProviderIds.at(-1), "gmail-draft-1");
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
     }
   });
 

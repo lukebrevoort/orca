@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
-import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
+import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -271,6 +271,8 @@ describe("App", () => {
     expect(readComposeDraft("account", storage)).toMatchObject({ subject: "A durable thought", body: "Hello Maya" });
     expect(hasComposeContent(readComposeDraft("account", storage))).toBe(true);
     expect(readComposeDraft("account", { getItem: () => "not-json" })).toMatchObject({ accountId: "account", subject: "", body: "" });
+    expect(COMPOSE_AUTOSAVE_DELAY_MS).toBeGreaterThanOrEqual(300);
+    expect(COMPOSE_AUTOSAVE_DELAY_MS).toBeLessThanOrEqual(500);
   });
 
   test("renders the write-first controls, delivery explanation, and labeled saved state", () => {
@@ -291,6 +293,51 @@ describe("App", () => {
     expect(html).not.toContain("Attachments");
     expect(html).not.toContain("class=\"compose-send\" disabled");
     expect(html).toContain("Remove Maya Chen from To");
+  });
+
+  test("offers a deterministic, labeled recovery choice for stale drafts", () => {
+    const local = { ...createEmptyComposeDraft("account"), id: "draft-1", revision: 1, body: "My unsaved ending" };
+    const server = {
+      id: "draft-1",
+      accountId: "account",
+      to: [],
+      cc: [],
+      bcc: [],
+      subject: "",
+      body: { text: "The newer saved ending", html: null },
+      context: null,
+      attachments: [],
+      revision: 2,
+      deliveryStatus: "draft" as const,
+      providerSyncStatus: "synced" as const,
+      providerSyncError: null,
+      providerDraftId: "gmail-draft-1",
+      providerMessageId: null,
+      providerThreadId: null,
+      createdAt: "2026-07-28T18:00:00.000Z",
+      updatedAt: "2026-07-28T18:02:00.000Z",
+    };
+    const html = renderToStaticMarkup(
+      <ComposeWorkspace
+        contacts={[]}
+        controller={{
+          draft: local,
+          saveStatus: "failed",
+          saveMessage: "Another version was saved — choose which one to keep",
+          conflict: { local, server },
+          hasContent: true,
+          updateDraft() {},
+          attachFiles: () => ({ accepted: [], rejected: [] }),
+          removeAttachment() {},
+          discardDraft() {},
+        }}
+      />,
+    );
+    expect(html).toContain("This draft changed in another tab.");
+    expect(html).toContain("Your words are still safe on this device.");
+    expect(html).toContain("Use newer version");
+    expect(html).toContain("Keep mine as a new draft");
+    expect(html).toContain(">Retry</button>");
   });
 
   test("sanitizes attachment names and enforces safe compose attachment limits", () => {

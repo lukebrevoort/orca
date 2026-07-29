@@ -3329,7 +3329,17 @@ textarea {
 .compose-save-status { align-items: center; color: var(--orca-muted); display: inline-flex; font-size: 11px; gap: 7px; }
 .compose-save-status > span { background: currentColor; border-radius: 50%; height: 6px; width: 6px; }
 .compose-save-status-saving > span { animation: compose-save-pulse 1s ease-in-out infinite; }
-.compose-save-status-failed { color: #a94f45; }
+.compose-save-status-failed { color: var(--orca-ink); }
+.compose-save-status-failed > span { background: #c96c5f; }
+.compose-save-retry { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font: inherit; font-weight: 700; padding: 3px 8px; }
+.compose-save-retry:hover, .compose-save-retry:focus-visible { border-color: var(--orca-ink); outline: none; }
+.compose-conflict { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 14px; color: var(--orca-ink); display: flex; gap: 16px; justify-content: space-between; margin: 12px 0; padding: 13px 14px; }
+.compose-conflict > div:first-child { display: grid; gap: 3px; }
+.compose-conflict strong { font-size: 12px; }
+.compose-conflict span { color: var(--orca-muted); font-size: 11px; line-height: 1.4; }
+.compose-conflict > div:last-child { display: flex; flex: 0 0 auto; gap: 7px; }
+.compose-conflict button { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; min-height: 34px; padding: 0 12px; }
+.compose-conflict button:hover, .compose-conflict button:focus-visible { background: var(--orca-surface-hover); border-color: var(--orca-ink); outline: none; }
 .compose-delivery-actions { display: flex; gap: 8px; }
 .compose-delivery-actions button { border: 1px solid var(--orca-border); border-radius: 999px; font: inherit; font-size: 12px; font-weight: 700; min-height: 38px; padding: 0 16px; }
 .compose-discard { background: transparent; color: var(--orca-muted); cursor: pointer; }
@@ -3370,6 +3380,8 @@ textarea {
 @keyframes compose-save-pulse { 50% { opacity: .25; transform: scale(.8); } }
 
 @media (max-width: 760px) {
+  .compose-conflict { align-items: stretch; flex-direction: column; }
+  .compose-conflict > div:last-child { flex-wrap: wrap; }
   .slide-panel { width: 100vw; }
   .compose-workspace-panel { padding: 22px 18px 18px; }
   .compose-workspace-intro { align-items: start; }

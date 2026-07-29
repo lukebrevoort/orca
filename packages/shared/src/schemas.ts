@@ -193,6 +193,9 @@ const outboundContentSchema = z.object({
 export const draftDeliveryStatusSchema = z.enum(["draft", "queued", "sending", "sent", "rejected", "ambiguous"]);
 export type DraftDeliveryStatus = z.infer<typeof draftDeliveryStatusSchema>;
 
+export const draftProviderSyncStatusSchema = z.enum(["not_applicable", "pending", "synced", "failed"]);
+export type DraftProviderSyncStatus = z.infer<typeof draftProviderSyncStatusSchema>;
+
 export const outboundErrorCodeSchema = z.enum([
   "validation_error",
   "stale_draft",
@@ -216,6 +219,8 @@ export const messageDraftSchema = outboundContentSchema.safeExtend({
   body: outboundBodySchema,
   revision: z.number().int().nonnegative(),
   deliveryStatus: draftDeliveryStatusSchema,
+  providerSyncStatus: draftProviderSyncStatusSchema,
+  providerSyncError: z.string().nullable(),
   providerDraftId: z.string().nullable(),
   providerMessageId: z.string().nullable(),
   providerThreadId: z.string().nullable(),

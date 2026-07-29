@@ -50,6 +50,7 @@ import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
+import { deleteGmailDraft, mirrorGmailDraft, type GmailDraftMirrorInput, type GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { createGmailTransport, GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 
 const serverConfig = getServerConfig();
@@ -59,6 +60,8 @@ type CreateAppOptions = {
   syncPage?: typeof syncGmailAccountPage;
   gmailTransport?: GmailTransport;
   now?: () => Date;
+  mirrorDraft?: (db: Database, input: GmailDraftMirrorInput) => Promise<GmailDraftMirrorResult>;
+  deleteProviderDraft?: (db: Database, accountId: string, providerDraftId: string) => Promise<void>;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -80,7 +83,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   const syncPage = options.syncPage ?? syncGmailAccountPage;
   const gmailTransport = options.gmailTransport ?? createGmailTransport();
   const now = options.now ?? (() => new Date());
+  const mirrorDraft = options.mirrorDraft ?? mirrorGmailDraft;
+  const deleteProviderDraft = options.deleteProviderDraft ?? deleteGmailDraft;
   const syncStatuses = new Map<string, SyncStatusRecord>();
+  const draftMirrorJobs = new Set<string>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -637,6 +643,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const drafts = db.select().from(messageDrafts)
         .where(eq(messageDrafts.accountId, account.id))
         .orderBy(desc(messageDrafts.updatedAt), asc(messageDrafts.id)).all();
+      for (const draft of drafts) {
+        if (draft.providerSyncStatus === "pending") scheduleDraftMirror(draft.id, draft.revision);
+      }
       return c.json(drafts.map(toMessageDraft));
     } finally { sqlite.close(); }
   });
@@ -648,14 +657,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const id = crypto.randomUUID();
       const input = c.req.valid("json");
-      db.insert(messageDrafts).values({ id, accountId: account.id, ...draftStorage(input) }).run();
-      const local = toMessageDraft(getMessageDraft(db, account.id, id)!);
-      if (detectGmailCapabilities(account.scope).draft) {
-        try {
-          const provider = await gmailTransport.saveDraft(db, account.id, local);
-          db.update(messageDrafts).set({ providerDraftId: provider.providerDraftId, updatedAt: now() }).where(eq(messageDrafts.id, id)).run();
-        } catch (error) { return transportError(c, error); }
+      if (!hasMeaningfulDraftContent(input)) {
+        return c.json({
+          error: {
+            code: "validation_error",
+            message: "A draft is created after you add a recipient, subject, message, or attachment",
+            retryable: false,
+          },
+        }, 400);
       }
+      const mirrorsToProvider = detectGmailCapabilities(account.scope).draft;
+      db.insert(messageDrafts).values({
+        id,
+        accountId: account.id,
+        ...draftStorage(input),
+        providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
+      }).run();
+      if (mirrorsToProvider) scheduleDraftMirror(id, 0);
       return c.json(messageDraftSchema.parse(toMessageDraft(getMessageDraft(db, account.id, id)!)), 201);
     } finally { sqlite.close(); }
   });
@@ -667,6 +685,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
+      if (draft.providerSyncStatus === "pending") scheduleDraftMirror(draft.id, draft.revision);
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(draft));
     } finally { sqlite.close(); }
   });
@@ -693,7 +712,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         context: update.context ?? current.context,
         attachments: update.attachments ?? current.attachments,
       });
-      const result = db.update(messageDrafts).set({ ...draftStorage(content), revision: sql`${messageDrafts.revision} + 1`, updatedAt: now() })
+      const mirrorsToProvider = detectGmailCapabilities(account.scope).draft;
+      const result = db.update(messageDrafts).set({
+        ...draftStorage(content),
+        revision: sql`${messageDrafts.revision} + 1`,
+        providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
+        providerSyncError: null,
+        updatedAt: now(),
+      })
         .where(and(
           eq(messageDrafts.id, draft.id),
           eq(messageDrafts.accountId, account.id),
@@ -708,13 +734,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (latest.revision !== update.revision) return staleDraft(c, latest.revision);
         return deliveryStarted(c);
       }
-      const updated = toMessageDraft(getMessageDraft(db, account.id, draft.id)!);
-      if (detectGmailCapabilities(account.scope).draft) {
-        try {
-          const provider = await gmailTransport.saveDraft(db, account.id, updated);
-          db.update(messageDrafts).set({ providerDraftId: provider.providerDraftId, updatedAt: now() }).where(eq(messageDrafts.id, draft.id)).run();
-        } catch (error) { return transportError(c, error); }
-      }
+      if (mirrorsToProvider) scheduleDraftMirror(draft.id, update.revision + 1);
       return jsonWithSchema(c, messageDraftSchema, toMessageDraft(getMessageDraft(db, account.id, draft.id)!));
     } finally { sqlite.close(); }
   });
@@ -728,8 +748,22 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!draft) return noDraft(c);
       if (draft.deliveryStatus !== "draft" || draft.sendIdempotencyKey !== null) return deliveryStarted(c);
       if (draft.providerDraftId && detectGmailCapabilities(account.scope).draft) {
-        try { await gmailTransport.deleteDraft(db, account.id, draft.providerDraftId); }
-        catch (error) { return transportError(c, error); }
+        try {
+          await deleteProviderDraft(db, account.id, draft.providerDraftId);
+        } catch {
+          db.update(messageDrafts).set({
+            providerSyncStatus: "failed",
+            providerSyncError: "Gmail could not discard its mirrored copy. Try again.",
+            updatedAt: now(),
+          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.accountId, account.id))).run();
+          return c.json({
+            error: {
+              code: "provider_rejected",
+              message: "Gmail could not discard its mirrored copy. The Orca draft was kept so you can retry.",
+              retryable: true,
+            },
+          }, 502);
+        }
       }
       const deleted = db.delete(messageDrafts)
         .where(and(
@@ -746,6 +780,73 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       return c.body(null, 204);
     } finally { sqlite.close(); }
   });
+
+  function scheduleDraftMirror(draftId: string, revision: number) {
+    if (draftMirrorJobs.has(draftId)) return;
+    draftMirrorJobs.add(draftId);
+    queueMicrotask(async () => {
+      const { db, sqlite } = dbFactory();
+      let nextRevision: number | null = null;
+      try {
+        const draft = db.select().from(messageDrafts).where(and(
+          eq(messageDrafts.id, draftId),
+          eq(messageDrafts.revision, revision),
+          eq(messageDrafts.deliveryStatus, "draft"),
+        )).get();
+        if (!draft) return;
+        const content = createMessageDraftSchema.parse({
+          to: parseDraftJson(draft.toRecipients, []),
+          cc: parseDraftJson(draft.ccRecipients, []),
+          bcc: parseDraftJson(draft.bccRecipients, []),
+          subject: draft.subject,
+          body: { text: draft.bodyText, html: draft.bodyHtml },
+          context: parseDraftJson(draft.context, null),
+          attachments: parseDraftJson(draft.attachments, []),
+        });
+        try {
+          const mirrored = await mirrorDraft(db, {
+            accountId: draft.accountId,
+            content,
+            providerDraftId: draft.providerDraftId,
+          });
+          const updated = db.update(messageDrafts).set({
+            providerDraftId: mirrored.providerDraftId,
+            providerMessageId: mirrored.providerMessageId,
+            providerThreadId: mirrored.providerThreadId,
+            providerSyncStatus: "synced",
+            providerSyncError: null,
+            updatedAt: now(),
+          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision)))
+            .returning({ id: messageDrafts.id }).get();
+          if (!updated) {
+            // A newer local revision arrived while Gmail was creating the
+            // provider draft. Carry that provider ID forward so the next job
+            // updates the same Gmail draft instead of creating an orphan.
+            db.update(messageDrafts).set({
+              providerDraftId: mirrored.providerDraftId,
+              providerMessageId: mirrored.providerMessageId,
+              providerThreadId: mirrored.providerThreadId,
+            }).where(and(eq(messageDrafts.id, draft.id), isNull(messageDrafts.providerDraftId))).run();
+          }
+        } catch (error) {
+          db.update(messageDrafts).set({
+            providerSyncStatus: "failed",
+            providerSyncError: error instanceof Error ? error.message : "Gmail could not mirror this draft",
+            updatedAt: now(),
+          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision))).run();
+        }
+        const latest = db.select({
+          revision: messageDrafts.revision,
+          providerSyncStatus: messageDrafts.providerSyncStatus,
+        }).from(messageDrafts).where(eq(messageDrafts.id, draftId)).get();
+        if (latest?.providerSyncStatus === "pending") nextRevision = latest.revision;
+      } finally {
+        sqlite.close();
+        draftMirrorJobs.delete(draftId);
+        if (nextRevision !== null) scheduleDraftMirror(draftId, nextRevision);
+      }
+    });
+  }
 
   app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
@@ -1126,6 +1227,14 @@ function draftStorage(input: ReturnType<typeof createMessageDraftSchema.parse>) 
   };
 }
 
+function hasMeaningfulDraftContent(input: ReturnType<typeof createMessageDraftSchema.parse>) {
+  return input.to.length + input.cc.length + input.bcc.length > 0
+    || Boolean(input.subject.trim())
+    || Boolean(input.body.text.trim())
+    || Boolean(input.body.html?.trim())
+    || input.attachments.length > 0;
+}
+
 function toMessageDraft(draft: MessageDraftRecord): ReturnType<typeof messageDraftSchema.parse> {
   return messageDraftSchema.parse({
     id: draft.id,
@@ -1139,6 +1248,8 @@ function toMessageDraft(draft: MessageDraftRecord): ReturnType<typeof messageDra
     attachments: parseDraftJson(draft.attachments, []),
     revision: draft.revision,
     deliveryStatus: draft.deliveryStatus,
+    providerSyncStatus: draft.providerSyncStatus,
+    providerSyncError: draft.providerSyncError,
     providerDraftId: draft.providerDraftId,
     providerMessageId: draft.providerMessageId,
     providerThreadId: draft.providerThreadId,
