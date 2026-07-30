@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
-import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
+import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -275,6 +275,72 @@ describe("App", () => {
     expect(COMPOSE_AUTOSAVE_DELAY_MS).toBeLessThanOrEqual(500);
   });
 
+  test("retries a response-lost delivery without patching or changing its idempotency key", async () => {
+    const content = {
+      to: [{ name: "Maya", email: "maya@example.com" }],
+      cc: [],
+      bcc: [],
+      subject: "Re: Reader notes",
+      body: { text: "Only once", html: "<p>Only once</p>" },
+      context: null,
+      attachments: [],
+    };
+    let server: MessageDraft = {
+      id: "draft-1",
+      accountId: "account",
+      ...content,
+      revision: 0,
+      deliveryStatus: "draft",
+      providerSyncStatus: "synced",
+      providerSyncError: null,
+      providerDraftId: "gmail-draft-1",
+      providerMessageId: null,
+      providerThreadId: null,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z",
+    };
+    let loseImmediateStatus = true;
+    let sendCalls = 0;
+    let updateCalls = 0;
+    const keys: string[] = [];
+    const operations = {
+      async inspect() {
+        if (sendCalls === 1 && loseImmediateStatus) {
+          loseImmediateStatus = false;
+          throw new Error("status response lost");
+        }
+        return server;
+      },
+      async create() {
+        throw new Error("must reuse the existing draft");
+      },
+      async update(_draftId: string, revision: number) {
+        updateCalls += 1;
+        server = { ...server, revision: revision + 1 };
+        return server;
+      },
+      async send(_draftId: string, _revision: number, idempotencyKey: string) {
+        sendCalls += 1;
+        keys.push(idempotencyKey);
+        if (sendCalls === 1) {
+          server = { ...server, deliveryStatus: "ambiguous" };
+          throw new Error("send response lost");
+        }
+        server = { ...server, deliveryStatus: "sent", providerMessageId: "gmail-sent-1" };
+        return { draftId: server.id, status: "sent" as const, providerMessageId: server.providerMessageId, providerThreadId: server.providerThreadId, error: null };
+      },
+    };
+    const input = { serverId: server.id, revision: server.revision, content, idempotencyKeyFor: () => "stable-send-key" };
+
+    await expect(deliverDurableDraft(input, operations)).rejects.toThrow("send response lost");
+    const retry = await deliverDurableDraft(input, operations);
+
+    expect(retry.result.status).toBe("sent");
+    expect(updateCalls).toBe(1);
+    expect(sendCalls).toBe(2);
+    expect(keys).toEqual(["stable-send-key", "stable-send-key"]);
+  });
+
   test("renders the write-first controls, delivery explanation, and labeled saved state", () => {
     const draft = { ...createEmptyComposeDraft("account"), to: [{ name: "Maya Chen", email: "maya@example.com" }], subject: "Launch notes", body: "A human note." };
     const html = renderToStaticMarkup(
@@ -463,6 +529,53 @@ describe("App", () => {
     expect(normalizeReplySubject("Reader test")).toBe("Re: Reader test");
     expect(normalizeReplySubject("Re: Reader test")).toBe("Re: Reader test");
   });
+
+  test("builds standards-aware reply-all and forward drafts", () => {
+    const message = {
+      ...makeThreadMessage("group", "2026-07-12T18:00:00.000Z"),
+      to: [
+        { name: "Luke Brevoort", email: "luke@example.com" },
+        { name: "Dana Kim", email: "dana@example.com" },
+        { name: "Maya duplicate", email: "MAYA@example.com" },
+      ],
+      cc: [
+        { name: "Anika Lee", email: "anika@example.com" },
+        { name: "Dana duplicate", email: "DANA@example.com" },
+      ],
+      references: ["<older@example.com>"],
+      attachments: [{ id: "notes", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }],
+    };
+    const detail = makeThreadDetail([message]);
+    const replyAll = buildReaderActionDraft(detail, message, "reply_all");
+    expect(replyAll.to.map((recipient) => recipient.email.toLowerCase())).toEqual(["maya@example.com", "dana@example.com"]);
+    expect(replyAll.cc.map((recipient) => recipient.email)).toEqual(["anika@example.com"]);
+    expect(replyAll.context).toMatchObject({ kind: "reply_all", providerThreadId: "provider-thread", inReplyTo: "<group@example.com>" });
+
+    const forward = buildReaderActionDraft(detail, message, "forward");
+    expect(forward.to).toEqual([]);
+    expect(forward.subject).toBe("Fwd: Reader test");
+    expect(forward.body).toContain("---------- Forwarded message ----------");
+    expect(forward.body).toContain("Original attachments (not included automatically): notes.pdf");
+    expect(normalizeForwardSubject("Fwd: Existing")).toBe("Fwd: Existing");
+  });
+
+  test("treats a SENT alias as owned when choosing reply recipients", () => {
+    const message = {
+      ...makeThreadMessage("alias-sent", "2026-07-12T18:00:00.000Z"),
+      from: { name: "Luke at Work", email: "luke+work@example.com" },
+      to: [
+        { name: "Maya Chen", email: "maya@example.com" },
+        { name: "Luke Brevoort", email: "luke@example.com" },
+      ],
+      cc: [{ name: "Luke alias", email: "LUKE+WORK@example.com" }],
+      labels: ["SENT"],
+    };
+    const detail = makeThreadDetail([message]);
+
+    expect(buildReaderActionDraft(detail, message, "reply").to.map((recipient) => recipient.email)).toEqual(["maya@example.com"]);
+    expect(buildReaderActionDraft(detail, message, "reply_all").to.map((recipient) => recipient.email)).toEqual(["maya@example.com"]);
+    expect(buildReaderActionDraft(detail, message, "reply_all").cc).toEqual([]);
+  });
 });
 
 function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyText = id): ThreadDetailMessage {
@@ -481,6 +594,8 @@ function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyT
     labels: ["INBOX"],
     bodyText,
     bodyHtml: null,
+    internetMessageId: `<${id}@example.com>`,
+    references: [],
     attachments: [],
   };
 }

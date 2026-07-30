@@ -58,7 +58,7 @@ describe("shared API schemas", () => {
         attention: { hasUnread: false, hasStarred: false, hasDraft: false, humanSignal: null },
       },
       messages: [{
-        id: "message_1", provider: "gmail", providerMessageId: "provider-message-1", from: { name: null, email: "maya@example.com" }, to: [], cc: [], bcc: [], subject: "A thread", snippet: "", receivedAt: "2026-07-08T12:00:00.000Z", unread: false, labels: [], bodyText: null, bodyHtml: null,
+        id: "message_1", provider: "gmail", providerMessageId: "provider-message-1", from: { name: null, email: "maya@example.com" }, to: [], cc: [], bcc: [], subject: "A thread", snippet: "", receivedAt: "2026-07-08T12:00:00.000Z", unread: false, labels: [], bodyText: null, bodyHtml: null, internetMessageId: null, references: [],
         attachments: [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }],
       }],
     });

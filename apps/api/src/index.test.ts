@@ -103,7 +103,7 @@ describe("Orca API", () => {
         body: JSON.stringify({
           to: [{ name: "Maya Chen", email: "MAYA@EXAMPLE.COM" }], subject: "Launch notes",
           body: { text: "Hi Maya", html: "<p>Hi <strong>Maya</strong><script>nope()</script></p>" },
-          context: { kind: "reply", threadId: "thread_1", messageId: "message_1" },
+          context: { kind: "reply", threadId: "thread_1", messageId: "message_1", providerMessageId: "provider-message-1", providerThreadId: "provider-thread-1", inReplyTo: "<message_1@example.com>", references: [] },
         }),
       });
       assert.equal(createdResponse.status, 201);
@@ -678,6 +678,8 @@ describe("Orca API", () => {
       const { db, sqlite } = createDatabaseClient(dbPath);
       try {
         migrate(db, { migrationsFolder: partialMigrations });
+        sqlite.run("insert into users (id, email, created_at) values ('upgrade-user', 'upgrade@example.com', 1)");
+        sqlite.run("insert into oauth_accounts (id, user_id, provider, provider_email, provider_id, sync_cursor, last_synced_at, created_at, updated_at) values ('upgrade-account', 'upgrade-user', 'gmail', 'upgrade@example.com', 'gmail-upgrade', 'cursor-before-upgrade', 1234, 1, 1)");
         migrate(db, { migrationsFolder: fullMigrations });
 
         const tables = sqlite.query("select name from sqlite_master where type = 'table'").all() as Array<{ name: string }>;
@@ -690,6 +692,8 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "message_drafts"));
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
+        assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);
+        assert.deepEqual(sqlite.query("select sync_cursor, last_synced_at from oauth_accounts where id = 'upgrade-account'").get(), { sync_cursor: null, last_synced_at: null });
       } finally {
         sqlite.close();
       }
