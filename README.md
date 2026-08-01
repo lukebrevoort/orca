@@ -136,6 +136,16 @@ The same setup guide is available as a local HTML page at
 The BRE-151 manual verification card is available at
 `http://localhost:5173/docs/bre-151-validation.html`.
 
+### Local feedback
+
+In Vite development mode, every React route includes the Feedback button from
+the vendored `@feedback-kit/react` package. It captures the current screen,
+selected elements, and a small redacted Orca state snapshot. Reports are
+validated and stored as in-memory receipts by the local API at
+`POST /v1/feedback`; this development sink does not send anything to Linear or
+require browser-side secrets. The receipt endpoint is disabled when
+`NODE_ENV=production`.
+
 ## Workspace Layout
 
 - `apps/api`: Bun/Hono backend.
