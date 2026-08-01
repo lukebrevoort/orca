@@ -135,6 +135,8 @@ The same setup guide is available as a local HTML page at
 `http://localhost:5173/docs/gmail-oauth-setup.html` when the web dev server is running.
 The BRE-151 manual verification card is available at
 `http://localhost:5173/docs/bre-151-validation.html`.
+The BRE-159 M3 writing and delivery verification guide is available at
+`http://localhost:5173/docs/bre-159-validation.html`.
 
 ## Workspace Layout
 

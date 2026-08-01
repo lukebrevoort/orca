@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" />
+  <title>BRE-159 · M3 writing and delivery validation</title>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { background: #f3f1eb; color: #1d211f; margin: 0; }
+    main { margin: 0 auto; max-width: 1160px; padding: 56px 24px 84px; }
+    header { border-bottom: 1px solid #c9ccc5; display: grid; gap: 14px; padding-bottom: 30px; }
+    .eyebrow { color: #617269; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1, h2 { font-family: Georgia, serif; font-weight: 500; letter-spacing: -.04em; }
+    h1 { font-size: clamp(42px, 7vw, 78px); line-height: .95; margin: 0; max-width: 780px; }
+    h2 { font-size: 30px; margin: 0 0 14px; }
+    header p, p, li { line-height: 1.6; }
+    header p { color: #59615d; font-size: 18px; margin: 0; max-width: 820px; }
+    .grid { display: grid; gap: 18px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 28px 0; }
+    .card, section { background: #fbfaf6; border: 1px solid #d6d8d1; border-radius: 18px; padding: 22px; }
+    .card strong { display: block; font-size: 26px; margin-bottom: 8px; }
+    .card span, figcaption { color: #59615d; line-height: 1.5; }
+    section { margin-top: 18px; }
+    ol, ul { margin: 0; padding-left: 22px; }
+    li + li { margin-top: 9px; }
+    code { background: #e9ece6; border-radius: 6px; color: #1d211f; padding: 2px 6px; }
+    .checks { display: grid; gap: 18px; grid-template-columns: 1fr 1fr; }
+    .check { border-left: 3px solid #70867d; padding-left: 16px; }
+    .check h3 { font-size: 17px; margin: 0 0 6px; }
+    .check p { color: #59615d; margin: 0; }
+    .evidence { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    figure { margin: 0; }
+    .evidence-card { background: #eef0ea; border: 1px dashed #aeb6ae; border-radius: 14px; min-height: 120px; padding: 18px; }
+    figcaption { font-size: 13px; margin-top: 8px; }
+    .note { background: #edf2ed; border-radius: 12px; color: #46554c; padding: 14px 16px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #111311; color: #ecece8; }
+      header { border-color: #343733; }
+      header p, .card span, .check p, figcaption { color: #aeb4ad; }
+      .eyebrow { color: #9db7a8; }
+      .card, section { background: #191b19; border-color: #353935; }
+      code { background: #292c29; color: #ecece8; }
+      .evidence-card { background: #202520; border-color: #566257; }
+      .note { background: #1d2a21; color: #c6d4c8; }
+    }
+    @media (max-width: 820px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .checks, .evidence { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { main { padding: 38px 16px 60px; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="eyebrow">BRE-159 · M3 reviewer guide</span>
+      <h1>Writing that stays safe through delivery.</h1>
+      <p>Use this guide to verify the complete writing journey: request Gmail compose access, write and recover a draft, attach and remove files, deliver once, and reconcile the sent message with its conversation. Repeat the visual checks in light and dark mode at wide and narrow widths.</p>
+    </header>
+
+    <div class="grid">
+      <div class="card"><strong>420 ms</strong><span>Debounced local and remote autosave window.</span></div>
+      <div class="card"><strong>25 MB</strong><span>Per-message attachment budget, with 25 file slots.</span></div>
+      <div class="card"><strong>1 key</strong><span>Stable idempotency key per durable delivery command.</span></div>
+      <div class="card"><strong>106 tests</strong><span>Shared, web, and API tests in the last local run.</span></div>
+    </div>
+
+    <section>
+      <h2>Fast manual check</h2>
+      <ol>
+        <li>Run <code>bun install</code>, then <code>bun run dev</code>. Open <code>/dev/inbox</code> for the UI preview and <code>/settings/integrations/gmail</code> for the real account flow.</li>
+        <li>In Settings, confirm a read-only account sees the minimum <code>gmail.compose</code> upgrade explanation. Cancel or deny the upgrade and confirm the inbox remains readable.</li>
+        <li>Open Compose, enter a recipient, subject, body, Cc, and Bcc. Confirm the saved status becomes explicit, then reload and confirm the text recovers. Add an image and a document, remove one, and confirm binary files are never restored from local storage.</li>
+        <li>Open Zen mode and return with Escape or the Return to compose control. Confirm focus and content remain in the writing journey.</li>
+        <li>With compose access granted, send once. Double-click Send or retry a response-lost request in the safety tests. Confirm the message is not delivered twice, the conversation refreshes, and reopening Compose starts blank.</li>
+        <li>Open a thread and exercise Reply, Reply all, and Forward. Confirm external recipients are selected correctly, Bcc is not exposed to other recipients, and the thread remains intact after reconciliation.</li>
+        <li>Discard a draft, simulate offline mode, and simulate a stale revision or provider cleanup failure. Confirm the copy says what is safe, what is retryable, and what action is blocked.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Safety matrix</h2>
+      <div class="checks">
+        <div class="check"><h3>Delivery reservation</h3><p>The API reserves a draft with a unique idempotency key before calling Gmail. A second command returns the durable result instead of sending again.</p></div>
+        <div class="check"><h3>Ambiguous provider response</h3><p>Timeouts and unknown upstream failures become an explicit ambiguous state. Retrying inspects the durable draft and reuses the same key.</p></div>
+        <div class="check"><h3>Recipient privacy</h3><p>To, Cc, and Bcc remain distinct through shared schemas and MIME encoding. Logs and public errors use bounded messages rather than provider payloads.</p></div>
+        <div class="check"><h3>Account isolation</h3><p>Draft reads, writes, deletes, and sends are scoped to the connected account behind the authenticated user session.</p></div>
+        <div class="check"><h3>Provider recovery</h3><p>Draft mirroring is revision-aware; a missing Gmail draft is recreated, and failed cleanup keeps the Orca copy available for retry.</p></div>
+        <div class="check"><h3>Thread correctness</h3><p>Replies hydrate missing Message-ID and References headers. Forwards intentionally start a new provider thread.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Responsive and accessible states</h2>
+      <ul>
+        <li>At wide and narrow widths, verify the compose panel, Zen mode, recipient fields, attachment chips, conflict choice, send, discard, and permission dialog remain usable without horizontal scrolling.</li>
+        <li>Repeat selected, hover, focus, disabled, saving, saved, error, and sending states in both themes. Labels must remain readable; selected controls use the established surface-hover treatment.</li>
+        <li>With reduced motion enabled, confirm the writing flow still works without transition-dependent focus loss. Escape closes Zen mode and restores the previous writing context.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Evidence log</h2>
+      <div class="evidence">
+        <figure><div class="evidence-card"><strong>Wide · light</strong><p>Inbox and compose preview captured with recipient, Cc/Bcc, subject, body, and labeled delivery state.</p></div><figcaption>Share the screenshot in the review thread or Dispatch media for the current run.</figcaption></figure>
+        <figure><div class="evidence-card"><strong>Narrow · dark</strong><p>Repeat the compose and reader checks after resizing and switching themes. Include the permission, recovery, and error states when available.</p></div><figcaption>Do not include private Gmail message content in screenshots or logs.</figcaption></figure>
+      </div>
+    </section>
+
+    <section>
+      <h2>Automated evidence</h2>
+      <p class="note">Last local verification: 2026-08-01 · Bun 1.3.14 · Vite 7.3.6</p>
+      <ul>
+        <li><code>bun run typecheck</code> — all workspaces pass.</li>
+        <li><code>bun run test</code> — 106 tests pass across shared, web, and API.</li>
+        <li><code>bun run build</code> — production build passes.</li>
+        <li><code>bun run lint</code> — all workspaces pass.</li>
+        <li>API tests cover account-scoped drafts, revision conflicts, attachment limits, exact-once reservation, ambiguous delivery, provider mirroring and cleanup, OAuth denial, and Gmail MIME/threading behavior.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

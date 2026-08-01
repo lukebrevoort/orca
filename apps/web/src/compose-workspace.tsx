@@ -563,6 +563,9 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       }
       if (hydratedScope === scopeKey && needsRemoteSave && !conflict) {
         saveSequenceRef.current = saveSequenceRef.current.then(() => persistRemote(draft, forceRemoteSave));
+      } else if (demoMode && hasComposeContent(draft)) {
+        setSaveStatus("saved");
+        setSaveMessage("Saved on this device");
       } else if (!hasComposeContent(draft)) {
         setSaveStatus("saved");
         setSaveMessage("Not saved yet");
@@ -665,7 +668,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
 
   async function sendDraft(): Promise<DeliveryResult> {
     if (demoMode) {
-      clearSentDraftStorage();
+      resetAfterSuccessfulSend();
       return { draftId: draft.id, status: "sent", providerMessageId: `demo-${draft.id}`, providerThreadId: draft.context?.providerThreadId ?? null, error: null };
     }
     if (conflict) throw new Error("Resolve the saved draft conflict before sending.");
@@ -747,7 +750,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       const idempotencyStorageKey = `orca-compose-send:${accountId}:${scope}:${delivery.draft.id}`;
       const result = delivery.result;
       if (result.status === "sent") {
-        clearSentDraftStorage();
+        resetAfterSuccessfulSend();
         window.localStorage.removeItem(idempotencyStorageKey);
       }
       return result;
@@ -756,10 +759,20 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     }
   }
 
-  function clearSentDraftStorage() {
+  function resetAfterSuccessfulSend() {
+    const empty = createEmptyComposeDraft(accountId);
+    revokeComposeAttachments(attachmentsRef.current);
     pendingDraftRef.current = null;
-    persistedDraftRef.current = JSON.stringify(persistableDraft(createEmptyComposeDraft(accountId)));
+    persistedDraftRef.current = JSON.stringify(persistableDraft(empty));
     window.localStorage.removeItem(draftStorageKey(accountId, scope));
+    serverIdRef.current = null;
+    serverRevisionRef.current = null;
+    lastRemoteSignatureRef.current = null;
+    sendIdempotencyKeyRef.current = null;
+    setConflict(null);
+    setDraft(empty);
+    setSaveStatus("saved");
+    setSaveMessage("Not saved yet");
   }
 
   return {
