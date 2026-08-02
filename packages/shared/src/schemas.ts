@@ -183,7 +183,7 @@ const outboundAttachmentSchema = z.object({
 }).strict();
 export type OutboundAttachment = z.infer<typeof outboundAttachmentSchema>;
 
-const outboundContentSchema = z.object({
+const outboundContentShape = {
   to: z.array(outboundRecipientSchema).max(100).default([]),
   cc: z.array(outboundRecipientSchema).max(100).default([]),
   bcc: z.array(outboundRecipientSchema).max(100).default([]),
@@ -191,11 +191,15 @@ const outboundContentSchema = z.object({
   body: outboundBodySchema.optional(),
   context: outboundContextSchema.nullable().default(null),
   attachments: z.array(outboundAttachmentSchema).max(25).default([]),
-}).strict().superRefine((value, context) => {
-  if (value.attachments.reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
+};
+
+function addAttachmentLimitIssue(value: { attachments?: Array<{ size: number }> }, context: z.RefinementCtx) {
+  if ((value.attachments ?? []).reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
     context.addIssue({ code: "custom", path: ["attachments"], message: "Attachments exceed the 25 MB delivery limit" });
   }
-});
+}
+
+const outboundContentSchema = z.object(outboundContentShape).strict();
 
 export const draftDeliveryStatusSchema = z.enum(["draft", "queued", "sending", "sent", "rejected", "ambiguous"]);
 export type DraftDeliveryStatus = z.infer<typeof draftDeliveryStatusSchema>;
@@ -220,7 +224,7 @@ export const outboundErrorSchema = z.object({
 }).strict();
 export type OutboundError = z.infer<typeof outboundErrorSchema>;
 
-export const messageDraftSchema = outboundContentSchema.safeExtend({
+export const messageDraftSchema = outboundContentSchema.extend({
   id: nonEmptyStringSchema,
   accountId: nonEmptyStringSchema,
   body: outboundBodySchema,
@@ -233,12 +237,12 @@ export const messageDraftSchema = outboundContentSchema.safeExtend({
   providerThreadId: z.string().nullable(),
   createdAt: isoDateTimeStringSchema,
   updatedAt: isoDateTimeStringSchema,
-}).strict();
+}).strict().superRefine(addAttachmentLimitIssue);
 export type MessageDraft = z.infer<typeof messageDraftSchema>;
 
-export const createMessageDraftSchema = outboundContentSchema.safeExtend({
+export const createMessageDraftSchema = outboundContentSchema.extend({
   body: outboundBodySchema.default({ text: "", html: null }),
-}).strict();
+}).strict().superRefine(addAttachmentLimitIssue);
 export type CreateMessageDraft = z.infer<typeof createMessageDraftSchema>;
 
 export const updateMessageDraftSchema = z.object({
