@@ -399,7 +399,7 @@ describe("Orca API", () => {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.deepEqual(body.messages.map((message: { id: string }) => message.id), ["email_old", "email_new"]);
-      assert.equal(body.messages[0].bodyHtml, "<h2>Hello <strong>Luke</strong></h2><p>Readable layout copy</p><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p>");
+      assert.equal(body.messages[0].bodyHtml, "<h2>Hello <strong>Luke</strong></h2><table><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\" />");
       assert.equal(body.messages[0].bodyText, "Hello LukeReadable layout copyRead more");
       assert.equal(body.messages[1].bodyHtml, null);
       assert.equal(body.messages[1].bodyText, null);
