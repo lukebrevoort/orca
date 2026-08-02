@@ -1267,6 +1267,7 @@ textarea {
 }
 
 .message-list {
+  align-content: start;
   border-top: 1px solid var(--orca-border);
   display: grid;
   gap: 0;
@@ -1279,6 +1280,7 @@ textarea {
 }
 
 .message-list li {
+  align-self: start;
   min-width: 0;
 }
 
