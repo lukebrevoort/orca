@@ -1111,7 +1111,7 @@ function InboxApp({
 
   return (
     <div className="app-root">
-      <main className="app-shell">
+      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
         <aside className="sidebar" aria-label="Mailbox navigation">
           <header className="sidebar-header">
             <div className="brand-wrap">
