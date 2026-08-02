@@ -1110,6 +1110,11 @@ textarea {
   padding: 32px 40px 40px;
 }
 
+.content-pane:not(.content-pane-reader) {
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 .pane-header {
   align-items: start;
   border-bottom: 1px solid var(--orca-border);
@@ -1274,7 +1279,6 @@ textarea {
   list-style: none;
   margin: 0;
   max-width: 900px;
-  overflow: auto;
   padding: 0;
   width: 100%;
 }
@@ -2790,6 +2794,9 @@ textarea {
   padding: 0;
 }
 
+.app-shell-reader { grid-template-columns: minmax(0, 1fr); }
+.app-shell-reader .sidebar { display: none; }
+
 .message-reader {
   color: var(--orca-canvas-ink);
   min-height: 100vh;
@@ -3237,8 +3244,8 @@ textarea {
 :root[data-motion="reduced"] .reader-back { transition: none; }
 
 @media (max-width: 760px) {
-  .app-shell:has(.content-pane-reader) { display: block; }
-  .app-shell:has(.content-pane-reader) .sidebar { display: none; }
+  .app-shell-reader { display: block; }
+  .app-shell-reader .sidebar { display: none; }
   .reader-nav { padding: 16px 18px; }
   .reader-document { padding: 38px 22px 72px; }
   .reader-heading { padding-bottom: 38px; }

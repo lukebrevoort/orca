@@ -1120,7 +1120,7 @@ function InboxApp({
 
   return (
     <div className="app-root">
-      <main className="app-shell">
+      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
         <aside className="sidebar" aria-label="Mailbox navigation">
           <header className="sidebar-header">
             <div className="brand-wrap">
@@ -1190,25 +1190,7 @@ function InboxApp({
         </aside>
 
         <section className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} aria-label={selectedThreadId ? "Message reader" : "Inbox"}>
-          {selectedThreadId ? (
-            <MessageReader
-              detail={threadDetail}
-              contacts={composeContacts}
-              demoMode={demoMode}
-              error={readerError}
-              fallbackMessages={selectedThreadMessages}
-              fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
-              onAttentionChange={updateSenderAttention}
-              notifyByDefault={preferences.notifyByDefault}
-              reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
-              onSaveReminder={saveReminder}
-              onFinishReminder={finishReminder}
-              onBack={closeThread}
-              onRetry={() => setReaderRefreshKey((key) => key + 1)}
-              onSent={reconcileSentMessage}
-              status={readerStatus}
-            />
-          ) : (
+          <div style={{ display: selectedThreadId ? "none" : undefined }}>
             <InboxView
               account={account}
               errorMessage={errorMessage}
@@ -1231,7 +1213,26 @@ function InboxApp({
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
             />
-          )}
+          </div>
+          <div style={{ display: selectedThreadId ? undefined : "none" }}>
+            <MessageReader
+              detail={threadDetail}
+              contacts={composeContacts}
+              demoMode={demoMode}
+              error={readerError}
+              fallbackMessages={selectedThreadMessages}
+              fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
+              onAttentionChange={updateSenderAttention}
+              notifyByDefault={preferences.notifyByDefault}
+              reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
+              onSaveReminder={saveReminder}
+              onFinishReminder={finishReminder}
+              onBack={closeThread}
+              onRetry={() => setReaderRefreshKey((key) => key + 1)}
+              onSent={reconcileSentMessage}
+              status={readerStatus}
+            />
+          </div>
         </section>
       </main>
 
