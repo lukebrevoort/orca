@@ -3086,6 +3086,13 @@ textarea {
 .reader-body-html pre { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 8px; font-size: .75em; line-height: 1.6; overflow-x: auto; padding: 1em; white-space: pre; }
 .reader-body-html pre code { background: transparent; padding: 0; }
 .reader-body-html hr { border: 0; border-top: 1px solid var(--orca-border); margin: 2em 0; }
+.reader-body-html table { border-collapse: collapse; font-size: .88em; margin: 1.25em 0; max-width: 100%; overflow-x: auto; }
+.reader-body-html td,
+.reader-body-html th { border: 1px solid var(--orca-border); padding: .5em .75em; vertical-align: top; }
+.reader-body-html th { background: var(--orca-surface-hover); font-weight: 700; }
+.reader-body-html img { border-radius: 4px; height: auto; max-width: 100%; }
+.reader-body-html figure { margin: 1.25em 0; }
+.reader-body-html figcaption { color: var(--orca-muted); font-size: .85em; margin-top: .35em; }
 
 :root[data-reader-size="large"] .reader-body { font-size: clamp(21px, 1.9vw, 25px); line-height: 1.82; }
 :root[data-reader-density="compact"] .reader-heading { padding-bottom: 30px; }
