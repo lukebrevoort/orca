@@ -60,6 +60,32 @@ describe("feedback receipt handler", () => {
     });
   });
 
+  test("returns the external delivery link when a report handler provides one", async () => {
+    const response = await handleFeedbackRequest(
+      new Request("http://localhost:3000/v1/feedback", {
+        method: "POST",
+        headers: { origin: "http://localhost:5173", "content-type": "application/json" },
+        body: JSON.stringify({ ...report, id: "feedback-test-delivery-1" }),
+      }),
+      {
+        allowedOrigin: "http://localhost:5173",
+        onReport: () => ({
+          identifier: "BRE-201",
+          url: "https://linear.app/brevoort/issue/BRE-201/feedback-button-delayed",
+        }),
+      },
+    );
+
+    assert.deepEqual(await response.json(), {
+      result: {
+        id: "feedback-test-delivery-1",
+        title: "The button feels quiet",
+        identifier: "BRE-201",
+        url: "https://linear.app/brevoort/issue/BRE-201/feedback-button-delayed",
+      },
+    });
+  });
+
   test("rejects cross-origin and malformed reports", async () => {
     const crossOrigin = await handleFeedbackRequest(
       new Request("http://localhost:3000/v1/feedback", { method: "POST", headers: { origin: "https://example.com" }, body: "{}" }),

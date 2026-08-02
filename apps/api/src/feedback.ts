@@ -2,6 +2,7 @@ import {
   redactState,
   validateFeedbackReport,
   type FeedbackReport,
+  type FeedbackSubmissionResult,
 } from "@feedback-kit/core";
 
 const MAX_FEEDBACK_BODY_BYTES = 40 * 1024 * 1024;
@@ -13,6 +14,11 @@ export type FeedbackReceipt = {
   route: string;
   receivedAt: string;
 };
+
+export type FeedbackDelivery = Pick<
+  FeedbackSubmissionResult,
+  "identifier" | "url"
+>;
 
 const feedbackReceipts = new Map<string, FeedbackReceipt>();
 
@@ -26,7 +32,9 @@ export async function handleFeedbackRequest(
     allowedOrigin?: string;
     enabled?: boolean;
     now?: () => Date;
-    onReport?: (report: FeedbackReport) => void;
+    onReport?: (
+      report: FeedbackReport,
+    ) => void | FeedbackDelivery | Promise<void | FeedbackDelivery>;
   } = {},
 ): Promise<Response> {
   const headers = new Headers({
@@ -78,15 +86,25 @@ export async function handleFeedbackRequest(
       receivedAt: (options.now ?? (() => new Date()))().toISOString(),
     };
     feedbackReceipts.set(receipt.id, receipt);
-    options.onReport?.(report);
+    const delivery = await options.onReport?.(report);
     console.info("Feedback received", receipt);
     return Response.json({
       result: {
         id: receipt.id,
         title: receipt.title,
+        ...(delivery ?? {}),
       },
     }, { status: 201, headers });
-  } catch {
-    return Response.json({ error: "Feedback could not be submitted." }, { status: 400, headers });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown feedback submission error.";
+    console.error("Feedback submission failed", { message });
+    return Response.json(
+      {
+        error: process.env.NODE_ENV === "production"
+          ? "Feedback could not be submitted."
+          : message,
+      },
+      { status: 400, headers },
+    );
   }
 }

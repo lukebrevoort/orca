@@ -53,8 +53,10 @@ import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts"
 import { deleteGmailDraft, mirrorGmailDraft, type GmailDraftMirrorInput, type GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { createGmailTransport, GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 import { handleFeedbackRequest } from "./feedback.ts";
+import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 
 const serverConfig = getServerConfig();
+const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
 
 type CreateAppOptions = {
   dbFactory?: typeof createDatabaseClient;
@@ -108,6 +110,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.all("/v1/feedback", (c) => handleFeedbackRequest(c.req.raw, {
     allowedOrigin: serverConfig.webOrigin,
     enabled: process.env.NODE_ENV !== "production",
+    onReport: linearFeedbackSubmitter,
   }));
 
   app.get("/v1/auth/session", requireAuth({ dbFactory }), (c) => {

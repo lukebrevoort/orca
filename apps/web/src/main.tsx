@@ -11,6 +11,7 @@ createRoot(document.getElementById("root")!).render(
     {import.meta.env.DEV ? (
       <FeedbackWidget
         accentColor="#70867d"
+        defaultScreenshot={false}
         endpoint="/v1/feedback"
         getState={() => ({
           route: `${window.location.pathname}${window.location.search}`,

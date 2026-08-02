@@ -141,11 +141,15 @@ The BRE-159 M3 writing and delivery verification guide is available at
 ### Local feedback
 
 In Vite development mode, every React route includes the Feedback button from
-the vendored `@feedback-kit/react` package. It captures the current screen,
-selected elements, and a small redacted Orca state snapshot. Reports are
-validated and stored as in-memory receipts by the local API at
-`POST /v1/feedback`; this development sink does not send anything to Linear or
-require browser-side secrets. The receipt endpoint is disabled when
+the vendored `@feedback-kit/react` package. It can include an explicitly
+selected screen, selected elements, and a small redacted Orca state snapshot.
+Reports are validated by the local API at `POST /v1/feedback` and require no
+browser-side secrets. Without `LINEAR_API_KEY`, they remain available as
+in-memory receipts only. If `LINEAR_API_KEY` is present in the root `.env`, the
+same dev-only route uploads image/file attachments to Linear’s private storage,
+creates a Linear issue in the configured Brev team and Orca project, applies the
+Feedback label, and returns the created issue link to the widget. The API key
+must remain server-side. The receipt endpoint is disabled when
 `NODE_ENV=production`.
 
 ## Workspace Layout

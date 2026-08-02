@@ -73,7 +73,7 @@ function convertOklch(_match: string, body: string): string {
   return oklabToRgb(lightness, chroma * Math.cos(hue), chroma * Math.sin(hue), parseAlpha(alphaToken));
 }
 
-function toLegacyColors(value: string): string {
+export function toLegacyColors(value: string): string {
   const normalized = value.replace(
     SRGB_COLOR_PATTERN,
     (_match, red: string, green: string, blue: string, alpha?: string) => {
@@ -110,6 +110,39 @@ function copyComputedStyles(
   });
 }
 
+function isCloneArtifact(element: HTMLElement): boolean {
+  const tagName = element.tagName.toLowerCase();
+  return tagName === "html2canvaspseudoelement" || tagName === "style";
+}
+
+function collectCaptureElements(
+  root: HTMLElement,
+  { clone }: { clone: boolean },
+): HTMLElement[] {
+  return [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))].filter(
+    (element) =>
+      (!clone || !isCloneArtifact(element)) &&
+      !element.closest("[data-feedback-kit-root]"),
+  );
+}
+
+function normalizeInlineStyles(elements: HTMLElement[]): void {
+  elements.forEach((element) => {
+    for (let propertyIndex = 0; propertyIndex < element.style.length; propertyIndex += 1) {
+      const property = element.style.item(propertyIndex);
+      const value = element.style.getPropertyValue(property);
+      const normalized = toLegacyColors(value);
+      if (normalized !== value) {
+        element.style.setProperty(
+          property,
+          normalized,
+          element.style.getPropertyPriority(property),
+        );
+      }
+    }
+  });
+}
+
 export function collectRuntimeContext(): FeedbackRuntimeContext {
   return {
     url: window.location.href,
@@ -133,20 +166,26 @@ export async function capturePageScreenshot(
   const { default: html2canvas } = await import("html2canvas");
   const canvas = await html2canvas(target, {
     backgroundColor: null,
+    // The normal renderer parses CSS colors itself and does not support the
+    // oklab values browsers can emit for color-mix(). Foreign-object
+    // rendering delegates that step back to the browser.
+    foreignObjectRendering: true,
     logging: false,
     onclone: (clonedDocument, clonedTarget) => {
-      // Orca uses color-mix() extensively, which html2canvas currently
-      // resolves to the unsupported color() syntax. Keep the live page
-      // untouched, remove styles from the temporary clone, and inline the
-      // computed styles using legacy-safe color values.
+      // Keep the live page untouched, remove the source styles from the
+      // temporary clone, and inline the computed styles using legacy-safe
+      // color values. The clone also contains html2canvas pseudo-elements,
+      // which must be normalized separately from the real DOM elements.
       clonedDocument.head.replaceChildren();
-      const originalElements = [target, ...Array.from(target.querySelectorAll("*"))]
-        .filter((element) => element.nodeType === 1) as HTMLElement[];
-      const clonedElements = [
-        clonedTarget,
-        ...Array.from(clonedTarget.querySelectorAll("*")),
-      ].filter((element) => element.nodeType === 1) as HTMLElement[];
+      clonedDocument
+        .querySelectorAll('link[rel="stylesheet"]')
+        .forEach((element) => element.remove());
+      const originalElements = collectCaptureElements(target, { clone: false });
+      const clonedElements = collectCaptureElements(clonedTarget, { clone: true });
       copyComputedStyles(originalElements, clonedElements);
+      normalizeInlineStyles(
+        Array.from(clonedDocument.querySelectorAll<HTMLElement>("*")),
+      );
     },
     useCORS: true,
     scale: Math.min(window.devicePixelRatio, 2),
