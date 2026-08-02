@@ -1267,6 +1267,7 @@ textarea {
 }
 
 .message-list {
+  align-content: start;
   border-top: 1px solid var(--orca-border);
   display: grid;
   gap: 0;
@@ -1279,6 +1280,7 @@ textarea {
 }
 
 .message-list li {
+  align-self: start;
   min-width: 0;
 }
 
@@ -3090,6 +3092,76 @@ textarea {
 :root[data-reader-density="compact"] .reader-message { padding-bottom: 34px; padding-top: 34px; }
 :root[data-reader-density="compact"] .reader-sender { margin-bottom: 22px; }
 
+/* Compact keeps the inbox and its sibling mailbox views scannable without hiding the snippet. */
+:root[data-reader-density="compact"] .message-row {
+  gap: 10px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+}
+
+:root[data-reader-density="compact"] .message-copy {
+  gap: 4px;
+}
+
+:root[data-reader-density="compact"] .message-mark {
+  height: 28px;
+  width: 28px;
+}
+
+:root[data-reader-density="compact"] .message-mark svg {
+  height: 16px;
+  width: 16px;
+}
+
+:root[data-reader-density="compact"] .message-meta strong {
+  font-size: 13px;
+}
+
+:root[data-reader-density="compact"] .message-meta span {
+  font-size: 11px;
+}
+
+:root[data-reader-density="compact"] .message-meta .attention-badge {
+  padding-bottom: 3px;
+  padding-top: 3px;
+}
+
+:root[data-reader-density="compact"] .message-subject-row h2 {
+  font-size: 15px;
+}
+
+:root[data-reader-density="compact"] .message-copy p {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (min-width: 900px) {
+  :root[data-reader-density="compact"] .message-row {
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+
+  :root[data-reader-density="compact"] .message-copy {
+    align-items: center;
+    column-gap: 12px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.3fr) minmax(0, 2fr);
+  }
+
+  :root[data-reader-density="compact"] .message-meta {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  :root[data-reader-density="compact"] .message-meta .attention-badge {
+    margin-left: 0;
+  }
+
+  :root[data-reader-density="compact"] .message-subject-row,
+  :root[data-reader-density="compact"] .message-copy p {
+    min-width: 0;
+  }
+}
+
 .reader-quoted {
   color: var(--orca-muted);
   font-size: 12px;
@@ -3228,6 +3300,7 @@ textarea {
   }
 
   .message-row { min-height: 112px; padding-right: 88px; }
+  :root[data-reader-density="compact"] .message-row { min-height: 0; }
   .keep-thread-button { right: 8px; top: 10px; }
   .message-row-wrap > .sender-attention-control-compact:not(.sender-attention-control-expanded) { right: 8px; top: 46px; }
 }
