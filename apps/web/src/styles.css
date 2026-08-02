@@ -2987,6 +2987,10 @@ textarea {
   text-transform: uppercase;
 }
 
+.reader-unread-divider-first {
+  margin: 0 0 38px;
+}
+
 .reader-unread-divider::before,
 .reader-unread-divider::after { background: var(--orca-accent); content: ""; flex: 1; height: 1px; }
 .reader-unread-divider span { border: 1px solid var(--orca-border); border-radius: 999px; padding: 5px 9px; }
@@ -3253,6 +3257,7 @@ textarea {
   .reader-message { padding: 24px 0 38px; }
   .reader-message-unread::before { left: -12px; }
   .reader-unread-divider { margin: 0 0 28px; }
+  .reader-unread-divider-first { margin: 0 0 28px; }
   .reader-jump { top: 12px; }
   .reader-jump-top { bottom: 18px; right: 18px; top: auto; }
   .reader-sender { grid-template-columns: 38px minmax(0, 1fr); }

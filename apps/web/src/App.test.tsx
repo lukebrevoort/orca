@@ -201,6 +201,42 @@ describe("App", () => {
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
   });
 
+  test("keeps the unread divider from colliding with the date heading", () => {
+    const readOlder = makeThreadMessage("read-older", "2026-07-10T09:00:00.000Z", false, "Read older");
+    const readSameDay = makeThreadMessage("read-same-day", "2026-07-11T09:00:00.000Z", false, "Read same day");
+    const unreadNextDay = makeThreadMessage("unread-next-day", "2026-07-12T09:00:00.000Z", true, "Unread next day");
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([readOlder, readSameDay, unreadNextDay])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+    expect(html).toContain("reader-unread-divider reader-unread-divider-first");
+    expect(html).toContain("Unread messages");
+
+    const unreadSameDay = makeThreadMessage("unread-same-day", "2026-07-11T12:00:00.000Z", true, "Unread same day");
+    const html2 = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([readOlder, readSameDay, unreadSameDay])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+    expect(html2).toContain("Unread messages");
+    expect(html2).not.toContain("reader-unread-divider-first");
+  });
+
   test("prefers the formatted HTML alternative over plain text", () => {
     const message = { ...makeThreadMessage("formatted", "2026-07-12T18:00:00.000Z", false, "Plain fallback"), bodyHtml: "<h2>Release notes</h2><p>Hello <strong>Luke</strong>.</p>" };
     const html = renderToStaticMarkup(

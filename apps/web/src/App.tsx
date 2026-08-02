@@ -2115,14 +2115,15 @@ export function MessageReader({
               <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
                 <ol>
-                  {group.messages.map((message) => {
+                  {group.messages.map((message, index) => {
                     const signature = getContactSignature(message.from);
                     const plainBody = !message.bodyHtml && message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
                     const isNewest = message.id === newestMessage?.id;
                     const isFirstUnread = message.id === firstUnreadMessage?.id;
+                    const isFirstInGroup = index === 0;
                     return (
                       <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={message.id}>
-                        {isFirstUnread ? <div className="reader-unread-divider" role="separator"><span>Unread messages</span></div> : null}
+                        {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
                           ref={(node) => {
