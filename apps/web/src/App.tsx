@@ -1140,6 +1140,7 @@ function InboxApp({
 
           <section className="sidebar-section mailbox-section">
             <h2>Mailboxes</h2>
+            <p className="mailbox-section-note">Inbox is home base. Use the other views to decide when mail gets your attention.</p>
             <nav className="nav-list">
               {mailboxItems.map((mailbox) => (
                 <button
@@ -2670,7 +2671,17 @@ function OrganizationSidebar({
         <div><span aria-hidden="true">◇</span><h2 id="keep-zone-title">Keep</h2></div>
         <small>Optional</small>
       </header>
-      <p className="keep-zone-note">A personal layer. Nothing moves out of your inbox.</p>
+      <p className="keep-zone-note">Save shortcuts and project views here. Your inbox stays exactly as it is.</p>
+      <div aria-label="How to use Keep" className="keep-guide" role="note">
+        <div className="keep-guide-item">
+          <span aria-hidden="true" className="keep-guide-mark">Pin</span>
+          <p><strong>Quick returns</strong><span>Save a view, person, or conversation.</span></p>
+        </div>
+        <div className="keep-guide-item">
+          <span aria-hidden="true" className="keep-guide-mark">Collection</span>
+          <p><strong>Project shelves</strong><span>Gather related threads without moving them.</span></p>
+        </div>
+      </div>
 
       <div className="keep-group">
         <div className="keep-group-heading">

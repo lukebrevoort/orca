@@ -965,6 +965,13 @@ textarea {
   color: var(--orca-muted);
 }
 
+.mailbox-section-note {
+  color: var(--orca-muted);
+  font-size: 10.5px;
+  line-height: 1.4;
+  margin: 5px 7px 12px;
+}
+
 .sidebar-section {
   border-top: 1px solid var(--orca-border);
   padding: 14px 0;
@@ -1365,7 +1372,53 @@ textarea {
   font-size: 11.5px;
   font-style: italic;
   line-height: 1.4;
-  margin: 5px 0 16px 21px;
+  margin: 5px 0 11px 21px;
+}
+
+.keep-guide {
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 9px;
+  display: grid;
+  margin: 0 0 15px;
+  overflow: hidden;
+}
+
+.keep-guide-item {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 62px minmax(0, 1fr);
+  padding: 8px 7px;
+}
+
+.keep-guide-item + .keep-guide-item {
+  border-top: 1px solid var(--orca-border);
+}
+
+.keep-guide-mark {
+  color: var(--orca-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  padding-top: 2px;
+  text-transform: uppercase;
+}
+
+.keep-guide-item p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.keep-guide-item strong {
+  font-size: 11px;
+}
+
+.keep-guide-item p span {
+  color: var(--orca-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
 }
 
 .keep-group + .keep-group { margin-top: 17px; }
