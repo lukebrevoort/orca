@@ -52,6 +52,7 @@ import { attentionViewSettings, collections, collectionThreads, emailAttachments
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 import { deleteGmailDraft, mirrorGmailDraft, type GmailDraftMirrorInput, type GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { createGmailTransport, GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
+import { handleFeedbackRequest } from "./feedback.ts";
 
 const serverConfig = getServerConfig();
 
@@ -103,6 +104,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       service: "orca-api",
     }),
   );
+
+  app.all("/v1/feedback", (c) => handleFeedbackRequest(c.req.raw, {
+    allowedOrigin: serverConfig.webOrigin,
+    enabled: process.env.NODE_ENV !== "production",
+  }));
 
   app.get("/v1/auth/session", requireAuth({ dbFactory }), (c) => {
     const auth = c.get("auth");
