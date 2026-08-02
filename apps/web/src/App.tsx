@@ -864,6 +864,15 @@ function InboxApp({
       originMessageIdRef.current = message.id;
       setSelectedThreadId(message.threadId);
     });
+
+    if (message.unread) {
+      if (!demoMode) {
+        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read`, { method: "PATCH", credentials: "include" }).catch(() => {});
+      }
+      setMessages((prev) =>
+        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+      );
+    }
   }
 
   function closeThread() {

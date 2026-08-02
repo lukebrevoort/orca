@@ -1073,6 +1073,32 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     },
   );
 
+  app.patch(
+    "/v1/threads/:threadId/read",
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccount(db, c.get("auth").userId);
+        if (!account) return noConnectedAccount(c);
+        const thread = db.select().from(threads)
+          .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
+        if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
+        db.update(emails)
+          .set({ isRead: true, updatedAt: now() })
+          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
+          .run();
+        db.update(threads)
+          .set({ isRead: true, updatedAt: now() })
+          .where(eq(threads.id, thread.id))
+          .run();
+        return c.json({ ok: true });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   app.route("/v1/auth/gmail", createGmailAuthApp());
 
   app.post(
