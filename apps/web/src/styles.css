@@ -1112,7 +1112,9 @@ textarea {
 
 .content-pane:not(.content-pane-reader) {
   max-height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-color: var(--orca-border) transparent;
+  scrollbar-width: thin;
 }
 
 .pane-header {
