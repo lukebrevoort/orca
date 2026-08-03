@@ -3101,7 +3101,7 @@ textarea {
 .reader-body-html hr { border: 0; border-top: 1px solid var(--orca-border); margin: 2em 0; }
 .reader-body-html table { border-collapse: collapse; font-size: .88em; margin: 1.25em 0; max-width: 100%; overflow-x: auto; }
 .reader-body-html td,
-.reader-body-html th { border: 1px solid var(--orca-border); padding: .5em .75em; vertical-align: top; }
+.reader-body-html th { padding: .5em .75em; vertical-align: top; }
 .reader-body-html th { background: var(--orca-surface-hover); font-weight: 700; }
 .reader-body-html img { border-radius: 4px; height: auto; max-width: 100%; }
 .reader-body-html figure { margin: 1.25em 0; }
