@@ -603,7 +603,10 @@ function InboxApp({
   useEffect(() => {
     if (demoMode) {
       setAccount(demoAccount);
-      setMessages(demoMessages);
+      const readThreadIds = readDemoReadState();
+      setMessages(demoMessages.map((message) =>
+        readThreadIds.has(message.threadId) ? { ...message, unread: false } : message,
+      ));
       setStatus("ready");
       setErrorMessage(null);
       return;
@@ -868,6 +871,8 @@ function InboxApp({
     if (message.unread) {
       if (!demoMode) {
         fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read`, { method: "PATCH", credentials: "include" }).catch(() => {});
+      } else {
+        writeDemoReadState(message.threadId);
       }
       setMessages((prev) =>
         prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
@@ -3258,6 +3263,28 @@ function getErrorMessage(error: unknown) {
   }
 
   return "An unexpected error occurred while loading inbox data.";
+}
+
+const DEMO_READ_STATE_KEY = "orca-demo-read-threads";
+
+function readDemoReadState(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(DEMO_READ_STATE_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDemoReadState(threadId: string) {
+  const current = readDemoReadState();
+  current.add(threadId);
+  try {
+    window.localStorage.setItem(DEMO_READ_STATE_KEY, JSON.stringify([...current]));
+  } catch {
+    // localStorage unavailable
+  }
 }
 
 function replySubject(subject: string) {
