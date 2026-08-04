@@ -1945,6 +1945,18 @@ function InboxView({
 
 function SyncStatusChip({ status }: { status: SyncStatus["accounts"][number] | null }) {
   if (!status) return null;
+
+  if (status.state === "auth_needed") {
+    return (
+      <a
+        className="sync-status-chip sync-status-auth_needed inbox-reconnect-link"
+        href="/settings/integrations/gmail"
+      >
+        Reconnect Gmail →
+      </a>
+    );
+  }
+
   const labels = {
     idle: status.lastSyncedAt ? `Synced ${formatReceivedAt(status.lastSyncedAt)}` : "Ready to sync",
     syncing: "Syncing Gmail…",
