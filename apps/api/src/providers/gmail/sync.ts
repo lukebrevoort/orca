@@ -385,7 +385,7 @@ function upsertEmails(
           references: JSON.stringify(message.references),
           receivedAt: new Date(message.receivedAt),
           internalDate: new Date(message.receivedAt),
-          isRead: !message.unread,
+          isRead: sql`CASE WHEN ${emails.isRead} = 1 AND ${message.unread} THEN 1 ELSE ${!message.unread} END`,
           isStarred: message.labels.includes("STARRED"),
           isDraft: message.labels.includes("DRAFT"),
           updatedAt: now,

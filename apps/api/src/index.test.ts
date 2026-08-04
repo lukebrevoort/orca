@@ -956,4 +956,55 @@ describe("Orca API", () => {
       delete process.env.TOKEN_ENCRYPTION_KEY;
     }
   });
+
+  test("marks entire thread as read including all emails", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-read-test-"));
+    const dbPath = join(tempDir, "read.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+      }).run();
+      db.insert(threads).values({
+        id: "thread_1", accountId: "acct_1", providerThreadId: "t1", isRead: false,
+      }).run();
+      db.insert(emails).values([
+        { id: "email_1", accountId: "acct_1", threadId: "thread_1", providerMessageId: "e1", isRead: false },
+        { id: "email_2", accountId: "acct_1", threadId: "thread_1", providerMessageId: "e2", isRead: false },
+      ]).run();
+
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+
+      const response = await testApp.request("/v1/threads/thread_1/read", { method: "PATCH", headers });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true });
+
+      const emailRows = sqlite.query("select id, is_read from emails where thread_id = 'thread_1' order by id").all() as Array<{ id: string; is_read: number }>;
+      assert.deepEqual(emailRows, [
+        { id: "email_1", is_read: 1 },
+        { id: "email_2", is_read: 1 },
+      ]);
+
+      const threadRow = sqlite.query("select is_read from threads where id = 'thread_1'").get() as { is_read: number };
+      assert.equal(threadRow.is_read, 1);
+
+      const missingAccount = await testApp.request("/v1/threads/thread_1/read", { method: "PATCH" });
+      assert.equal(missingAccount.status, 401);
+
+      const missingThread = await testApp.request("/v1/threads/nonexistent/read", { method: "PATCH", headers });
+      assert.equal(missingThread.status, 404);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
 });
