@@ -180,7 +180,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || devPreview) return;
+    if (isLoginRoute() || isReaderPreferencesRoute() || isInboxRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -207,6 +207,10 @@ export function App() {
 
   if (isSettingsRoute()) {
     return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} />;
+  }
+
+  if (isInboxRoute()) {
+    return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
@@ -619,19 +623,15 @@ function InboxApp({
       setErrorMessage(null);
 
       try {
-        const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
-        if (abortController.signal.aborted) return;
-        setAccount(currentAccount);
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
-
-        const inbox = await fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal);
+        const inbox = await loadInboxSnapshot(abortController.signal);
         if (abortController.signal.aborted) return;
         setAccount(inbox.account);
         setMessages(inbox.messages);
         setStatus("ready");
 
-        // Cached SQLite mail is now visible. Refresh Gmail without putting the
-        // network round trip on the inbox's first-render path.
+        // The inbox response already includes the account and cached SQLite
+        // mail. Make that data visible first; sync status and Gmail refresh can
+        // follow without holding the workspace behind another round trip.
         void refreshGmailInBackground();
       } catch (error) {
         if (abortController.signal.aborted) return;
@@ -3008,6 +3008,10 @@ async function fetchJson<T>(
   return schema.parse(await response.json());
 }
 
+export function loadInboxSnapshot(signal?: AbortSignal) {
+  return fetchJson("/v1/inbox?view=all", inboxResponseSchema, signal);
+}
+
 async function fetchNoContent(input: string, init: RequestInit, _acceptsJson = false) {
   const response = await fetch(input, { ...init, credentials: "include" });
   if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
@@ -3094,6 +3098,10 @@ function isLoginRoute() {
     return false;
   }
   return window.location.pathname === "/login";
+}
+
+export function isInboxRoute(pathname = typeof window === "undefined" ? "" : window.location.pathname) {
+  return pathname === "/";
 }
 
 function isOnboardingRoute() {

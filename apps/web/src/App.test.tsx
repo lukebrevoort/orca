@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { accountFixture, inboxFixture, type MessageDraft, type ThreadDetail, type ThreadDetailMessage } from "@orca/shared";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, isInboxRoute, loadInboxSnapshot, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -129,6 +129,40 @@ describe("App", () => {
     expect(isDevPreviewPath("/dev/inbox", false)).toBe(false);
     expect(isDevPreviewPath("/", true)).toBe(false);
     expect(isDevPreviewPath("/", false, true)).toBe(true);
+  });
+
+  test("uses the root route for the fast inbox bootstrap", () => {
+    expect(isInboxRoute("/")).toBe(true);
+    expect(isInboxRoute("/login")).toBe(false);
+    expect(isInboxRoute("/onboarding")).toBe(false);
+  });
+
+  test("loads the inbox snapshot from one delayed authenticated request", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: string[] = [];
+    const delayedFetch = Object.assign(async (input: Parameters<typeof fetch>[0]) => {
+        requests.push(input.toString());
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return Response.json({
+          account: accountFixture,
+          messages: inboxFixture,
+          counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+          nextCursor: null,
+        });
+      },
+      { preconnect: originalFetch.preconnect },
+    );
+    globalThis.fetch = delayedFetch;
+
+    try {
+      const response = await loadInboxSnapshot();
+
+      expect(response.account).toEqual(accountFixture);
+      expect(response.messages).toEqual(inboxFixture);
+      expect(requests).toEqual(["/v1/inbox?view=all"]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("applies sender attention to historical and newly synced messages", () => {
