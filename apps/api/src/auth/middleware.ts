@@ -2,8 +2,9 @@ import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { sessionCookieName } from "./config.ts";
-import { getSessionFromToken } from "./session-store.ts";
+import { sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
+import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { getSessionFromToken, renewSession } from "./session-store.ts";
 
 export type AuthContext = {
   sessionId: string;
@@ -61,7 +62,16 @@ export function requireAuth(
         );
       }
 
-      c.set("auth", auth);
+      const renewed = auth.expiresAt.getTime() - Date.now() <= sessionRenewalWindowMs
+        ? await renewSession(db, auth).catch(() => null)
+        : null;
+      const activeAuth = renewed ?? auth;
+
+      if (renewed) {
+        c.header("Set-Cookie", buildSessionCookie(renewed.token, renewed.expiresAt, getSessionCookieOptions()));
+      }
+
+      c.set("auth", activeAuth);
 
       await next();
     } finally {

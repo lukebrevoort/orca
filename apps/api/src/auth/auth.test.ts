@@ -9,7 +9,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../db/client.ts";
 import { oauthAccounts, users } from "../db/schema.ts";
-import { getAuthConfig, sessionCookieName } from "./config.ts";
+import { defaultSessionTtlMs, getAuthConfig, sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
 import { requireAuth, type AuthVariables } from "./middleware.ts";
 import {
   buildClearedSessionCookie,
@@ -20,6 +20,7 @@ import {
   getSessionFromToken,
   invalidateSession,
   readProviderTokens,
+  renewSession,
   storeProviderTokens,
 } from "./session-store.ts";
 import { decryptToken, encryptToken } from "./token-crypto.ts";
@@ -56,6 +57,35 @@ afterEach(() => {
 });
 
 describe("auth foundation", () => {
+  test("keeps sessions for 30 days and renews them during active use", async () => {
+    setAuthEnv();
+
+    const { db, sqlite, tempDir } = createMigratedDb();
+
+    try {
+      db.insert(users).values({
+        id: "user_1",
+        email: "luke@example.com",
+      }).run();
+
+      const session = await createSession(db, "user_1");
+      assert.ok(session.expiresAt.getTime() - Date.now() > defaultSessionTtlMs - 5_000);
+
+      const expiring = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
+      const renewed = await renewSession(db, expiring);
+
+      assert.ok(renewed.expiresAt.getTime() > expiring.expiresAt.getTime());
+      assert.deepEqual(await getSessionFromToken(db, renewed.token), {
+        sessionId: expiring.sessionId,
+        userId: "user_1",
+        expiresAt: renewed.expiresAt,
+      });
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test("encrypts and decrypts provider tokens", async () => {
     setAuthEnv();
 

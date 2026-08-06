@@ -42,6 +42,38 @@ export async function createSession(
   };
 }
 
+export async function renewSession(
+  db: DatabaseClient,
+  session: Pick<SessionRecord, "sessionId" | "userId">,
+  ttlMs = defaultSessionTtlMs,
+) {
+  const expiresAt = new Date(Date.now() + ttlMs);
+
+  db
+    .update(sessions)
+    .set({ expiresAt })
+    .where(
+      and(
+        eq(sessions.id, session.sessionId),
+        eq(sessions.userId, session.userId),
+        isNull(sessions.invalidatedAt),
+      ),
+    )
+    .run();
+
+  const token = await createSessionToken({
+    sessionId: session.sessionId,
+    userId: session.userId,
+    expiresAt,
+  });
+
+  return {
+    ...session,
+    expiresAt,
+    token,
+  };
+}
+
 export async function getSessionFromToken(db: DatabaseClient, token: string) {
   const payload = await verifySessionToken(token);
 
