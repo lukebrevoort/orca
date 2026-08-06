@@ -1266,6 +1266,94 @@ textarea {
   color: var(--orca-ink);
 }
 
+.selection-toolbar {
+  align-items: center;
+  border-bottom: 1px solid var(--orca-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 14px;
+  margin-top: 16px;
+  max-width: 900px;
+  padding: 10px 10px;
+}
+
+.selection-toolbar[data-has-selection="true"] {
+  background: var(--orca-accent-soft);
+}
+
+.selection-all-button,
+.selection-action-button,
+.selection-clear-button {
+  align-items: center;
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 11px;
+  white-space: nowrap;
+}
+
+.selection-all-button,
+.selection-clear-button {
+  background: transparent;
+  color: var(--orca-ink);
+}
+
+.selection-action-button {
+  background: var(--orca-surface-hover);
+  color: var(--orca-ink);
+}
+
+.selection-all-button:hover,
+.selection-all-button:focus-visible,
+.selection-action-button:hover,
+.selection-action-button:focus-visible,
+.selection-clear-button:hover,
+.selection-clear-button:focus-visible {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  color: var(--orca-ink);
+}
+
+.selection-check-indicator {
+  align-items: center;
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 5px;
+  display: inline-flex;
+  font-size: 13px;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  width: 20px;
+}
+
+.selection-status {
+  color: var(--orca-muted);
+  display: grid;
+  flex: 1 1 180px;
+  font-size: 11px;
+  gap: 2px;
+  line-height: 1.35;
+  min-width: 145px;
+}
+
+.selection-status strong {
+  color: var(--orca-ink);
+  font-size: 12px;
+}
+
+.selection-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 .inbox-body {
   display: flex;
   flex: 1;
@@ -1294,6 +1382,58 @@ textarea {
   position: relative;
 }
 
+.message-selection-toggle {
+  align-items: center;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  left: 10px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  z-index: 3;
+}
+
+.message-selection-toggle input {
+  appearance: none;
+  background: var(--orca-paper);
+  border: 1px solid var(--orca-border);
+  border-radius: 6px;
+  cursor: pointer;
+  height: 22px;
+  margin: 0;
+  position: relative;
+  width: 22px;
+}
+
+.message-selection-toggle input::after {
+  color: var(--orca-ink);
+  content: "✓";
+  font-size: 14px;
+  font-weight: 800;
+  left: 50%;
+  line-height: 1;
+  opacity: 0;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -52%);
+}
+
+.message-selection-toggle input:checked {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-accent);
+}
+
+.message-selection-toggle input:checked::after {
+  opacity: 1;
+}
+
+.message-selection-toggle input:hover,
+.message-selection-toggle input:focus-visible {
+  border-color: var(--orca-accent);
+}
+
 .message-row {
   align-items: start;
   background: transparent;
@@ -1305,7 +1445,7 @@ textarea {
   display: grid;
   gap: 14px;
   grid-template-columns: 32px minmax(0, 1fr);
-  padding: 17px 156px 17px 10px;
+  padding: 17px 156px 17px 54px;
   text-align: left;
   transition:
     background 0.15s ease,
@@ -1538,12 +1678,15 @@ textarea {
 .organizer-pin-grid > button:disabled { cursor: default; }
 .organizer-collections { margin-top: 24px; }
 .organizer-collections h3 { color: var(--orca-muted); font-size: 9px; letter-spacing: .14em; margin: 0 0 8px; text-transform: uppercase; }
-.organizer-collections > button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 9px; color: var(--orca-ink); cursor: pointer; display: grid; gap: 10px; grid-template-columns: 27px minmax(0,1fr) auto; padding: 8px; text-align: left; width: 100%; }
+.organizer-collections > button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 9px; color: var(--orca-ink); cursor: pointer; display: grid; gap: 2px 10px; grid-template-columns: 27px minmax(0,1fr) 22px; padding: 8px; text-align: left; width: 100%; }
+.organizer-collections > button strong,
+.organizer-collections > button small { grid-column: 2; }
 .organizer-collections > button strong { font-size: 12px; }
 .organizer-collections > button small { color: var(--orca-muted); display: block; font-size: 9.5px; }
 .organizer-collections > button > span:last-child { color: var(--orca-accent); grid-column: 3; grid-row: 1; }
 .organizer-collections > button:hover,
-.organizer-collections > button[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
+.organizer-collections > button[aria-pressed="true"],
+.organizer-collections > button.organizer-collection-partial { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .organizer-collections form { display: grid; gap: 7px; grid-template-columns: minmax(0,1fr) auto; margin-top: 9px; }
 .organizer-collections input { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-ink); min-width: 0; padding: 10px 11px; }
 .organizer-collections form button { background: var(--orca-control); border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-control-ink); cursor: pointer; font-size: 11px; font-weight: 700; padding: 0 13px; }
@@ -1552,6 +1695,9 @@ textarea {
 
 @media (max-width: 760px) {
   .message-row { padding-right: 112px; }
+  .selection-toolbar { align-items: flex-start; padding: 10px 0; }
+  .selection-status { flex-basis: calc(100% - 150px); }
+  .selection-actions { flex-basis: 100%; }
   .keep-thread-button { right: 54px; }
   .keep-thread-button { font-size: 0; }
   .keep-thread-button span { font-size: 14px; }
@@ -1567,6 +1713,11 @@ textarea {
 .message-row-unread {
   background: color-mix(in srgb, var(--orca-accent) 5%, transparent);
   box-shadow: inset 2px 0 var(--message-rail, var(--orca-accent));
+}
+
+.message-row-selected {
+  background: var(--orca-surface-hover);
+  box-shadow: inset 3px 0 var(--orca-accent);
 }
 
 .message-row-reply .message-subject-row h2 {

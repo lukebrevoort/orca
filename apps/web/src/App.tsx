@@ -566,7 +566,7 @@ function InboxApp({
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
-  const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
+  const [organizerMessages, setOrganizerMessages] = useState<InboxMessage[] | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
@@ -574,6 +574,7 @@ function InboxApp({
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -747,6 +748,14 @@ function InboxApp({
     }));
   }, [activeCollectionId, activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
 
+  useEffect(() => {
+    setSelectedMessageIds((current) => {
+      const visibleIds = new Set(visibleMessages.map((message) => message.id));
+      const next = new Set([...current].filter((id) => visibleIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [visibleMessages]);
+
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
       return [];
@@ -848,18 +857,29 @@ function InboxApp({
       organizerCloseTimerRef.current = null;
     }
     setOrganizerClosing(false);
-    setOrganizerMessage(message);
+    setOrganizerMessages([message]);
+  }
+
+  function openSelectedOrganizer() {
+    const selected = visibleMessages.filter((message) => selectedMessageIds.has(message.id));
+    if (selected.length === 0) return;
+    if (organizerCloseTimerRef.current) {
+      clearTimeout(organizerCloseTimerRef.current);
+      organizerCloseTimerRef.current = null;
+    }
+    setOrganizerClosing(false);
+    setOrganizerMessages(selected);
   }
 
   function closeOrganizer() {
-    if (!organizerMessage || organizerClosing) return;
+    if (!organizerMessages || organizerClosing) return;
     if (shouldReduceMotion()) {
-      setOrganizerMessage(null);
+      setOrganizerMessages(null);
       return;
     }
     setOrganizerClosing(true);
     organizerCloseTimerRef.current = setTimeout(() => {
-      setOrganizerMessage(null);
+      setOrganizerMessages(null);
       setOrganizerClosing(false);
       organizerCloseTimerRef.current = null;
     }, 220);
@@ -962,6 +982,7 @@ function InboxApp({
       setPersonFilter((current) => (current === name ? null : name));
       setActiveCollectionId(null);
       setSelectedThreadId(null);
+      setSelectedMessageIds(new Set());
       closePanel();
     });
   }
@@ -973,6 +994,7 @@ function InboxApp({
       setInboxFilter("all");
       setPersonFilter(null);
       setSelectedThreadId(null);
+      setSelectedMessageIds(new Set());
     });
   }
 
@@ -982,6 +1004,7 @@ function InboxApp({
       setPersonFilter(null);
       setSelectedThreadId(null);
       setInboxFilter("all");
+      setSelectedMessageIds(new Set());
     });
   }
 
@@ -1043,6 +1066,32 @@ function InboxApp({
     }
   }
 
+  async function toggleCollectionMembershipForMessages(collection: Collection, selected: InboxMessage[]) {
+    const threadIds = [...new Set(selected.map((message) => message.threadId))];
+    if (threadIds.length === 0) return;
+    const shouldAdd = threadIds.some((threadId) => !collection.threadIds.includes(threadId));
+    setOrganizationError(null);
+    try {
+      if (!demoMode) {
+        await Promise.all(threadIds.map((threadId) => fetchNoContent(
+          `/v1/collections/${encodeURIComponent(collection.id)}/threads/${encodeURIComponent(threadId)}`,
+          { method: shouldAdd ? "PUT" : "DELETE" },
+          shouldAdd,
+        )));
+      }
+      const threadIdSet = new Set(threadIds);
+      setCollections((current) => current.map((item) => item.id === collection.id ? {
+        ...item,
+        threadIds: shouldAdd
+          ? [...new Set([...item.threadIds, ...threadIds])]
+          : item.threadIds.filter((threadId) => !threadIdSet.has(threadId)),
+        updatedAt: new Date().toISOString(),
+      } : item));
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
   async function createPin(input: Pick<Pin, "kind" | "targetId" | "label">) {
     if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return;
     setOrganizationError(null);
@@ -1089,7 +1138,10 @@ function InboxApp({
   }
 
   function selectInboxFilter(filter: InboxFilter) {
-    runUiTransition("content", () => setInboxFilter(filter));
+    runUiTransition("content", () => {
+      setInboxFilter(filter);
+      setSelectedMessageIds(new Set());
+    });
   }
 
   async function updateSenderAttention(address: string, behavior?: AttentionBehavior) {
@@ -1214,9 +1266,14 @@ function InboxApp({
               inboxTitle={inboxTitle}
               isCollectionView={Boolean(activeCollection)}
               messages={visibleMessages}
+              onClearVisibleSelection={() => setSelectedMessageIds((current) => clearVisibleMessageSelection(current, visibleMessages))}
               onClearFilter={() => setPersonFilter(null)}
+              onKeepSelected={openSelectedOrganizer}
               onOpenThread={openThread}
+              onSelectAllVisible={() => setSelectedMessageIds((current) => selectAllVisibleMessages(current, visibleMessages))}
+              onToggleMessageSelection={(messageId) => setSelectedMessageIds((current) => toggleMessageSelection(current, messageId))}
               rowRefs={messageRowRefs}
+              selectedMessageIds={selectedMessageIds}
               personFilter={personFilter}
               status={status}
               syncStatus={syncStatus}
@@ -1251,18 +1308,18 @@ function InboxApp({
         </section>
       </main>
 
-      {organizerMessage ? (
+      {organizerMessages ? (
         <ThreadOrganizer
           closing={organizerClosing}
           collections={collections}
-          message={organizerMessage}
+          messages={organizerMessages}
           onClose={closeOrganizer}
           onCreateCollection={async (name) => {
             const created = await createCollection(name, false);
-            if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
+            if (created) await toggleCollectionMembershipForMessages(created, organizerMessages);
           }}
           onPin={(input) => void createPin(input)}
-          onToggleCollection={(collection) => void toggleCollectionMembership(collection, organizerMessage.threadId)}
+          onToggleCollection={(collection) => void toggleCollectionMembershipForMessages(collection, organizerMessages)}
           pins={pins}
         />
       ) : null}
@@ -1772,15 +1829,20 @@ function InboxView({
   status,
   syncStatus,
   isRefreshing,
+  onClearVisibleSelection,
   onClearFilter,
+  onKeepSelected,
   onOpenThread,
   onRefresh,
+  onSelectAllVisible,
+  onToggleMessageSelection,
   onAttentionChange,
   onInboxFilterChange,
   onOpenOrganizer,
   onRemoveFromCollection,
   showInboxFilters,
   rowRefs,
+  selectedMessageIds,
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
@@ -1794,15 +1856,20 @@ function InboxView({
   status: "loading" | "syncing" | "ready" | "error";
   syncStatus: SyncStatus | null;
   isRefreshing: boolean;
+  onClearVisibleSelection: () => void;
   onClearFilter: () => void;
+  onKeepSelected: () => void;
   onOpenThread: (message: InboxMessage) => void;
   onRefresh: () => void;
+  onSelectAllVisible: () => void;
+  onToggleMessageSelection: (messageId: string) => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onRemoveFromCollection?: (message: InboxMessage) => void;
   showInboxFilters: boolean;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
+  selectedMessageIds: ReadonlySet<string>;
 }) {
   const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
     { id: "all", label: "Everything" },
@@ -1810,6 +1877,7 @@ function InboxView({
     { id: "focus", label: "Keep in focus" },
     { id: "normal", label: "Flow" },
   ];
+  const selection = getMessageSelectionState(messages, selectedMessageIds);
   return (
     <>
       <header className="pane-header">
@@ -1867,6 +1935,41 @@ function InboxView({
         </nav>
       ) : null}
 
+      {status === "ready" && messages.length > 0 ? (
+        <section
+          aria-label="Message selection"
+          className="selection-toolbar"
+          data-has-selection={selection.selectedCount > 0 ? "true" : "false"}
+          role="toolbar"
+        >
+          <button
+            aria-pressed={selection.allVisibleSelected}
+            className="selection-all-button"
+            onClick={selection.allVisibleSelected ? onClearVisibleSelection : onSelectAllVisible}
+            type="button"
+          >
+            <span aria-hidden="true" className="selection-check-indicator">
+              {selection.allVisibleSelected ? "✓" : selection.selectedCount > 0 ? "−" : ""}
+            </span>
+            {selection.allVisibleSelected ? "Clear all visible" : "Select all visible"}
+          </button>
+          <div className="selection-status" role="status">
+            {selection.selectedCount > 0 ? (
+              <strong>{selection.selectedCount} selected</strong>
+            ) : (
+              <span>Select messages to organize them together.</span>
+            )}
+            {selection.selectedCount > 0 && selection.selectedCount < messages.length ? <span>Only visible rows are included.</span> : null}
+          </div>
+          {selection.selectedCount > 0 ? (
+            <div className="selection-actions">
+              <button className="selection-action-button" onClick={onKeepSelected} type="button">Keep selected</button>
+              <button className="selection-clear-button" onClick={onClearVisibleSelection} type="button">Clear selection</button>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="inbox-body" aria-live="polite">
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
@@ -1904,12 +2007,23 @@ function InboxView({
             {messages.map((message) => {
               const signature = getContactSignature(message.from);
               const isReply = message.subject.trim().toLowerCase().startsWith("re:");
+              const selected = selectedMessageIds.has(message.id);
+              const senderLabel = message.from.name ?? message.from.email;
 
               return (
                 <li key={message.id}>
                   <div className="message-row-wrap">
+                    <label className="message-selection-toggle">
+                      <input
+                        aria-label={`${selected ? "Deselect" : "Select"} email from ${senderLabel}`}
+                        checked={selected}
+                        onChange={() => onToggleMessageSelection(message.id)}
+                        type="checkbox"
+                      />
+                      <span aria-hidden="true" />
+                    </label>
                     <button
-                      className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
+                      className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}${selected ? " message-row-selected" : ""}`}
                       onClick={() => onOpenThread(message)}
                       ref={(node) => {
                         if (node) rowRefs.current.set(message.id, node);
@@ -1986,6 +2100,33 @@ function SyncStatusChip({ status }: { status: SyncStatus["accounts"][number] | n
     error: status.error ?? "Gmail sync error",
   } as const;
   return <span className={`sync-status-chip sync-status-${status.state}`} role="status">{labels[status.state]}</span>;
+}
+
+export function toggleMessageSelection(selectedIds: ReadonlySet<string>, messageId: string) {
+  const next = new Set(selectedIds);
+  if (next.has(messageId)) next.delete(messageId);
+  else next.add(messageId);
+  return next;
+}
+
+export function selectAllVisibleMessages(selectedIds: ReadonlySet<string>, messages: InboxMessage[]) {
+  const next = new Set(selectedIds);
+  messages.forEach((message) => next.add(message.id));
+  return next;
+}
+
+export function clearVisibleMessageSelection(selectedIds: ReadonlySet<string>, messages: InboxMessage[]) {
+  const next = new Set(selectedIds);
+  messages.forEach((message) => next.delete(message.id));
+  return next;
+}
+
+export function getMessageSelectionState(messages: InboxMessage[], selectedIds: ReadonlySet<string>) {
+  const selectedCount = messages.reduce((count, message) => count + (selectedIds.has(message.id) ? 1 : 0), 0);
+  return {
+    allVisibleSelected: messages.length > 0 && selectedCount === messages.length,
+    selectedCount,
+  };
 }
 
 export function sortThreadMessages(messages: ThreadDetailMessage[]) {
@@ -2804,10 +2945,10 @@ function OrganizationSidebar({
   );
 }
 
-function ThreadOrganizer({ closing, collections, message, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+function ThreadOrganizer({ closing, collections, messages, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
   closing: boolean;
   collections: Collection[];
-  message: InboxMessage;
+  messages: InboxMessage[];
   onClose: () => void;
   onCreateCollection: (name: string) => Promise<void>;
   onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
@@ -2822,26 +2963,36 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
-  const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
-  const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
+  const singleMessage = messages.length === 1 ? messages[0] : null;
+  const selectedThreadIds = [...new Set(messages.map((message) => message.threadId))];
+  const senderPinned = singleMessage ? pins.some((pin) => pin.kind === "sender" && pin.targetId === singleMessage.from.email) : false;
+  const threadPinned = singleMessage ? pins.some((pin) => pin.kind === "thread" && pin.targetId === singleMessage.threadId) : false;
   return (
     <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
       <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
       <section aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} role="dialog">
         <header>
-          <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
+          <div><p>Keep, don’t move</p><h2 id="organizer-title">{singleMessage ? "Save this thread" : `Save ${messages.length} messages`}</h2></div>
           <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
         </header>
-        <div className="organizer-thread-preview"><span>Conversation</span><strong>{message.subject || "(no subject)"}</strong><small>{message.from.name ?? message.from.email}</small></div>
-        <div className="organizer-pin-grid">
-          <button aria-pressed={senderPinned} disabled={senderPinned} onClick={() => onPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })} type="button"><span>@</span><strong>{senderPinned ? "Person pinned" : "Pin person"}</strong><small>{message.from.email}</small></button>
-          <button aria-pressed={threadPinned} disabled={threadPinned} onClick={() => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" })} type="button"><span>↗</span><strong>{threadPinned ? "Thread pinned" : "Pin thread"}</strong><small>Return straight here</small></button>
-        </div>
+        {singleMessage ? (
+          <div className="organizer-thread-preview"><span>Conversation</span><strong>{singleMessage.subject || "(no subject)"}</strong><small>{singleMessage.from.name ?? singleMessage.from.email}</small></div>
+        ) : (
+          <div className="organizer-thread-preview"><span>Selected messages</span><strong>{messages.length} messages across {selectedThreadIds.length} {selectedThreadIds.length === 1 ? "thread" : "threads"}</strong><small>Collection changes apply to every selected thread.</small></div>
+        )}
+        {singleMessage ? (
+          <div className="organizer-pin-grid">
+            <button aria-pressed={senderPinned} disabled={senderPinned} onClick={() => onPin({ kind: "sender", targetId: singleMessage.from.email, label: singleMessage.from.name ?? singleMessage.from.email })} type="button"><span>@</span><strong>{senderPinned ? "Person pinned" : "Pin person"}</strong><small>{singleMessage.from.email}</small></button>
+            <button aria-pressed={threadPinned} disabled={threadPinned} onClick={() => onPin({ kind: "thread", targetId: singleMessage.threadId, label: singleMessage.subject || "(no subject)" })} type="button"><span>↗</span><strong>{threadPinned ? "Thread pinned" : "Pin thread"}</strong><small>Return straight here</small></button>
+          </div>
+        ) : null}
         <div className="organizer-collections">
-          <h3>Add to collections</h3>
+          <h3>{singleMessage ? "Add to collections" : "Add selected to collections"}</h3>
           {collections.map((collection) => {
-            const included = collection.threadIds.includes(message.threadId);
-            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
+            const includedCount = selectedThreadIds.filter((threadId) => collection.threadIds.includes(threadId)).length;
+            const included = includedCount === selectedThreadIds.length;
+            const partial = includedCount > 0 && !included;
+            return <button aria-pressed={included} className={included ? "organizer-collection-active" : partial ? "organizer-collection-partial" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? singleMessage ? "Added" : "All selected threads" : partial ? `${includedCount} of ${selectedThreadIds.length} threads added` : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
           })}
           <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
             <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />

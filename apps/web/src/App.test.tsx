@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, clearVisibleMessageSelection, defaultReaderPreferences, getMessageSelectionState, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, selectAllVisibleMessages, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, toggleMessageSelection } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -122,6 +122,21 @@ describe("App", () => {
     expect(getMessagesForMailbox(demoMessages, "quiet")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "hidden")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
+  });
+
+  test("selects individual visible messages and toggles all visible rows without touching hidden selection", () => {
+    const visible = demoMessages.slice(0, 3);
+    let selected = toggleMessageSelection(new Set<string>(), visible[0].id);
+
+    expect(getMessageSelectionState(visible, selected)).toEqual({ selectedCount: 1, allVisibleSelected: false });
+
+    selected = selectAllVisibleMessages(new Set(["msg_6"]), visible);
+    expect([...selected]).toEqual(["msg_6", "msg_1", "msg_1_reply", "msg_2"]);
+    expect(getMessageSelectionState(visible, selected)).toEqual({ selectedCount: 3, allVisibleSelected: true });
+
+    selected = clearVisibleMessageSelection(selected, visible);
+    expect([...selected]).toEqual(["msg_6"]);
+    expect(getMessageSelectionState(visible, selected)).toEqual({ selectedCount: 0, allVisibleSelected: false });
   });
 
   test("only exposes the fake inbox preview route during development", () => {
