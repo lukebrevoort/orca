@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, clearVisibleMessageSelection, defaultReaderPreferences, getMessageSelectionState, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, selectAllVisibleMessages, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, toggleMessageSelection } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, clearVisibleMessageSelection, defaultReaderPreferences, getMessageSelectionLabel, getMessageSelectionState, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, selectAllVisibleMessages, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, toggleMessageSelection } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -137,6 +137,20 @@ describe("App", () => {
     selected = clearVisibleMessageSelection(selected, visible);
     expect([...selected]).toEqual(["msg_6"]);
     expect(getMessageSelectionState(visible, selected)).toEqual({ selectedCount: 0, allVisibleSelected: false });
+  });
+
+  test("clears filter-scoped selection before returning to the broader inbox", () => {
+    const filtered = demoMessages.filter((message) => message.from.name === "Maya Chen");
+    const selected = selectAllVisibleMessages(new Set<string>(), filtered);
+
+    expect(getMessageSelectionState(demoMessages, selected).selectedCount).toBe(filtered.length);
+    const cleared = clearVisibleMessageSelection(selected, filtered);
+    expect(getMessageSelectionState(demoMessages, cleared).selectedCount).toBe(0);
+  });
+
+  test("gives every message selection control a distinct accessible label", () => {
+    expect(getMessageSelectionLabel(demoMessages[0], false)).toContain('Select email "Launch notes for Orca Mail" from Maya Chen');
+    expect(getMessageSelectionLabel({ ...demoMessages[0], subject: "  " }, true)).toContain('Deselect email "(no subject)" from Maya Chen');
   });
 
   test("only exposes the fake inbox preview route during development", () => {

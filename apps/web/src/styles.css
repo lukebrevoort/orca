@@ -1691,6 +1691,8 @@ textarea {
 .organizer-collections input { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-ink); min-width: 0; padding: 10px 11px; }
 .organizer-collections form button { background: var(--orca-control); border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-control-ink); cursor: pointer; font-size: 11px; font-weight: 700; padding: 0 13px; }
 .organizer-collections form button:disabled { opacity: .45; }
+.organizer-status { color: var(--orca-muted); font-size: 10px; line-height: 1.4; margin: 10px 4px 0; }
+.organizer-error { color: #bd5a32; font-size: 10px; line-height: 1.4; margin: 10px 4px 0; }
 .thread-organizer > footer { color: var(--orca-muted); font-family: var(--orca-font-display); font-size: 11px; font-style: italic; line-height: 1.45; margin-top: 18px; text-align: center; }
 
 @media (max-width: 760px) {

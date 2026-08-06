@@ -565,6 +565,8 @@ function InboxApp({
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
+  const [collectionMutationId, setCollectionMutationId] = useState<string | null>(null);
+  const collectionMutationRef = useRef<string | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessages, setOrganizerMessages] = useState<InboxMessage[] | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
@@ -1068,27 +1070,46 @@ function InboxApp({
 
   async function toggleCollectionMembershipForMessages(collection: Collection, selected: InboxMessage[]) {
     const threadIds = [...new Set(selected.map((message) => message.threadId))];
-    if (threadIds.length === 0) return;
+    if (threadIds.length === 0 || collectionMutationRef.current !== null) return;
     const shouldAdd = threadIds.some((threadId) => !collection.threadIds.includes(threadId));
+    const threadIdSet = new Set(threadIds);
+    collectionMutationRef.current = collection.id;
+    setCollectionMutationId(collection.id);
     setOrganizationError(null);
     try {
-      if (!demoMode) {
-        await Promise.all(threadIds.map((threadId) => fetchNoContent(
+      if (demoMode) {
+        setCollections((current) => current.map((item) => item.id === collection.id ? {
+          ...item,
+          threadIds: shouldAdd
+            ? [...new Set([...item.threadIds, ...threadIds])]
+            : item.threadIds.filter((threadId) => !threadIdSet.has(threadId)),
+          updatedAt: new Date().toISOString(),
+        } : item));
+        return;
+      }
+
+      const results = await Promise.allSettled(threadIds.map((threadId) => fetchNoContent(
           `/v1/collections/${encodeURIComponent(collection.id)}/threads/${encodeURIComponent(threadId)}`,
           { method: shouldAdd ? "PUT" : "DELETE" },
           shouldAdd,
         )));
+      const hasFailures = results.some((result) => result.status === "rejected");
+
+      try {
+        setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
+      } catch (refreshError) {
+        setOrganizationError(`Collection changes may be incomplete. Could not refresh your saved collections. ${getErrorMessage(refreshError)}`);
+        return;
       }
-      const threadIdSet = new Set(threadIds);
-      setCollections((current) => current.map((item) => item.id === collection.id ? {
-        ...item,
-        threadIds: shouldAdd
-          ? [...new Set([...item.threadIds, ...threadIds])]
-          : item.threadIds.filter((threadId) => !threadIdSet.has(threadId)),
-        updatedAt: new Date().toISOString(),
-      } : item));
+
+      if (hasFailures) {
+        setOrganizationError("Some selected threads could not be updated. Your saved collections were refreshed.");
+      }
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+    } finally {
+      collectionMutationRef.current = null;
+      setCollectionMutationId(null);
     }
   }
 
@@ -1267,7 +1288,10 @@ function InboxApp({
               isCollectionView={Boolean(activeCollection)}
               messages={visibleMessages}
               onClearVisibleSelection={() => setSelectedMessageIds((current) => clearVisibleMessageSelection(current, visibleMessages))}
-              onClearFilter={() => setPersonFilter(null)}
+              onClearFilter={() => {
+                setSelectedMessageIds(new Set());
+                setPersonFilter(null);
+              }}
               onKeepSelected={openSelectedOrganizer}
               onOpenThread={openThread}
               onSelectAllVisible={() => setSelectedMessageIds((current) => selectAllVisibleMessages(current, visibleMessages))}
@@ -1320,6 +1344,8 @@ function InboxApp({
           }}
           onPin={(input) => void createPin(input)}
           onToggleCollection={(collection) => void toggleCollectionMembershipForMessages(collection, organizerMessages)}
+          collectionMutationId={collectionMutationId}
+          error={organizationError}
           pins={pins}
         />
       ) : null}
@@ -2008,14 +2034,13 @@ function InboxView({
               const signature = getContactSignature(message.from);
               const isReply = message.subject.trim().toLowerCase().startsWith("re:");
               const selected = selectedMessageIds.has(message.id);
-              const senderLabel = message.from.name ?? message.from.email;
 
               return (
                 <li key={message.id}>
                   <div className="message-row-wrap">
                     <label className="message-selection-toggle">
                       <input
-                        aria-label={`${selected ? "Deselect" : "Select"} email from ${senderLabel}`}
+                        aria-label={getMessageSelectionLabel(message, selected)}
                         checked={selected}
                         onChange={() => onToggleMessageSelection(message.id)}
                         type="checkbox"
@@ -2127,6 +2152,12 @@ export function getMessageSelectionState(messages: InboxMessage[], selectedIds: 
     allVisibleSelected: messages.length > 0 && selectedCount === messages.length,
     selectedCount,
   };
+}
+
+export function getMessageSelectionLabel(message: Pick<InboxMessage, "from" | "subject" | "receivedAt">, selected: boolean) {
+  const subjectLabel = message.subject.trim() || "(no subject)";
+  const senderLabel = message.from.name ?? message.from.email;
+  return `${selected ? "Deselect" : "Select"} email "${subjectLabel}" from ${senderLabel}, received ${formatFullReceivedAt(message.receivedAt)}`;
 }
 
 export function sortThreadMessages(messages: ThreadDetailMessage[]) {
@@ -2945,9 +2976,11 @@ function OrganizationSidebar({
   );
 }
 
-function ThreadOrganizer({ closing, collections, messages, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
+function ThreadOrganizer({ closing, collectionMutationId, collections, error, messages, onClose, onCreateCollection, onPin, onToggleCollection, pins }: {
   closing: boolean;
+  collectionMutationId: string | null;
   collections: Collection[];
+  error: string | null;
   messages: InboxMessage[];
   onClose: () => void;
   onCreateCollection: (name: string) => Promise<void>;
@@ -2992,13 +3025,15 @@ function ThreadOrganizer({ closing, collections, messages, onClose, onCreateColl
             const includedCount = selectedThreadIds.filter((threadId) => collection.threadIds.includes(threadId)).length;
             const included = includedCount === selectedThreadIds.length;
             const partial = includedCount > 0 && !included;
-            return <button aria-pressed={included} className={included ? "organizer-collection-active" : partial ? "organizer-collection-partial" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? singleMessage ? "Added" : "All selected threads" : partial ? `${includedCount} of ${selectedThreadIds.length} threads added` : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
+            return <button aria-busy={collectionMutationId === collection.id || undefined} aria-pressed={included} className={included ? "organizer-collection-active" : partial ? "organizer-collection-partial" : ""} disabled={collectionMutationId !== null} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{collectionMutationId === collection.id ? "Updating…" : included ? singleMessage ? "Added" : "All selected threads" : partial ? `${includedCount} of ${selectedThreadIds.length} threads added` : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
           })}
           <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
             <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />
-            <button disabled={!name.trim()} type="submit">Create</button>
+            <button disabled={!name.trim() || collectionMutationId !== null} type="submit">Create</button>
           </form>
         </div>
+        {collectionMutationId ? <p className="organizer-status" role="status">Updating selected threads…</p> : null}
+        {error ? <p className="organizer-error" role="alert">{error}</p> : null}
         <footer>Threads can live in several collections. Attention placement never changes.</footer>
       </section>
     </div>
