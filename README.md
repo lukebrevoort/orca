@@ -43,6 +43,13 @@ During local development, open `http://localhost:5173/dev/inbox` to review the f
 inbox with fake email data. This route bypasses OAuth only in Vite development mode;
 production builds keep the inbox protected by the normal session check.
 
+The Vercel project described by `vercel.json` is intentionally a frontend-only
+preview: it installs the workspace, builds `apps/web`, and publishes
+`apps/web/dist`. It does not deploy the Hono/SQLite API. A Vercel `READY` status
+therefore verifies the static web bundle only; the SPA's relative `/v1/...`
+requests require the API to be hosted separately behind the same origin (or a
+configured proxy) before authenticated inbox flows can work on that preview.
+
 The API applies any pending local SQLite migrations before it starts. This
 makes a fresh or reset development database ready for auth and OAuth flows.
 

@@ -47,9 +47,10 @@ export async function renewSession(
   session: Pick<SessionRecord, "sessionId" | "userId">,
   ttlMs = defaultSessionTtlMs,
 ) {
-  const expiresAt = new Date(Date.now() + ttlMs);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ttlMs);
 
-  db
+  const updated = db
     .update(sessions)
     .set({ expiresAt })
     .where(
@@ -57,9 +58,15 @@ export async function renewSession(
         eq(sessions.id, session.sessionId),
         eq(sessions.userId, session.userId),
         isNull(sessions.invalidatedAt),
+        gt(sessions.expiresAt, now),
       ),
     )
-    .run();
+    .returning({ sessionId: sessions.id })
+    .get();
+
+  if (!updated) {
+    return null;
+  }
 
   const token = await createSessionToken({
     sessionId: session.sessionId,

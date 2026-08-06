@@ -6,11 +6,12 @@ import { afterEach, describe, test } from "node:test";
 
 import { Hono } from "hono";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { oauthAccounts, users } from "../db/schema.ts";
+import { oauthAccounts, sessions, users } from "../db/schema.ts";
 import { defaultSessionTtlMs, getAuthConfig, sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
-import { requireAuth, type AuthVariables } from "./middleware.ts";
+import { requireAuth, shouldRenewSession, type AuthVariables } from "./middleware.ts";
 import {
   buildClearedSessionCookie,
   buildSessionCookie,
@@ -74,12 +75,133 @@ describe("auth foundation", () => {
       const expiring = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
       const renewed = await renewSession(db, expiring);
 
+      assert.ok(renewed);
       assert.ok(renewed.expiresAt.getTime() > expiring.expiresAt.getTime());
       assert.deepEqual(await getSessionFromToken(db, renewed.token), {
         sessionId: expiring.sessionId,
         userId: "user_1",
         expiresAt: renewed.expiresAt,
       });
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("does not renew invalidated or expired sessions", async () => {
+    setAuthEnv();
+
+    const { db, sqlite, tempDir } = createMigratedDb();
+
+    try {
+      db.insert(users).values({
+        id: "user_1",
+        email: "luke@example.com",
+      }).run();
+
+      const invalidated = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
+      invalidateSession(db, invalidated.sessionId);
+      assert.equal(await renewSession(db, invalidated), null);
+
+      const expired = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
+      db.update(sessions)
+        .set({ expiresAt: new Date(Date.now() - 1_000) })
+        .where(eq(sessions.id, expired.sessionId))
+        .run();
+      assert.equal(await renewSession(db, expired), null);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("renews through auth middleware and keeps the token out of auth context", async () => {
+    setAuthEnv();
+
+    const { db, dbPath, sqlite, tempDir } = createMigratedDb();
+
+    try {
+      db.insert(users).values({
+        id: "user_1",
+        email: "luke@example.com",
+        displayName: "Luke",
+      }).run();
+
+      const expiring = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
+      const app = new Hono<{ Variables: AuthVariables }>();
+      app.use(
+        "*",
+        requireAuth({
+          dbFactory: () => createDatabaseClient(dbPath),
+        }),
+      );
+      app.get("/protected", (c) => c.json(c.get("auth")));
+
+      const response = await app.request("http://orca.test/protected", {
+        headers: {
+          cookie: `${sessionCookieName}=${expiring.token}`,
+        },
+      });
+
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get("set-cookie");
+      assert.ok(cookie);
+      assert.match(cookie, new RegExp(`^${sessionCookieName}=[^;]+; HttpOnly; Path=/; SameSite=Lax;`));
+      assert.match(cookie, /Max-Age=\d+/);
+      assert.match(cookie, /Expires=/);
+      const refreshedToken = cookie.match(new RegExp(`^${sessionCookieName}=([^;]+)`))?.[1];
+      assert.ok(refreshedToken);
+      assert.notEqual(refreshedToken, expiring.token);
+
+      const auth = await response.json();
+      assert.deepEqual(auth, {
+        sessionId: expiring.sessionId,
+        userId: "user_1",
+        expiresAt: (await getSessionFromToken(db, refreshedToken))?.expiresAt.toISOString(),
+      });
+      assert.equal("token" in auth, false);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects a renewal that did not update a live session and honors the exact renewal boundary", async () => {
+    setAuthEnv();
+
+    const { db, dbPath, sqlite, tempDir } = createMigratedDb();
+
+    try {
+      db.insert(users).values({
+        id: "user_1",
+        email: "luke@example.com",
+      }).run();
+
+      const now = Date.parse("2026-08-06T00:00:00.000Z");
+      assert.equal(shouldRenewSession(new Date(now + sessionRenewalWindowMs), now), true);
+      assert.equal(shouldRenewSession(new Date(now + sessionRenewalWindowMs + 1), now), false);
+
+      const expiring = await createSession(db, "user_1", sessionRenewalWindowMs - 1_000);
+      invalidateSession(db, expiring.sessionId);
+
+      const app = new Hono<{ Variables: AuthVariables }>();
+      app.use(
+        "*",
+        requireAuth({
+          dbFactory: () => createDatabaseClient(dbPath),
+          renewSession: async () => null,
+        }),
+      );
+      app.get("/protected", (c) => c.json(c.get("auth")));
+
+      const response = await app.request("http://orca.test/protected", {
+        headers: {
+          cookie: `${sessionCookieName}=${expiring.token}`,
+        },
+      });
+
+      assert.equal(response.status, 401);
+      assert.equal(response.headers.get("set-cookie"), null);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

@@ -18,7 +18,12 @@ export type AuthVariables = {
 
 type RequireAuthOptions = {
   dbFactory?: typeof createDatabaseClient;
+  renewSession?: typeof renewSession;
 };
+
+export function shouldRenewSession(expiresAt: Date, now = Date.now()) {
+  return expiresAt.getTime() - now <= sessionRenewalWindowMs;
+}
 
 export function requireAuth(
   options: RequireAuthOptions = {},
@@ -62,16 +67,31 @@ export function requireAuth(
         );
       }
 
-      const renewed = auth.expiresAt.getTime() - Date.now() <= sessionRenewalWindowMs
-        ? await renewSession(db, auth).catch(() => null)
-        : null;
-      const activeAuth = renewed ?? auth;
+      if (shouldRenewSession(auth.expiresAt)) {
+        const renew = options.renewSession ?? renewSession;
+        const renewed = await renew(db, auth).catch(() => null);
 
-      if (renewed) {
+        if (!renewed) {
+          return c.json(
+            {
+              error: {
+                code: "unauthorized",
+                message: "Authentication required",
+              },
+            },
+            401,
+          );
+        }
+
         c.header("Set-Cookie", buildSessionCookie(renewed.token, renewed.expiresAt, getSessionCookieOptions()));
+        c.set("auth", {
+          sessionId: renewed.sessionId,
+          userId: renewed.userId,
+          expiresAt: renewed.expiresAt,
+        });
+      } else {
+        c.set("auth", auth);
       }
-
-      c.set("auth", activeAuth);
 
       await next();
     } finally {
