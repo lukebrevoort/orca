@@ -2,8 +2,9 @@ import type { MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { sessionCookieName } from "./config.ts";
-import { getSessionFromToken } from "./session-store.ts";
+import { sessionCookieName, sessionRenewalWindowMs } from "./config.ts";
+import { buildSessionCookie, getSessionCookieOptions } from "./jwt.ts";
+import { getSessionFromToken, renewSession } from "./session-store.ts";
 
 export type AuthContext = {
   sessionId: string;
@@ -17,7 +18,12 @@ export type AuthVariables = {
 
 type RequireAuthOptions = {
   dbFactory?: typeof createDatabaseClient;
+  renewSession?: typeof renewSession;
 };
+
+export function shouldRenewSession(expiresAt: Date, now = Date.now()) {
+  return expiresAt.getTime() - now <= sessionRenewalWindowMs;
+}
 
 export function requireAuth(
   options: RequireAuthOptions = {},
@@ -61,7 +67,31 @@ export function requireAuth(
         );
       }
 
-      c.set("auth", auth);
+      if (shouldRenewSession(auth.expiresAt)) {
+        const renew = options.renewSession ?? renewSession;
+        const renewed = await renew(db, auth).catch(() => null);
+
+        if (!renewed) {
+          return c.json(
+            {
+              error: {
+                code: "unauthorized",
+                message: "Authentication required",
+              },
+            },
+            401,
+          );
+        }
+
+        c.header("Set-Cookie", buildSessionCookie(renewed.token, renewed.expiresAt, getSessionCookieOptions()));
+        c.set("auth", {
+          sessionId: renewed.sessionId,
+          userId: renewed.userId,
+          expiresAt: renewed.expiresAt,
+        });
+      } else {
+        c.set("auth", auth);
+      }
 
       await next();
     } finally {

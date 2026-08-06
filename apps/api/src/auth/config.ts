@@ -2,7 +2,8 @@ const minimumSessionSecretLength = 32;
 const encryptionKeyLengthBytes = 32;
 
 export const sessionCookieName = "orca_session";
-export const defaultSessionTtlMs = 1000 * 60 * 60 * 24 * 14;
+export const defaultSessionTtlMs = 1000 * 60 * 60 * 24 * 30;
+export const sessionRenewalWindowMs = 1000 * 60 * 60 * 24 * 7;
 
 export type AuthConfig = {
   sessionSecret: string;

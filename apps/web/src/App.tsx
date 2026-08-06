@@ -557,6 +557,7 @@ function InboxApp({
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessages : []);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">(demoMode ? "ready" : "loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
@@ -609,6 +610,7 @@ function InboxApp({
       ));
       setStatus("ready");
       setErrorMessage(null);
+      setErrorStatus(null);
       return;
     }
 
@@ -617,6 +619,7 @@ function InboxApp({
     async function loadInbox() {
       setStatus(messages.length > 0 ? "ready" : "loading");
       setErrorMessage(null);
+      setErrorStatus(null);
 
       try {
         const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
@@ -641,6 +644,7 @@ function InboxApp({
         }
         setStatus("error");
         setErrorMessage(getErrorMessage(error));
+        setErrorStatus(error instanceof ApiRequestError ? error.status : null);
       }
     }
 
@@ -657,7 +661,12 @@ function InboxApp({
         setMessages(refreshedInbox.messages);
       } catch (error) {
         if (abortController.signal.aborted) return;
+        if (error instanceof ApiRequestError && error.status === 401) {
+          setStatus("signedout");
+          return;
+        }
         setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
+        setErrorStatus(error instanceof ApiRequestError ? error.status : null);
       }
     }
 
@@ -1199,6 +1208,7 @@ function InboxApp({
             <InboxView
               account={account}
               errorMessage={errorMessage}
+              errorStatus={errorStatus}
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
@@ -1752,6 +1762,7 @@ function MessageMark({ signature, unread }: { signature: ContactSignature; unrea
 function InboxView({
   account,
   errorMessage,
+  errorStatus,
   inboxEyebrow,
   inboxFilter,
   inboxTitle,
@@ -1773,6 +1784,7 @@ function InboxView({
 }: {
   account: MailAccount | null;
   errorMessage: string | null;
+  errorStatus: number | null;
   inboxEyebrow: string;
   inboxFilter: InboxFilter;
   inboxTitle: string;
@@ -1865,7 +1877,12 @@ function InboxView({
         ) : null}
 
         {status === "error" ? (
-          <InboxStatusState description={errorMessage ?? "Please try again."} eyebrow="Could not open inbox" title="Your mailbox is safe—Orca just could not reach it." />
+          <InboxStatusState
+            action={errorStatus === 404 ? <a className="empty-state-action" href="/login">Reconnect Gmail <span aria-hidden="true">→</span></a> : undefined}
+            description={errorStatus === 404 ? "Your mailbox is safe, but this browser needs to reconnect to Gmail before Orca can open it." : errorMessage ?? "Please try again."}
+            eyebrow="Could not open inbox"
+            title={errorStatus === 404 ? "Reconnect to open your inbox." : "Your mailbox is safe—Orca just could not reach it."}
+          />
         ) : null}
 
         {status === "ready" && messages.length === 0 ? (
@@ -1941,7 +1958,7 @@ function InboxView({
 
       {errorMessage && status === "ready" ? (
         <p className="filter-chip-label" style={{ marginTop: 12 }}>
-          {errorMessage} <a className="inbox-reconnect-link" href="/settings/integrations/gmail">Reconnect Gmail</a>
+          {errorMessage} <a className="inbox-reconnect-link" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>Reconnect Gmail</a>
         </p>
       ) : null}
     </>
@@ -2945,10 +2962,12 @@ function GoogleGlyph() {
 }
 
 function InboxStatusState({
+  action,
   eyebrow,
   title,
   description,
 }: {
+  action?: ReactNode;
   eyebrow: string;
   title: string;
   description: string;
@@ -2958,6 +2977,7 @@ function InboxStatusState({
       <p>{eyebrow}</p>
       <h2>{title}</h2>
       <span>{description}</span>
+      {action ? <div className="empty-state-actions">{action}</div> : null}
     </div>
   );
 }
@@ -3054,8 +3074,8 @@ function LoginRequiredScreen() {
         <div className="oauth-brand"><span className="oauth-brand-mark">O</span><span>Orca</span></div>
         <p className="oauth-eyebrow">A private workspace</p>
         <h1>Your inbox waits for its person.</h1>
-        <p>Sign in with Google to open the Gmail account you connected to Orca.</p>
-        <a className="oauth-google-button oauth-enter-button" href="/login"><GoogleGlyph />Continue with Google</a>
+        <p>Your session or Gmail connection needs a quick refresh. Sign in with Google to return to the inbox.</p>
+        <a className="oauth-google-button oauth-enter-button" href="/login"><GoogleGlyph />Reconnect with Google</a>
       </section>
     </main>
   );
