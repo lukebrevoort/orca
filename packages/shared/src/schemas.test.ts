@@ -51,6 +51,16 @@ describe("shared API schemas", () => {
     );
   });
 
+  test("accepts an older authenticated session response without onboarding state", () => {
+    const session = authSessionSchema.parse({
+      isAuthenticated: true,
+      user: { id: "user_1", email: "luke@example.com", name: "Luke" },
+      expiresAt: null,
+    });
+
+    assert.equal(session.onboardingCompletedAt, null);
+  });
+
   test("keeps nullable body fields and attachment metadata in reader payloads", () => {
     const result = threadDetailSchema.safeParse({
       account: accountFixture,

@@ -45,6 +45,10 @@ type SignedStatePayload = {
   issuedAt: string;
   intent: GmailOAuthIntent;
   accountId: string | null;
+  initialLogin?: boolean;
+};
+
+type VerifiedStatePayload = Omit<SignedStatePayload, "initialLogin"> & {
   initialLogin: boolean;
 };
 
@@ -403,7 +407,7 @@ function signState(payload: SignedStatePayload, secret: string): string {
   return `${encodedPayload}.${signature}`;
 }
 
-function verifyState(value: string, secret: string): SignedStatePayload | null {
+function verifyState(value: string, secret: string): VerifiedStatePayload | null {
   const [encodedPayload, signature] = value.split(".");
   if (!encodedPayload || !signature) {
     return null;
@@ -425,13 +429,36 @@ function verifyState(value: string, secret: string): SignedStatePayload | null {
       return null;
     }
 
-    if (!(["connect", "upgrade"] as const).includes(payload.intent) || (payload.accountId !== null && typeof payload.accountId !== "string") || typeof payload.initialLogin !== "boolean") {
+    const hasInitialLoginMarker = Object.hasOwn(payload, "initialLogin");
+    if (
+      (!(["connect", "upgrade"] as const).includes(payload.intent))
+      || (payload.accountId !== null && typeof payload.accountId !== "string")
+      || (typeof payload.returnTo !== "string" && payload.returnTo !== null)
+      || (hasInitialLoginMarker && typeof payload.initialLogin !== "boolean")
+    ) {
       return null;
     }
 
-    return payload;
+    return {
+      ...payload,
+      initialLogin: hasInitialLoginMarker
+        ? payload.initialLogin as boolean
+        : payload.intent === "connect" && isLegacyOnboardingReturnTo(payload.returnTo),
+    };
   } catch {
     return null;
+  }
+}
+
+function isLegacyOnboardingReturnTo(returnTo: string | null): boolean {
+  if (!returnTo) {
+    return false;
+  }
+
+  try {
+    return new URL(returnTo).pathname === "/onboarding";
+  } catch {
+    return false;
   }
 }
 
