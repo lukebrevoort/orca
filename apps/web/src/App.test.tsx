@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { ApiRequestError, App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -12,6 +12,11 @@ describe("App", () => {
     expect(html).toContain("Orca");
     expect(html).toContain("Checking your key.");
     expect(html).not.toContain("Compose");
+  });
+
+  test("keeps provider authorization failures separate from expired Orca sessions", () => {
+    expect(isSessionUnauthorizedError(new ApiRequestError(401, "Gmail needs to be reconnected", "provider_auth_error"))).toBe(false);
+    expect(isSessionUnauthorizedError(new ApiRequestError(401, "Authentication required", "unauthorized"))).toBe(true);
   });
 
   test("renders the Gmail OAuth login page on auth routes", () => {

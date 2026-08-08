@@ -425,7 +425,7 @@ function AttentionViewSettingsPage({
       })
       .catch((error) => {
         if (abortController.signal.aborted) return;
-        if (error instanceof ApiRequestError && error.status === 401) {
+        if (isSessionUnauthorizedError(error)) {
           onSessionExpired();
           return;
         }
@@ -471,7 +471,7 @@ function AttentionViewSettingsPage({
       });
       setSavedBehavior(updated.behavior);
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
+      if (isSessionUnauthorizedError(error)) {
         onSessionExpired();
         return;
       }
@@ -498,7 +498,7 @@ function AttentionViewSettingsPage({
       setSettings(reorderedSettings);
       setSavedBehavior(updated.behavior);
     } catch (error) {
-      if (error instanceof ApiRequestError && error.status === 401) {
+      if (isSessionUnauthorizedError(error)) {
         onSessionExpired();
         return;
       }
@@ -720,7 +720,7 @@ function InboxApp({
         void refreshGmailInBackground();
       } catch (error) {
         if (abortController.signal.aborted) return;
-        if (error instanceof ApiRequestError && error.status === 401) {
+        if (isSessionUnauthorizedError(error)) {
           setStatus("signedout");
           return;
         }
@@ -743,7 +743,7 @@ function InboxApp({
         setMessages(refreshedInbox.messages);
       } catch (error) {
         if (abortController.signal.aborted) return;
-        if (error instanceof ApiRequestError && error.status === 401) {
+        if (isSessionUnauthorizedError(error)) {
           setStatus("signedout");
           return;
         }
@@ -3294,16 +3294,14 @@ async function fetchJson<T>(
 ): Promise<T> {
   const response = await fetch(input, { ...init, credentials: "include", signal });
 
-  if (!response.ok) {
-    throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
-  }
+  if (!response.ok) throw await buildApiRequestError(response);
 
   return schema.parse(await response.json());
 }
 
 async function fetchNoContent(input: string, init: RequestInit, _acceptsJson = false) {
   const response = await fetch(input, { ...init, credentials: "include" });
-  if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
+  if (!response.ok) throw await buildApiRequestError(response);
 }
 
 function reorderItems<T extends { id: string; position: number }>(items: T[], id: string, requestedPosition?: number) {
@@ -3316,10 +3314,14 @@ function reorderItems<T extends { id: string; position: number }>(items: T[], id
   return next.map((entry, position) => ({ ...entry, position }));
 }
 
-class ApiRequestError extends Error {
-  constructor(readonly status: number, message: string) {
+export class ApiRequestError extends Error {
+  constructor(readonly status: number, message: string, readonly code: string | null = null) {
     super(message);
   }
+}
+
+export function isSessionUnauthorizedError(error: unknown) {
+  return error instanceof ApiRequestError && error.code === "unauthorized";
 }
 
 export function isTidelineMessage(message: InboxMessage) {
@@ -3422,6 +3424,19 @@ async function readJsonObject(response: Response): Promise<Record<string, unknow
   } catch {
     return {};
   }
+}
+
+async function buildApiRequestError(response: Response) {
+  const body = await readJsonObject(response);
+  const error = body.error;
+  const details = error && typeof error === "object" && !Array.isArray(error)
+    ? error as Record<string, unknown>
+    : {};
+  const code = typeof details.code === "string" ? details.code : null;
+  const message = typeof details.message === "string" && details.message.trim()
+    ? details.message
+    : `Request failed with ${response.status} ${response.statusText}`.trim();
+  return new ApiRequestError(response.status, message, code);
 }
 
 function getStringField(value: Record<string, unknown>, key: string) {

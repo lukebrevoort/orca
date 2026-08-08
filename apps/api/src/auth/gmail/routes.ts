@@ -128,13 +128,13 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
           .where(eq(users.email, result.account.providerEmail)).get();
 
         if (existingUser && existingUser.id !== auth.userId) {
-          const existingAccount = db.select({ id: oauthAccounts.id }).from(oauthAccounts)
+          const existingAccount = db.select().from(oauthAccounts)
             .where(and(
               eq(oauthAccounts.userId, existingUser.id),
               eq(oauthAccounts.provider, "gmail"),
               eq(oauthAccounts.providerId, result.account.providerAccountId),
             )).get();
-          const pendingAccount = db.select({ id: oauthAccounts.id }).from(oauthAccounts)
+          const pendingAccount = db.select().from(oauthAccounts)
             .where(and(
               eq(oauthAccounts.userId, auth.userId),
               eq(oauthAccounts.provider, "gmail"),
@@ -142,6 +142,21 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
             )).get();
 
           if (pendingAccount && existingAccount) {
+            // The callback stores the newly exchanged Google credentials under
+            // the temporary login user. Keep the existing account id so its
+            // cached mail remains attached, but move the fresh credentials
+            // onto that account before removing the temporary record.
+            db.update(oauthAccounts)
+              .set({
+                providerEmail: pendingAccount.providerEmail,
+                providerId: pendingAccount.providerId,
+                accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
+                refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
+                tokenExpiry: pendingAccount.tokenExpiry,
+                updatedAt: new Date(),
+              })
+              .where(eq(oauthAccounts.id, existingAccount.id))
+              .run();
             db.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
           } else if (pendingAccount) {
             db.update(oauthAccounts).set({ userId: existingUser.id }).where(eq(oauthAccounts.id, pendingAccount.id)).run();
