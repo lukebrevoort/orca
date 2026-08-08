@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -124,6 +124,60 @@ describe("App", () => {
     expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
   });
 
+  test("keeps Tideline filtering scoped to Inbox and searches the rendered stream", () => {
+    const lowSignal = { ...demoMessages[0]!, id: "low", providerMessageId: "low", threadId: "low", humanSignal: 2 };
+    const unknownSignal = { ...demoMessages[1]!, id: "unknown", providerMessageId: "unknown", threadId: "unknown", humanSignal: null, subject: "A singular lighthouse note" };
+    const hidden = { ...demoMessages[3]!, id: "hidden", providerMessageId: "hidden", threadId: "hidden", attentionBehavior: "hidden" as const };
+
+    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "inbox").map((message) => message.id)).toEqual(["unknown", "hidden"]);
+    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "hidden").map((message) => message.id)).toEqual(["low", "unknown", "hidden"]);
+    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "all", "lighthouse").map((message) => message.id)).toEqual(["unknown"]);
+    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "collection")).toHaveLength(3);
+  });
+
+  test("groups stream rows by local calendar date instead of read state", () => {
+    const now = new Date(2026, 7, 8, 12);
+    expect(getStreamSectionLabel(new Date(2026, 7, 8, 8).toISOString(), now)).toBe("Today");
+    expect(getStreamSectionLabel(new Date(2026, 7, 7, 23).toISOString(), now)).toBe("Yesterday");
+    expect(getStreamSectionLabel(new Date(2026, 7, 3, 8).toISOString(), now)).toBe("Earlier this week");
+    expect(getStreamSectionLabel(new Date(2026, 6, 1, 8).toISOString(), now)).toBe("Older");
+  });
+
+  test("updates a resurfaced reminder in place when it is snoozed again", () => {
+    const input = { threadId: "thread-1", scheduledFor: "2026-08-09T16:00:00.000Z", timezone: "America/Los_Angeles", notify: true };
+    const resurfaced = {
+      id: "reminder-resurfaced",
+      accountId: "account-1",
+      ...input,
+      scheduledFor: "2026-08-08T16:00:00.000Z",
+      status: "resurfaced" as const,
+      resurfacedAt: "2026-08-08T16:00:00.000Z",
+      completedAt: null,
+      cancelledAt: null,
+      createdAt: "2026-08-01T16:00:00.000Z",
+      updatedAt: "2026-08-08T16:00:00.000Z",
+    };
+
+    expect(buildReminderSaveRequest(input, resurfaced)).toEqual({
+      path: "/v1/reminders/reminder-resurfaced",
+      method: "PATCH",
+      body: { scheduledFor: input.scheduledFor, timezone: input.timezone, notify: true },
+    });
+    expect(buildReminderSaveRequest(input)).toEqual({ path: "/v1/reminders", method: "POST", body: input });
+  });
+
+  test("derives pinned people only from persisted sender pins", () => {
+    const pins: Pin[] = [
+      { id: "thread", accountId: "account", kind: "thread", targetId: demoMessages[0]!.threadId, label: "Thread", position: 0, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "anika", accountId: "account", kind: "sender", targetId: "anika@example.com", label: "Pinned Anika", position: 2, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "maya", accountId: "account", kind: "sender", targetId: "maya@example.com", label: "Pinned Maya", position: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+    ];
+    const people = buildPinnedPeopleFromPins(pins, demoMessages);
+
+    expect(people.map((person) => person.filterValue)).toEqual(["maya@example.com", "anika@example.com"]);
+    expect(people.map((person) => person.name)).toEqual(["Maya Chen", "Anika Lee"]);
+  });
+
   test("only exposes the fake inbox preview route during development", () => {
     expect(isDevPreviewPath("/dev/inbox", true)).toBe(true);
     expect(isDevPreviewPath("/dev/inbox", false)).toBe(false);
@@ -196,6 +250,8 @@ describe("App", () => {
     expect(html).toContain("Show quoted history");
     expect(html).toContain("Continue the conversation");
     expect(html).toContain(">Reply</button>");
+    expect(html).toContain(">Reply all</button>");
+    expect(html).toContain(">Forward</button>");
     expect(html).toContain("Earlier note");
     expect(html).not.toContain("<details open=\"\"");
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
@@ -258,7 +314,7 @@ describe("App", () => {
     expect(html).not.toContain("Plain fallback");
   });
 
-  test("targets Attention at the sender shown in the newest reader message", () => {
+  test("keeps Attention available for every sender shown in the reader", () => {
     const older = makeThreadMessage("older", "2026-07-11T08:00:00.000Z");
     const newest = {
       ...makeThreadMessage("newest", "2026-07-12T18:00:00.000Z"),
@@ -278,7 +334,7 @@ describe("App", () => {
     );
 
     expect(html).toContain('aria-label="Manage mail from Anika Lee"');
-    expect(html).not.toContain('aria-label="Manage mail from Maya Chen"');
+    expect(html).toContain('aria-label="Manage mail from Maya Chen"');
   });
 
   test("normalizes realistic recipient paste and rejects incomplete addresses", () => {
@@ -388,6 +444,8 @@ describe("App", () => {
     );
     expect(html).toContain("compose-workspace-intro");
     expect(html).toContain("Saved on this device");
+    expect(html).toContain("Add Cc or Bcc");
+    expect(html).toContain("This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.");
     expect(html).toContain("Type / for structure · drop anywhere to attach");
     expect(html).toContain("Enable Gmail compose access");
     expect(html).toContain("Enable sending");
