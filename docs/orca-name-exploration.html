@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>A quieter name for human mail</title>
+    <style>
+      :root {
+        --foam: #f7faf8;
+        --white: #ffffff;
+        --tideline: #e2ece8;
+        --kelp: #5f7470;
+        --current: #0f2422;
+        --lagoon: #0e9f8a;
+        --lagoon-soft: rgb(14 159 138 / 10%);
+        --sand: #f3eadb;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        background: var(--foam);
+        color: var(--current);
+        font: 15px/1.65 "Sora", ui-sans-serif, system-ui, sans-serif;
+        margin: 0;
+      }
+
+      .page { margin: 0 auto; max-width: 1080px; padding: 64px 28px 88px; }
+      .eyebrow { color: var(--lagoon); font-size: 11px; font-weight: 800; letter-spacing: .14em; margin: 0 0 20px; text-transform: uppercase; }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: clamp(44px, 8vw, 84px); letter-spacing: -.075em; line-height: .96; margin-bottom: 24px; max-width: 780px; }
+      h1 em, .recommendation h2 em { color: var(--lagoon); font-family: Georgia, serif; font-weight: 400; }
+      .lede { color: var(--kelp); font-size: 18px; line-height: 1.65; max-width: 650px; }
+      .rule { border: 0; border-top: 1px solid var(--tideline); margin: 54px 0 34px; }
+      .section-label { color: var(--kelp); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+
+      .recommendation { background: var(--current); border-radius: 28px; color: var(--foam); display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr) 300px; margin: 34px 0 48px; padding: 32px; }
+      .recommendation h2 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -.055em; line-height: 1.02; margin: 0 0 16px; }
+      .recommendation p { color: rgb(247 250 248 / 72%); margin-bottom: 0; max-width: 570px; }
+      .recommendation aside { align-self: center; background: rgb(247 250 248 / 8%); border: 1px solid rgb(247 250 248 / 16%); border-radius: 20px; padding: 20px; }
+      .recommendation aside strong { display: block; font-size: 11px; letter-spacing: .12em; margin-bottom: 10px; text-transform: uppercase; }
+      .recommendation aside span { color: #a5e3d6; display: block; font-size: 14px; }
+
+      .criteria { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 44px; }
+      .criteria span { background: var(--white); border: 1px solid var(--tideline); border-radius: 999px; color: var(--kelp); font-size: 12px; padding: 7px 12px; }
+      .names { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+      .name-card { background: var(--white); border: 1px solid var(--tideline); border-radius: 20px; padding: 22px; }
+      .name-card strong { color: var(--lagoon); display: block; font-size: 27px; letter-spacing: -.045em; line-height: 1.1; margin-bottom: 10px; }
+      .name-card p { color: var(--kelp); margin-bottom: 12px; }
+      .name-card small { color: var(--current); display: block; font-size: 12px; line-height: 1.5; }
+      .name-card small::before { color: var(--lagoon); content: "Note · "; font-weight: 800; }
+
+      .shortlist { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 18px; }
+      .shortlist div { border-top: 2px solid var(--tideline); padding-top: 14px; }
+      .shortlist b { color: var(--lagoon); display: block; font-size: 12px; letter-spacing: .1em; margin-bottom: 6px; text-transform: uppercase; }
+      .shortlist span { font-size: 17px; letter-spacing: -.02em; }
+      .footer-note { color: var(--kelp); font-size: 12px; margin-top: 54px; max-width: 720px; }
+
+      @media (max-width: 720px) {
+        .page { padding: 38px 18px 56px; }
+        .recommendation, .names { grid-template-columns: 1fr; }
+        .recommendation { border-radius: 22px; padding: 24px; }
+        .shortlist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <p class="eyebrow">Orca / naming room</p>
+      <h1>A quieter name for <em>human mail.</em></h1>
+      <p class="lede">A short exploration for the product that is becoming a calm workplace for people, conversations, and the signal between them.</p>
+
+      <section class="recommendation" aria-labelledby="recommendation-title">
+        <div>
+          <p class="eyebrow">Working recommendation</p>
+          <h2 id="recommendation-title">Start with <em>Tideline.</em></h2>
+          <p>It suggests a clear boundary between signal and noise, keeps the quiet coastal feeling from Orca, and gives the inbox a useful metaphor: the important things reach the line first.</p>
+        </div>
+        <aside>
+          <strong>Shortlist</strong>
+          <span>1. Tideline</span>
+          <span>2. Current</span>
+          <span>3. Morrow</span>
+          <span>Keep Orca as the codename</span>
+        </aside>
+      </section>
+
+      <p class="section-label">What the name needs to carry</p>
+      <div class="criteria" aria-label="Naming criteria">
+        <span>human signal</span>
+        <span>calm reading</span>
+        <span>easy to say</span>
+        <span>room to grow</span>
+        <span>ownable enough to explore</span>
+      </div>
+
+      <p class="section-label">The candidates</p>
+      <section class="names" aria-label="Product name candidates">
+        <article class="name-card">
+          <strong>Tideline</strong>
+          <p>A boundary where the signal arrives. Calm, directional, and naturally connected to the idea of an inbox.</p>
+          <small>Best fit for the current product promise; a little more distinctive than Orca.</small>
+        </article>
+        <article class="name-card">
+          <strong>Current</strong>
+          <p>Something live and moving, without noise. It gives the product energy while staying grounded in flow.</p>
+          <small>Strong voice, though it can sound slightly technical or infrastructure-adjacent.</small>
+        </article>
+        <article class="name-card">
+          <strong>Morrow</strong>
+          <p>A gentle promise of what comes next. It fits Later, reminders, and a product that helps people return at the right time.</p>
+          <small>Warm and memorable; the meaning needs a little introduction.</small>
+        </article>
+        <article class="name-card">
+          <strong>Kith</strong>
+          <p>A word for familiar people and company. It makes the human-to-human thesis explicit in a compact name.</p>
+          <small>Most human-first; pronunciation and recognition may need support.</small>
+        </article>
+        <article class="name-card">
+          <strong>Lilt</strong>
+          <p>Writing should feel lighter here. It is warm, writerly, and easy to remember.</p>
+          <small>Friendly and playful, but less obviously about attention or email.</small>
+        </article>
+        <article class="name-card">
+          <strong>Still</strong>
+          <p>Quiet, present, and readable. A simple name for a product that makes room for the thought.</p>
+          <small>Elegant, but likely the most crowded and difficult to own.</small>
+        </article>
+      </section>
+
+      <hr class="rule" />
+      <p class="section-label">A useful next decision</p>
+      <section class="shortlist" aria-label="Name decision order">
+        <div><b>01</b><span>Say Tideline out loud.</span></div>
+        <div><b>02</b><span>Test Current in the UI.</span></div>
+        <div><b>03</b><span>Compare Morrow’s warmth.</span></div>
+        <div><b>04</b><span>Keep Orca if the symbol wins.</span></div>
+      </section>
+
+      <p class="footer-note">These are creative directions, not clearance results. Before committing, check trademarks, domains, app-store names, and the names of adjacent communication products.</p>
+    </main>
+  </body>
+</html>
