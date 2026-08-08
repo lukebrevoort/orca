@@ -1,7 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build",
+  "buildCommand": "bun run build && bun run build:vercel-api",
   "outputDirectory": "apps/web/dist",
-  "bunVersion": "1.x"
+  "bunVersion": "1.x",
+  "rewrites": [
+    { "source": "/v1/:path*", "destination": "/api?__orca_path=/v1/$1" }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "apps/api/drizzle/**"
+    }
+  }
 }

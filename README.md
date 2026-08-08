@@ -43,12 +43,12 @@ During local development, open `http://localhost:5173/dev/inbox` to review the f
 inbox with fake email data. This route bypasses OAuth only in Vite development mode;
 production builds keep the inbox protected by the normal session check.
 
-The Vercel project described by `vercel.json` is intentionally a frontend-only
-preview: it installs the workspace, builds `apps/web`, and publishes
-`apps/web/dist`. It does not deploy the Hono/SQLite API. A Vercel `READY` status
-therefore verifies the static web bundle only; the SPA's relative `/v1/...`
-requests require the API to be hosted separately behind the same origin (or a
-configured proxy) before authenticated inbox flows can work on that preview.
+The Vercel project described by `vercel.json` installs the workspace, builds
+`apps/web`, publishes `apps/web/dist`, and bundles the Hono API as a Bun
+function. Rewrites send the SPA's `/v1/...` requests to that function, so the
+preview can exercise the Google OAuth return path on the same origin. Preview
+SQLite state is stored under `/tmp/orca.sqlite` and is intentionally
+non-durable; production persistence still belongs on a managed database.
 
 The API applies any pending local SQLite migrations before it starts. This
 makes a fresh or reset development database ready for auth and OAuth flows.
@@ -130,7 +130,7 @@ Google Cloud setup:
 2. Configure the OAuth consent screen and add local test users while the app is unpublished.
 3. Create an OAuth client ID using application type **Web application**.
 4. Add `http://localhost:5173` as an Authorized JavaScript origin.
-5. Add `http://localhost:3000/v1/auth/gmail/callback` as an Authorized redirect URI.
+5. Add `http://localhost:3000/v1/auth/gmail/callback` as an Authorized redirect URI for local development. For a Vercel preview, also add the deployed project's stable origin followed by `/v1/auth/gmail/callback`.
 6. Enable the Gmail API.
 7. Under **Google Auth Platform → Data Access**, add `https://www.googleapis.com/auth/gmail.compose` alongside the existing read-only scopes. Do not add `gmail.modify` or `mail.google.com`.
 8. Keep the app in Testing and add local test users, or complete Google's restricted-scope verification before broader use. Google classifies both `gmail.readonly` and `gmail.compose` as restricted scopes.
