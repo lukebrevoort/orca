@@ -10,4 +10,6 @@ dist
 *.sqlite-shm
 *.sqlite-wal
 apps/api/data/
+api/index.js
 docs/outbound-delivery-contract.html
+.vercel
