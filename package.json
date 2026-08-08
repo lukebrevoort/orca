@@ -12,7 +12,6 @@
     "dev:api": "bun --cwd apps/api dev",
     "dev:web": "bun --cwd apps/web dev",
     "build": "bun --filter '*' build",
-    "build:vercel-api": "bun build server/vercel-api.ts --outfile 'api/index.js' --target bun",
     "typecheck": "bun --filter '*' typecheck",
     "test": "bun --filter '*' test",
     "test:smoke": "bun --filter @orca/api test:smoke",

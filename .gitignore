@@ -12,3 +12,5 @@ dist
 apps/api/data/
 docs/outbound-delivery-contract.html
 .vercel
+.playwright-mcp/
+output/playwright/

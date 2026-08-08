@@ -1,16 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build && bun run build:vercel-api",
+  "buildCommand": "bun run build",
   "outputDirectory": "apps/web/dist",
   "bunVersion": "1.x",
   "rewrites": [
-    { "source": "/v1/:path*", "destination": "/api?__orca_path=/v1/$1" },
+    { "source": "/v1/:path*", "destination": "https://orca-api-production-fbf9.up.railway.app/v1/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "apps/api/drizzle/**"
-    }
-  }
+  ]
 }
