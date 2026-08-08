@@ -9,7 +9,7 @@ import type { MiddlewareHandler } from "hono";
 
 import type { AuthVariables } from "../middleware.ts";
 import type { GmailOAuthConfig } from "./config.ts";
-import { decryptSecret } from "./crypto.ts";
+import { decryptSecret, encryptSecret } from "./crypto.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
 import { DatabaseOAuthAccountStore, InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
@@ -191,8 +191,8 @@ describe("Gmail auth routes", () => {
       providerEmail: "returning@example.com",
       providerId: "google-returning-user",
       scope: config.scopes.join(" "),
-      accessTokenEncrypted: "existing-access-token",
-      refreshTokenEncrypted: "existing-refresh-token",
+      accessTokenEncrypted: encryptSecret("existing-access-token", config.tokenEncryptionKey),
+      refreshTokenEncrypted: encryptSecret("existing-refresh-token", config.tokenEncryptionKey),
     }).run();
     initialClient.sqlite.close();
 
@@ -243,6 +243,17 @@ describe("Gmail auth routes", () => {
         id: "existing_account",
         email: "returning@example.com",
       });
+
+      const verificationClient = dbFactory();
+      try {
+        const account = verificationClient.db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "existing_account")).get();
+        expect(account).toBeTruthy();
+        expect(decryptSecret(account!.accessTokenEncrypted!, config.tokenEncryptionKey)).toBe("returning-access-token");
+        expect(decryptSecret(account!.refreshTokenEncrypted!, config.tokenEncryptionKey)).toBe("returning-refresh-token");
+        expect(verificationClient.db.select().from(oauthAccounts).all()).toHaveLength(1);
+      } finally {
+        verificationClient.sqlite.close();
+      }
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
       if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
