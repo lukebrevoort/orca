@@ -45,6 +45,7 @@ describe("shared API schemas", () => {
           isAuthenticated: true,
           user: null,
           expiresAt: null,
+          onboardingCompletedAt: null,
         }),
       /Authenticated sessions must include a user/,
     );

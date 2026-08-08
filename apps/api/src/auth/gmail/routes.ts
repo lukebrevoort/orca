@@ -30,15 +30,15 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
   Variables: AuthVariables;
 }> {
   const config = options.config ?? loadGmailOAuthConfig();
-  const store = options.store ?? new DatabaseOAuthAccountStore();
+  const dbFactory = options.dbFactory ?? createDatabaseClient;
+  const store = options.store ?? new DatabaseOAuthAccountStore(dbFactory);
   const service = createGmailOAuthService({
     config,
     store,
     fetch: options.fetch,
   });
-  const authMiddleware = options.authMiddleware ?? requireAuth();
-  const pendingAuthMiddleware = options.authMiddleware ?? requireAuth();
-  const dbFactory = options.dbFactory ?? createDatabaseClient;
+  const authMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
+  const pendingAuthMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
 
   const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -108,7 +108,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
       const session = await createSession(db, userId);
       c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
       const returnTo = c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`;
-      const result = service.getAuthorizationUrl(returnTo);
+      const result = service.getAuthorizationUrl(returnTo, "connect", null, true);
       return c.json({ provider: "gmail", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
     } finally {
       sqlite.close();
@@ -119,9 +119,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     const auth = c.get("auth");
     const result = await service.handleCallback(new URLSearchParams(c.req.query()), auth.userId);
 
-    const isInitialLogin = result.ok && result.redirectUrl
-      ? new URL(result.redirectUrl).pathname === "/onboarding"
-      : false;
+    const isInitialLogin = result.ok && result.initialLogin;
 
     if (result.ok && isInitialLogin) {
       const { db, sqlite } = dbFactory();
@@ -148,6 +146,10 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
           } else if (pendingAccount) {
             db.update(oauthAccounts).set({ userId: existingUser.id }).where(eq(oauthAccounts.id, pendingAccount.id)).run();
           }
+          db.update(users)
+            .set({ onboardingCompletedAt: new Date() })
+            .where(eq(users.id, existingUser.id))
+            .run();
           db.delete(users).where(eq(users.id, auth.userId)).run();
           const session = await createSession(db, existingUser.id);
           c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));

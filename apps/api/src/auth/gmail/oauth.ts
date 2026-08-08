@@ -45,10 +45,11 @@ type SignedStatePayload = {
   issuedAt: string;
   intent: GmailOAuthIntent;
   accountId: string | null;
+  initialLogin: boolean;
 };
 
 export type GmailOAuthService = {
-  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null): { url: string; state: string; scopes: string[] };
+  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null, initialLogin?: boolean): { url: string; state: string; scopes: string[] };
   handleCallback(params: URLSearchParams, userId: string): Promise<GmailOAuthCallbackResult>;
 };
 
@@ -56,6 +57,7 @@ export type GmailOAuthCallbackResult =
   | {
       ok: true;
       redirectUrl: string | null;
+      initialLogin: boolean;
       account: {
         providerEmail: string;
         providerAccountId: string;
@@ -77,7 +79,7 @@ export function createGmailOAuthService(options: {
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    getAuthorizationUrl(returnTo, intent = "connect", accountId = null) {
+    getAuthorizationUrl(returnTo, intent = "connect", accountId = null, initialLogin = false) {
       const scopes = intent === "upgrade" ? options.config.composeScopes : options.config.scopes;
       const state = signState(
         {
@@ -86,6 +88,7 @@ export function createGmailOAuthService(options: {
           issuedAt: new Date().toISOString(),
           intent,
           accountId: intent === "upgrade" ? accountId : null,
+          initialLogin,
         },
         options.config.stateSecret,
       );
@@ -248,6 +251,7 @@ export function createGmailOAuthService(options: {
           status: "success",
           intent: decodedState.intent,
         }),
+        initialLogin: decodedState.initialLogin,
         account: {
           providerEmail: userInfoResponse.providerEmail,
           providerAccountId: userInfoResponse.providerAccountId,
@@ -421,7 +425,7 @@ function verifyState(value: string, secret: string): SignedStatePayload | null {
       return null;
     }
 
-    if (!(["connect", "upgrade"] as const).includes(payload.intent) || (payload.accountId !== null && typeof payload.accountId !== "string")) {
+    if (!(["connect", "upgrade"] as const).includes(payload.intent) || (payload.accountId !== null && typeof payload.accountId !== "string") || typeof payload.initialLogin !== "boolean") {
       return null;
     }
 

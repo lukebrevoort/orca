@@ -5,12 +5,13 @@ import {
   useState,
   type CSSProperties,
   type Dispatch,
+  type MouseEvent,
   type ReactNode,
   type Ref,
   type SetStateAction,
 } from "react";
 import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -194,7 +195,17 @@ export function App() {
     if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || onboardingPreview || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
-      .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
+      .then(async (response) => {
+        if (!response.ok) {
+          setAccess("signedout");
+          return;
+        }
+        const session = authSessionSchema.parse(await response.json());
+        setAccess("authenticated");
+        if (isOnboardingRoute() && session.onboardingCompletedAt) {
+          window.location.replace("/");
+        }
+      })
       .catch(() => {
         if (!abortController.signal.aborted) setAccess("signedout");
       });
@@ -227,7 +238,7 @@ export function App() {
   if (access === "signedout") return isOnboardingRoute() ? <GmailOAuthLoginPage /> : <LoginRequiredScreen />;
 
   if (isOnboardingRoute()) {
-    return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
+    return <WelcomeOrientationPage onComplete={completeOnboarding} theme={theme} setTheme={setTheme} />;
   }
 
   if (isGmailLabelMigrationRoute()) {
@@ -243,6 +254,18 @@ export function App() {
   }
 
   return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
+
+  async function completeOnboarding() {
+    const response = await fetch("/v1/auth/onboarding/complete", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const body = await readJsonObject(response);
+      throw new Error(getStringField(body, "message") ?? `Could not finish onboarding (${response.status})`);
+    }
+    window.location.replace("/");
+  }
 }
 
 const defaultAccountPreferences: UserPreferences = { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false };
@@ -1518,12 +1541,28 @@ function OAuthUpgradeReturnNotice({ status }: { status: Exclude<OAuthReturnStatu
     : <div className="oauth-notice oauth-notice-error" role="alert"><strong>Nothing changed</strong><span>{oauthErrorMessage(status.reason, true)}</span></div>;
 }
 
-export function WelcomeOrientationPage({ theme, setTheme }: {
+export function WelcomeOrientationPage({ onComplete, theme, setTheme }: {
+  onComplete?: () => Promise<void>;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const [completionStatus, setCompletionStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [completionError, setCompletionError] = useState<string | null>(null);
   useEffect(() => { titleRef.current?.focus(); }, []);
+
+  async function handleComplete(event: MouseEvent<HTMLAnchorElement>) {
+    if (!onComplete) return;
+    event.preventDefault();
+    setCompletionStatus("loading");
+    setCompletionError(null);
+    try {
+      await onComplete();
+    } catch (error) {
+      setCompletionStatus("error");
+      setCompletionError(getErrorMessage(error));
+    }
+  }
 
   return <main className="onboarding-page">
     <header className="onboarding-topbar">
@@ -1539,7 +1578,8 @@ export function WelcomeOrientationPage({ theme, setTheme }: {
         <li><span>02</span><div><strong>Tune as you go</strong><p>Move senders into Focus, Quiet, or Hidden whenever their rhythm becomes clear.</p></div></li>
       </ul>
       <div className="onboarding-actions">
-        <a className="onboarding-enter" href="/">Open my inbox <span aria-hidden="true">→</span></a>
+        <a aria-busy={completionStatus === "loading" || undefined} className="onboarding-enter" href="/" onClick={onComplete ? (event) => void handleComplete(event) : undefined}>{completionStatus === "loading" ? "Opening your inbox…" : "Open my inbox"} <span aria-hidden="true">→</span></a>
+        {completionError ? <p className="onboarding-error" role="alert">{completionError}</p> : null}
         <p>Want your old organization later? Import Gmail labels from Settings.</p>
       </div>
     </section>

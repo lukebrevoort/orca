@@ -1,10 +1,17 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { MiddlewareHandler } from "hono";
 
 import type { AuthVariables } from "../middleware.ts";
 import type { GmailOAuthConfig } from "./config.ts";
 import { decryptSecret } from "./crypto.ts";
-import { InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
+import { createDatabaseClient } from "../../db/client.ts";
+import { oauthAccounts, users } from "../../db/schema.ts";
+import { DatabaseOAuthAccountStore, InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
 import { createGmailAuthApp, redirectReturningUserToWorkspace } from "./routes.ts";
 
 const config: GmailOAuthConfig = {
@@ -69,6 +76,68 @@ describe("Gmail auth routes", () => {
     expect(authUrl.searchParams.get("redirect_uri")).toBe(config.redirectUri);
     expect(authUrl.searchParams.get("scope")).toBe(config.scopes.join(" "));
     expect(authUrl.searchParams.get("state")).toBe(body.state);
+  });
+
+  test("uses one configured database for the login session and OAuth account", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-gmail-login-route-test-"));
+    const dbPath = join(tempDir, "login.sqlite");
+    const initialClient = createDatabaseClient(dbPath);
+    migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+    initialClient.sqlite.close();
+
+    try {
+      const dbFactory = () => createDatabaseClient(dbPath);
+      const app = createGmailAuthApp({
+        config,
+        dbFactory,
+        fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
+          ? Response.json({
+              access_token: "login-access-token",
+              refresh_token: "login-refresh-token",
+              scope: config.scopes.join(" "),
+            })
+          : Response.json({ id: "google-login-user", email: "login@example.com" }),
+      });
+
+      const loginResponse = await app.request("/login?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fonboarding");
+      expect(loginResponse.status).toBe(200);
+      const loginBody = (await loginResponse.json()) as { state: string };
+      const sessionCookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+      expect(sessionCookie).toBeTruthy();
+
+      const callbackResponse = await app.request(
+        `/callback?code=login-code&state=${encodeURIComponent(loginBody.state)}`,
+        { headers: { cookie: sessionCookie! }, redirect: "manual" },
+      );
+      expect(callbackResponse.status).toBe(302);
+      expect(callbackResponse.headers.get("location")).toContain("/onboarding");
+
+      const verificationClient = dbFactory();
+      try {
+        const user = verificationClient.db.select().from(users).where(eq(users.email, "login@example.com")).get();
+        expect(user).toBeTruthy();
+        const account = await new DatabaseOAuthAccountStore(dbFactory).findForUser(user!.id);
+        expect(account).toMatchObject({
+          userId: user!.id,
+          providerEmail: "login@example.com",
+          providerAccountId: "google-login-user",
+        });
+        expect(verificationClient.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, user!.id)).all()).toHaveLength(1);
+      } finally {
+        verificationClient.sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
+    }
   });
 
   test("callback exchanges code, encrypts tokens, and upserts an oauth account record", async () => {

@@ -321,6 +321,7 @@ export const authSessionSchema = z
     isAuthenticated: z.boolean(),
     user: authUserSchema.nullable(),
     expiresAt: isoDateTimeStringSchema.nullable(),
+    onboardingCompletedAt: isoDateTimeStringSchema.nullable(),
   })
   .strict()
   .refine((session) => !session.isAuthenticated || session.user !== null, {
