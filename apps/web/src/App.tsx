@@ -51,6 +51,7 @@ type MailboxItem = {
 type PersonItem = {
   initials: string;
   name: string;
+  filterValue: string;
   context: string;
   unread?: boolean;
 };
@@ -143,7 +144,16 @@ const collectionColors = [
 
 const demoPins: Pin[] = [
   { id: "pin_demo_sender", accountId: demoAccount.id, kind: "sender", targetId: "maya@example.com", label: "Maya Chen", position: 0, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "pin_demo_thread", accountId: demoAccount.id, kind: "thread", targetId: "thread_3", label: "Dinner on Sunday?", position: 1, createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+  { id: "pin_demo_mom", accountId: demoAccount.id, kind: "sender", targetId: "family@example.com", label: "Mom", position: 1, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_anika", accountId: demoAccount.id, kind: "sender", targetId: "anika@example.com", label: "Anika Lee", position: 2, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_dana", accountId: demoAccount.id, kind: "sender", targetId: "dana@example.com", label: "Dana Brooks", position: 3, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_thread", accountId: demoAccount.id, kind: "thread", targetId: "thread_3", label: "Dinner on Sunday?", position: 4, createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+];
+
+const demoReminders: Reminder[] = [
+  { id: "reminder_demo_dana", accountId: demoAccount.id, threadId: "thread_5", scheduledFor: "2026-07-09T16:00:00.000Z", timezone: "America/Los_Angeles", notify: true, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "reminder_demo_anika", accountId: demoAccount.id, threadId: "thread_4", scheduledFor: "2026-07-10T15:30:00.000Z", timezone: "America/Los_Angeles", notify: false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "reminder_demo_harbor", accountId: demoAccount.id, threadId: "thread_2", scheduledFor: "2026-07-11T16:00:00.000Z", timezone: "America/Los_Angeles", notify: false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
 ];
 
 const collectionsResponseSchema: JsonSchema<Collection[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => collectionSchema.parse(item)) : (() => { throw new Error("Collections response was not a list."); })() };
@@ -180,7 +190,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || devPreview) return;
+    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -264,7 +274,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
 
   return <main className="settings-home-page">
-    <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
+    <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
@@ -295,7 +305,7 @@ export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme
   return (
     <main className="preferences-page">
       <header className="attention-settings-topbar">
-        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
         <a className="settings-back-link" href="/">← Inbox</a>
       </header>
       <section className="preferences-shell" aria-labelledby="preferences-title">
@@ -470,7 +480,7 @@ function AttentionViewSettingsPage({
   return (
     <main className="attention-settings-page">
       <header className="attention-settings-topbar">
-        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
         <div className="settings-topbar-actions">
           <a className="settings-back-link" href="/">← Inbox</a>
           <button
@@ -562,9 +572,10 @@ function InboxApp({
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
+  const [organizationOpen, setOrganizationOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
@@ -572,6 +583,7 @@ function InboxApp({
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
+  const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
@@ -589,6 +601,8 @@ function InboxApp({
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const libraryRef = useRef<HTMLElement>(null);
+  const libraryReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -600,6 +614,43 @@ function InboxApp({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!organizationOpen) return;
+    if (!libraryReturnFocusRef.current) libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const drawer = libraryRef.current;
+    const getFocusable = () => drawer ? Array.from(drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden")) : [];
+    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOrganizationOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      const returnFocus = libraryReturnFocusRef.current;
+      libraryReturnFocusRef.current = null;
+      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
+    };
+  }, [organizationOpen]);
 
   useEffect(() => {
     if (demoMode) {
@@ -819,8 +870,16 @@ function InboxApp({
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
   const composeContacts = useMemo(() => collectComposeContacts(messages, account?.email ?? ""), [account?.email, messages]);
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
+  const pinnedPeople = useMemo(
+    () => buildPinnedPeopleFromPins(pins, messages),
+    [messages, pins],
+  );
+  const automatedMessages = useMemo(
+    () => getMessagesForMailbox(messages, "inbox", attentionByAddress).filter(isTidelineMessage),
+    [attentionByAddress, messages],
+  );
   const activeMailboxLabel = activeMailboxItem.label;
-  const inboxTitle = personFilter ? personFilter : activeCollection?.name ?? activeMailboxLabel;
+  const inboxTitle = personFilter ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name ?? personFilter : activeCollection?.name ?? activeMailboxLabel;
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? activeMailboxLabel).toLowerCase()}`
     : activeCollection
@@ -840,6 +899,16 @@ function InboxApp({
     setZenClosing(false);
     setPanelMode("compose");
     setZen(false);
+  }
+
+  function openLibrary() {
+    libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setOrganizationOpen(true);
+  }
+
+  function toggleLibrary() {
+    if (organizationOpen) setOrganizationOpen(false);
+    else openLibrary();
   }
 
   function openOrganizer(message: InboxMessage) {
@@ -973,6 +1042,7 @@ function InboxApp({
       setInboxFilter("all");
       setPersonFilter(null);
       setSelectedThreadId(null);
+      setOrganizationOpen(false);
     });
   }
 
@@ -982,6 +1052,7 @@ function InboxApp({
       setPersonFilter(null);
       setSelectedThreadId(null);
       setInboxFilter("all");
+      setOrganizationOpen(false);
     });
   }
 
@@ -1111,11 +1182,16 @@ function InboxApp({
     }
   }
 
-  async function saveReminder(input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) {
+  async function saveReminder(input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }, existingReminder?: Reminder | null) {
     if (!account) return;
+    const request = buildReminderSaveRequest(input, existingReminder);
     const saved = demoMode
-      ? reminderSchema.parse({ id: `reminder_demo_${input.threadId}`, accountId: account.id, ...input, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
-      : await fetchJson("/v1/reminders", reminderSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+      ? reminderSchema.parse({ id: existingReminder?.id ?? `reminder_demo_${input.threadId}`, accountId: account.id, ...input, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: existingReminder?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() })
+      : await fetchJson(request.path, reminderSchema, undefined, {
+        method: request.method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request.body),
+      });
     setReminders((current) => [...current.filter((item) => item.threadId !== saved.threadId || !["scheduled", "resurfaced"].includes(item.status)), saved]);
   }
 
@@ -1135,10 +1211,18 @@ function InboxApp({
   return (
     <div className="app-root">
       <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
-        <aside className="sidebar" aria-label="Mailbox navigation">
+        <WaveRail
+          activeMailbox={activeMailbox}
+          libraryOpen={organizationOpen}
+          onOpenLibrary={toggleLibrary}
+          onSelectMailbox={selectMailbox}
+        />
+
+        {organizationOpen ? <button aria-label="Close library" className="rail-library-backdrop" onClick={() => setOrganizationOpen(false)} tabIndex={-1} type="button" /> : null}
+        <aside aria-label="Mailbox navigation" aria-hidden={!organizationOpen} aria-modal={organizationOpen || undefined} className={`sidebar rail-library${organizationOpen ? " rail-library-open" : ""}`} inert={!organizationOpen || undefined} ref={libraryRef} role={organizationOpen ? "dialog" : undefined}>
           <header className="sidebar-header">
             <div className="brand-wrap">
-              <div className="brand">Orca</div>
+              <div className="brand"><WaveGlyph /> Orca</div>
               {demoMode ? <span className="dev-preview-badge">Preview</span> : null}
             </div>
             <div className="header-actions">
@@ -1150,15 +1234,13 @@ function InboxApp({
               >
                 {theme === "dark" ? "☾" : "☀"}
               </button>
-              <button className="compose-button" onClick={openCompose} type="button">
-                Compose
-              </button>
+              <button aria-label="Close library" className="compose-button" onClick={() => setOrganizationOpen(false)} type="button">Close</button>
             </div>
           </header>
 
           <label className="search-field">
             <span>Search mail</span>
-            <input placeholder="People, subjects, words" />
+            <input onChange={(event) => setStreamQuery(event.target.value)} placeholder="People, subjects, words" value={streamQuery} />
           </label>
 
           <section className="sidebar-section mailbox-section">
@@ -1203,19 +1285,23 @@ function InboxApp({
           />
         </aside>
 
-        <section className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} aria-label={selectedThreadId ? "Message reader" : "Inbox"}>
+        <section aria-label={selectedThreadId ? "Message reader" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             <InboxView
               account={account}
+              automatedMessages={automatedMessages}
               errorMessage={errorMessage}
               errorStatus={errorStatus}
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
               isCollectionView={Boolean(activeCollection)}
+              collection={activeCollection}
               messages={visibleMessages}
+              pinnedPeople={pinnedPeople}
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
+              onSelectPerson={togglePersonFilter}
               rowRefs={messageRowRefs}
               personFilter={personFilter}
               status={status}
@@ -1224,9 +1310,17 @@ function InboxApp({
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onInboxFilterChange={selectInboxFilter}
+              onOpenLibrary={openLibrary}
               onOpenOrganizer={openOrganizer}
+              onFinishLater={(reminder) => void finishReminder(reminder)}
+              onSnoozeLater={(message, reminder) => saveReminder({ threadId: message.threadId, scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", notify: reminder?.notify ?? false }, reminder)}
+              onRenameCollection={activeCollection ? () => { const name = window.prompt("Rename collection", activeCollection.name)?.trim(); if (name) void updateCollection(activeCollection, { name }); } : undefined}
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
+              onSearchChange={setStreamQuery}
+              searchQuery={streamQuery}
+              reminders={reminders}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
+              viewMode={activeCollection ? "collection" : activeMailbox}
             />
           </div>
           <div style={{ display: selectedThreadId ? undefined : "none" }}>
@@ -1250,6 +1344,8 @@ function InboxApp({
           </div>
         </section>
       </main>
+
+      {!selectedThreadId ? <button className="tidal-compose-fab" inert={organizationOpen || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span> Write</button> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -1289,7 +1385,7 @@ function InboxApp({
               <div className="panel-actions">
                 <button className="panel-zen" onClick={enterZen} type="button">
                   <ZenGlyph />
-                  <span>Zen</span>
+                  <span>Open in Zen</span>
                 </button>
                 <button
                   aria-label="Close panel"
@@ -1297,7 +1393,7 @@ function InboxApp({
                   onClick={closePanel}
                   type="button"
                 >
-                  <ArrowGlyph direction="right" />
+                  <span aria-hidden="true">×</span>
                 </button>
               </div>
             </header>
@@ -1362,7 +1458,7 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
   return (
     <main className="gmail-settings-page">
       <header className="attention-settings-topbar">
-        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
         <div className="settings-topbar-actions">
           <a className="settings-back-link" href="/">← Inbox</a>
           <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
@@ -1521,7 +1617,7 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
   return (
     <main className="label-migration-page">
       <header className="attention-settings-topbar">
-        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
+        <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
         <div className="settings-topbar-actions">
           {mode === "settings" ? <a className="settings-back-link" href="/">← Inbox</a> : null}
           <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
@@ -1638,7 +1734,7 @@ function GmailOAuthLoginPage() {
       <section className="oauth-shell" aria-labelledby="gmail-oauth-title">
         <div className="oauth-brand">
           <span className="oauth-brand-mark" aria-hidden="true">
-            O
+            <WaveGlyph />
           </span>
           <span>Orca</span>
         </div>
@@ -1649,7 +1745,7 @@ function GmailOAuthLoginPage() {
             {isOnboarding && returnStatus?.kind === "success"
               ? "Welcome aboard."
               : isLogin
-                ? "Make room for the people."
+                ? <>Make room for <em>the people.</em></>
                 : "Connect your Gmail inbox"}
           </h1>
           <p>
@@ -1759,8 +1855,42 @@ function MessageMark({ signature, unread }: { signature: ContactSignature; unrea
   );
 }
 
+function WaveGlyph() {
+  return <svg aria-hidden="true" className="wave-glyph" viewBox="0 0 24 24"><path d="M3 8.5c2.5-2.7 4.6-2.7 7.1 0s4.6 2.7 7.1 0 3.8-2.7 3.8-2.7M3 14.5c2.5-2.7 4.6-2.7 7.1 0s4.6 2.7 7.1 0 3.8-2.7 3.8-2.7" /></svg>;
+}
+
+function RailGlyph({ name }: { name: "inbox" | "focus" | "quiet" | "later" | "library" | "settings" }) {
+  if (name === "inbox") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM4 14h4l1.5 2h5l1.5-2h4" /></svg>;
+  if (name === "focus") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8zM18.5 15l.7 2.1 2.3.9-2.3.9-.7 2.1-.7-2.1-2.3-.9 2.3-.9z" /></svg>;
+  if (name === "quiet") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19.2 15.2A8 8 0 0 1 8.8 4.8 8.5 8.5 0 1 0 19.2 15.2Z" /></svg>;
+  if (name === "later") return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" /></svg>;
+  if (name === "library") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4zM4 12l8 4 8-4M4 16l8 4 8-4" /></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>;
+}
+
+function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }: {
+  activeMailbox: Mailbox;
+  libraryOpen: boolean;
+  onOpenLibrary: () => void;
+  onSelectMailbox: (mailbox: Mailbox) => void;
+}) {
+  const items: Array<{ id: "inbox" | "focus" | "quiet" | "later"; label: string }> = [
+    { id: "inbox", label: "Inbox" }, { id: "focus", label: "Focus" }, { id: "quiet", label: "Quiet" }, { id: "later", label: "Later" },
+  ];
+  return <aside aria-label="Primary navigation" className="wave-rail" inert={libraryOpen || undefined}>
+    <button aria-label="Inbox stream" className="wave-rail-brand" onClick={() => onSelectMailbox("inbox")} type="button"><WaveGlyph /></button>
+    <nav>{items.map((item) => <button aria-current={activeMailbox === item.id ? "page" : undefined} aria-label={item.label} key={item.id} onClick={() => onSelectMailbox(item.id)} title={item.label} type="button"><RailGlyph name={item.id} /></button>)}
+      <button aria-expanded={libraryOpen} aria-label="Collections and pins" className={libraryOpen ? "wave-rail-selected" : ""} onClick={onOpenLibrary} title="Collections and pins" type="button"><RailGlyph name="library" /></button>
+      <a aria-label="Settings" href="/settings" title="Settings"><RailGlyph name="settings" /></a>
+    </nav>
+    <a aria-label="Account settings" className="wave-rail-account" href="/settings">L</a>
+  </aside>;
+}
+
 function InboxView({
   account,
+  automatedMessages,
+  collection,
   errorMessage,
   errorStatus,
   inboxEyebrow,
@@ -1768,6 +1898,8 @@ function InboxView({
   inboxTitle,
   isCollectionView,
   messages,
+  pinnedPeople,
+  reminders,
   personFilter,
   status,
   syncStatus,
@@ -1777,12 +1909,22 @@ function InboxView({
   onRefresh,
   onAttentionChange,
   onInboxFilterChange,
+  onOpenLibrary,
   onOpenOrganizer,
+  onFinishLater,
+  onSnoozeLater,
+  onRenameCollection,
+  onSearchChange,
+  onSelectPerson,
   onRemoveFromCollection,
+  searchQuery,
   showInboxFilters,
+  viewMode,
   rowRefs,
 }: {
   account: MailAccount | null;
+  automatedMessages: InboxMessage[];
+  collection: Collection | null;
   errorMessage: string | null;
   errorStatus: number | null;
   inboxEyebrow: string;
@@ -1790,6 +1932,8 @@ function InboxView({
   inboxTitle: string;
   isCollectionView: boolean;
   messages: InboxMessage[];
+  pinnedPeople: PersonItem[];
+  reminders: Reminder[];
   personFilter: string | null;
   status: "loading" | "syncing" | "ready" | "error";
   syncStatus: SyncStatus | null;
@@ -1799,9 +1943,17 @@ function InboxView({
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
+  onOpenLibrary: () => void;
   onOpenOrganizer: (message: InboxMessage) => void;
+  onFinishLater: (reminder: Reminder) => void;
+  onSnoozeLater: (message: InboxMessage, reminder: Reminder | null) => Promise<void>;
+  onRenameCollection?: () => void;
+  onSearchChange: (query: string) => void;
+  onSelectPerson: (filterValue: string) => void;
   onRemoveFromCollection?: (message: InboxMessage) => void;
+  searchQuery: string;
   showInboxFilters: boolean;
+  viewMode: "collection" | Mailbox;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
   const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
@@ -1810,13 +1962,50 @@ function InboxView({
     { id: "focus", label: "Keep in focus" },
     { id: "normal", label: "Flow" },
   ];
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [snoozingThreadId, setSnoozingThreadId] = useState<string | null>(null);
+  const [laterError, setLaterError] = useState<string | null>(null);
+  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
+  const streamSectionLabels = useMemo(() => {
+    const now = new Date();
+    return displayMessages.map((message) => getStreamSectionLabel(message.receivedAt, now));
+  }, [displayMessages]);
+  const unreadCount = displayMessages.filter((message) => message.unread).length;
+  const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
+  useEffect(() => {
+    if (collection) return;
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, [collection]);
+
+  async function snoozeLater(message: InboxMessage, reminder: Reminder | null) {
+    setLaterError(null);
+    setSnoozingThreadId(message.threadId);
+    try {
+      await onSnoozeLater(message, reminder);
+    } catch (error) {
+      setLaterError(`Could not snooze this message. ${getErrorMessage(error)}`);
+    } finally {
+      setSnoozingThreadId(null);
+    }
+  }
   return (
-    <>
+    <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       <header className="pane-header">
         <div>
-          <p>{inboxEyebrow}</p>
-          <h1>{inboxTitle}</h1>
+          <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
+          <div className="stream-title-line"><h1>{inboxTitle}</h1><span>{unreadCount} unread · {pinnedPeople.length} people</span></div>
+          <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
+        {!collection ? <label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -1848,6 +2037,11 @@ function InboxView({
           <SyncStatusChip status={syncStatus?.accounts.find((item) => item.id === account?.id) ?? null} />
         </div>
       </header>
+
+      <nav aria-label="Pinned people" className="pinned-people">
+        {pinnedPeople.map((person) => <button aria-pressed={personFilter === person.filterValue} key={person.filterValue} onClick={() => onSelectPerson(person.filterValue)} type="button"><span className="pinned-avatar">{person.initials}{person.unread ? <i /> : null}</span><small>{person.name.split(" ")[0]}</small></button>)}
+        <button className="pinned-person-add" onClick={onOpenLibrary} type="button"><span className="pinned-avatar">＋</span><small>Pin</small></button>
+      </nav>
 
       {showInboxFilters ? (
         <nav aria-label="Filter Inbox by attention treatment" className="inbox-filter-bar">
@@ -1885,28 +2079,31 @@ function InboxView({
           />
         ) : null}
 
-        {status === "ready" && messages.length === 0 ? (
+        {status === "ready" && displayMessages.length === 0 ? (
           <InboxStatusState
             description={
-              personFilter
+              searchQuery.trim()
+                ? `No messages match “${searchQuery.trim()}”. Try a person, subject, or phrase.`
+                : personFilter
                 ? `No threads in your inbox include ${personFilter} yet.`
                 : isCollectionView
                   ? "Use Keep on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
-                : "When synced mail arrives, your inbox list will appear here."
+                  : "When synced mail arrives, your inbox list will appear here."
             }
-            eyebrow={personFilter ? "No matches" : isCollectionView ? "Collection empty" : "Inbox empty"}
-            title={personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : "No messages yet"}
+            eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : "Inbox empty"}
+            title={searchQuery.trim() ? "Nothing found" : personFilter ? "Nothing from this person" : isCollectionView ? "Nothing saved here yet" : "No messages yet"}
           />
         ) : null}
 
-        {status === "ready" && messages.length > 0 ? (
+        {status === "ready" && displayMessages.length > 0 ? (
           <ol className="message-list">
-            {messages.map((message) => {
+            {displayMessages.map((message, index) => {
               const signature = getContactSignature(message.from);
               const isReply = message.subject.trim().toLowerCase().startsWith("re:");
 
               return (
                 <li key={message.id}>
+                  {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className="message-row-wrap">
                     <button
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
@@ -1924,7 +2121,7 @@ function InboxView({
                       }
                       type="button"
                     >
-                      <MessageMark signature={signature} unread={message.unread} />
+                      <span aria-hidden="true" className="stream-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span>
                       <div className="message-copy">
                         <div className="message-meta">
                           <strong>{message.from.name ?? message.from.email}</strong>
@@ -1940,13 +2137,18 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                     </button>
-                    <button
+                    {viewMode !== "later" ? <button
                       className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
                       onClick={() => onRemoveFromCollection ? onRemoveFromCollection(message) : onOpenOrganizer(message)}
                       type="button"
                     >
                       <span aria-hidden="true">{onRemoveFromCollection ? "−" : "＋"}</span> {onRemoveFromCollection ? "Remove" : "Keep"}
-                    </button>
+                    </button> : null}
+                    {viewMode === "later" ? (() => {
+                      const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
+                      const snoozing = snoozingThreadId === message.threadId;
+                      return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
+                    })() : null}
                     <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} />
                   </div>
                 </li>
@@ -1954,6 +2156,8 @@ function InboxView({
             })}
           </ol>
         ) : null}
+        {laterError ? <p className="later-error" role="alert">{laterError}</p> : null}
+        {status === "ready" && viewMode === "inbox" && !searchQuery.trim() && automatedMessages.length ? <section className="tideline-section" aria-label="Automated messages"><div className="tideline-label"><span /><strong><WaveGlyph /> Tideline</strong><small>machines and newsletters rest below</small><span /></div><div className="automation-summary"><span className="automation-mark">⌁</span><div><strong>{automatedMessages.length} automated messages</strong><small>{automatedMessages.map((message) => message.from.name ?? message.from.email).slice(0, 2).join(" · ")}</small></div><button onClick={() => onOpenThread(automatedMessages[0]!)} type="button">Review</button><button className="sweep-button" type="button">◇ Sweep away</button></div></section> : null}
       </section>
 
       {errorMessage && status === "ready" ? (
@@ -1961,7 +2165,7 @@ function InboxView({
           {errorMessage} <a className="inbox-reconnect-link" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>Reconnect Gmail</a>
         </p>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -2105,7 +2309,7 @@ export function MessageReader({
       <nav className="reader-nav" aria-label="Reader controls">
         <button className="reader-back" onClick={onBack} type="button">
           <ArrowGlyph direction="left" />
-          <span>Back to inbox</span>
+          <span>Inbox</span>
         </button>
         <span className="reader-escape-hint" aria-hidden="true">esc</span>
       </nav>
@@ -2131,10 +2335,10 @@ export function MessageReader({
       {status === "ready" && detail ? (
         <div className="reader-document">
           <header className="reader-heading">
-            <p className="reader-kicker">Conversation · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <p className="reader-kicker">Focus · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
-            <p className="reader-participants">With {formatThreadParticipants(detail.thread.participants, detail.account.email)}</p>
-            <RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} />
+            <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
+            <div className="reader-top-actions"><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -2185,7 +2389,8 @@ export function MessageReader({
                           </dl>
                         </details>
                       </div>
-                      {isNewest ? <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} /> : null}
+                      <time className="reader-sent-time" dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time>
+                      <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} />
                     </header>
                     {message.bodyHtml ? (
                       <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
@@ -2848,7 +3053,7 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
             <button disabled={!name.trim()} type="submit">Create</button>
           </form>
         </div>
-        <footer>Threads can live in several collections. Attention placement never changes.</footer>
+        <footer><span>Saved in {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length} {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length === 1 ? "collection" : "collections"} · elsewhere untouched</span><button onClick={onClose} type="button">Cancel</button><button className="organizer-keep" onClick={onClose} type="button">Keep thread</button></footer>
       </section>
     </div>
   );
@@ -2871,10 +3076,10 @@ function SidebarSection({
       <div className="person-list">
         {items.map((item) => (
           <button
-            aria-pressed={activePerson === item.name}
-            className={`person-row${activePerson === item.name ? " person-row-active" : ""}`}
-            key={item.name}
-            onClick={() => onSelectPerson(item.name)}
+            aria-pressed={activePerson === item.filterValue}
+            className={`person-row${activePerson === item.filterValue ? " person-row-active" : ""}`}
+            key={item.filterValue}
+            onClick={() => onSelectPerson(item.filterValue)}
             type="button"
           >
             <span className="avatar">{item.initials}</span>
@@ -3049,29 +3254,76 @@ class ApiRequestError extends Error {
   }
 }
 
-function buildPinnedPeople(messages: InboxMessage[]): PersonItem[] {
+export function isTidelineMessage(message: InboxMessage) {
+  return message.humanSignal !== null && message.humanSignal <= 3;
+}
+
+export function getStreamMessages(messages: InboxMessage[], viewMode: "collection" | Mailbox, query = "") {
+  const normalizedQuery = query.trim().toLowerCase();
   const seen = new Set<string>();
-  const people: PersonItem[] = [];
+  return messages.filter((message) => {
+    if (seen.has(message.threadId)) return false;
+    seen.add(message.threadId);
+    if (viewMode === "inbox" && isTidelineMessage(message)) return false;
+    if (!normalizedQuery) return true;
+    return [message.from.name, message.from.email, message.subject, message.snippet]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLowerCase().includes(normalizedQuery));
+  });
+}
+
+export function getStreamSectionLabel(receivedAt: string, now = new Date()) {
+  const received = new Date(receivedAt);
+  if (Number.isNaN(received.getTime())) return "Date unavailable";
+  const localDayNumber = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
+  const difference = localDayNumber(now) - localDayNumber(received);
+  if (difference <= 0) return "Today";
+  if (difference === 1) return "Yesterday";
+  if (difference < 7) return "Earlier this week";
+  return "Older";
+}
+
+export function buildReminderSaveRequest(input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }, existingReminder?: Reminder | null) {
+  if (!existingReminder) return { path: "/v1/reminders", method: "POST" as const, body: input };
+  return {
+    path: `/v1/reminders/${encodeURIComponent(existingReminder.id)}`,
+    method: "PATCH" as const,
+    body: { scheduledFor: input.scheduledFor, timezone: input.timezone, notify: input.notify },
+  };
+}
+
+export function buildPinnedPeopleFromPins(pins: Pin[], messages: InboxMessage[]): PersonItem[] {
+  const messagesByAddress = new Map<string, InboxMessage[]>();
   for (const message of messages) {
-    const name = message.from.name ?? message.from.email;
-    if (seen.has(name)) continue;
-    seen.add(name);
-    people.push({
-      initials: name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
-      name,
-      context: message.subject || "No subject",
-      unread: message.unread,
-    });
-    if (people.length === 3) break;
+    const address = message.from.email.trim().toLowerCase();
+    const current = messagesByAddress.get(address) ?? [];
+    current.push(message);
+    messagesByAddress.set(address, current);
   }
-  return people;
+  return pins
+    .filter((pin) => pin.kind === "sender")
+    .slice()
+    .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
+    .map((pin) => {
+      const address = pin.targetId.trim().toLowerCase();
+      const senderMessages = messagesByAddress.get(address) ?? [];
+      const latest = [...senderMessages].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))[0];
+      const name = latest?.from.name ?? pin.label;
+      return {
+        initials: name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
+        name,
+        filterValue: address,
+        context: latest?.subject || address,
+        unread: senderMessages.some((message) => message.unread),
+      };
+    });
 }
 
 function LoginRequiredScreen() {
   return (
     <main className="oauth-page login-required-page">
       <section className="login-required-shell">
-        <div className="oauth-brand"><span className="oauth-brand-mark">O</span><span>Orca</span></div>
+        <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
         <p className="oauth-eyebrow">A private workspace</p>
         <h1>Your inbox waits for its person.</h1>
         <p>Your session or Gmail connection needs a quick refresh. Sign in with Google to return to the inbox.</p>
@@ -3085,7 +3337,7 @@ function SessionCheckingScreen() {
   return (
     <main className="oauth-page login-required-page">
       <section className="login-required-shell" aria-live="polite">
-        <div className="oauth-brand"><span className="oauth-brand-mark">O</span><span>Orca</span></div>
+        <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
         <p className="oauth-eyebrow">Opening your private workspace</p>
         <h1>Checking your key.</h1>
       </section>
