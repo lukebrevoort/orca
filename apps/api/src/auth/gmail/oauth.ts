@@ -45,10 +45,15 @@ type SignedStatePayload = {
   issuedAt: string;
   intent: GmailOAuthIntent;
   accountId: string | null;
+  initialLogin?: boolean;
+};
+
+type VerifiedStatePayload = Omit<SignedStatePayload, "initialLogin"> & {
+  initialLogin: boolean;
 };
 
 export type GmailOAuthService = {
-  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null): { url: string; state: string; scopes: string[] };
+  getAuthorizationUrl(returnTo?: string | null, intent?: GmailOAuthIntent, accountId?: string | null, initialLogin?: boolean): { url: string; state: string; scopes: string[] };
   handleCallback(params: URLSearchParams, userId: string): Promise<GmailOAuthCallbackResult>;
 };
 
@@ -56,6 +61,7 @@ export type GmailOAuthCallbackResult =
   | {
       ok: true;
       redirectUrl: string | null;
+      initialLogin: boolean;
       account: {
         providerEmail: string;
         providerAccountId: string;
@@ -77,7 +83,7 @@ export function createGmailOAuthService(options: {
   const fetchImpl = options.fetch ?? fetch;
 
   return {
-    getAuthorizationUrl(returnTo, intent = "connect", accountId = null) {
+    getAuthorizationUrl(returnTo, intent = "connect", accountId = null, initialLogin = false) {
       const scopes = intent === "upgrade" ? options.config.composeScopes : options.config.scopes;
       const state = signState(
         {
@@ -86,6 +92,7 @@ export function createGmailOAuthService(options: {
           issuedAt: new Date().toISOString(),
           intent,
           accountId: intent === "upgrade" ? accountId : null,
+          initialLogin,
         },
         options.config.stateSecret,
       );
@@ -248,6 +255,7 @@ export function createGmailOAuthService(options: {
           status: "success",
           intent: decodedState.intent,
         }),
+        initialLogin: decodedState.initialLogin,
         account: {
           providerEmail: userInfoResponse.providerEmail,
           providerAccountId: userInfoResponse.providerAccountId,
@@ -399,7 +407,7 @@ function signState(payload: SignedStatePayload, secret: string): string {
   return `${encodedPayload}.${signature}`;
 }
 
-function verifyState(value: string, secret: string): SignedStatePayload | null {
+function verifyState(value: string, secret: string): VerifiedStatePayload | null {
   const [encodedPayload, signature] = value.split(".");
   if (!encodedPayload || !signature) {
     return null;
@@ -421,13 +429,36 @@ function verifyState(value: string, secret: string): SignedStatePayload | null {
       return null;
     }
 
-    if (!(["connect", "upgrade"] as const).includes(payload.intent) || (payload.accountId !== null && typeof payload.accountId !== "string")) {
+    const hasInitialLoginMarker = Object.hasOwn(payload, "initialLogin");
+    if (
+      (!(["connect", "upgrade"] as const).includes(payload.intent))
+      || (payload.accountId !== null && typeof payload.accountId !== "string")
+      || (typeof payload.returnTo !== "string" && payload.returnTo !== null)
+      || (hasInitialLoginMarker && typeof payload.initialLogin !== "boolean")
+    ) {
       return null;
     }
 
-    return payload;
+    return {
+      ...payload,
+      initialLogin: hasInitialLoginMarker
+        ? payload.initialLogin as boolean
+        : payload.intent === "connect" && isLegacyOnboardingReturnTo(payload.returnTo),
+    };
   } catch {
     return null;
+  }
+}
+
+function isLegacyOnboardingReturnTo(returnTo: string | null): boolean {
+  if (!returnTo) {
+    return false;
+  }
+
+  try {
+    return new URL(returnTo).pathname === "/onboarding";
+  } catch {
+    return false;
   }
 }
 

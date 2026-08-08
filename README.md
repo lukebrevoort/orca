@@ -77,7 +77,12 @@ bun run test:smoke
 
 The API workspace now includes a Drizzle + SQLite persistence foundation for
 future auth and sync work. By default it writes to
-`apps/api/data/orca.sqlite`. Override that with `DATABASE_PATH` if needed.
+`apps/api/data/orca.sqlite`. Relative `DATABASE_PATH` values are anchored to the
+API workspace, so API requests and startup migrations use the same file even
+when the process is launched from the repository root. Override that with
+`DATABASE_PATH` if needed. Production deployments must point it at durable
+storage shared by every API instance; an ephemeral/serverless filesystem will
+lose sessions and connected accounts between instances or restarts.
 
 Useful commands:
 
@@ -96,7 +101,7 @@ Variables used by the current local boot flow:
 
 - `PORT`: API port. Defaults to `3000`.
 - `WEB_ORIGIN`: browser origin allowed by API CORS. Defaults to `http://localhost:5173`.
-- `DATABASE_PATH`: SQLite file path used by the API workspace. Because the API scripts run from `apps/api`, the default local value is `./data/orca.sqlite`.
+- `DATABASE_PATH`: SQLite file path used by the API workspace. Relative paths resolve from `apps/api`; the default local value is `./data/orca.sqlite`. Production must use durable shared storage.
 
 Variables required by the auth/session foundation when that code path is exercised:
 

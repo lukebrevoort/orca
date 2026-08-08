@@ -17,6 +17,7 @@ export const authSessionFixture = authSessionSchema.parse({
     name: accountFixture.displayName,
   },
   expiresAt: null,
+  onboardingCompletedAt: null,
 });
 
 export const inboxFixture = z.array(inboxMessageSchema).parse([

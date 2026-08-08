@@ -66,6 +66,39 @@ describe("Orca API", () => {
     }
   });
 
+  test("persists onboarding completion and exposes it on later session checks", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-onboarding-test-"));
+    const dbPath = join(tempDir, "onboarding.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    const completedAt = new Date("2026-08-08T20:00:00.000Z");
+    try {
+      db.insert(users).values({ id: "onboarding_user", email: "onboarding@example.com" }).run();
+      const session = await createSession(db, "onboarding_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => completedAt });
+      const headers = { cookie: `orca_session=${session.token}` };
+
+      const before = await testApp.request("/v1/auth/session", { headers });
+      assert.equal(before.status, 200);
+      assert.equal((await before.json()).onboardingCompletedAt, null);
+
+      const complete = await testApp.request("/v1/auth/onboarding/complete", { method: "POST", headers });
+      assert.equal(complete.status, 200);
+      assert.deepEqual(await complete.json(), { ok: true });
+
+      const after = await testApp.request("/v1/auth/session", { headers });
+      assert.equal(after.status, 200);
+      assert.equal((await after.json()).onboardingCompletedAt, completedAt.toISOString());
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("creates account-owned drafts with revisions and a safe delivery boundary", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");

@@ -249,6 +249,7 @@ textarea {
 .onboarding-enter { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); display: inline-flex; flex: none; font-size: 13px; font-weight: 800; gap: 18px; padding: 12px 16px; }
 .onboarding-enter:hover { border-color: var(--orca-accent); box-shadow: 0 8px 22px color-mix(in srgb, var(--orca-ink) 9%, transparent); transform: translateY(-1px); }
 .onboarding-enter:active { transform: scale(.985); }
+.onboarding-error { color: var(--orca-danger); font-size: 12px; line-height: 1.45; margin: 0; }
 .onboarding-actions p { color: var(--orca-muted); font-size: 11px; line-height: 1.45; margin: 0; max-width: 220px; }
 @keyframes onboarding-arrive { from { opacity: 0; transform: translateY(14px) scale(.985); } }
 

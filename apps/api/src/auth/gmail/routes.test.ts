@@ -1,11 +1,21 @@
+import { createHmac } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { MiddlewareHandler } from "hono";
 
 import type { AuthVariables } from "../middleware.ts";
 import type { GmailOAuthConfig } from "./config.ts";
 import { decryptSecret } from "./crypto.ts";
-import { InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
+import { createDatabaseClient } from "../../db/client.ts";
+import { oauthAccounts, users } from "../../db/schema.ts";
+import { DatabaseOAuthAccountStore, InMemoryOAuthAccountStore } from "./oauth-accounts.ts";
+import { createGmailOAuthService } from "./oauth.ts";
 import { createGmailAuthApp, redirectReturningUserToWorkspace } from "./routes.ts";
+import { createApp } from "../../index.ts";
 
 const config: GmailOAuthConfig = {
   clientId: "client-id",
@@ -69,6 +79,177 @@ describe("Gmail auth routes", () => {
     expect(authUrl.searchParams.get("redirect_uri")).toBe(config.redirectUri);
     expect(authUrl.searchParams.get("scope")).toBe(config.scopes.join(" "));
     expect(authUrl.searchParams.get("state")).toBe(body.state);
+  });
+
+  test("uses one configured database for the login session and OAuth account", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-gmail-login-route-test-"));
+    const dbPath = join(tempDir, "login.sqlite");
+    const initialClient = createDatabaseClient(dbPath);
+    migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+    initialClient.sqlite.close();
+
+    try {
+      const dbFactory = () => createDatabaseClient(dbPath);
+      const app = createGmailAuthApp({
+        config,
+        dbFactory,
+        fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
+          ? Response.json({
+              access_token: "login-access-token",
+              refresh_token: "login-refresh-token",
+              scope: config.scopes.join(" "),
+            })
+          : Response.json({ id: "google-login-user", email: "login@example.com" }),
+      });
+
+      const loginResponse = await app.request("/login?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fonboarding");
+      expect(loginResponse.status).toBe(200);
+      const loginBody = (await loginResponse.json()) as { state: string };
+      const sessionCookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+      expect(sessionCookie).toBeTruthy();
+
+      const callbackResponse = await app.request(
+        `/callback?code=login-code&state=${encodeURIComponent(loginBody.state)}`,
+        { headers: { cookie: sessionCookie! }, redirect: "manual" },
+      );
+      expect(callbackResponse.status).toBe(302);
+      expect(callbackResponse.headers.get("location")).toContain("/onboarding");
+
+      const verificationClient = dbFactory();
+      try {
+        const user = verificationClient.db.select().from(users).where(eq(users.email, "login@example.com")).get();
+        expect(user).toBeTruthy();
+        const account = await new DatabaseOAuthAccountStore(dbFactory).findForUser(user!.id);
+        expect(account).toMatchObject({
+          userId: user!.id,
+          providerEmail: "login@example.com",
+          providerAccountId: "google-login-user",
+        });
+        expect(verificationClient.db.select().from(oauthAccounts).where(eq(oauthAccounts.userId, user!.id)).all()).toHaveLength(1);
+      } finally {
+        verificationClient.sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
+    }
+  });
+
+  test("accepts a pre-marker OAuth state during a rolling deployment", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const service = createGmailOAuthService({
+      config,
+      store,
+      fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
+        ? Response.json({ access_token: "legacy-access-token", scope: config.scopes.join(" ") })
+        : Response.json({ id: "legacy-google-user", email: "legacy@example.com" }),
+    });
+    const currentState = service.getAuthorizationUrl("http://localhost:5173/onboarding", "connect", null, true).state;
+    const encodedPayload = currentState.split(".")[0]!;
+    const legacyPayload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as Record<string, unknown>;
+    delete legacyPayload.initialLogin;
+    const legacyState = signTestState(legacyPayload, config.stateSecret);
+
+    const result = await service.handleCallback(
+      new URLSearchParams({ code: "legacy-code", state: legacyState }),
+      "user_1",
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.initialLogin).toBe(true);
+      expect(result.redirectUrl).toContain("/onboarding");
+    }
+  });
+
+  test("merges returning users onto the existing account and rotates a usable session", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-gmail-returning-user-test-"));
+    const dbPath = join(tempDir, "returning.sqlite");
+    const initialClient = createDatabaseClient(dbPath);
+    migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+    initialClient.db.insert(users).values({
+      id: "existing_user",
+      email: "returning@example.com",
+    }).run();
+    initialClient.db.insert(oauthAccounts).values({
+      id: "existing_account",
+      userId: "existing_user",
+      provider: "gmail",
+      providerEmail: "returning@example.com",
+      providerId: "google-returning-user",
+      scope: config.scopes.join(" "),
+      accessTokenEncrypted: "existing-access-token",
+      refreshTokenEncrypted: "existing-refresh-token",
+    }).run();
+    initialClient.sqlite.close();
+
+    try {
+      const dbFactory = () => createDatabaseClient(dbPath);
+      const authApp = createGmailAuthApp({
+        config,
+        dbFactory,
+        fetch: async (input) => input.toString().includes("oauth2.googleapis.com/token")
+          ? Response.json({
+              access_token: "returning-access-token",
+              refresh_token: "returning-refresh-token",
+              scope: config.scopes.join(" "),
+            })
+          : Response.json({ id: "google-returning-user", email: "returning@example.com" }),
+      });
+
+      const loginResponse = await authApp.request("/login?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fonboarding");
+      expect(loginResponse.status).toBe(200);
+      const loginBody = (await loginResponse.json()) as { state: string };
+      const pendingCookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
+      expect(pendingCookie).toBeTruthy();
+
+      const callbackResponse = await authApp.request(
+        "/callback?code=returning-code&state=" + encodeURIComponent(loginBody.state),
+        { headers: { cookie: pendingCookie! }, redirect: "manual" },
+      );
+      expect(callbackResponse.status).toBe(302);
+      expect(callbackResponse.headers.get("location")).toStartWith("http://localhost:5173/?");
+      const rotatedCookie = callbackResponse.headers.get("set-cookie")?.split(";", 1)[0];
+      expect(rotatedCookie).toBeTruthy();
+      expect(rotatedCookie).not.toBe(pendingCookie);
+
+      const api = createApp({ dbFactory });
+      const sessionResponse = await api.request("/v1/auth/session", {
+        headers: { cookie: rotatedCookie! },
+      });
+      expect(sessionResponse.status).toBe(200);
+      const session = await sessionResponse.json();
+      expect(session.user).toEqual({ id: "existing_user", email: "returning@example.com", name: null });
+      expect(session.onboardingCompletedAt).toEqual(expect.any(String));
+
+      const accountResponse = await api.request("/v1/me", {
+        headers: { cookie: rotatedCookie! },
+      });
+      expect(accountResponse.status).toBe(200);
+      expect(await accountResponse.json()).toMatchObject({
+        id: "existing_account",
+        email: "returning@example.com",
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
+    }
   });
 
   test("callback exchanges code, encrypts tokens, and upserts an oauth account record", async () => {
@@ -354,6 +535,12 @@ describe("Gmail auth routes", () => {
     expect(store.getAll()[0]).toEqual(afterSuccess);
   });
 });
+
+function signTestState(payload: Record<string, unknown>, secret: string): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+  return encodedPayload + "." + signature;
+}
 
 async function seedReadOnlyAccount(store: InMemoryOAuthAccountStore) {
   return store.upsert({

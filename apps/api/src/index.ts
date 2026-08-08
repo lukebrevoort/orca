@@ -125,7 +125,26 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         isAuthenticated: true,
         user: { id: user.id, email: user.email, name: user.displayName },
         expiresAt: auth.expiresAt.toISOString(),
+        onboardingCompletedAt: user.onboardingCompletedAt?.toISOString() ?? null,
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.post("/v1/auth/onboarding/complete", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const userId = c.get("auth").userId;
+      const updated = db.update(users)
+        .set({ onboardingCompletedAt: now() })
+        .where(eq(users.id, userId))
+        .returning({ id: users.id })
+        .get();
+      if (!updated) {
+        return c.json({ error: { code: "unauthorized", message: "Authentication required" } }, 401);
+      }
+      return c.json({ ok: true });
     } finally {
       sqlite.close();
     }
@@ -1099,7 +1118,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     },
   );
 
-  app.route("/v1/auth/gmail", createGmailAuthApp());
+  app.route("/v1/auth/gmail", createGmailAuthApp({ dbFactory }));
 
   app.post(
     "/v1/sync/gmail",

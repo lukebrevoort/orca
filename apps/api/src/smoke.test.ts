@@ -69,6 +69,7 @@ describe("first-slice API smoke test", () => {
         isAuthenticated: true,
         user: { id: "user_smoke", email: "luke@example.com", name: "Luke" },
         expiresAt: session.expiresAt.toISOString(),
+        onboardingCompletedAt: null,
       });
 
       const syncResponse = await api.request("/v1/sync/gmail", { method: "POST", headers });
