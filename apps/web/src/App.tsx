@@ -2189,7 +2189,7 @@ function InboxView({
                       }
                       type="button"
                     >
-                      <span aria-hidden="true" className="stream-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span>
+                      <span aria-hidden="true" className={`stream-avatar stream-avatar-variant-${signature.variant}`} style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span>
                       <div className="message-copy">
                         <div className="message-meta">
                           <strong>{message.from.name ?? message.from.email}</strong>
