@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildReaderActionDraft, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -59,13 +59,39 @@ describe("App", () => {
     }
   });
 
-  test("explains the read-only Gmail label migration while it loads", () => {
-    const html = renderToStaticMarkup(<GmailLabelMigrationPage mode="settings" setTheme={() => {}} theme="light" />);
+  test("keeps the post-OAuth onboarding route on the welcome screen", () => {
+    const originalWindow = globalThis.window;
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        location: {
+          assign() {},
+          href: "https://orca-mail.vercel.app/onboarding?status=success",
+          origin: "https://orca-mail.vercel.app",
+          pathname: "/onboarding",
+          search: "?status=success",
+        },
+        localStorage: {
+          getItem() { return null; },
+          setItem() {},
+          removeItem() {},
+          clear() {},
+        },
+      },
+    });
 
-    expect(html).toContain("Keep the labels");
-    expect(html).toContain("nothing in Gmail is changed");
-    expect(html).toContain("Labels are never renamed, removed, or edited");
-    expect(html).toContain("Checking your Gmail organization");
+    try {
+      const html = renderToStaticMarkup(<App />);
+
+      expect(html).toContain("Welcome aboard.");
+      expect(html).toContain("Enter Orca");
+      expect(html).not.toContain("Keep the labels");
+    } finally {
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: originalWindow,
+      });
+    }
   });
 
   test("defaults reader preferences to OS behavior and safely restores saved choices", () => {
@@ -98,22 +124,6 @@ describe("App", () => {
     expect(html).toContain("Writing");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
-  });
-
-  test("resumes Gmail sync until label migration data is ready", async () => {
-    const pending = { status: "pending" as const, ready: false, labels: [], completedAt: null };
-    const ready = { ...pending, ready: true };
-    const previews = [pending, ready];
-    let syncCalls = 0;
-
-    const result = await syncGmailLabelsUntilReady(
-      pending,
-      async () => { syncCalls += 1; },
-      async () => previews.shift() ?? ready,
-    );
-
-    expect(syncCalls).toBe(2);
-    expect(result.ready).toBe(true);
   });
 
   test("separates attention treatments into recoverable inbox views", () => {

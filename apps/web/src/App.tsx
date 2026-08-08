@@ -9,8 +9,8 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, InboxMessage, MailAccount, MailContact, Pin, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, inboxResponseSchema, meResponseSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -186,7 +186,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || devPreview) return;
+    if (isLoginRoute() || isOnboardingRoute() || isReaderPreferencesRoute() || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -207,6 +207,10 @@ export function App() {
     return <GmailOAuthLoginPage />;
   }
 
+  if (isOnboardingRoute()) {
+    return <GmailOAuthLoginPage />;
+  }
+
   if (isReaderPreferencesRoute()) {
     return <ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} />;
   }
@@ -216,10 +220,10 @@ export function App() {
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
-  if (access === "signedout") return isOnboardingRoute() ? <GmailOAuthLoginPage /> : <LoginRequiredScreen />;
+  if (access === "signedout") return <LoginRequiredScreen />;
 
-  if (isOnboardingRoute() || isGmailLabelMigrationRoute()) {
-    return <GmailLabelMigrationPage mode={isOnboardingRoute() ? "onboarding" : "settings"} theme={theme} setTheme={setTheme} />;
+  if (isGmailLabelMigrationRoute()) {
+    return <GmailConnectionSettingsPage theme={theme} setTheme={setTheme} />;
   }
 
   if (isGmailSettingsRoute()) {
@@ -280,7 +284,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
         <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
         <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
-        <SettingsSection id="connected" title="Connected accounts" note="Provider access"><p className="settings-section-copy">See Gmail capabilities, connection health, last sync, and safely reconnect or import labels.</p><a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a><a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a></SettingsSection>
+        <SettingsSection id="connected" title="Connected accounts" note="Provider access"><p className="settings-section-copy">See Gmail capabilities, connection health, and safely reconnect your account.</p><a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a></SettingsSection>
         <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores your normalized mail locally and only requests the Gmail permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a></SettingsSection>
         <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices follow your account."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
       </section>
@@ -1440,7 +1444,6 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
             {authorizationStatus === "error" ? <p className="gmail-authorization-error" role="alert">{errorMessage}</p> : null}
             <footer className="gmail-settings-actions">
               <button onClick={() => void beginGmailAuthorization("connect", returnTo, account.id, setAuthorizationStatus, setErrorMessage)} type="button">Reconnect Gmail</button>
-              <a href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
             </footer>
           </> : null}
         </section>
@@ -1495,136 +1498,6 @@ async function beginGmailAuthorization(
     setStatus("error");
     setError(getErrorMessage(error));
   }
-}
-
-export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
-  mode: "onboarding" | "settings";
-  theme: Theme;
-  setTheme: Dispatch<SetStateAction<Theme>>;
-}) {
-  const [migration, setMigration] = useState<GmailLabelMigration | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "saving" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    async function load() {
-      try {
-        let next = await fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal);
-        if (mode === "onboarding" && next.status !== "pending") {
-          window.location.replace("/");
-          return;
-        }
-        if (!next.ready) {
-          setStatus("syncing");
-          next = await syncGmailLabelsUntilReady(
-            next,
-            () => fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, controller.signal, { method: "POST" }),
-            () => fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal),
-          );
-        }
-        if (!controller.signal.aborted) {
-          setMigration(next);
-          setStatus("ready");
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setStatus("error");
-          setErrorMessage(getErrorMessage(error));
-        }
-      }
-    }
-    void load();
-    return () => controller.abort();
-  }, [mode]);
-
-  async function finish(action: "skip" | "import") {
-    setStatus("saving");
-    setErrorMessage(null);
-    try {
-      const next = await fetchJson(
-        `/v1/gmail-label-migration/${action}`,
-        gmailLabelMigrationSchema,
-        undefined,
-        action === "skip"
-          ? { method: "POST" }
-          : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ labelIds: [...selectedIds] }) },
-      );
-      setMigration(next);
-      setStatus("ready");
-      if (mode === "onboarding") window.location.assign("/");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(getErrorMessage(error));
-    }
-  }
-
-  const selectedThreadCount = migration?.labels.filter((label) => selectedIds.has(label.id)).reduce((sum, label) => sum + label.threadCount, 0) ?? 0;
-  const completed = migration?.status === "completed";
-
-  return (
-    <main className="label-migration-page">
-      <header className="attention-settings-topbar">
-        <a className="settings-brand" href="/"><span aria-hidden="true">O</span> Orca</a>
-        <div className="settings-topbar-actions">
-          {mode === "settings" ? <a className="settings-back-link" href="/">← Inbox</a> : null}
-          <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
-        </div>
-      </header>
-      <section className="label-migration-shell" aria-labelledby="label-migration-title">
-        <header className="label-migration-intro">
-          <p className="settings-eyebrow">{mode === "onboarding" ? "One last choice" : "Settings / Gmail labels"}</p>
-          <h1 id="label-migration-title">Keep the labels<br /><em>that still matter.</em></h1>
-          <p>Turn selected Gmail labels into Orca Collections. This only copies your organization into Orca—nothing in Gmail is changed.</p>
-          <div className="label-migration-safety"><strong>Read-only by design</strong><span>Messages stay in Gmail. Labels are never renamed, removed, or edited.</span></div>
-        </header>
-
-        <section className="label-migration-picker" aria-label="Gmail labels available to import">
-          <div className="label-migration-heading"><span>Your labels</span><span>{migration ? `${migration.labels.length} available` : ""}</span></div>
-          {status === "loading" ? <div className="attention-loading">Checking your Gmail organization…</div> : null}
-          {status === "syncing" ? <div className="attention-loading">Reading labels from Gmail for the first time…</div> : null}
-          {status === "error" ? <div className="attention-error" role="alert">{errorMessage ?? "Could not load Gmail labels."} <button onClick={() => window.location.reload()} type="button">Try again</button></div> : null}
-          {status === "ready" && completed ? (
-            <div className="label-migration-complete" role="status"><span aria-hidden="true">✓</span><div><strong>Gmail labels imported</strong><p>{migration?.labels.filter((label) => label.imported).length ?? 0} Collections were created. Reopening this page will never duplicate them.</p></div></div>
-          ) : null}
-          {(status === "ready" || status === "saving") && migration && !completed ? (
-            <>
-              {migration.labels.length ? <div className="label-migration-list">
-                {migration.labels.map((label) => {
-                  const selected = selectedIds.has(label.id);
-                  return <label className={`label-migration-option${selected ? " label-migration-option-selected" : ""}`} key={label.id}>
-                    <input checked={selected} disabled={status === "saving"} onChange={() => setSelectedIds((current) => { const next = new Set(current); selected ? next.delete(label.id) : next.add(label.id); return next; })} type="checkbox" />
-                    <span className="label-migration-check" aria-hidden="true">{selected ? "✓" : ""}</span>
-                    <span><strong>{label.name}</strong><small>{label.threadCount} {label.threadCount === 1 ? "thread" : "threads"}</small></span>
-                  </label>;
-                })}
-              </div> : <div className="label-migration-empty"><strong>A clean start is ready.</strong><p>No user-created Gmail labels were found. System labels such as Inbox and Sent are intentionally left out.</p></div>}
-              <footer className="label-migration-actions">
-                <div><strong>{selectedIds.size} selected</strong><span>{selectedThreadCount} label memberships will be copied</span></div>
-                <button disabled={status === "saving"} onClick={() => void finish("skip")} type="button">{migration.labels.length ? "Start clean" : "Continue to Orca"}</button>
-                {migration.labels.length ? <button className="label-import-button" disabled={status === "saving" || selectedIds.size === 0} onClick={() => void finish("import")} type="button">{status === "saving" ? "Saving…" : "Import selected"}</button> : null}
-              </footer>
-            </>
-          ) : null}
-          {completed ? <a className="label-migration-return" href="/">Return to inbox →</a> : null}
-        </section>
-      </section>
-    </main>
-  );
-}
-
-export async function syncGmailLabelsUntilReady(
-  initial: GmailLabelMigration,
-  sync: () => Promise<unknown>,
-  reload: () => Promise<GmailLabelMigration>,
-) {
-  let migration = initial;
-  while (!migration.ready) {
-    await sync();
-    migration = await reload();
-  }
-  return migration;
 }
 
 function GmailOAuthLoginPage() {
