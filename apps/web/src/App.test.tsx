@@ -48,7 +48,7 @@ describe("App", () => {
     try {
       const html = renderToStaticMarkup(<App />);
 
-      expect(html).toContain("Make room for the people.");
+      expect(html).toContain("Make room for <em>the people.</em>");
       expect(html).toContain("Continue with Google");
       expect(html).toContain("What happens next");
     } finally {

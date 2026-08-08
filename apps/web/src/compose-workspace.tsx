@@ -953,7 +953,7 @@ export function ComposeWorkspace({
       </div> : <div className="compose-reply-context"><span>{actionLabel === "Reply all" ? "Replying to everyone" : "Replying to"}</span><strong>{replyLabel ?? draft.to.map((recipient) => recipient.name ?? recipient.email).join(", ")}</strong><span>{draft.subject}</span><button onClick={() => setEditReplyDetails(true)} type="button">Edit recipients</button></div>}
 
       {variant !== "reply" || editReplyDetails ? <label className="compose-subject-field">
-        <span className="sr-only">Subject</span>
+        <span className="compose-subject-label">Sub</span>
         <input autoComplete="off" name="subject" onChange={(event) => updateDraft({ subject: event.target.value })} placeholder="Give this note a subject…" type="text" value={draft.subject} />
       </label> : null}
 
@@ -989,13 +989,14 @@ export function ComposeWorkspace({
     return (
       <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
-          <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Return to compose</span></button>
+          <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
           <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
         </header>
         <div className="zen-stage">
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
             {editor}
             {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
+            <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
         </div>
