@@ -43,12 +43,12 @@ During local development, open `http://localhost:5173/dev/inbox` to review the f
 inbox with fake email data. This route bypasses OAuth only in Vite development mode;
 production builds keep the inbox protected by the normal session check.
 
-The Vercel project described by `vercel.json` is intentionally a frontend-only
-preview: it installs the workspace, builds `apps/web`, and publishes
-`apps/web/dist`. It does not deploy the Hono/SQLite API. A Vercel `READY` status
-therefore verifies the static web bundle only; the SPA's relative `/v1/...`
-requests require the API to be hosted separately behind the same origin (or a
-configured proxy) before authenticated inbox flows can work on that preview.
+The Vercel project described by `vercel.json` builds both the static web bundle
+and the Hono API bridge. `/v1/...` requests are rewritten to the generated
+`api/index.js` function, while browser routes fall back to `apps/web/dist` so
+`/login` and `/onboarding` survive a direct refresh. A `READY` deployment now
+includes both the web bundle and the API function, but it is not proof that the
+OAuth flow has been exercised.
 
 The API applies any pending local SQLite migrations before it starts. This
 makes a fresh or reset development database ready for auth and OAuth flows.
@@ -81,8 +81,10 @@ future auth and sync work. By default it writes to
 API workspace, so API requests and startup migrations use the same file even
 when the process is launched from the repository root. Override that with
 `DATABASE_PATH` if needed. Production deployments must point it at durable
-storage shared by every API instance; an ephemeral/serverless filesystem will
-lose sessions and connected accounts between instances or restarts.
+storage shared by every API instance; the Vercel bridge falls back to
+`/tmp/orca.sqlite` only to keep previews bootable, and an ephemeral/serverless
+filesystem will lose sessions and connected accounts between instances or
+restarts.
 
 Useful commands:
 

@@ -11,3 +11,4 @@ dist
 *.sqlite-wal
 apps/api/data/
 docs/outbound-delivery-contract.html
+.vercel
