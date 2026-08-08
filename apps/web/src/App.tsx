@@ -172,6 +172,7 @@ export function App() {
   };
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
   const devPreview = isDevPreviewRoute();
+  const onboardingPreview = isOnboardingDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -190,7 +191,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || devPreview) return;
+    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || onboardingPreview || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then((response) => setAccess(response.ok ? "authenticated" : "signedout"))
@@ -202,6 +203,9 @@ export function App() {
 
   if (isSettingsDevPreviewRoute()) {
     return <SettingsHome preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} theme={theme} setTheme={setTheme} demoMode />;
+  }
+  if (onboardingPreview) {
+    return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
   }
   if (devPreview) {
     return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
@@ -222,8 +226,12 @@ export function App() {
   if (access === "checking") return <SessionCheckingScreen />;
   if (access === "signedout") return isOnboardingRoute() ? <GmailOAuthLoginPage /> : <LoginRequiredScreen />;
 
-  if (isOnboardingRoute() || isGmailLabelMigrationRoute()) {
-    return <GmailLabelMigrationPage mode={isOnboardingRoute() ? "onboarding" : "settings"} theme={theme} setTheme={setTheme} />;
+  if (isOnboardingRoute()) {
+    return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
+  }
+
+  if (isGmailLabelMigrationRoute()) {
+    return <GmailLabelMigrationPage theme={theme} setTheme={setTheme} />;
   }
 
   if (isGmailSettingsRoute()) {
@@ -1510,6 +1518,34 @@ function OAuthUpgradeReturnNotice({ status }: { status: Exclude<OAuthReturnStatu
     : <div className="oauth-notice oauth-notice-error" role="alert"><strong>Nothing changed</strong><span>{oauthErrorMessage(status.reason, true)}</span></div>;
 }
 
+export function WelcomeOrientationPage({ theme, setTheme }: {
+  theme: Theme;
+  setTheme: Dispatch<SetStateAction<Theme>>;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { titleRef.current?.focus(); }, []);
+
+  return <main className="onboarding-page">
+    <header className="onboarding-topbar">
+      <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
+      <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
+    </header>
+    <section className="onboarding-card" aria-labelledby="onboarding-title">
+      <p className="settings-eyebrow">You’re in</p>
+      <h1 id="onboarding-title" ref={titleRef} tabIndex={-1}>Welcome to a<br /><em>quieter inbox.</em></h1>
+      <p className="onboarding-lede">Orca is syncing your Gmail now. Your workspace starts with the mail that feels most human, without changing anything in Gmail.</p>
+      <ul className="onboarding-orientation">
+        <li><span>01</span><div><strong>Read what matters</strong><p>Your inbox brings people forward and keeps the rest within reach.</p></div></li>
+        <li><span>02</span><div><strong>Tune as you go</strong><p>Move senders into Focus, Quiet, or Hidden whenever their rhythm becomes clear.</p></div></li>
+      </ul>
+      <div className="onboarding-actions">
+        <a className="onboarding-enter" href="/">Open my inbox <span aria-hidden="true">→</span></a>
+        <p>Want your old organization later? Import Gmail labels from Settings.</p>
+      </div>
+    </section>
+  </main>;
+}
+
 function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
   const continueRef = useRef<HTMLButtonElement>(null);
   useEffect(() => { continueRef.current?.focus(); }, []);
@@ -1548,8 +1584,7 @@ async function beginGmailAuthorization(
   }
 }
 
-export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
-  mode: "onboarding" | "settings";
+export function GmailLabelMigrationPage({ theme, setTheme }: {
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
@@ -1563,10 +1598,6 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
     async function load() {
       try {
         let next = await fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal);
-        if (mode === "onboarding" && next.status !== "pending") {
-          window.location.replace("/");
-          return;
-        }
         if (!next.ready) {
           setStatus("syncing");
           next = await syncGmailLabelsUntilReady(
@@ -1588,23 +1619,20 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
     }
     void load();
     return () => controller.abort();
-  }, [mode]);
+  }, []);
 
-  async function finish(action: "skip" | "import") {
+  async function importLabels() {
     setStatus("saving");
     setErrorMessage(null);
     try {
       const next = await fetchJson(
-        `/v1/gmail-label-migration/${action}`,
+        "/v1/gmail-label-migration/import",
         gmailLabelMigrationSchema,
         undefined,
-        action === "skip"
-          ? { method: "POST" }
-          : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ labelIds: [...selectedIds] }) },
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ labelIds: [...selectedIds] }) },
       );
       setMigration(next);
       setStatus("ready");
-      if (mode === "onboarding") window.location.assign("/");
     } catch (error) {
       setStatus("error");
       setErrorMessage(getErrorMessage(error));
@@ -1619,13 +1647,13 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
       <header className="attention-settings-topbar">
         <a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a>
         <div className="settings-topbar-actions">
-          {mode === "settings" ? <a className="settings-back-link" href="/">← Inbox</a> : null}
+          <a className="settings-back-link" href="/">← Inbox</a>
           <button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button>
         </div>
       </header>
       <section className="label-migration-shell" aria-labelledby="label-migration-title">
         <header className="label-migration-intro">
-          <p className="settings-eyebrow">{mode === "onboarding" ? "One last choice" : "Settings / Gmail labels"}</p>
+          <p className="settings-eyebrow">Settings / Gmail labels</p>
           <h1 id="label-migration-title">Keep the labels<br /><em>that still matter.</em></h1>
           <p>Turn selected Gmail labels into Orca Collections. This only copies your organization into Orca—nothing in Gmail is changed.</p>
           <div className="label-migration-safety"><strong>Read-only by design</strong><span>Messages stay in Gmail. Labels are never renamed, removed, or edited.</span></div>
@@ -1653,8 +1681,8 @@ export function GmailLabelMigrationPage({ mode, theme, setTheme }: {
               </div> : <div className="label-migration-empty"><strong>A clean start is ready.</strong><p>No user-created Gmail labels were found. System labels such as Inbox and Sent are intentionally left out.</p></div>}
               <footer className="label-migration-actions">
                 <div><strong>{selectedIds.size} selected</strong><span>{selectedThreadCount} label memberships will be copied</span></div>
-                <button disabled={status === "saving"} onClick={() => void finish("skip")} type="button">{migration.labels.length ? "Start clean" : "Continue to Orca"}</button>
-                {migration.labels.length ? <button className="label-import-button" disabled={status === "saving" || selectedIds.size === 0} onClick={() => void finish("import")} type="button">{status === "saving" ? "Saving…" : "Import selected"}</button> : null}
+                <a className="label-migration-cancel" href="/">Not now</a>
+                {migration.labels.length ? <button className="label-import-button" disabled={status === "saving" || selectedIds.size === 0} onClick={() => void importLabels()} type="button">{status === "saving" ? "Saving…" : "Import selected"}</button> : null}
               </footer>
             </>
           ) : null}
@@ -3370,6 +3398,10 @@ function isLoginRoute() {
 
 function isOnboardingRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/onboarding";
+}
+
+function isOnboardingDevPreviewRoute() {
+  return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/onboarding";
 }
 
 function isGmailLabelMigrationRoute() {

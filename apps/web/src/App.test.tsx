@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -60,12 +60,22 @@ describe("App", () => {
   });
 
   test("explains the read-only Gmail label migration while it loads", () => {
-    const html = renderToStaticMarkup(<GmailLabelMigrationPage mode="settings" setTheme={() => {}} theme="light" />);
+    const html = renderToStaticMarkup(<GmailLabelMigrationPage setTheme={() => {}} theme="light" />);
 
     expect(html).toContain("Keep the labels");
     expect(html).toContain("nothing in Gmail is changed");
     expect(html).toContain("Labels are never renamed, removed, or edited");
     expect(html).toContain("Checking your Gmail organization");
+  });
+
+  test("orients new users without making Gmail labels part of sign-in", () => {
+    const html = renderToStaticMarkup(<WelcomeOrientationPage setTheme={() => {}} theme="light" />);
+
+    expect(html).toContain("Welcome to a");
+    expect(html).toContain("Open my inbox");
+    expect(html).toContain("Import Gmail labels from Settings");
+    expect(html).not.toContain("Checking your Gmail organization");
+    expect(html).not.toContain("Import selected");
   });
 
   test("defaults reader preferences to OS behavior and safely restores saved choices", () => {
