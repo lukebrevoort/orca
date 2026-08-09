@@ -925,12 +925,27 @@ function InboxApp({
     () => new Set(pins.filter((pin) => pin.kind === "sender").map((pin) => pin.targetId.trim().toLowerCase())),
     [pins],
   );
+  const activePin = useMemo(
+    () => pins.find((pin) => (pin.kind === "sender" || pin.kind === "filter") && isTopBarPinActive(pin, {
+      inboxFilter,
+      personFilter,
+      searchQuery: streamQuery,
+      viewMode: activeCollectionId ? "collection" : activeMailbox,
+    })) ?? null,
+    [activeCollectionId, activeMailbox, inboxFilter, personFilter, pins, streamQuery],
+  );
   const automatedMessages = useMemo(
     () => getMessagesForMailbox(messages, "inbox", attentionByAddress).filter(isTidelineMessage),
     [attentionByAddress, messages],
   );
   const activeMailboxLabel = activeMailboxItem.label;
-  const inboxTitle = personFilter ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name ?? personFilter : activeCollection?.name ?? activeMailboxLabel;
+  const personFilterName = personFilter
+    ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
+      ?? messages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
+      ?? activePin?.label
+      ?? personFilter
+    : null;
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? activeMailboxLabel;
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? activeMailboxLabel).toLowerCase()}`
     : activeCollection
@@ -1178,6 +1193,17 @@ function InboxApp({
     }
   }
 
+  async function removePin(pin: Pin) {
+    if (!account) return;
+    setOrganizationError(null);
+    try {
+      if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
+      setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
   function selectPin(pin: Pin) {
     if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
     if (pin.kind === "sender") togglePersonFilter(pin.targetId);
@@ -1260,7 +1286,7 @@ function InboxApp({
         />
 
         {organizationOpen ? <button aria-label="Close library" className="rail-library-backdrop" onClick={() => setOrganizationOpen(false)} tabIndex={-1} type="button" /> : null}
-        <aside aria-label="Mailbox navigation" aria-hidden={!organizationOpen} aria-modal={organizationOpen || undefined} className={`sidebar rail-library${organizationOpen ? " rail-library-open" : ""}`} inert={!organizationOpen || undefined} ref={libraryRef} role={organizationOpen ? "dialog" : undefined}>
+        <aside aria-label="Collections and pins" aria-hidden={!organizationOpen} aria-modal={organizationOpen || undefined} className={`sidebar rail-library${organizationOpen ? " rail-library-open" : ""}`} id="collections-and-pins-drawer" inert={!organizationOpen || undefined} ref={libraryRef} role={organizationOpen ? "dialog" : undefined}>
           <header className="sidebar-header">
             <div className="brand-wrap">
               <div className="brand"><WaveGlyph /> Orca</div>
@@ -1284,6 +1310,18 @@ function InboxApp({
             <input onChange={(event) => setStreamQuery(event.target.value)} placeholder="People, subjects, words" value={streamQuery} />
           </label>
 
+          <OrganizationSidebar
+            activeCollectionId={activeCollectionId}
+            collections={collections}
+            error={organizationError}
+            onCreateCollection={createCollection}
+            onColorCollection={(collection, color) => void updateCollection(collection, { color })}
+            onDeleteCollection={deleteCollection}
+            onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
+            onRenameCollection={(collection, name) => void updateCollection(collection, { name })}
+            onSelectCollection={selectCollection}
+          />
+
           <section className="sidebar-section mailbox-section">
             <h2>Mailboxes</h2>
             <nav className="nav-list">
@@ -1306,18 +1344,6 @@ function InboxApp({
           <a className="settings-link" href="/settings">
             <span aria-hidden="true">⚙</span> Settings
           </a>
-
-          <OrganizationSidebar
-            activeCollectionId={activeCollectionId}
-            collections={collections}
-            error={organizationError}
-            onCreateCollection={createCollection}
-            onColorCollection={(collection, color) => void updateCollection(collection, { color })}
-            onDeleteCollection={deleteCollection}
-            onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
-            onRenameCollection={(collection, name) => void updateCollection(collection, { name })}
-            onSelectCollection={selectCollection}
-          />
         </aside>
 
         <section aria-label={selectedThreadId ? "Message reader" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined}>
@@ -1335,6 +1361,7 @@ function InboxApp({
               currentViewLabel={activeMailboxLabel}
               allMessages={messages}
               attentionByAddress={attentionByAddress}
+              activePin={activePin}
               messages={visibleMessages}
               pins={pins}
               pinnedPeople={pinnedPeople}
@@ -1342,6 +1369,7 @@ function InboxApp({
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
+              onRemovePin={(pin) => void removePin(pin)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPin={selectPin}
               rowRefs={messageRowRefs}
@@ -1958,7 +1986,7 @@ function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }
   return <aside aria-label="Primary navigation" className="wave-rail" inert={libraryOpen || undefined}>
     <button aria-label="Inbox stream" className="wave-rail-brand" onClick={() => onSelectMailbox("inbox")} type="button"><WaveGlyph /></button>
     <nav>{items.map((item) => <button aria-current={activeMailbox === item.id ? "page" : undefined} aria-label={item.label} key={item.id} onClick={() => onSelectMailbox(item.id)} title={item.label} type="button"><RailGlyph name={item.id} /></button>)}
-      <button aria-expanded={libraryOpen} aria-label="Collections and pins" className={libraryOpen ? "wave-rail-selected" : ""} onClick={onOpenLibrary} title="Collections and pins" type="button"><RailGlyph name="library" /></button>
+      <button aria-controls="collections-and-pins-drawer" aria-expanded={libraryOpen} aria-label={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} className={libraryOpen ? "wave-rail-selected" : ""} onClick={onOpenLibrary} title={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} type="button"><RailGlyph name="library" /></button>
       <a aria-label="Settings" href="/settings" title="Settings"><RailGlyph name="settings" /></a>
     </nav>
     <a aria-label="Account settings" className="wave-rail-account" href="/settings">L</a>
@@ -1977,6 +2005,7 @@ function InboxView({
   isCollectionView,
   allMessages,
   attentionByAddress,
+  activePin,
   messages,
   pins,
   pinnedPeople,
@@ -1989,6 +2018,7 @@ function InboxView({
   isRefreshing,
   onClearFilter,
   onCreatePin,
+  onRemovePin,
   onOpenThread,
   onPinPerson,
   onSelectPin,
@@ -2018,6 +2048,7 @@ function InboxView({
   currentViewLabel: string;
   allMessages: InboxMessage[];
   attentionByAddress: Record<string, AttentionBehavior>;
+  activePin: Pin | null;
   messages: InboxMessage[];
   pins: Pin[];
   pinnedPeople: PersonItem[];
@@ -2029,6 +2060,7 @@ function InboxView({
   isRefreshing: boolean;
   onClearFilter: () => void;
   onCreatePin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
+  onRemovePin: (pin: Pin) => void;
   onOpenThread: (message: InboxMessage) => void;
   onPinPerson: (message: InboxMessage) => void;
   onSelectPin: (pin: Pin) => void;
@@ -2170,7 +2202,15 @@ function InboxView({
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
-          <div className="stream-title-line"><h1>{inboxTitle}</h1><span>{unreadCount} unread · {pins.length} {pins.length === 1 ? "pin" : "pins"}</span></div>
+          <div className="stream-title-line">
+            <h1>{inboxTitle}</h1>
+            <span>{unreadCount} unread · {pins.length} {pins.length === 1 ? "pin" : "pins"}</span>
+            {activePin ? (
+              <button aria-label={`Remove ${activePin.label} pin`} className="active-pin-action" onClick={() => onRemovePin(activePin)} type="button">
+                Unpin
+              </button>
+            ) : null}
+          </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
         {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
@@ -2319,7 +2359,7 @@ function InboxView({
                 : personFilter
                 ? `No threads in your inbox include ${personFilter} yet.`
                 : isCollectionView
-                  ? "Use Keep on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
+                  ? "Use Add to collection on any conversation to add it here. Your inbox and attention placement will stay exactly as they are."
                   : "When synced mail arrives, your inbox list will appear here."
             }
             eyebrow={searchQuery.trim() || personFilter ? "No matches" : isCollectionView ? "Collection empty" : "Inbox empty"}
