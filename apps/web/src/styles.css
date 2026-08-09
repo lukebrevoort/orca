@@ -3718,7 +3718,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .wave-rail-account { align-items: center; background: var(--color-sand); border-radius: 50%; color: #8a7046; display: flex; font-size: 13px; font-weight: 600; height: 40px; justify-content: center; width: 40px; }
 
 .rail-library {
-  background: var(--orca-surface);
+  background: var(--color-white, var(--orca-paper));
   border: 1px solid var(--orca-border);
   border-radius: 24px;
   box-shadow: var(--orca-shadow);
@@ -3850,7 +3850,6 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .pin-builder-actions .pin-builder-save:hover,
 .pin-builder-actions .pin-builder-save:focus-visible { background: color-mix(in srgb, var(--orca-accent) 88%, var(--orca-ink)); color: #fff; }
 .pin-builder-actions .pin-builder-save:disabled { background: var(--orca-control); border-color: var(--orca-border); color: var(--orca-muted); cursor: not-allowed; }
-
 .inbox-filter-bar { display: none; }
 .inbox-body { border: 0; display: block; min-height: 0; padding: 0; }
 .message-list { display: block; margin: 0; padding: 0; }
@@ -3926,7 +3925,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }
-  .pinned-people { gap: 14px; padding: 4px; }
+  .pinned-people { gap: 14px; overflow-x: auto; padding: 4px; }
   .rail-library { inset: 12px 12px 84px; height: auto; left: 12px; top: 12px; width: auto; }
   .tidal-compose-fab { bottom: 84px; }
 }
