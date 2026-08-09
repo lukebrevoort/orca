@@ -3127,6 +3127,7 @@ textarea {
 
 .reader-body-html :first-child { margin-top: 0; }
 .reader-body-html :last-child { margin-bottom: 0; }
+.reader-body-html [data-email-preheader="true"] { display: none !important; }
 .reader-body-html p { margin: 0 0 1.15em; }
 .reader-body-html h1,
 .reader-body-html h2,

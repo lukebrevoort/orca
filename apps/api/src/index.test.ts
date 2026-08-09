@@ -416,7 +416,7 @@ describe("Orca API", () => {
         {
           id: "email_old", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-old",
           fromAddress: "maya@example.com", fromName: "Maya", toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]",
-          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<h2>Hello <strong>Luke</strong></h2><table role=\"presentation\"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\"><script>alert(1)</script>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
+          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<div data-email-preheader=\"true\" style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden preheader</div><div style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden spacer</div><h2>Hello <strong>Luke</strong></h2><table role=\"presentation\"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\"><script>alert(1)</script>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
         },
         {
           id: "email_new", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-new",
