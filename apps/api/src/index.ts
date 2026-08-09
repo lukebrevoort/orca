@@ -23,6 +23,7 @@ import {
   inboxResponseSchema,
   mailAccountSchema,
   messageDraftSchema,
+  pinFilterSchema,
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
   pinSchema,
@@ -1641,7 +1642,7 @@ function updatePinRecord(db: Database, accountId: string, current: PinRecord, in
   });
 }
 
-function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view", targetId: string) {
+function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view" | "filter", targetId: string) {
   const target = targetId.trim();
   if (kind === "thread" && !db.select({ id: threads.id }).from(threads).where(and(eq(threads.accountId, accountId), eq(threads.id, target))).get()) {
     throw new OrganizationTargetError("Thread pins must refer to a thread in this account");
@@ -1651,6 +1652,17 @@ function validatePinTarget(db: Database, accountId: string, kind: "sender" | "th
   }
   if (kind === "view" && !["inbox", "focus", "quiet", "hidden", "all"].includes(target)) {
     throw new OrganizationTargetError("View pins must refer to an Orca attention view");
+  }
+  if (kind === "filter") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(target);
+    } catch {
+      throw new OrganizationTargetError("Filter pins must contain a valid filter definition");
+    }
+    if (!pinFilterSchema.safeParse(parsed).success) {
+      throw new OrganizationTargetError("Filter pins must contain a supported filter definition");
+    }
   }
 }
 
