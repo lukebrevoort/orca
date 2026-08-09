@@ -4031,7 +4031,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .reader-top-actions .remind-control > button { font-size: 0; }
 .reader-top-actions .remind-control > button::after { content: "◷"; font-size: 17px; }
 .reader-top-actions > button:hover, .reader-top-actions .remind-control > button:hover { background: var(--orca-surface-hover); color: var(--orca-ink); }
-.reader-top-actions .remind-control { position: relative; }
+.reader-top-actions .remind-control { margin-top: 0; position: relative; }
 .reader-top-actions .remind-menu { right: 0; top: calc(100% + 12px); width: 320px; }
 .reader-jump { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-muted); font-size: 11px; font-weight: 600; margin: -25px 0 30px auto; padding: 9px 12px; }
 .reader-jump-top { bottom: 26px; margin: 0; position: fixed; right: 26px; }
