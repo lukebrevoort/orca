@@ -925,12 +925,27 @@ function InboxApp({
     () => new Set(pins.filter((pin) => pin.kind === "sender").map((pin) => pin.targetId.trim().toLowerCase())),
     [pins],
   );
+  const activePin = useMemo(
+    () => pins.find((pin) => (pin.kind === "sender" || pin.kind === "filter") && isTopBarPinActive(pin, {
+      inboxFilter,
+      personFilter,
+      searchQuery: streamQuery,
+      viewMode: activeCollectionId ? "collection" : activeMailbox,
+    })) ?? null,
+    [activeCollectionId, activeMailbox, inboxFilter, personFilter, pins, streamQuery],
+  );
   const automatedMessages = useMemo(
     () => getMessagesForMailbox(messages, "inbox", attentionByAddress).filter(isTidelineMessage),
     [attentionByAddress, messages],
   );
   const activeMailboxLabel = activeMailboxItem.label;
-  const inboxTitle = personFilter ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name ?? personFilter : activeCollection?.name ?? activeMailboxLabel;
+  const personFilterName = personFilter
+    ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
+      ?? messages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
+      ?? activePin?.label
+      ?? personFilter
+    : null;
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? activeMailboxLabel;
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? activeMailboxLabel).toLowerCase()}`
     : activeCollection
@@ -1178,6 +1193,17 @@ function InboxApp({
     }
   }
 
+  async function removePin(pin: Pin) {
+    if (!account) return;
+    setOrganizationError(null);
+    try {
+      if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
+      setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+    }
+  }
+
   function selectPin(pin: Pin) {
     if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
     if (pin.kind === "sender") togglePersonFilter(pin.targetId);
@@ -1335,6 +1361,7 @@ function InboxApp({
               currentViewLabel={activeMailboxLabel}
               allMessages={messages}
               attentionByAddress={attentionByAddress}
+              activePin={activePin}
               messages={visibleMessages}
               pins={pins}
               pinnedPeople={pinnedPeople}
@@ -1342,6 +1369,7 @@ function InboxApp({
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
+              onRemovePin={(pin) => void removePin(pin)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPin={selectPin}
               rowRefs={messageRowRefs}
@@ -1977,6 +2005,7 @@ function InboxView({
   isCollectionView,
   allMessages,
   attentionByAddress,
+  activePin,
   messages,
   pins,
   pinnedPeople,
@@ -1989,6 +2018,7 @@ function InboxView({
   isRefreshing,
   onClearFilter,
   onCreatePin,
+  onRemovePin,
   onOpenThread,
   onPinPerson,
   onSelectPin,
@@ -2018,6 +2048,7 @@ function InboxView({
   currentViewLabel: string;
   allMessages: InboxMessage[];
   attentionByAddress: Record<string, AttentionBehavior>;
+  activePin: Pin | null;
   messages: InboxMessage[];
   pins: Pin[];
   pinnedPeople: PersonItem[];
@@ -2029,6 +2060,7 @@ function InboxView({
   isRefreshing: boolean;
   onClearFilter: () => void;
   onCreatePin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
+  onRemovePin: (pin: Pin) => void;
   onOpenThread: (message: InboxMessage) => void;
   onPinPerson: (message: InboxMessage) => void;
   onSelectPin: (pin: Pin) => void;
@@ -2170,7 +2202,15 @@ function InboxView({
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
-          <div className="stream-title-line"><h1>{inboxTitle}</h1><span>{unreadCount} unread · {pins.length} {pins.length === 1 ? "pin" : "pins"}</span></div>
+          <div className="stream-title-line">
+            <h1>{inboxTitle}</h1>
+            <span>{unreadCount} unread · {pins.length} {pins.length === 1 ? "pin" : "pins"}</span>
+            {activePin ? (
+              <button aria-label={`Remove ${activePin.label} pin`} className="active-pin-action" onClick={() => onRemovePin(activePin)} type="button">
+                Unpin
+              </button>
+            ) : null}
+          </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
         {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
