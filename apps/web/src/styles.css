@@ -4162,6 +4162,58 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .gmail-permission-dialog ul li { color: var(--orca-ink); font-size: 12px; }
 .gmail-permission-dialog .gmail-permission-continue { background: var(--orca-ink); color: var(--orca-paper); }
 
+/* BRE-222: keep sender pinning beside the sender controls so a filter can be created in context. */
+.pin-sender-button {
+  align-items: center;
+  background: var(--orca-surface);
+  border: 1px solid var(--orca-border);
+  border-radius: 999px;
+  color: var(--orca-accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 650;
+  gap: 3px;
+  min-height: 30px;
+  padding: 0 9px;
+  position: absolute;
+  right: 103px;
+  top: 32px;
+  z-index: 2;
+}
+
+.pin-sender-button:hover:not(:disabled),
+.pin-sender-button:focus-visible {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  color: var(--orca-ink);
+  outline: 2px solid var(--orca-accent);
+  outline-offset: 2px;
+}
+
+.pin-sender-button[aria-pressed="true"] {
+  background: var(--orca-surface-hover);
+  border-color: var(--orca-border);
+  color: var(--orca-ink);
+  cursor: default;
+}
+
+.pin-sender-button:disabled { opacity: .9; }
+
+.inbox-view-collection .pin-sender-button { right: 158px; }
+.inbox-view-collection .message-row-wrap > .sender-attention-control { right: 103px; }
+
+@media (max-width: 680px) {
+  .pin-sender-button { right: 88px; top: 46px; }
+  .inbox-view-collection .pin-sender-button { right: 88px; }
+  .inbox-view-collection .message-row-wrap > .sender-attention-control { right: 8px; }
+}
+
+@media (max-width: 560px) {
+  .pin-sender-button { min-width: 32px; padding: 0; right: 62px; width: 32px; }
+  .pin-sender-label { display: none; }
+}
+
 @media (max-width: 860px) {
   .settings-home-page, .preferences-page, .attention-settings-page, .gmail-settings-page, .label-migration-page { padding: 18px 18px 84px; }
   .settings-home-layout { display: block; margin-top: 44px; }

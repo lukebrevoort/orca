@@ -905,6 +905,10 @@ function InboxApp({
     () => buildPinnedPeopleFromPins(pins, messages),
     [messages, pins],
   );
+  const pinnedSenderAddresses = useMemo(
+    () => new Set(pins.filter((pin) => pin.kind === "sender").map((pin) => pin.targetId.trim().toLowerCase())),
+    [pins],
+  );
   const automatedMessages = useMemo(
     () => getMessagesForMailbox(messages, "inbox", attentionByAddress).filter(isTidelineMessage),
     [attentionByAddress, messages],
@@ -1330,8 +1334,10 @@ function InboxApp({
               collection={activeCollection}
               messages={visibleMessages}
               pinnedPeople={pinnedPeople}
+              pinnedSenderAddresses={pinnedSenderAddresses}
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
+              onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPerson={togglePersonFilter}
               rowRefs={messageRowRefs}
               personFilter={personFilter}
@@ -1967,6 +1973,7 @@ function InboxView({
   isCollectionView,
   messages,
   pinnedPeople,
+  pinnedSenderAddresses,
   reminders,
   personFilter,
   status,
@@ -1974,6 +1981,7 @@ function InboxView({
   isRefreshing,
   onClearFilter,
   onOpenThread,
+  onPinPerson,
   onRefresh,
   onAttentionChange,
   onInboxFilterChange,
@@ -2001,6 +2009,7 @@ function InboxView({
   isCollectionView: boolean;
   messages: InboxMessage[];
   pinnedPeople: PersonItem[];
+  pinnedSenderAddresses: Set<string>;
   reminders: Reminder[];
   personFilter: string | null;
   status: "loading" | "syncing" | "ready" | "error";
@@ -2008,6 +2017,7 @@ function InboxView({
   isRefreshing: boolean;
   onClearFilter: () => void;
   onOpenThread: (message: InboxMessage) => void;
+  onPinPerson: (message: InboxMessage) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
@@ -2168,6 +2178,9 @@ function InboxView({
             {displayMessages.map((message, index) => {
               const signature = getContactSignature(message.from);
               const isReply = message.subject.trim().toLowerCase().startsWith("re:");
+              const senderAddress = message.from.email.trim().toLowerCase();
+              const senderPinned = pinnedSenderAddresses.has(senderAddress);
+              const senderName = message.from.name ?? message.from.email;
 
               return (
                 <li key={message.id}>
@@ -2204,7 +2217,19 @@ function InboxView({
                         </div>
                         <p>{message.snippet}</p>
                       </div>
-                    </button>
+                  </button>
+                    {viewMode !== "later" ? <button
+                      aria-label={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
+                      aria-pressed={senderPinned}
+                      className={`pin-sender-button${senderPinned ? " pin-sender-button-pinned" : ""}`}
+                      disabled={senderPinned}
+                      onClick={() => onPinPerson(message)}
+                      title={senderPinned ? "Person pinned" : "Pin person"}
+                      type="button"
+                    >
+                      <span aria-hidden="true">{senderPinned ? "✓" : "＋"}</span>
+                      <span className="pin-sender-label">{senderPinned ? "Pinned" : "Pin"}</span>
+                    </button> : null}
                     {viewMode !== "later" ? <button
                       className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
                       onClick={() => onRemoveFromCollection ? onRemoveFromCollection(message) : onOpenOrganizer(message)}
