@@ -3160,7 +3160,7 @@ textarea {
 .reader-body-html td,
 .reader-body-html th { padding: .5em .75em; vertical-align: top; }
 .reader-body-html th { background: var(--orca-surface-hover); font-weight: 700; }
-.reader-body-html img { border-radius: 4px; height: auto; max-width: 100%; }
+.reader-body-html img { border-radius: 4px; height: auto !important; max-width: 100% !important; }
 .reader-body-html figure { margin: 1.25em 0; }
 .reader-body-html figcaption { color: var(--orca-muted); font-size: .85em; margin-top: .35em; }
 
