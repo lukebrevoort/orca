@@ -7,6 +7,7 @@ import {
   createMessageDraftSchema,
   inboxQuerySchema,
   inboxResponseSchema,
+  pinFilterSchema,
   threadDetailSchema,
   updateMessageDraftSchema,
   updateCollectionSchema,
@@ -80,6 +81,7 @@ describe("shared API schemas", () => {
     assert.deepEqual(createCollectionSchema.parse({ name: "Orca launch" }), { name: "Orca launch" });
     assert.deepEqual(createCollectionSchema.parse({ name: "Orca launch", color: "#70867d" }), { name: "Orca launch", color: "#70867d" });
     assert.deepEqual(createPinSchema.parse({ kind: "thread", targetId: "thread_1", label: "Launch notes" }), { kind: "thread", targetId: "thread_1", label: "Launch notes" });
+    assert.deepEqual(pinFilterSchema.parse({ mailbox: "inbox", attention: "focus", person: "maya@example.com", query: "launch" }), { mailbox: "inbox", attention: "focus", person: "maya@example.com", query: "launch" });
     assert.equal(updateCollectionSchema.safeParse({}).success, false);
     assert.equal(updateCollectionSchema.safeParse({ color: "moss" }).success, false);
     assert.equal(createPinSchema.safeParse({ kind: "folder", targetId: "thread_1", label: "Nope" }).success, false);

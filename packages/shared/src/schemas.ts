@@ -461,8 +461,16 @@ export const updateCollectionSchema = collectionSchema.pick({
 }).partial().refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
 export type UpdateCollection = z.infer<typeof updateCollectionSchema>;
 
-export const pinKindSchema = z.enum(["sender", "thread", "view"]);
+export const pinKindSchema = z.enum(["sender", "thread", "view", "filter"]);
 export type PinKind = z.infer<typeof pinKindSchema>;
+
+export const pinFilterSchema = z.object({
+  mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]),
+  attention: z.enum(["all", "notify", "focus", "normal"]),
+  person: z.string().trim().max(500).nullable(),
+  query: z.string().trim().max(200),
+}).strict();
+export type PinFilter = z.infer<typeof pinFilterSchema>;
 
 export const pinSchema = z.object({
   id: nonEmptyStringSchema,
