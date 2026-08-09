@@ -1726,13 +1726,21 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
     col: ["width", "style"],
     colgroup: ["width", "span", "style"],
     tr: ["align", "valign", "style"],
-    div: ["align", "style"],
+    div: ["align", "style", "data-email-preheader"],
     p: ["align", "style"],
     span: ["style"],
     "*": ["class", "style"],
   },
   allowedSchemes: ["http", "https", "mailto", "cid"],
   disallowedTagsMode: "discard",
+  exclusiveFilter: (frame) => {
+    if (frame.tag !== "div") return false;
+    if (frame.attribs["data-email-preheader"] === "true") return true;
+    const style = frame.attribs.style ?? "";
+    const hasHiddenStyle = /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0)/i.test(style);
+    const hasZeroSize = /(?:height|max-height|width|max-width)\s*:\s*0(?:px)?/i.test(style);
+    return hasHiddenStyle && hasZeroSize;
+  },
   allowedStyles: {
     "*": {
       "margin": [/.*/],
@@ -1752,6 +1760,11 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
       "min-width": [/.*/],
       "min-height": [/.*/],
       "text-align": [/.*/],
+      "visibility": [/.*/],
+      "opacity": [/.*/],
+      "overflow": [/.*/],
+      "overflow-x": [/.*/],
+      "overflow-y": [/.*/],
       "vertical-align": [/.*/],
       "font-family": [/.*/],
       "font-size": [/.*/],
@@ -1795,7 +1808,9 @@ function sanitizeOutboundHtml(value: string | null) {
 
 function htmlToText(value: string | null) {
   if (value === null) return null;
-  const text = sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
+  const visibleHtml = sanitizeProviderHtml(value);
+  if (visibleHtml === null) return null;
+  const text = sanitizeHtml(visibleHtml, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim();
   return text || null;
 }
 
