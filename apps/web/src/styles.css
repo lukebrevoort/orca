@@ -1386,36 +1386,19 @@ textarea {
   color: color-mix(in srgb, #b4533c 78%, var(--orca-ink));
 }
 
-.keep-zone {
+.collections-zone {
   border-top: 1px solid color-mix(in srgb, var(--orca-accent) 45%, var(--orca-border));
   margin-top: 2px;
   padding: 17px 0 4px;
 }
 
-.keep-zone-heading,
-.keep-zone-heading > div,
 .keep-group-heading {
   align-items: center;
   display: flex;
   justify-content: space-between;
 }
 
-.keep-zone-heading > div { gap: 7px; }
-.keep-zone-heading > div > span { color: var(--orca-accent); font-size: 14px; }
-.keep-zone-heading h2,
 .keep-group-heading h3 { margin: 0; }
-.keep-zone-heading h2 { font-family: var(--orca-font-display); font-size: 18px; font-weight: 500; }
-.keep-zone-heading > small { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-
-.keep-zone-note {
-  color: var(--orca-muted);
-  font-family: var(--orca-font-display);
-  font-size: 11.5px;
-  font-style: italic;
-  line-height: 1.4;
-  margin: 5px 0 16px 21px;
-}
-
 .keep-group + .keep-group { margin-top: 17px; }
 .keep-group-heading { padding: 0 3px 6px; }
 .keep-group-heading h3 { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
@@ -3770,11 +3753,16 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .stream-search input { background: transparent; border: 0; color: var(--orca-ink); font-size: 13px; min-width: 0; outline: none; width: 100%; }
 .stream-search kbd { background: var(--orca-control); border-radius: 6px; color: var(--orca-muted); font-family: inherit; font-size: 10px; padding: 3px 6px; white-space: nowrap; }
 
-.pinned-people { display: flex; gap: 22px; margin: 28px 0 38px; position: relative; }
+.pinned-people { align-items: flex-start; display: flex; gap: 18px; margin: 28px 0 38px; max-width: 100%; overflow-x: auto; padding: 2px 2px 4px; position: relative; scrollbar-width: none; }
+.pinned-people::-webkit-scrollbar { display: none; }
 .pinned-people > button,
 .pinned-person-add-wrap > .pinned-person-add { align-items: center; background: transparent; border: 0; color: var(--orca-ink); cursor: pointer; display: flex; flex-direction: column; gap: 8px; padding: 0; }
+.pinned-people > button { flex: 0 0 auto; min-width: 48px; }
 .pinned-avatar { align-items: center; background: var(--orca-accent-soft); border: 1px solid transparent; border-radius: 50%; color: var(--orca-muted); display: flex; font-size: 15px; font-weight: 500; height: 48px; justify-content: center; position: relative; width: 48px; }
 .pinned-avatar i { background: var(--orca-accent); border: 2px solid var(--orca-paper); border-radius: 50%; height: 10px; position: absolute; right: -1px; top: -1px; width: 10px; }
+.pinned-pin-filter .pinned-avatar,
+.pinned-pin-thread .pinned-avatar,
+.pinned-pin-view .pinned-avatar { background: var(--orca-surface); border-color: var(--orca-border); color: var(--orca-accent); font-family: var(--orca-font-body); font-size: 20px; }
 .pinned-people > button:nth-child(2) .pinned-avatar { background: #f4e3dc; color: #95624f; }
 .pinned-people > button:nth-child(3) .pinned-avatar { background: #e7e3f1; color: #6e658d; }
 .pinned-people > button:nth-child(4) .pinned-avatar { background: #f4ead7; color: #8f7448; }
@@ -3784,6 +3772,9 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .pinned-person-add-wrap > .pinned-person-add:focus-visible .pinned-avatar { border-color: var(--orca-accent); box-shadow: 0 0 0 4px var(--orca-accent-soft); }
 .pinned-people > button small,
 .pinned-person-add-wrap > .pinned-person-add small { color: var(--orca-muted); font-size: 11px; }
+.pinned-pin-filter small,
+.pinned-pin-thread small,
+.pinned-pin-view small { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pinned-person-add-wrap { position: relative; }
 .pinned-person-add .pinned-avatar { background: transparent !important; border: 1px dashed var(--orca-border); color: var(--orca-muted) !important; }
 
@@ -3919,7 +3910,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .tidal-compose-fab { align-items: center; background: var(--orca-accent); border: 0; border-radius: 999px; bottom: 28px; box-shadow: 0 14px 30px rgb(14 159 138 / 26%); color: #fff; cursor: pointer; display: flex; font-size: 14px; font-weight: 600; gap: 9px; left: 50%; padding: 13px 25px; position: fixed; transform: translateX(-50%); z-index: 46; }
 .tidal-compose-fab:hover { background: color-mix(in srgb, var(--orca-accent) 88%, var(--orca-ink)); transform: translateX(-50%) translateY(-2px); }
 
-.inbox-view-collection .pinned-people, .inbox-view-collection .stream-search { display: none; }
+.inbox-view-collection .stream-search { display: none; }
 .inbox-view-collection .pane-header { margin-bottom: 28px; }
 .inbox-view-collection .pane-header .stream-date { color: var(--orca-muted); }
 .inbox-view-collection .pane-header .stream-context { display: block; }
@@ -3932,7 +3923,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }
-  .pinned-people { gap: 14px; overflow-x: auto; padding: 4px; }
+  .pinned-people { gap: 14px; padding: 4px; }
   .rail-library { inset: 12px 12px 84px; height: auto; left: 12px; top: 12px; width: auto; }
   .tidal-compose-fab { bottom: 84px; }
 }
@@ -3975,7 +3966,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .thread-organizer > footer .organizer-keep { background: var(--orca-ink); color: var(--orca-paper); }
 
 /* Later and collections */
-.inbox-view-later .pinned-people, .inbox-view-later .stream-search, .inbox-view-later .stream-title-line > span, .inbox-view-collection .stream-title-line > span { display: none; }
+.inbox-view-later .stream-search, .inbox-view-later .stream-title-line > span, .inbox-view-collection .stream-title-line > span { display: none; }
 .inbox-view-later .pane-header, .inbox-view-collection .pane-header { margin-bottom: 34px; }
 .inbox-view-later .pane-header .stream-date { font-size: 12px; font-weight: 400; letter-spacing: 0; margin: 42px 0 4px 48px; text-transform: none; }
 .inbox-view-later .pane-header .stream-title-line { left: 48px; position: absolute; top: 0; }

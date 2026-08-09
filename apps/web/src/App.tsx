@@ -1178,29 +1178,6 @@ function InboxApp({
     }
   }
 
-  async function movePin(pin: Pin, direction: -1 | 1) {
-    const position = pin.position + direction;
-    if (position < 0 || position >= pins.length) return;
-    try {
-      if (demoMode) setPins((current) => reorderItems(current, pin.id, position));
-      else {
-        await fetchJson(`/v1/pins/${encodeURIComponent(pin.id)}`, pinSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
-        setPins(await fetchJson("/v1/pins", pinsResponseSchema));
-      }
-    } catch (error) {
-      setOrganizationError(getErrorMessage(error));
-    }
-  }
-
-  async function deletePin(pin: Pin) {
-    try {
-      if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
-      setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
-    } catch (error) {
-      setOrganizationError(getErrorMessage(error));
-    }
-  }
-
   function selectPin(pin: Pin) {
     if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
     if (pin.kind === "sender") togglePersonFilter(pin.targetId);
@@ -1335,15 +1312,11 @@ function InboxApp({
             collections={collections}
             error={organizationError}
             onCreateCollection={createCollection}
-            onDeleteCollection={deleteCollection}
-            onDeletePin={deletePin}
             onColorCollection={(collection, color) => void updateCollection(collection, { color })}
+            onDeleteCollection={deleteCollection}
             onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
-            onMovePin={(pin, direction) => void movePin(pin, direction)}
             onRenameCollection={(collection, name) => void updateCollection(collection, { name })}
             onSelectCollection={selectCollection}
-            onSelectPin={selectPin}
-            pins={pins}
           />
         </aside>
 
@@ -1363,13 +1336,14 @@ function InboxApp({
               allMessages={messages}
               attentionByAddress={attentionByAddress}
               messages={visibleMessages}
+              pins={pins}
               pinnedPeople={pinnedPeople}
               pinnedSenderAddresses={pinnedSenderAddresses}
               onClearFilter={() => setPersonFilter(null)}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
-              onSelectPerson={togglePersonFilter}
+              onSelectPin={selectPin}
               rowRefs={messageRowRefs}
               personFilter={personFilter}
               status={status}
@@ -2004,6 +1978,7 @@ function InboxView({
   allMessages,
   attentionByAddress,
   messages,
+  pins,
   pinnedPeople,
   pinnedSenderAddresses,
   currentViewLabel,
@@ -2016,6 +1991,7 @@ function InboxView({
   onCreatePin,
   onOpenThread,
   onPinPerson,
+  onSelectPin,
   onRefresh,
   onAttentionChange,
   onInboxFilterChange,
@@ -2024,7 +2000,6 @@ function InboxView({
   onSnoozeLater,
   onRenameCollection,
   onSearchChange,
-  onSelectPerson,
   onRemoveFromCollection,
   searchQuery,
   showInboxFilters,
@@ -2044,6 +2019,7 @@ function InboxView({
   allMessages: InboxMessage[];
   attentionByAddress: Record<string, AttentionBehavior>;
   messages: InboxMessage[];
+  pins: Pin[];
   pinnedPeople: PersonItem[];
   pinnedSenderAddresses: Set<string>;
   reminders: Reminder[];
@@ -2055,6 +2031,7 @@ function InboxView({
   onCreatePin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
   onOpenThread: (message: InboxMessage) => void;
   onPinPerson: (message: InboxMessage) => void;
+  onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
   onInboxFilterChange: (filter: InboxFilter) => void;
@@ -2063,7 +2040,6 @@ function InboxView({
   onSnoozeLater: (message: InboxMessage, reminder: Reminder | null) => Promise<void>;
   onRenameCollection?: () => void;
   onSearchChange: (query: string) => void;
-  onSelectPerson: (filterValue: string) => void;
   onRemoveFromCollection?: (message: InboxMessage) => void;
   searchQuery: string;
   showInboxFilters: boolean;
@@ -2194,7 +2170,7 @@ function InboxView({
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
-          <div className="stream-title-line"><h1>{inboxTitle}</h1><span>{unreadCount} unread · {pinnedPeople.length} people</span></div>
+          <div className="stream-title-line"><h1>{inboxTitle}</h1><span>{unreadCount} unread · {pins.length} {pins.length === 1 ? "pin" : "pins"}</span></div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
         {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
@@ -2231,8 +2207,14 @@ function InboxView({
         </div>
       </header>
 
-      <nav aria-label="Pinned people" className="pinned-people">
-        {pinnedPeople.map((person) => <button aria-pressed={personFilter === person.filterValue} key={person.filterValue} onClick={() => onSelectPerson(person.filterValue)} type="button"><span className="pinned-avatar">{person.initials}{person.unread ? <i /> : null}</span><small>{person.name.split(" ")[0]}</small></button>)}
+      <nav aria-label="Saved pins" className="pinned-people">
+        {pins.map((pin) => {
+          const person = pin.kind === "sender"
+            ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
+            : null;
+          const active = isTopBarPinActive(pin, { inboxFilter, personFilter, searchQuery, viewMode });
+          return <button aria-label={`Open ${pin.label} pin`} aria-pressed={active} className={`pinned-pin pinned-pin-${pin.kind}`} key={pin.id} onClick={() => onSelectPin(pin)} title={pin.label} type="button"><span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span><small>{pinTopBarLabel(pin, person)}</small></button>;
+        })}
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -3132,13 +3114,9 @@ function OrganizationSidebar({
   onCreateCollection,
   onColorCollection,
   onDeleteCollection,
-  onDeletePin,
   onMoveCollection,
-  onMovePin,
   onRenameCollection,
   onSelectCollection,
-  onSelectPin,
-  pins,
 }: {
   activeCollectionId: string | null;
   collections: Collection[];
@@ -3146,13 +3124,9 @@ function OrganizationSidebar({
   onCreateCollection: (name: string) => Promise<Collection | null>;
   onColorCollection: (collection: Collection, color: string) => void;
   onDeleteCollection: (collection: Collection) => Promise<void>;
-  onDeletePin: (pin: Pin) => Promise<void>;
   onMoveCollection: (collection: Collection, direction: -1 | 1) => void;
-  onMovePin: (pin: Pin, direction: -1 | 1) => void;
   onRenameCollection: (collection: Collection, name: string) => void;
   onSelectCollection: (id: string) => void;
-  onSelectPin: (pin: Pin) => void;
-  pins: Pin[];
 }) {
   const [addingCollection, setAddingCollection] = useState(false);
   const collectionPresence = useExitPresence(addingCollection);
@@ -3176,42 +3150,10 @@ function OrganizationSidebar({
   }
 
   return (
-    <section className="keep-zone" aria-labelledby="keep-zone-title">
-      <header className="keep-zone-heading">
-        <div><span aria-hidden="true">◇</span><h2 id="keep-zone-title">Keep</h2></div>
-        <small>Optional</small>
-      </header>
-      <p className="keep-zone-note">A personal layer. Nothing moves out of your inbox.</p>
-
-      <div className="keep-group">
-        <div className="keep-group-heading">
-          <h3>Pins</h3>
-        </div>
-        {pins.length ? (
-          <div className="keep-list">
-            {pins.map((pin, index) => (
-              <div className="keep-row" key={pin.id}>
-                <button className="keep-row-main" onClick={() => onSelectPin(pin)} type="button">
-                  <span className={`pin-kind pin-kind-${pin.kind}`} aria-hidden="true">{pin.kind === "sender" ? "@" : pin.kind === "thread" ? "↗" : pin.kind === "filter" ? "⌕" : "◫"}</span>
-                  <span><strong>{pin.label}</strong><small>{pin.kind}</small></span>
-                </button>
-                <details className="keep-row-menu">
-                  <summary aria-label={`Options for ${pin.label}`}>•••</summary>
-                  <div onClick={(event) => { const menu = event.currentTarget.closest("details"); if (menu) menu.open = false; }}>
-                    <button disabled={index === 0} onClick={() => onMovePin(pin, -1)} type="button">↑ Move up</button>
-                    <button disabled={index === pins.length - 1} onClick={() => onMovePin(pin, 1)} type="button">↓ Move down</button>
-                    <button className="keep-menu-danger" onClick={() => void onDeletePin(pin)} type="button">× Remove pin</button>
-                  </div>
-                </details>
-              </div>
-            ))}
-          </div>
-        ) : <p className="keep-empty">Pin a view, person, or conversation for quick return.</p>}
-      </div>
-
+    <section className="collections-zone" aria-labelledby="collections-zone-title">
       <div className="keep-group collection-group">
         <div className="keep-group-heading">
-          <h3>Collections</h3>
+          <h3 id="collections-zone-title">Collections</h3>
           <button aria-expanded={addingCollection} className="keep-group-action" onClick={() => setAddingCollection((current) => !current)} type="button"><span aria-hidden="true">＋</span>New collection</button>
         </div>
         {collectionPresence.rendered ? (
@@ -3570,6 +3512,36 @@ function pinFilterLabel(filter: PinFilter, personName?: string | null) {
   if (personName) parts.push(personName);
   if (filter.query) parts.push(`“${filter.query}”`);
   return parts.join(" · ");
+}
+
+function pinTopBarMark(pin: Pin, person: PersonItem | null) {
+  if (pin.kind === "sender") return person?.initials ?? pin.label.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  if (pin.kind === "thread") return "↗";
+  if (pin.kind === "filter") return "⌕";
+  return "◫";
+}
+
+function pinTopBarLabel(pin: Pin, person: PersonItem | null) {
+  if (pin.kind === "sender") return (person?.name ?? pin.label).split(/\s+/)[0] ?? pin.label;
+  if (pin.kind !== "filter") return pin.label;
+  const filter = parsePinFilterTarget(pin.targetId);
+  if (!filter) return pin.label;
+  const personLabel = filter.person ? (person?.name ?? filter.person.split("@")[0]) : null;
+  const parts = [personLabel?.split(/\s+/)[0], filter.query ? `“${filter.query}”` : null].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+  return pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
+}
+
+function isTopBarPinActive(pin: Pin, current: { inboxFilter: InboxFilter; personFilter: string | null; searchQuery: string; viewMode: "collection" | Mailbox }) {
+  if (pin.kind === "sender") return current.personFilter?.trim().toLowerCase() === pin.targetId.trim().toLowerCase();
+  if (pin.kind === "view") return current.viewMode === pin.targetId;
+  if (pin.kind !== "filter") return false;
+  const filter = parsePinFilterTarget(pin.targetId);
+  if (!filter || current.viewMode !== filter.mailbox) return false;
+  const samePerson = (current.personFilter ?? "").trim().toLowerCase() === (filter.person ?? "").trim().toLowerCase();
+  return samePerson
+    && current.searchQuery.trim() === filter.query
+    && (filter.mailbox !== "inbox" || current.inboxFilter === filter.attention);
 }
 
 export function buildPinnedPeopleFromPins(pins: Pin[], messages: InboxMessage[]): PersonItem[] {
