@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { ApiRequestError, App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { ApiRequestError, App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -224,6 +224,18 @@ describe("App", () => {
     const groups = groupThreadMessages([newest, oldest, middle]);
     expect(groups).toHaveLength(2);
     expect(groups.map((group) => group.messages.map((message) => message.id))).toEqual([["oldest"], ["middle", "newest"]]);
+  });
+
+  test("scopes thread-detail requests to the selected message account", () => {
+    const secondaryMessage = {
+      ...demoMessages[0]!,
+      id: "secondary-message",
+      accountId: "acct_secondary",
+      threadId: "secondary-thread",
+    };
+
+    expect(getSelectedThreadAccountId([secondaryMessage], secondaryMessage.threadId, null)).toBe("acct_secondary");
+    expect(buildThreadDetailRequest(secondaryMessage)).toBe("/v1/threads/secondary-thread?accountId=acct_secondary");
   });
 
   test("reveals the top jump after meaningful reader scrolling", () => {
