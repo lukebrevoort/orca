@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import type { Handler, MiddlewareHandler } from "hono";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
 import { createSession } from "../session-store.ts";
 import { DatabaseOAuthAccountStore, type OAuthAccountStore } from "../gmail/oauth-accounts.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { users } from "../../db/schema.ts";
+import { oauthAccounts, users } from "../../db/schema.ts";
 import { loadOutlookOAuthConfig, validateOutlookOAuthConfig, type OutlookOAuthConfig } from "./config.ts";
 import { createOutlookOAuthService, type OutlookFetch } from "./oauth.ts";
 
@@ -47,10 +47,70 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
     const result = await service.handleCallback(new URLSearchParams(c.req.query()), current.userId);
     if (result.ok && result.initialLogin) {
       const { db, sqlite } = dbFactory();
-      try { db.update(users).set({ email: result.account.providerEmail, authenticatedAt: new Date(), onboardingCompletedAt: new Date() }).where(eq(users.id, current.userId)).run(); } finally { sqlite.close(); }
+      try {
+        const existingUser = db.select({ id: users.id }).from(users)
+          .where(eq(users.email, result.account.providerEmail)).get();
+
+        if (existingUser && existingUser.id !== current.userId) {
+          const existingAccount = db.select().from(oauthAccounts)
+            .where(and(
+              eq(oauthAccounts.userId, existingUser.id),
+              eq(oauthAccounts.provider, "outlook"),
+              eq(oauthAccounts.providerId, result.account.providerAccountId),
+            )).get();
+          const pendingAccount = db.select().from(oauthAccounts)
+            .where(and(
+              eq(oauthAccounts.userId, current.userId),
+              eq(oauthAccounts.provider, "outlook"),
+              eq(oauthAccounts.providerId, result.account.providerAccountId),
+            )).get();
+
+          if (pendingAccount && existingAccount) {
+            db.update(oauthAccounts)
+              .set({
+                providerEmail: pendingAccount.providerEmail,
+                providerId: pendingAccount.providerId,
+                accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
+                refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
+                tokenExpiry: pendingAccount.tokenExpiry,
+                scope: pendingAccount.scope,
+                updatedAt: new Date(),
+              })
+              .where(eq(oauthAccounts.id, existingAccount.id))
+              .run();
+            db.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
+          } else if (pendingAccount) {
+            db.update(oauthAccounts)
+              .set({ userId: existingUser.id })
+              .where(eq(oauthAccounts.id, pendingAccount.id))
+              .run();
+          }
+
+          db.update(users)
+            .set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
+            .where(eq(users.id, existingUser.id))
+            .run();
+          db.delete(users).where(eq(users.id, current.userId)).run();
+          const session = await createSession(db, existingUser.id);
+          c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
+
+          if (result.redirectUrl) return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
+        } else {
+          db.update(users)
+            .set({ email: result.account.providerEmail, authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
+            .where(eq(users.id, current.userId))
+            .run();
+        }
+      } finally { sqlite.close(); }
     }
     if (result.redirectUrl) return c.redirect(result.redirectUrl, 302);
     return result.ok ? c.json({ ok: true, provider: "outlook", account: result.account }) : c.json({ ok: false, error: result.code, message: result.message }, 400);
   });
   return app;
+}
+
+export function redirectReturningUserToWorkspace(redirectUrl: string): string {
+  const url = new URL(redirectUrl);
+  url.pathname = "/";
+  return url.toString();
 }

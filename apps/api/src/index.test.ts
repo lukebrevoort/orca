@@ -656,7 +656,7 @@ describe("Orca API", () => {
       assert.equal((await testApp.request("/v1/auth/outlook/connect")).status, 404);
 
       const outlookOnlyApp = createApp({ providerRegistry: new ProviderRegistry([outlookProvider]) });
-      assert.equal((await outlookOnlyApp.request("/v1/auth/outlook/connect")).status, 501);
+      assert.equal((await outlookOnlyApp.request("/v1/auth/outlook/connect")).status, 401);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

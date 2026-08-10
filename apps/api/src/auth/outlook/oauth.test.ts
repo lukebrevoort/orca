@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { decryptSecret } from "../gmail/crypto.ts";
 import { InMemoryOAuthAccountStore } from "../gmail/oauth-accounts.ts";
 import { createOutlookOAuthService } from "./oauth.ts";
@@ -11,9 +12,15 @@ describe("Outlook OAuth", () => {
   test("uses read-first Microsoft scopes and persists encrypted tokens", async () => {
     const store = new InMemoryOAuthAccountStore();
     const requests: string[] = [];
-    const service = createOutlookOAuthService({ config, store, fetch: async (input) => {
+    let expectedCodeVerifier = "";
+    const service = createOutlookOAuthService({ config, store, fetch: async (input, init) => {
       requests.push(String(input));
-      if (String(input).includes("/token")) return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 3600, scope: "User.Read Mail.Read offline_access" });
+      if (String(input).includes("/token")) {
+        const body = new URLSearchParams(String(init?.body));
+        expect(init?.method).toBe("POST");
+        expect(body.get("code_verifier")).toBe(expectedCodeVerifier);
+        return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 3600, scope: "User.Read Mail.Read offline_access" });
+      }
       return Response.json({ id: "microsoft-user", mail: "person@outlook.com" });
     } });
     const authorization = service.getAuthorizationUrl("http://localhost:5173/onboarding", true);
@@ -21,6 +28,12 @@ describe("Outlook OAuth", () => {
     expect(authUrl.hostname).toBe("login.microsoftonline.com");
     expect(authUrl.searchParams.get("scope")).toContain("Mail.Read");
     expect(authUrl.searchParams.get("scope")).not.toContain("Mail.ReadWrite");
+    expect(authUrl.searchParams.get("code_challenge_method")).toBe("S256");
+    const statePayload = JSON.parse(Buffer.from(authorization.state.split(".")[0]!, "base64url").toString("utf8")) as { codeVerifier: string };
+    expectedCodeVerifier = statePayload.codeVerifier;
+    expect(authUrl.searchParams.get("code_challenge")).toBe(
+      createHash("sha256").update(statePayload.codeVerifier).digest("base64url"),
+    );
 
     const result = await service.handleCallback(new URLSearchParams({ code: "code", state: authorization.state }), "user-1");
     expect(result.ok).toBe(true);
