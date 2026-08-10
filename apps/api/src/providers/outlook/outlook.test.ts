@@ -1,7 +1,12 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, test } from "bun:test";
 import { createOutlookClient, OutlookApiError } from "./client.ts";
 import { outlookMessageFixture } from "./fixtures/message.fixture.ts";
 import { normalizeOutlookMessage } from "./normalizer.ts";
+
+const inboxNextLink = "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$skiptoken=opaque";
+const inboxMessagePath = "/v1.0/me/mailFolders/inbox/messages";
 
 describe("Outlook provider", () => {
   test("lists Graph messages, follows opaque pagination, and gets a message", async () => {
@@ -14,7 +19,7 @@ describe("Outlook provider", () => {
       if (urls.length === 1) {
         return Response.json({
           value: [outlookMessageFixture],
-          "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$skiptoken=opaque",
+          "@odata.nextLink": inboxNextLink,
         });
       }
 
@@ -28,6 +33,7 @@ describe("Outlook provider", () => {
     const page = await client.listInboxMessagePage({ accessToken: "token", pageSize: 10 });
     expect(page.messages).toEqual([outlookMessageFixture]);
     expect(page.nextCursor).not.toContain("skiptoken");
+    expect(new URL(urls[0]!).pathname).toBe(inboxMessagePath);
     expect(new URL(urls[0]!).searchParams.get("$top")).toBe("10");
     expect(new URL(urls[0]!).searchParams.get("$orderby")).toBe("receivedDateTime desc");
 
@@ -36,9 +42,7 @@ describe("Outlook provider", () => {
       cursor: page.nextCursor,
     });
     expect(finalPage).toEqual({ messages: [], nextCursor: null });
-    expect(urls[1]).toBe(
-      "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$skiptoken=opaque",
-    );
+    expect(urls[1]).toBe(inboxNextLink);
 
     await client.getMessage("token", "message-1");
     expect(new URL(urls[2]!).pathname).toBe("/v1.0/me/messages/message-1");
@@ -59,9 +63,53 @@ describe("Outlook provider", () => {
     },
   );
 
-  test("rejects pagination cursors that do not point back to a Graph message page", async () => {
-    const client = createOutlookClient();
-    const cursor = Buffer.from("https://example.com/steal-token").toString("base64url");
+  test("does not replay a cursor with a different account token", async () => {
+    let requestCount = 0;
+    const client = createOutlookClient(async () => {
+      requestCount += 1;
+      return Response.json({ "@odata.nextLink": inboxNextLink });
+    });
+
+    const page = await client.listInboxMessagePage({ accessToken: "account-a-token" });
+    await expect(client.listInboxMessagePage({
+      accessToken: "account-b-token",
+      cursor: page.nextCursor,
+    })).rejects.toEqual(
+      new OutlookApiError("Invalid Outlook pagination cursor", 400, "provider"),
+    );
+    expect(requestCount).toBe(1);
+  });
+
+  test.each([
+    ["another user's inbox", "https://graph.microsoft.com/v1.0/users/other-user/mailFolders/inbox/messages?$skiptoken=opaque"],
+    ["a non-inbox folder", "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?$skiptoken=opaque"],
+    ["the mailbox message collection", "https://graph.microsoft.com/v1.0/me/messages?$skiptoken=opaque"],
+    ["a different Graph path", "https://graph.microsoft.com/beta/me/mailFolders/inbox/messages?$skiptoken=opaque"],
+    ["a different origin", "https://evil.example/v1.0/me/mailFolders/inbox/messages?$skiptoken=opaque"],
+  ])("rejects cursors outside the exact inbox route: %s", async (_description, url) => {
+    const client = createOutlookClient(async () => {
+      throw new Error("Graph must not receive an out-of-scope cursor");
+    });
+
+    await expect(client.listInboxMessagePage({
+      accessToken: "token",
+      cursor: signedCursor(url, "token"),
+    })).rejects.toEqual(
+      new OutlookApiError("Invalid Outlook pagination cursor", 400, "provider"),
+    );
+  });
+
+  test.each([
+    ["empty", ""],
+    ["plain text", "not-a-cursor"],
+    ["unsupported version", "v2.payload.signature"],
+    ["missing signature", "v1.payload"],
+    ["invalid base64url", "v1.!payload.signature"],
+    ["extra segment", "v1.payload.signature.extra"],
+  ])("rejects malformed cursors: %s", async (_description, cursor) => {
+    const client = createOutlookClient(async () => {
+      throw new Error("Graph must not receive a malformed cursor");
+    });
 
     await expect(client.listInboxMessagePage({ accessToken: "token", cursor })).rejects.toEqual(
       new OutlookApiError("Invalid Outlook pagination cursor", 400, "provider"),
@@ -113,3 +161,12 @@ describe("Outlook provider", () => {
     });
   });
 });
+
+function signedCursor(url: string, accessToken: string): string {
+  const payload = Buffer.from(url, "utf8").toString("base64url");
+  const signedPayload = `v1.${payload}`;
+  const signature = createHmac("sha256", accessToken)
+    .update(signedPayload)
+    .digest("base64url");
+  return `${signedPayload}.${signature}`;
+}

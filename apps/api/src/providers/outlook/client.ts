@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 import type { GraphMessage } from "./types.ts";
 
 type FetchLike = (
@@ -5,7 +7,10 @@ type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>;
 
-const graphBaseUrl = "https://graph.microsoft.com/v1.0";
+const graphOrigin = "https://graph.microsoft.com";
+const graphBaseUrl = `${graphOrigin}/v1.0`;
+const inboxMessagePath = "/v1.0/me/mailFolders/inbox/messages";
+const cursorVersion = "v1";
 const defaultPageSize = 25;
 const messageFields = [
   "id",
@@ -52,11 +57,11 @@ export type OutlookClient = {
 export function createOutlookClient(fetchImpl: FetchLike = fetch): OutlookClient {
   return {
     async listInboxMessagePage({ accessToken, cursor, pageSize = defaultPageSize }) {
-      const url = cursor
-        ? decodeCursor(cursor)
-        : new URL(`${graphBaseUrl}/me/mailFolders/inbox/messages`);
+      const url = cursor === undefined || cursor === null
+        ? new URL(`${graphOrigin}${inboxMessagePath}`)
+        : decodeCursor(cursor, accessToken);
 
-      if (!cursor) {
+      if (cursor === undefined || cursor === null) {
         url.searchParams.set("$top", String(pageSize));
         url.searchParams.set("$orderby", "receivedDateTime desc");
         url.searchParams.set("$select", messageFields);
@@ -70,7 +75,7 @@ export function createOutlookClient(fetchImpl: FetchLike = fetch): OutlookClient
       return {
         messages: response.value ?? [],
         nextCursor: response["@odata.nextLink"]
-          ? encodeCursor(response["@odata.nextLink"])
+          ? encodeCursor(response["@odata.nextLink"], accessToken)
           : null,
       };
     },
@@ -116,20 +121,80 @@ async function request<T>(fetchImpl: FetchLike, token: string, url: URL): Promis
   return await response.json() as T;
 }
 
-function encodeCursor(value: string): string {
-  return Buffer.from(value).toString("base64url");
+function encodeCursor(value: string, accessToken: string): string {
+  try {
+    const url = new URL(value);
+    assertInboxMessagePage(url);
+
+    // The access token is the mailbox identity available to this low-level
+    // contract, so bind every cursor to the token that received the page.
+    const payload = Buffer.from(value, "utf8").toString("base64url");
+    const signedPayload = `${cursorVersion}.${payload}`;
+    const signature = createHmac("sha256", accessToken)
+      .update(signedPayload)
+      .digest("base64url");
+
+    return `${signedPayload}.${signature}`;
+  } catch {
+    throw invalidCursorError();
+  }
 }
 
-function decodeCursor(value: string): URL {
+function decodeCursor(value: string, accessToken: string): URL {
   try {
-    const url = new URL(Buffer.from(value, "base64url").toString());
-    const isGraphMessagePage = url.origin === "https://graph.microsoft.com"
-      && url.pathname.startsWith("/v1.0/")
-      && url.pathname.endsWith("/messages");
+    const parts = value.split(".");
+    const [version, payload, signature] = parts;
+    if (
+      parts.length !== 3
+      || version !== cursorVersion
+      || !isBase64UrlSegment(payload)
+      || !isBase64UrlSegment(signature)
+    ) {
+      throw new Error("Malformed Outlook cursor");
+    }
 
-    if (!isGraphMessagePage) throw new Error("Unexpected Graph cursor URL");
+    const signedPayload = `${version}.${payload}`;
+    const expectedSignature = createHmac("sha256", accessToken)
+      .update(signedPayload)
+      .digest();
+    const providedSignature = Buffer.from(signature, "base64url");
+
+    if (
+      providedSignature.length !== expectedSignature.length
+      || !timingSafeEqual(providedSignature, expectedSignature)
+    ) {
+      throw new Error("Outlook cursor signature mismatch");
+    }
+
+    const encodedUrl = Buffer.from(payload, "base64url").toString("utf8");
+    if (Buffer.from(encodedUrl, "utf8").toString("base64url") !== payload) {
+      throw new Error("Non-canonical Outlook cursor payload");
+    }
+
+    const url = new URL(encodedUrl);
+    assertInboxMessagePage(url);
     return url;
   } catch {
-    throw new OutlookApiError("Invalid Outlook pagination cursor", 400, "provider");
+    throw invalidCursorError();
   }
+}
+
+function assertInboxMessagePage(url: URL): void {
+  if (
+    url.origin !== graphOrigin
+    || url.username
+    || url.password
+    || url.pathname !== inboxMessagePath
+    || url.hash
+  ) {
+    throw new Error("Unexpected Graph inbox cursor URL");
+  }
+}
+
+function isBase64UrlSegment(value: string | undefined): value is string {
+  return value !== undefined && value.length > 0 && /^[A-Za-z0-9_-]+$/.test(value);
+}
+
+function invalidCursorError(): OutlookApiError {
+  return new OutlookApiError("Invalid Outlook pagination cursor", 400, "provider");
 }
