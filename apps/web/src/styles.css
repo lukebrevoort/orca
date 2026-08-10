@@ -9,6 +9,7 @@
   --orca-surface-hover: rgba(31, 31, 29, 0.065);
   --orca-accent: #536b62;
   --orca-accent-soft: rgba(83, 107, 98, 0.11);
+  --orca-danger: #b44c42;
   --orca-blur-tint: rgba(244, 244, 242, 0.55);
   --orca-shadow: 0 24px 80px rgba(10, 10, 11, 0.12);
   --orca-canvas: #fbfbf9;
@@ -38,6 +39,7 @@
   --orca-surface-hover: rgba(235, 235, 231, 0.07);
   --orca-accent: #94aaa1;
   --orca-accent-soft: rgba(148, 170, 161, 0.12);
+  --orca-danger: #ef8c7f;
   --orca-blur-tint: rgba(10, 10, 11, 0.62);
   --orca-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
   --orca-canvas: #1d1d1b;
@@ -198,6 +200,22 @@ textarea {
 .settings-row-link { border-bottom: 1px solid var(--orca-border); color: var(--orca-ink); display: block; font-size: 14px; font-weight: 700; padding: 14px 0; transform-origin: left center; }
 .settings-row-link:hover { color: var(--orca-accent); transform: translateX(4px); }
 .settings-row-link:active { transform: translateX(4px) scale(.99); }
+.settings-account-list { display: grid; gap: 8px; margin: 18px 0 14px; }
+.settings-account-row { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 12px; display: flex; gap: 16px; justify-content: space-between; padding: 13px 14px; }
+.settings-account-row > div { display: grid; gap: 4px; min-width: 0; }
+.settings-account-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-account-provider { color: var(--orca-muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.settings-account-capability { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); flex: none; font-size: 10px; font-weight: 750; padding: 7px 9px; }
+.settings-account-status { color: var(--orca-muted); font-size: 13px; line-height: 1.5; margin: 0; }
+.settings-account-status-error, .settings-outlook-error { color: var(--orca-danger); }
+.settings-outlook-connect { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 14px; display: flex; gap: 18px; justify-content: space-between; margin-top: 14px; padding: 14px; }
+.settings-outlook-connect > div { display: grid; gap: 4px; min-width: 0; }
+.settings-outlook-connect strong { font-size: 13px; }
+.settings-outlook-connect span { color: var(--orca-muted); font-size: 12px; line-height: 1.45; }
+.settings-outlook-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; flex: none; font-size: 11px; font-weight: 750; padding: 10px 12px; }
+.settings-outlook-button:hover:not(:disabled) { background: var(--orca-control-hover); }
+.settings-outlook-button:disabled { cursor: wait; opacity: .64; }
+.settings-outlook-error { font-size: 12px; line-height: 1.5; margin: 10px 0 0; }
 .settings-field { display: grid; gap: 8px; margin-bottom: 22px; }.settings-field > span { font-size: 15px; font-weight: 750; }.settings-field textarea { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 12px; color: var(--orca-ink); line-height: 1.5; min-height: 104px; padding: 12px; resize: vertical; }.settings-field textarea:hover:not(:disabled) { background: var(--orca-surface-hover); }.settings-field textarea:focus { background: var(--orca-surface); border-color: var(--orca-accent); box-shadow: 0 0 0 3px var(--orca-accent-soft); transform: translateY(-1px); }
 .settings-section .preference-group { padding: 17px 0; }.settings-section .preference-group:first-child { padding-top: 0; }.settings-section .preference-group:last-child { border-bottom: 0; padding-bottom: 0; }
 .settings-capability { margin-top: 18px; }
@@ -730,7 +748,7 @@ textarea {
   max-width: 580px;
 }
 
-.oauth-google-button {
+.oauth-provider-button, .oauth-google-button {
   align-items: center;
   background: var(--orca-control);
   border: 1px solid transparent;
@@ -747,12 +765,20 @@ textarea {
   width: min(100%, 300px);
 }
 
-.oauth-google-button:hover:not(:disabled) { background: var(--orca-control-hover); }
+.oauth-provider-button:hover:not(:disabled), .oauth-google-button:hover:not(:disabled) { background: var(--orca-control-hover); }
 
-.oauth-google-button:disabled {
+.oauth-provider-button:disabled, .oauth-google-button:disabled {
   cursor: wait;
   opacity: 0.72;
 }
+
+.oauth-provider-list { display: grid; gap: 10px; margin-top: 32px; width: min(100%, 300px); }
+.oauth-provider-list .oauth-google-button { margin-top: 0; width: 100%; }
+.oauth-provider-separator { align-items: center; color: var(--orca-muted); display: flex; font-size: 11px; gap: 10px; justify-content: center; text-transform: uppercase; }
+.oauth-provider-separator::before, .oauth-provider-separator::after { background: var(--orca-border); content: ""; height: 1px; width: 100%; }
+.oauth-outlook-button { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-ink); cursor: pointer; display: inline-flex; font-weight: 700; gap: 12px; justify-content: center; min-height: 52px; padding: 0 20px; width: 100%; }
+.oauth-outlook-button:hover:not(:disabled) { background: var(--orca-surface-hover); }
+.oauth-outlook-button:disabled { cursor: wait; opacity: .72; }
 
 .oauth-enter-button {
   text-decoration: none;
@@ -877,6 +903,10 @@ textarea {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.oauth-setup-links { display: grid; gap: 12px; }
+.oauth-setup-links a { margin-top: 0; }
+.oauth-setup-links a + a { border-top: 1px solid var(--orca-border); padding-top: 12px; }
 
 .app-shell {
   display: grid;
@@ -4246,7 +4276,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .oauth-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; }
 .oauth-hero h1 { font-family: var(--orca-font-display); font-size: 44px; font-weight: 600; letter-spacing: -.05em; line-height: 1.04; margin: 28px 0 28px; max-width: 420px; }
 .oauth-hero > p:not(.oauth-eyebrow):not(.oauth-fine-print) { font-size: 15px; line-height: 1.6; max-width: 450px; }
-.oauth-google-button { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; box-shadow: 0 8px 20px rgb(15 36 34 / 10%); font-size: 14px; padding: 13px 22px; }
+.oauth-provider-button, .oauth-google-button, .oauth-outlook-button { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; box-shadow: 0 8px 20px rgb(15 36 34 / 10%); font-size: 14px; padding: 13px 22px; }
 .oauth-fine-print { font-size: 11px; max-width: 420px; }
 .oauth-setup-panel { background: var(--orca-surface); border: 0; border-radius: 24px; box-shadow: var(--orca-shadow); padding: 30px; }
 .oauth-setup-panel h2 { font-family: var(--orca-font-display); font-size: 16px; font-weight: 600; }
@@ -4312,6 +4342,8 @@ button, input, textarea { font-family: var(--orca-font-body); }
 @media (max-width: 560px) {
   .pin-sender-button { min-width: 32px; padding: 0; right: 62px; width: 32px; }
   .pin-sender-label { display: none; }
+  .settings-outlook-connect { align-items: stretch; flex-direction: column; }
+  .settings-outlook-button { width: 100%; }
 }
 
 @media (max-width: 860px) {
