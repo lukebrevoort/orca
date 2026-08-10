@@ -38,6 +38,186 @@ describe("Orca API", () => {
     assert.equal(response.status, 401);
   });
 
+  test("lists every connected provider and disconnects only owned accounts with local data", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 13).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-accounts-test-"));
+    const dbPath = join(tempDir, "accounts.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "accounts_user", email: "owner@example.com", displayName: "Owner" },
+        { id: "accounts_other", email: "other@example.com", displayName: "Other" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "gmail_account", userId: "accounts_user", provider: "gmail", providerEmail: "owner@gmail.com", providerId: "gmail-owner", scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "gmail-access", refreshTokenEncrypted: "gmail-refresh", createdAt: new Date(1) },
+        { id: "outlook_account", userId: "accounts_user", provider: "outlook", providerEmail: "owner@outlook.com", providerId: "outlook-owner", accessTokenEncrypted: "outlook-access", refreshTokenEncrypted: "outlook-refresh", createdAt: new Date(2) },
+        { id: "other_account", userId: "accounts_other", provider: "gmail", providerEmail: "other@gmail.com", providerId: "gmail-other", createdAt: new Date(3) },
+      ]).run();
+      db.insert(threads).values({ id: "outlook_thread", accountId: "outlook_account", providerThreadId: "provider-thread" }).run();
+      const session = await createSession(db, "accounts_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+
+      const list = await testApp.request("/v1/accounts", { headers });
+      assert.equal(list.status, 200);
+      assert.deepEqual(await list.json(), {
+        items: [
+          { id: "gmail_account", provider: "gmail", email: "owner@gmail.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
+          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", capabilities: { read: false, draft: false, send: false } },
+        ],
+        nextCursor: null,
+      });
+
+      assert.equal((await testApp.request("/v1/accounts/other_account", { method: "DELETE", headers })).status, 404);
+      assert.ok(db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "other_account")).get());
+
+      assert.equal((await testApp.request("/v1/accounts/outlook_account", { method: "DELETE", headers })).status, 204);
+      assert.equal(db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "outlook_account")).get(), undefined);
+      assert.equal(db.select().from(threads).where(eq(threads.id, "outlook_thread")).get(), undefined);
+      assert.equal((await testApp.request("/v1/accounts/outlook_account", { method: "DELETE", headers })).status, 404);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("keeps Gmail-only routes on Gmail when Outlook was connected first", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 15).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-mixed-provider-test-"));
+    const dbPath = join(tempDir, "mixed-provider.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "mixed_user", email: "mixed@example.com", displayName: "Mixed" }).run();
+      db.insert(oauthAccounts).values([
+        {
+          id: "outlook_account",
+          userId: "mixed_user",
+          provider: "outlook",
+          providerEmail: "mixed@outlook.com",
+          providerId: "outlook-mixed",
+          createdAt: new Date(1),
+        },
+        {
+          id: "gmail_account",
+          userId: "mixed_user",
+          provider: "gmail",
+          providerEmail: "mixed@gmail.com",
+          providerId: "gmail-mixed",
+          scope: "https://www.googleapis.com/auth/gmail.compose",
+          lastSyncedAt: new Date("2026-08-09T12:00:00.000Z"),
+          createdAt: new Date(2),
+        },
+      ]).run();
+      db.insert(threads).values({
+        id: "gmail_thread",
+        accountId: "gmail_account",
+        providerThreadId: "gmail-thread",
+        subject: "Gmail inbox",
+        latestReceivedAt: new Date("2026-08-09T13:00:00.000Z"),
+        messageCount: 1,
+      }).run();
+      db.insert(emails).values({
+        id: "gmail_email",
+        accountId: "gmail_account",
+        threadId: "gmail_thread",
+        providerMessageId: "gmail-message",
+        fromAddress: "maya@example.com",
+        subject: "Gmail inbox",
+        snippet: "Gmail message",
+        receivedAt: new Date("2026-08-09T13:00:00.000Z"),
+      }).run();
+      db.insert(labels).values([
+        { id: "outlook_label", accountId: "outlook_account", providerLabelId: "outlook-work", name: "Outlook label", type: "user" },
+        { id: "gmail_label", accountId: "gmail_account", providerLabelId: "gmail-work", name: "Gmail label", type: "user" },
+      ]).run();
+      db.insert(emailLabels).values({ id: "gmail_email_label", emailId: "gmail_email", labelId: "gmail_label" }).run();
+      db.insert(senderAttentionRules).values([
+        { id: "outlook_rule", accountId: "outlook_account", scope: "domain", value: "outlook.com", behavior: "quiet", source: "user_choice" },
+        { id: "gmail_rule", accountId: "gmail_account", scope: "domain", value: "example.com", behavior: "focus", source: "user_choice" },
+      ]).run();
+
+      const syncCalls: string[] = [];
+      const mirrorCalls: string[] = [];
+      const transportCalls: string[] = [];
+      const session = await createSession(db, "mixed_user");
+      const headers = { cookie: `orca_session=${session.token}` };
+      const jsonHeaders = { ...headers, "content-type": "application/json" };
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        syncPage: async (_database, input) => {
+          syncCalls.push(input.accountId);
+          return { accountId: input.accountId, emailCount: 1, threadCount: 1, labelCount: 1, contactCount: 1, nextCursor: null, lastSyncedAt: "2026-08-09T13:00:00.000Z" };
+        },
+        mirrorDraft: async (_database, input) => {
+          mirrorCalls.push(input.accountId);
+          return { providerDraftId: "gmail-draft", providerMessageId: "gmail-draft-message", providerThreadId: null };
+        },
+        gmailTransport: {
+          async saveDraft() { return { providerDraftId: "gmail-draft" }; },
+          async deleteDraft() {},
+          async send(_database, accountId) {
+            transportCalls.push(accountId);
+            return { providerMessageId: "gmail-sent", providerThreadId: "gmail-thread" };
+          },
+        },
+      });
+
+      const accounts = await testApp.request("/v1/accounts", { headers });
+      assert.deepEqual((await accounts.json()).items.map((account: { id: string }) => account.id), ["outlook_account", "gmail_account"]);
+
+      const me = await testApp.request("/v1/me", { headers });
+      assert.equal(me.status, 200);
+      assert.equal((await me.json()).id, "gmail_account");
+
+      const inbox = await testApp.request("/v1/inbox?view=all", { headers });
+      assert.equal(inbox.status, 200);
+      const inboxBody = await inbox.json();
+      assert.deepEqual(inboxBody.accounts.map((account: { id: string }) => account.id), ["outlook_account", "gmail_account"]);
+      assert.deepEqual(inboxBody.messages.map((message: { id: string; accountId: string }) => [message.id, message.accountId]), [["gmail_email", "gmail_account"]]);
+
+      const attention = await testApp.request("/v1/attention/rules", { headers });
+      assert.deepEqual((await attention.json()).map((rule: { id: string; accountId: string }) => [rule.id, rule.accountId]), [["gmail_rule", "gmail_account"]]);
+
+      const labelMigration = await testApp.request("/v1/gmail-label-migration", { headers });
+      assert.deepEqual((await labelMigration.json()).labels.map((label: { id: string; name: string }) => [label.id, label.name]), [["gmail_label", "Gmail label"]]);
+
+      const sync = await testApp.request("/v1/sync/gmail", { method: "POST", headers });
+      assert.equal(sync.status, 200);
+      assert.deepEqual(syncCalls, ["gmail_account"]);
+
+      const draftResponse = await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ subject: "Mixed-provider draft" }),
+      });
+      assert.equal(draftResponse.status, 201);
+      const draft = await draftResponse.json();
+      assert.equal(draft.accountId, "gmail_account");
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, draft.id)).get()?.providerSyncStatus === "synced");
+      assert.deepEqual(mirrorCalls, ["gmail_account"]);
+
+      const send = await testApp.request(`/v1/drafts/${draft.id}/send`, {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ revision: draft.revision, idempotencyKey: "mixed-provider-send" }),
+      });
+      assert.equal(send.status, 200);
+      assert.equal((await send.json()).status, "sent");
+      assert.deepEqual(transportCalls, ["gmail_account"]);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("requires a session before returning inbox data", async () => {
     const response = await app.request("/v1/inbox");
 
