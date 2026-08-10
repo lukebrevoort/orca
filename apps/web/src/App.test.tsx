@@ -19,7 +19,7 @@ describe("App", () => {
     expect(isSessionUnauthorizedError(new ApiRequestError(401, "Authentication required", "unauthorized"))).toBe(true);
   });
 
-  test("renders the Gmail OAuth login page on auth routes", () => {
+  test("renders the Gmail and Outlook OAuth choices on auth routes", () => {
     const originalWindow = globalThis.window;
     const localStorage = new Map<string, string>();
 
@@ -55,6 +55,8 @@ describe("App", () => {
 
       expect(html).toContain("Make room for <em>the people.</em>");
       expect(html).toContain("Continue with Google");
+      expect(html).toContain("Continue with Outlook");
+      expect(html).toContain("Outlook setup guide");
       expect(html).toContain("What happens next");
     } finally {
       Object.defineProperty(globalThis, "window", {
@@ -110,6 +112,8 @@ describe("App", () => {
     expect(html).toContain("Inbox &amp; attention");
     expect(html).toContain("/settings/attention-views");
     expect(html).toContain("/settings/integrations/gmail");
+    expect(html).toContain("Add Microsoft Outlook");
+    expect(html).toContain("Connect Outlook");
     expect(html).toContain("Writing");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
