@@ -633,6 +633,7 @@ function InboxApp({
   const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
+  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(null);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -727,7 +728,7 @@ function InboxApp({
 
         const inbox = await fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal);
         if (abortController.signal.aborted) return;
-        setAccount(inbox.account);
+        setAccount(inbox.accounts[0] ?? currentAccount);
         setMessages(inbox.messages);
         setStatus("ready");
 
@@ -845,21 +846,23 @@ function InboxApp({
     }));
   }, [activeCollectionId, activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
 
+  const readerAccountId = getSelectedThreadAccountId(messages, selectedThreadId, selectedThreadAccountId);
+
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
       return [];
     }
 
     return messages
-      .filter((message) => message.threadId === selectedThreadId)
+      .filter((message) => message.threadId === selectedThreadId && (!readerAccountId || message.accountId === readerAccountId))
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
-  }, [messages, selectedThreadId]);
+  }, [messages, readerAccountId, selectedThreadId]);
 
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
 
   useEffect(() => {
-    if (!selectedThreadId || !account) {
+    if (!selectedThreadId || !readerAccountId || !account) {
       setThreadDetail(null);
       setReaderStatus("idle");
       return;
@@ -876,7 +879,7 @@ function InboxApp({
     setThreadDetail(null);
     setReaderStatus("loading");
     setReaderError(null);
-    fetchJson(`/v1/threads/${encodeURIComponent(selectedThreadId)}?accountId=${encodeURIComponent(account.id)}`, threadDetailSchema, controller.signal)
+    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
       .then((detail) => {
         if (controller.signal.aborted) return;
         setThreadDetail(detail);
@@ -888,7 +891,7 @@ function InboxApp({
         setReaderError(getErrorMessage(error));
       });
     return () => controller.abort();
-  }, [account, demoMode, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
+  }, [account, demoMode, readerAccountId, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
@@ -1010,11 +1013,12 @@ function InboxApp({
       setZenClosing(false);
       originMessageIdRef.current = message.id;
       setSelectedThreadId(message.threadId);
+      setSelectedThreadAccountId(message.accountId);
     });
 
     if (message.unread) {
       if (!demoMode) {
-        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read`, { method: "PATCH", credentials: "include" }).catch(() => {});
+        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH", credentials: "include" }).catch(() => {});
       } else {
         writeDemoReadState(message.threadId);
       }
@@ -1027,6 +1031,7 @@ function InboxApp({
   function closeThread() {
     runUiTransition("reader-back", () => {
       setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
       setThreadDetail(null);
       setReaderStatus("idle");
     });
@@ -1097,6 +1102,7 @@ function InboxApp({
       setPersonFilter((current) => (current === name ? null : name));
       setActiveCollectionId(null);
       setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
       closePanel();
     });
   }
@@ -1108,6 +1114,7 @@ function InboxApp({
       setInboxFilter("all");
       setPersonFilter(null);
       setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
       setOrganizationOpen(false);
     });
   }
@@ -1117,6 +1124,7 @@ function InboxApp({
       setActiveCollectionId(id);
       setPersonFilter(null);
       setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
       setInboxFilter("all");
       setOrganizationOpen(false);
     });
@@ -1217,6 +1225,7 @@ function InboxApp({
         setPersonFilter(filter.person);
         setStreamQuery(filter.query);
         setSelectedThreadId(null);
+        setSelectedThreadAccountId(null);
         setOrganizationOpen(false);
       });
     }
@@ -3427,6 +3436,21 @@ function InboxStatusState({
       {action ? <div className="empty-state-actions">{action}</div> : null}
     </div>
   );
+}
+
+export function getSelectedThreadAccountId(
+  messages: InboxMessage[],
+  selectedThreadId: string | null,
+  selectedThreadAccountId: string | null,
+) {
+  if (!selectedThreadId) return null;
+  return selectedThreadAccountId
+    ?? messages.find((message) => message.threadId === selectedThreadId)?.accountId
+    ?? null;
+}
+
+export function buildThreadDetailRequest(message: Pick<InboxMessage, "threadId" | "accountId">) {
+  return `/v1/threads/${encodeURIComponent(message.threadId)}?accountId=${encodeURIComponent(message.accountId)}`;
 }
 
 export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox, attentionByAddress: Record<string, AttentionBehavior> = {}) {

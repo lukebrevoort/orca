@@ -79,9 +79,9 @@ describe("first-slice API smoke test", () => {
       const inboxResponse = await api.request("/v1/inbox", { headers });
       assert.equal(inboxResponse.status, 200);
       const inbox = await inboxResponse.json();
-      assert.equal(inbox.account.email, "luke@example.com");
+      assert.deepEqual(inbox.accounts.map((account: { email: string }) => account.email), ["luke@example.com"]);
       assert.deepEqual(inbox.messages, [{
-        id: "email_smoke", provider: "gmail", providerMessageId: "message-smoke", threadId: "thread_smoke",
+        id: "email_smoke", accountId: "acct_smoke", provider: "gmail", providerMessageId: "message-smoke", threadId: "thread_smoke",
         from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Smoke coverage", snippet: "A seeded inbox message",
         receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"], attentionBehavior: "normal", humanSignal: null,
       }]);

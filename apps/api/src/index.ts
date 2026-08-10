@@ -78,6 +78,8 @@ const defaultViewSettings = [
   { behavior: "hidden", displayName: "Hidden", icon: "eye-off", color: "#475569", position: 4 },
 ] as const;
 
+const defaultInboxLimit = 100;
+
 const collectionColors = ["#70867d", "#a87360", "#6c8195", "#83728d", "#a18757", "#6d716f"] as const;
 
 export function createApp(options: CreateAppOptions = {}): Hono<{
@@ -938,46 +940,65 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { view } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view } = c.req.valid("query");
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
-        if (!account) {
-          return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
+        const accounts = getUnifiedInboxAccounts(db, c.get("auth").userId);
+        if (accounts.length === 0) {
+          return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
         }
-        const rows = db.select({
-          id: emails.id,
-          providerMessageId: emails.providerMessageId,
-          threadId: emails.threadId,
-          fromAddress: emails.fromAddress,
-          fromName: emails.fromName,
-          subject: emails.subject,
-          snippet: emails.snippet,
-          receivedAt: emails.receivedAt,
-          isRead: emails.isRead,
-          humanSignal: emails.humanSignal,
-          labelName: labels.name,
-        }).from(emails)
-          .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
-          .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-          .where(eq(emails.accountId, account.id))
-          .orderBy(desc(emails.receivedAt))
-          .limit(100)
-          .all();
-        const byId = new Map<string, { id: string; providerMessageId: string; threadId: string; fromAddress: string | null; fromName: string | null; subject: string | null; snippet: string | null; receivedAt: Date | null; isRead: boolean; humanSignal: number | null; labels: string[] }>();
-        for (const row of rows) {
-          const message = byId.get(row.id) ?? {
-            ...row,
-            labels: [],
-          };
-          if (row.labelName) message.labels.push(row.labelName);
-          byId.set(row.id, message);
+
+        const resolved: ResolvedInboxMessage[] = [];
+        for (const account of accounts) {
+          const rows = db.select({
+            id: emails.id,
+            accountId: emails.accountId,
+            providerMessageId: emails.providerMessageId,
+            threadId: emails.threadId,
+            fromAddress: emails.fromAddress,
+            fromName: emails.fromName,
+            subject: emails.subject,
+            snippet: emails.snippet,
+            receivedAt: emails.receivedAt,
+            isRead: emails.isRead,
+            humanSignal: emails.humanSignal,
+            labelName: labels.name,
+          }).from(emails)
+            .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
+            .leftJoin(labels, eq(labels.id, emailLabels.labelId))
+            .where(eq(emails.accountId, account.id))
+            .orderBy(desc(emails.receivedAt), asc(emails.id), asc(labels.name))
+            .all();
+          const byId = new Map<string, InboxDatabaseMessage>();
+          for (const row of rows) {
+            const message = byId.get(row.id) ?? {
+              id: row.id,
+              accountId: row.accountId,
+              providerMessageId: row.providerMessageId,
+              threadId: row.threadId,
+              fromAddress: row.fromAddress,
+              fromName: row.fromName,
+              subject: row.subject,
+              snippet: row.snippet,
+              receivedAt: row.receivedAt,
+              isRead: row.isRead,
+              humanSignal: row.humanSignal,
+              labels: [],
+            };
+            if (row.labelName && !message.labels.includes(row.labelName)) message.labels.push(row.labelName);
+            byId.set(row.id, message);
+          }
+
+          const rules = listSenderRules(db, account.id);
+          for (const message of byId.values()) {
+            resolved.push({
+              ...message,
+              provider: account.provider,
+              attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
+            });
+          }
         }
-        const rules = listSenderRules(db, account.id);
-        const resolved = [...byId.values()].map((message) => ({
-          ...message,
-          attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
-        }));
+
         const counts = {
           focus: resolved.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
           normal: resolved.filter((message) => message.attentionBehavior === "normal").length,
@@ -986,15 +1007,20 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           all: resolved.length,
         };
         const filtered = resolved.filter((message) => matchesAttentionView(message.attentionBehavior, view));
-        const attentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
-        filtered.sort((a, b) => attentionRank[a.attentionBehavior] - attentionRank[b.attentionBehavior]
-          || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
-          || a.id.localeCompare(b.id));
+        filtered.sort(compareInboxMessages);
+        const cursorTarget = decodeInboxCursor(cursor);
+        const cursorIndex = cursorTarget
+          ? filtered.findIndex((message) => message.id === cursorTarget.id && (!cursorTarget.accountId || message.accountId === cursorTarget.accountId))
+          : -1;
+        const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+        const page = filtered.slice(start, start + limit);
+        const lastMessage = page.at(-1);
         return jsonWithSchema(c, inboxResponseSchema, {
-          account: toMailAccount(account),
-          messages: filtered.map((message) => ({
+          accounts: accounts.map(toMailAccount),
+          messages: page.map((message) => ({
             id: message.id,
-            provider: "gmail",
+            accountId: message.accountId,
+            provider: message.provider,
             providerMessageId: message.providerMessageId,
             threadId: message.threadId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
@@ -1007,7 +1033,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             humanSignal: message.humanSignal,
           })),
           counts,
-          nextCursor: null,
+          nextCursor: lastMessage && start + page.length < filtered.length
+            ? encodeInboxCursor(lastMessage)
+            : null,
         });
       } finally {
         sqlite.close();
@@ -1061,7 +1089,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const messages = [...messagesById.values()].map((message) => {
           const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
           return {
-            id: message.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
+            id: message.id, accountId: account.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
             to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
@@ -1095,11 +1123,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/threads/:threadId/read",
+    validator("query", (value, c) => {
+      const result = threadQuerySchema.safeParse(value);
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to mark a thread as read" } }, 400);
+      return result.data;
+    }),
     requireAuth({ dbFactory }),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return noConnectedAccount(c);
         const thread = db.select().from(threads)
           .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
@@ -1192,6 +1225,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
 type ConnectedAccount = {
   id: string;
+  provider: "gmail" | "outlook";
   providerEmail: string;
   displayName: string | null;
   accessTokenEncrypted: string | null;
@@ -1199,6 +1233,28 @@ type ConnectedAccount = {
   lastSyncedAt: Date | null;
   scope: string | null;
 };
+
+type InboxDatabaseMessage = {
+  id: string;
+  accountId: string;
+  providerMessageId: string;
+  threadId: string;
+  fromAddress: string | null;
+  fromName: string | null;
+  subject: string | null;
+  snippet: string | null;
+  receivedAt: Date | null;
+  isRead: boolean;
+  humanSignal: number | null;
+  labels: string[];
+};
+
+type ResolvedInboxMessage = InboxDatabaseMessage & {
+  provider: ConnectedAccount["provider"];
+  attentionBehavior: AttentionBehavior;
+};
+
+type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id">;
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
@@ -1438,6 +1494,35 @@ function matchesAttentionView(behavior: AttentionBehavior, view?: "focus" | "nor
   if (view === "all") return true;
   if (view === "focus") return behavior === "notify" || behavior === "focus";
   return behavior === view;
+}
+
+const inboxAttentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
+
+function compareInboxMessages(a: ResolvedInboxMessage, b: ResolvedInboxMessage) {
+  return inboxAttentionRank[a.attentionBehavior] - inboxAttentionRank[b.attentionBehavior]
+    || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
+    || a.accountId.localeCompare(b.accountId)
+    || a.id.localeCompare(b.id);
+}
+
+function encodeInboxCursor(message: InboxCursor) {
+  return Buffer.from(JSON.stringify(message), "utf8").toString("base64url");
+}
+
+function decodeInboxCursor(value: string | undefined): InboxCursor | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<InboxCursor>;
+    if (typeof parsed.accountId === "string" && parsed.accountId.length > 0 && typeof parsed.id === "string" && parsed.id.length > 0) {
+      return { accountId: parsed.accountId, id: parsed.id };
+    }
+  } catch {
+    // Keep accepting legacy opaque cursors. They cannot select a page unless
+    // they identify a returned message, but they remain safe to retry.
+  }
+
+  return { accountId: "", id: value };
 }
 
 function uniqueRuleError(c: Context, error: unknown) {
@@ -1682,8 +1767,24 @@ function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db
 }
 
 function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
+  return selectConnectedAccounts(db, userId, "gmail");
+}
+
+function getUnifiedInboxAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
+  return selectConnectedAccounts(db, userId);
+}
+
+function selectConnectedAccounts(
+  db: ReturnType<typeof createDatabaseClient>["db"],
+  userId: string,
+  provider?: ConnectedAccount["provider"],
+): ConnectedAccount[] {
+  const ownership = provider
+    ? and(eq(oauthAccounts.userId, userId), eq(oauthAccounts.provider, provider))
+    : eq(oauthAccounts.userId, userId);
   return db.select({
     id: oauthAccounts.id,
+    provider: oauthAccounts.provider,
     providerEmail: oauthAccounts.providerEmail,
     displayName: users.displayName,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
@@ -1693,17 +1794,20 @@ function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"],
   })
     .from(oauthAccounts)
     .innerJoin(users, eq(users.id, oauthAccounts.userId))
-    .where(and(eq(oauthAccounts.userId, userId), eq(oauthAccounts.provider, "gmail")))
-    .all();
+    .where(ownership)
+    .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
+    .all() as ConnectedAccount[];
 }
 
 function toMailAccount(account: ConnectedAccount) {
   return {
     id: account.id,
-    provider: "gmail" as const,
+    provider: account.provider,
     email: account.providerEmail,
     displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
-    capabilities: detectGmailCapabilities(account.scope),
+    capabilities: account.provider === "gmail"
+      ? detectGmailCapabilities(account.scope)
+      : { read: true, draft: false, send: false },
   };
 }
 

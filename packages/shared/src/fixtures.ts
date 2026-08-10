@@ -23,6 +23,7 @@ export const authSessionFixture = authSessionSchema.parse({
 export const inboxFixture = z.array(inboxMessageSchema).parse([
   {
     id: "msg_local_1",
+    accountId: accountFixture.id,
     provider: "gmail",
     providerMessageId: "gmail_msg_local_1",
     threadId: "thread_local_1",

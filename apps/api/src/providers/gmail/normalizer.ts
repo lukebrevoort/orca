@@ -31,6 +31,7 @@ export function normalizeGmailMessage(
 
   return {
     id: buildProviderScopedId(options.accountId, message.id),
+    accountId: options.accountId,
     provider: "gmail",
     providerMessageId: message.id,
     threadId: buildProviderScopedId(options.accountId, message.threadId),
