@@ -58,6 +58,20 @@ Default local URLs:
 - API: `http://localhost:3000`
 - Web: `http://localhost:5173`
 
+## Connected accounts API
+
+`GET /v1/accounts` returns every Gmail and Outlook account connected to the
+authenticated Orca user as a provider-neutral account page. `DELETE
+/v1/accounts/:id` disconnects only an account owned by that user and returns
+`204 No Content` (or `404` when the account is absent or belongs to another
+user).
+
+Disconnecting deletes the local OAuth account, encrypted provider tokens, and
+all locally stored account-scoped data through SQLite foreign-key cascades,
+including cached threads, messages, labels, contacts, drafts, collections,
+pins, reminders, and attention settings. It does not delete or modify mail or
+settings at Gmail or Outlook. Reconnecting starts with a fresh local cache.
+
 ## Checks
 
 ```bash

@@ -21,6 +21,7 @@ import {
   createSenderAttentionRuleSchema,
   inboxQuerySchema,
   inboxResponseSchema,
+  mailAccountPageSchema,
   mailAccountSchema,
   messageDraftSchema,
   pinFilterSchema,
@@ -161,6 +162,35 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
       }
       return jsonWithSchema(c, mailAccountSchema, toMailAccount(account));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/accounts", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      return jsonWithSchema(c, mailAccountPageSchema, {
+        items: getUnifiedInboxAccounts(db, c.get("auth").userId).map(toMailAccount),
+        nextCursor: null,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.delete("/v1/accounts/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const deleted = db.delete(oauthAccounts)
+        .where(and(eq(oauthAccounts.id, c.req.param("id")), eq(oauthAccounts.userId, c.get("auth").userId)))
+        .returning({ id: oauthAccounts.id })
+        .get();
+      if (!deleted) {
+        return c.json({ error: { code: "not_found", message: "Connected account not found" } }, 404);
+      }
+      syncStatuses.delete(deleted.id);
+      return c.body(null, 204);
     } finally {
       sqlite.close();
     }

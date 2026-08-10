@@ -34,6 +34,53 @@ describe("Orca API", () => {
     assert.equal(response.status, 401);
   });
 
+  test("lists every connected provider and disconnects only owned accounts with local data", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 13).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-accounts-test-"));
+    const dbPath = join(tempDir, "accounts.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "accounts_user", email: "owner@example.com", displayName: "Owner" },
+        { id: "accounts_other", email: "other@example.com", displayName: "Other" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "gmail_account", userId: "accounts_user", provider: "gmail", providerEmail: "owner@gmail.com", providerId: "gmail-owner", scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "gmail-access", refreshTokenEncrypted: "gmail-refresh", createdAt: new Date(1) },
+        { id: "outlook_account", userId: "accounts_user", provider: "outlook", providerEmail: "owner@outlook.com", providerId: "outlook-owner", accessTokenEncrypted: "outlook-access", refreshTokenEncrypted: "outlook-refresh", createdAt: new Date(2) },
+        { id: "other_account", userId: "accounts_other", provider: "gmail", providerEmail: "other@gmail.com", providerId: "gmail-other", createdAt: new Date(3) },
+      ]).run();
+      db.insert(threads).values({ id: "outlook_thread", accountId: "outlook_account", providerThreadId: "provider-thread" }).run();
+      const session = await createSession(db, "accounts_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+
+      const list = await testApp.request("/v1/accounts", { headers });
+      assert.equal(list.status, 200);
+      assert.deepEqual(await list.json(), {
+        items: [
+          { id: "gmail_account", provider: "gmail", email: "owner@gmail.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
+          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
+        ],
+        nextCursor: null,
+      });
+
+      assert.equal((await testApp.request("/v1/accounts/other_account", { method: "DELETE", headers })).status, 404);
+      assert.ok(db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "other_account")).get());
+
+      assert.equal((await testApp.request("/v1/accounts/outlook_account", { method: "DELETE", headers })).status, 204);
+      assert.equal(db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "outlook_account")).get(), undefined);
+      assert.equal(db.select().from(threads).where(eq(threads.id, "outlook_thread")).get(), undefined);
+      assert.equal((await testApp.request("/v1/accounts/outlook_account", { method: "DELETE", headers })).status, 404);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("requires a session before returning inbox data", async () => {
     const response = await app.request("/v1/inbox");
 
