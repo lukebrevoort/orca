@@ -11,7 +11,11 @@ import { createDatabaseClient } from "./db/client.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
+import { gmailProvider } from "./providers/gmail/provider.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
+import { outlookProvider } from "./providers/outlook/provider.ts";
+import { ProviderRegistry } from "./providers/registry.ts";
+import type { MailProviderAdapter, ProviderTransport } from "./providers/shared/interfaces.ts";
 
 async function waitFor(predicate: () => boolean, timeoutMs = 1_000) {
   const deadline = Date.now() + timeoutMs;
@@ -61,7 +65,7 @@ describe("Orca API", () => {
       assert.deepEqual(await list.json(), {
         items: [
           { id: "gmail_account", provider: "gmail", email: "owner@gmail.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
-          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
+          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", capabilities: { read: false, draft: false, send: false } },
         ],
         nextCursor: null,
       });
@@ -549,6 +553,156 @@ describe("Orca API", () => {
       await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, racingCreated.id)).get()?.providerSyncStatus === "synced");
       assert.deepEqual(mirroredSubjects.slice(-2), ["Race one", "Race two"]);
       assert.equal(mirroredProviderIds.at(-1), "gmail-draft-1");
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("dispatches account lifecycle through a partial custom registry", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 15).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-provider-registry-app-test-"));
+    const dbPath = join(tempDir, "provider-registry.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "provider_user", email: "provider@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "provider_account",
+        userId: "provider_user",
+        provider: "gmail",
+        providerEmail: "provider@example.com",
+        providerId: "custom-gmail",
+      }).run();
+      const session = await createSession(db, "provider_user");
+      const calls: string[] = [];
+      const transport: ProviderTransport = {
+        async saveDraft(_db, accountId, draft) {
+          calls.push(`save:${accountId}:${draft.subject}`);
+          return {
+            providerDraftId: "custom-draft",
+            providerMessageId: "custom-message",
+            providerThreadId: "custom-thread",
+          };
+        },
+        async deleteDraft(_db, accountId, providerDraftId) {
+          calls.push(`delete:${accountId}:${providerDraftId}`);
+        },
+        async send(_db, accountId, draft) {
+          calls.push(`send:${accountId}:${draft.subject}`);
+          return { providerMessageId: "sent-message", providerThreadId: "sent-thread" };
+        },
+      };
+      const customProvider: MailProviderAdapter = {
+        ...gmailProvider,
+        detectCapabilities: () => ({ read: true, draft: true, send: true }),
+        async syncPage(_db, input) {
+          calls.push(`sync:${input.accountId}`);
+          return { nextCursor: null, emailCount: 1, threadCount: 1, labelCount: 0, contactCount: 1 };
+        },
+        createTransport: () => transport,
+      };
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        providerRegistry: new ProviderRegistry([customProvider]),
+      });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      const accountResponse = await testApp.request("/v1/me", { headers });
+      assert.equal(accountResponse.status, 200);
+      assert.deepEqual((await accountResponse.json()).capabilities, { read: true, draft: true, send: true });
+
+      const syncResponse = await testApp.request("/v1/sync/gmail", { method: "POST", headers });
+      assert.equal(syncResponse.status, 200);
+      assert.deepEqual(calls, ["sync:provider_account"]);
+
+      const draftResponse = await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ subject: "Custom provider draft" }),
+      });
+      assert.equal(draftResponse.status, 201);
+      const draft = await draftResponse.json();
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, draft.id)).get()?.providerSyncStatus === "synced");
+
+      const sendResponse = await testApp.request(`/v1/drafts/${draft.id}/send`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ revision: 0, idempotencyKey: "custom-provider-send" }),
+      });
+      assert.equal(sendResponse.status, 200);
+      assert.equal((await sendResponse.json()).providerMessageId, "sent-message");
+
+      const deletableResponse = await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ subject: "Delete me" }),
+      });
+      const deletable = await deletableResponse.json();
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, deletable.id)).get()?.providerSyncStatus === "synced");
+      assert.equal((await testApp.request(`/v1/drafts/${deletable.id}`, { method: "DELETE", headers })).status, 204);
+
+      assert.deepEqual(calls, [
+        "sync:provider_account",
+        "save:provider_account:Custom provider draft",
+        "send:provider_account:Custom provider draft",
+        "save:provider_account:Delete me",
+        "delete:provider_account:custom-draft",
+      ]);
+      assert.equal((await testApp.request("/v1/auth/gmail/connect")).status, 401);
+      assert.equal((await testApp.request("/v1/auth/outlook/connect")).status, 404);
+
+      const outlookOnlyApp = createApp({ providerRegistry: new ProviderRegistry([outlookProvider]) });
+      assert.equal((await outlookOnlyApp.request("/v1/auth/outlook/connect")).status, 501);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("dispatches a registered Outlook account and keeps unsupported sync explicit", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 16).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-outlook-provider-app-test-"));
+    const dbPath = join(tempDir, "outlook-provider.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "outlook_user", email: "outlook@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "outlook_account",
+        userId: "outlook_user",
+        provider: "outlook",
+        providerEmail: "outlook@example.com",
+        providerId: "microsoft-account",
+      }).run();
+      const session = await createSession(db, "outlook_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+
+      const accountResponse = await testApp.request("/v1/me", { headers });
+      assert.equal(accountResponse.status, 200);
+      assert.deepEqual(await accountResponse.json(), {
+        id: "outlook_account",
+        provider: "outlook",
+        email: "outlook@example.com",
+        displayName: "outlook",
+        capabilities: { read: false, draft: false, send: false },
+      });
+
+      const syncResponse = await testApp.request("/v1/sync/gmail", { method: "POST", headers });
+      assert.equal(syncResponse.status, 501);
+      assert.deepEqual(await syncResponse.json(), {
+        error: {
+          code: "provider_not_implemented",
+          message: "Outlook sync is not implemented",
+        },
+      });
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
