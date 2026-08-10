@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { ApiRequestError, App, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import { ApiRequestError, App, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -71,6 +71,11 @@ describe("App", () => {
     expect(html).toContain("nothing in Gmail is changed");
     expect(html).toContain("Labels are never renamed, removed, or edited");
     expect(html).toContain("Checking your Gmail organization");
+  });
+
+  test("keeps adding another Gmail account discoverable in connection settings", () => {
+    const html = renderToStaticMarkup(<GmailConnectionSettingsPage setTheme={() => {}} theme="light" />);
+    expect(html).toContain("Add Gmail account");
   });
 
   test("orients new users without making Gmail labels part of sign-in", () => {

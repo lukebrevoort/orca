@@ -11,7 +11,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -1517,7 +1517,7 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
-  const [account, setAccount] = useState<MailAccount | null>(null);
+  const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [authorizationStatus, setAuthorizationStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -1525,13 +1525,14 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchJson("/v1/me", meResponseSchema, controller.signal)
-      .then((next) => { setAccount(next); setStatus("ready"); })
+    fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal)
+      .then((next) => { setAccounts(next.items.filter((account) => account.provider === "gmail")); setStatus("ready"); })
       .catch((error) => { if (!controller.signal.aborted) { setStatus("error"); setErrorMessage(getErrorMessage(error)); } });
     return () => controller.abort();
   }, []);
 
   const returnTo = typeof window === "undefined" ? "/settings/integrations/gmail" : `${window.location.origin}/settings/integrations/gmail`;
+  const account = accounts[0] ?? null;
 
   return (
     <main className="gmail-settings-page">
@@ -1553,8 +1554,10 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
           {status === "loading" ? <p>Checking the confirmed Google grant…</p> : null}
           {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>Connection needs attention</strong><span>{errorMessage}</span></div> : null}
           {returnStatus?.intent === "upgrade" ? <OAuthUpgradeReturnNotice status={returnStatus} /> : null}
+          {accounts.length > 0 ? <div className="gmail-connected-list" aria-label="Connected Gmail accounts">
+            {accounts.map((connectedAccount) => <div className="gmail-account-heading" key={connectedAccount.id}><div><span>Connected account</span><strong>{connectedAccount.email}</strong></div><span className="gmail-capability-badge">{connectedAccount.capabilities.send ? "Compose + send" : "Read-only"}</span></div>)}
+          </div> : null}
           {account ? <>
-            <div className="gmail-account-heading"><div><span>Connected account</span><strong>{account.email}</strong></div><span className="gmail-capability-badge">{account.capabilities.send ? "Compose + send" : "Read-only"}</span></div>
             <div className="gmail-capability-grid">
               <CapabilityRow active={account.capabilities.read} label="Read inbox" note="Keeps Orca synced with incoming mail." />
               <CapabilityRow active={account.capabilities.draft} label="Manage Gmail drafts" note="Creates and updates only messages you write." />
@@ -1572,6 +1575,7 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
               <a href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
             </footer>
           </> : null}
+          <footer className="gmail-settings-actions"><button disabled={status === "loading" || authorizationStatus === "loading"} onClick={() => void beginGmailAuthorization("connect", returnTo, null, setAuthorizationStatus, setErrorMessage)} type="button">{authorizationStatus === "loading" ? "Opening Google…" : "Add Gmail account"}</button></footer>
         </section>
       </section>
     </main>
