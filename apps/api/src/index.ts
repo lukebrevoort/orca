@@ -991,9 +991,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
           || a.id.localeCompare(b.id));
         return jsonWithSchema(c, inboxResponseSchema, {
-          account: toMailAccount(account),
+          accounts: [toMailAccount(account)],
           messages: filtered.map((message) => ({
             id: message.id,
+            accountId: account.id,
             provider: "gmail",
             providerMessageId: message.providerMessageId,
             threadId: message.threadId,
@@ -1061,7 +1062,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const messages = [...messagesById.values()].map((message) => {
           const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
           return {
-            id: message.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
+            id: message.id, accountId: account.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
             to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
@@ -1095,11 +1096,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   app.patch(
     "/v1/threads/:threadId/read",
+    validator("query", (value, c) => {
+      const result = threadQuerySchema.safeParse(value);
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to mark a thread as read" } }, 400);
+      return result.data;
+    }),
     requireAuth({ dbFactory }),
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return noConnectedAccount(c);
         const thread = db.select().from(threads)
           .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();

@@ -727,7 +727,7 @@ function InboxApp({
 
         const inbox = await fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal);
         if (abortController.signal.aborted) return;
-        setAccount(inbox.account);
+        setAccount(inbox.accounts[0] ?? currentAccount);
         setMessages(inbox.messages);
         setStatus("ready");
 
@@ -1014,7 +1014,7 @@ function InboxApp({
 
     if (message.unread) {
       if (!demoMode) {
-        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read`, { method: "PATCH", credentials: "include" }).catch(() => {});
+        fetch(`/v1/threads/${encodeURIComponent(message.threadId)}/read?accountId=${encodeURIComponent(message.accountId)}`, { method: "PATCH", credentials: "include" }).catch(() => {});
       } else {
         writeDemoReadState(message.threadId);
       }

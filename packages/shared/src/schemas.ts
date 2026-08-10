@@ -78,6 +78,7 @@ export type SyncStatus = z.infer<typeof syncStatusSchema>;
 export const inboxMessageSchema = z
   .object({
     id: nonEmptyStringSchema,
+    accountId: nonEmptyStringSchema,
     provider: mailProviderSchema,
     providerMessageId: nonEmptyStringSchema,
     threadId: nonEmptyStringSchema,
@@ -566,7 +567,7 @@ export type NormalizedLabelPage = z.infer<typeof normalizedLabelPageSchema>;
 
 export const inboxResponseSchema = z
   .object({
-    account: mailAccountSchema,
+    accounts: z.array(mailAccountSchema),
     messages: z.array(inboxMessageSchema),
     counts: z.object({
       focus: z.number().int().nonnegative(),

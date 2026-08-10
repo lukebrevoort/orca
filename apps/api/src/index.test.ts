@@ -1015,7 +1015,7 @@ describe("Orca API", () => {
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
       const headers = { cookie: `orca_session=${session.token}` };
 
-      const response = await testApp.request("/v1/threads/thread_1/read", { method: "PATCH", headers });
+      const response = await testApp.request("/v1/threads/thread_1/read?accountId=acct_1", { method: "PATCH", headers });
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { ok: true });
 
@@ -1028,10 +1028,13 @@ describe("Orca API", () => {
       const threadRow = sqlite.query("select is_read from threads where id = 'thread_1'").get() as { is_read: number };
       assert.equal(threadRow.is_read, 1);
 
-      const missingAccount = await testApp.request("/v1/threads/thread_1/read", { method: "PATCH" });
+      const missingAccount = await testApp.request("/v1/threads/thread_1/read?accountId=acct_1", { method: "PATCH" });
       assert.equal(missingAccount.status, 401);
 
-      const missingThread = await testApp.request("/v1/threads/nonexistent/read", { method: "PATCH", headers });
+      const missingQuery = await testApp.request("/v1/threads/thread_1/read", { method: "PATCH", headers });
+      assert.equal(missingQuery.status, 400);
+
+      const missingThread = await testApp.request("/v1/threads/nonexistent/read?accountId=acct_1", { method: "PATCH", headers });
       assert.equal(missingThread.status, 404);
     } finally {
       sqlite.close();

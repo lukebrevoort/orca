@@ -690,6 +690,7 @@ describe("App", () => {
 function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyText = id): ThreadDetailMessage {
   return {
     id,
+    accountId: "account",
     provider: "gmail",
     providerMessageId: `provider-${id}`,
     from: { name: "Maya Chen", email: "maya@example.com" },
