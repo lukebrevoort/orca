@@ -1,0 +1,40 @@
+import { describe, expect, test } from "bun:test";
+import { decryptSecret } from "../gmail/crypto.ts";
+import { InMemoryOAuthAccountStore } from "../gmail/oauth-accounts.ts";
+import { createOutlookOAuthService } from "./oauth.ts";
+import type { OutlookOAuthConfig } from "./config.ts";
+
+const key = Buffer.alloc(32, 7).toString("base64");
+const config: OutlookOAuthConfig = { clientId: "client", clientSecret: "secret", tenant: "common", redirectUri: "http://localhost:3000/v1/auth/outlook/callback", scopes: ["openid", "offline_access", "User.Read", "Mail.Read"], tokenEncryptionKey: key, stateSecret: "state-secret", successRedirectUrl: "http://localhost:5173/onboarding", errorRedirectUrl: "http://localhost:5173/login", webOrigin: "http://localhost:5173" };
+
+describe("Outlook OAuth", () => {
+  test("uses read-first Microsoft scopes and persists encrypted tokens", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const requests: string[] = [];
+    const service = createOutlookOAuthService({ config, store, fetch: async (input) => {
+      requests.push(String(input));
+      if (String(input).includes("/token")) return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 3600, scope: "User.Read Mail.Read offline_access" });
+      return Response.json({ id: "microsoft-user", mail: "person@outlook.com" });
+    } });
+    const authorization = service.getAuthorizationUrl("http://localhost:5173/onboarding", true);
+    const authUrl = new URL(authorization.url);
+    expect(authUrl.hostname).toBe("login.microsoftonline.com");
+    expect(authUrl.searchParams.get("scope")).toContain("Mail.Read");
+    expect(authUrl.searchParams.get("scope")).not.toContain("Mail.ReadWrite");
+
+    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: authorization.state }), "user-1");
+    expect(result.ok).toBe(true);
+    expect(requests).toEqual([expect.stringContaining("/token"), "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName"]);
+    const account = store.getAll()[0]!;
+    expect(account.provider).toBe("outlook");
+    expect(account.encryptedAccessToken).not.toContain("access");
+    expect(decryptSecret(account.encryptedAccessToken, key)).toBe("access");
+  });
+
+  test("rejects a tampered state before exchanging tokens", async () => {
+    const service = createOutlookOAuthService({ config, store: new InMemoryOAuthAccountStore(), fetch: async () => { throw new Error("must not fetch"); } });
+    const { state } = service.getAuthorizationUrl();
+    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: `${state}x` }), "user-1");
+    expect(result).toMatchObject({ ok: false, code: "invalid_state" });
+  });
+});

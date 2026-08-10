@@ -1,4 +1,5 @@
 import { and, asc, eq, sql } from "drizzle-orm";
+import type { MailProvider } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts } from "../../db/schema.ts";
@@ -8,7 +9,7 @@ type DatabaseFactory = typeof createDatabaseClient;
 export type OAuthAccountRecord = {
   id: string;
   userId: string;
-  provider: "gmail";
+  provider: MailProvider;
   providerAccountId: string;
   providerEmail: string;
   grantedScopes: string[];
@@ -21,7 +22,7 @@ export type OAuthAccountRecord = {
 
 export type OAuthAccountUpsert = {
   userId: string;
-  provider: "gmail";
+  provider: MailProvider;
   providerAccountId: string;
   providerEmail: string;
   grantedScopes: string[];
@@ -72,7 +73,10 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
 }
 
 export class DatabaseOAuthAccountStore implements OAuthAccountStore {
-  constructor(private readonly dbFactory: DatabaseFactory = createDatabaseClient) {}
+  constructor(
+    private readonly dbFactory: DatabaseFactory = createDatabaseClient,
+    private readonly provider: MailProvider = "gmail",
+  ) {}
 
   async findById(userId: string, accountId: string): Promise<OAuthAccountRecord | null> {
     const { db, sqlite } = this.dbFactory();
@@ -92,7 +96,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
     try {
       const record = db.select().from(oauthAccounts).where(and(
         eq(oauthAccounts.userId, userId),
-        eq(oauthAccounts.provider, "gmail"),
+        eq(oauthAccounts.provider, this.provider),
       )).orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id)).get();
       return record ? mapRecord(record) : null;
     } finally {
@@ -164,7 +168,7 @@ function mapRecord(record: typeof oauthAccounts.$inferSelect): OAuthAccountRecor
   return {
     id: record.id,
     userId: record.userId,
-    provider: "gmail",
+    provider: record.provider as MailProvider,
     providerAccountId: record.providerId,
     providerEmail: record.providerEmail,
     grantedScopes: record.scope ? record.scope.split(/\s+/).filter(Boolean) : [],

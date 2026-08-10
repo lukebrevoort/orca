@@ -33,16 +33,10 @@ describe("provider registry", () => {
     });
   });
 
-  test("Outlook exposes registered, explicit stubs", async () => {
+  test("Outlook exposes read capabilities while sync remains an explicit stub", async () => {
     expect(outlookProvider.detectCapabilities(null)).toEqual({ read: false, draft: false, send: false });
+    expect(outlookProvider.detectCapabilities("User.Read Mail.Read offline_access")).toEqual({ read: true, draft: false, send: false });
     await expect(outlookProvider.syncPage({} as never, { accountId: "account-1" }))
       .rejects.toEqual(new ProviderNotImplementedError("outlook", "sync"));
-
-    const response = await outlookProvider.createOAuthApp().request("/connect");
-    expect(response.status).toBe(501);
-    expect(await response.json()).toEqual({
-      error: "outlook_oauth_not_implemented",
-      message: "Outlook OAuth is not implemented",
-    });
   });
 });
