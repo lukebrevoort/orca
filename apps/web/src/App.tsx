@@ -76,10 +76,11 @@ type PersonItem = {
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
 type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
+type OAuthProvider = "gmail" | "outlook";
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
-  | { kind: "success"; email: string | null; intent: string | null }
-  | { kind: "error"; reason: string | null; message: string | null; intent: string | null }
+  | { provider: OAuthProvider; kind: "success"; email: string | null; intent: string | null }
+  | { provider: OAuthProvider; kind: "error"; reason: string | null; message: string | null; intent: string | null }
   | null;
 
 const PANEL_ANIM_MS = 650;
@@ -239,7 +240,7 @@ export function App() {
   }
 
   if (isLoginRoute()) {
-    return <GmailOAuthLoginPage />;
+    return <OAuthLoginPage />;
   }
 
   if (isReaderPreferencesRoute()) {
@@ -251,7 +252,7 @@ export function App() {
   }
 
   if (access === "checking") return <SessionCheckingScreen />;
-  if (access === "signedout") return isOnboardingRoute() ? <GmailOAuthLoginPage /> : <LoginRequiredScreen />;
+  if (access === "signedout") return isOnboardingRoute() ? <OAuthLoginPage /> : <LoginRequiredScreen />;
 
   if (isOnboardingRoute()) {
     return <WelcomeOrientationPage onComplete={completeOnboarding} theme={theme} setTheme={setTheme} />;
@@ -298,7 +299,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [accountPreferences, setAccountPreferences] = useState<UserPreferences>(defaultAccountPreferences);
   const [accountStatus, setAccountStatus] = useState<"loading" | "ready" | "saving" | "error">(demoMode ? "ready" : "loading");
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
+  const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
+  const [connectedAccountsError, setConnectedAccountsError] = useState<string | null>(null);
+  const [outlookAuthorizationStatus, setOutlookAuthorizationStatus] = useState<OAuthConnectStatus>("idle");
+  const [outlookAuthorizationError, setOutlookAuthorizationError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const returnStatus = readOAuthReturnStatus();
 
   useEffect(() => { titleRef.current?.focus(); }, []);
   useEffect(() => {
@@ -307,6 +314,19 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     fetchJson("/v1/preferences", userPreferencesSchema, controller.signal)
       .then((value) => { if (!controller.signal.aborted) { setAccountPreferences(value); setAccountStatus("ready"); } })
       .catch((error) => { if (!controller.signal.aborted) { setAccountStatus("error"); setAccountError(getErrorMessage(error)); } });
+    return () => controller.abort();
+  }, [demoMode]);
+  useEffect(() => {
+    if (demoMode) {
+      setConnectedAccounts([demoAccount]);
+      setConnectedAccountsStatus("ready");
+      setConnectedAccountsError(null);
+      return;
+    }
+    const controller = new AbortController();
+    fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) { setConnectedAccounts(value.items); setConnectedAccountsStatus("ready"); } })
+      .catch((error) => { if (!controller.signal.aborted) { setConnectedAccountsStatus("error"); setConnectedAccountsError(getErrorMessage(error)); } });
     return () => controller.abort();
   }, [demoMode]);
 
@@ -319,6 +339,10 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     try { setAccountPreferences(await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(accountPreferences) })); setSaved(true); setAccountStatus("ready"); }
     catch (error) { setAccountError(`Could not save your preferences. ${getErrorMessage(error)}`); setAccountStatus("error"); }
   }
+  const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
+  function connectOutlook() {
+    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
+  }
 
   return <main className="settings-home-page">
     <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
@@ -326,13 +350,32 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
-        <SettingsSection id="account" title="Account" note="Account-level"><div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected Gmail account.</span></div><a className="settings-row-link" href="/settings/integrations/gmail">Review connected account →</a></SettingsSection>
+        {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
+        <SettingsSection id="account" title="Account" note="Account-level"><div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a></SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint="Compact fits more mail and thread history on screen." name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
         <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
         <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
-        <SettingsSection id="connected" title="Connected accounts" note="Provider access"><p className="settings-section-copy">See Gmail capabilities, connection health, last sync, and safely reconnect or import labels.</p><a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a><a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a></SettingsSection>
-        <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores your normalized mail locally and only requests the Gmail permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a></SettingsSection>
+        <SettingsSection id="connected" title="Connected accounts" note="Provider access">
+          <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
+          <div aria-live="polite" className="settings-account-list">
+            {connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking connected accounts…</p> : null}
+            {connectedAccountsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load connected accounts. {connectedAccountsError}</p> : null}
+            {connectedAccountsStatus === "ready" && connectedAccounts.length === 0 ? <p className="settings-account-status">No mail provider is connected yet.</p> : null}
+            {connectedAccountsStatus === "ready" ? connectedAccounts.map((account) => <div className="settings-account-row" key={account.id}>
+              <div><span className="settings-account-provider">{mailProviderLabel(account.provider)}</span><strong>{account.email}</strong></div>
+              <span className="settings-account-capability">{account.capabilities.read ? "Read-only" : "Needs attention"}</span>
+            </div>) : null}
+          </div>
+          <div className="settings-outlook-connect">
+            <div><strong>Add Microsoft Outlook</strong><span>Read-only Mail.Read access. Outlook mail will appear after the Outlook sync step is enabled.</span></div>
+            <button className="settings-outlook-button" disabled={outlookAuthorizationStatus === "loading"} onClick={connectOutlook} type="button">{outlookAuthorizationStatus === "loading" ? "Opening Outlook…" : "Connect Outlook"}</button>
+          </div>
+          {outlookAuthorizationError ? <p className="settings-outlook-error" role="alert">{outlookAuthorizationError}</p> : null}
+          <a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a>
+          <a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
+        </SettingsSection>
+        <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores normalized mail locally and only requests the read-first permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google or Microsoft prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a><a className="settings-row-link" href="https://myaccount.microsoft.com/organizations">Manage Microsoft provider access →</a></SettingsSection>
         <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices follow your account."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
       </section>
     </div>
@@ -1860,60 +1903,37 @@ export async function syncGmailLabelsUntilReady(
   return migration;
 }
 
-function GmailOAuthLoginPage() {
+function OAuthLoginPage() {
   const [connectStatus, setConnectStatus] = useState<OAuthConnectStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
+  const [activeProvider, setActiveProvider] = useState<OAuthProvider | null>(null);
   const connectInFlightRef = useRef(false);
   const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
   const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
+  const returnProvider = returnStatus?.provider ?? "gmail";
 
-  async function connectGmail() {
+  async function connectProvider(provider: OAuthProvider) {
     if (connectInFlightRef.current || connectStatus === "loading") {
       return;
     }
 
     connectInFlightRef.current = true;
+    setActiveProvider(provider);
     setReturnStatus(null);
-    setConnectStatus("loading");
-    setErrorMessage(null);
-
-    try {
-      const returnTo = typeof window === "undefined"
-        ? "/onboarding"
-        : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`;
-      const response = await fetch(
-        `/v1/auth/gmail/${isLogin ? "login" : "connect"}?returnTo=${encodeURIComponent(returnTo)}`,
-        {
-          credentials: "include",
-        },
-      );
-
-      if (!response.ok) {
-        const body = await readJsonObject(response);
-        throw new Error(
-          getStringField(body, "message") ??
-            `Could not start Gmail OAuth (${response.status} ${response.statusText})`.trim(),
-        );
-      }
-
-      const body = await readJsonObject(response);
-      const authUrl = getStringField(body, "authUrl");
-      if (!authUrl) {
-        throw new Error("The Gmail OAuth connect response did not include an authUrl.");
-      }
-
-      window.location.assign(authUrl);
-    } catch (error) {
+    const returnTo = typeof window === "undefined"
+      ? "/onboarding"
+      : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`;
+    const started = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
+    if (!started) {
       connectInFlightRef.current = false;
-      setConnectStatus("error");
-      setErrorMessage(getErrorMessage(error));
+      setActiveProvider(null);
     }
   }
 
   return (
     <main className="oauth-page">
-      <section className="oauth-shell" aria-labelledby="gmail-oauth-title">
+      <section className="oauth-shell" aria-labelledby="oauth-title">
         <div className="oauth-brand">
           <span className="oauth-brand-mark" aria-hidden="true">
             <WaveGlyph />
@@ -1922,18 +1942,20 @@ function GmailOAuthLoginPage() {
         </div>
 
         <div className="oauth-hero">
-          <p className="oauth-eyebrow">{isOnboarding ? "Your workspace is ready" : isLogin ? "A quieter way to email" : "Gmail connection"}</p>
-          <h1 id="gmail-oauth-title">
+          <p className="oauth-eyebrow">{isOnboarding ? "Your workspace is ready" : isLogin ? "A quieter way to email" : `${providerDisplayName(returnProvider)} connection`}</p>
+          <h1 id="oauth-title">
             {isOnboarding && returnStatus?.kind === "success"
               ? "Welcome aboard."
               : isLogin
                 ? <>Make room for <em>the people.</em></>
-                : "Connect your Gmail inbox"}
+                : `Connect your ${providerDisplayName(returnProvider)} inbox`}
           </h1>
           <p>
             {isOnboarding && returnStatus?.kind === "success"
-              ? "Orca is now connected to your Gmail account. Your first inbox sync can begin when you enter your workspace."
-              : "Orca uses Google to sign you in, then asks only for read-only Gmail access to build a calmer inbox—never to send, delete, or modify your messages."}
+              ? returnProvider === "outlook"
+                ? "Orca is now connected to your Microsoft Outlook account. Outlook mail will appear after the Graph sync step is enabled."
+                : "Orca is now connected to your Gmail account. Your first inbox sync can begin when you enter your workspace."
+              : "Choose Gmail or Microsoft Outlook to sign in. Orca asks for read-only mail access to build a calmer inbox—never to send, delete, or modify your messages."}
           </p>
 
           {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -1945,43 +1967,95 @@ function GmailOAuthLoginPage() {
           ) : null}
 
           {isOnboarding && returnStatus?.kind === "success" ? (
-            <a className="oauth-google-button oauth-enter-button" href="/">Enter Orca <span aria-hidden="true">→</span></a>
+            <a className="oauth-provider-button oauth-enter-button" href="/">Enter Orca <span aria-hidden="true">→</span></a>
           ) : (
-            <button
-              className="oauth-google-button"
-              disabled={connectStatus === "loading"}
-              onClick={connectGmail}
-              type="button"
-            >
-              <GoogleGlyph />
-              <span>{connectStatus === "loading" ? "Opening Google..." : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
-            </button>
+            <div aria-label="Choose a mail provider" className="oauth-provider-list">
+              <button
+                className="oauth-google-button"
+                disabled={connectStatus === "loading"}
+                onClick={() => void connectProvider("gmail")}
+                type="button"
+              >
+                <GoogleGlyph />
+                <span>{connectStatus === "loading" && activeProvider === "gmail" ? "Opening Google…" : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
+              </button>
+              <div className="oauth-provider-separator" aria-hidden="true"><span>or</span></div>
+              <button
+                className="oauth-outlook-button"
+                disabled={connectStatus === "loading"}
+                onClick={() => void connectProvider("outlook")}
+                type="button"
+              >
+                <OutlookGlyph />
+                <span>{connectStatus === "loading" && activeProvider === "outlook" ? "Opening Outlook…" : isLogin ? "Continue with Outlook" : "Connect Outlook"}</span>
+              </button>
+            </div>
           )}
 
           <p className="oauth-fine-print">
-            Uses `gmail.readonly` and `userinfo.email`. You can revoke access at any time in your Google Account security settings.
+            Gmail uses `gmail.readonly`; Outlook uses Microsoft Graph `Mail.Read`. You can revoke access at any time from your provider’s security settings.
           </p>
         </div>
 
-        <aside className="oauth-setup-panel" aria-label="Google OAuth setup checklist">
-          <h2>{isLogin ? "What happens next" : "Google setup checklist"}</h2>
+        <aside className="oauth-setup-panel" aria-label="OAuth setup checklist">
+          <h2>{isLogin ? "What happens next" : "Provider setup checklist"}</h2>
           <ol>
             {isLogin ? <>
-              <li>Choose the Google account you want to bring to Orca.</li>
-              <li>Review the read-only permission on Google’s secure screen.</li>
+              <li>Choose the Gmail or Outlook account you want to bring to Orca.</li>
+              <li>Review the read-only permission on your provider’s secure screen.</li>
               <li>Return here to enter your new human-first inbox.</li>
             </> : <>
-              <li>Create a Google Cloud OAuth client for a web application.</li>
+              <li>Create an OAuth client for the provider you want to connect.</li>
               <li>Add `http://localhost:5173` as an authorized JavaScript origin.</li>
-              <li>Add `http://localhost:3000/v1/auth/gmail/callback` as the redirect URI.</li>
+              <li>Add the provider callback URI shown in its setup guide.</li>
               <li>Copy the client ID and secret into `.env`, then restart the API.</li>
             </>}
           </ol>
-          <a href="/docs/gmail-oauth-setup.html">Open setup guide</a>
+          <div className="oauth-setup-links">
+            <a href="/docs/gmail-oauth-setup.html">Gmail setup guide</a>
+            <a href="/docs/outlook-oauth-setup.html">Outlook setup guide</a>
+          </div>
         </aside>
       </section>
     </main>
   );
+}
+
+function providerDisplayName(provider: OAuthProvider) {
+  return provider === "outlook" ? "Microsoft Outlook" : "Gmail";
+}
+
+function mailProviderLabel(provider: MailAccount["provider"]) {
+  return providerDisplayName(provider);
+}
+
+async function beginProviderAuthorization(
+  provider: OAuthProvider,
+  intent: "login" | "connect",
+  returnTo: string,
+  setStatus: (status: OAuthConnectStatus) => void,
+  setError: (message: string | null) => void,
+): Promise<boolean> {
+  setStatus("loading");
+  setError(null);
+  try {
+    const query = new URLSearchParams({ returnTo });
+    const response = await fetch(`/v1/auth/${provider}/${intent}?${query}`, { credentials: "include" });
+    const body = await readJsonObject(response);
+    if (!response.ok) {
+      throw new Error(getStringField(body, "message") ?? `Could not start ${providerDisplayName(provider)} OAuth (${response.status} ${response.statusText})`.trim());
+    }
+    const authUrl = getStringField(body, "authUrl");
+    if (!authUrl) {
+      throw new Error(`The ${providerDisplayName(provider)} OAuth response did not include an authUrl.`);
+    }
+    window.location.assign(authUrl);
+    return true;
+  } catch (error) {
+    setStatus("error");
+    setError(getErrorMessage(error));
+    return false;
+  }
 }
 
 function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
@@ -1992,11 +2066,15 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
   if (status.kind === "success") {
     return (
       <div className="oauth-notice oauth-notice-success" role="status">
-        <strong>Gmail connected</strong>
+        <strong>{providerDisplayName(status.provider)} connected</strong>
         <span>
-          {status.email
-            ? `${status.email} is ready for read-only inbox sync.`
-            : "Your Gmail account is ready for read-only inbox sync."}
+          {status.provider === "outlook"
+            ? status.email
+              ? `${status.email} is connected. Outlook mail will appear after the Graph sync step is enabled.`
+              : "Your Microsoft Outlook account is connected. Mail will appear after the Graph sync step is enabled."
+            : status.email
+              ? `${status.email} is ready for read-only inbox sync.`
+              : "Your Gmail account is ready for read-only inbox sync."}
         </span>
       </div>
     );
@@ -2004,24 +2082,25 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
 
   return (
     <div className="oauth-notice oauth-notice-error" role="alert">
-      <strong>Google returned an error</strong>
-      <span>{oauthErrorMessage(status.reason, false)}</span>
+      <strong>{providerDisplayName(status.provider)} returned an error</strong>
+      <span>{oauthErrorMessage(status.reason, false, status.provider)}</span>
     </div>
   );
 }
 
-function oauthErrorMessage(reason: string | null, preserveReading: boolean) {
+function oauthErrorMessage(reason: string | null, preserveReading: boolean, provider: OAuthProvider = "gmail") {
+  const providerName = providerDisplayName(provider);
   const suffix = preserveReading ? " Your read-only inbox still works." : "";
   switch (reason) {
-    case "provider_error": return `Google permission was not granted.${suffix}`;
+    case "provider_error": return `${providerName} permission was not granted.${suffix}`;
     case "compose_not_granted": return `Google did not grant Gmail draft and send access.${suffix}`;
-    case "account_mismatch": return `Choose the same Google account that is already connected to Orca.${suffix}`;
+    case "account_mismatch": return `Choose the same ${providerName} account that is already connected to Orca.${suffix}`;
     case "upgrade_account_missing": return `Orca could not find the Gmail connection to upgrade.${suffix}`;
     case "invalid_state":
     case "missing_state": return "The authorization return could not be verified. Start again from Orca.";
     case "token_exchange_failed":
-    case "userinfo_failed": return `Google could not confirm the authorization. Try again.${suffix}`;
-    default: return `The Gmail authorization flow did not complete.${suffix}`;
+    case "userinfo_failed": return `${providerName} could not confirm the authorization. Try again.${suffix}`;
+    default: return `The ${providerName} authorization flow did not complete.${suffix}`;
   }
 }
 
@@ -3484,6 +3563,17 @@ function GoogleGlyph() {
   );
 }
 
+function OutlookGlyph() {
+  return (
+    <svg aria-hidden="true" height="20" viewBox="0 0 24 24" width="20">
+      <path d="M2 3.5h9v8.5H2z" fill="#f25022" />
+      <path d="M12.5 3.5H22v8.5h-9.5z" fill="#7fba00" />
+      <path d="M2 12.5h9v8H2z" fill="#00a4ef" />
+      <path d="M12.5 12.5H22v8h-9.5z" fill="#ffb900" />
+    </svg>
+  );
+}
+
 function InboxStatusState({
   action,
   eyebrow,
@@ -3709,8 +3799,8 @@ function LoginRequiredScreen() {
         <div className="oauth-brand"><span className="oauth-brand-mark"><WaveGlyph /></span><span>Orca</span></div>
         <p className="oauth-eyebrow">A private workspace</p>
         <h1>Your inbox waits for its person.</h1>
-        <p>Your session or Gmail connection needs a quick refresh. Sign in with Google to return to the inbox.</p>
-        <a className="oauth-google-button oauth-enter-button" href="/login"><GoogleGlyph />Reconnect with Google</a>
+        <p>Your session needs a quick refresh. Choose Gmail or Outlook to return to the inbox.</p>
+        <a className="oauth-provider-button oauth-enter-button" href="/login">Choose a provider <span aria-hidden="true">→</span></a>
       </section>
     </main>
   );
@@ -3808,9 +3898,11 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
 
   const params = new URLSearchParams(window.location.search);
   const status = params.get("status");
+  const provider = params.get("provider") === "outlook" ? "outlook" : "gmail";
 
   if (status === "success") {
     return {
+      provider,
       kind: "success",
       email: params.get("email"),
       intent: params.get("intent"),
@@ -3819,6 +3911,7 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
 
   if (status === "error") {
     return {
+      provider,
       kind: "error",
       reason: params.get("reason"),
       message: params.get("message"),
