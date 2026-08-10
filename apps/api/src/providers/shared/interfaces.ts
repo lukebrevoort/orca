@@ -25,8 +25,14 @@ export type ProviderTransportResult = {
   providerThreadId: string;
 };
 
+export type ProviderDraftResult = {
+  providerDraftId: string;
+  providerMessageId?: string | null;
+  providerThreadId?: string | null;
+};
+
 export interface ProviderTransport {
-  saveDraft(db: ProviderDatabase, accountId: string, draft: MessageDraft): Promise<{ providerDraftId: string }>;
+  saveDraft(db: ProviderDatabase, accountId: string, draft: MessageDraft): Promise<ProviderDraftResult>;
   deleteDraft(db: ProviderDatabase, accountId: string, providerDraftId: string): Promise<void>;
   send(db: ProviderDatabase, accountId: string, draft: MessageDraft): Promise<ProviderTransportResult>;
 }

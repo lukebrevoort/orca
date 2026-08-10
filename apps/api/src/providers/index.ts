@@ -4,6 +4,7 @@ export { ProviderRegistry, providerRegistry } from "./registry.ts";
 export type {
   MailProviderAdapter,
   ProviderDatabase,
+  ProviderDraftResult,
   ProviderSyncOptions,
   ProviderSyncResult,
   ProviderTransport,

@@ -7,6 +7,7 @@ import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
   type AttentionBehavior,
+  type MailProvider,
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
@@ -49,9 +50,10 @@ import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
-import { deleteGmailDraft, mirrorGmailDraft, type GmailDraftMirrorInput, type GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
+import type { GmailDraftMirrorInput, GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 import { providerRegistry as defaultProviderRegistry, type ProviderRegistry } from "./providers/registry.ts";
+import { ProviderNotImplementedError, type ProviderTransport } from "./providers/shared/interfaces.ts";
 import { handleFeedbackRequest } from "./feedback.ts";
 import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 
@@ -82,24 +84,38 @@ const defaultInboxLimit = 100;
 
 const collectionColors = ["#70867d", "#a87360", "#6c8195", "#83728d", "#a18757", "#6d716f"] as const;
 
+const providerAuthRoutePrefixes: Record<MailProvider, string> = {
+  gmail: "/v1/auth/gmail",
+  outlook: "/v1/auth/outlook",
+};
+
 export function createApp(options: CreateAppOptions = {}): Hono<{
   Variables: AuthVariables;
 }> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const providerRegistry = options.providerRegistry ?? defaultProviderRegistry;
-  const gmailProvider = providerRegistry.get("gmail");
+  const providerTransports = new Map<MailProvider, ProviderTransport>();
+  const providerFor = (account: ConnectedAccount) => providerRegistry.get(account.provider);
   const serializeMailAccount = (account: ConnectedAccount) => ({
     id: account.id,
-    provider: "gmail" as const,
+    provider: account.provider,
     email: account.providerEmail,
     displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
-    capabilities: gmailProvider.detectCapabilities(account.scope),
+    capabilities: providerFor(account).detectCapabilities(account.scope),
   });
-  const syncPage = options.syncPage ?? gmailProvider.syncPage;
-  const gmailTransport = options.gmailTransport ?? gmailProvider.createTransport();
+  const transportFor = (account: ConnectedAccount) => {
+    if (account.provider === "gmail" && options.gmailTransport) return options.gmailTransport;
+    const existing = providerTransports.get(account.provider);
+    if (existing) return existing;
+    const transport = providerFor(account).createTransport();
+    providerTransports.set(account.provider, transport);
+    return transport;
+  };
+  const syncPageFor = (account: ConnectedAccount) => account.provider === "gmail" && options.syncPage
+    ? options.syncPage
+    : providerFor(account).syncPage;
+  const capabilitiesFor = (account: ConnectedAccount) => providerFor(account).detectCapabilities(account.scope);
   const now = options.now ?? (() => new Date());
-  const mirrorDraft = options.mirrorDraft ?? mirrorGmailDraft;
-  const deleteProviderDraft = options.deleteProviderDraft ?? deleteGmailDraft;
   const syncStatuses = new Map<string, SyncStatusRecord>();
   const draftMirrorJobs = new Set<string>();
 
@@ -706,7 +722,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           },
         }, 400);
       }
-      const mirrorsToProvider = gmailProvider.detectCapabilities(account.scope).draft;
+      const mirrorsToProvider = capabilitiesFor(account).draft;
       db.insert(messageDrafts).values({
         id,
         accountId: account.id,
@@ -752,7 +768,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         context: update.context ?? current.context,
         attachments: update.attachments ?? current.attachments,
       });
-      const mirrorsToProvider = gmailProvider.detectCapabilities(account.scope).draft;
+      const mirrorsToProvider = capabilitiesFor(account).draft;
       const result = db.update(messageDrafts).set({
         ...draftStorage(content),
         revision: sql`${messageDrafts.revision} + 1`,
@@ -787,19 +803,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
       if (draft.deliveryStatus !== "draft" || draft.sendIdempotencyKey !== null) return deliveryStarted(c);
-      if (draft.providerDraftId && gmailProvider.detectCapabilities(account.scope).draft) {
+      if (draft.providerDraftId && capabilitiesFor(account).draft) {
         try {
-          await deleteProviderDraft(db, account.id, draft.providerDraftId);
+          if (account.provider === "gmail" && options.deleteProviderDraft) {
+            await options.deleteProviderDraft(db, account.id, draft.providerDraftId);
+          } else {
+            await transportFor(account).deleteDraft(db, account.id, draft.providerDraftId);
+          }
         } catch {
           db.update(messageDrafts).set({
             providerSyncStatus: "failed",
-            providerSyncError: "Gmail could not discard its mirrored copy. Try again.",
+            providerSyncError: `${providerDisplayName(account.provider)} could not discard its mirrored copy. Try again.`,
             updatedAt: now(),
           }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.accountId, account.id))).run();
           return c.json({
             error: {
               code: "provider_rejected",
-              message: "Gmail could not discard its mirrored copy. The Orca draft was kept so you can retry.",
+              message: `${providerDisplayName(account.provider)} could not discard its mirrored copy. The Orca draft was kept so you can retry.`,
               retryable: true,
             },
           }, 502);
@@ -843,35 +863,41 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           context: parseDraftJson(draft.context, null),
           attachments: parseDraftJson(draft.attachments, []),
         });
+        const account = getAccountById(db, draft.accountId);
+        if (!account) return;
         try {
-          const mirrored = await mirrorDraft(db, {
-            accountId: draft.accountId,
-            content,
-            providerDraftId: draft.providerDraftId,
-          });
+          const mirrored = account.provider === "gmail" && options.mirrorDraft
+            ? await options.mirrorDraft(db, {
+                accountId: draft.accountId,
+                content,
+                providerDraftId: draft.providerDraftId,
+              })
+            : await transportFor(account).saveDraft(db, account.id, toMessageDraft(draft));
           const updated = db.update(messageDrafts).set({
             providerDraftId: mirrored.providerDraftId,
-            providerMessageId: mirrored.providerMessageId,
-            providerThreadId: mirrored.providerThreadId,
+            providerMessageId: mirrored.providerMessageId ?? null,
+            providerThreadId: mirrored.providerThreadId ?? null,
             providerSyncStatus: "synced",
             providerSyncError: null,
             updatedAt: now(),
           }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision)))
             .returning({ id: messageDrafts.id }).get();
           if (!updated) {
-            // A newer local revision arrived while Gmail was creating the
+            // A newer local revision arrived while the provider was creating the
             // provider draft. Carry that provider ID forward so the next job
-            // updates the same Gmail draft instead of creating an orphan.
+            // updates the same provider draft instead of creating an orphan.
             db.update(messageDrafts).set({
               providerDraftId: mirrored.providerDraftId,
-              providerMessageId: mirrored.providerMessageId,
-              providerThreadId: mirrored.providerThreadId,
+              providerMessageId: mirrored.providerMessageId ?? null,
+              providerThreadId: mirrored.providerThreadId ?? null,
             }).where(and(eq(messageDrafts.id, draft.id), isNull(messageDrafts.providerDraftId))).run();
           }
         } catch (error) {
           db.update(messageDrafts).set({
             providerSyncStatus: "failed",
-            providerSyncError: error instanceof Error ? error.message : "Gmail could not mirror this draft",
+            providerSyncError: error instanceof Error
+              ? error.message
+              : `${providerDisplayName(account.provider)} could not mirror this draft`,
             updatedAt: now(),
           }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision))).run();
         }
@@ -903,8 +929,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
         return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(draft));
       }
-      if (!gmailProvider.detectCapabilities(account.scope).send) {
-        return c.json({ error: { code: "missing_capability", message: "The connected Gmail account has read-only access and cannot deliver mail", retryable: false } }, 501);
+      if (!capabilitiesFor(account).send) {
+        return c.json({ error: { code: "missing_capability", message: `The connected ${providerDisplayName(account.provider)} account has read-only access and cannot deliver mail`, retryable: false } }, 501);
       }
       if (toMessageDraft(draft).attachments.some((attachment) => !attachment.contentBase64)) {
         return c.json({ error: { code: "provider_rejected", message: "Attachments must finish uploading before this message can be delivered", retryable: false } }, 409);
@@ -915,7 +941,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!reserved) return jsonWithSchema(c, deliveryResultSchema, toDeliveryResult(getMessageDraft(db, account.id, draft.id)!));
       const sending = toMessageDraft(getMessageDraft(db, account.id, draft.id)!);
       try {
-        const provider = await gmailTransport.send(db, account.id, sending);
+        const provider = await transportFor(account).send(db, account.id, sending);
         db.update(messageDrafts).set({ deliveryStatus: "sent", providerMessageId: provider.providerMessageId, providerThreadId: provider.providerThreadId, updatedAt: now() }).where(eq(messageDrafts.id, draft.id)).run();
       } catch (error) {
         const transport = asTransportError(error);
@@ -1025,7 +1051,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const page = filtered.slice(start, start + limit);
         const lastMessage = page.at(-1);
         return jsonWithSchema(c, inboxResponseSchema, {
-          accounts: accounts.map(toMailAccount),
+          accounts: accounts.map(serializeMailAccount),
           messages: page.map((message) => ({
             id: message.id,
             accountId: message.accountId,
@@ -1098,7 +1124,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const messages = [...messagesById.values()].map((message) => {
           const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
           return {
-            id: message.id, accountId: account.id, provider: "gmail" as const, providerMessageId: message.providerMessageId,
+            id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
             to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
@@ -1111,7 +1137,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         return jsonWithSchema(c, threadDetailSchema, {
           account: serializeMailAccount(account),
           thread: {
-            id: thread.id, provider: "gmail", providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
+            id: thread.id, provider: account.provider, providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
             latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
             labels: [...new Set(messages.flatMap((message) => message.labels))],
             participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
@@ -1161,7 +1187,13 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     },
   );
 
-  app.route("/v1/auth/gmail", gmailProvider.createOAuthApp({ dbFactory }));
+  for (const provider of providerRegistry.list()) {
+    const routePrefix = providerAuthRoutePrefixes[provider.provider];
+    if (!routePrefix) {
+      throw new Error(`No OAuth route prefix is configured for mail provider ${provider.provider}`);
+    }
+    app.route(routePrefix, provider.createOAuthApp({ dbFactory }));
+  }
 
   app.post(
     "/v1/sync/gmail",
@@ -1187,6 +1219,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
 
         syncStatuses.set(account.id, { state: "syncing", error: null });
+        const syncPage = syncPageFor(account);
         let result = await syncPage(db, { accountId: account.id, pageSize: 25 });
         let pages = 1;
         let emailCount = result.emailCount;
@@ -1204,7 +1237,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         syncStatuses.delete(account.id);
         return c.json({ ...result, emailCount, threadCount, labelCount, contactCount, pages }, 200);
       } catch (error) {
-        console.error("Gmail sync failed", {
+        console.error(`${account?.provider ?? "mail"} sync failed`, {
           userId: auth.userId,
           error,
         });
@@ -1234,7 +1267,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
 type ConnectedAccount = {
   id: string;
-  provider: "gmail" | "outlook";
+  provider: MailProvider;
   providerEmail: string;
   displayName: string | null;
   accessTokenEncrypted: string | null;
@@ -1321,6 +1354,8 @@ function deliveryStarted(c: Context) {
 function asTransportError(error: unknown) {
   return error instanceof GmailTransportError
     ? error
+    : error instanceof ProviderNotImplementedError
+      ? new GmailTransportError(`${providerDisplayName(error.provider)} transport is not implemented`, "rejected", false)
     : new GmailTransportError("The delivery outcome could not be confirmed", "ambiguous", true);
 }
 
@@ -1767,6 +1802,10 @@ function organizationConflict(c: Context, error: unknown, message: string) {
   throw error;
 }
 
+function providerDisplayName(provider: MailProvider) {
+  return provider === "gmail" ? "Gmail" : "Outlook";
+}
+
 function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount | undefined {
   return getConnectedAccounts(db, userId)[0];
 }
@@ -1775,8 +1814,26 @@ function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db
   return getConnectedAccounts(db, userId).find((account) => account.id === accountId);
 }
 
+function getAccountById(db: ReturnType<typeof createDatabaseClient>["db"], accountId: string): ConnectedAccount | undefined {
+  const record = db.select({
+    id: oauthAccounts.id,
+    provider: oauthAccounts.provider,
+    providerEmail: oauthAccounts.providerEmail,
+    displayName: users.displayName,
+    accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
+    refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    lastSyncedAt: oauthAccounts.lastSyncedAt,
+    scope: oauthAccounts.scope,
+  })
+    .from(oauthAccounts)
+    .innerJoin(users, eq(users.id, oauthAccounts.userId))
+    .where(eq(oauthAccounts.id, accountId))
+    .get();
+  return record ? { ...record, provider: record.provider as MailProvider } : undefined;
+}
+
 function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
-  return selectConnectedAccounts(db, userId, "gmail");
+  return selectConnectedAccounts(db, userId);
 }
 
 function getUnifiedInboxAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
@@ -1806,18 +1863,6 @@ function selectConnectedAccounts(
     .where(ownership)
     .orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id))
     .all() as ConnectedAccount[];
-}
-
-function toMailAccount(account: ConnectedAccount) {
-  return {
-    id: account.id,
-    provider: account.provider,
-    email: account.providerEmail,
-    displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
-    capabilities: account.provider === "gmail"
-      ? detectGmailCapabilities(account.scope)
-      : { read: true, draft: false, send: false },
-  };
 }
 const providerHtmlPolicy: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -1979,6 +2024,13 @@ function jsonWithSchema<T>(
 }
 
 function toPublicSyncError(error: unknown) {
+  if (error instanceof ProviderNotImplementedError) {
+    return {
+      code: "provider_not_implemented",
+      message: `${providerDisplayName(error.provider)} ${error.operation} is not implemented`,
+      status: 501,
+    } as const;
+  }
   if (error instanceof GmailSyncError) {
     switch (error.code) {
       case "provider_auth_error":

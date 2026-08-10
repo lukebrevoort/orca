@@ -3,6 +3,7 @@ import { createDatabaseClient } from "../../db/client.ts";
 import { encodeGmailMessage } from "./mime.ts";
 import { createGmailClient, GmailApiError, type GmailClient, type GmailTransportClient } from "./client.ts";
 import { readGmailProviderTokens } from "./sync.ts";
+import type { ProviderDraftResult } from "../shared/interfaces.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 
@@ -15,7 +16,7 @@ export class GmailTransportError extends Error {
 }
 
 export type GmailTransport = {
-  saveDraft(db: DatabaseClient, accountId: string, draft: MessageDraft): Promise<{ providerDraftId: string }>;
+  saveDraft(db: DatabaseClient, accountId: string, draft: MessageDraft): Promise<ProviderDraftResult>;
   deleteDraft(db: DatabaseClient, accountId: string, providerDraftId: string): Promise<void>;
   send(db: DatabaseClient, accountId: string, draft: MessageDraft): Promise<{ providerMessageId: string; providerThreadId: string }>;
 };
@@ -45,7 +46,11 @@ export function createGmailTransport(gmailClient: GmailThreadingClient = createG
         const response = draft.providerDraftId
           ? await gmailClient.updateDraft({ ...input, draftId: draft.providerDraftId })
           : await gmailClient.createDraft(input);
-        return { providerDraftId: response.id };
+        return {
+          providerDraftId: response.id,
+          providerMessageId: response.message.id,
+          providerThreadId: response.message.threadId,
+        };
       } catch (error) { throw normalizeTransportError(error); }
     },
     async deleteDraft(db, accountId, providerDraftId) {

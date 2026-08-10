@@ -16,6 +16,15 @@ describe("provider registry", () => {
     expect(() => new ProviderRegistry([gmailProvider, gmailProvider])).toThrow("gmail is already registered");
   });
 
+  test("allows intentionally partial registries and reports missing providers", () => {
+    const registry = new ProviderRegistry([gmailProvider]);
+
+    expect(registry.has("gmail")).toBe(true);
+    expect(registry.has("outlook")).toBe(false);
+    expect(registry.list()).toEqual([gmailProvider]);
+    expect(() => registry.get("outlook")).toThrow("Mail provider outlook is not registered");
+  });
+
   test("Gmail delegates capability detection to the existing implementation", () => {
     expect(gmailProvider.detectCapabilities("https://www.googleapis.com/auth/gmail.readonly")).toEqual({
       read: true,
