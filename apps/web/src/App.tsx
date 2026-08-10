@@ -1556,25 +1556,106 @@ function InboxApp({
   );
 }
 
+export type GmailAuthorizationState = {
+  accountId: string | null;
+  status: "idle" | "loading" | "error";
+  errorMessage: string | null;
+};
+
+export function withGmailAccountId(path: string, accountId?: string | null) {
+  if (!accountId) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}accountId=${encodeURIComponent(accountId)}`;
+}
+
+export function buildGmailAuthorizationRequestPath(intent: "connect" | "upgrade", returnTo: string, accountId?: string | null) {
+  const endpoint = intent === "upgrade" ? "/v1/auth/gmail/upgrade" : "/v1/auth/gmail/connect";
+  const query = new URLSearchParams({ returnTo });
+  if (accountId) query.set("accountId", accountId);
+  return `${endpoint}?${query.toString()}`;
+}
+
+export function buildGmailLabelMigrationPath(accountId?: string | null) {
+  return withGmailAccountId("/settings/integrations/gmail/labels", accountId);
+}
+
+export function GmailAccountSettingsList({
+  accounts,
+  authorization,
+  onAuthorize,
+}: {
+  accounts: MailAccount[];
+  authorization: GmailAuthorizationState;
+  onAuthorize: (intent: "connect" | "upgrade", accountId: string) => void;
+}) {
+  return <div className="gmail-account-list" aria-label="Connected Gmail accounts">
+    {accounts.map((account) => {
+      const accountIsLoading = authorization.status === "loading" && authorization.accountId === account.id;
+      const accountHasError = authorization.status === "error" && authorization.accountId === account.id;
+      return <article aria-labelledby={`gmail-account-${account.id}`} className="gmail-account-card" data-account-id={account.id} key={account.id}>
+        <div className="gmail-account-heading">
+          <div><span>Connected account</span><strong id={`gmail-account-${account.id}`}>{account.email}</strong></div>
+          <span className="gmail-capability-badge">{account.capabilities.send ? "Compose + send" : "Read-only"}</span>
+        </div>
+        <div aria-label={`Gmail capabilities for ${account.email}`} className="gmail-capability-grid">
+          <CapabilityRow active={account.capabilities.read} label="Read inbox" note="Keeps Orca synced with incoming mail." />
+          <CapabilityRow active={account.capabilities.draft} label="Manage Gmail drafts" note="Creates and updates only messages you write." />
+          <CapabilityRow active={account.capabilities.send} label="Send mail" note="Covers new messages, replies, and forwards." />
+        </div>
+        {!account.capabilities.send ? <div className="gmail-upgrade-explainer">
+          <span>Optional permission</span>
+          <h2>Let Orca finish what you write.</h2>
+          <p>Google will ask for <code>gmail.compose</code>. It is the minimum single scope that supports Gmail drafts and sending. Orca does not request delete, label-editing, or broad mailbox-modification access.</p>
+          <button aria-label={`Enable drafts and sending for ${account.email}`} className="gmail-account-action gmail-account-action-primary" disabled={authorization.status === "loading"} onClick={() => onAuthorize("upgrade", account.id)} type="button">{accountIsLoading ? "Opening Google…" : "Enable drafts and sending"}</button>
+        </div> : <div className="gmail-upgrade-confirmed"><span aria-hidden="true">✓</span><div><strong>Google confirmed compose access</strong><p>Orca can now use the future draft and delivery transport for this account.</p></div></div>}
+        {accountHasError ? <p className="gmail-authorization-error" role="alert">{authorization.errorMessage}</p> : null}
+        <footer className="gmail-settings-actions">
+          <button aria-label={`Reconnect Gmail for ${account.email}`} className="gmail-account-action" disabled={authorization.status === "loading"} onClick={() => onAuthorize("connect", account.id)} type="button">{accountIsLoading ? "Opening Google…" : "Reconnect Gmail"}</button>
+          <a aria-label={`Import Gmail labels for ${account.email}`} className="gmail-account-action-link" href={buildGmailLabelMigrationPath(account.id)}>Import Gmail labels →</a>
+        </footer>
+      </article>;
+    })}
+  </div>;
+}
+
 export function GmailConnectionSettingsPage({ theme, setTheme }: {
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
-  const [account, setAccount] = useState<MailAccount | null>(null);
+  const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [authorizationStatus, setAuthorizationStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [authorization, setAuthorization] = useState<GmailAuthorizationState>({ accountId: null, status: "idle", errorMessage: null });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const returnStatus = readOAuthReturnStatus();
+  const returnTo = typeof window === "undefined" ? "/settings/integrations/gmail" : `${window.location.origin}/settings/integrations/gmail`;
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchJson("/v1/me", meResponseSchema, controller.signal)
-      .then((next) => { setAccount(next); setStatus("ready"); })
+    setStatus("loading");
+    setErrorMessage(null);
+    fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal)
+      .then((next) => { setAccounts(next.items.filter((account) => account.provider === "gmail")); setStatus("ready"); })
       .catch((error) => { if (!controller.signal.aborted) { setStatus("error"); setErrorMessage(getErrorMessage(error)); } });
     return () => controller.abort();
-  }, []);
+  }, [reloadToken]);
 
-  const returnTo = typeof window === "undefined" ? "/settings/integrations/gmail" : `${window.location.origin}/settings/integrations/gmail`;
+  useEffect(() => {
+    if (status === "ready" || status === "error") titleRef.current?.focus();
+  }, [status]);
+
+  function authorize(intent: "connect" | "upgrade", accountId: string | null) {
+    if (authorization.status === "loading") return;
+    setAuthorization({ accountId, status: "loading", errorMessage: null });
+    void beginGmailAuthorization(
+      intent,
+      returnTo,
+      accountId,
+      (nextStatus) => setAuthorization((current) => ({ ...current, status: nextStatus })),
+      (nextError) => setAuthorization((current) => ({ ...current, status: "error", errorMessage: nextError })),
+    );
+  }
 
   return (
     <main className="gmail-settings-page">
@@ -1588,33 +1669,17 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
       <section className="gmail-settings-shell" aria-labelledby="gmail-settings-title">
         <header className="gmail-settings-intro">
           <p className="settings-eyebrow">Settings / Gmail connection</p>
-          <h1 id="gmail-settings-title">Permission<br /><em>with purpose.</em></h1>
+          <h1 id="gmail-settings-title" ref={titleRef} tabIndex={-1}>Permission<br /><em>with purpose.</em></h1>
           <p>Your inbox connection stays readable while you deliberately decide whether Orca may create drafts and send mail.</p>
         </header>
 
-        <section className="gmail-permission-card" aria-label="Gmail authorization state">
-          {status === "loading" ? <p>Checking the confirmed Google grant…</p> : null}
-          {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>Connection needs attention</strong><span>{errorMessage}</span></div> : null}
+        <section aria-busy={status === "loading"} aria-label="Gmail authorization state" className="gmail-permission-card">
+          {status === "loading" ? <p aria-live="polite" role="status">Checking the confirmed Google grant…</p> : null}
+          {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>Connection needs attention</strong><span>{errorMessage}</span><button className="gmail-account-action" onClick={() => setReloadToken((current) => current + 1)} type="button">Try again</button></div> : null}
           {returnStatus?.intent === "upgrade" ? <OAuthUpgradeReturnNotice status={returnStatus} /> : null}
-          {account ? <>
-            <div className="gmail-account-heading"><div><span>Connected account</span><strong>{account.email}</strong></div><span className="gmail-capability-badge">{account.capabilities.send ? "Compose + send" : "Read-only"}</span></div>
-            <div className="gmail-capability-grid">
-              <CapabilityRow active={account.capabilities.read} label="Read inbox" note="Keeps Orca synced with incoming mail." />
-              <CapabilityRow active={account.capabilities.draft} label="Manage Gmail drafts" note="Creates and updates only messages you write." />
-              <CapabilityRow active={account.capabilities.send} label="Send mail" note="Covers new messages, replies, and forwards." />
-            </div>
-            {!account.capabilities.send ? <div className="gmail-upgrade-explainer">
-              <span>Optional permission</span>
-              <h2>Let Orca finish what you write.</h2>
-              <p>Google will ask for <code>gmail.compose</code>. It is the minimum single scope that supports Gmail drafts and sending. Orca does not request delete, label-editing, or broad mailbox-modification access.</p>
-              <button disabled={authorizationStatus === "loading"} onClick={() => void beginGmailAuthorization("upgrade", returnTo, account.id, setAuthorizationStatus, setErrorMessage)} type="button">{authorizationStatus === "loading" ? "Opening Google…" : "Enable drafts and sending"}</button>
-            </div> : <div className="gmail-upgrade-confirmed"><span aria-hidden="true">✓</span><div><strong>Google confirmed compose access</strong><p>Orca can now use the future draft and delivery transport for this account.</p></div></div>}
-            {authorizationStatus === "error" ? <p className="gmail-authorization-error" role="alert">{errorMessage}</p> : null}
-            <footer className="gmail-settings-actions">
-              <button onClick={() => void beginGmailAuthorization("connect", returnTo, account.id, setAuthorizationStatus, setErrorMessage)} type="button">Reconnect Gmail</button>
-              <a href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
-            </footer>
-          </> : null}
+          {status === "ready" && accounts.length > 0 ? <GmailAccountSettingsList accounts={accounts} authorization={authorization} onAuthorize={(intent, accountId) => authorize(intent, accountId)} /> : null}
+          {status === "ready" && accounts.length === 0 ? <p aria-live="polite" className="gmail-empty-state" role="status">No Gmail accounts are connected yet. Add one to start your inbox.</p> : null}
+          <footer className="gmail-settings-actions"><button aria-label="Add a Gmail account" className="gmail-account-action gmail-account-action-primary" disabled={status === "loading" || authorization.status === "loading"} onClick={() => authorize("connect", null)} type="button">{authorization.status === "loading" && authorization.accountId === null ? "Opening Google…" : "Add Gmail account"}</button></footer>
         </section>
       </section>
     </main>
@@ -1700,9 +1765,7 @@ async function beginGmailAuthorization(
   setStatus("loading");
   setError(null);
   try {
-    const query = new URLSearchParams({ returnTo });
-    if (intent === "upgrade" && accountId) query.set("accountId", accountId);
-    const response = await fetch(`/v1/auth/gmail/${intent === "upgrade" ? "upgrade" : "connect"}?${query}`, { credentials: "include" });
+    const response = await fetch(buildGmailAuthorizationRequestPath(intent, returnTo, accountId), { credentials: "include" });
     const body = await readJsonObject(response);
     if (!response.ok) throw new Error(getStringField(body, "message") ?? `Could not start Gmail authorization (${response.status})`);
     const authUrl = getStringField(body, "authUrl");
@@ -1722,18 +1785,22 @@ export function GmailLabelMigrationPage({ theme, setTheme }: {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "saving" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const accountId = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("accountId");
+  const migrationPath = withGmailAccountId("/v1/gmail-label-migration", accountId);
+  const syncPath = withGmailAccountId("/v1/sync/gmail", accountId);
+  const importPath = withGmailAccountId("/v1/gmail-label-migration/import", accountId);
 
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
       try {
-        let next = await fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal);
+        let next = await fetchJson(migrationPath, gmailLabelMigrationSchema, controller.signal);
         if (!next.ready) {
           setStatus("syncing");
           next = await syncGmailLabelsUntilReady(
             next,
-            () => fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, controller.signal, { method: "POST" }),
-            () => fetchJson("/v1/gmail-label-migration", gmailLabelMigrationSchema, controller.signal),
+            () => fetchJson(syncPath, { parse: (value: unknown) => value }, controller.signal, { method: "POST" }),
+            () => fetchJson(migrationPath, gmailLabelMigrationSchema, controller.signal),
           );
         }
         if (!controller.signal.aborted) {
@@ -1749,14 +1816,14 @@ export function GmailLabelMigrationPage({ theme, setTheme }: {
     }
     void load();
     return () => controller.abort();
-  }, []);
+  }, [migrationPath, syncPath]);
 
   async function importLabels() {
     setStatus("saving");
     setErrorMessage(null);
     try {
       const next = await fetchJson(
-        "/v1/gmail-label-migration/import",
+        importPath,
         gmailLabelMigrationSchema,
         undefined,
         { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ labelIds: [...selectedIds] }) },
@@ -1791,8 +1858,8 @@ export function GmailLabelMigrationPage({ theme, setTheme }: {
 
         <section className="label-migration-picker" aria-label="Gmail labels available to import">
           <div className="label-migration-heading"><span>Your labels</span><span>{migration ? `${migration.labels.length} available` : ""}</span></div>
-          {status === "loading" ? <div className="attention-loading">Checking your Gmail organization…</div> : null}
-          {status === "syncing" ? <div className="attention-loading">Reading labels from Gmail for the first time…</div> : null}
+          {status === "loading" ? <div aria-live="polite" className="attention-loading" role="status">Checking your Gmail organization…</div> : null}
+          {status === "syncing" ? <div aria-live="polite" className="attention-loading" role="status">Reading labels from Gmail for the first time…</div> : null}
           {status === "error" ? <div className="attention-error" role="alert">{errorMessage ?? "Could not load Gmail labels."} <button onClick={() => window.location.reload()} type="button">Try again</button></div> : null}
           {status === "ready" && completed ? (
             <div className="label-migration-complete" role="status"><span aria-hidden="true">✓</span><div><strong>Gmail labels imported</strong><p>{migration?.labels.filter((label) => label.imported).length ?? 0} Collections were created. Reopening this page will never duplicate them.</p></div></div>

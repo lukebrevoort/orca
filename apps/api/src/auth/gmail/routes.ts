@@ -55,7 +55,8 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     }
 
     const returnTo = c.req.query("returnTo");
-    const result = service.getAuthorizationUrl(returnTo);
+    const accountId = c.req.query("accountId") ?? null;
+    const result = service.getAuthorizationUrl(returnTo, "connect", accountId);
 
     return c.json({
       provider: "gmail",

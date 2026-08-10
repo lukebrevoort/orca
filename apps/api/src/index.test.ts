@@ -997,6 +997,7 @@ describe("Orca API", () => {
       ]).run();
       db.insert(oauthAccounts).values([
         { id: "acct_import", userId: "user_import", provider: "gmail", providerEmail: "import@example.com", providerId: "gmail-import", lastSyncedAt: new Date() },
+        { id: "acct_import_secondary", userId: "user_import", provider: "gmail", providerEmail: "secondary@example.com", providerId: "gmail-import-secondary", lastSyncedAt: new Date() },
         { id: "acct_skip", userId: "user_skip", provider: "gmail", providerEmail: "skip@example.com", providerId: "gmail-skip", lastSyncedAt: new Date() },
         { id: "acct_empty", userId: "user_empty", provider: "gmail", providerEmail: "empty@example.com", providerId: "gmail-empty", lastSyncedAt: new Date() },
       ]).run();
@@ -1013,6 +1014,7 @@ describe("Orca API", () => {
         { id: "label_work", accountId: "acct_import", providerLabelId: "Label_1", name: "Work", type: "user" },
         { id: "label_travel", accountId: "acct_import", providerLabelId: "Label_2", name: "Travel", type: "user" },
         { id: "label_inbox", accountId: "acct_import", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+        { id: "label_secondary", accountId: "acct_import_secondary", providerLabelId: "Label_secondary", name: "Secondary work", type: "user" },
         { id: "label_skip", accountId: "acct_skip", providerLabelId: "Label_3", name: "Receipts", type: "user" },
       ]).run();
       db.insert(emailLabels).values([
@@ -1032,6 +1034,11 @@ describe("Orca API", () => {
 
       const preview = await (await testApp.request("/v1/gmail-label-migration", { headers: headersFor(sessions.import.token) })).json();
       assert.deepEqual(preview.labels.map((label: { name: string; threadCount: number }) => [label.name, label.threadCount]), [["Travel", 1], ["Work", 1]]);
+      const secondaryPreview = await (await testApp.request("/v1/gmail-label-migration?accountId=acct_import_secondary", { headers: headersFor(sessions.import.token) })).json();
+      assert.deepEqual(secondaryPreview.labels.map((label: { name: string }) => label.name), ["Secondary work"]);
+      const secondaryImport = await testApp.request("/v1/gmail-label-migration/import?accountId=acct_import_secondary", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_secondary"] }) });
+      assert.equal(secondaryImport.status, 200);
+      assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_import_secondary")).all().length, 1);
       db.update(oauthAccounts).set({ lastSyncedAt: null }).where(eq(oauthAccounts.id, "acct_import")).run();
       const preSyncImport = await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: [] }) });
       assert.equal(preSyncImport.status, 409);
@@ -1047,7 +1054,7 @@ describe("Orca API", () => {
       assert.equal((await importRequest()).status, 200);
       assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_import")).all().length, 2);
       assert.equal(db.select().from(collectionThreads).all().length, 2);
-      assert.equal(db.select().from(gmailLabelCollectionImports).all().length, 2);
+      assert.equal(db.select().from(gmailLabelCollectionImports).all().length, 3);
 
       const skipped = await (await testApp.request("/v1/gmail-label-migration/skip", { method: "POST", headers: headersFor(sessions.skip.token) })).json();
       assert.equal(skipped.status, "skipped");
@@ -1060,7 +1067,7 @@ describe("Orca API", () => {
       assert.deepEqual(emptyPreview.labels, []);
       const emptyImport = await (await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.empty.token), body: JSON.stringify({ labelIds: [] }) })).json();
       assert.equal(emptyImport.status, "completed");
-      assert.equal(db.select().from(gmailLabelMigrations).all().length, 3);
+      assert.equal(db.select().from(gmailLabelMigrations).all().length, 4);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
@@ -1223,6 +1230,47 @@ describe("Orca API", () => {
         pages: 1,
       });
       assert.deepEqual(syncCalls, ["acct_1"]);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("runs manual Gmail sync against the selected stacked account", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-index-multi-sync-test-"));
+    const dbPath = join(tempDir, "multi-sync.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "multi_sync_user", email: "multi-sync@example.com" }).run();
+      db.insert(oauthAccounts).values([
+        { id: "multi_sync_first", userId: "multi_sync_user", provider: "gmail", providerEmail: "first@example.com", providerId: "gmail-first" },
+        { id: "multi_sync_second", userId: "multi_sync_user", provider: "gmail", providerEmail: "second@example.com", providerId: "gmail-second" },
+      ]).run();
+      const session = await createSession(db, "multi_sync_user");
+      const syncCalls: string[] = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        syncPage: async (_db, input) => {
+          syncCalls.push(input.accountId);
+          return { accountId: input.accountId, emailCount: 0, threadCount: 0, labelCount: 0, contactCount: 0, nextCursor: null, lastSyncedAt: "2026-08-09T12:00:00.000Z" };
+        },
+      });
+
+      const response = await testApp.request("/v1/sync/gmail?accountId=multi_sync_second", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(syncCalls, ["multi_sync_second"]);
+      assert.equal((await response.json()).accountId, "multi_sync_second");
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

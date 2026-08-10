@@ -4245,11 +4245,23 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .gmail-capability-row:last-child { border-bottom: 0; }
 .gmail-capability-row-active > span { background: var(--orca-accent-soft); color: var(--orca-accent); }
 .gmail-capability-row-active small, .gmail-capability-badge { background: var(--orca-accent-soft); border: 0; color: var(--orca-accent) !important; }
+.gmail-account-list { display: grid; gap: 14px; }
+.gmail-account-card { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 18px; box-shadow: 0 5px 18px rgb(15 36 34 / 5%); padding: 18px; }
+.gmail-account-card .gmail-account-heading { background: transparent; border-radius: 0; box-shadow: none; margin: 0 0 12px; padding: 0 0 18px; }
+.gmail-account-card .gmail-capability-grid { background: transparent; border-radius: 0; box-shadow: none; padding: 0; }
 .gmail-upgrade-explainer { align-items: center; background: var(--orca-surface); border: 0; border-radius: 18px; box-shadow: 0 5px 18px rgb(15 36 34 / 5%); display: grid; grid-template-columns: 1fr auto; padding: 24px; }
 .gmail-upgrade-explainer > span, .gmail-upgrade-explainer h2, .gmail-upgrade-explainer p { grid-column: 1; }
 .gmail-upgrade-explainer h2 { font-family: var(--orca-font-display); font-size: 20px; font-weight: 600; }
 .gmail-upgrade-explainer button { background: var(--orca-ink); color: var(--orca-paper); grid-column: 2; grid-row: 1 / 4; }
 .gmail-settings-actions a { color: var(--orca-accent); font-weight: 600; }
+.gmail-account-action, .gmail-account-action-link { align-items: center; background: var(--orca-surface-hover) !important; border: 1px solid var(--orca-border) !important; border-radius: 999px; color: var(--orca-ink) !important; display: inline-flex; font-size: 12px; font-weight: 700; justify-content: center; min-height: 38px; padding: 9px 14px !important; text-decoration: none; }
+.gmail-account-action:hover:not(:disabled), .gmail-account-action-link:hover { background: var(--orca-surface) !important; border-color: var(--orca-accent) !important; color: var(--orca-ink) !important; }
+.gmail-account-action:focus-visible, .gmail-account-action-link:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.gmail-account-action:disabled { cursor: wait; opacity: .62; }
+.gmail-account-card .gmail-upgrade-explainer { background: var(--orca-surface-hover); box-shadow: none; }
+.gmail-account-card .gmail-upgrade-explainer .gmail-account-action { grid-column: 2; grid-row: 1 / 4; }
+.gmail-empty-state { color: var(--orca-muted); line-height: 1.55; margin: 0; }
+.oauth-notice .gmail-account-action { justify-self: start; margin-top: 6px; }
 
 .label-migration-picker { background: var(--orca-surface); border-radius: 22px; box-shadow: 0 8px 24px rgb(15 36 34 / 6%); padding: 14px 22px 0; }
 .label-migration-safety { display: none; }
