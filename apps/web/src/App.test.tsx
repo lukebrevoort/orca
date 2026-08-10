@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { ApiRequestError, App, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady } from "./App";
+import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
+import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId } from "./App";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
@@ -76,6 +76,45 @@ describe("App", () => {
   test("keeps adding another Gmail account discoverable in connection settings", () => {
     const html = renderToStaticMarkup(<GmailConnectionSettingsPage setTheme={() => {}} theme="light" />);
     expect(html).toContain("Add Gmail account");
+  });
+
+  test("renders scoped capability, reconnect, and label-import controls for every Gmail account", () => {
+    const accounts: MailAccount[] = [
+      { id: "gmail_personal", provider: "gmail", email: "luke.personal@gmail.com", displayName: "Luke Personal", capabilities: { read: true, draft: false, send: false } },
+      { id: "gmail_work", provider: "gmail", email: "luke@work.example", displayName: "Luke Work", capabilities: { read: true, draft: true, send: true } },
+    ];
+    const html = renderToStaticMarkup(
+      <GmailAccountSettingsList
+        accounts={accounts}
+        authorization={{ accountId: null, status: "idle", errorMessage: null }}
+        onAuthorize={() => {}}
+      />,
+    );
+
+    expect(html).toContain('data-account-id="gmail_personal"');
+    expect(html).toContain('data-account-id="gmail_work"');
+    expect(html).toContain("luke.personal@gmail.com");
+    expect(html).toContain("luke@work.example");
+    expect(html).toContain('aria-label="Enable drafts and sending for luke.personal@gmail.com"');
+    expect(html).toContain('aria-label="Reconnect Gmail for luke.personal@gmail.com"');
+    expect(html).toContain('aria-label="Reconnect Gmail for luke@work.example"');
+    expect(html).toContain('href="/settings/integrations/gmail/labels?accountId=gmail_personal"');
+    expect(html).toContain('href="/settings/integrations/gmail/labels?accountId=gmail_work"');
+    expect(html).not.toContain("/v1/accounts/gmail_personal");
+  });
+
+  test("keeps stacked Gmail actions on existing account-aware routes", () => {
+    const returnTo = "http://localhost:5173/settings/integrations/gmail";
+
+    expect(buildGmailAuthorizationRequestPath("upgrade", returnTo, "gmail_work")).toBe(
+      "/v1/auth/gmail/upgrade?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fsettings%2Fintegrations%2Fgmail&accountId=gmail_work",
+    );
+    expect(buildGmailAuthorizationRequestPath("connect", returnTo, "gmail_personal")).toBe(
+      "/v1/auth/gmail/connect?returnTo=http%3A%2F%2Flocalhost%3A5173%2Fsettings%2Fintegrations%2Fgmail&accountId=gmail_personal",
+    );
+    expect(buildGmailLabelMigrationPath("gmail_personal")).toBe("/settings/integrations/gmail/labels?accountId=gmail_personal");
+    expect(withGmailAccountId("/v1/gmail-label-migration/import", "gmail_work")).toBe("/v1/gmail-label-migration/import?accountId=gmail_work");
+    expect(withGmailAccountId("/v1/gmail-label-migration", null)).toBe("/v1/gmail-label-migration");
   });
 
   test("orients new users without making Gmail labels part of sign-in", () => {

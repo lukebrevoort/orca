@@ -124,6 +124,31 @@ describe("Gmail auth routes", () => {
     }
   });
 
+  test("reconnect carries the selected stacked account through OAuth", async () => {
+    const store = new InMemoryOAuthAccountStore();
+    const first = await seedReadOnlyAccount(store);
+    const second = await store.upsert({
+      userId: "user_1", provider: "gmail", providerAccountId: "google-user-2", providerEmail: "work@gmail.com",
+      grantedScopes: config.scopes, encryptedAccessToken: "work-access", encryptedRefreshToken: "work-refresh", expiresAt: null,
+    });
+    const app = createGmailAuthApp({
+      authMiddleware,
+      config,
+      store,
+      fetch: async (input) => input.toString().includes("token")
+        ? Response.json({ access_token: "reconnected-access", refresh_token: "reconnected-refresh", scope: config.scopes.join(" ") })
+        : Response.json({ id: "google-user-2", email: "work@gmail.com" }),
+    });
+
+    const connect = await (await app.request(`/connect?accountId=${encodeURIComponent(second.id)}`)).json() as { state: string };
+    const callback = await app.request(`/callback?code=reconnect-code&state=${encodeURIComponent(connect.state)}`, { redirect: "manual" });
+
+    expect(callback.headers.get("location")).toContain("status=success");
+    expect(store.getAll().find((account) => account.id === first.id)?.encryptedAccessToken).toBe("encrypted-read-access");
+    expect(store.getAll().find((account) => account.id === second.id)?.encryptedAccessToken).not.toBe("work-access");
+    expect(store.getAll()).toHaveLength(2);
+  });
+
   test("uses one configured database for the login session and OAuth account", async () => {
     const previousSessionSecret = process.env.SESSION_SECRET;
     const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;

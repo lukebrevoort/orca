@@ -22,6 +22,7 @@ export type GmailOAuthErrorCode =
   | "account_identity_missing"
   | "account_mismatch"
   | "compose_not_granted"
+  | "connect_account_missing"
   | "upgrade_account_missing"
   | "account_persistence_failed";
 
@@ -91,7 +92,7 @@ export function createGmailOAuthService(options: {
           returnTo: normalizeReturnTo(returnTo, options.config.webOrigin),
           issuedAt: new Date().toISOString(),
           intent,
-          accountId: intent === "upgrade" ? accountId : null,
+          accountId: accountId ?? null,
           initialLogin,
         },
         options.config.stateSecret,
@@ -183,7 +184,30 @@ export function createGmailOAuthService(options: {
         );
       }
 
-      let existingUpgradeAccount: Awaited<ReturnType<OAuthAccountStore["findById"]>> = null;
+      let existingTargetAccount: Awaited<ReturnType<OAuthAccountStore["findById"]>> = null;
+      if (decodedState.accountId) {
+        existingTargetAccount = await options.store.findById(userId, decodedState.accountId);
+        if (!existingTargetAccount) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            decodedState.intent === "upgrade" ? "upgrade_account_missing" : "connect_account_missing",
+            decodedState.intent === "upgrade"
+              ? "The existing Gmail connection could not be found. Reading access was not changed."
+              : "The Gmail connection to reconnect could not be found. Reading access was not changed.",
+            decodedState.intent,
+          );
+        }
+        if (existingTargetAccount.providerAccountId !== userInfoResponse.providerAccountId) {
+          return buildError(
+            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
+            "account_mismatch",
+            "Choose the same Google account that is already connected to Orca. Reading access was not changed.",
+            decodedState.intent,
+          );
+        }
+      }
+
+      let existingUpgradeAccount = existingTargetAccount;
       if (decodedState.intent === "upgrade") {
         if (!decodedState.accountId) {
           return buildError(
@@ -193,23 +217,8 @@ export function createGmailOAuthService(options: {
             decodedState.intent,
           );
         }
-        existingUpgradeAccount = await options.store.findById(userId, decodedState.accountId);
-        if (!existingUpgradeAccount) {
-          return buildError(
-            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
-            "upgrade_account_missing",
-            "The existing Gmail connection could not be found. Reading access was not changed.",
-            decodedState.intent,
-          );
-        }
-        if (existingUpgradeAccount.providerAccountId !== userInfoResponse.providerAccountId) {
-          return buildError(
-            resolveReturnTo(decodedState, options.config.errorRedirectUrl),
-            "account_mismatch",
-            "Choose the same Google account that is already connected to Orca. Reading access was not changed.",
-            decodedState.intent,
-          );
-        }
+        // The account was loaded and identity-checked above so this upgrade
+        // cannot accidentally mutate another stacked Gmail connection.
         const missingScopes = options.config.composeScopes.filter((scope) => !tokenResponse.grantedScopes.includes(scope));
         if (tokenResponse.scopeReturned && missingScopes.length > 0) {
           return buildError(

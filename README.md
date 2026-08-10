@@ -72,6 +72,12 @@ including cached threads, messages, labels, contacts, drafts, collections,
 pins, reminders, and attention settings. It does not delete or modify mail or
 settings at Gmail or Outlook. Reconnecting starts with a fresh local cache.
 
+Gmail sync and label migration keep the existing routes and accept an optional
+`accountId` query parameter when a user has more than one Gmail connection:
+`POST /v1/sync/gmail?accountId=:id`, `GET /v1/gmail-label-migration?accountId=:id`,
+and the matching label import/skip routes. Without it, these endpoints retain
+their original first-connected-Gmail-account behavior for backwards compatibility.
+
 ## Checks
 
 ```bash

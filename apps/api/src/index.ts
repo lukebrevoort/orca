@@ -387,7 +387,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/gmail-label-migration", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const account = getConnectedGmailAccount(db, c.get("auth").userId, c.req.query("accountId"));
       if (!account) return noConnectedAccount(c);
       return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
     } finally {
@@ -398,7 +398,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/gmail-label-migration/skip", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+      const account = getConnectedGmailAccount(db, c.get("auth").userId, c.req.query("accountId"));
       if (!account) return noConnectedAccount(c);
       const current = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
       if (current?.status !== "completed") {
@@ -419,7 +419,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+        const account = getConnectedGmailAccount(db, c.get("auth").userId, c.req.query("accountId"));
         if (!account) return noConnectedAccount(c);
         if (!account.lastSyncedAt) {
           return c.json({ error: { code: "sync_incomplete", message: "Gmail must finish its initial sync before labels can be imported" } }, 409);
@@ -1193,7 +1193,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       let account: ConnectedAccount | undefined;
 
       try {
-        account = getConnectedAccountByProvider(db, auth.userId, "gmail");
+        account = getConnectedGmailAccount(db, auth.userId, c.req.query("accountId"));
 
         if (!account) {
           return c.json(
@@ -1798,6 +1798,17 @@ function getConnectedAccountByProvider(
 
 function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db"], userId: string, accountId: string) {
   return getConnectedAccounts(db, userId).find((account) => account.id === accountId);
+}
+
+function getConnectedGmailAccount(
+  db: ReturnType<typeof createDatabaseClient>["db"],
+  userId: string,
+  accountId?: string,
+) {
+  const account = accountId
+    ? getConnectedAccountById(db, userId, accountId)
+    : getConnectedAccounts(db, userId).find((candidate) => candidate.provider === "gmail");
+  return account?.provider === "gmail" ? account : undefined;
 }
 
 function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
