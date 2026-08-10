@@ -1,6 +1,5 @@
-import { Hono } from "hono";
-
-import type { AuthVariables } from "../../auth/middleware.ts";
+import { detectOutlookCapabilities } from "../../auth/outlook/capabilities.ts";
+import { createOutlookAuthApp } from "../../auth/outlook/routes.ts";
 import type { MailProviderAdapter, ProviderTransport } from "../shared/interfaces.ts";
 import { ProviderNotImplementedError } from "../shared/interfaces.ts";
 
@@ -12,17 +11,8 @@ const unavailableTransport: ProviderTransport = {
 
 export const outlookProvider: MailProviderAdapter = {
   provider: "outlook",
-  createOAuthApp() {
-    const app = new Hono<{ Variables: AuthVariables }>();
-    app.all("/*", (c) => c.json({
-      error: "outlook_oauth_not_implemented",
-      message: "Outlook OAuth is not implemented",
-    }, 501));
-    return app;
-  },
-  detectCapabilities() {
-    return { read: false, draft: false, send: false };
-  },
+  createOAuthApp: createOutlookAuthApp,
+  detectCapabilities: detectOutlookCapabilities,
   async syncPage() {
     throw new ProviderNotImplementedError("outlook", "sync");
   },
