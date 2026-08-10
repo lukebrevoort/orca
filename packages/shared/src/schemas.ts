@@ -335,6 +335,7 @@ export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),
     view: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
 export type InboxQuery = z.infer<typeof inboxQuerySchema>;

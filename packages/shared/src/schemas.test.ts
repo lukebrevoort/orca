@@ -39,6 +39,12 @@ describe("shared API schemas", () => {
     assert.equal(result.error.issues[0]?.path.join("."), "cursor");
   });
 
+  test("coerces bounded inbox limits", () => {
+    assert.deepEqual(inboxQuerySchema.parse({ limit: "25" }), { limit: 25 });
+    assert.equal(inboxQuerySchema.safeParse({ limit: "0" }).success, false);
+    assert.equal(inboxQuerySchema.safeParse({ limit: "101" }).success, false);
+  });
+
   test("requires an authenticated user when the session is authenticated", () => {
     assert.throws(
       () =>

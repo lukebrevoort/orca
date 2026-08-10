@@ -45,6 +45,7 @@
             <li><code>messages[]</code> is one stream sorted across accounts.</li>
             <li>Every message keeps both <code>accountId</code> and <code>provider</code>.</li>
             <li>Counts describe the returned unified set, not one provider.</li>
+            <li><code>limit</code> bounds each response page and <code>nextCursor</code> continues the same deterministic stream.</li>
           </ul>
         </section>
         <section>
@@ -74,7 +75,7 @@
         </section>
         <section>
           <h2>Ordering</h2>
-          <p>The unified implementation uses descending <code>receivedAt</code> across every account. Equal timestamps use ascending local message <code>id</code> as the deterministic tie-breaker.</p>
+          <p>The unified implementation keeps the existing attention order—<code>notify</code>, <code>focus</code>, <code>normal</code>, <code>quiet</code>, then <code>hidden</code>—across every account. Within a treatment, messages use descending <code>receivedAt</code>, then ascending <code>accountId</code> and local message <code>id</code> as deterministic tie-breakers.</p>
         </section>
         <section>
           <h2>Human Signal / Tideline</h2>

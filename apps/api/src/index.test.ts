@@ -501,6 +501,97 @@ describe("Orca API", () => {
     }
   });
 
+  test("merges two owned accounts with account-local attention rules, metadata, and cursors", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-unified-inbox-test-"));
+    const dbPath = join(tempDir, "unified-inbox.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "user_1", email: "luke@example.com", displayName: "Luke" },
+        { id: "user_2", email: "other@example.com", displayName: "Other" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "acct_primary", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-primary", createdAt: new Date("2026-07-01T00:00:00.000Z") },
+        { id: "acct_secondary", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-secondary", createdAt: new Date("2026-07-02T00:00:00.000Z") },
+        { id: "acct_private", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-private", createdAt: new Date("2026-07-03T00:00:00.000Z") },
+      ]).run();
+      db.insert(threads).values([
+        { id: "thread_primary_focus", accountId: "acct_primary", providerThreadId: "primary-focus", subject: "Primary focus", latestReceivedAt: new Date("2026-07-08T12:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "thread_primary_normal", accountId: "acct_primary", providerThreadId: "primary-normal", subject: "Primary normal", latestReceivedAt: new Date("2026-07-08T11:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "thread_secondary_notify", accountId: "acct_secondary", providerThreadId: "secondary-notify", subject: "Secondary notify", latestReceivedAt: new Date("2026-07-08T10:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "thread_secondary_quiet", accountId: "acct_secondary", providerThreadId: "secondary-quiet", subject: "Secondary quiet", latestReceivedAt: new Date("2026-07-08T15:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "thread_private", accountId: "acct_private", providerThreadId: "private", subject: "Private", latestReceivedAt: new Date("2026-07-08T18:00:00.000Z"), messageCount: 1, isRead: false },
+      ]).run();
+      db.insert(emails).values([
+        { id: "primary_focus", accountId: "acct_primary", threadId: "thread_primary_focus", providerMessageId: "primary-focus", fromAddress: "shared@example.com", fromName: "Shared sender", subject: "Primary focus", snippet: "Focus from primary", receivedAt: new Date("2026-07-08T12:00:00.000Z"), isRead: false, humanSignal: 8 },
+        { id: "primary_normal", accountId: "acct_primary", threadId: "thread_primary_normal", providerMessageId: "primary-normal", fromAddress: "normal@primary.example", subject: "Primary normal", snippet: "Normal from primary", receivedAt: new Date("2026-07-08T11:00:00.000Z"), isRead: false, humanSignal: 4 },
+        { id: "secondary_notify", accountId: "acct_secondary", threadId: "thread_secondary_notify", providerMessageId: "secondary-notify", fromAddress: "urgent@secondary.example", subject: "Secondary notify", snippet: "Notify from secondary", receivedAt: new Date("2026-07-08T10:00:00.000Z"), isRead: false, humanSignal: 9 },
+        { id: "secondary_quiet", accountId: "acct_secondary", threadId: "thread_secondary_quiet", providerMessageId: "secondary-quiet", fromAddress: "shared@example.com", subject: "Secondary quiet", snippet: "Quiet from secondary", receivedAt: new Date("2026-07-08T15:00:00.000Z"), isRead: false, humanSignal: 1 },
+        { id: "private_message", accountId: "acct_private", threadId: "thread_private", providerMessageId: "private", fromAddress: "private@example.com", subject: "Private", snippet: "Not owned by user_1", receivedAt: new Date("2026-07-08T18:00:00.000Z"), isRead: false, humanSignal: 10 },
+      ]).run();
+      db.insert(labels).values([
+        { id: "label_primary", accountId: "acct_primary", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+        { id: "label_secondary", accountId: "acct_secondary", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+        { id: "label_private", accountId: "acct_private", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+      ]).run();
+      db.insert(emailLabels).values([
+        { id: "join_primary_focus", emailId: "primary_focus", labelId: "label_primary" },
+        { id: "join_primary_normal", emailId: "primary_normal", labelId: "label_primary" },
+        { id: "join_secondary_notify", emailId: "secondary_notify", labelId: "label_secondary" },
+        { id: "join_secondary_quiet", emailId: "secondary_quiet", labelId: "label_secondary" },
+        { id: "join_private", emailId: "private_message", labelId: "label_private" },
+      ]).run();
+      const now = new Date("2026-07-08T16:00:00.000Z");
+      db.insert(senderAttentionRules).values([
+        { id: "rule_primary_shared", accountId: "acct_primary", scope: "address", value: "shared@example.com", behavior: "focus", source: "user_choice", createdAt: now, updatedAt: now },
+        { id: "rule_secondary_shared", accountId: "acct_secondary", scope: "address", value: "shared@example.com", behavior: "quiet", source: "user_choice", createdAt: now, updatedAt: now },
+        { id: "rule_secondary_urgent", accountId: "acct_secondary", scope: "address", value: "urgent@secondary.example", behavior: "notify", source: "user_choice", createdAt: now, updatedAt: now },
+      ]).run();
+
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+      const firstResponse = await testApp.request("/v1/inbox?view=all&limit=2", { headers });
+      assert.equal(firstResponse.status, 200);
+      const firstPage = await firstResponse.json();
+      assert.deepEqual(firstPage.accounts, [
+        { id: "acct_primary", provider: "gmail", email: "luke@example.com", displayName: "Luke", capabilities: { read: true, draft: false, send: false } },
+        { id: "acct_secondary", provider: "gmail", email: "luke.work@example.com", displayName: "Luke", capabilities: { read: true, draft: false, send: false } },
+      ]);
+      assert.deepEqual(firstPage.messages.map((message: { id: string; accountId: string; attentionBehavior: string }) => ({ id: message.id, accountId: message.accountId, attentionBehavior: message.attentionBehavior })), [
+        { id: "secondary_notify", accountId: "acct_secondary", attentionBehavior: "notify" },
+        { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
+      ]);
+      assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
+      assert.equal(typeof firstPage.nextCursor, "string");
+
+      const secondResponse = await testApp.request(`/v1/inbox?view=all&limit=2&cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers });
+      assert.equal(secondResponse.status, 200);
+      const secondPage = await secondResponse.json();
+      assert.deepEqual(secondPage.messages.map((message: { id: string; accountId: string; attentionBehavior: string }) => ({ id: message.id, accountId: message.accountId, attentionBehavior: message.attentionBehavior })), [
+        { id: "primary_normal", accountId: "acct_primary", attentionBehavior: "normal" },
+        { id: "secondary_quiet", accountId: "acct_secondary", attentionBehavior: "quiet" },
+      ]);
+      assert.equal(secondPage.nextCursor, null);
+      assert.equal(secondPage.messages.some((message: { id: string }) => message.id === "private_message"), false);
+
+      const focus = await (await testApp.request("/v1/inbox?view=focus", { headers })).json();
+      assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["secondary_notify", "primary_focus"]);
+      const normal = await (await testApp.request("/v1/inbox?view=normal", { headers })).json();
+      assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_normal"]);
+      const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
+      assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("keeps collections additive, orders pins deterministically, and deletes only organization metadata", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
