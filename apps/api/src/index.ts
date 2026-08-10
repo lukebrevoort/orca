@@ -21,6 +21,7 @@ import {
   createSenderAttentionRuleSchema,
   inboxQuerySchema,
   inboxResponseSchema,
+  mailAccountPageSchema,
   mailAccountSchema,
   messageDraftSchema,
   pinFilterSchema,
@@ -156,11 +157,40 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/me", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) {
         return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
       }
       return jsonWithSchema(c, mailAccountSchema, toMailAccount(account));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/accounts", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      return jsonWithSchema(c, mailAccountPageSchema, {
+        items: getUnifiedInboxAccounts(db, c.get("auth").userId).map(toMailAccount),
+        nextCursor: null,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.delete("/v1/accounts/:id", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const deleted = db.delete(oauthAccounts)
+        .where(and(eq(oauthAccounts.id, c.req.param("id")), eq(oauthAccounts.userId, c.get("auth").userId)))
+        .returning({ id: oauthAccounts.id })
+        .get();
+      if (!deleted) {
+        return c.json({ error: { code: "not_found", message: "Connected account not found" } }, 404);
+      }
+      syncStatuses.delete(deleted.id);
+      return c.body(null, 204);
     } finally {
       sqlite.close();
     }
@@ -212,7 +242,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/attention/rules", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return c.json(listSenderRules(db, account.id).map(toSenderRule));
     } finally {
@@ -227,7 +257,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = normalizeRuleInput(c.req.valid("json"));
         const id = `sender-rule:${crypto.randomUUID()}`;
@@ -248,7 +278,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const existing = getSenderRule(db, account.id, c.req.param("id"));
         if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
@@ -267,7 +297,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/attention/rules/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const existing = getSenderRule(db, account.id, c.req.param("id"));
       if (!existing) return c.json({ error: { code: "not_found", message: "Sender rule was not found" } }, 404);
@@ -285,7 +315,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const address = c.req.valid("query").address.toLowerCase();
         const domain = address.split("@")[1]!;
@@ -311,7 +341,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/attention/view-settings", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       ensureViewSettings(db, account.id);
       return c.json(listViewSettings(db, account.id).map(toViewSetting));
@@ -329,7 +359,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!behavior.success) return c.json({ error: { code: "validation_error", message: "Unknown attention behavior" } }, 400);
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         ensureViewSettings(db, account.id);
         const current = db.select().from(attentionViewSettings).where(and(eq(attentionViewSettings.accountId, account.id), eq(attentionViewSettings.behavior, behavior.data))).get()!;
@@ -346,7 +376,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/collections", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return c.json(listCollections(db, account.id).map((collection) => collectionSchema.parse(collection)));
     } finally {
@@ -357,7 +387,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/gmail-label-migration", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return jsonWithSchema(c, gmailLabelMigrationSchema, getGmailLabelMigration(db, account));
     } finally {
@@ -368,7 +398,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/gmail-label-migration/skip", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const current = db.select().from(gmailLabelMigrations).where(eq(gmailLabelMigrations.accountId, account.id)).get();
       if (current?.status !== "completed") {
@@ -389,7 +419,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         if (!account.lastSyncedAt) {
           return c.json({ error: { code: "sync_incomplete", message: "Gmail must finish its initial sync before labels can be imported" } }, 409);
@@ -441,7 +471,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
         const name = input.name.trim();
@@ -463,7 +493,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const current = getCollection(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
@@ -480,7 +510,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/collections/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const current = getCollection(db, account.id, c.req.param("id"));
       if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
@@ -499,7 +529,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.put("/v1/collections/:id/threads/:threadId", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const collection = getCollection(db, account.id, c.req.param("id"));
       const thread = db.select().from(threads).where(and(eq(threads.accountId, account.id), eq(threads.id, c.req.param("threadId")))).get();
@@ -514,7 +544,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/collections/:id/threads/:threadId", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const collection = getCollection(db, account.id, c.req.param("id"));
       if (!collection) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
@@ -528,7 +558,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/pins", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return c.json(listPins(db, account.id).map(toPin));
     } finally {
@@ -543,7 +573,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
         validatePinTarget(db, account.id, input.kind, input.targetId);
@@ -566,7 +596,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccount(db, c.get("auth").userId);
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const current = getPin(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
@@ -581,7 +611,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/pins/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const current = getPin(db, account.id, c.req.param("id"));
       if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
@@ -600,7 +630,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/reminders/view-settings", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       return jsonWithSchema(c, reminderViewSettingsSchema, getReminderViewSettings(db, account.id));
     } finally { sqlite.close(); }
@@ -609,7 +639,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/reminders/view-settings", validator("json", (value, c) => validateJson(c, reminderViewSettingsSchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const setting = c.req.valid("json");
       db.insert(reminderViewSettings).values({ accountId: account.id, displayName: setting.displayName })
@@ -621,7 +651,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/reminders", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       resurfaceDueReminders(db, account.id, now());
       const records = db.select().from(threadReminders).where(eq(threadReminders.accountId, account.id)).orderBy(asc(threadReminders.scheduledFor), asc(threadReminders.id)).all();
@@ -632,7 +662,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/reminders", validator("json", (value, c) => validateJson(c, createReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const input = c.req.valid("json");
       const scheduledFor = validateReminderTime(c, input.scheduledFor, input.timezone, now());
@@ -650,7 +680,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/reminders/:id", validator("json", (value, c) => validateJson(c, updateReminderSchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const record = db.select().from(threadReminders).where(and(eq(threadReminders.id, c.req.param("id")), eq(threadReminders.accountId, account.id))).get();
       if (!record) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
@@ -669,7 +699,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/drafts", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const drafts = db.select().from(messageDrafts)
         .where(eq(messageDrafts.accountId, account.id))
@@ -684,7 +714,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const id = crypto.randomUUID();
       const input = c.req.valid("json");
@@ -712,7 +742,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.get("/v1/drafts/:id", requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -724,7 +754,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -773,7 +803,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.delete("/v1/drafts/:id", requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -882,7 +912,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.post("/v1/drafts/:id/send", validator("json", (value, c) => validateJson(c, sendMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
-      const account = getConnectedAccount(db, c.get("auth").userId);
+      const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
       const draft = getMessageDraft(db, account.id, c.req.param("id"));
       if (!draft) return noDraft(c);
@@ -1163,7 +1193,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       let account: ConnectedAccount | undefined;
 
       try {
-        account = getConnectedAccount(db, auth.userId);
+        account = getConnectedAccountByProvider(db, auth.userId, "gmail");
 
         if (!account) {
           return c.json(
@@ -1431,7 +1461,7 @@ function updateReminderTerminal(
 ) {
   const { db, sqlite } = dbFactory();
   try {
-    const account = getConnectedAccount(db, c.get("auth").userId);
+    const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
     if (!account) return noConnectedAccount(c);
     const reminderId = c.req.param("id");
     if (!reminderId) return c.json({ error: { code: "not_found", message: "Reminder not found" } }, 404);
@@ -1758,8 +1788,12 @@ function organizationConflict(c: Context, error: unknown, message: string) {
   throw error;
 }
 
-function getConnectedAccount(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount | undefined {
-  return getConnectedAccounts(db, userId)[0];
+function getConnectedAccountByProvider(
+  db: ReturnType<typeof createDatabaseClient>["db"],
+  userId: string,
+  provider: ConnectedAccount["provider"],
+): ConnectedAccount | undefined {
+  return getConnectedAccounts(db, userId).find((account) => account.provider === provider);
 }
 
 function getConnectedAccountById(db: ReturnType<typeof createDatabaseClient>["db"], userId: string, accountId: string) {
