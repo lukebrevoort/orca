@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-251 · Human Inbox validation</title>
+  <style>
+    :root { color-scheme: light; --paper:#f5faf8; --surface:#fff; --ink:#102522; --muted:#607570; --line:#d9e8e2; --accent:#0e9f8a; --accent-soft:#e4f4ef; --shadow:0 18px 50px rgb(16 37 34 / 10%); }
+    * { box-sizing:border-box; }
+    body { background:radial-gradient(circle at 92% 0, #dff3ed, transparent 32rem), var(--paper); color:var(--ink); font:15px/1.6 ui-sans-serif, system-ui, sans-serif; margin:0; }
+    main { margin:0 auto; max-width:1080px; padding:56px 24px 80px; }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    h1 { font-size:clamp(34px,6vw,64px); letter-spacing:-.06em; line-height:1; margin:12px 0 18px; max-width:760px; }
+    h2 { font-size:22px; letter-spacing:-.03em; margin:0 0 10px; }
+    p { color:var(--muted); margin:0; }
+    .hero, .card { background:color-mix(in srgb, var(--surface) 88%, transparent); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow); }
+    .hero { padding:clamp(24px,5vw,52px); }
+    .hero p { font-size:18px; max-width:700px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:18px; }
+    .card { padding:24px; }
+    .card.wide { grid-column:1 / -1; }
+    table { border-collapse:collapse; margin-top:12px; width:100%; }
+    th, td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+    code { background:var(--accent-soft); border-radius:7px; color:var(--ink); font:13px ui-monospace, SFMono-Regular, Menlo, monospace; padding:2px 6px; }
+    pre { background:#102522; border-radius:14px; color:#e7f8f2; overflow:auto; padding:16px; }
+    .checklist { display:grid; gap:8px; list-style:none; margin:12px 0 0; padding:0; }
+    .checklist li::before { color:var(--accent); content:"✓"; font-weight:900; margin-right:9px; }
+    .shots { display:grid; gap:14px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:16px; }
+    figure { margin:0; }
+    figure img { background:#102522; border:1px solid var(--line); border-radius:14px; display:block; width:100%; }
+    figcaption { color:var(--muted); font-size:12px; margin-top:7px; }
+    a { color:var(--accent); }
+    @media (max-width:760px) { .grid,.shots { grid-template-columns:1fr; } .card.wide { grid-column:auto; } main { padding:28px 16px 56px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">BRE-251 · 3fc255bc-1885-41ca-86a3-fd7be6b4dd48</div>
+      <h1>Human Inbox, Tideline, and safe corrections</h1>
+      <p>Validation notes for the server-backed classification surfaces. The screenshots below were captured from the running Vite SPA at <code>http://localhost:5173/dev/inbox</code>, with the local API running at <code>http://localhost:3000</code>.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Surface contract</h2>
+        <table>
+          <tr><th>View</th><th>Behavior</th></tr>
+          <tr><td>Human Inbox</td><td>Likely-human messages, with unread/pin context.</td></tr>
+          <tr><td>Tideline</td><td>Automated or bulk signal, kept out of the human stream.</td></tr>
+          <tr><td>Review</td><td>Uncertain and unclassified messages for later review.</td></tr>
+          <tr><td>All mail</td><td>Every classified message, with provider/account scope preserved.</td></tr>
+        </table>
+      </article>
+      <article class="card">
+        <h2>Correction flow</h2>
+        <ul class="checklist">
+          <li>Choose message, sender address, or sender domain scope.</li>
+          <li>Save likely-human, automated/bulk, or uncertain.</li>
+          <li>Reset to the automatic Orca estimate.</li>
+          <li>Provider mail is never mutated by a correction.</li>
+          <li>Thread opens remain account-scoped.</li>
+        </ul>
+      </article>
+      <article class="card wide">
+        <h2>Verification commands</h2>
+        <pre><code>bun install --frozen-lockfile
+bun run dev:api        # API on :3000
+bun run dev:web        # Vite on :5173
+# Open: http://localhost:5173/dev/inbox
+# Exercise: Tideline → theme toggle → dark; Human Inbox → correction → All mail → reset</code></pre>
+        <p>Automated checks: <code>bun run typecheck</code>, <code>bun run test</code>, <code>bun run build</code>.</p>
+      </article>
+      <article class="card wide">
+        <h2>Actual-app evidence</h2>
+        <div class="shots">
+          <figure><img src="../output/playwright/bre-251-human-inbox-light-final.png" alt="Human Inbox in the light theme"><figcaption>Light · Human Inbox</figcaption></figure>
+          <figure><img src="../output/playwright/bre-251-tideline-dark.png" alt="Tideline in the dark theme"><figcaption>Dark · Tideline after the visible theme toggle</figcaption></figure>
+          <figure><img src="../output/playwright/bre-251-correction-light-final.png" alt="Classification correction dialog in the light theme"><figcaption>Light · correction dialog</figcaption></figure>
+        </div>
+        <p style="margin-top:16px">Dispatch media: <code>bre-251-human-inbox-light-final-2026-08-11-04-47-05-312.png</code>, <code>bre-251-tideline-dark-2026-08-11-04-47-05-636.png</code>, and <code>bre-251-correction-light-final-2026-08-11-04-47-05-726.png</code>.</p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
