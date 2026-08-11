@@ -24,22 +24,29 @@ describe("shared API schemas", () => {
       inboxResponseSchema.parse({
         accounts: [accountFixture],
         messages: inboxFixture,
-        counts: {
-          attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
-          classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
-        },
+        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
         nextCursor: null,
       }),
       {
         accounts: [accountFixture],
         messages: inboxFixture,
-        counts: {
-          attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
-          classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
-        },
+        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
         nextCursor: null,
       },
     );
+  });
+
+  test("accepts the opt-in classification count contract alongside the legacy shape", () => {
+    const parsed = inboxResponseSchema.parse({
+      accounts: [accountFixture],
+      messages: inboxFixture,
+      counts: {
+        attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+        classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+      },
+      nextCursor: null,
+    });
+    assert.equal("classification" in parsed.counts, true);
   });
 
   test("rejects blank inbox cursors", () => {
