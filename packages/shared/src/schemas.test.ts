@@ -16,7 +16,14 @@ import {
   updateMessageDraftSchema,
   updateCollectionSchema,
 } from "./index.ts";
-import { accountFixture, inboxFixture } from "./fixtures.ts";
+import {
+  accountFixture,
+  inboxFixture,
+  m5FixtureAccounts,
+  m5FixtureExpectedClassifications,
+  m5InboxFixture,
+  m5NormalizedFixtureMessages,
+} from "./fixtures.ts";
 
 describe("shared API schemas", () => {
   test("parses the fixture inbox response shape", () => {
@@ -39,6 +46,41 @@ describe("shared API schemas", () => {
         },
         nextCursor: null,
       },
+    );
+  });
+
+  test("keeps the M5 fixture matrix provider- and account-attributed", () => {
+    assert.deepEqual(
+      [...new Set(m5NormalizedFixtureMessages.map((message) => message.provider))],
+      ["gmail", "outlook"],
+    );
+    assert.deepEqual(
+      [...new Set(m5NormalizedFixtureMessages.map((message) => message.accountId))],
+      ["acct_m5_gmail", "acct_m5_outlook"],
+    );
+    assert.deepEqual(
+      [...new Set(Object.values(m5FixtureExpectedClassifications).map((assessment) => assessment.classification))].sort(),
+      ["automated_or_bulk", "likely_human", "uncertain", "unclassified"],
+    );
+    assert.equal(m5NormalizedFixtureMessages.filter((message) => message.threadId.endsWith("mixed-thread")).length, 2);
+    assert.equal(m5InboxFixture.find((message) => message.id === "m5_gmail_override")?.humanClassification?.effective.source, "user_override");
+    assert.deepEqual(
+      inboxResponseSchema.parse({
+        accounts: m5FixtureAccounts,
+        messages: m5InboxFixture,
+        counts: {
+          attention: { focus: 0, normal: m5InboxFixture.length, quiet: 0, hidden: 0, all: m5InboxFixture.length },
+          classification: {
+            likely_human: m5InboxFixture.filter((message) => message.humanClassification?.effective.classification === "likely_human").length,
+            automated_or_bulk: m5InboxFixture.filter((message) => message.humanClassification?.effective.classification === "automated_or_bulk").length,
+            uncertain: m5InboxFixture.filter((message) => message.humanClassification?.effective.classification === "uncertain").length,
+            unclassified: m5InboxFixture.filter((message) => message.humanClassification?.effective.classification === "unclassified").length,
+            all: m5InboxFixture.length,
+          },
+        },
+        nextCursor: null,
+      }).accounts.map((account) => account.provider),
+      ["gmail", "outlook"],
     );
   });
 

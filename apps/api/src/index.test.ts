@@ -5,6 +5,12 @@ import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { eq } from "drizzle-orm";
+import {
+  m5FixtureAccounts,
+  m5FixtureOverride,
+  m5InboxFixture,
+  m5NormalizedFixtureMessages,
+} from "@orca/shared";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
@@ -1022,6 +1028,120 @@ describe("Orca API", () => {
         ["overridden_human", "likely_human"],
       ]);
       assert.equal(thread.messages[1].humanClassification.effective.source, "user_override");
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 24).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-m5-fixture-api-test-"));
+    const dbPath = join(tempDir, "m5-fixture.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      const fixtureById = new Map(m5NormalizedFixtureMessages.map((message) => [message.id, message]));
+      db.insert(users).values({ id: "m5-user", email: "m5@example.com", displayName: "M5 User" }).run();
+      db.insert(oauthAccounts).values(m5FixtureAccounts.map((account) => ({
+        id: account.id,
+        userId: "m5-user",
+        provider: account.provider,
+        providerEmail: account.email,
+        providerId: `${account.provider}-m5`,
+      }))).run();
+      db.insert(threads).values(
+        [...new Map(m5NormalizedFixtureMessages.map((message) => [message.threadId, message])).values()].map((message) => ({
+          id: message.threadId,
+          accountId: message.accountId,
+          providerThreadId: message.raw.threadId,
+          subject: message.subject,
+          latestReceivedAt: new Date(message.receivedAt),
+          messageCount: m5NormalizedFixtureMessages.filter((candidate) => candidate.threadId === message.threadId).length,
+          isRead: !message.unread,
+        })),
+      ).run();
+      db.insert(emails).values(m5InboxFixture.map((message) => {
+        const normalized = fixtureById.get(message.id);
+        const automatic = message.humanClassification?.automatic;
+        if (!normalized || !automatic) throw new Error(`Missing M5 database fixture for ${message.id}`);
+        return {
+          id: message.id,
+          accountId: message.accountId,
+          threadId: message.threadId,
+          providerMessageId: message.providerMessageId,
+          fromAddress: message.from.email,
+          fromName: message.from.name,
+          toRecipients: JSON.stringify(normalized.to),
+          ccRecipients: JSON.stringify(normalized.cc),
+          bccRecipients: JSON.stringify(normalized.bcc),
+          subject: message.subject,
+          snippet: message.snippet,
+          bodyText: normalized.bodyText,
+          bodyHtml: normalized.bodyHtml,
+          internetMessageId: normalized.internetMessageId,
+          references: JSON.stringify(normalized.references),
+          receivedAt: new Date(message.receivedAt),
+          internalDate: new Date(message.receivedAt),
+          isRead: !message.unread,
+          humanSignal: automatic.score,
+          humanClassification: automatic.classification,
+          humanClassificationReasons: JSON.stringify(automatic.reasonCodes),
+          humanClassifierVersion: automatic.classifierVersion,
+          humanClassificationEvidence: JSON.stringify(normalized.classificationEvidence),
+        };
+      })).run();
+      db.insert(humanClassificationOverrides).values({
+        id: m5FixtureOverride.id,
+        accountId: m5FixtureOverride.accountId,
+        targetType: "message",
+        targetValue: m5FixtureOverride.target.scope === "message" ? m5FixtureOverride.target.messageId : "",
+        classification: m5FixtureOverride.classification,
+        source: "user_choice",
+        createdAt: new Date(m5FixtureOverride.createdAt),
+        updatedAt: new Date(m5FixtureOverride.updatedAt),
+      }).run();
+
+      const session = await createSession(db, "m5-user");
+      const headers = { cookie: `orca_session=${session.token}` };
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const allResponse = await testApp.request("/v1/inbox?classification=all&limit=100", { headers });
+      assert.equal(allResponse.status, 200);
+      const all = await allResponse.json();
+      assert.deepEqual(all.accounts.map((account: { provider: string }) => account.provider), ["gmail", "outlook"]);
+      assert.deepEqual(all.counts.classification, {
+        likely_human: 5,
+        automated_or_bulk: 3,
+        uncertain: 1,
+        unclassified: 1,
+        all: 10,
+      });
+      assert.equal(all.messages.length, 10);
+      assert.equal(all.messages.find((message: { id: string }) => message.id === "m5_gmail_override").humanClassification.effective.source, "user_override");
+      assert.equal(all.messages.find((message: { id: string }) => message.id === "m5_gmail_override").humanSignal, null);
+
+      const humanPage = await (await testApp.request("/v1/inbox?classification=human&limit=2", { headers })).json();
+      assert.deepEqual(humanPage.messages.map((message: { id: string }) => message.id), ["m5_gmail_reply", "m5_gmail_human"]);
+      assert.ok(humanPage.nextCursor);
+      const humanRemainder = await (await testApp.request(`/v1/inbox?classification=human&limit=10&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).json();
+      assert.deepEqual(humanRemainder.messages.map((message: { id: string }) => message.id), ["m5_gmail_mixed_human", "m5_gmail_override", "m5_outlook_human"]);
+      assert.equal((await testApp.request(`/v1/inbox?classification=tideline&cursor=${encodeURIComponent(humanPage.nextCursor)}`, { headers })).status, 400);
+
+      const review = await (await testApp.request("/v1/inbox?classification=uncertain", { headers })).json();
+      assert.deepEqual(review.messages.map((message: { id: string }) => message.id), ["m5_gmail_ambiguous", "m5_outlook_unknown"]);
+      const tideline = await (await testApp.request("/v1/inbox?classification=tideline", { headers })).json();
+      assert.deepEqual(tideline.messages.map((message: { id: string }) => message.id), ["m5_gmail_transactional", "m5_gmail_newsletter", "m5_gmail_mixed_bulk"]);
+
+      const mixedThread = await (await testApp.request("/v1/threads/gmail:acct_m5_gmail:mixed-thread?accountId=acct_m5_gmail", { headers })).json();
+      assert.equal(mixedThread.account.provider, "gmail");
+      assert.deepEqual(mixedThread.messages.map((message: { id: string; humanClassification: { effective: { classification: string } } }) => [message.id, message.humanClassification.effective.classification]), [
+        ["m5_gmail_mixed_bulk", "automated_or_bulk"],
+        ["m5_gmail_mixed_human", "likely_human"],
+      ]);
+      assert.equal((await testApp.request("/v1/threads/gmail:acct_m5_gmail:mixed-thread?accountId=acct_m5_outlook", { headers })).status, 404);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
