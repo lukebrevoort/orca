@@ -7,6 +7,7 @@ import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
   type AttentionBehavior,
+  type HumanClassificationResult,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
   type MailProvider,
@@ -22,6 +23,7 @@ import {
   gmailLabelMigrationSchema,
   importGmailLabelsSchema,
   humanClassificationAssessmentSchema,
+  humanClassificationSchema,
   humanClassificationOverrideSchema,
   humanClassificationResultSchema,
   createPinSchema,
@@ -1130,7 +1132,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification = "all" } = c.req.valid("query");
       const { db, sqlite } = dbFactory();
       try {
         const accounts = getUnifiedInboxAccounts(db, c.get("auth").userId);
@@ -1152,6 +1154,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             receivedAt: emails.receivedAt,
             isRead: emails.isRead,
             humanSignal: emails.humanSignal,
+            humanClassification: emails.humanClassification,
+            humanClassificationReasons: emails.humanClassificationReasons,
+            humanClassifierVersion: emails.humanClassifierVersion,
             labelName: labels.name,
           }).from(emails)
             .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
@@ -1173,6 +1178,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               receivedAt: row.receivedAt,
               isRead: row.isRead,
               humanSignal: row.humanSignal,
+              humanClassification: row.humanClassification,
+              humanClassificationReasons: row.humanClassificationReasons,
+              humanClassifierVersion: row.humanClassifierVersion,
               labels: [],
             };
             if (row.labelName && !message.labels.includes(row.labelName)) message.labels.push(row.labelName);
@@ -1181,27 +1189,51 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
           const rules = listSenderRules(db, account.id);
           for (const message of byId.values()) {
+            const humanClassification = resolveHumanClassification(db, account.id, message);
             resolved.push({
               ...message,
               provider: account.provider,
               attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
+              humanSignal: humanClassification.effective.score,
+              humanClassification,
             });
           }
         }
 
         const counts = {
-          focus: resolved.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
-          normal: resolved.filter((message) => message.attentionBehavior === "normal").length,
-          quiet: resolved.filter((message) => message.attentionBehavior === "quiet").length,
-          hidden: resolved.filter((message) => message.attentionBehavior === "hidden").length,
-          all: resolved.length,
+          attention: {
+            focus: resolved.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
+            normal: resolved.filter((message) => message.attentionBehavior === "normal").length,
+            quiet: resolved.filter((message) => message.attentionBehavior === "quiet").length,
+            hidden: resolved.filter((message) => message.attentionBehavior === "hidden").length,
+            all: resolved.length,
+          },
+          classification: {
+            likely_human: resolved.filter((message) => message.humanClassification.effective.classification === "likely_human").length,
+            automated_or_bulk: resolved.filter((message) => message.humanClassification.effective.classification === "automated_or_bulk").length,
+            uncertain: resolved.filter((message) => message.humanClassification.effective.classification === "uncertain").length,
+            unclassified: resolved.filter((message) => message.humanClassification.effective.classification === "unclassified").length,
+            all: resolved.length,
+          },
         };
-        const filtered = resolved.filter((message) => matchesAttentionView(message.attentionBehavior, view));
+        const filtered = resolved.filter((message) =>
+          matchesAttentionView(message.attentionBehavior, view)
+          && matchesHumanClassificationView(message.humanClassification.effective.classification, classification),
+        );
         filtered.sort(compareInboxMessages);
         const cursorTarget = decodeInboxCursor(cursor);
+        if (cursor && (!cursorTarget
+          || cursorTarget.view !== (view ?? "default")
+          || cursorTarget.classification !== classification
+          || !accounts.some((account) => account.id === cursorTarget.accountId))) {
+          return c.json({ error: { code: "invalid_cursor", message: "The inbox cursor does not match this account set or filter" } }, 400);
+        }
         const cursorIndex = cursorTarget
-          ? filtered.findIndex((message) => message.id === cursorTarget.id && (!cursorTarget.accountId || message.accountId === cursorTarget.accountId))
+          ? filtered.findIndex((message) => message.id === cursorTarget.id && message.accountId === cursorTarget.accountId)
           : -1;
+        if (cursorTarget && cursorIndex < 0) {
+          return c.json({ error: { code: "invalid_cursor", message: "The inbox cursor is not part of this filtered result" } }, 400);
+        }
         const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
         const page = filtered.slice(start, start + limit);
         const lastMessage = page.at(-1);
@@ -1221,10 +1253,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             labels: message.labels,
             attentionBehavior: message.attentionBehavior,
             humanSignal: message.humanSignal,
+            humanClassification: message.humanClassification,
           })),
           counts,
           nextCursor: lastMessage && start + page.length < filtered.length
-            ? encodeInboxCursor(lastMessage)
+            ? encodeInboxCursor(lastMessage, view ?? "default", classification)
             : null,
         });
       } finally {
@@ -1251,12 +1284,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
 
         const messageRows = db.select({
-          id: emails.id, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
+          id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
           toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
           subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
           internetMessageId: emails.internetMessageId, references: emails.references,
           receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
-          humanSignal: emails.humanSignal, labelName: labels.name,
+          humanSignal: emails.humanSignal, humanClassification: emails.humanClassification,
+          humanClassificationReasons: emails.humanClassificationReasons, humanClassifierVersion: emails.humanClassifierVersion,
+          labelName: labels.name,
         }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
           .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
           .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
@@ -1278,6 +1313,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
         const messages = [...messagesById.values()].map((message) => {
           const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+          const humanClassification = resolveHumanClassification(db, account.id, message);
           return {
             id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
@@ -1285,8 +1321,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
             unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
             internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
-            humanSignal: message.humanSignal,
-            humanClassification: null,
+            humanSignal: humanClassification.effective.score,
+            humanClassification,
             attachments: attachmentsByMessage.get(message.id) ?? [],
           };
         });
@@ -1448,15 +1484,22 @@ type InboxDatabaseMessage = {
   receivedAt: Date | null;
   isRead: boolean;
   humanSignal: number | null;
+  humanClassification: string | null;
+  humanClassificationReasons: string | null;
+  humanClassifierVersion: string | null;
   labels: string[];
 };
 
-type ResolvedInboxMessage = InboxDatabaseMessage & {
+type ResolvedInboxMessage = Omit<InboxDatabaseMessage, "humanClassification"> & {
   provider: ConnectedAccount["provider"];
   attentionBehavior: AttentionBehavior;
+  humanClassification: ReturnType<typeof resolveHumanClassification>;
 };
 
-type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id">;
+type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
+  view: "default" | "focus" | "normal" | "quiet" | "hidden" | "all";
+  classification: "human" | "tideline" | "uncertain" | "all";
+};
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
@@ -1747,7 +1790,7 @@ function getEmailByAccountId(db: Database, accountId: string, id: string): Class
   }).from(emails).where(and(eq(emails.accountId, accountId), eq(emails.id, id))).get();
 }
 
-function resolveHumanClassification(db: Database, accountId: string, message: ClassificationEmailRecord) {
+function resolveHumanClassification(db: Database, accountId: string, message: ClassificationEmailRecord): HumanClassificationResult {
   const normalizedAddress = message.fromAddress?.trim().toLowerCase() ?? "";
   const normalizedDomain = normalizedAddress.split("@")[1] ?? "";
   const rule = getHumanClassificationOverrideForTarget(db, accountId, "message", message.id)
@@ -1766,7 +1809,7 @@ function resolveHumanClassification(db: Database, accountId: string, message: Cl
       automatic,
       userOverride,
       effective: {
-        classification: rule.classification,
+        classification: humanClassificationSchema.parse(rule.classification),
         score: null,
         reasonCodes: [scopeReason[rule.targetType as "message" | "sender_address" | "sender_domain"]],
         classifierVersion: null,
@@ -1860,6 +1903,17 @@ function matchesAttentionView(behavior: AttentionBehavior, view?: "focus" | "nor
   return behavior === view;
 }
 
+function matchesHumanClassificationView(
+  classification: "likely_human" | "automated_or_bulk" | "uncertain" | "unclassified",
+  view: "human" | "tideline" | "uncertain" | "all",
+) {
+  if (view === "all") return true;
+  if (view === "human") return classification === "likely_human";
+  if (view === "tideline") return classification === "automated_or_bulk";
+  // Historical rows with no classifier result need a review surface too.
+  return classification === "uncertain" || classification === "unclassified";
+}
+
 const inboxAttentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
 
 function compareInboxMessages(a: ResolvedInboxMessage, b: ResolvedInboxMessage) {
@@ -1869,8 +1923,12 @@ function compareInboxMessages(a: ResolvedInboxMessage, b: ResolvedInboxMessage) 
     || a.id.localeCompare(b.id);
 }
 
-function encodeInboxCursor(message: InboxCursor) {
-  return Buffer.from(JSON.stringify(message), "utf8").toString("base64url");
+function encodeInboxCursor(
+  message: Pick<ResolvedInboxMessage, "accountId" | "id">,
+  view: InboxCursor["view"],
+  classification: InboxCursor["classification"],
+) {
+  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification } satisfies InboxCursor), "utf8").toString("base64url");
 }
 
 function decodeInboxCursor(value: string | undefined): InboxCursor | null {
@@ -1878,15 +1936,17 @@ function decodeInboxCursor(value: string | undefined): InboxCursor | null {
 
   try {
     const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<InboxCursor>;
-    if (typeof parsed.accountId === "string" && parsed.accountId.length > 0 && typeof parsed.id === "string" && parsed.id.length > 0) {
-      return { accountId: parsed.accountId, id: parsed.id };
+    if (
+      typeof parsed.accountId === "string" && parsed.accountId.length > 0
+      && typeof parsed.id === "string" && parsed.id.length > 0
+      && ["default", "focus", "normal", "quiet", "hidden", "all"].includes(parsed.view ?? "")
+      && ["human", "tideline", "uncertain", "all"].includes(parsed.classification ?? "")
+    ) {
+      return parsed as InboxCursor;
     }
-  } catch {
-    // Keep accepting legacy opaque cursors. They cannot select a page unless
-    // they identify a returned message, but they remain safe to retry.
-  }
+  } catch { /* Invalid cursors are rejected by the route. */ }
 
-  return { accountId: "", id: value };
+  return null;
 }
 
 function uniqueRuleError(c: Context, error: unknown) {

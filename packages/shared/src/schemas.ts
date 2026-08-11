@@ -510,6 +510,10 @@ export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),
     view: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+    // This is deliberately independent from `view`: attention answers where a
+    // message belongs in a person's workflow, while classification answers how
+    // Orca currently estimates the message was produced.
+    classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -746,11 +750,20 @@ export const inboxResponseSchema = z
     accounts: z.array(mailAccountSchema),
     messages: z.array(inboxMessageSchema),
     counts: z.object({
-      focus: z.number().int().nonnegative(),
-      normal: z.number().int().nonnegative(),
-      quiet: z.number().int().nonnegative(),
-      hidden: z.number().int().nonnegative(),
-      all: z.number().int().nonnegative(),
+      attention: z.object({
+        focus: z.number().int().nonnegative(),
+        normal: z.number().int().nonnegative(),
+        quiet: z.number().int().nonnegative(),
+        hidden: z.number().int().nonnegative(),
+        all: z.number().int().nonnegative(),
+      }).strict(),
+      classification: z.object({
+        likely_human: z.number().int().nonnegative(),
+        automated_or_bulk: z.number().int().nonnegative(),
+        uncertain: z.number().int().nonnegative(),
+        unclassified: z.number().int().nonnegative(),
+        all: z.number().int().nonnegative(),
+      }).strict(),
     }).strict(),
     nextCursor: z.string().nullable(),
   })

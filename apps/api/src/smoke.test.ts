@@ -83,9 +83,16 @@ describe("first-slice API smoke test", () => {
       assert.deepEqual(inbox.messages, [{
         id: "email_smoke", accountId: "acct_smoke", provider: "gmail", providerMessageId: "message-smoke", threadId: "thread_smoke",
         from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Smoke coverage", snippet: "A seeded inbox message",
-        receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"], attentionBehavior: "normal", humanSignal: null, humanClassification: null,
+        receivedAt: syncedAt.toISOString(), unread: true, labels: ["Inbox"], attentionBehavior: "normal", humanSignal: null,
+        humanClassification: {
+          automatic: null, userOverride: null,
+          effective: { classification: "unclassified", score: null, reasonCodes: ["insufficient_evidence"], classifierVersion: null, source: "automatic_heuristic", userOverride: null },
+        },
       }]);
-      assert.deepEqual(inbox.counts, { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 });
+      assert.deepEqual(inbox.counts, {
+        attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 1, all: 1 },
+      });
     } finally {
       sqlite.close();
     }

@@ -38,6 +38,22 @@ export const inboxFixture = z.array(inboxMessageSchema).parse([
     labels: ["INBOX"],
     attentionBehavior: "normal",
     humanSignal: 9,
-    humanClassification: null,
+    humanClassification: {
+      automatic: {
+        classification: "likely_human",
+        score: 9,
+        reasonCodes: ["direct_recipient"],
+        classifierVersion: "m5-v1",
+      },
+      effective: {
+        classification: "likely_human",
+        score: 9,
+        reasonCodes: ["direct_recipient"],
+        classifierVersion: "m5-v1",
+        source: "automatic_heuristic",
+        userOverride: null,
+      },
+      userOverride: null,
+    },
   },
 ]);

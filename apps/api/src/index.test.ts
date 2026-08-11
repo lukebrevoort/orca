@@ -822,9 +822,13 @@ describe("Orca API", () => {
 
       const focus = await (await request("focus")).json();
       assert.deepEqual(focus.messages.map((message: { id: string }) => message.id), ["email_family", "email_bank"]);
-      assert.equal(focus.messages[0].humanSignal, 10);
-      assert.equal(focus.messages[1].humanSignal, 0);
-      assert.deepEqual(focus.counts, { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 });
+      assert.equal(focus.messages[0].humanSignal, null);
+      assert.equal(focus.messages[1].humanSignal, null);
+      assert.equal(focus.messages[0].humanClassification.effective.classification, "unclassified");
+      assert.deepEqual(focus.counts, {
+        attention: { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 },
+        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 4, all: 4 },
+      });
       assert.deepEqual((await (await request("quiet")).json()).messages.map((message: { id: string }) => message.id), ["email_news"]);
       assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden"]);
     } finally {
@@ -899,7 +903,10 @@ describe("Orca API", () => {
         { id: "secondary_notify", accountId: "acct_secondary", attentionBehavior: "notify" },
         { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
       ]);
-      assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
+      assert.deepEqual(firstPage.counts, {
+        attention: { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 },
+        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 4, all: 4 },
+      });
       assert.equal(typeof firstPage.nextCursor, "string");
 
       const secondResponse = await testApp.request(`/v1/inbox?view=all&limit=2&cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers });
@@ -918,6 +925,103 @@ describe("Orca API", () => {
       assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_normal"]);
       const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
       assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 23).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-human-inbox-api-test-"));
+    const dbPath = join(tempDir, "human-inbox-api.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "human_user", email: "human@example.com", displayName: "Human User" },
+        { id: "other_user", email: "other@example.com", displayName: "Other User" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "gmail_human", userId: "human_user", provider: "gmail", providerEmail: "human@gmail.com", providerId: "human-gmail" },
+        { id: "outlook_human", userId: "human_user", provider: "outlook", providerEmail: "human@outlook.com", providerId: "human-outlook" },
+        { id: "private_human", userId: "other_user", provider: "gmail", providerEmail: "other@gmail.com", providerId: "other-gmail" },
+      ]).run();
+      db.insert(threads).values([
+        { id: "mixed_thread", accountId: "gmail_human", providerThreadId: "mixed", subject: "Mixed", latestReceivedAt: new Date("2026-08-10T12:00:00.000Z"), messageCount: 2, isRead: false },
+        { id: "bulk_thread_1", accountId: "gmail_human", providerThreadId: "bulk-1", subject: "Bulk 1", latestReceivedAt: new Date("2026-08-10T11:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "bulk_thread_2", accountId: "gmail_human", providerThreadId: "bulk-2", subject: "Bulk 2", latestReceivedAt: new Date("2026-08-10T10:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "uncertain_thread", accountId: "gmail_human", providerThreadId: "uncertain", subject: "Uncertain", latestReceivedAt: new Date("2026-08-10T09:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "unknown_thread", accountId: "gmail_human", providerThreadId: "unknown", subject: "Unknown", latestReceivedAt: new Date("2026-08-10T08:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "outlook_thread", accountId: "outlook_human", providerThreadId: "outlook", subject: "Outlook", latestReceivedAt: new Date("2026-08-10T07:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "private_thread", accountId: "private_human", providerThreadId: "private", subject: "Private", latestReceivedAt: new Date("2026-08-10T13:00:00.000Z"), messageCount: 1, isRead: false },
+      ]).run();
+      const automatic = (classification: "likely_human" | "automated_or_bulk" | "uncertain") => ({
+        humanSignal: classification === "likely_human" ? 8 : classification === "automated_or_bulk" ? 2 : null,
+        humanClassification: classification,
+        humanClassificationReasons: JSON.stringify(classification === "likely_human" ? ["direct_recipient"] : classification === "automated_or_bulk" ? ["list_id_header"] : ["conflicting_evidence"]),
+        humanClassifierVersion: "m5-v1",
+      });
+      db.insert(emails).values([
+        { id: "overridden_human", accountId: "gmail_human", threadId: "mixed_thread", providerMessageId: "overridden", fromAddress: "notices@example.com", subject: "Keep this", receivedAt: new Date("2026-08-10T12:00:00.000Z"), isRead: false, ...automatic("automated_or_bulk") },
+        { id: "mixed_bulk", accountId: "gmail_human", threadId: "mixed_thread", providerMessageId: "mixed-bulk", fromAddress: "news@example.com", subject: "Thread newsletter", receivedAt: new Date("2026-08-10T11:30:00.000Z"), isRead: false, ...automatic("automated_or_bulk") },
+        { id: "bulk_page_1", accountId: "gmail_human", threadId: "bulk_thread_1", providerMessageId: "bulk-1", fromAddress: "one@bulk.example", subject: "Bulk one", receivedAt: new Date("2026-08-10T11:00:00.000Z"), isRead: false, ...automatic("automated_or_bulk") },
+        { id: "bulk_page_2", accountId: "gmail_human", threadId: "bulk_thread_2", providerMessageId: "bulk-2", fromAddress: "two@bulk.example", subject: "Bulk two", receivedAt: new Date("2026-08-10T10:00:00.000Z"), isRead: false, ...automatic("automated_or_bulk") },
+        { id: "uncertain_message", accountId: "gmail_human", threadId: "uncertain_thread", providerMessageId: "uncertain", fromAddress: "maybe@example.com", subject: "Maybe", receivedAt: new Date("2026-08-10T09:00:00.000Z"), isRead: false, ...automatic("uncertain") },
+        { id: "unclassified_message", accountId: "gmail_human", threadId: "unknown_thread", providerMessageId: "unknown", fromAddress: "old@example.com", subject: "Old mail", receivedAt: new Date("2026-08-10T08:00:00.000Z"), isRead: false },
+        { id: "outlook_same_sender", accountId: "outlook_human", threadId: "outlook_thread", providerMessageId: "outlook", fromAddress: "notices@example.com", subject: "Separate account", receivedAt: new Date("2026-08-10T07:00:00.000Z"), isRead: false, ...automatic("automated_or_bulk") },
+        { id: "private_message", accountId: "private_human", threadId: "private_thread", providerMessageId: "private", fromAddress: "private@example.com", subject: "Private", receivedAt: new Date("2026-08-10T13:00:00.000Z"), isRead: false, ...automatic("likely_human") },
+      ]).run();
+      const createdAt = new Date("2026-08-10T12:05:00.000Z");
+      db.insert(humanClassificationOverrides).values({
+        id: "keep-notices", accountId: "gmail_human", targetType: "sender_address", targetValue: "notices@example.com", classification: "likely_human", createdAt, updatedAt: createdAt,
+      }).run();
+      // Joining multiple labels must not duplicate this message in a filtered
+      // page or inflate either set of account-wide counts.
+      db.insert(labels).values([
+        { id: "bulk-inbox-label", accountId: "gmail_human", providerLabelId: "INBOX", name: "Inbox", type: "system" },
+        { id: "bulk-newsletter-label", accountId: "gmail_human", providerLabelId: "NEWS", name: "Newsletter", type: "user" },
+      ]).run();
+      db.insert(emailLabels).values([
+        { id: "bulk-inbox-join", emailId: "mixed_bulk", labelId: "bulk-inbox-label" },
+        { id: "bulk-newsletter-join", emailId: "mixed_bulk", labelId: "bulk-newsletter-label" },
+      ]).run();
+
+      const session = await createSession(db, "human_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}` };
+      const first = await (await testApp.request("/v1/inbox?view=normal&classification=tideline&limit=2", { headers })).json();
+      assert.deepEqual(first.messages.map((message: { id: string }) => message.id), ["mixed_bulk", "bulk_page_1"]);
+      assert.deepEqual(first.messages[0].labels, ["Inbox", "Newsletter"]);
+      assert.equal(first.messages[0].humanClassification.effective.classification, "automated_or_bulk");
+      assert.equal(first.messages[0].humanClassification.effective.source, "automatic_heuristic");
+      assert.deepEqual(first.counts, {
+        attention: { focus: 0, normal: 7, quiet: 0, hidden: 0, all: 7 },
+        classification: { likely_human: 1, automated_or_bulk: 4, uncertain: 1, unclassified: 1, all: 7 },
+      });
+      const second = await (await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).json();
+      assert.deepEqual(second.messages.map((message: { id: string }) => message.id), ["bulk_page_2", "outlook_same_sender"]);
+      assert.equal(second.nextCursor, null);
+      assert.equal((await testApp.request(`/v1/inbox?view=normal&classification=human&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).status, 400);
+      const foreignCursor = Buffer.from(JSON.stringify({ accountId: "private_human", id: "private_message", view: "normal", classification: "human" })).toString("base64url");
+      assert.equal((await testApp.request(`/v1/inbox?view=normal&classification=human&cursor=${encodeURIComponent(foreignCursor)}`, { headers })).status, 400);
+
+      const human = await (await testApp.request("/v1/inbox?classification=human", { headers })).json();
+      assert.deepEqual(human.messages.map((message: { id: string }) => message.id), ["overridden_human"]);
+      assert.equal(human.messages[0].humanSignal, null);
+      assert.equal(human.messages[0].humanClassification.effective.source, "user_override");
+      const review = await (await testApp.request("/v1/inbox?classification=uncertain", { headers })).json();
+      assert.deepEqual(review.messages.map((message: { id: string }) => message.id), ["uncertain_message", "unclassified_message"]);
+
+      const thread = await (await testApp.request("/v1/threads/mixed_thread?accountId=gmail_human", { headers })).json();
+      assert.deepEqual(thread.messages.map((message: { id: string; humanClassification: { effective: { classification: string } } }) => [message.id, message.humanClassification.effective.classification]), [
+        ["mixed_bulk", "automated_or_bulk"],
+        ["overridden_human", "likely_human"],
+      ]);
+      assert.equal(thread.messages[1].humanClassification.effective.source, "user_override");
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

@@ -24,13 +24,19 @@ describe("shared API schemas", () => {
       inboxResponseSchema.parse({
         accounts: [accountFixture],
         messages: inboxFixture,
-        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+        counts: {
+          attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+          classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+        },
         nextCursor: null,
       }),
       {
         accounts: [accountFixture],
         messages: inboxFixture,
-        counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+        counts: {
+          attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+          classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+        },
         nextCursor: null,
       },
     );
@@ -44,9 +50,10 @@ describe("shared API schemas", () => {
   });
 
   test("coerces bounded inbox limits", () => {
-    assert.deepEqual(inboxQuerySchema.parse({ limit: "25" }), { limit: 25 });
+    assert.deepEqual(inboxQuerySchema.parse({ limit: "25", classification: "tideline" }), { limit: 25, classification: "tideline" });
     assert.equal(inboxQuerySchema.safeParse({ limit: "0" }).success, false);
     assert.equal(inboxQuerySchema.safeParse({ limit: "101" }).success, false);
+    assert.equal(inboxQuerySchema.safeParse({ classification: "machine" }).success, false);
   });
 
   test("defines an explainable, bounded Human Signal contract", () => {
