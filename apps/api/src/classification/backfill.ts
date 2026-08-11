@@ -18,6 +18,12 @@ export type HumanClassificationBackfillResult = {
   hasMore: boolean;
 };
 
+export type HumanClassificationBackfillCandidate = {
+  id: string;
+  humanClassificationEvidence: string | null;
+  humanClassifierVersion: string | null;
+};
+
 /**
  * Reclassify a bounded, account-scoped batch from stored normalized evidence.
  * It intentionally performs no provider or network access, so a partially
@@ -33,6 +39,7 @@ export function backfillHumanClassifications(
     .select({
       id: emails.id,
       humanClassificationEvidence: emails.humanClassificationEvidence,
+      humanClassifierVersion: emails.humanClassifierVersion,
     })
     .from(emails)
     .where(and(
@@ -45,23 +52,55 @@ export function backfillHumanClassifications(
 
   const batch = rows.slice(0, limit);
   const updatedAt = input.now ?? new Date();
+  let processed = 0;
+  let skippedChangedRow = false;
   for (const row of batch) {
-    const classification = classifyHumanSignal(parseStoredEvidence(row.humanClassificationEvidence));
-    db
-      .update(emails)
-      .set({
-        ...automaticClassificationColumns(classification),
-        updatedAt,
-      })
-      .where(and(eq(emails.id, row.id), eq(emails.accountId, input.accountId)))
-      .run();
+    if (applyBackfillClassification(db, { accountId: input.accountId, row, updatedAt })) {
+      processed += 1;
+    } else {
+      skippedChangedRow = true;
+    }
   }
 
   return {
     accountId: input.accountId,
-    processed: batch.length,
-    hasMore: rows.length > limit,
+    processed,
+    hasMore: rows.length > limit || skippedChangedRow,
   };
+}
+
+/**
+ * Persist an automatic result only if the evidence and rule version selected
+ * for this batch are still current. A sync may update either in another
+ * process between selecting the batch and this write.
+ */
+export function applyBackfillClassification(
+  db: Database,
+  input: { accountId: string; row: HumanClassificationBackfillCandidate; updatedAt: Date },
+) {
+  const classification = classifyHumanSignal(parseStoredEvidence(input.row.humanClassificationEvidence));
+  const unchangedEvidence = input.row.humanClassificationEvidence === null
+    ? isNull(emails.humanClassificationEvidence)
+    : eq(emails.humanClassificationEvidence, input.row.humanClassificationEvidence);
+  const unchangedVersion = input.row.humanClassifierVersion === null
+    ? isNull(emails.humanClassifierVersion)
+    : eq(emails.humanClassifierVersion, input.row.humanClassifierVersion);
+  const updated = db
+    .update(emails)
+    .set({
+      ...automaticClassificationColumns(classification),
+      updatedAt: input.updatedAt,
+    })
+    .where(and(
+      eq(emails.id, input.row.id),
+      eq(emails.accountId, input.accountId),
+      unchangedEvidence,
+      unchangedVersion,
+    ))
+    .returning({ id: emails.id })
+    .all();
+
+  return updated.length === 1;
 }
 
 function parseStoredEvidence(value: string | null) {

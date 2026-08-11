@@ -48,6 +48,10 @@ export function classifyHumanSignal(
   }
 
   for (const signal of evidence.headerSignals) {
+    // Kept in the wire contract to parse historical evidence, but this header
+    // controls automatic replies by recipients rather than sender authorship.
+    if (signal === "x_auto_response_suppress") continue;
+
     switch (signal) {
       case "list_id":
         score -= 3;
@@ -63,7 +67,6 @@ export function classifyHumanSignal(
         reasons.add("bulk_precedence_header");
         break;
       case "auto_submitted":
-      case "x_auto_response_suppress":
         score -= 3;
         reasons.add("auto_submitted_header");
         break;
