@@ -16,6 +16,7 @@ export {
   humanClassificationOverrideSchema,
   humanClassificationOverrideScopeSchema,
   humanClassificationOverrideTargetSchema,
+  normalizeHumanClassificationOverrideTarget,
   humanClassificationProviderSignalSchema,
   humanClassificationReasonCodeSchema,
   humanClassificationResultSchema,

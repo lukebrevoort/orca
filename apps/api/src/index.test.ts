@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
-import { app, createApp } from "./index.ts";
+import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 import { gmailProvider } from "./providers/gmail/provider.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
@@ -1523,10 +1523,12 @@ describe("Orca API", () => {
       );
 
       assert.equal((await create({ accountId: "gmail", target: { scope: "message", messageId: "missing" }, classification: "likely_human" })).status, 404);
+      assert.equal((await create({ accountId: "gmail", target: { scope: "message", messageId: "   " }, classification: "likely_human" })).status, 400);
       assert.equal((await create({ accountId: "gmail", target: { scope: "sender_domain", domain: "invalid domain" }, classification: "likely_human" })).status, 400);
       assert.equal((await create({ accountId: "other-account", target: { scope: "sender_domain", domain: "example.com" }, classification: "likely_human" })).status, 404);
       assert.equal((await create({ accountId: "outlook", target: { scope: "message", messageId: "gmail-message" }, classification: "likely_human" })).status, 404);
       assert.equal((await resolve("outlook", "gmail-message")).status, 404);
+      assert.equal((await testApp.request("/v1/classification/resolve?accountId=gmail&messageId=%20gmail-message%20", { headers })).status, 200);
 
       const domain = await create({ accountId: "gmail", target: { scope: "sender_domain", domain: "EXAMPLE.COM" }, classification: "uncertain" });
       assert.equal(domain.status, 201);
@@ -1544,6 +1546,8 @@ describe("Orca API", () => {
       const address = await create({ accountId: "gmail", target: { scope: "sender_address", address: "MAYA@EXAMPLE.COM" }, classification: "likely_human" });
       assert.equal(address.status, 201);
       const addressRule = await address.json();
+      assert.equal(addressRule.target.address, "maya@example.com");
+      assert.equal((await create({ accountId: "gmail", target: { scope: "sender_address", address: "maya@example.com" }, classification: "uncertain" })).status, 409);
       resolved = await (await resolve("gmail", "gmail-message")).json();
       assert.equal(resolved.effective.userOverride.id, addressRule.id);
 
@@ -1581,6 +1585,27 @@ describe("Orca API", () => {
       delete process.env.SESSION_SECRET;
       delete process.env.TOKEN_ENCRYPTION_KEY;
     }
+  });
+
+  test("resolves a large message batch from one preloaded classification override map", () => {
+    const rules = Array.from({ length: 300 }, (_, index) => ({
+      id: `rule_${index}`,
+      accountId: "account",
+      targetType: "sender_address",
+      targetValue: `sender-${index}@example.com`,
+      classification: "likely_human",
+      source: "user_choice",
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }));
+    const resolve = createHumanClassificationOverrideResolver(rules);
+    const resolved = Array.from({ length: 300 }, (_, index) => resolve({
+      id: `message_${index}`,
+      fromAddress: `Sender-${index}@Example.com`,
+    }));
+
+    assert.equal(resolved.filter(Boolean).length, 300);
+    assert.equal(resolved[299]?.id, "rule_299");
   });
 
   test("marks entire thread as read including all emails", async () => {
