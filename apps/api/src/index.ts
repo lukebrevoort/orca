@@ -7,16 +7,23 @@ import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
   type AttentionBehavior,
+  type HumanClassificationAssessment,
+  type HumanClassificationReasonCode,
   type MailProvider,
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
   collectionSchema,
   createCollectionSchema,
+  createHumanClassificationOverrideSchema,
   createMessageDraftSchema,
   deliveryResultSchema,
+  deleteHumanClassificationOverrideSchema,
   gmailLabelMigrationSchema,
   importGmailLabelsSchema,
+  humanClassificationAssessmentSchema,
+  humanClassificationOverrideSchema,
+  humanClassificationResultSchema,
   createPinSchema,
   createReminderSchema,
   createSenderAttentionRuleSchema,
@@ -26,6 +33,8 @@ import {
   mailAccountSchema,
   messageDraftSchema,
   pinFilterSchema,
+  listHumanClassificationOverridesSchema,
+  resolveHumanClassificationSchema,
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
   pinSchema,
@@ -38,6 +47,7 @@ import {
   threadQuerySchema,
   updateAttentionViewSettingSchema,
   updateCollectionSchema,
+  updateHumanClassificationOverrideSchema,
   updatePinSchema,
   updateReminderSchema,
   updateMessageDraftSchema,
@@ -49,7 +59,7 @@ import {
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
+import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
 import type { GmailDraftMirrorInput, GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
@@ -357,6 +367,121 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           behavior: rule?.behavior ?? "normal",
           rule: rule ? toSenderRule(rule) : null,
         });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.get(
+    "/v1/classification/overrides",
+    validator("query", (value, c) => validateJson(c, listHumanClassificationOverridesSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const input = c.req.valid("query");
+        const account = getConnectedAccountById(db, c.get("auth").userId, input.accountId);
+        if (!account) return classificationAccountNotFound(c);
+        return c.json(listHumanClassificationOverrides(db, account.id).map(toHumanClassificationOverride));
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.post(
+    "/v1/classification/overrides",
+    validator("json", (value, c) => validateJson(c, createHumanClassificationOverrideSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const input = c.req.valid("json");
+        const account = getConnectedAccountById(db, c.get("auth").userId, input.accountId);
+        if (!account) return classificationAccountNotFound(c);
+        const target = normalizeHumanClassificationOverrideTarget(input.target);
+        if (target.scope === "message" && !getEmailByAccountId(db, account.id, target.value)) {
+          return classificationTargetNotFound(c);
+        }
+        const id = `classification-override:${crypto.randomUUID()}`;
+        db.insert(humanClassificationOverrides).values({
+          id,
+          accountId: account.id,
+          targetType: target.scope,
+          targetValue: target.value,
+          classification: input.classification,
+          source: "user_choice",
+        }).run();
+        return c.json(humanClassificationOverrideSchema.parse(toHumanClassificationOverride(
+          getHumanClassificationOverride(db, account.id, id)!,
+        )), 201);
+      } catch (error) {
+        return classificationOverrideConflict(c, error);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.patch(
+    "/v1/classification/overrides/:id",
+    validator("query", (value, c) => validateJson(c, deleteHumanClassificationOverrideSchema, value)),
+    validator("json", (value, c) => validateJson(c, updateHumanClassificationOverrideSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const accountId = c.req.valid("query").accountId;
+        const account = getConnectedAccountById(db, c.get("auth").userId, accountId);
+        if (!account) return classificationAccountNotFound(c);
+        const existing = getHumanClassificationOverride(db, account.id, c.req.param("id"));
+        if (!existing) return classificationOverrideNotFound(c);
+        db.update(humanClassificationOverrides)
+          .set({ classification: c.req.valid("json").classification, updatedAt: new Date() })
+          .where(and(eq(humanClassificationOverrides.accountId, account.id), eq(humanClassificationOverrides.id, existing.id)))
+          .run();
+        return jsonWithSchema(c, humanClassificationOverrideSchema, toHumanClassificationOverride(
+          getHumanClassificationOverride(db, account.id, existing.id)!,
+        ));
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.delete(
+    "/v1/classification/overrides/:id",
+    validator("query", (value, c) => validateJson(c, deleteHumanClassificationOverrideSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
+        if (!account) return classificationAccountNotFound(c);
+        const existing = getHumanClassificationOverride(db, account.id, c.req.param("id"));
+        if (!existing) return classificationOverrideNotFound(c);
+        db.delete(humanClassificationOverrides).where(eq(humanClassificationOverrides.id, existing.id)).run();
+        return c.body(null, 204);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.get(
+    "/v1/classification/resolve",
+    validator("query", (value, c) => validateJson(c, resolveHumanClassificationSchema, value)),
+    requireAuth({ dbFactory }),
+    (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const input = c.req.valid("query");
+        const account = getConnectedAccountById(db, c.get("auth").userId, input.accountId);
+        if (!account) return classificationAccountNotFound(c);
+        const message = getEmailByAccountId(db, account.id, input.messageId);
+        if (!message) return classificationTargetNotFound(c);
+        return jsonWithSchema(c, humanClassificationResultSchema, resolveHumanClassification(db, account.id, message));
       } finally {
         sqlite.close();
       }
@@ -1335,6 +1460,10 @@ type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id">;
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
+type HumanClassificationOverrideRecord = typeof humanClassificationOverrides.$inferSelect;
+type ClassificationEmailRecord = Pick<typeof emails.$inferSelect,
+  "id" | "accountId" | "fromAddress" | "humanSignal" | "humanClassification" | "humanClassificationReasons" | "humanClassifierVersion"
+>;
 type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
 type CollectionRecord = typeof collections.$inferSelect;
 type PinRecord = typeof pins.$inferSelect;
@@ -1532,6 +1661,162 @@ function normalizeRuleInput(input: { scope: string; value: string; behavior: str
     behavior: input.behavior,
     source: input.source,
   });
+}
+
+function classificationAccountNotFound(c: Context) {
+  return c.json({ error: { code: "not_found", message: "Mail account was not found" } }, 404);
+}
+
+function classificationTargetNotFound(c: Context) {
+  return c.json({ error: { code: "not_found", message: "Classification target was not found" } }, 404);
+}
+
+function classificationOverrideNotFound(c: Context) {
+  return c.json({ error: { code: "not_found", message: "Classification override was not found" } }, 404);
+}
+
+function classificationOverrideConflict(c: Context, error: unknown) {
+  if (error instanceof Error && /UNIQUE constraint failed/.test(error.message)) {
+    return c.json({ error: { code: "conflict", message: "A classification override already exists for this target" } }, 409);
+  }
+  throw error;
+}
+
+function normalizeHumanClassificationOverrideTarget(
+  target: ReturnType<typeof createHumanClassificationOverrideSchema.parse>["target"],
+) {
+  switch (target.scope) {
+    case "message": return { scope: target.scope, value: target.messageId };
+    case "sender_address": return { scope: target.scope, value: target.address };
+    case "sender_domain": return { scope: target.scope, value: target.domain };
+  }
+}
+
+function toHumanClassificationOverride(rule: HumanClassificationOverrideRecord) {
+  const target = rule.targetType === "message"
+    ? { scope: "message" as const, messageId: rule.targetValue }
+    : rule.targetType === "sender_address"
+      ? { scope: "sender_address" as const, address: rule.targetValue }
+      : { scope: "sender_domain" as const, domain: rule.targetValue };
+  return humanClassificationOverrideSchema.parse({
+    id: rule.id,
+    accountId: rule.accountId,
+    target,
+    classification: rule.classification,
+    source: rule.source,
+    createdAt: rule.createdAt.toISOString(),
+    updatedAt: rule.updatedAt.toISOString(),
+  });
+}
+
+function getHumanClassificationOverride(db: Database, accountId: string, id: string) {
+  return db.select().from(humanClassificationOverrides).where(and(
+    eq(humanClassificationOverrides.accountId, accountId),
+    eq(humanClassificationOverrides.id, id),
+  )).get();
+}
+
+function getHumanClassificationOverrideForTarget(
+  db: Database,
+  accountId: string,
+  targetType: "message" | "sender_address" | "sender_domain",
+  targetValue: string,
+) {
+  return db.select().from(humanClassificationOverrides).where(and(
+    eq(humanClassificationOverrides.accountId, accountId),
+    eq(humanClassificationOverrides.targetType, targetType),
+    eq(humanClassificationOverrides.targetValue, targetValue),
+  )).get();
+}
+
+function listHumanClassificationOverrides(db: Database, accountId: string) {
+  return db.select().from(humanClassificationOverrides)
+    .where(eq(humanClassificationOverrides.accountId, accountId))
+    .orderBy(asc(humanClassificationOverrides.targetType), asc(humanClassificationOverrides.targetValue)).all();
+}
+
+function getEmailByAccountId(db: Database, accountId: string, id: string): ClassificationEmailRecord | undefined {
+  return db.select({
+    id: emails.id,
+    accountId: emails.accountId,
+    fromAddress: emails.fromAddress,
+    humanSignal: emails.humanSignal,
+    humanClassification: emails.humanClassification,
+    humanClassificationReasons: emails.humanClassificationReasons,
+    humanClassifierVersion: emails.humanClassifierVersion,
+  }).from(emails).where(and(eq(emails.accountId, accountId), eq(emails.id, id))).get();
+}
+
+function resolveHumanClassification(db: Database, accountId: string, message: ClassificationEmailRecord) {
+  const normalizedAddress = message.fromAddress?.trim().toLowerCase() ?? "";
+  const normalizedDomain = normalizedAddress.split("@")[1] ?? "";
+  const rule = getHumanClassificationOverrideForTarget(db, accountId, "message", message.id)
+    ?? (normalizedAddress ? getHumanClassificationOverrideForTarget(db, accountId, "sender_address", normalizedAddress) : undefined)
+    ?? (normalizedDomain ? getHumanClassificationOverrideForTarget(db, accountId, "sender_domain", normalizedDomain) : undefined);
+  const userOverride = rule ? toHumanClassificationOverride(rule) : null;
+  const automatic = storedAutomaticClassification(message);
+
+  if (rule) {
+    const scopeReason: Record<"message" | "sender_address" | "sender_domain", HumanClassificationReasonCode> = {
+      message: "user_message_override",
+      sender_address: "user_sender_address_override",
+      sender_domain: "user_sender_domain_override",
+    };
+    return {
+      automatic,
+      userOverride,
+      effective: {
+        classification: rule.classification,
+        score: null,
+        reasonCodes: [scopeReason[rule.targetType as "message" | "sender_address" | "sender_domain"]],
+        classifierVersion: null,
+        source: "user_override" as const,
+        userOverride,
+      },
+    };
+  }
+
+  const effective: HumanClassificationAssessment = automatic ?? {
+    classification: "unclassified",
+    score: null,
+    reasonCodes: ["insufficient_evidence"],
+    classifierVersion: null,
+  };
+  return {
+    automatic,
+    userOverride: null,
+    effective: { ...effective, source: "automatic_heuristic" as const, userOverride: null },
+  };
+}
+
+function storedAutomaticClassification(message: ClassificationEmailRecord): HumanClassificationAssessment | null {
+  if (!message.humanClassification) return null;
+  const parsed = humanClassificationAssessmentSchema.safeParse({
+    classification: message.humanClassification,
+    score: message.humanSignal,
+    reasonCodes: parseHumanClassificationReasons(message.humanClassificationReasons),
+    classifierVersion: message.humanClassifierVersion,
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function parseHumanClassificationReasons(value: string | null): HumanClassificationReasonCode[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(isHumanClassificationReasonCode) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isHumanClassificationReasonCode(value: unknown): value is HumanClassificationReasonCode {
+  return typeof value === "string" && [
+    "sender_no_reply_pattern", "list_id_header", "list_unsubscribe_header", "bulk_precedence_header",
+    "auto_submitted_header", "provider_bulk_signal", "provider_promotions_signal", "provider_transactional_signal",
+    "reply_context", "direct_recipient", "conflicting_evidence", "insufficient_evidence",
+    "user_message_override", "user_sender_address_override", "user_sender_domain_override",
+  ].includes(value);
 }
 
 function toSenderRule(rule: SenderRuleRecord) {

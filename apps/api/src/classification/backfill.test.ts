@@ -9,7 +9,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import type { HumanClassificationEvidence } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, oauthAccounts, threads, users } from "../db/schema.ts";
+import { emails, humanClassificationOverrides, oauthAccounts, threads, users } from "../db/schema.ts";
 import { backfillHumanClassifications } from "./backfill.ts";
 import { humanClassifierVersion } from "./human-signal.ts";
 
@@ -96,6 +96,44 @@ describe("Human Signal backfill", () => {
         { id: "a_missing", human_signal: null, human_classification: "unclassified", human_classifier_version: humanClassifierVersion },
         { id: "b_private", human_signal: null, human_classification: null, human_classifier_version: null },
       ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("retains account-scoped user corrections while automatic fields are reclassified", () => {
+    const { db, sqlite } = createMigratedClient();
+    try {
+      db.insert(users).values({ id: "user", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "account", userId: "user", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail" }).run();
+      db.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
+      db.insert(emails).values({
+        id: "message",
+        accountId: "account",
+        threadId: "thread",
+        providerMessageId: "message",
+        receivedAt: new Date("2026-08-10T12:00:00.000Z"),
+        humanClassificationEvidence: JSON.stringify(evidence({ recipientRelationship: "not_direct", headerSignals: ["list_id"] })),
+      }).run();
+      db.insert(humanClassificationOverrides).values({
+        id: "override",
+        accountId: "account",
+        targetType: "message",
+        targetValue: "message",
+        classification: "likely_human",
+        source: "user_choice",
+      }).run();
+
+      assert.equal(backfillHumanClassifications(db, { accountId: "account" }).processed, 1);
+      const automatic = sqlite.query("select human_classification, human_signal from emails where id = 'message'").get() as {
+        human_classification: string;
+        human_signal: number;
+      };
+      assert.deepEqual(automatic, { human_classification: "automated_or_bulk", human_signal: 2 });
+      assert.deepEqual(
+        sqlite.query("select account_id, target_type, target_value, classification from human_classification_overrides where id = 'override'").get(),
+        { account_id: "account", target_type: "message", target_value: "message", classification: "likely_human" },
+      );
     } finally {
       sqlite.close();
     }

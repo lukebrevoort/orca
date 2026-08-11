@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import {
   authSessionSchema,
   createCollectionSchema,
+  createHumanClassificationOverrideSchema,
   createPinSchema,
   createMessageDraftSchema,
   humanClassificationEvidenceSchema,
@@ -92,6 +93,20 @@ describe("shared API schemas", () => {
       humanClassification: classification,
     });
     assert.equal(message.humanClassification?.effective.source, "automatic_heuristic");
+    assert.equal(message.humanClassification?.userOverride, null);
+
+    const override = createHumanClassificationOverrideSchema.parse({
+      accountId: "account_1",
+      target: { scope: "sender_address", address: "MAYA@EXAMPLE.COM" },
+      classification: "likely_human",
+    });
+    assert.equal(override.target.scope, "sender_address");
+    if (override.target.scope === "sender_address") assert.equal(override.target.address, "maya@example.com");
+    assert.equal(createHumanClassificationOverrideSchema.safeParse({
+      accountId: "account_1",
+      target: { scope: "sender_domain", domain: "not a domain" },
+      classification: "likely_human",
+    }).success, false);
   });
 
   test("requires an authenticated user when the session is authenticated", () => {
