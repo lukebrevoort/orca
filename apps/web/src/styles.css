@@ -4134,7 +4134,9 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .classification-tab-list { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; padding: 2px 1px 4px; }
   .classification-tab { flex: 0 0 auto; }
   .classification-correction { right: 152px; top: 29px; z-index: 80; }
-  .classification-correction-menu {
+  .reader-document:has(.classification-correction-menu) { animation: none; }
+  .classification-correction-menu,
+  .reader-sender .classification-correction-menu {
     bottom: 160px;
     left: 16px;
     max-height: calc(100vh - 120px);

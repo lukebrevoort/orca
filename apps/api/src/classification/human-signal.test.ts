@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import {
   m5FixtureExpectedClassifications,
+  m5FixtureReasonCodeCases,
   m5NormalizedFixtureMessages,
 } from "@orca/shared";
 import type { HumanClassificationEvidence } from "@orca/shared";
@@ -128,7 +129,7 @@ describe("Human Signal classifier", () => {
     );
   });
 
-  test("covers every M5 state, reason code, provider, account, and mixed thread", () => {
+  test("covers every M5 state, provider, account, and mixed thread", () => {
     for (const message of m5NormalizedFixtureMessages) {
       const expected = m5FixtureExpectedClassifications[message.id];
       assert.ok(expected, `Missing expected M5 classification for ${message.id}`);
@@ -147,5 +148,19 @@ describe("Human Signal classifier", () => {
       [...new Set(m5NormalizedFixtureMessages.map((message) => message.provider))],
       ["gmail", "outlook"],
     );
+  });
+
+  test("covers every M5 precedence and auto-response header reason branch", () => {
+    const signalNames = new Set<string>();
+    const reasonCodes = new Set<string>();
+
+    for (const fixture of m5FixtureReasonCodeCases) {
+      assert.deepEqual(classifyHumanSignal(fixture.evidence), fixture.expected, fixture.id);
+      for (const signal of fixture.evidence.headerSignals) signalNames.add(signal);
+      for (const reasonCode of fixture.expected.reasonCodes) reasonCodes.add(reasonCode);
+    }
+
+    assert.deepEqual([...signalNames].sort(), ["auto_submitted", "precedence_bulk", "precedence_list", "x_auto_response_suppress"]);
+    assert.deepEqual([...reasonCodes].sort(), ["auto_submitted_header", "bulk_precedence_header", "insufficient_evidence"]);
   });
 });

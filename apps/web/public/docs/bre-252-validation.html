@@ -43,7 +43,7 @@
     <section class="hero">
       <div class="eyebrow">BRE-252 | M5 closeout</div>
       <h1>Provider-neutral Human Inbox validation</h1>
-      <p>This guide validates the Gmail and Outlook-normalized fixture path without a live Microsoft tenant grant. It is runnable at <code>/dev/inbox</code> with the local API and Vite app, and it records the boundary between M5's completed provider-neutral behavior and M4's deferred live Outlook approval.</p>
+      <p>This guide separates two validation lanes. The running <code>/dev/inbox</code> route is the existing Gmail-only demo UI for visual and interaction checks; the provider-neutral Gmail/Outlook M5 matrix is validated by the shared and API commands below. It records the boundary between M5's completed fixture behavior and M4's deferred live Outlook approval.</p>
     </section>
 
     <div class="grid">
@@ -51,7 +51,7 @@
         <h2>Closeout status</h2>
         <ul class="checklist">
           <li>Shared fixture matrix covers Gmail and Outlook, all four classification states, mixed threads, account/provider attribution, and a user override.</li>
-          <li>Classifier, persistence/backfill, API filter/count/cursor, thread detail, account isolation, and web correction tests are automated.</li>
+          <li>Classifier, header-signal branches, persistence/backfill, API filter/count/cursor, thread detail, account isolation, and web correction tests are automated.</li>
           <li>Classification and correction routes only change Orca's local SQLite state.</li>
           <li>Validation evidence is captured in light and dark themes at wide and narrow viewport sizes.</li>
           <li>Verification commands and their results are recorded below.</li>
@@ -59,7 +59,7 @@
       </section>
       <section class="section">
         <h2>Boundary</h2>
-        <p><span class="status">M5 accepted:</span> deterministic provider-neutral classification is proven using fixtures, Gmail/demo data, and local API state.</p>
+        <p><span class="status">M5 accepted:</span> deterministic provider-neutral classification is proven using shared normalized fixtures and local API state; the Gmail demo UI supplies the visual interaction lane.</p>
         <p><span class="deferred">M4 deferred:</span> Microsoft tenant approval, live Outlook OAuth login/sync, and provider write verification remain outside this milestone.</p>
         <p>There is no claim that the classifier detects AI-written text. It estimates explainable mail-signal evidence only.</p>
       </section>
@@ -71,12 +71,12 @@
           <tbody>
             <tr><td>Human note</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Likely human</td><td>Direct recipient</td></tr>
             <tr><td>Reply</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Likely human</td><td>Direct recipient + reply context</td></tr>
-            <tr><td>Receipt</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated or bulk</td><td>No-reply pattern + transactional signal</td></tr>
+            <tr><td>Receipt</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated or bulk</td><td>No-reply pattern + Gmail updates category</td></tr>
             <tr><td>Newsletter</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated or bulk</td><td>List headers + promotions signal</td></tr>
             <tr><td>Conflicting reply</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Uncertain</td><td>Reply context conflicts with list evidence</td></tr>
             <tr><td>Mixed thread: digest</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated or bulk</td><td>List header + bulk signal</td></tr>
             <tr><td>Mixed thread: personal reply</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Likely human</td><td>Direct recipient + reply context</td></tr>
-            <tr><td>Corrected alert</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated automatically; likely human effectively</td><td>Account-scoped message override</td></tr>
+            <tr><td>Corrected alert</td><td>Gmail / <code>acct_m5_gmail</code></td><td>Automated automatically; likely human effectively</td><td>No-reply pattern + Gmail updates category, then account-scoped message override</td></tr>
             <tr><td>Human note</td><td>Outlook / <code>acct_m5_outlook</code></td><td>Likely human</td><td>Direct recipient</td></tr>
             <tr><td>Legacy unknown</td><td>Outlook / <code>acct_m5_outlook</code></td><td>Unclassified</td><td>Insufficient evidence</td></tr>
           </tbody>
@@ -104,7 +104,18 @@ bun run test:smoke</code></pre>
             <tr><td><code>bun run test</code></td><td><span class="status">PASS</span></td><td>Provider normalization, classifier, persistence, API, and UI tests pass without live provider access.</td></tr>
             <tr><td><code>bun run build</code></td><td><span class="status">PASS</span></td><td>Production API and web bundles build.</td></tr>
             <tr><td><code>bun run lint</code></td><td><span class="status">PASS</span></td><td>Repository type-level lint scripts pass.</td></tr>
-            <tr><td><code>bun run test:smoke</code></td><td><span class="status">PASS</span></td><td>Smoke coverage exercises the local API and browser-facing fixture path.</td></tr>
+            <tr><td><code>bun run test:smoke</code></td><td><span class="status">PASS</span></td><td>API-only smoke coverage authenticates a seeded user, runs the Gmail sync boundary, and returns inbox data.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section wide">
+        <h2>Validation lanes</h2>
+        <table>
+          <thead><tr><th>Lane</th><th>Entry point</th><th>Scope</th></tr></thead>
+          <tbody>
+            <tr><td>Browser UI</td><td><code>/dev/inbox</code></td><td>Gmail-only demo account and local preview state. Use it for Human Inbox, Tideline, Review, search, correction/reset, sweep/undo, reader behavior, and responsive/theme evidence. It does not load the shared Outlook fixture account.</td></tr>
+            <tr><td>Provider-neutral matrix</td><td>Shared fixture and API tests</td><td>Gmail and Outlook normalized messages, all four states, account/provider attribution, mixed-thread detail, counts, cursors, overrides, and account isolation.</td></tr>
           </tbody>
         </table>
       </section>
@@ -114,7 +125,7 @@ bun run test:smoke</code></pre>
         <pre><code>bun run dev:api   # http://localhost:3000
 bun run dev:web   # http://localhost:5173
 # Open http://localhost:5173/dev/inbox</code></pre>
-        <p>The development route uses local fixtures and does not require Google or Microsoft approval. Production builds retain the normal session gate.</p>
+        <p>The development route is a Gmail-only demo preview and does not require Google or Microsoft approval. Provider-neutral M5 coverage runs through the shared/API commands above. Production builds retain the normal session gate.</p>
       </section>
       <section class="section">
         <h2>Recovery</h2>
@@ -133,20 +144,20 @@ bun run dev:web   # http://localhost:5173
           <tbody>
             <tr><td>Human Inbox</td><td>Open <code>/dev/inbox</code>; leave Human Inbox selected.</td><td>Likely-human rows are visible, including the mixed thread's personal reply.</td></tr>
             <tr><td>Tideline</td><td>Select Tideline.</td><td>Transactional, newsletter, and bulk rows appear; personal rows are absent.</td></tr>
-            <tr><td>Review / Uncertain</td><td>Select Review.</td><td>Conflicting evidence and unclassified legacy mail are both recoverable.</td></tr>
-            <tr><td>All mail</td><td>Select All mail.</td><td>All rows remain visible and account/provider attribution is preserved.</td></tr>
+            <tr><td>Review / Uncertain</td><td>Select Review.</td><td>Conflicting demo evidence is visible in Review; the unclassified Outlook legacy case is covered by the shared/API fixture tests.</td></tr>
+            <tr><td>All mail</td><td>Select All mail.</td><td>All Gmail demo rows remain visible; cross-account Gmail/Outlook attribution is verified by the provider-neutral API test.</td></tr>
             <tr><td>Search inside a view</td><td>Type a sender or subject in the search field while each tab is selected.</td><td>Search narrows the currently rendered view and does not broaden the server classification filter.</td></tr>
-            <tr><td>Mixed thread</td><td>Open <code>Re: Team offsite</code>.</td><td>Both automated and personal messages remain in chronological order with per-message classification.</td></tr>
+            <tr><td>Mixed thread</td><td>Open <code>Re: Team offsite</code>.</td><td>The demo reader keeps automated and personal messages in chronological order; the Gmail mixed fixture's per-message API classifications are asserted separately.</td></tr>
             <tr><td>Correction and reset</td><td>Open a classification badge, choose message/sender/domain scope, save a new class, then choose Reset to Orca estimate.</td><td>The effective label changes locally, the automatic assessment remains available, and reset restores it.</td></tr>
-            <tr><td>Local sweep</td><td>Use the visible organizer/local attention control on a fixture sender, then undo or reset it.</td><td>The local view changes reversibly; no provider archive, delete, or label request is made.</td></tr>
-            <tr><td>Provider safety</td><td>Inspect the browser network panel while filtering, correcting, resetting, and sweeping.</td><td>Only Orca local API routes are called; Gmail and Outlook provider mail are untouched.</td></tr>
+            <tr><td>Local sweep</td><td>Use the visible organizer/local attention control on a demo sender, then undo or reset it.</td><td>The local preview changes reversibly; the demo route makes no provider archive, delete, or label request.</td></tr>
+            <tr><td>Provider safety</td><td>Inspect the browser network panel while filtering, correcting, resetting, and sweeping.</td><td>The demo route stays local; provider-neutral API tests use seeded SQLite data and do not call Gmail or Outlook.</td></tr>
           </tbody>
         </table>
       </section>
 
       <section class="section wide">
         <h2>Review evidence</h2>
-        <p>These images are captured from the running app, not a static mock. They cover Human Inbox, Tideline, Review, and correction states at wide/narrow sizes and in both themes.</p>
+        <p>These images are captured from the running Gmail demo UI, not a static mock. They cover Human Inbox, Tideline, Review, and correction states at wide/narrow sizes and in both themes. The provider-neutral matrix is represented by the shared/API test results above.</p>
         <div class="shots">
           <figure><img src="assets/bre-252-human-light.png" alt="Human Inbox in the light theme at a wide viewport"><figcaption>Light / wide: Human Inbox</figcaption></figure>
           <figure><img src="assets/bre-252-tideline-dark.png" alt="Tideline in the dark theme at a wide viewport"><figcaption>Dark / wide: Tideline</figcaption></figure>

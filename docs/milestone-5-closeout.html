@@ -12,7 +12,7 @@
   <ul>
     <li>Gmail and Outlook-normalized fixture cases share one deterministic classifier and include all four classification states.</li>
     <li>Mixed threads, account/provider attribution, API filters/counts/cursors, thread detail, account isolation, overrides, reset behavior, persistence/backfill, and web correction surfaces have automated coverage.</li>
-    <li>Manual validation is runnable from <code>/dev/inbox</code> without a live Microsoft tenant grant.</li>
+    <li>Gmail-only demo UI validation is runnable from <code>/dev/inbox</code> without a live Microsoft tenant grant; the provider-neutral matrix/API lane runs from the shared and API test commands.</li>
     <li>Classification is local-only: provider mail is never archived, deleted, relabeled, or otherwise mutated.</li>
   </ul>
   <h2>Deferred M4 boundary</h2>

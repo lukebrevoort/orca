@@ -227,7 +227,7 @@ export const m5NormalizedFixtureMessages = [
       sender: { name: "Harbor Billing", email: "no-reply@billing.m5.example" },
       recipients: [lukeGmail],
       recipientRelationship: "direct",
-      providerSignals: ["transactional_category"],
+      providerSignals: ["automated_category"],
     }),
   }),
   m5NormalizedMessage({
@@ -331,7 +331,7 @@ export const m5NormalizedFixtureMessages = [
       sender: { name: "Account Alerts", email: "no-reply@alerts.m5.example" },
       recipients: [lukeGmail],
       recipientRelationship: "direct",
-      providerSignals: ["transactional_category"],
+      providerSignals: ["automated_category"],
     }),
   }),
   m5NormalizedMessage({
@@ -387,15 +387,76 @@ function m5Assessment(
   });
 }
 
+/**
+ * Header-only edge cases keep the classifier's less common reason branches
+ * covered without changing the ten-message inbox/count matrix below.
+ */
+export const m5FixtureReasonCodeCases = [
+  {
+    id: "m5_gmail_precedence_bulk",
+    provider: "gmail",
+    accountId: gmailAccountId,
+    evidence: m5Evidence({
+      sender: { name: "Bulk Notices", email: "notices@m5.example" },
+      recipients: [lukeGmail],
+      recipientRelationship: "not_direct",
+      headerSignals: ["precedence_bulk"],
+    }),
+    expected: m5Assessment("automated_or_bulk", 2, ["bulk_precedence_header"]),
+  },
+  {
+    id: "m5_gmail_precedence_list",
+    provider: "gmail",
+    accountId: gmailAccountId,
+    evidence: m5Evidence({
+      sender: { name: "List Notices", email: "list@m5.example" },
+      recipients: [lukeGmail],
+      recipientRelationship: "not_direct",
+      headerSignals: ["precedence_list"],
+    }),
+    expected: m5Assessment("automated_or_bulk", 2, ["bulk_precedence_header"]),
+  },
+  {
+    id: "m5_outlook_auto_submitted",
+    provider: "outlook",
+    accountId: outlookAccountId,
+    evidence: m5Evidence({
+      sender: { name: "Calendar Robot", email: "calendar@m5.example" },
+      recipients: [lukeOutlook],
+      recipientRelationship: "not_direct",
+      headerSignals: ["auto_submitted"],
+    }),
+    expected: m5Assessment("automated_or_bulk", 2, ["auto_submitted_header"]),
+  },
+  {
+    id: "m5_outlook_auto_suppress",
+    provider: "outlook",
+    accountId: outlookAccountId,
+    evidence: m5Evidence({
+      sender: { name: "No Reply Suppressed", email: "robot@m5.example" },
+      recipients: [lukeOutlook],
+      recipientRelationship: "not_direct",
+      headerSignals: ["x_auto_response_suppress"],
+    }),
+    expected: m5Assessment("unclassified", null, ["insufficient_evidence"]),
+  },
+] satisfies Array<{
+  id: string;
+  provider: "gmail" | "outlook";
+  accountId: string;
+  evidence: HumanClassificationEvidence;
+  expected: HumanClassificationAssessment;
+}>;
+
 export const m5FixtureExpectedClassifications: Record<string, HumanClassificationAssessment> = {
   m5_gmail_human: m5Assessment("likely_human", 7, ["direct_recipient"]),
   m5_gmail_reply: m5Assessment("likely_human", 9, ["direct_recipient", "reply_context"]),
-  m5_gmail_transactional: m5Assessment("automated_or_bulk", 0, ["direct_recipient", "sender_no_reply_pattern", "provider_transactional_signal"]),
+  m5_gmail_transactional: m5Assessment("automated_or_bulk", 0, ["direct_recipient", "sender_no_reply_pattern", "provider_bulk_signal"]),
   m5_gmail_newsletter: m5Assessment("automated_or_bulk", 0, ["list_id_header", "list_unsubscribe_header", "provider_promotions_signal"]),
   m5_gmail_ambiguous: m5Assessment("uncertain", 6, ["direct_recipient", "reply_context", "list_id_header", "conflicting_evidence"]),
   m5_gmail_mixed_bulk: m5Assessment("automated_or_bulk", 0, ["list_id_header", "provider_bulk_signal"]),
   m5_gmail_mixed_human: m5Assessment("likely_human", 9, ["direct_recipient", "reply_context"]),
-  m5_gmail_override: m5Assessment("automated_or_bulk", 0, ["direct_recipient", "sender_no_reply_pattern", "provider_transactional_signal"]),
+  m5_gmail_override: m5Assessment("automated_or_bulk", 0, ["direct_recipient", "sender_no_reply_pattern", "provider_bulk_signal"]),
   m5_outlook_human: m5Assessment("likely_human", 7, ["direct_recipient"]),
   m5_outlook_unknown: m5Assessment("unclassified", null, ["insufficient_evidence"]),
 };
