@@ -62,6 +62,105 @@ export type UpdateUserPreferences = z.infer<typeof updateUserPreferencesSchema>;
 export const syncStateSchema = z.enum(["idle", "syncing", "auth_needed", "error"]);
 export type SyncState = z.infer<typeof syncStateSchema>;
 
+/**
+ * Human Signal is an explainable, bounded estimate. It is deliberately not an
+ * authorship detector or a statement that a message is safe to act on.
+ */
+export const humanSignalScoreSchema = z.number().int().min(0).max(10).nullable();
+export type HumanSignalScore = z.infer<typeof humanSignalScoreSchema>;
+
+export const humanClassificationSchema = z.enum([
+  "likely_human",
+  "automated_or_bulk",
+  "uncertain",
+  "unclassified",
+]);
+export type HumanClassification = z.infer<typeof humanClassificationSchema>;
+
+export const humanClassificationSourceSchema = z.enum([
+  "automatic_heuristic",
+  "user_override",
+]);
+export type HumanClassificationSource = z.infer<typeof humanClassificationSourceSchema>;
+
+/**
+ * These codes describe evidence, not an assertion about who authored a
+ * message. Keep them stable: clients can render the codes as user-safe copy.
+ */
+export const humanClassificationReasonCodeSchema = z.enum([
+  "sender_no_reply_pattern",
+  "list_id_header",
+  "list_unsubscribe_header",
+  "bulk_precedence_header",
+  "auto_submitted_header",
+  "provider_bulk_signal",
+  "provider_promotions_signal",
+  "provider_transactional_signal",
+  "reply_context",
+  "direct_recipient",
+  "conflicting_evidence",
+  "insufficient_evidence",
+  "user_message_override",
+  "user_sender_address_override",
+  "user_sender_domain_override",
+]);
+export type HumanClassificationReasonCode = z.infer<typeof humanClassificationReasonCodeSchema>;
+
+export const humanClassificationAssessmentSchema = z.object({
+  classification: humanClassificationSchema,
+  score: humanSignalScoreSchema,
+  reasonCodes: z.array(humanClassificationReasonCodeSchema).max(12),
+  classifierVersion: z.string().trim().min(1).max(100).nullable(),
+}).strict();
+export type HumanClassificationAssessment = z.infer<typeof humanClassificationAssessmentSchema>;
+
+/**
+ * The automatic assessment is retained when a person corrects Orca. The
+ * effective assessment is the one surfaces should use for filtering and copy.
+ */
+export const humanClassificationResultSchema = z.object({
+  automatic: humanClassificationAssessmentSchema.nullable(),
+  effective: humanClassificationAssessmentSchema.extend({
+    source: humanClassificationSourceSchema,
+  }).strict(),
+}).strict();
+export type HumanClassificationResult = z.infer<typeof humanClassificationResultSchema>;
+
+export const humanClassificationHeaderSignalSchema = z.enum([
+  "list_id",
+  "list_unsubscribe",
+  "precedence_bulk",
+  "precedence_list",
+  "auto_submitted",
+  "x_auto_response_suppress",
+]);
+export type HumanClassificationHeaderSignal = z.infer<typeof humanClassificationHeaderSignalSchema>;
+
+export const humanClassificationProviderSignalSchema = z.enum([
+  "bulk_or_marketing_label",
+  "promotions_label",
+  "transactional_category",
+  "automated_category",
+]);
+export type HumanClassificationProviderSignal = z.infer<typeof humanClassificationProviderSignalSchema>;
+
+/**
+ * The provider adapters reduce raw headers, labels, and categories to this
+ * provider-neutral evidence before the deterministic classifier sees them.
+ */
+export const humanClassificationEvidenceSchema = z.object({
+  sender: mailContactSchema,
+  recipients: z.array(mailContactSchema),
+  recipientRelationship: z.enum(["direct", "not_direct", "unknown"]),
+  reply: z.object({
+    hasInReplyTo: z.boolean(),
+    referenceCount: z.number().int().nonnegative(),
+  }).strict(),
+  headerSignals: z.array(humanClassificationHeaderSignalSchema),
+  providerSignals: z.array(humanClassificationProviderSignalSchema),
+}).strict();
+export type HumanClassificationEvidence = z.infer<typeof humanClassificationEvidenceSchema>;
+
 export const syncStatusSchema = z
   .object({
     accounts: z.array(
@@ -89,7 +188,8 @@ export const inboxMessageSchema = z
     unread: z.boolean(),
     labels: labelListSchema,
     attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]),
-    humanSignal: z.number().int().nullable(),
+    humanSignal: humanSignalScoreSchema,
+    humanClassification: humanClassificationResultSchema.nullable().default(null),
   })
   .strict();
 export type InboxMessage = z.infer<typeof inboxMessageSchema>;
@@ -130,7 +230,7 @@ export const normalizedMessageRawSchema = z
 export type NormalizedMessageRaw = z.infer<typeof normalizedMessageRawSchema>;
 
 export const normalizedMessageSchema = inboxMessageSchema
-  .omit({ attentionBehavior: true, humanSignal: true })
+  .omit({ attentionBehavior: true, humanSignal: true, humanClassification: true })
   .extend({
     to: z.array(mailContactSchema),
     cc: z.array(mailContactSchema),
@@ -139,6 +239,7 @@ export const normalizedMessageSchema = inboxMessageSchema
     bodyHtml: z.string().nullable(),
     internetMessageId: z.string().nullable(),
     references: z.array(z.string()),
+    classificationEvidence: humanClassificationEvidenceSchema.optional(),
     raw: normalizedMessageRawSchema,
   })
   .strict();
@@ -287,13 +388,19 @@ export const threadAttentionSchema = z.object({
   hasUnread: z.boolean(),
   hasStarred: z.boolean(),
   hasDraft: z.boolean(),
-  humanSignal: z.number().int().nullable(),
+  // Legacy aggregate for the reader chrome only. Per-message classification is
+  // authoritative and must never be inferred from this aggregate.
+  humanSignal: humanSignalScoreSchema,
 }).strict();
 export type ThreadAttention = z.infer<typeof threadAttentionSchema>;
 
 export const threadDetailMessageSchema = normalizedMessageSchema
   .omit({ threadId: true, raw: true })
-  .extend({ attachments: z.array(mailAttachmentSchema) })
+  .extend({
+    humanSignal: humanSignalScoreSchema,
+    humanClassification: humanClassificationResultSchema.nullable().default(null),
+    attachments: z.array(mailAttachmentSchema),
+  })
   .strict();
 export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
 

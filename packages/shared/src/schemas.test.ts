@@ -5,6 +5,9 @@ import {
   createCollectionSchema,
   createPinSchema,
   createMessageDraftSchema,
+  humanClassificationEvidenceSchema,
+  humanClassificationResultSchema,
+  inboxMessageSchema,
   inboxQuerySchema,
   inboxResponseSchema,
   pinFilterSchema,
@@ -45,6 +48,52 @@ describe("shared API schemas", () => {
     assert.equal(inboxQuerySchema.safeParse({ limit: "101" }).success, false);
   });
 
+  test("defines an explainable, bounded Human Signal contract", () => {
+    const automatic = {
+      classification: "likely_human" as const,
+      score: 8,
+      reasonCodes: ["direct_recipient", "reply_context"] as const,
+      classifierVersion: "m5-v1",
+    };
+    const classification = humanClassificationResultSchema.parse({
+      automatic,
+      effective: { ...automatic, source: "automatic_heuristic" },
+    });
+
+    assert.equal(classification.effective.classification, "likely_human");
+    assert.equal(classification.effective.score, 8);
+    assert.equal(
+      humanClassificationResultSchema.safeParse({
+        automatic: null,
+        effective: {
+          classification: "likely_human",
+          score: 11,
+          reasonCodes: [],
+          classifierVersion: "m5-v1",
+          source: "automatic_heuristic",
+        },
+      }).success,
+      false,
+    );
+
+    const evidence = humanClassificationEvidenceSchema.parse({
+      sender: { name: "Maya", email: "maya@example.com" },
+      recipients: [{ name: "Luke", email: "luke@example.com" }],
+      recipientRelationship: "direct",
+      reply: { hasInReplyTo: true, referenceCount: 1 },
+      headerSignals: ["list_id"],
+      providerSignals: [],
+    });
+    assert.deepEqual(evidence.headerSignals, ["list_id"]);
+
+    const message = inboxMessageSchema.parse({
+      ...inboxFixture[0],
+      humanSignal: 8,
+      humanClassification: classification,
+    });
+    assert.equal(message.humanClassification?.effective.source, "automatic_heuristic");
+  });
+
   test("requires an authenticated user when the session is authenticated", () => {
     assert.throws(
       () =>
@@ -76,7 +125,7 @@ describe("shared API schemas", () => {
         attention: { hasUnread: false, hasStarred: false, hasDraft: false, humanSignal: null },
       },
       messages: [{
-        id: "message_1", accountId: accountFixture.id, provider: "gmail", providerMessageId: "provider-message-1", from: { name: null, email: "maya@example.com" }, to: [], cc: [], bcc: [], subject: "A thread", snippet: "", receivedAt: "2026-07-08T12:00:00.000Z", unread: false, labels: [], bodyText: null, bodyHtml: null, internetMessageId: null, references: [],
+        id: "message_1", accountId: accountFixture.id, provider: "gmail", providerMessageId: "provider-message-1", from: { name: null, email: "maya@example.com" }, to: [], cc: [], bcc: [], subject: "A thread", snippet: "", receivedAt: "2026-07-08T12:00:00.000Z", unread: false, labels: [], bodyText: null, bodyHtml: null, internetMessageId: null, references: [], humanSignal: null,
         attachments: [{ id: "attachment_1", filename: "notes.pdf", mimeType: "application/pdf", size: 42 }],
       }],
     });

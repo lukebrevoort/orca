@@ -23,6 +23,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "focus",
     humanSignal: 9,
+    humanClassification: null,
   },
   {
     id: "msg_1_reply",
@@ -38,6 +39,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["SENT"],
     attentionBehavior: "normal",
     humanSignal: 10,
+    humanClassification: null,
   },
   {
     id: "msg_2",
@@ -53,6 +55,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "focus",
     humanSignal: 0,
+    humanClassification: null,
   },
   {
     id: "msg_3",
@@ -68,6 +71,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "notify",
     humanSignal: 10,
+    humanClassification: null,
   },
   {
     id: "msg_4",
@@ -83,6 +87,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "normal",
     humanSignal: 8,
+    humanClassification: null,
   },
   {
     id: "msg_5",
@@ -98,6 +103,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "quiet",
     humanSignal: 7,
+    humanClassification: null,
   },
   {
     id: "msg_6",
@@ -113,14 +119,15 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "hidden",
     humanSignal: 9,
+    humanClassification: null,
   },
 ];
 
 export const demoThreadHistoryExtras: InboxMessage[] = [
-  { id: "msg_1_followup", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_followup", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "Exactly. I tightened the reader notes around quoted replies and metadata.", receivedAt: "2026-07-04T15:02:00.000Z", unread: false, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9 },
-  { id: "msg_1_reply_2", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_reply_2", threadId: "thread_1", from: { name: "Luke Brevoort", email: "luke@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "The calmer metadata treatment works. Can we make long threads easier to scan?", receivedAt: "2026-07-05T18:44:00.000Z", unread: false, labels: ["SENT"], attentionBehavior: "normal", humanSignal: 10 },
-  { id: "msg_1_unread", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_unread", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "I grouped the history by day and kept every quoted reply recoverable.", receivedAt: "2026-07-06T16:20:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9 },
-  { id: "msg_1_latest", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_latest", threadId: "thread_1", from: { name: "Anika Lee", email: "anika@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "One last pass: the unread boundary should be unmistakable in either theme.", receivedAt: "2026-07-07T19:08:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 8 },
+  { id: "msg_1_followup", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_followup", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "Exactly. I tightened the reader notes around quoted replies and metadata.", receivedAt: "2026-07-04T15:02:00.000Z", unread: false, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: null },
+  { id: "msg_1_reply_2", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_reply_2", threadId: "thread_1", from: { name: "Luke Brevoort", email: "luke@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "The calmer metadata treatment works. Can we make long threads easier to scan?", receivedAt: "2026-07-05T18:44:00.000Z", unread: false, labels: ["SENT"], attentionBehavior: "normal", humanSignal: 10, humanClassification: null },
+  { id: "msg_1_unread", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_unread", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "I grouped the history by day and kept every quoted reply recoverable.", receivedAt: "2026-07-06T16:20:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: null },
+  { id: "msg_1_latest", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_latest", threadId: "thread_1", from: { name: "Anika Lee", email: "anika@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "One last pass: the unread boundary should be unmistakable in either theme.", receivedAt: "2026-07-07T19:08:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 8, humanClassification: null },
 ];
 
 export const messageBodies: Record<string, string> = {

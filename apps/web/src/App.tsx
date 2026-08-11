@@ -4014,7 +4014,7 @@ function createDemoThreadDetail(account: MailAccount, threadId: string, messages
       labels: [...new Set(demoMessagesForThread.flatMap((message) => message.labels))],
       participants: [...demoMessagesForThread.map((message) => message.from), ...recipients],
       readState: demoMessagesForThread.some((message) => message.unread) ? "unread" : "read",
-      attention: { hasUnread: demoMessagesForThread.some((message) => message.unread), hasStarred: false, hasDraft: false, humanSignal: 100 },
+      attention: { hasUnread: demoMessagesForThread.some((message) => message.unread), hasStarred: false, hasDraft: false, humanSignal: 10 },
     },
     messages: demoMessagesForThread.map((message) => ({
       ...message,
