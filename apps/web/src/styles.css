@@ -3922,6 +3922,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .classification-tab-selected strong { background: var(--orca-accent-soft); color: var(--orca-ink); }
 .classification-tab:disabled { background: var(--orca-surface); color: var(--orca-muted); cursor: wait; opacity: .72; }
 .classification-tabs-status { color: var(--orca-muted); font-size: 10px; margin-left: auto; min-width: 68px; text-align: right; }
+.classification-panel { min-width: 0; }
 .classification-action-message, .classification-action-error { border-radius: 10px; font-size: 11px; line-height: 1.45; margin: -5px 0 14px; padding: 9px 11px; }
 .classification-action-message { background: var(--orca-accent-soft); color: var(--orca-ink); }
 .classification-action-error { background: color-mix(in srgb, var(--orca-danger) 10%, var(--orca-surface)); color: var(--orca-danger); }
@@ -3933,10 +3934,11 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .classification-badge-uncertain .classification-badge-dot, .classification-badge-unclassified .classification-badge-dot { background: #a18757; }
 .classification-badge-source { color: var(--orca-accent); font-size: 8px; letter-spacing: .04em; text-transform: uppercase; }
 .classification-correction { position: absolute; right: 218px; top: 31px; z-index: 4; }
+.classification-correction-open { z-index: 120; }
 .classification-correction-trigger { align-items: center; background: transparent; border: 0; border-radius: 999px; color: var(--orca-ink); cursor: pointer; display: inline-flex; gap: 4px; padding: 0; }
 .classification-correction-trigger:hover .classification-badge, .classification-correction-trigger:focus-visible .classification-badge { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent); outline-offset: 2px; }
 .classification-correction-trigger > span:last-child { color: var(--orca-muted); font-size: 11px; }
-.classification-correction-menu { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: var(--orca-shadow); min-width: 310px; padding: 15px; position: absolute; right: 0; top: 38px; }
+.classification-correction-menu { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: var(--orca-shadow); max-height: min(520px, calc(100vh - 24px)); overflow-y: auto; padding: 15px; position: fixed; right: auto; top: auto; width: min(360px, calc(100vw - 24px)); z-index: 110; }
 .classification-correction-menu > header { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
 .classification-correction-menu > header > div { display: grid; gap: 3px; }
 .classification-correction-menu > header span, .classification-correction-menu legend { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -3959,7 +3961,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .classification-reset:not(:disabled):hover, .classification-reset:not(:disabled):focus-visible { background: var(--orca-surface-hover); color: var(--orca-ink); }
 .classification-correction-error { color: var(--orca-danger); font-size: 10px; line-height: 1.4; margin: 9px 0 0; }
 .reader-sender .classification-correction { margin-left: auto; position: static; }
-.reader-sender .classification-correction-menu { right: 0; top: 34px; }
+.reader-sender .classification-correction-menu { right: auto; top: auto; }
 .classification-load-more { display: flex; justify-content: center; padding: 20px 0 4px; }
 .classification-load-more button { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font-size: 11px; font-weight: 700; padding: 10px 14px; }
 .classification-load-more button:hover:not(:disabled), .classification-load-more button:focus-visible { background: var(--orca-surface-hover); border-color: var(--orca-border); outline: 2px solid var(--orca-accent); outline-offset: 2px; }
@@ -4134,7 +4136,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .classification-tab-list { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; padding: 2px 1px 4px; }
   .classification-tab { flex: 0 0 auto; }
   .classification-correction { right: 152px; top: 29px; }
-  .classification-correction-menu { max-width: calc(100vw - 32px); min-width: min(310px, calc(100vw - 32px)); right: -78px; }
+  .classification-correction-menu { max-width: calc(100vw - 24px); width: calc(100vw - 24px); }
 }
 
 /* Immersive reader */
