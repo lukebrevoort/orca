@@ -9,6 +9,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
+import { humanClassifierVersion } from "../../classification/human-signal.ts";
 import { syncGmailAccountPage } from "./sync.ts";
 import type { GmailClient } from "./client.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
@@ -221,6 +222,44 @@ describe("syncGmailAccountPage", () => {
         new Date(syncState.last_synced_at).toISOString(),
         "2026-07-08T12:10:00.000Z",
       );
+
+      const classifications = sqlite.query(
+        `select provider_message_id, human_signal, human_classification,
+                human_classification_reasons, human_classifier_version,
+                human_classification_evidence
+         from emails
+         order by provider_message_id`,
+      ).all() as Array<{
+        provider_message_id: string;
+        human_signal: number | null;
+        human_classification: string | null;
+        human_classification_reasons: string | null;
+        human_classifier_version: string | null;
+        human_classification_evidence: string | null;
+      }>;
+      assert.deepEqual(classifications.map((row) => ({
+        providerMessageId: row.provider_message_id,
+        score: row.human_signal,
+        classification: row.human_classification,
+        reasons: JSON.parse(row.human_classification_reasons ?? "[]"),
+        version: row.human_classifier_version,
+      })), [
+        {
+          providerMessageId: "msg-1",
+          score: 7,
+          classification: "likely_human",
+          reasons: ["direct_recipient"],
+          version: humanClassifierVersion,
+        },
+        {
+          providerMessageId: "msg-2",
+          score: null,
+          classification: "unclassified",
+          reasons: ["insufficient_evidence"],
+          version: humanClassifierVersion,
+        },
+      ]);
+      assert.equal(JSON.parse(classifications[0]?.human_classification_evidence ?? "{}").recipientRelationship, "direct");
     } finally {
       sqlite.close();
     }

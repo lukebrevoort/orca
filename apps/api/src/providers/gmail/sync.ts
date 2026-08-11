@@ -2,6 +2,8 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
+import { backfillHumanClassifications } from "../../classification/backfill.ts";
+import { automaticClassificationColumns, classifyHumanSignal } from "../../classification/human-signal.ts";
 import { loadGmailOAuthConfig } from "../../auth/gmail/config.ts";
 import { decryptSecret } from "../../auth/gmail/crypto.ts";
 import { readProviderTokens } from "../../auth/session-store.ts";
@@ -24,6 +26,7 @@ type DatabaseExecutor = Pick<DatabaseClient, "delete" | "insert" | "update" | "s
 type GmailAccountRecord = {
   id: string;
   provider: string;
+  providerEmail: string;
   syncCursor: string | null;
   lastSyncedAt: Date | null;
 };
@@ -115,7 +118,7 @@ export async function syncGmailAccountPage(
   }
 
   const normalizedMessages = gmailMessages.map((message) =>
-    normalizeGmailMessage(message, { accountId: account.id }),
+    normalizeGmailMessage(message, { accountId: account.id, accountEmail: account.providerEmail }),
   );
 
   const persistedLabels = buildPersistedLabels(account.id, labelList, normalizedMessages);
@@ -151,6 +154,11 @@ export async function syncGmailAccountPage(
       .run();
   });
 
+  // Older cached rows may predate normalized evidence. Each normal sync moves
+  // one bounded, provider-free backfill batch forward without blocking on a
+  // live Outlook path or a complete mailbox history.
+  backfillHumanClassifications(db, { accountId: account.id, limit: 100, now: nowDate });
+
   return {
     accountId: account.id,
     emailCount: normalizedMessages.length,
@@ -183,6 +191,7 @@ function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRec
     .select({
       id: oauthAccounts.id,
       provider: oauthAccounts.provider,
+      providerEmail: oauthAccounts.providerEmail,
       syncCursor: oauthAccounts.syncCursor,
       lastSyncedAt: oauthAccounts.lastSyncedAt,
     })
@@ -342,6 +351,8 @@ function upsertEmails(
   now: Date,
 ) {
   for (const message of normalizedMessages) {
+    const automaticClassification = classifyHumanSignal(message.classificationEvidence);
+    const classificationColumns = automaticClassificationColumns(automaticClassification);
     db
       .insert(emails)
       .values({
@@ -365,6 +376,10 @@ function upsertEmails(
         isRead: !message.unread,
         isStarred: message.labels.includes("STARRED"),
         isDraft: message.labels.includes("DRAFT"),
+        ...classificationColumns,
+        humanClassificationEvidence: message.classificationEvidence
+          ? JSON.stringify(message.classificationEvidence)
+          : null,
         createdAt: now,
         updatedAt: now,
       })
@@ -388,6 +403,10 @@ function upsertEmails(
           isRead: sql`CASE WHEN ${emails.isRead} = 1 AND ${message.unread} THEN 1 ELSE ${!message.unread} END`,
           isStarred: message.labels.includes("STARRED"),
           isDraft: message.labels.includes("DRAFT"),
+          ...classificationColumns,
+          humanClassificationEvidence: message.classificationEvidence
+            ? JSON.stringify(message.classificationEvidence)
+            : null,
           updatedAt: now,
         },
       })

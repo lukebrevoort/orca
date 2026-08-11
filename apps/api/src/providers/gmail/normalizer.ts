@@ -5,6 +5,7 @@ import type {
   NormalizedMessage,
   NormalizedThread,
 } from "@orca/shared";
+import { buildHumanClassificationEvidence } from "../../classification/evidence.ts";
 import type {
   GmailHeader,
   GmailLabel,
@@ -14,6 +15,7 @@ import type {
 
 type NormalizeOptions = {
   accountId: string;
+  accountEmail?: string | null;
 };
 
 export type NormalizedGmailMessage = NormalizedMessage & {
@@ -28,6 +30,10 @@ export function normalizeGmailMessage(
   const subject = headers.get("subject") ?? "(No subject)";
   const receivedAt = normalizeInternalDate(message.internalDate);
   const labelIds = message.labelIds ?? [];
+  const from = parseContact(headers.get("from"));
+  const to = parseContactList(headers.get("to"));
+  const cc = parseContactList(headers.get("cc"));
+  const bcc = parseContactList(headers.get("bcc"));
 
   return {
     id: buildProviderScopedId(options.accountId, message.id),
@@ -35,10 +41,10 @@ export function normalizeGmailMessage(
     provider: "gmail",
     providerMessageId: message.id,
     threadId: buildProviderScopedId(options.accountId, message.threadId),
-    from: parseContact(headers.get("from")),
-    to: parseContactList(headers.get("to")),
-    cc: parseContactList(headers.get("cc")),
-    bcc: parseContactList(headers.get("bcc")),
+    from,
+    to,
+    cc,
+    bcc,
     subject,
     snippet: message.snippet ?? "",
     receivedAt,
@@ -48,6 +54,13 @@ export function normalizeGmailMessage(
     bodyHtml: findBodyPart(message.payload, "text/html"),
     internetMessageId: headers.get("message-id")?.trim() || null,
     references: parseReferences(headers.get("references")),
+    classificationEvidence: buildHumanClassificationEvidence({
+      sender: from,
+      recipients: [...to, ...cc, ...bcc],
+      accountEmail: options.accountEmail,
+      headers,
+      providerSignals: gmailProviderSignals(labelIds),
+    }),
     attachments: findAttachments(message.payload, options.accountId, message.id),
     raw: {
       provider: "gmail",
@@ -57,6 +70,25 @@ export function normalizeGmailMessage(
       labelIds,
     },
   };
+}
+
+function gmailProviderSignals(labelIds: string[]) {
+  const signals = new Set<"bulk_or_marketing_label" | "promotions_label" | "transactional_category" | "automated_category">();
+  for (const labelId of labelIds) {
+    switch (labelId.toUpperCase()) {
+      case "CATEGORY_PROMOTIONS":
+        signals.add("promotions_label");
+        break;
+      case "CATEGORY_FORUMS":
+      case "CATEGORY_SOCIAL":
+        signals.add("bulk_or_marketing_label");
+        break;
+      case "CATEGORY_UPDATES":
+        signals.add("automated_category");
+        break;
+    }
+  }
+  return [...signals];
 }
 
 function parseReferences(value: string | undefined): string[] {
