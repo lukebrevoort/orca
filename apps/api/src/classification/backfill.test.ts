@@ -140,6 +140,45 @@ describe("Human Signal backfill", () => {
     }
   });
 
+  test("reclassifies persisted m5-v1 rows when metadata semantics change", () => {
+    const { db, sqlite } = createMigratedClient();
+    try {
+      const timestamp = new Date("2026-08-10T12:00:00.000Z");
+      db.insert(users).values({ id: "user", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "account", userId: "user", provider: "outlook", providerEmail: "luke@example.com", providerId: "outlook" }).run();
+      db.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
+      db.insert(emails).values({
+        id: "message",
+        accountId: "account",
+        threadId: "thread",
+        providerMessageId: "message",
+        receivedAt: timestamp,
+        humanSignal: 4,
+        humanClassification: "uncertain",
+        humanClassificationReasons: JSON.stringify(["auto_submitted_header"]),
+        humanClassifierVersion: "m5-v1",
+        humanClassificationEvidence: JSON.stringify(evidence({
+          headerSignals: ["x_auto_response_suppress"],
+        })),
+      }).run();
+
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", now: timestamp }), {
+        accountId: "account",
+        processed: 1,
+        hasMore: false,
+      });
+      assert.deepEqual(sqlite.query(
+        "select human_signal, human_classification, human_classifier_version from emails where id = 'message'",
+      ).get(), {
+        human_signal: 7,
+        human_classification: "likely_human",
+        human_classifier_version: humanClassifierVersion,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("does not overwrite a sync refresh that lands after a batch row was selected", () => {
     const { db, sqlite } = createMigratedClient();
     try {
