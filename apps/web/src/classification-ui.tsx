@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type {
   HumanClassification,
   HumanClassificationOverrideScope,
@@ -108,11 +108,12 @@ export function ClassificationTabs({
 }) {
   return (
     <nav aria-label="Inbox classification views" className="classification-tabs">
-      <span className="classification-tabs-label">Sort by signal</span>
+      <span className="classification-tabs-label">Sort by signal · message counts</span>
       <div className="classification-tab-list" role="tablist">
         {classificationViewItems.map((item) => (
           <button
-            aria-controls={`classification-panel-${item.id}`}
+            aria-label={`${item.label}, ${counts[item.countKey]} messages`}
+            aria-controls="classification-panel"
             aria-selected={active === item.id}
             className={active === item.id ? "classification-tab classification-tab-selected" : "classification-tab"}
             disabled={loading}
@@ -120,6 +121,7 @@ export function ClassificationTabs({
             key={item.id}
             onClick={() => onChange(item.id)}
             role="tab"
+            title={`${item.description} · ${counts[item.countKey]} messages`}
             type="button"
           >
             <span>{item.label}</span>
@@ -154,6 +156,63 @@ export function ClassificationCorrection({
   const [pending, setPending] = useState<HumanClassification | "reset" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLButtonElement | null>(null);
+  const menuId = `classification-correction-menu-${useId()}`;
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      const trigger = restoreFocusRef.current;
+      restoreFocusRef.current = null;
+      if (trigger?.isConnected) window.requestAnimationFrame(() => trigger.isConnected && trigger.focus());
+      return;
+    }
+
+    const menu = menuRef.current;
+    const trigger = triggerRef.current;
+    if (!menu || !trigger) return;
+
+    const positionMenu = () => {
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const viewportMargin = 12;
+      const gap = 8;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const menuWidth = Math.min(menuRect.width || 360, viewportWidth - viewportMargin * 2);
+      const belowSpace = Math.max(0, viewportHeight - triggerRect.bottom - gap - viewportMargin);
+      const aboveSpace = Math.max(0, triggerRect.top - gap - viewportMargin);
+      const flipAbove = belowSpace < Math.min(menuRect.height || 0, 360) && aboveSpace > belowSpace;
+      const availableSpace = flipAbove ? aboveSpace : belowSpace;
+      const maxHeight = Math.max(120, Math.min(520, availableSpace || viewportHeight - viewportMargin * 2));
+      const visibleHeight = Math.min(menuRect.height || maxHeight, maxHeight);
+      const requestedTop = flipAbove ? triggerRect.top - gap - visibleHeight : triggerRect.bottom + gap;
+      const top = Math.max(viewportMargin, Math.min(requestedTop, viewportHeight - viewportMargin - visibleHeight));
+      const requestedLeft = triggerRect.right - menuWidth;
+      const left = Math.max(viewportMargin, Math.min(requestedLeft, viewportWidth - viewportMargin - menuWidth));
+      setMenuPosition({ top, left, maxHeight });
+    };
+
+    positionMenu();
+    const onViewportChange = () => positionMenu();
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => {
+      menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -198,15 +257,23 @@ export function ClassificationCorrection({
   }
 
   return (
-    <div className={`classification-correction${compact ? " classification-correction-compact" : ""}`} ref={wrapperRef}>
+    <div className={`classification-correction${compact ? " classification-correction-compact" : ""}${open ? " classification-correction-open" : ""}`} ref={wrapperRef}>
       <button
+        aria-controls={menuId}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Correct classification: ${classificationLabel(effective)}`}
         className="classification-correction-trigger"
+        ref={triggerRef}
         onClick={(event) => {
           event.stopPropagation();
-          setOpen((value) => !value);
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          restoreFocusRef.current = event.currentTarget;
+          setMenuPosition(null);
+          setOpen(true);
         }}
         type="button"
       >
@@ -214,7 +281,21 @@ export function ClassificationCorrection({
         <span aria-hidden="true">⌄</span>
       </button>
       {open ? (
-        <div aria-label="Correct message classification" className="classification-correction-menu" onClick={(event) => event.stopPropagation()} role="dialog">
+        <div
+          aria-label="Correct message classification"
+          aria-modal="false"
+          className="classification-correction-menu"
+          id={menuId}
+          onClick={(event) => event.stopPropagation()}
+          ref={menuRef}
+          role="dialog"
+          style={{
+            left: menuPosition?.left,
+            maxHeight: menuPosition?.maxHeight,
+            top: menuPosition?.top,
+            visibility: menuPosition ? "visible" : "hidden",
+          }}
+        >
           <header>
             <div>
               <span>Classification</span>
