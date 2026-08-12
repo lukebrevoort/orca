@@ -400,6 +400,8 @@ export const pins = sqliteTable(
     kind: text("kind").notNull(),
     targetId: text("target_id").notNull(),
     label: text("label").notNull(),
+    icon: text("icon").notNull().default("person"),
+    color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),

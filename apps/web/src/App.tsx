@@ -10,7 +10,7 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, Pin, PinFilter, PinIcon, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
 import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
@@ -59,6 +59,28 @@ const pinAttentionOptions: Array<{ id: InboxFilter; label: string }> = [
   { id: "focus", label: "Keep in focus" },
   { id: "normal", label: "Flow" },
 ];
+
+const pinIconOptions: Array<{ id: PinIcon; label: string; glyph: string }> = [
+  { id: "person", label: "Person", glyph: "@" },
+  { id: "thread", label: "Thread", glyph: "↗" },
+  { id: "search", label: "Search", glyph: "⌕" },
+  { id: "grid", label: "View", glyph: "◫" },
+  { id: "star", label: "Star", glyph: "★" },
+  { id: "bolt", label: "Bolt", glyph: "ϟ" },
+  { id: "heart", label: "Heart", glyph: "♥" },
+  { id: "bookmark", label: "Bookmark", glyph: "▮" },
+];
+
+const pinColorOptions = [
+  { name: "Moss", value: "#70867d" },
+  { name: "Clay", value: "#a87360" },
+  { name: "Harbor", value: "#6c8195" },
+  { name: "Plum", value: "#83728d" },
+  { name: "Ochre", value: "#a18757" },
+  { name: "Berry", value: "#9b6e83" },
+] as const;
+
+type PinInput = Pick<Pin, "kind" | "targetId" | "label"> & Partial<Pick<Pin, "icon" | "color">>;
 
 type MailboxItem = {
   id: Mailbox;
@@ -188,11 +210,11 @@ const collectionColors = [
 ] as const;
 
 const demoPins: Pin[] = [
-  { id: "pin_demo_sender", accountId: demoAccount.id, kind: "sender", targetId: "maya@example.com", label: "Maya Chen", position: 0, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "pin_demo_mom", accountId: demoAccount.id, kind: "sender", targetId: "family@example.com", label: "Mom", position: 1, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "pin_demo_anika", accountId: demoAccount.id, kind: "sender", targetId: "anika@example.com", label: "Anika Lee", position: 2, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "pin_demo_dana", accountId: demoAccount.id, kind: "sender", targetId: "dana@example.com", label: "Dana Brooks", position: 3, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
-  { id: "pin_demo_thread", accountId: demoAccount.id, kind: "thread", targetId: "thread_3", label: "Dinner on Sunday?", position: 4, createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
+  { id: "pin_demo_sender", accountId: demoAccount.id, kind: "sender", targetId: "maya@example.com", label: "Maya Chen", icon: "person", color: "#70867d", position: 0, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_mom", accountId: demoAccount.id, kind: "sender", targetId: "family@example.com", label: "Mom", icon: "person", color: "#a87360", position: 1, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_anika", accountId: demoAccount.id, kind: "sender", targetId: "anika@example.com", label: "Anika Lee", icon: "person", color: "#6c8195", position: 2, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_dana", accountId: demoAccount.id, kind: "sender", targetId: "dana@example.com", label: "Dana Brooks", icon: "person", color: "#83728d", position: 3, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
+  { id: "pin_demo_thread", accountId: demoAccount.id, kind: "thread", targetId: "thread_3", label: "Dinner on Sunday?", icon: "thread", color: "#a18757", position: 4, createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
 ];
 
 const demoReminders: Reminder[] = [
@@ -1474,16 +1496,45 @@ function InboxApp({
     }
   }
 
-  async function createPin(input: Pick<Pin, "kind" | "targetId" | "label">) {
+  async function createPin(input: PinInput) {
     if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return;
     setOrganizationError(null);
     try {
+      const normalizedInput = {
+        ...input,
+        icon: input.icon ?? defaultPinIcon(input.kind),
+        color: input.color ?? pinColorOptions[pins.length % pinColorOptions.length]!.value,
+      };
       const created = demoMode
-        ? pinSchema.parse({ ...input, id: `pin_demo_${Date.now()}`, accountId: account.id, position: pins.length, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
-        : await fetchJson("/v1/pins", pinSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+        ? pinSchema.parse({ ...normalizedInput, id: `pin_demo_${Date.now()}`, accountId: account.id, position: pins.length, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+        : await fetchJson("/v1/pins", pinSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(normalizedInput) });
       setPins((current) => [...current, created]);
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+    }
+  }
+
+  async function updatePin(pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">> & { position?: number }) {
+    if (!account) return;
+    setOrganizationError(null);
+    try {
+      if (demoMode) {
+        setPins((current) => reorderItems(current.map((item) => item.id === pin.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item), pin.id, patch.position));
+      } else {
+        await fetchJson(`/v1/pins/${encodeURIComponent(pin.id)}`, pinSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
+        setPins(await fetchJson("/v1/pins", pinsResponseSchema));
+      }
+    } catch (error) {
+      setOrganizationError(getErrorMessage(error));
+      throw error;
+    }
+  }
+
+  async function reorderPin(pin: Pin, position: number) {
+    try {
+      await updatePin(pin, { position });
+    } catch {
+      // updatePin already exposes the bounded organization error to the user.
     }
   }
 
@@ -1678,6 +1729,8 @@ function InboxApp({
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
               onRemovePin={(pin) => void removePin(pin)}
+              onReorderPin={(pin, position) => void reorderPin(pin, position)}
+              onUpdatePin={(pin, patch) => updatePin(pin, patch)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPin={selectPin}
               rowRefs={messageRowRefs}
@@ -2405,6 +2458,168 @@ function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }
   </aside>;
 }
 
+function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onReorderPin, onUpdatePin }: {
+  pins: Pin[];
+  pinnedPeople: PersonItem[];
+  inboxFilter: InboxFilter;
+  personFilter: string | null;
+  searchQuery: string;
+  viewMode: "collection" | Mailbox;
+  onSelectPin: (pin: Pin) => void;
+  onReorderPin: (pin: Pin, position: number) => void;
+  onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
+}) {
+  const [draggedPinId, setDraggedPinId] = useState<string | null>(null);
+  const [dropPinId, setDropPinId] = useState<string | null>(null);
+  const [editingPinId, setEditingPinId] = useState<string | null>(null);
+  const [moveMessage, setMoveMessage] = useState("");
+  const editingPin = pins.find((pin) => pin.id === editingPinId) ?? null;
+
+  function clearDragState() {
+    setDraggedPinId(null);
+    setDropPinId(null);
+  }
+
+  function handleDrop(event: React.DragEvent<HTMLButtonElement>, targetPin: Pin) {
+    event.preventDefault();
+    const draggedId = draggedPinId ?? event.dataTransfer.getData("text/plain");
+    const draggedPin = pins.find((pin) => pin.id === draggedId);
+    if (!draggedPin || draggedPin.id === targetPin.id) {
+      clearDragState();
+      return;
+    }
+    const remaining = pins.filter((pin) => pin.id !== draggedPin.id);
+    const targetIndex = remaining.findIndex((pin) => pin.id === targetPin.id);
+    if (targetIndex < 0) {
+      clearDragState();
+      return;
+    }
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const insertAfter = event.clientX >= targetRect.left + targetRect.width / 2;
+    const nextPosition = Math.max(0, Math.min(targetIndex + (insertAfter ? 1 : 0), remaining.length));
+    onReorderPin(draggedPin, nextPosition);
+    setMoveMessage(`${draggedPin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
+    clearDragState();
+  }
+
+  function moveWithKeyboard(pin: Pin, direction: -1 | 1) {
+    const currentIndex = pins.findIndex((item) => item.id === pin.id);
+    const nextPosition = currentIndex + direction;
+    if (currentIndex < 0 || nextPosition < 0 || nextPosition >= pins.length) return;
+    onReorderPin(pin, nextPosition);
+    setMoveMessage(`${pin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
+  }
+
+  return <>
+    <div className="pin-rail-items" onDragEnd={clearDragState}>
+      {pins.map((pin) => {
+        const person = pin.kind === "sender"
+          ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
+          : null;
+        const active = isTopBarPinActive(pin, { inboxFilter, personFilter, searchQuery, viewMode });
+        const isDragging = draggedPinId === pin.id;
+        const isDropTarget = dropPinId === pin.id && !isDragging;
+        return <div className={`pinned-pin-item${isDragging ? " pinned-pin-item-dragging" : ""}${isDropTarget ? " pinned-pin-item-drop-target" : ""}`} key={pin.id}>
+          <button
+            aria-describedby="pin-rail-instructions"
+            aria-grabbed={isDragging}
+            aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+            aria-label={`Open ${pin.label} pin`}
+            aria-pressed={active}
+            className={`pinned-pin pinned-pin-${pin.kind}`}
+            draggable
+            onClick={() => onSelectPin(pin)}
+            onDragEnter={() => { if (draggedPinId && draggedPinId !== pin.id) setDropPinId(pin.id); }}
+            onDragOver={(event) => { if (!draggedPinId || draggedPinId === pin.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropPinId(pin.id); }}
+            onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setMoveMessage(""); }}
+            onDrop={(event) => handleDrop(event, pin)}
+            onKeyDown={(event) => {
+              if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
+              event.preventDefault();
+              moveWithKeyboard(pin, event.key === "ArrowLeft" ? -1 : 1);
+            }}
+            style={{ "--pin-color": pin.color } as CSSProperties}
+            title={`${pin.label} · drag to reorder`}
+            type="button"
+          >
+            <span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span>
+            <small>{pinTopBarLabel(pin, person)}</small>
+          </button>
+          <button aria-label={`Customize ${pin.label} pin`} className="pinned-pin-edit" onClick={() => setEditingPinId(pin.id)} title={`Customize ${pin.label}`} type="button">✎</button>
+        </div>;
+      })}
+      <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder · select the customize button to choose an icon and color · Option plus arrow keys also move pins.</p>
+      <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
+    </div>
+    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onSave={onUpdatePin} /> : null}
+  </>;
+}
+
+function PinAppearanceEditor({ pin, onClose, onSave }: {
+  pin: Pin;
+  onClose: () => void;
+  onSave: (pin: Pin, patch: Partial<Pick<Pin, "icon" | "color">>) => Promise<void>;
+}) {
+  const [icon, setIcon] = useState<PinIcon>(pin.icon);
+  const [color, setColor] = useState<string>(pin.color);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose, saving]);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(pin, { icon, color });
+      onClose();
+    } catch (saveError) {
+      setError(getErrorMessage(saveError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <div className="pin-appearance-layer" role="presentation">
+    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={saving} onClick={onClose} type="button" />
+    <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" role="dialog">
+      <header className="pin-appearance-heading">
+        <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
+        <button aria-label="Close pin customization" autoFocus disabled={saving} onClick={onClose} type="button">×</button>
+      </header>
+      <form onSubmit={submit}>
+        <div className="pin-appearance-preview" style={{ "--pin-color": color } as CSSProperties}>
+          <span>{pinTopBarMark({ ...pin, icon }, null)}</span>
+          <div><strong>{pin.label}</strong><small>{pinTopBarLabel({ ...pin, icon }, null)}</small></div>
+        </div>
+        <fieldset className="pin-appearance-icons">
+          <legend>Icon</legend>
+          <div aria-label="Pin icons" role="group">
+            {pinIconOptions.map((option) => <button aria-label={`${option.label}${icon === option.id ? ", selected" : ""}`} aria-pressed={icon === option.id} className={icon === option.id ? "pin-appearance-icon-selected" : ""} disabled={saving} key={option.id} onClick={() => setIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span><small>{option.label}</small></button>)}
+          </div>
+        </fieldset>
+        <fieldset className="pin-appearance-colors">
+          <legend>Color</legend>
+          <div aria-label="Pin colors" role="group">
+            {pinColorOptions.map((option) => <button aria-label={`${option.name}${color.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={color.toLowerCase() === option.value} className="pin-appearance-color-swatch" disabled={saving} key={option.value} onClick={() => setColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
+            <label className="pin-appearance-custom-color"><span>Custom</span><input aria-label="Custom pin color" disabled={saving} onChange={(event) => setColor(event.target.value)} type="color" value={color} /></label>
+          </div>
+          <code>{color}</code>
+        </fieldset>
+        {error ? <p className="pin-appearance-error" role="alert">Could not save this pin. {error}</p> : null}
+        <footer className="pin-appearance-actions"><button disabled={saving} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={saving} type="submit">{saving ? "Saving…" : "Save pin style"}</button></footer>
+      </form>
+    </section>
+  </div>;
+}
+
 function InboxView({
   account,
   automatedMessages,
@@ -2443,6 +2658,8 @@ function InboxView({
   onClassificationChange,
   onCreatePin,
   onRemovePin,
+  onReorderPin,
+  onUpdatePin,
   onOpenThread,
   onPinPerson,
   onSelectPin,
@@ -2495,8 +2712,10 @@ function InboxView({
   onLoadMoreMessages: () => void;
   onRetry: () => void;
   onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
-  onCreatePin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
+  onCreatePin: (input: PinInput) => void;
   onRemovePin: (pin: Pin) => void;
+  onReorderPin: (pin: Pin, position: number) => void;
+  onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
   onOpenThread: (message: InboxMessage) => void;
   onPinPerson: (message: InboxMessage) => void;
   onSelectPin: (pin: Pin) => void;
@@ -2532,6 +2751,8 @@ function InboxView({
   const [pinFilterAttention, setPinFilterAttention] = useState<InboxFilter>("all");
   const [pinFilterPerson, setPinFilterPerson] = useState<string | null>(null);
   const [pinFilterQuery, setPinFilterQuery] = useState("");
+  const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
+  const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery).filter((message) => !sweptThreadIds.has(message.threadId)), [messages, searchQuery, sweptThreadIds, viewMode]);
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
@@ -2608,6 +2829,8 @@ function InboxView({
     setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all");
     setPinFilterPerson(personFilter);
     setPinFilterQuery(searchQuery);
+    setPinFilterIcon("search");
+    setPinFilterColor(pinColorOptions[pins.length % pinColorOptions.length]!.value);
     setPinMenuOpen(true);
   }
 
@@ -2619,7 +2842,7 @@ function InboxView({
   function savePinFilter(event: React.FormEvent) {
     event.preventDefault();
     if (!pinPreview.count) return;
-    onCreatePin({ kind: "filter", targetId: JSON.stringify(pinFilter), label: pinFilterDisplayLabel });
+    onCreatePin({ kind: "filter", targetId: JSON.stringify(pinFilter), label: pinFilterDisplayLabel, icon: pinFilterIcon, color: pinFilterColor });
     closePinBuilder();
   }
 
@@ -2697,13 +2920,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        {pins.map((pin) => {
-          const person = pin.kind === "sender"
-            ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
-            : null;
-          const active = isTopBarPinActive(pin, { inboxFilter, personFilter, searchQuery, viewMode });
-          return <button aria-label={`Open ${pin.label} pin`} aria-pressed={active} className={`pinned-pin pinned-pin-${pin.kind}`} key={pin.id} onClick={() => onSelectPin(pin)} title={pin.label} type="button"><span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span><small>{pinTopBarLabel(pin, person)}</small></button>;
-        })}
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -2745,6 +2962,13 @@ function InboxView({
                     {canPinCurrentView ? <button onClick={() => { setPinFilterMailbox(viewMode as PinMailbox); setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all"); setPinFilterPerson(null); setPinFilterQuery(""); }} type="button">Use {currentViewLabel}</button> : null}
                     {pinPeople.slice(0, 3).map((person) => <button key={person.email} onClick={() => { setPinFilterPerson(person.email); setPinFilterQuery(""); }} type="button">{person.name}</button>)}
                   </div>
+                  <fieldset className="pin-builder-appearance">
+                    <legend>Pin style</legend>
+                    <div className="pin-builder-icon-options" aria-label="Choose a pin icon" role="group">
+                      {pinIconOptions.map((option) => <button aria-label={`${option.label}${pinFilterIcon === option.id ? ", selected" : ""}`} aria-pressed={pinFilterIcon === option.id} className={pinFilterIcon === option.id ? "pin-builder-icon-selected" : ""} key={option.id} onClick={() => setPinFilterIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span></button>)}
+                    </div>
+                    <label className="pin-builder-color-field"><span>Color</span><input aria-label="Pin color" onChange={(event) => setPinFilterColor(event.target.value)} type="color" value={pinFilterColor} /><code>{pinFilterColor}</code></label>
+                  </fieldset>
                   <section aria-live="polite" className="pin-builder-preview">
                     <header><div><span>Preview</span><strong>{pinPreview.count} matching {pinPreview.count === 1 ? "thread" : "threads"}</strong></div><small>{pinFilterDisplayLabel}</small></header>
                     {pinPreview.messages.length ? (
@@ -4125,11 +4349,20 @@ function pinFilterLabel(filter: PinFilter, personName?: string | null) {
   return parts.join(" · ");
 }
 
+function defaultPinIcon(kind: Pin["kind"]): PinIcon {
+  if (kind === "sender") return "person";
+  if (kind === "thread") return "thread";
+  if (kind === "filter") return "search";
+  return "grid";
+}
+
+function pinIconGlyph(icon: PinIcon) {
+  return pinIconOptions.find((option) => option.id === icon)?.glyph ?? "•";
+}
+
 function pinTopBarMark(pin: Pin, person: PersonItem | null) {
-  if (pin.kind === "sender") return person?.initials ?? pin.label.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-  if (pin.kind === "thread") return "↗";
-  if (pin.kind === "filter") return "⌕";
-  return "◫";
+  if (pin.icon === "person" && pin.kind === "sender") return person?.initials ?? pin.label.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  return pinIconGlyph(pin.icon);
 }
 
 function pinTopBarLabel(pin: Pin, person: PersonItem | null) {

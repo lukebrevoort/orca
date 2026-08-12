@@ -1234,7 +1234,9 @@ describe("Orca API", () => {
       assert.deepEqual(both.map((item: { color: string }) => item.color), ["#83728d", "#70867d"]);
 
       const firstPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "sender", targetId: "maya@example.com", label: "Maya" }) })).json();
-      const secondPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "thread", targetId: "thread_1", label: "Additive" }) })).json();
+      assert.deepEqual({ icon: firstPin.icon, color: firstPin.color }, { icon: "person", color: "#70867d" });
+      const secondPin = await (await testApp.request("/v1/pins", { method: "POST", headers, body: JSON.stringify({ kind: "thread", targetId: "thread_1", label: "Additive", icon: "star", color: "#83728d" }) })).json();
+      assert.deepEqual({ icon: secondPin.icon, color: secondPin.color }, { icon: "star", color: "#83728d" });
       await testApp.request(`/v1/pins/${secondPin.id}`, { method: "PATCH", headers, body: JSON.stringify({ position: 0 }) });
       const orderedPins = await (await testApp.request("/v1/pins", { headers })).json();
       assert.deepEqual(orderedPins.map((item: { id: string; position: number }) => [item.id, item.position]), [[secondPin.id, 0], [firstPin.id, 1]]);

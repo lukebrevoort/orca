@@ -731,7 +731,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const input = c.req.valid("json");
         validatePinTarget(db, account.id, input.kind, input.targetId);
         const id = `pin:${crypto.randomUUID()}`;
-        db.insert(pins).values({ id, accountId: account.id, kind: input.kind, targetId: input.targetId.trim(), label: input.label.trim(), position: listPins(db, account.id).length }).run();
+        db.insert(pins).values({
+          id,
+          accountId: account.id,
+          kind: input.kind,
+          targetId: input.targetId.trim(),
+          label: input.label.trim(),
+          icon: input.icon ?? defaultPinIcon(input.kind),
+          color: input.color ?? "#70867d",
+          position: listPins(db, account.id).length,
+        }).run();
         return c.json(pinSchema.parse(toPin(db.select().from(pins).where(eq(pins.id, id)).get()!)), 201);
       } catch (error) {
         if (error instanceof OrganizationTargetError) return c.json({ error: { code: "validation_error", message: error.message } }, 400);
@@ -2141,11 +2150,12 @@ function getPin(db: Database, accountId: string, id: string) {
 function toPin(pin: PinRecord) {
   return pinSchema.parse({
     id: pin.id, accountId: pin.accountId, kind: pin.kind, targetId: pin.targetId, label: pin.label,
+    icon: pin.icon, color: pin.color,
     position: pin.position, createdAt: pin.createdAt.toISOString(), updatedAt: pin.updatedAt.toISOString(),
   });
 }
 
-function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; position?: number }) {
+function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; icon?: string; color?: string; position?: number }) {
   const records = listPins(db, accountId);
   const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
   db.transaction((tx) => {
@@ -2160,8 +2170,21 @@ function updatePinRecord(db: Database, accountId: string, current: PinRecord, in
         tx.update(pins).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(pins.id, item.id)).run();
       }
     }
-    tx.update(pins).set({ label: input.label?.trim() ?? current.label, position: nextPosition, updatedAt: new Date() }).where(eq(pins.id, current.id)).run();
+    tx.update(pins).set({
+      label: input.label?.trim() ?? current.label,
+      icon: input.icon ?? current.icon,
+      color: input.color ?? current.color,
+      position: nextPosition,
+      updatedAt: new Date(),
+    }).where(eq(pins.id, current.id)).run();
   });
+}
+
+function defaultPinIcon(kind: "sender" | "thread" | "view" | "filter") {
+  if (kind === "sender") return "person" as const;
+  if (kind === "thread") return "thread" as const;
+  if (kind === "filter") return "search" as const;
+  return "grid" as const;
 }
 
 function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view" | "filter", targetId: string) {
