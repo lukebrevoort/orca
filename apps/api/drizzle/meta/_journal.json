@@ -127,6 +127,13 @@
       "when": 1786509195000,
       "tag": "0017_pin_appearance",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1786509758868,
+      "tag": "0018_gmail_push_notifications",
+      "breakpoints": true
     }
   ]
 }

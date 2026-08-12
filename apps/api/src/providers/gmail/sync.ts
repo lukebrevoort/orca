@@ -23,11 +23,14 @@ import { createGmailClient, GmailApiError, type GmailClient } from "./client.ts"
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 type DatabaseExecutor = Pick<DatabaseClient, "delete" | "insert" | "update" | "select">;
 
-type GmailAccountRecord = {
+export type GmailAccountRecord = {
   id: string;
   provider: string;
   providerEmail: string;
   syncCursor: string | null;
+  syncHistoryId: string | null;
+  watchExpirationAt: Date | null;
+  watchTopic: string | null;
   lastSyncedAt: Date | null;
 };
 
@@ -47,9 +50,10 @@ export type GmailSyncResult = {
   lastSyncedAt: string;
 };
 
-type SyncOptions = {
+export type SyncOptions = {
   accountId: string;
   cursor?: string | null;
+  fullBackfill?: boolean;
   now?: Date;
   pageSize?: number;
   gmailClient?: GmailClient;
@@ -72,6 +76,22 @@ export class GmailSyncError extends Error {
   }
 }
 
+const accountSyncLocks = new Map<string, Promise<void>>();
+
+/** Serialize push, periodic, and manual sync work for one account. */
+export function withGmailSyncLock<T>(accountId: string, task: () => Promise<T>): Promise<T> {
+  const previous = accountSyncLocks.get(accountId) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(task);
+  const tracked = run.then(() => undefined, () => undefined);
+  accountSyncLocks.set(accountId, tracked);
+  void tracked.finally(() => {
+    if (accountSyncLocks.get(accountId) === tracked) {
+      accountSyncLocks.delete(accountId);
+    }
+  });
+  return run;
+}
+
 export async function syncGmailAccountPage(
   db: DatabaseClient,
   options: SyncOptions,
@@ -87,6 +107,7 @@ export async function syncGmailAccountPage(
 
   const syncState = resolveSyncCursorState({
     explicitCursor: options.cursor,
+    fullBackfill: options.fullBackfill,
     lastSyncedAt: account.lastSyncedAt,
     now,
     storedCursor: account.syncCursor,
@@ -121,37 +142,33 @@ export async function syncGmailAccountPage(
     normalizeGmailMessage(message, { accountId: account.id, accountEmail: account.providerEmail }),
   );
 
-  const persistedLabels = buildPersistedLabels(account.id, labelList, normalizedMessages);
-  const threadIds = [...new Set(normalizedMessages.map((message) => message.threadId))];
   const nowDate = new Date(now);
-
-  db.transaction((tx) => {
-    upsertLabels(tx, account.id, persistedLabels, nowDate);
-    upsertThreads(tx, normalizedMessages, nowDate);
-    upsertEmails(tx, normalizedMessages, nowDate);
-    upsertAttachments(tx, normalizedMessages, nowDate);
-    upsertEmailLabels(tx, normalizedMessages, persistedLabels, nowDate);
-    upsertContacts(tx, account.id, normalizedMessages, nowDate);
-    refreshThreads(tx, threadIds, nowDate);
-
-    tx
-      .update(oauthAccounts)
-      .set({
-        syncCursor: page.nextCursor
-          ? JSON.stringify({
-              pageToken: page.nextCursor,
-              startedAt: syncState.startedAt,
-              checkpointAt: syncState.checkpointAt,
-            } satisfies SyncCursorState)
-          : null,
-        // A completed page sequence advances the durable high-water mark. While
-        // pagination is in progress we keep the previous checkpoint so a failed
-        // import can safely resume without skipping mail.
-        lastSyncedAt: page.nextCursor ? account.lastSyncedAt : new Date(syncState.checkpointAt),
-        updatedAt: nowDate,
-      })
-      .where(eq(oauthAccounts.id, account.id))
-      .run();
+  const persisted = persistGmailMessages(db, {
+    accountId: account.id,
+    accountEmail: account.providerEmail,
+    gmailMessages,
+    labelList,
+    now: nowDate,
+    afterPersist: (tx) => {
+      tx
+        .update(oauthAccounts)
+        .set({
+          syncCursor: page.nextCursor
+            ? JSON.stringify({
+                pageToken: page.nextCursor,
+                startedAt: syncState.startedAt,
+                checkpointAt: syncState.checkpointAt,
+              } satisfies SyncCursorState)
+            : null,
+          // A completed page sequence advances the durable high-water mark. While
+          // pagination is in progress we keep the previous checkpoint so a failed
+          // import can safely resume without skipping mail.
+          lastSyncedAt: page.nextCursor ? account.lastSyncedAt : new Date(syncState.checkpointAt),
+          updatedAt: nowDate,
+        })
+        .where(eq(oauthAccounts.id, account.id))
+        .run();
+    },
   });
 
   // Older cached rows may predate normalized evidence. Each normal sync moves
@@ -161,12 +178,68 @@ export async function syncGmailAccountPage(
 
   return {
     accountId: account.id,
+    emailCount: persisted.emailCount,
+    threadCount: persisted.threadCount,
+    labelCount: persisted.labelCount,
+    contactCount: persisted.contactCount,
+    nextCursor: page.nextCursor,
+    lastSyncedAt: nowDate.toISOString(),
+  };
+}
+
+export type GmailMessagePersistenceInput = {
+  accountId: string;
+  accountEmail: string;
+  gmailMessages: Awaited<ReturnType<GmailClient["getMessage"]>>[];
+  labelList: Array<{ id: string; name: string; type?: "system" | "user" }>;
+  now: Date;
+  afterPersist?: (db: DatabaseExecutor) => void;
+};
+
+export type GmailMessagePersistenceResult = {
+  emailCount: number;
+  threadCount: number;
+  labelCount: number;
+  contactCount: number;
+  threadIds: string[];
+};
+
+/**
+ * Persist a batch of fully fetched Gmail messages using the same normalized
+ * writes as the regular inbox sync. Push history and periodic fallback both
+ * use this seam so their provider-specific fetch strategy cannot drift from
+ * the existing account isolation and classification behavior.
+ */
+export function persistGmailMessages(
+  db: DatabaseClient,
+  input: GmailMessagePersistenceInput,
+): GmailMessagePersistenceResult {
+  const normalizedMessages = input.gmailMessages.map((message) =>
+    normalizeGmailMessage(message, {
+      accountId: input.accountId,
+      accountEmail: input.accountEmail,
+    }),
+  );
+  const persistedLabels = buildPersistedLabels(input.accountId, input.labelList, normalizedMessages);
+  const threadIds = [...new Set(normalizedMessages.map((message) => message.threadId))];
+
+  db.transaction((tx) => {
+    upsertLabels(tx, input.accountId, persistedLabels, input.now);
+    upsertThreads(tx, normalizedMessages, input.now);
+    upsertEmails(tx, normalizedMessages, input.now);
+    upsertAttachments(tx, normalizedMessages, input.now);
+    upsertEmailLabels(tx, normalizedMessages, persistedLabels, input.now);
+    upsertContacts(tx, input.accountId, normalizedMessages, input.now);
+    refreshThreads(tx, threadIds, input.now);
+    input.afterPersist?.(tx);
+  });
+
+  return {
     emailCount: normalizedMessages.length,
     threadCount: threadIds.length,
     labelCount: persistedLabels.length,
     contactCount: collectContacts(normalizedMessages).length,
-    nextCursor: page.nextCursor,
-    lastSyncedAt: nowDate.toISOString(),
+    threadIds,
   };
 }
 
@@ -186,13 +259,16 @@ async function fetchMessageDetails(
   return messages;
 }
 
-function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRecord {
+export function getGmailAccount(db: DatabaseClient, accountId: string): GmailAccountRecord {
   const account = db
     .select({
       id: oauthAccounts.id,
       provider: oauthAccounts.provider,
       providerEmail: oauthAccounts.providerEmail,
       syncCursor: oauthAccounts.syncCursor,
+      syncHistoryId: oauthAccounts.syncHistoryId,
+      watchExpirationAt: oauthAccounts.watchExpirationAt,
+      watchTopic: oauthAccounts.watchTopic,
       lastSyncedAt: oauthAccounts.lastSyncedAt,
     })
     .from(oauthAccounts)
@@ -499,7 +575,7 @@ function upsertContacts(
   }
 }
 
-function refreshThreads(db: DatabaseExecutor, threadIds: string[], now: Date) {
+export function refreshThreads(db: DatabaseExecutor, threadIds: string[], now: Date) {
   for (const threadId of threadIds) {
     const aggregate = db
       .select({
@@ -577,10 +653,19 @@ function buildContactId(accountId: string, email: string) {
 
 function resolveSyncCursorState(input: {
   explicitCursor?: string | null;
+  fullBackfill?: boolean;
   lastSyncedAt: Date | null;
   now: Date;
   storedCursor: string | null;
 }): SyncCursorState {
+  if (input.fullBackfill) {
+    return {
+      pageToken: null,
+      startedAt: new Date(0).toISOString(),
+      checkpointAt: input.now.toISOString(),
+    };
+  }
+
   if (input.explicitCursor) {
     return {
       pageToken: input.explicitCursor,

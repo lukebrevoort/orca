@@ -1,0 +1,183 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterEach, describe, test } from "node:test";
+
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+
+import { createSession, storeProviderTokens } from "./auth/session-store.ts";
+import { createDatabaseClient } from "./db/client.ts";
+import { oauthAccounts, users } from "./db/schema.ts";
+import { createApp } from "./index.ts";
+import type { GmailClient } from "./providers/gmail/client.ts";
+import type { GmailPushConfig } from "./providers/gmail/push-config.ts";
+import type { GmailMessage } from "./providers/gmail/types.ts";
+
+const tempDirs: string[] = [];
+const migrationsFolder = resolve(import.meta.dir, "../drizzle");
+const pushConfig: GmailPushConfig = {
+  topicName: "projects/orca/topics/gmail",
+  verificationToken: "push-secret",
+  syncIntervalMs: 60_000,
+  watchRenewalWindowMs: 60_000,
+  backfillPageSize: 25,
+  backfillMaxPages: 20,
+};
+
+function createMigratedClient() {
+  const tempDir = mkdtempSync(join(tmpdir(), "orca-gmail-route-"));
+  tempDirs.push(tempDir);
+  const client = createDatabaseClient(join(tempDir, "route.sqlite"));
+  migrate(client.db, { migrationsFolder });
+  return client;
+}
+
+function setAuthEnv() {
+  process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+  process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+}
+
+function createMessage(id: string): GmailMessage {
+  return {
+    id,
+    threadId: "thread-1",
+    internalDate: "1783512000000",
+    labelIds: ["INBOX"],
+    snippet: "A push message",
+    payload: {
+      mimeType: "text/plain",
+      headers: [
+        { name: "From", value: "Maya Chen <maya@example.com>" },
+        { name: "To", value: "Luke Brevoort <luke@example.com>" },
+        { name: "Subject", value: "A push message" },
+      ],
+      body: { data: Buffer.from("A push message").toString("base64") },
+    },
+  };
+}
+
+afterEach(() => {
+  delete process.env.SESSION_SECRET;
+  delete process.env.TOKEN_ENCRYPTION_KEY;
+  while (tempDirs.length > 0) {
+    const tempDir = tempDirs.pop();
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+describe("Gmail push routes", () => {
+  test("accepts a verified Pub/Sub push and runs history sync without a user session", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage(_token, id) { return createMessage(id); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
+      async listHistory() { return { messageIds: ["push-message"], deletedMessageIds: [], nextCursor: null, historyId: "11" }; },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1",
+        userId: "user_1",
+        provider: "gmail",
+        providerEmail: "luke@example.com",
+        providerId: "gmail-user-1",
+        syncHistoryId: "10",
+        lastSyncedAt: new Date("2026-08-10T00:00:00.000Z"),
+      }).run();
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_1",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        tokenExpiry: null,
+      });
+
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite")),
+        gmailClient,
+        gmailPushConfig: pushConfig,
+      });
+      const data = Buffer.from(JSON.stringify({ emailAddress: "LUKE@EXAMPLE.COM", historyId: "11" })).toString("base64url");
+      const response = await testApp.request("/v1/webhooks/gmail?token=push-secret", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: { data } }),
+      });
+
+      assert.equal(response.status, 204);
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "11");
+      assert.equal((sqlite.query("select count(*) as count from emails").get() as { count: number }).count, 1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects unverified pushes and keeps the watch endpoint session-protected", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage() { throw new Error("not used"); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return []; },
+      async watch() { return { historyId: "1", expiration: "1800000000000" }; },
+    };
+
+    try {
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite")),
+        gmailClient,
+        gmailPushConfig: pushConfig,
+      });
+      const data = Buffer.from(JSON.stringify({ emailAddress: "luke@example.com", historyId: "11" })).toString("base64url");
+
+      assert.equal((await testApp.request("/v1/gmail/push?token=wrong", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: { data } }),
+      })).status, 401);
+      assert.equal((await testApp.request("/v1/gmail/watch", { method: "POST" })).status, 401);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("watch endpoint establishes a cursor before backfilling a new account", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage(_token, id) { return createMessage(id); },
+      async listInboxMessagePage() { return { messageIds: ["existing-message"], nextCursor: null }; },
+      async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
+      async watch() { return { historyId: "50", expiration: "1800000000000" }; },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({ id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite")),
+        gmailClient,
+        gmailPushConfig: pushConfig,
+        now: () => new Date("2026-08-11T00:00:00.000Z"),
+      });
+
+      const response = await testApp.request("/v1/gmail/watch", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.watch.historyId, "50");
+      assert.equal(body.backfill.emailCount, 1);
+      assert.equal((sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "50");
+    } finally {
+      sqlite.close();
+    }
+  });
+});

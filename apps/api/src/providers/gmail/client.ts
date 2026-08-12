@@ -11,6 +11,31 @@ type GmailListMessagesResponse = {
   nextPageToken?: string;
 };
 
+type GmailHistoryRecord = {
+  messagesAdded?: Array<{ message?: { id?: string; threadId?: string } }>;
+  messagesDeleted?: Array<{ message?: { id?: string; threadId?: string } }>;
+  labelsAdded?: Array<{ message?: { id?: string; threadId?: string } }>;
+  labelsRemoved?: Array<{ message?: { id?: string; threadId?: string } }>;
+};
+
+type GmailHistoryResponse = {
+  history?: GmailHistoryRecord[];
+  historyId?: string | number;
+  nextPageToken?: string;
+};
+
+export type GmailWatchResponse = {
+  historyId: string | number;
+  expiration: string | number;
+};
+
+export type GmailHistoryPage = {
+  messageIds: string[];
+  deletedMessageIds: string[];
+  nextCursor: string | null;
+  historyId: string | null;
+};
+
 export type GmailMessagePage = {
   messageIds: string[];
   nextCursor: string | null;
@@ -25,6 +50,13 @@ export type GmailClient = {
     since: Date;
   }): Promise<GmailMessagePage>;
   listLabels(accessToken: string): Promise<GmailLabel[]>;
+  listHistory?(input: {
+    accessToken: string;
+    startHistoryId: string;
+    cursor?: string | null;
+    pageSize?: number;
+  }): Promise<GmailHistoryPage>;
+  watch?(accessToken: string, topicName: string): Promise<GmailWatchResponse>;
 };
 
 export type GmailDraft = {
@@ -102,6 +134,63 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
       );
 
       return response.labels ?? [];
+    },
+
+    async listHistory({ accessToken, startHistoryId, cursor, pageSize = defaultPageSize }) {
+      const params = new URLSearchParams({
+        startHistoryId,
+        maxResults: String(pageSize),
+      });
+
+      if (cursor) {
+        params.set("pageToken", cursor);
+      }
+
+      // A push notification does not identify whether the change was a new
+      // message or a label/read-state update. Ask for every history type so
+      // the local normalized copy is refreshed in either case.
+      for (const historyType of ["messageAdded", "messageDeleted", "labelAdded", "labelRemoved"]) {
+        params.append("historyTypes", historyType);
+      }
+
+      const response = await gmailRequest<GmailHistoryResponse>(
+        fetchImpl,
+        accessToken,
+        `/history?${params.toString()}`,
+      );
+
+      const messageIds = new Set<string>();
+      const deletedMessageIds = new Set<string>();
+      for (const record of response.history ?? []) {
+        for (const entry of [
+          ...(record.messagesAdded ?? []),
+          ...(record.labelsAdded ?? []),
+          ...(record.labelsRemoved ?? []),
+        ]) {
+          if (entry.message?.id) messageIds.add(entry.message.id);
+        }
+        for (const entry of record.messagesDeleted ?? []) {
+          if (entry.message?.id) deletedMessageIds.add(entry.message.id);
+        }
+      }
+
+      return {
+        messageIds: [...messageIds],
+        deletedMessageIds: [...deletedMessageIds].filter((id) => !messageIds.has(id)),
+        nextCursor: response.nextPageToken ?? null,
+        historyId: response.historyId === undefined ? null : String(response.historyId),
+      };
+    },
+
+    async watch(accessToken, topicName) {
+      return gmailRequest<GmailWatchResponse>(fetchImpl, accessToken, "/watch", {
+        method: "POST",
+        body: {
+          topicName,
+          labelIds: ["INBOX"],
+          labelFilterBehavior: "INCLUDE",
+        },
+      });
     },
 
     async createDraft({ accessToken, raw, threadId }) {
