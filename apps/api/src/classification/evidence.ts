@@ -34,8 +34,11 @@ function headerSignals(headers: ReadonlyMap<string, string>): HumanClassificatio
   const precedence = headers.get("precedence")?.trim().toLowerCase();
   if (precedence === "bulk") signals.add("precedence_bulk");
   if (precedence === "list") signals.add("precedence_list");
-  if (hasHeader(headers, "auto-submitted")) signals.add("auto_submitted");
-  if (hasHeader(headers, "x-auto-response-suppress")) signals.add("x_auto_response_suppress");
+  // RFC 3834 explicitly uses "no" to say the message was not generated
+  // automatically. X-Auto-Response-Suppress only controls recipient replies,
+  // so neither is evidence that the original sender is automated.
+  const autoSubmitted = headers.get("auto-submitted")?.trim().toLowerCase();
+  if (autoSubmitted && autoSubmitted !== "no") signals.add("auto_submitted");
   return [...signals];
 }
 

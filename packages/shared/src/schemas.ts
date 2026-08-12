@@ -122,11 +122,12 @@ export const humanClassificationAssessmentSchema = z.object({
 export type HumanClassificationAssessment = z.infer<typeof humanClassificationAssessmentSchema>;
 
 const humanClassificationOverrideValueSchema = z.string().trim().min(1).max(320);
+const humanClassificationMessageIdSchema = z.string().trim().min(1).max(512);
 
 export const humanClassificationOverrideTargetSchema = z.discriminatedUnion("scope", [
   z.object({
     scope: z.literal("message"),
-    messageId: nonEmptyStringSchema,
+    messageId: humanClassificationMessageIdSchema,
   }).strict(),
   z.object({
     scope: z.literal("sender_address"),
@@ -142,6 +143,11 @@ export const humanClassificationOverrideTargetSchema = z.discriminatedUnion("sco
   }
 });
 export type HumanClassificationOverrideTarget = z.infer<typeof humanClassificationOverrideTargetSchema>;
+
+/** Use this before comparing an existing rule target with a proposed one. */
+export function normalizeHumanClassificationOverrideTarget(target: unknown): HumanClassificationOverrideTarget {
+  return humanClassificationOverrideTargetSchema.parse(target);
+}
 
 export const humanClassificationOverrideSchema = z.object({
   id: nonEmptyStringSchema,
@@ -176,7 +182,7 @@ export type DeleteHumanClassificationOverride = z.infer<typeof deleteHumanClassi
 
 export const resolveHumanClassificationSchema = z.object({
   accountId: nonEmptyStringSchema,
-  messageId: nonEmptyStringSchema,
+  messageId: humanClassificationMessageIdSchema,
 }).strict();
 export type ResolveHumanClassification = z.infer<typeof resolveHumanClassificationSchema>;
 
