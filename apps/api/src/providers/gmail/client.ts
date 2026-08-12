@@ -159,24 +159,23 @@ export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient 
         `/history?${params.toString()}`,
       );
 
-      const messageIds = new Set<string>();
-      const deletedMessageIds = new Set<string>();
+      const messageChanges = new Map<string, "changed" | "deleted">();
       for (const record of response.history ?? []) {
         for (const entry of [
           ...(record.messagesAdded ?? []),
           ...(record.labelsAdded ?? []),
           ...(record.labelsRemoved ?? []),
         ]) {
-          if (entry.message?.id) messageIds.add(entry.message.id);
+          if (entry.message?.id) messageChanges.set(entry.message.id, "changed");
         }
         for (const entry of record.messagesDeleted ?? []) {
-          if (entry.message?.id) deletedMessageIds.add(entry.message.id);
+          if (entry.message?.id) messageChanges.set(entry.message.id, "deleted");
         }
       }
 
       return {
-        messageIds: [...messageIds],
-        deletedMessageIds: [...deletedMessageIds].filter((id) => !messageIds.has(id)),
+        messageIds: [...messageChanges].filter(([, change]) => change === "changed").map(([id]) => id),
+        deletedMessageIds: [...messageChanges].filter(([, change]) => change === "deleted").map(([id]) => id),
         nextCursor: response.nextPageToken ?? null,
         historyId: response.historyId === undefined ? null : String(response.historyId),
       };

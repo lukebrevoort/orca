@@ -120,10 +120,32 @@ export async function watchGmailAccount(
     throw new GmailPushError("Gmail returned an invalid push watch response", "provider_error");
   }
 
+  // Gmail returns the mailbox's current history ID from users.watch. If this
+  // is a renewal, the existing cursor may be older than that ID. Drain the
+  // range before recording the new watch metadata so the renewal itself does
+  // not skip changes that happened since the previous watch was established.
+  if (account.syncHistoryId && !isHistoryIdAtOrBefore(historyId, account.syncHistoryId)) {
+    if (!gmailClient.listHistory) {
+      throw new GmailPushError("Gmail history sync is required to renew an existing watch safely", "provider_error");
+    }
+    await syncGmailAccountHistory(db, {
+      accountId: account.id,
+      historyId,
+      gmailClient,
+      config,
+      now,
+    });
+  }
+
+  const accountAfterDrain = getGmailAccount(db, account.id);
+  const nextHistoryId = accountAfterDrain.syncHistoryId && isHistoryIdAtOrBefore(historyId, accountAfterDrain.syncHistoryId)
+    ? accountAfterDrain.syncHistoryId
+    : historyId;
+
   db
     .update(oauthAccounts)
     .set({
-      syncHistoryId: historyId,
+      syncHistoryId: nextHistoryId,
       watchExpirationAt: expirationAt,
       watchTopic: config.topicName,
       updatedAt: now,
@@ -133,7 +155,7 @@ export async function watchGmailAccount(
 
   return {
     accountId: account.id,
-    historyId,
+    historyId: nextHistoryId,
     expirationAt: expirationAt.toISOString(),
     topicName: config.topicName,
   };
@@ -292,7 +314,8 @@ export async function syncGmailAccountHistory(
         deletedMessageIds.delete(messageId);
       }
       for (const messageId of page.deletedMessageIds) {
-        if (!messageIds.has(messageId)) deletedMessageIds.add(messageId);
+        messageIds.delete(messageId);
+        deletedMessageIds.add(messageId);
       }
       if (page.historyId) historyId = page.historyId;
       cursor = page.nextCursor;
@@ -335,17 +358,23 @@ export async function syncGmailAccountHistory(
   let deletedEmailCount = 0;
 
   if (messageIds.size > 0) {
-    let gmailMessages: GmailMessage[];
+    let fetched: { messages: GmailMessage[]; missingMessageIds: string[] };
     try {
-      gmailMessages = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, [...messageIds]);
-      const labelList = await gmailClient.listLabels(tokenRecord.accessToken);
-      persisted = persistGmailMessages(db, {
-        accountId: account.id,
-        accountEmail: account.providerEmail,
-        gmailMessages,
-        labelList,
-        now,
-      });
+      fetched = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, [...messageIds]);
+      for (const messageId of fetched.missingMessageIds) {
+        messageIds.delete(messageId);
+        deletedMessageIds.add(messageId);
+      }
+      if (fetched.messages.length > 0) {
+        const labelList = await gmailClient.listLabels(tokenRecord.accessToken);
+        persisted = persistGmailMessages(db, {
+          accountId: account.id,
+          accountEmail: account.providerEmail,
+          gmailMessages: fetched.messages,
+          labelList,
+          now,
+        });
+      }
     } catch (error) {
       throw mapGmailPushError(error);
     }
@@ -409,9 +438,18 @@ export function verifyGmailPushToken(request: Request, config: GmailPushConfig):
 }
 
 function updateHistoryCursor(db: DatabaseClient, accountId: string, historyId: string, now: Date) {
+  const current = db
+    .select({ syncHistoryId: oauthAccounts.syncHistoryId })
+    .from(oauthAccounts)
+    .where(eq(oauthAccounts.id, accountId))
+    .get();
+  const nextHistoryId = current?.syncHistoryId && isHistoryIdAtOrBefore(historyId, current.syncHistoryId)
+    ? current.syncHistoryId
+    : historyId;
+
   db
     .update(oauthAccounts)
-    .set({ syncHistoryId: historyId, updatedAt: now })
+    .set({ syncHistoryId: nextHistoryId, updatedAt: now })
     .where(eq(oauthAccounts.id, accountId))
     .run();
 }
@@ -443,14 +481,28 @@ async function fetchMessageDetails(
   gmailClient: GmailClient,
   accessToken: string,
   messageIds: string[],
-): Promise<GmailMessage[]> {
+): Promise<{ messages: GmailMessage[]; missingMessageIds: string[] }> {
   const messages: GmailMessage[] = [];
+  const missingMessageIds: string[] = [];
   const concurrentRequests = 5;
   for (let index = 0; index < messageIds.length; index += concurrentRequests) {
     const batch = messageIds.slice(index, index + concurrentRequests);
-    messages.push(...await Promise.all(batch.map((messageId) => gmailClient.getMessage(accessToken, messageId))));
+    const results = await Promise.all(batch.map(async (messageId) => {
+      try {
+        return { message: await gmailClient.getMessage(accessToken, messageId) };
+      } catch (error) {
+        if (error instanceof GmailApiError && error.status === 404) {
+          return { missingMessageId: messageId };
+        }
+        throw error;
+      }
+    }));
+    for (const result of results) {
+      if ("message" in result && result.message) messages.push(result.message);
+      else if ("missingMessageId" in result) missingMessageIds.push(result.missingMessageId);
+    }
   }
-  return messages;
+  return { messages, missingMessageIds };
 }
 
 function parseWatchExpiration(value: string | number, now: Date): Date | null {

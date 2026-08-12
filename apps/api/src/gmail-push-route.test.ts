@@ -165,6 +165,15 @@ describe("Gmail push routes", () => {
         gmailPushConfig: pushConfig,
         now: () => new Date("2026-08-11T00:00:00.000Z"),
       });
+      const partialConfigApp = createApp({
+        dbFactory: () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite")),
+        gmailClient,
+        gmailPushConfig: { ...pushConfig, topicName: null },
+      });
+      assert.equal((await partialConfigApp.request("/v1/gmail/watch", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      })).status, 503);
 
       const response = await testApp.request("/v1/gmail/watch", {
         method: "POST",

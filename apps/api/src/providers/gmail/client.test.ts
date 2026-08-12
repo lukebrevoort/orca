@@ -25,6 +25,8 @@ describe("Gmail push API client", () => {
           { labelsAdded: [{ message: { id: "labeled", threadId: "thread" } }] },
           { labelsRemoved: [{ message: { id: "labeled", threadId: "thread" } }] },
           { messagesDeleted: [{ message: { id: "deleted", threadId: "thread" } }] },
+          { messagesAdded: [{ message: { id: "added-then-deleted", threadId: "thread" } }] },
+          { messagesDeleted: [{ message: { id: "added-then-deleted", threadId: "thread" } }] },
         ],
       });
     };
@@ -36,7 +38,7 @@ describe("Gmail push API client", () => {
     assert.deepEqual(watch, { historyId: "100", expiration: "1783519200000" });
     assert.deepEqual(history, {
       messageIds: ["added", "labeled"],
-      deletedMessageIds: ["deleted"],
+      deletedMessageIds: ["deleted", "added-then-deleted"],
       nextCursor: null,
       historyId: "110",
     });

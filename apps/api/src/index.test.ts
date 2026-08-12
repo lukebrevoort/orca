@@ -16,7 +16,7 @@ import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
-import { GmailSyncError } from "./providers/gmail/sync.ts";
+import { GmailSyncError, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { gmailProvider } from "./providers/gmail/provider.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 import { outlookProvider } from "./providers/outlook/provider.ts";
@@ -1552,6 +1552,66 @@ describe("Orca API", () => {
       assert.deepEqual(syncCalls, ["multi_sync_second"]);
       assert.equal((await response.json()).accountId, "multi_sync_second");
     } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("serializes manual Gmail sync behind existing account work", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-index-locked-sync-test-"));
+    const dbPath = join(tempDir, "locked-sync.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    let release!: () => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => { markStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+
+    try {
+      db.insert(users).values({ id: "locked_sync_user", email: "locked-sync@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "locked_sync_account",
+        userId: "locked_sync_user",
+        provider: "gmail",
+        providerEmail: "locked-sync@example.com",
+        providerId: "gmail-locked-sync",
+      }).run();
+      const session = await createSession(db, "locked_sync_user");
+      const syncCalls: string[] = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        syncPage: async (_db, input) => {
+          syncCalls.push(input.accountId);
+          return { accountId: input.accountId, emailCount: 0, threadCount: 0, labelCount: 0, contactCount: 0, nextCursor: null, lastSyncedAt: "2026-08-09T12:00:00.000Z" };
+        },
+      });
+
+      const held = withGmailSyncLock("locked_sync_account", async () => {
+        markStarted();
+        await gate;
+      });
+      await started;
+
+      const responsePromise = testApp.request("/v1/sync/gmail", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      assert.deepEqual(syncCalls, []);
+
+      release();
+      await held;
+      const response = await responsePromise;
+      assert.equal(response.status, 200);
+      assert.deepEqual(syncCalls, ["locked_sync_account"]);
+    } finally {
+      release?.();
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
       delete process.env.SESSION_SECRET;

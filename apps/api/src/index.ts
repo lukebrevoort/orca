@@ -1506,7 +1506,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     "/v1/gmail/watch",
     requireAuth({ dbFactory }),
     async (c) => {
-      if (!gmailPushConfig.verificationToken) {
+      if (!gmailPushConfig.verificationToken || !gmailPushConfig.topicName) {
         return c.json({ error: { code: "push_not_configured", message: "Gmail push verification is not configured" } }, 503);
       }
       const { db, sqlite } = dbFactory();
@@ -1574,24 +1574,28 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           );
         }
 
-        syncStatuses.set(account.id, { state: "syncing", error: null });
-        const syncPage = syncPageFor(account);
-        let result = await syncPage(db, { accountId: account.id, pageSize: 25 });
-        let pages = 1;
-        let emailCount = result.emailCount;
-        let threadCount = result.threadCount;
-        let labelCount = result.labelCount;
-        let contactCount = result.contactCount;
-        while (result.nextCursor && pages < 20) {
-          result = await syncPage(db, { accountId: account.id, pageSize: 25 });
-          pages += 1;
-          emailCount += result.emailCount;
-          threadCount += result.threadCount;
-          labelCount += result.labelCount;
-          contactCount += result.contactCount;
-        }
-        syncStatuses.delete(account.id);
-        return c.json({ ...result, emailCount, threadCount, labelCount, contactCount, pages }, 200);
+        const connectedAccount = account;
+        syncStatuses.set(connectedAccount.id, { state: "syncing", error: null });
+        const result = await withGmailSyncLock(connectedAccount.id, async () => {
+          const syncPage = syncPageFor(connectedAccount);
+          let pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
+          let pages = 1;
+          let emailCount = pageResult.emailCount;
+          let threadCount = pageResult.threadCount;
+          let labelCount = pageResult.labelCount;
+          let contactCount = pageResult.contactCount;
+          while (pageResult.nextCursor && pages < 20) {
+            pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
+            pages += 1;
+            emailCount += pageResult.emailCount;
+            threadCount += pageResult.threadCount;
+            labelCount += pageResult.labelCount;
+            contactCount += pageResult.contactCount;
+          }
+          return { ...pageResult, emailCount, threadCount, labelCount, contactCount, pages };
+        });
+        syncStatuses.delete(connectedAccount.id);
+        return c.json(result, 200);
       } catch (error) {
         console.error(`${account?.provider ?? "mail"} sync failed`, {
           userId: auth.userId,

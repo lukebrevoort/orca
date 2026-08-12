@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
@@ -118,6 +119,96 @@ describe("Gmail push sync", () => {
       assert.deepEqual(second, first);
       assert.deepEqual(calls, ["projects/orca/topics/gmail"]);
       assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "123");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("drains pending history before replacing the cursor during watch renewal", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const calls: string[] = [];
+    const gmailClient: GmailClient = {
+      async getMessage(_token, messageId) {
+        calls.push(`message:${messageId}`);
+        return createMessage(messageId);
+      },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() {
+        calls.push("labels");
+        return [{ id: "INBOX", name: "Inbox" }];
+      },
+      async listHistory(input) {
+        calls.push(`history:${input.startHistoryId}`);
+        return { messageIds: ["pending-message"], deletedMessageIds: [], nextCursor: null, historyId: "150" };
+      },
+      async watch() {
+        calls.push("watch");
+        return { historyId: "150", expiration: "1800000000000" };
+      },
+    };
+
+    try {
+      insertAccount(db, { historyId: "100", lastSyncedAt: new Date("2026-08-10T00:00:00.000Z") });
+      db.update(oauthAccounts).set({
+        watchTopic: config.topicName,
+        watchExpirationAt: new Date("2026-08-11T00:00:30.000Z"),
+      }).where(eq(oauthAccounts.id, "acct_1")).run();
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_1",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        tokenExpiry: null,
+      });
+
+      const result = await ensureGmailWatch(db, {
+        accountId: "acct_1",
+        gmailClient,
+        config,
+        now: new Date("2026-08-11T00:00:00.000Z"),
+      });
+
+      assert.equal(result?.historyId, "150");
+      assert.deepEqual(calls, ["watch", "history:100", "message:pending-message", "labels"]);
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "150");
+      assert.equal((sqlite.query("select count(*) as count from emails where provider_message_id = 'pending-message'").get() as { count: number }).count, 1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("advances the cursor when a changed message disappears before fetch", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage() { throw new GmailApiError("message no longer exists", 404); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return []; },
+      async listHistory() {
+        return { messageIds: ["gone-message"], deletedMessageIds: [], nextCursor: null, historyId: "120" };
+      },
+    };
+
+    try {
+      insertAccount(db, { historyId: "100", lastSyncedAt: new Date("2026-08-10T00:00:00.000Z") });
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_1",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        tokenExpiry: null,
+      });
+
+      const result = await syncGmailAccountHistory(db, {
+        accountId: "acct_1",
+        historyId: "120",
+        gmailClient,
+        config,
+        now: new Date("2026-08-11T00:00:00.000Z"),
+      });
+
+      assert.equal(result.deletedEmailCount, 0);
+      assert.equal(result.historyId, "120");
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "120");
     } finally {
       sqlite.close();
     }
