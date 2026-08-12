@@ -3859,6 +3859,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .pinned-pin-edit:focus-visible { opacity: 1; }
 .pinned-pin-edit:hover,
 .pinned-pin-edit:focus-visible { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent-soft); outline-offset: 1px; }
+.pin-rail-error { background: color-mix(in srgb, var(--orca-danger) 10%, var(--orca-surface)); border: 1px solid color-mix(in srgb, var(--orca-danger) 30%, var(--orca-border)); border-radius: 10px; color: var(--orca-danger); font-size: 11px; line-height: 1.4; margin: 8px 0 0; padding: 8px 10px; }
 
 .pin-appearance-layer { align-items: center; display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 82; }
 .pin-appearance-backdrop { background: rgb(15 36 34 / 34%); backdrop-filter: blur(7px); border: 0; inset: 0; position: absolute; }

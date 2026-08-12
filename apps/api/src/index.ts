@@ -762,8 +762,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return noConnectedAccount(c);
         const current = getPin(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-        updatePinRecord(db, account.id, current, c.req.valid("json"));
-        return jsonWithSchema(c, pinSchema, toPin(getPin(db, account.id, current.id)!));
+        if (!updatePinRecord(db, account.id, current, c.req.valid("json"))) {
+          return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+        }
+        const updatedPin = getPin(db, account.id, current.id);
+        if (!updatedPin) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+        return jsonWithSchema(c, pinSchema, toPin(updatedPin));
+      } catch (error) {
+        return organizationConflict(c, error, "That pin order changed. Try moving it again.");
       } finally {
         sqlite.close();
       }
@@ -2156,28 +2162,36 @@ function toPin(pin: PinRecord) {
 }
 
 function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; icon?: string; color?: string; position?: number }) {
-  const records = listPins(db, accountId);
-  const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
+  let updated = false;
   db.transaction((tx) => {
-    if (nextPosition !== current.position) {
-      tx.update(pins).set({ position: -1 }).where(eq(pins.id, current.id)).run();
-      const moving = records.filter((item) => item.id !== current.id && (
-        nextPosition < current.position
-          ? item.position >= nextPosition && item.position < current.position
-          : item.position > current.position && item.position <= nextPosition
+    // Re-read both the target row and the ordered list after the transaction
+    // starts. The request may have waited behind another reorder, so using the
+    // route-level snapshot here can shift rows into occupied unique positions.
+    const freshCurrent = tx.select().from(pins).where(and(eq(pins.accountId, accountId), eq(pins.id, current.id))).get();
+    if (!freshCurrent) return;
+    const records = tx.select().from(pins).where(eq(pins.accountId, accountId)).orderBy(asc(pins.position)).all();
+    const nextPosition = Math.min(input.position ?? freshCurrent.position, Math.max(records.length - 1, 0));
+    if (nextPosition !== freshCurrent.position) {
+      tx.update(pins).set({ position: -1 }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
+      const moving = records.filter((item) => item.id !== freshCurrent.id && (
+        nextPosition < freshCurrent.position
+          ? item.position >= nextPosition && item.position < freshCurrent.position
+          : item.position > freshCurrent.position && item.position <= nextPosition
       ));
-      for (const item of moving.sort((a, b) => nextPosition < current.position ? b.position - a.position : a.position - b.position)) {
-        tx.update(pins).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(pins.id, item.id)).run();
+      for (const item of moving.sort((a, b) => nextPosition < freshCurrent.position ? b.position - a.position : a.position - b.position)) {
+        tx.update(pins).set({ position: item.position + (nextPosition < freshCurrent.position ? 1 : -1) }).where(and(eq(pins.accountId, accountId), eq(pins.id, item.id))).run();
       }
     }
     tx.update(pins).set({
-      label: input.label?.trim() ?? current.label,
-      icon: input.icon ?? current.icon,
-      color: input.color ?? current.color,
+      label: input.label?.trim() ?? freshCurrent.label,
+      icon: input.icon ?? freshCurrent.icon,
+      color: input.color ?? freshCurrent.color,
       position: nextPosition,
       updatedAt: new Date(),
-    }).where(eq(pins.id, current.id)).run();
+    }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
+    updated = true;
   });
+  return updated;
 }
 
 function defaultPinIcon(kind: "sender" | "thread" | "view" | "filter") {

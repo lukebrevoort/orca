@@ -23,6 +23,7 @@ import {
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
+import { createPortal } from "react-dom";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -759,6 +760,12 @@ function InboxApp({
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const libraryRef = useRef<HTMLElement>(null);
   const libraryReturnFocusRef = useRef<HTMLElement | null>(null);
+  const pinOrderRef = useRef<Pin[]>(demoMode ? demoPins : []);
+  const pinReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    pinOrderRef.current = pins;
+  }, [pins]);
 
   useEffect(() => {
     return () => {
@@ -1519,10 +1526,16 @@ function InboxApp({
     setOrganizationError(null);
     try {
       if (demoMode) {
-        setPins((current) => reorderItems(current.map((item) => item.id === pin.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item), pin.id, patch.position));
+        setPins((current) => {
+          const next = reorderItems(current.map((item) => item.id === pin.id ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item), pin.id, patch.position);
+          pinOrderRef.current = next;
+          return next;
+        });
       } else {
         await fetchJson(`/v1/pins/${encodeURIComponent(pin.id)}`, pinSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
-        setPins(await fetchJson("/v1/pins", pinsResponseSchema));
+        const refreshed = await fetchJson("/v1/pins", pinsResponseSchema);
+        pinOrderRef.current = refreshed;
+        setPins(refreshed);
       }
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
@@ -1531,11 +1544,46 @@ function InboxApp({
   }
 
   async function reorderPin(pin: Pin, position: number) {
-    try {
-      await updatePin(pin, { position });
-    } catch {
-      // updatePin already exposes the bounded organization error to the user.
-    }
+    if (!account) return;
+    setOrganizationError(null);
+    const previous = pinOrderRef.current;
+    const optimistic = reorderItems(previous, pin.id, position);
+    pinOrderRef.current = optimistic;
+    setPins(optimistic);
+
+    const save = async () => {
+      try {
+        if (demoMode) return;
+        await fetchJson(`/v1/pins/${encodeURIComponent(pin.id)}`, pinSchema, undefined, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ position }),
+        });
+        const refreshed = await fetchJson("/v1/pins", pinsResponseSchema);
+        pinOrderRef.current = refreshed;
+        setPins(refreshed);
+      } catch (error) {
+        setOrganizationError(getErrorMessage(error));
+        try {
+          const refreshed = demoMode ? null : await fetchJson("/v1/pins", pinsResponseSchema);
+          if (refreshed) {
+            pinOrderRef.current = refreshed;
+            setPins(refreshed);
+          } else {
+            pinOrderRef.current = previous;
+            setPins(previous);
+          }
+        } catch {
+          pinOrderRef.current = previous;
+          setPins(previous);
+        }
+        throw error;
+      }
+    };
+
+    const request = pinReorderQueueRef.current.then(save);
+    pinReorderQueueRef.current = request.catch(() => undefined);
+    return request;
   }
 
   async function removePin(pin: Pin) {
@@ -1729,7 +1777,7 @@ function InboxApp({
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
               onRemovePin={(pin) => void removePin(pin)}
-              onReorderPin={(pin, position) => void reorderPin(pin, position)}
+              onReorderPin={reorderPin}
               onUpdatePin={(pin, patch) => updatePin(pin, patch)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPin={selectPin}
@@ -2466,13 +2514,14 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
   searchQuery: string;
   viewMode: "collection" | Mailbox;
   onSelectPin: (pin: Pin) => void;
-  onReorderPin: (pin: Pin, position: number) => void;
+  onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
   const [draggedPinId, setDraggedPinId] = useState<string | null>(null);
   const [dropPinId, setDropPinId] = useState<string | null>(null);
   const [editingPinId, setEditingPinId] = useState<string | null>(null);
   const [moveMessage, setMoveMessage] = useState("");
+  const [moveError, setMoveError] = useState<string | null>(null);
   const editingPin = pins.find((pin) => pin.id === editingPinId) ?? null;
 
   function clearDragState() {
@@ -2480,7 +2529,7 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
     setDropPinId(null);
   }
 
-  function handleDrop(event: React.DragEvent<HTMLButtonElement>, targetPin: Pin) {
+  async function handleDrop(event: React.DragEvent<HTMLButtonElement>, targetPin: Pin) {
     event.preventDefault();
     const draggedId = draggedPinId ?? event.dataTransfer.getData("text/plain");
     const draggedPin = pins.find((pin) => pin.id === draggedId);
@@ -2497,17 +2546,29 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
     const targetRect = event.currentTarget.getBoundingClientRect();
     const insertAfter = event.clientX >= targetRect.left + targetRect.width / 2;
     const nextPosition = Math.max(0, Math.min(targetIndex + (insertAfter ? 1 : 0), remaining.length));
-    onReorderPin(draggedPin, nextPosition);
-    setMoveMessage(`${draggedPin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
     clearDragState();
+    setMoveMessage("");
+    setMoveError(null);
+    try {
+      await onReorderPin(draggedPin, nextPosition);
+      setMoveMessage(`${draggedPin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
+    } catch (error) {
+      setMoveError(`Could not save ${draggedPin.label}'s new position. ${getErrorMessage(error)}`);
+    }
   }
 
-  function moveWithKeyboard(pin: Pin, direction: -1 | 1) {
+  async function moveWithKeyboard(pin: Pin, direction: -1 | 1) {
     const currentIndex = pins.findIndex((item) => item.id === pin.id);
     const nextPosition = currentIndex + direction;
     if (currentIndex < 0 || nextPosition < 0 || nextPosition >= pins.length) return;
-    onReorderPin(pin, nextPosition);
-    setMoveMessage(`${pin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
+    setMoveMessage("");
+    setMoveError(null);
+    try {
+      await onReorderPin(pin, nextPosition);
+      setMoveMessage(`${pin.label} moved to position ${nextPosition + 1} of ${pins.length}.`);
+    } catch (error) {
+      setMoveError(`Could not save ${pin.label}'s new position. ${getErrorMessage(error)}`);
+    }
   }
 
   return <>
@@ -2532,11 +2593,11 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
             onDragEnter={() => { if (draggedPinId && draggedPinId !== pin.id) setDropPinId(pin.id); }}
             onDragOver={(event) => { if (!draggedPinId || draggedPinId === pin.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropPinId(pin.id); }}
             onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setMoveMessage(""); }}
-            onDrop={(event) => handleDrop(event, pin)}
+            onDrop={(event) => void handleDrop(event, pin)}
             onKeyDown={(event) => {
               if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
               event.preventDefault();
-              moveWithKeyboard(pin, event.key === "ArrowLeft" ? -1 : 1);
+              void moveWithKeyboard(pin, event.key === "ArrowLeft" ? -1 : 1);
             }}
             style={{ "--pin-color": pin.color } as CSSProperties}
             title={`${pin.label} · drag to reorder`}
@@ -2549,6 +2610,7 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
         </div>;
       })}
       <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder · select the customize button to choose an icon and color · Option plus arrow keys also move pins.</p>
+      {moveError ? <p className="pin-rail-error" role="alert">{moveError}</p> : null}
       <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
     </div>
     {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onSave={onUpdatePin} /> : null}
@@ -2564,14 +2626,53 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
   const [color, setColor] = useState<string>(pin.color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+  const savingRef = useRef(saving);
+  onCloseRef.current = onClose;
+  savingRef.current = saving;
 
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !saving) onClose();
+    const root = document.getElementById("root");
+    const previousRootInert = root?.inert ?? false;
+    if (root) root.inert = true;
+    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const getFocusable = () => dialogRef.current
+      ? Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden"))
+      : [];
+    const closeOnKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !savingRef.current) {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (!dialogRef.current?.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, saving]);
+    document.addEventListener("keydown", closeOnKeyDown);
+    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
+    return () => {
+      document.removeEventListener("keydown", closeOnKeyDown);
+      if (root) root.inert = previousRootInert;
+      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
+    };
+  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -2587,12 +2688,12 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
     }
   }
 
-  return <div className="pin-appearance-layer" role="presentation">
+  const dialog = <div className="pin-appearance-layer" role="presentation">
     <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={saving} onClick={onClose} type="button" />
-    <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" role="dialog">
+    <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" ref={dialogRef} role="dialog">
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
-        <button aria-label="Close pin customization" autoFocus disabled={saving} onClick={onClose} type="button">×</button>
+        <button aria-label="Close pin customization" data-dialog-initial-focus disabled={saving} onClick={onClose} type="button">×</button>
       </header>
       <form onSubmit={submit}>
         <div className="pin-appearance-preview" style={{ "--pin-color": color } as CSSProperties}>
@@ -2618,6 +2719,7 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
       </form>
     </section>
   </div>;
+  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }
 
 function InboxView({
@@ -2714,7 +2816,7 @@ function InboxView({
   onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   onCreatePin: (input: PinInput) => void;
   onRemovePin: (pin: Pin) => void;
-  onReorderPin: (pin: Pin, position: number) => void;
+  onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
   onOpenThread: (message: InboxMessage) => void;
   onPinPerson: (message: InboxMessage) => void;
