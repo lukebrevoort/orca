@@ -45,7 +45,7 @@
     </div>
 
     <h2>Response guarantees</h2>
-    <p>Each inbox row exposes <code>humanClassification</code> with automatic evidence, an optional user override, and the effective source, reasons, score, and classifier version. <code>humanSignal</code> mirrors the effective score when one exists. Counts are full account-scoped totals, separate under <code>counts.attention</code> and <code>counts.classification</code>, and are never derived from the current page.</p>
+    <p>Each inbox row exposes <code>humanClassification</code> with automatic evidence, an optional user override, and the effective source, reasons, score, and classifier version. <code>humanSignal</code> mirrors the effective score when one exists. Counts are full account-scoped totals and are never derived from the current page. New clients that send <code>classification</code> receive separate <code>counts.attention</code> and <code>counts.classification</code>; callers that omit it retain the legacy top-level attention count shape during migration.</p>
     <p>Thread detail preserves this same result for every message in <code>messages[]</code>. The existing thread-level <code>attention.humanSignal</code> remains a legacy reader aggregate only; it is not a thread classification and must not replace per-message results.</p>
   </body>
 </html>

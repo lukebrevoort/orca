@@ -745,29 +745,46 @@ export type NormalizedThreadPage = z.infer<typeof normalizedThreadPageSchema>;
 export const normalizedLabelPageSchema = createProviderPageSchema(normalizedLabelSchema);
 export type NormalizedLabelPage = z.infer<typeof normalizedLabelPageSchema>;
 
-export const inboxResponseSchema = z
-  .object({
-    accounts: z.array(mailAccountSchema),
-    messages: z.array(inboxMessageSchema),
-    counts: z.object({
-      attention: z.object({
-        focus: z.number().int().nonnegative(),
-        normal: z.number().int().nonnegative(),
-        quiet: z.number().int().nonnegative(),
-        hidden: z.number().int().nonnegative(),
-        all: z.number().int().nonnegative(),
-      }).strict(),
-      classification: z.object({
-        likely_human: z.number().int().nonnegative(),
-        automated_or_bulk: z.number().int().nonnegative(),
-        uncertain: z.number().int().nonnegative(),
-        unclassified: z.number().int().nonnegative(),
-        all: z.number().int().nonnegative(),
-      }).strict(),
-    }).strict(),
-    nextCursor: z.string().nullable(),
-  })
-  .strict();
+const inboxAttentionCountsSchema = z.object({
+  focus: z.number().int().nonnegative(),
+  normal: z.number().int().nonnegative(),
+  quiet: z.number().int().nonnegative(),
+  hidden: z.number().int().nonnegative(),
+  all: z.number().int().nonnegative(),
+}).strict();
+
+const inboxClassificationCountsSchema = z.object({
+  likely_human: z.number().int().nonnegative(),
+  automated_or_bulk: z.number().int().nonnegative(),
+  uncertain: z.number().int().nonnegative(),
+  unclassified: z.number().int().nonnegative(),
+  all: z.number().int().nonnegative(),
+}).strict();
+
+const inboxResponseBaseSchema = z.object({
+  accounts: z.array(mailAccountSchema),
+  messages: z.array(inboxMessageSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+/**
+ * The legacy response remains valid when callers omit `classification`.
+ * New clients opt into the richer count contract with classification=all (or
+ * another classification view), so strict BRE-249 clients keep parsing old
+ * responses during the rollout.
+ */
+export const inboxClassificationResponseSchema = inboxResponseBaseSchema.extend({
+  counts: z.object({
+    attention: inboxAttentionCountsSchema,
+    classification: inboxClassificationCountsSchema,
+  }).strict(),
+}).strict();
+export type InboxClassificationResponse = z.infer<typeof inboxClassificationResponseSchema>;
+
+export const inboxResponseSchema = z.union([
+  inboxResponseBaseSchema.extend({ counts: inboxAttentionCountsSchema }).strict(),
+  inboxClassificationResponseSchema,
+]);
 export type InboxResponse = z.infer<typeof inboxResponseSchema>;
 
 export type MailProviderClient = {

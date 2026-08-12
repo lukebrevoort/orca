@@ -1132,13 +1132,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification = "all" } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification } = c.req.valid("query");
+      const classificationFilter = classification ?? "all";
+      const useClassificationResponse = classification !== undefined;
       const { db, sqlite } = dbFactory();
       try {
         const accounts = getUnifiedInboxAccounts(db, c.get("auth").userId);
         if (accounts.length === 0) {
           return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
         }
+        const accountIds = accounts.map((account) => account.id).sort();
 
         const resolved: ResolvedInboxMessage[] = [];
         for (const account of accounts) {
@@ -1188,8 +1191,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           }
 
           const rules = listSenderRules(db, account.id);
+          const classificationOverrides = createHumanClassificationOverrideLookup(listHumanClassificationOverrides(db, account.id));
           for (const message of byId.values()) {
-            const humanClassification = resolveHumanClassification(db, account.id, message);
+            const humanClassification = resolveHumanClassification(db, account.id, message, classificationOverrides);
             resolved.push({
               ...message,
               provider: account.provider,
@@ -1218,13 +1222,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         };
         const filtered = resolved.filter((message) =>
           matchesAttentionView(message.attentionBehavior, view)
-          && matchesHumanClassificationView(message.humanClassification.effective.classification, classification),
+          && matchesHumanClassificationView(message.humanClassification.effective.classification, classificationFilter),
         );
         filtered.sort(compareInboxMessages);
         const cursorTarget = decodeInboxCursor(cursor);
         if (cursor && (!cursorTarget
           || cursorTarget.view !== (view ?? "default")
-          || cursorTarget.classification !== classification
+          || cursorTarget.classification !== classificationFilter
+          || JSON.stringify(cursorTarget.accountIds) !== JSON.stringify(accountIds)
           || !accounts.some((account) => account.id === cursorTarget.accountId))) {
           return c.json({ error: { code: "invalid_cursor", message: "The inbox cursor does not match this account set or filter" } }, 400);
         }
@@ -1255,9 +1260,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             humanSignal: message.humanSignal,
             humanClassification: message.humanClassification,
           })),
-          counts,
+          counts: useClassificationResponse ? counts : counts.attention,
           nextCursor: lastMessage && start + page.length < filtered.length
-            ? encodeInboxCursor(lastMessage, view ?? "default", classification)
+            ? encodeInboxCursor(lastMessage, view ?? "default", classificationFilter, accountIds)
             : null,
         });
       } finally {
@@ -1499,6 +1504,7 @@ type ResolvedInboxMessage = Omit<InboxDatabaseMessage, "humanClassification"> & 
 type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
   view: "default" | "focus" | "normal" | "quiet" | "hidden" | "all";
   classification: "human" | "tideline" | "uncertain" | "all";
+  accountIds: string[];
 };
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -1778,6 +1784,12 @@ function listHumanClassificationOverrides(db: Database, accountId: string) {
     .orderBy(asc(humanClassificationOverrides.targetType), asc(humanClassificationOverrides.targetValue)).all();
 }
 
+type HumanClassificationOverrideLookup = Map<string, HumanClassificationOverrideRecord>;
+
+function createHumanClassificationOverrideLookup(rules: HumanClassificationOverrideRecord[]): HumanClassificationOverrideLookup {
+  return new Map(rules.map((rule) => [`${rule.targetType}:${rule.targetValue}`, rule]));
+}
+
 function getEmailByAccountId(db: Database, accountId: string, id: string): ClassificationEmailRecord | undefined {
   return db.select({
     id: emails.id,
@@ -1790,12 +1802,21 @@ function getEmailByAccountId(db: Database, accountId: string, id: string): Class
   }).from(emails).where(and(eq(emails.accountId, accountId), eq(emails.id, id))).get();
 }
 
-function resolveHumanClassification(db: Database, accountId: string, message: ClassificationEmailRecord): HumanClassificationResult {
+function resolveHumanClassification(
+  db: Database,
+  accountId: string,
+  message: ClassificationEmailRecord,
+  overrideLookup?: HumanClassificationOverrideLookup,
+): HumanClassificationResult {
   const normalizedAddress = message.fromAddress?.trim().toLowerCase() ?? "";
   const normalizedDomain = normalizedAddress.split("@")[1] ?? "";
-  const rule = getHumanClassificationOverrideForTarget(db, accountId, "message", message.id)
-    ?? (normalizedAddress ? getHumanClassificationOverrideForTarget(db, accountId, "sender_address", normalizedAddress) : undefined)
-    ?? (normalizedDomain ? getHumanClassificationOverrideForTarget(db, accountId, "sender_domain", normalizedDomain) : undefined);
+  const findRule = (targetType: "message" | "sender_address" | "sender_domain", targetValue: string) =>
+    overrideLookup
+      ? overrideLookup.get(`${targetType}:${targetValue}`)
+      : getHumanClassificationOverrideForTarget(db, accountId, targetType, targetValue);
+  const rule = findRule("message", message.id)
+    ?? (normalizedAddress ? findRule("sender_address", normalizedAddress) : undefined)
+    ?? (normalizedDomain ? findRule("sender_domain", normalizedDomain) : undefined);
   const userOverride = rule ? toHumanClassificationOverride(rule) : null;
   const automatic = storedAutomaticClassification(message);
 
@@ -1927,8 +1948,9 @@ function encodeInboxCursor(
   message: Pick<ResolvedInboxMessage, "accountId" | "id">,
   view: InboxCursor["view"],
   classification: InboxCursor["classification"],
+  accountIds: string[],
 ) {
-  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification } satisfies InboxCursor), "utf8").toString("base64url");
+  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification, accountIds } satisfies InboxCursor), "utf8").toString("base64url");
 }
 
 function decodeInboxCursor(value: string | undefined): InboxCursor | null {
@@ -1941,6 +1963,9 @@ function decodeInboxCursor(value: string | undefined): InboxCursor | null {
       && typeof parsed.id === "string" && parsed.id.length > 0
       && ["default", "focus", "normal", "quiet", "hidden", "all"].includes(parsed.view ?? "")
       && ["human", "tideline", "uncertain", "all"].includes(parsed.classification ?? "")
+      && Array.isArray(parsed.accountIds)
+      && parsed.accountIds.length > 0
+      && parsed.accountIds.every((accountId) => typeof accountId === "string" && accountId.length > 0)
     ) {
       return parsed as InboxCursor;
     }

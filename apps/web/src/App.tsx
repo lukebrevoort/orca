@@ -10,8 +10,8 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxMessage, InboxResponse, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -835,8 +835,8 @@ function InboxApp({
           : `/v1/inbox?classification=${classificationView}&limit=100`;
         const allInboxPath = "/v1/inbox?view=all&classification=all&limit=100";
         const [inbox, allInbox] = await Promise.all([
-          fetchJson(inboxPath, inboxResponseSchema, abortController.signal),
-          allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxResponseSchema, abortController.signal),
+          fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal),
+          allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxClassificationResponseSchema, abortController.signal),
         ]);
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         setAccount(inbox.accounts[0] ?? currentAccount);
@@ -876,8 +876,8 @@ function InboxApp({
         const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
         const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
           fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
-          fetchJson(refreshedPath, inboxResponseSchema, abortController.signal),
-          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxResponseSchema, abortController.signal),
+          fetchJson(refreshedPath, inboxClassificationResponseSchema, abortController.signal),
+          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, abortController.signal),
         ]);
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         classificationPageRequestRef.current += 1;
@@ -1308,7 +1308,7 @@ function InboxApp({
       const path = useClassificationSource && view !== "all"
         ? `/v1/inbox?classification=${view}&limit=100`
         : "/v1/inbox?view=all&classification=all&limit=100";
-      const next = await fetchJson(`${path}&cursor=${encodeURIComponent(cursor)}`, inboxResponseSchema);
+      const next = await fetchJson(`${path}&cursor=${encodeURIComponent(cursor)}`, inboxClassificationResponseSchema);
       const isCurrent = useClassificationSource
         ? requestId === classificationPageRequestRef.current && classificationViewRef.current === view
         : requestId === allMailPageRequestRef.current;
@@ -3906,7 +3906,7 @@ export function getSelectedThreadAccountId(
     ?? null;
 }
 
-function toClassificationCounts(counts: InboxResponse["counts"]["classification"]): ClassificationCounts {
+function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {
   return {
     likely_human: counts.likely_human,
     automated_or_bulk: counts.automated_or_bulk,
