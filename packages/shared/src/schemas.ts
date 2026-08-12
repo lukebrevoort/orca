@@ -516,6 +516,10 @@ export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),
     view: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+    // This is deliberately independent from `view`: attention answers where a
+    // message belongs in a person's workflow, while classification answers how
+    // Orca currently estimates the message was produced.
+    classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -747,20 +751,43 @@ export type NormalizedThreadPage = z.infer<typeof normalizedThreadPageSchema>;
 export const normalizedLabelPageSchema = createProviderPageSchema(normalizedLabelSchema);
 export type NormalizedLabelPage = z.infer<typeof normalizedLabelPageSchema>;
 
-export const inboxResponseSchema = z
-  .object({
-    accounts: z.array(mailAccountSchema),
-    messages: z.array(inboxMessageSchema),
+const inboxAttentionCountsSchema = z.object({
+  focus: z.number().int().nonnegative(),
+  normal: z.number().int().nonnegative(),
+  quiet: z.number().int().nonnegative(),
+  hidden: z.number().int().nonnegative(),
+  all: z.number().int().nonnegative(),
+}).strict();
+
+const inboxClassificationCountsSchema = z.object({
+  likely_human: z.number().int().nonnegative(),
+  automated_or_bulk: z.number().int().nonnegative(),
+  uncertain: z.number().int().nonnegative(),
+  unclassified: z.number().int().nonnegative(),
+  all: z.number().int().nonnegative(),
+}).strict();
+
+const inboxResponseBaseSchema = z.object({
+  accounts: z.array(mailAccountSchema),
+  messages: z.array(inboxMessageSchema),
+  nextCursor: z.string().nullable(),
+}).strict();
+
+/**
+ * The legacy response remains valid when callers omit `classification`.
+ * New clients opt into the richer count contract with classification=all (or
+ * another classification view), so strict BRE-249 clients keep parsing old
+ * responses during the rollout.
+ */
+export const inboxResponseSchema = z.union([
+  inboxResponseBaseSchema.extend({ counts: inboxAttentionCountsSchema }).strict(),
+  inboxResponseBaseSchema.extend({
     counts: z.object({
-      focus: z.number().int().nonnegative(),
-      normal: z.number().int().nonnegative(),
-      quiet: z.number().int().nonnegative(),
-      hidden: z.number().int().nonnegative(),
-      all: z.number().int().nonnegative(),
+      attention: inboxAttentionCountsSchema,
+      classification: inboxClassificationCountsSchema,
     }).strict(),
-    nextCursor: z.string().nullable(),
-  })
-  .strict();
+  }).strict(),
+]);
 export type InboxResponse = z.infer<typeof inboxResponseSchema>;
 
 export type MailProviderClient = {

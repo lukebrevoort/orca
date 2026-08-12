@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-250 — Unified Inbox classification API</title>
+    <style>
+      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+      body { max-width: 900px; margin: 3rem auto; padding: 0 1.25rem; line-height: 1.55; }
+      h1 { margin-bottom: .2rem; } h2 { margin-top: 2.25rem; }
+      code { padding: .12rem .32rem; border-radius: .25rem; background: color-mix(in srgb, currentColor 10%, transparent); }
+      table { width: 100%; border-collapse: collapse; } th, td { padding: .6rem; text-align: left; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+      .note { border-left: 4px solid #5b8def; padding: .8rem 1rem; background: color-mix(in srgb, #5b8def 10%, transparent); }
+    </style>
+  </head>
+  <body>
+    <h1>Unified Inbox classification API</h1>
+    <p>BRE-250 · Human Inbox and Tideline are server-side views of the effective, per-message Human Signal result.</p>
+
+    <h2>Request</h2>
+    <p><code>GET /v1/inbox?view=:attention&amp;classification=:classification&amp;limit=:limit&amp;cursor=:cursor</code></p>
+    <table>
+      <thead><tr><th>Parameter</th><th>Values</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>view</code></td><td><code>focus</code>, <code>normal</code>, <code>quiet</code>, <code>hidden</code>, <code>all</code></td><td>Existing attention filter. Omit it for the established default, which excludes quiet and hidden mail.</td></tr>
+        <tr><td><code>classification</code></td><td><code>human</code>, <code>tideline</code>, <code>uncertain</code>, <code>all</code></td><td>Orthogonal effective-classification filter. Omit it for <code>all</code>.</td></tr>
+        <tr><td><code>limit</code></td><td>1–100</td><td>Page size.</td></tr>
+        <tr><td><code>cursor</code></td><td>Opaque</td><td>Continue only with the same attention and classification filters. A cursor from another account set or filter returns <code>400 invalid_cursor</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Classification views</h2>
+    <table>
+      <thead><tr><th>View</th><th>Effective class included</th></tr></thead>
+      <tbody>
+        <tr><td>Human Inbox · <code>human</code></td><td><code>likely_human</code></td></tr>
+        <tr><td>Tideline · <code>tideline</code></td><td><code>automated_or_bulk</code></td></tr>
+        <tr><td>Review · <code>uncertain</code></td><td><code>uncertain</code> and historical <code>unclassified</code> rows</td></tr>
+        <tr><td>All mail · <code>all</code></td><td>Every effective class</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      Attention and classification are independent. A likely-human message can be quiet; an automated message can be focused. Neither filter modifies mail at Gmail or Outlook.
+    </div>
+
+    <h2>Response guarantees</h2>
+    <p>Each inbox row exposes <code>humanClassification</code> with automatic evidence, an optional user override, and the effective source, reasons, score, and classifier version. <code>humanSignal</code> mirrors the effective score when one exists. Counts are full account-scoped totals and are never derived from the current page. New clients that send <code>classification</code> receive separate <code>counts.attention</code> and <code>counts.classification</code>; callers that omit it retain the legacy top-level attention count shape during migration.</p>
+    <p>Thread detail preserves this same result for every message in <code>messages[]</code>. The existing thread-level <code>attention.humanSignal</code> remains a legacy reader aggregate only; it is not a thread classification and must not replace per-message results.</p>
+  </body>
+</html>
