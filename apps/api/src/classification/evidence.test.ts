@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { buildHumanClassificationEvidence } from "./evidence.ts";
-import { classifyHumanSignal } from "./human-signal.ts";
+import { classifyHumanSignal, humanClassifierVersion } from "./human-signal.ts";
 
 function build(headers: ReadonlyMap<string, string>) {
   return buildHumanClassificationEvidence({
@@ -26,13 +26,13 @@ describe("Human Signal evidence", () => {
       classification: "likely_human",
       score: 7,
       reasonCodes: ["direct_recipient"],
-      classifierVersion: "m5-v1",
+      classifierVersion: humanClassifierVersion,
     });
     assert.deepEqual(classifyHumanSignal({ ...evidence, headerSignals: ["x_auto_response_suppress"] }), {
       classification: "likely_human",
       score: 7,
       reasonCodes: ["direct_recipient"],
-      classifierVersion: "m5-v1",
+      classifierVersion: humanClassifierVersion,
     });
   });
 

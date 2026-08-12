@@ -383,7 +383,7 @@ function m5Assessment(
     classification,
     score,
     reasonCodes,
-    classifierVersion: "m5-v1",
+    classifierVersion: "m5-v2",
   });
 }
 

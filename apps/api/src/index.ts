@@ -483,7 +483,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return classificationAccountNotFound(c);
         const message = getEmailByAccountId(db, account.id, input.messageId);
         if (!message) return classificationTargetNotFound(c);
-        return jsonWithSchema(c, humanClassificationResultSchema, resolveHumanClassification(db, account.id, message));
+        const resolve = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
+        return jsonWithSchema(c, humanClassificationResultSchema, resolveHumanClassification(message, resolve));
       } finally {
         sqlite.close();
       }
@@ -1191,9 +1192,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           }
 
           const rules = listSenderRules(db, account.id);
-          const classificationOverrides = createHumanClassificationOverrideLookup(listHumanClassificationOverrides(db, account.id));
+          const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
           for (const message of byId.values()) {
-            const humanClassification = resolveHumanClassification(db, account.id, message, classificationOverrides);
+            const humanClassification = resolveHumanClassification(message, resolveClassification);
             resolved.push({
               ...message,
               provider: account.provider,
@@ -1316,9 +1317,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
           attachmentsByMessage.set(attachment.emailId, attachments);
         }
+        const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
         const messages = [...messagesById.values()].map((message) => {
           const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
-          const humanClassification = resolveHumanClassification(db, account.id, message);
+          const humanClassification = resolveHumanClassification(message, resolveClassification);
           return {
             id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
             from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
@@ -1509,8 +1511,8 @@ type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type SenderRuleRecord = typeof senderAttentionRules.$inferSelect;
-type HumanClassificationOverrideRecord = typeof humanClassificationOverrides.$inferSelect;
-type ClassificationEmailRecord = Pick<typeof emails.$inferSelect,
+export type HumanClassificationOverrideRecord = typeof humanClassificationOverrides.$inferSelect;
+export type ClassificationEmailRecord = Pick<typeof emails.$inferSelect,
   "id" | "accountId" | "fromAddress" | "humanSignal" | "humanClassification" | "humanClassificationReasons" | "humanClassifierVersion"
 >;
 type ViewSettingRecord = typeof attentionViewSettings.$inferSelect;
@@ -1765,29 +1767,10 @@ function getHumanClassificationOverride(db: Database, accountId: string, id: str
   )).get();
 }
 
-function getHumanClassificationOverrideForTarget(
-  db: Database,
-  accountId: string,
-  targetType: "message" | "sender_address" | "sender_domain",
-  targetValue: string,
-) {
-  return db.select().from(humanClassificationOverrides).where(and(
-    eq(humanClassificationOverrides.accountId, accountId),
-    eq(humanClassificationOverrides.targetType, targetType),
-    eq(humanClassificationOverrides.targetValue, targetValue),
-  )).get();
-}
-
 function listHumanClassificationOverrides(db: Database, accountId: string) {
   return db.select().from(humanClassificationOverrides)
     .where(eq(humanClassificationOverrides.accountId, accountId))
     .orderBy(asc(humanClassificationOverrides.targetType), asc(humanClassificationOverrides.targetValue)).all();
-}
-
-type HumanClassificationOverrideLookup = Map<string, HumanClassificationOverrideRecord>;
-
-function createHumanClassificationOverrideLookup(rules: HumanClassificationOverrideRecord[]): HumanClassificationOverrideLookup {
-  return new Map(rules.map((rule) => [`${rule.targetType}:${rule.targetValue}`, rule]));
 }
 
 function getEmailByAccountId(db: Database, accountId: string, id: string): ClassificationEmailRecord | undefined {
@@ -1802,21 +1785,26 @@ function getEmailByAccountId(db: Database, accountId: string, id: string): Class
   }).from(emails).where(and(eq(emails.accountId, accountId), eq(emails.id, id))).get();
 }
 
+export function createHumanClassificationOverrideResolver(rules: HumanClassificationOverrideRecord[]) {
+  const rulesByTarget = new Map(rules.map((rule) => [humanClassificationOverrideKey(rule.targetType, rule.targetValue), rule]));
+  return (message: Pick<ClassificationEmailRecord, "id" | "fromAddress">) => {
+    const normalizedAddress = message.fromAddress?.trim().toLowerCase() ?? "";
+    const normalizedDomain = normalizedAddress.split("@")[1] ?? "";
+    return rulesByTarget.get(humanClassificationOverrideKey("message", message.id))
+      ?? (normalizedAddress ? rulesByTarget.get(humanClassificationOverrideKey("sender_address", normalizedAddress)) : undefined)
+      ?? (normalizedDomain ? rulesByTarget.get(humanClassificationOverrideKey("sender_domain", normalizedDomain)) : undefined);
+  };
+}
+
+function humanClassificationOverrideKey(targetType: string, targetValue: string) {
+  return `${targetType}:${targetValue}`;
+}
+
 function resolveHumanClassification(
-  db: Database,
-  accountId: string,
   message: ClassificationEmailRecord,
-  overrideLookup?: HumanClassificationOverrideLookup,
+  resolveOverride: ReturnType<typeof createHumanClassificationOverrideResolver>,
 ): HumanClassificationResult {
-  const normalizedAddress = message.fromAddress?.trim().toLowerCase() ?? "";
-  const normalizedDomain = normalizedAddress.split("@")[1] ?? "";
-  const findRule = (targetType: "message" | "sender_address" | "sender_domain", targetValue: string) =>
-    overrideLookup
-      ? overrideLookup.get(`${targetType}:${targetValue}`)
-      : getHumanClassificationOverrideForTarget(db, accountId, targetType, targetValue);
-  const rule = findRule("message", message.id)
-    ?? (normalizedAddress ? findRule("sender_address", normalizedAddress) : undefined)
-    ?? (normalizedDomain ? findRule("sender_domain", normalizedDomain) : undefined);
+  const rule = resolveOverride(message);
   const userOverride = rule ? toHumanClassificationOverride(rule) : null;
   const automatic = storedAutomaticClassification(message);
 

@@ -5,7 +5,7 @@ import type {
 } from "@orca/shared";
 
 /** Increment whenever deterministic classification rules intentionally change. */
-export const humanClassifierVersion = "m5-v1";
+export const humanClassifierVersion = "m5-v2";
 
 const noReplyAddressPattern = /(?:^|[._+\-])(no[._+\-]?reply|do[._+\-]?not[._+\-]?reply|mailer[._+\-]?daemon|postmaster)(?:[._+\-]|@|$)/i;
 
