@@ -779,14 +779,17 @@ const inboxResponseBaseSchema = z.object({
  * another classification view), so strict BRE-249 clients keep parsing old
  * responses during the rollout.
  */
+export const inboxClassificationResponseSchema = inboxResponseBaseSchema.extend({
+  counts: z.object({
+    attention: inboxAttentionCountsSchema,
+    classification: inboxClassificationCountsSchema,
+  }).strict(),
+}).strict();
+export type InboxClassificationResponse = z.infer<typeof inboxClassificationResponseSchema>;
+
 export const inboxResponseSchema = z.union([
   inboxResponseBaseSchema.extend({ counts: inboxAttentionCountsSchema }).strict(),
-  inboxResponseBaseSchema.extend({
-    counts: z.object({
-      attention: inboxAttentionCountsSchema,
-      classification: inboxClassificationCountsSchema,
-    }).strict(),
-  }).strict(),
+  inboxClassificationResponseSchema,
 ]);
 export type InboxResponse = z.infer<typeof inboxResponseSchema>;
 

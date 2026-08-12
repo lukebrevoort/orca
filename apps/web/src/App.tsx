@@ -10,8 +10,8 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, InboxMessage, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, inboxResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, Pin, PinFilter, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -22,6 +22,7 @@ import {
 } from "./demo-data";
 import { getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
+import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -76,6 +77,8 @@ type PersonItem = {
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
 type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
+type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "humanClassification" | "humanSignal">;
+type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
 type OAuthConnectStatus = "idle" | "loading" | "error";
 type OAuthReturnStatus =
@@ -150,6 +153,30 @@ const demoCollections: Collection[] = [
   { id: "collection_demo_work", accountId: demoAccount.id, name: "Orca launch", color: "#70867d", position: 0, threadIds: ["thread_1", "thread_4"], createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
   { id: "collection_demo_life", accountId: demoAccount.id, name: "Life admin", color: "#a87360", position: 1, threadIds: ["thread_2", "thread_3"], createdAt: "2026-07-02T00:00:00.000Z", updatedAt: "2026-07-02T00:00:00.000Z" },
 ];
+
+function classificationMatchesView(message: Pick<InboxMessage, "humanClassification">, view: ClassificationView) {
+  if (view === "all") return true;
+  const classification = message.humanClassification?.effective.classification;
+  if (view === "human") return classification === "likely_human";
+  if (view === "tideline") return classification === "automated_or_bulk";
+  return classification === "uncertain" || classification === "unclassified" || !classification;
+}
+
+function getClassificationCounts(source: InboxMessage[]): ClassificationCounts {
+  return {
+    likely_human: source.filter((message) => message.humanClassification?.effective.classification === "likely_human").length,
+    automated_or_bulk: source.filter((message) => message.humanClassification?.effective.classification === "automated_or_bulk").length,
+    uncertain: source.filter((message) => message.humanClassification?.effective.classification === "uncertain" || message.humanClassification?.effective.classification === "unclassified" || !message.humanClassification).length,
+    unclassified: source.filter((message) => message.humanClassification?.effective.classification === "unclassified" || !message.humanClassification).length,
+    all: source.length,
+  };
+}
+
+const demoClassificationCounts = getClassificationCounts(demoMessages);
+
+function demoMessagesForClassification(view: ClassificationView, source = demoMessages) {
+  return source.filter((message) => classificationMatchesView(message, view));
+}
 
 const collectionColors = [
   { name: "Moss", value: "#70867d" },
@@ -654,7 +681,17 @@ function InboxApp({
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessages : []);
+  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human") : []);
+  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMessages : []);
+  const [classificationView, setClassificationView] = useState<ClassificationView>("human");
+  const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
+  const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
+  const [allMailCursor, setAllMailCursor] = useState<string | null>(null);
+  const [classificationLoading, setClassificationLoading] = useState(false);
+  const [classificationError, setClassificationError] = useState<string | null>(null);
+  const [classificationActionError, setClassificationActionError] = useState<string | null>(null);
+  const [classificationActionMessage, setClassificationActionMessage] = useState<string | null>(null);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [status, setStatus] = useState<"loading" | "syncing" | "ready" | "error" | "signedout">(demoMode ? "ready" : "loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -682,6 +719,12 @@ function InboxApp({
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
+  const demoDataInitializedRef = useRef(false);
+  const classificationRequestRef = useRef(0);
+  const classificationPageRequestRef = useRef(0);
+  const allMailPageRequestRef = useRef(0);
+  const classificationViewRef = useRef(classificationView);
+  classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const composeDraft = useComposeDraft(account?.id ?? "preview", "new", demoMode);
   const [zen, setZen] = useState(false);
@@ -744,12 +787,25 @@ function InboxApp({
   }, [organizationOpen]);
 
   useEffect(() => {
+    const requestId = ++classificationRequestRef.current;
+    classificationPageRequestRef.current += 1;
+    allMailPageRequestRef.current += 1;
+    setIsLoadingMoreMessages(false);
     if (demoMode) {
       setAccount(demoAccount);
       const readThreadIds = readDemoReadState();
-      setMessages(demoMessages.map((message) =>
+      const readMessages = demoMessages.map((message) =>
         readThreadIds.has(message.threadId) ? { ...message, unread: false } : message,
-      ));
+      );
+      const sourceMessages = demoDataInitializedRef.current ? allMailMessages : readMessages;
+      demoDataInitializedRef.current = true;
+      setAllMailMessages(sourceMessages);
+      setMessages(demoMessagesForClassification(classificationView, sourceMessages));
+      setClassificationCounts(getClassificationCounts(sourceMessages));
+      setClassificationCursor(null);
+      setAllMailCursor(null);
+      setClassificationError(null);
+      setClassificationLoading(false);
       setStatus("ready");
       setErrorMessage(null);
       setErrorStatus(null);
@@ -759,9 +815,14 @@ function InboxApp({
     const abortController = new AbortController();
 
     async function loadInbox() {
-      setStatus(messages.length > 0 ? "ready" : "loading");
+      setStatus("loading");
+      setMessages([]);
+      setClassificationCursor(null);
+      setAllMailCursor(null);
+      setClassificationLoading(true);
       setErrorMessage(null);
       setErrorStatus(null);
+      setClassificationError(null);
 
       try {
         const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
@@ -769,17 +830,31 @@ function InboxApp({
         setAccount(currentAccount);
         setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
 
-        const inbox = await fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal);
-        if (abortController.signal.aborted) return;
+        const inboxPath = classificationView === "all"
+          ? "/v1/inbox?view=all&classification=all&limit=100"
+          : `/v1/inbox?classification=${classificationView}&limit=100`;
+        const allInboxPath = "/v1/inbox?view=all&classification=all&limit=100";
+        const [inbox, allInbox] = await Promise.all([
+          fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal),
+          allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxClassificationResponseSchema, abortController.signal),
+        ]);
+        if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         setAccount(inbox.accounts[0] ?? currentAccount);
         setMessages(inbox.messages);
+        setAllMailMessages(mergeMessages(allInbox?.messages ?? [], inbox.messages));
+        setClassificationCounts(toClassificationCounts(inbox.counts.classification));
+        setClassificationCursor(inbox.nextCursor);
+        setAllMailCursor(allInbox?.nextCursor ?? inbox.nextCursor);
+        setClassificationLoading(false);
         setStatus("ready");
 
         // Cached SQLite mail is now visible. Refresh Gmail without putting the
         // network round trip on the inbox's first-render path.
         void refreshGmailInBackground();
       } catch (error) {
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
+        setClassificationLoading(false);
+        setClassificationCursor(null);
         if (isSessionUnauthorizedError(error)) {
           setStatus("signedout");
           return;
@@ -787,6 +862,7 @@ function InboxApp({
         setStatus("error");
         setErrorMessage(getErrorMessage(error));
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
+        setClassificationError(getErrorMessage(error));
       }
     }
 
@@ -794,13 +870,26 @@ function InboxApp({
       try {
         setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
         await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
-        const [nextStatus, refreshedInbox] = await Promise.all([
+        const refreshedPath = classificationView === "all"
+          ? "/v1/inbox?view=all&classification=all&limit=100"
+          : `/v1/inbox?classification=${classificationView}&limit=100`;
+        const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
+        const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
           fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
-          fetchJson("/v1/inbox?view=all", inboxResponseSchema, abortController.signal),
+          fetchJson(refreshedPath, inboxClassificationResponseSchema, abortController.signal),
+          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, abortController.signal),
         ]);
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
+        classificationPageRequestRef.current += 1;
+        allMailPageRequestRef.current += 1;
+        setIsLoadingMoreMessages(false);
         setSyncStatus(nextStatus);
         setMessages(refreshedInbox.messages);
+        setAllMailMessages(mergeMessages(refreshedAllInbox?.messages ?? [], refreshedInbox.messages));
+        setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
+        setClassificationCursor(refreshedInbox.nextCursor);
+        setAllMailCursor(refreshedAllInbox?.nextCursor ?? refreshedInbox.nextCursor);
+        setClassificationLoading(false);
       } catch (error) {
         if (abortController.signal.aborted) return;
         if (isSessionUnauthorizedError(error)) {
@@ -809,6 +898,8 @@ function InboxApp({
         }
         setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
+        setClassificationError(getErrorMessage(error));
+        setClassificationLoading(false);
       }
     }
 
@@ -817,7 +908,7 @@ function InboxApp({
     return () => {
       abortController.abort();
     };
-  }, [demoMode, refreshKey]);
+  }, [classificationView, demoMode, refreshKey]);
 
   useEffect(() => {
     if (demoMode || !account || status !== "ready") return;
@@ -861,22 +952,30 @@ function InboxApp({
     return () => controller.abort();
   }, [demoMode, messages, status]);
 
+  const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
   const mailboxMessages = useMemo(
     () => {
       const activeCollection = collections.find((collection) => collection.id === activeCollectionId);
       return activeCollection
-        ? messages.filter((message) => activeCollection.threadIds.includes(message.threadId))
-        : activeMailbox === "later"
-          ? messages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
-        : getMessagesForMailbox(messages, activeMailbox, attentionByAddress);
+        ? allMailMessages.filter((message) => activeCollection.threadIds.includes(message.threadId))
+        : isClassificationMailbox
+          ? getMessagesForMailbox(messages, activeMailbox, attentionByAddress)
+          : activeMailbox === "later"
+            ? allMailMessages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
+            : getMessagesForMailbox(allMailMessages, activeMailbox, attentionByAddress);
     },
-    [activeCollectionId, activeMailbox, attentionByAddress, collections, messages, reminders],
+    [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, isClassificationMailbox, messages, reminders],
   );
 
   const visibleMessages = useMemo(() => {
     let filtered = personFilter
       ? mailboxMessages.filter((message) => messageIncludesPerson(message, personFilter))
       : mailboxMessages;
+    if (!activeCollectionId && isClassificationMailbox) {
+      filtered = filtered.filter((message) => classificationMatchesView(message, classificationView));
+      const latestRows = new Set(getLatestThreadRows(allMailMessages).map((message) => message.id));
+      filtered = filtered.filter((message) => latestRows.has(message.id));
+    }
     if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
         const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
@@ -887,19 +986,19 @@ function InboxApp({
       ...message,
       attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
     }));
-  }, [activeCollectionId, activeMailbox, attentionByAddress, inboxFilter, mailboxMessages, personFilter]);
+  }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
-  const readerAccountId = getSelectedThreadAccountId(messages, selectedThreadId, selectedThreadAccountId);
+  const readerAccountId = getSelectedThreadAccountId(allMailMessages, selectedThreadId, selectedThreadAccountId);
 
   const selectedThreadMessages = useMemo(() => {
     if (!selectedThreadId) {
       return [];
     }
 
-    return messages
+    return allMailMessages
       .filter((message) => message.threadId === selectedThreadId && (!readerAccountId || message.accountId === readerAccountId))
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
-  }, [messages, readerAccountId, selectedThreadId]);
+  }, [allMailMessages, readerAccountId, selectedThreadId]);
 
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
@@ -912,7 +1011,7 @@ function InboxApp({
     }
 
     if (demoMode) {
-      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages));
+      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
       setReaderStatus("ready");
       setReaderError(null);
       return;
@@ -934,7 +1033,7 @@ function InboxApp({
         setReaderError(getErrorMessage(error));
       });
     return () => controller.abort();
-  }, [account, demoMode, readerAccountId, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
+  }, [account, allMailMessages, demoMode, readerAccountId, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
@@ -955,17 +1054,18 @@ function InboxApp({
         label: mailbox.id === "later" ? laterLabel : mailbox.label,
         count: status === "ready" ? mailbox.id === "later"
           ? new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size
-          : getMessagesForMailbox(messages, mailbox.id, attentionByAddress).length : undefined,
+          : getMessagesForMailbox(allMailMessages, mailbox.id, attentionByAddress).length : undefined,
       })),
-    [attentionByAddress, laterLabel, messages, reminders, status],
+    [allMailMessages, attentionByAddress, laterLabel, reminders, status],
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
-  const composeContacts = useMemo(() => collectComposeContacts(messages, account?.email ?? ""), [account?.email, messages]);
+  const activeMailboxCursor = activeCollectionId || !isClassificationMailbox ? allMailCursor : classificationCursor;
+  const composeContacts = useMemo(() => collectComposeContacts(allMailMessages, account?.email ?? ""), [account?.email, allMailMessages]);
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
   const pinnedPeople = useMemo(
-    () => buildPinnedPeopleFromPins(pins, messages),
-    [messages, pins],
+    () => buildPinnedPeopleFromPins(pins, allMailMessages),
+    [allMailMessages, pins],
   );
   const pinnedSenderAddresses = useMemo(
     () => new Set(pins.filter((pin) => pin.kind === "sender").map((pin) => pin.targetId.trim().toLowerCase())),
@@ -981,22 +1081,24 @@ function InboxApp({
     [activeCollectionId, activeMailbox, inboxFilter, personFilter, pins, streamQuery],
   );
   const automatedMessages = useMemo(
-    () => getMessagesForMailbox(messages, "inbox", attentionByAddress).filter(isTidelineMessage),
-    [attentionByAddress, messages],
+    () => getLatestThreadRows(allMailMessages).filter(isTidelineMessage),
+    [allMailMessages],
   );
   const activeMailboxLabel = activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
-      ?? messages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
+      ?? allMailMessages.find((message) => messageIncludesPerson(message, personFilter))?.from.name
       ?? activePin?.label
       ?? personFilter
     : null;
-  const inboxTitle = personFilterName ?? activeCollection?.name ?? activeMailboxLabel;
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? (isClassificationMailbox ? classificationViewLabel(classificationView) : activeMailboxLabel);
   const inboxEyebrow = personFilter
-    ? `Filtered ${(activeCollection?.name ?? activeMailboxLabel).toLowerCase()}`
+    ? `Filtered ${(activeCollection?.name ?? classificationViewLabel(classificationView)).toLowerCase()}`
     : activeCollection
       ? `Collection · ${activeCollection.threadIds.length} ${activeCollection.threadIds.length === 1 ? "thread" : "threads"}`
-      : activeMailboxItem.description;
+      : isClassificationMailbox
+        ? classificationViewItems.find((item) => item.id === classificationView)?.description ?? activeMailboxItem.description
+        : activeMailboxItem.description;
 
   if (status === "signedout") {
     return <LoginRequiredScreen />;
@@ -1066,6 +1168,9 @@ function InboxApp({
         writeDemoReadState(message.threadId);
       }
       setMessages((prev) =>
+        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+      );
+      setAllMailMessages((prev) =>
         prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
     }
@@ -1153,6 +1258,8 @@ function InboxApp({
   function selectMailbox(mailbox: Mailbox) {
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
+      if (mailbox === "inbox") setClassificationView("human");
+      if (mailbox === "all") setClassificationView("all");
       setActiveCollectionId(null);
       setInboxFilter("all");
       setPersonFilter(null);
@@ -1160,6 +1267,142 @@ function InboxApp({
       setSelectedThreadAccountId(null);
       setOrganizationOpen(false);
     });
+  }
+
+  function retryInbox() {
+    setClassificationActionError(null);
+    setClassificationActionMessage(null);
+    setRefreshKey((key) => key + 1);
+  }
+
+  function selectClassification(view: ClassificationView) {
+    const sameView = view === classificationView;
+    if (sameView && isClassificationMailbox) {
+      if (classificationLoading) return;
+      if (status === "ready" && !classificationError) return;
+      retryInbox();
+      return;
+    }
+    runUiTransition("content", () => {
+      setClassificationView(view);
+      setActiveCollectionId(null);
+      setPersonFilter(null);
+      setSelectedThreadId(null);
+      setSelectedThreadAccountId(null);
+      setClassificationActionError(null);
+      setClassificationActionMessage(null);
+      setActiveMailbox(view === "all" ? "all" : "inbox");
+    });
+    if (sameView) retryInbox();
+  }
+
+  async function loadMoreMessages() {
+    const useClassificationSource = isClassificationMailbox && !activeCollectionId;
+    const view = classificationView;
+    const cursor = useClassificationSource ? classificationCursor : allMailCursor;
+    if (demoMode || !cursor || isLoadingMoreMessages) return;
+    const requestId = useClassificationSource ? ++classificationPageRequestRef.current : ++allMailPageRequestRef.current;
+    setIsLoadingMoreMessages(true);
+    setClassificationError(null);
+    try {
+      const path = useClassificationSource && view !== "all"
+        ? `/v1/inbox?classification=${view}&limit=100`
+        : "/v1/inbox?view=all&classification=all&limit=100";
+      const next = await fetchJson(`${path}&cursor=${encodeURIComponent(cursor)}`, inboxClassificationResponseSchema);
+      const isCurrent = useClassificationSource
+        ? requestId === classificationPageRequestRef.current && classificationViewRef.current === view
+        : requestId === allMailPageRequestRef.current;
+      if (!isCurrent) return;
+      if (useClassificationSource) {
+        setMessages((current) => mergeMessages(current, next.messages));
+        setAllMailMessages((current) => mergeMessages(current, next.messages));
+        setClassificationCursor(next.nextCursor);
+        setClassificationCounts(toClassificationCounts(next.counts.classification));
+      } else {
+        setAllMailMessages((current) => mergeMessages(current, next.messages));
+        setAllMailCursor(next.nextCursor);
+      }
+    } catch (error) {
+      const isCurrent = useClassificationSource
+        ? requestId === classificationPageRequestRef.current && classificationViewRef.current === view
+        : requestId === allMailPageRequestRef.current;
+      if (!isCurrent) return;
+      const sourceLabel = useClassificationSource ? classificationViewLabel(view).toLowerCase() : "mailbox";
+      setClassificationError(`Could not load more ${sourceLabel} messages. ${getErrorMessage(error)}`);
+    } finally {
+      const isCurrent = useClassificationSource
+        ? requestId === classificationPageRequestRef.current && classificationViewRef.current === view
+        : requestId === allMailPageRequestRef.current;
+      if (isCurrent) setIsLoadingMoreMessages(false);
+    }
+  }
+
+  function normalizeClassificationCorrectionTarget(message: ClassificationMessage, target: ClassificationCorrectionTarget): ClassificationOverride["target"] {
+    if (target.scope === "message") return { scope: "message", messageId: (target.messageId ?? message.id).trim() };
+    const address = message.from.email.trim().toLowerCase();
+    if (target.scope === "sender_address") return { scope: "sender_address", address: (target.address ?? address).trim().toLowerCase() };
+    return { scope: "sender_domain", domain: (target.domain ?? address.split("@").at(-1) ?? "").trim().toLowerCase() };
+  }
+
+  async function correctClassification(message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") {
+    setClassificationActionError(null);
+    setClassificationActionMessage(null);
+    const existingOverride = message.humanClassification?.userOverride ?? message.humanClassification?.effective.userOverride ?? null;
+    const targetPayload = normalizeClassificationCorrectionTarget(message, target);
+    const matchesOverride = existingOverride ? classificationTargetsEqual(existingOverride.target, targetPayload) : false;
+    let savedOverride: ClassificationOverride | null = existingOverride;
+    try {
+      if (demoMode) {
+        if (classification === "reset") savedOverride = null;
+        else savedOverride = {
+          id: `classification-override:demo:${Date.now()}`,
+          accountId: message.accountId,
+          target: targetPayload,
+          classification,
+          source: "user_choice" as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      } else if (classification === "reset") {
+        if (!existingOverride || !matchesOverride) throw new Error("Choose the correction target that owns this override before resetting it.");
+        await fetchNoContent(`/v1/classification/overrides/${encodeURIComponent(existingOverride.id)}?accountId=${encodeURIComponent(message.accountId)}`, { method: "DELETE" });
+        savedOverride = null;
+      } else if (existingOverride && matchesOverride) {
+        savedOverride = await fetchJson(`/v1/classification/overrides/${encodeURIComponent(existingOverride.id)}?accountId=${encodeURIComponent(message.accountId)}`, humanClassificationOverrideSchema, undefined, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ classification }),
+        });
+      } else {
+        savedOverride = await fetchJson("/v1/classification/overrides", humanClassificationOverrideSchema, undefined, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ accountId: message.accountId, target: targetPayload, classification }),
+        });
+      }
+
+      const matchesTarget = (candidate: InboxMessage) => {
+        if (candidate.accountId !== message.accountId) return false;
+        if (targetPayload.scope === "message") return candidate.id === targetPayload.messageId;
+        if (targetPayload.scope === "sender_address") return candidate.from.email.trim().toLowerCase() === targetPayload.address;
+        return candidate.from.email.split("@").at(-1)?.trim().toLowerCase() === targetPayload.domain;
+      };
+      const update = (candidate: InboxMessage) => matchesTarget(candidate)
+        && shouldApplyClassificationTarget(candidate, targetPayload, classification)
+        ? { ...candidate, ...applyLocalClassification(candidate, classification, savedOverride) }
+        : candidate;
+      const nextMessages = messages.map(update);
+      const nextAllMailMessages = allMailMessages.map(update);
+      setMessages(nextMessages);
+      setAllMailMessages(nextAllMailMessages);
+      if (demoMode) setClassificationCounts(getClassificationCounts(nextAllMailMessages));
+      setClassificationActionMessage(classification === "reset" ? "Reset to Orca’s automatic estimate." : `Saved for ${target.scope === "message" ? "this message" : target.scope === "sender_address" ? "this sender" : "this domain"}.`);
+      if (!demoMode) setRefreshKey((key) => key + 1);
+    } catch (error) {
+      const messageText = getErrorMessage(error);
+      setClassificationActionError(`That correction was not saved. ${messageText}`);
+      throw error;
+    }
   }
 
   function selectCollection(id: string) {
@@ -1329,6 +1572,15 @@ function InboxApp({
 
   return (
     <div className="app-root">
+      <button
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        className="theme-toggle app-theme-toggle"
+        onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
+        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        type="button"
+      >
+        {theme === "dark" ? "☾" : "☀"}
+      </button>
       <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
         <WaveRail
           activeMailbox={activeMailbox}
@@ -1345,14 +1597,6 @@ function InboxApp({
               {demoMode ? <span className="dev-preview-badge">Preview</span> : null}
             </div>
             <div className="header-actions">
-              <button
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                className="theme-toggle"
-                onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
-                type="button"
-              >
-                {theme === "dark" ? "☾" : "☀"}
-              </button>
               <button aria-label="Close library" className="compose-button" onClick={() => setOrganizationOpen(false)} type="button">Close</button>
             </div>
           </header>
@@ -1408,10 +1652,18 @@ function InboxApp({
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
+              classificationView={classificationView}
+              classificationCounts={classificationCounts}
+              classificationLoading={classificationLoading}
+              classificationError={classificationError}
+              classificationActionError={classificationActionError}
+              classificationActionMessage={classificationActionMessage}
+              hasMoreMessages={Boolean(activeMailboxCursor)}
+              isLoadingMoreMessages={isLoadingMoreMessages}
               isCollectionView={Boolean(activeCollection)}
               collection={activeCollection}
               currentViewLabel={activeMailboxLabel}
-              allMessages={messages}
+              allMessages={allMailMessages}
               attentionByAddress={attentionByAddress}
               activePin={activePin}
               messages={visibleMessages}
@@ -1419,6 +1671,10 @@ function InboxApp({
               pinnedPeople={pinnedPeople}
               pinnedSenderAddresses={pinnedSenderAddresses}
               onClearFilter={() => setPersonFilter(null)}
+              onSelectClassification={selectClassification}
+              onLoadMoreMessages={() => void loadMoreMessages()}
+              onRetry={retryInbox}
+              onClassificationChange={correctClassification}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
               onRemovePin={(pin) => void removePin(pin)}
@@ -1453,6 +1709,7 @@ function InboxApp({
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
               onAttentionChange={updateSenderAttention}
+              onClassificationChange={correctClassification}
               notifyByDefault={preferences.notifyByDefault}
               reminder={reminders.find((reminder) => reminder.threadId === selectedThreadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")) ?? null}
               onSaveReminder={saveReminder}
@@ -2157,6 +2414,14 @@ function InboxView({
   inboxEyebrow,
   inboxFilter,
   inboxTitle,
+  classificationView,
+  classificationCounts,
+  classificationLoading,
+  classificationError,
+  classificationActionError,
+  classificationActionMessage,
+  hasMoreMessages,
+  isLoadingMoreMessages,
   isCollectionView,
   allMessages,
   attentionByAddress,
@@ -2172,6 +2437,10 @@ function InboxView({
   syncStatus,
   isRefreshing,
   onClearFilter,
+  onSelectClassification,
+  onLoadMoreMessages,
+  onRetry,
+  onClassificationChange,
   onCreatePin,
   onRemovePin,
   onOpenThread,
@@ -2199,6 +2468,14 @@ function InboxView({
   inboxEyebrow: string;
   inboxFilter: InboxFilter;
   inboxTitle: string;
+  classificationView: ClassificationView;
+  classificationCounts: ClassificationCounts;
+  classificationLoading: boolean;
+  classificationError: string | null;
+  classificationActionError: string | null;
+  classificationActionMessage: string | null;
+  hasMoreMessages: boolean;
+  isLoadingMoreMessages: boolean;
   isCollectionView: boolean;
   currentViewLabel: string;
   allMessages: InboxMessage[];
@@ -2214,6 +2491,10 @@ function InboxView({
   syncStatus: SyncStatus | null;
   isRefreshing: boolean;
   onClearFilter: () => void;
+  onSelectClassification: (view: ClassificationView) => void;
+  onLoadMoreMessages: () => void;
+  onRetry: () => void;
+  onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   onCreatePin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
   onRemovePin: (pin: Pin) => void;
   onOpenThread: (message: InboxMessage) => void;
@@ -2245,12 +2526,13 @@ function InboxView({
   const pinBuilderInputRef = useRef<HTMLInputElement>(null);
   const [snoozingThreadId, setSnoozingThreadId] = useState<string | null>(null);
   const [laterError, setLaterError] = useState<string | null>(null);
+  const [sweptThreadIds, setSweptThreadIds] = useState<Set<string>>(new Set());
   const [pinMenuOpen, setPinMenuOpen] = useState(false);
   const [pinFilterMailbox, setPinFilterMailbox] = useState<PinMailbox>("inbox");
   const [pinFilterAttention, setPinFilterAttention] = useState<InboxFilter>("all");
   const [pinFilterPerson, setPinFilterPerson] = useState<string | null>(null);
   const [pinFilterQuery, setPinFilterQuery] = useState("");
-  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
+  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery).filter((message) => !sweptThreadIds.has(message.threadId)), [messages, searchQuery, sweptThreadIds, viewMode]);
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -2402,7 +2684,19 @@ function InboxView({
         </div>
       </header>
 
-      <nav aria-label="Saved pins" className="pinned-people">
+      {!collection ? <ClassificationTabs counts={classificationCounts} active={classificationView} loading={classificationLoading} onChange={onSelectClassification} /> : null}
+      <div
+        aria-labelledby={!collection ? `classification-tab-${classificationView}` : undefined}
+        className="classification-panel"
+        id={!collection ? "classification-panel" : undefined}
+        role={!collection ? "tabpanel" : undefined}
+        tabIndex={!collection ? 0 : undefined}
+      >
+        {classificationActionMessage ? <p className="classification-action-message" role="status">{classificationActionMessage}</p> : null}
+        {classificationActionError ? <p className="classification-action-error" role="alert">{classificationActionError}</p> : null}
+        {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
+
+        <nav aria-label="Saved pins" className="pinned-people">
         {pins.map((pin) => {
           const person = pin.kind === "sender"
             ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
@@ -2468,27 +2762,27 @@ function InboxView({
             </div>
           ) : null}
         </div>
-      </nav>
-
-      {showInboxFilters ? (
-        <nav aria-label="Filter Inbox by attention treatment" className="inbox-filter-bar">
-          <span>Within Inbox</span>
-          <div role="group" aria-label="Inbox attention filters">
-            {inboxFilters.map((filter) => (
-              <button
-                aria-pressed={inboxFilter === filter.id}
-                key={filter.id}
-                onClick={() => onInboxFilterChange(filter.id)}
-                type="button"
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
         </nav>
-      ) : null}
 
-      <section className="inbox-body" aria-live="polite">
+        {showInboxFilters ? (
+          <nav aria-label="Filter Inbox by attention treatment" className="inbox-filter-bar">
+            <span>Within Inbox</span>
+            <div role="group" aria-label="Inbox attention filters">
+              {inboxFilters.map((filter) => (
+                <button
+                  aria-pressed={inboxFilter === filter.id}
+                  key={filter.id}
+                  onClick={() => onInboxFilterChange(filter.id)}
+                  type="button"
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+        ) : null}
+
+        <section className="inbox-body" aria-live="polite">
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
             description={status === "syncing" ? "Reading your Gmail inbox and bringing the latest conversations into Orca." : "Checking your Orca session."}
@@ -2499,7 +2793,7 @@ function InboxView({
 
         {status === "error" ? (
           <InboxStatusState
-            action={errorStatus === 404 ? <a className="empty-state-action" href="/login">Reconnect Gmail <span aria-hidden="true">→</span></a> : undefined}
+            action={errorStatus === 404 ? <a className="empty-state-action" href="/login">Reconnect Gmail <span aria-hidden="true">→</span></a> : <button className="empty-state-action" onClick={onRetry} type="button">Try again <span aria-hidden="true">↻</span></button>}
             description={errorStatus === 404 ? "Your mailbox is safe, but this browser needs to reconnect to Gmail before Orca can open it." : errorMessage ?? "Please try again."}
             eyebrow="Could not open inbox"
             title={errorStatus === 404 ? "Reconnect to open your inbox." : "Your mailbox is safe—Orca just could not reach it."}
@@ -2567,6 +2861,7 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                   </button>
+                    <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                     {viewMode !== "later" ? <button
                       aria-label={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
                       aria-pressed={senderPinned}
@@ -2599,14 +2894,16 @@ function InboxView({
           </ol>
         ) : null}
         {laterError ? <p className="later-error" role="alert">{laterError}</p> : null}
-        {status === "ready" && viewMode === "inbox" && !searchQuery.trim() && automatedMessages.length ? <section className="tideline-section" aria-label="Automated messages"><div className="tideline-label"><span /><strong><WaveGlyph /> Tideline</strong><small>machines and newsletters rest below</small><span /></div><div className="automation-summary"><span className="automation-mark">⌁</span><div><strong>{automatedMessages.length} automated messages</strong><small>{automatedMessages.map((message) => message.from.name ?? message.from.email).slice(0, 2).join(" · ")}</small></div><button onClick={() => onOpenThread(automatedMessages[0]!)} type="button">Review</button><button className="sweep-button" type="button">◇ Sweep away</button></div></section> : null}
-      </section>
+        {hasMoreMessages ? <div className="classification-load-more"><button disabled={isLoadingMoreMessages} onClick={onLoadMoreMessages} type="button">{isLoadingMoreMessages ? "Loading more…" : searchQuery.trim() ? "Load more messages to search" : "Load more messages"}</button></div> : null}
+        {status === "ready" && viewMode === "inbox" && !searchQuery.trim() && automatedMessages.length ? <section className="tideline-section" aria-label="Automated messages"><div className="tideline-label"><span /><strong><WaveGlyph /> Tideline</strong><small>machines and newsletters rest below</small><span /></div><div className="automation-summary"><span className="automation-mark">⌁</span><div><strong>{automatedMessages.length} automated threads</strong><small>{automatedMessages.map((message) => message.from.name ?? message.from.email).slice(0, 2).join(" · ")}</small></div><button onClick={() => onSelectClassification("tideline")} type="button">Review</button>{sweptThreadIds.size ? <button className="sweep-button" onClick={() => setSweptThreadIds(new Set())} type="button">Undo sweep</button> : <button className="sweep-button" onClick={() => setSweptThreadIds(new Set(automatedMessages.map((message) => message.threadId)))} type="button">◇ Sweep away</button>}</div>{sweptThreadIds.size ? <p className="tideline-local-note" role="status">{sweptThreadIds.size} thread{sweptThreadIds.size === 1 ? " is" : "s are"} hidden for this preview only. Nothing changed at Gmail or Outlook.</p> : null}</section> : null}
+        </section>
 
-      {errorMessage && status === "ready" ? (
-        <p className="filter-chip-label" style={{ marginTop: 12 }}>
-          {errorMessage} <a className="inbox-reconnect-link" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>Reconnect Gmail</a>
-        </p>
-      ) : null}
+        {errorMessage && status === "ready" ? (
+          <p className="filter-chip-label" style={{ marginTop: 12 }}>
+            {errorMessage} <a className="inbox-reconnect-link" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>Reconnect Gmail</a>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -2685,6 +2982,7 @@ export function MessageReader({
   onSent = () => {},
   status,
   onAttentionChange,
+  onClassificationChange = async () => {},
   reminder = null,
   onSaveReminder = async () => {},
   onFinishReminder = async () => {},
@@ -2701,6 +2999,7 @@ export function MessageReader({
   onSent?: (result: DeliveryResult) => Promise<void> | void;
   status: "idle" | "loading" | "ready" | "error";
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
+  onClassificationChange?: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   reminder?: Reminder | null;
   onSaveReminder?: (input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }) => Promise<void>;
   onFinishReminder?: (reminder: Reminder, cancelled?: boolean) => Promise<void>;
@@ -2832,6 +3131,7 @@ export function MessageReader({
                         </details>
                       </div>
                       <time className="reader-sent-time" dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time>
+                      <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
                       <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} />
                     </header>
                     {message.bodyHtml ? (
@@ -3606,6 +3906,97 @@ export function getSelectedThreadAccountId(
     ?? null;
 }
 
+function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {
+  return {
+    likely_human: counts.likely_human,
+    automated_or_bulk: counts.automated_or_bulk,
+    uncertain: counts.uncertain + counts.unclassified,
+    unclassified: counts.unclassified,
+    all: counts.all,
+  };
+}
+
+function applyLocalClassification(
+  message: Pick<InboxMessage, "humanClassification" | "humanSignal">,
+  classification: HumanClassification | "reset",
+  override: NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]> | null,
+) {
+  const automatic = message.humanClassification?.automatic;
+  if (classification === "reset") {
+    if (!automatic) return { humanSignal: null, humanClassification: null };
+    return {
+      humanSignal: automatic.score,
+      humanClassification: {
+        automatic,
+        effective: { ...automatic, source: "automatic_heuristic" as const, userOverride: null },
+        userOverride: null,
+      },
+    };
+  }
+  const effective = {
+    classification,
+    score: null,
+    reasonCodes: override?.target.scope === "sender_address"
+      ? ["user_sender_address_override" as const]
+      : override?.target.scope === "sender_domain"
+        ? ["user_sender_domain_override" as const]
+        : ["user_message_override" as const],
+    classifierVersion: null,
+    source: "user_override" as const,
+    userOverride: override,
+  };
+  return {
+    humanSignal: null,
+    humanClassification: {
+      automatic: automatic ?? null,
+      effective,
+      userOverride: override,
+    },
+  };
+}
+
+function classificationTargetsEqual(
+  left: ClassificationCorrectionTarget,
+  right: ClassificationCorrectionTarget,
+) {
+  if (left.scope !== right.scope) return false;
+  if (left.scope === "message") return left.messageId === right.messageId;
+  if (left.scope === "sender_address") return left.address?.trim().toLowerCase() === right.address?.trim().toLowerCase();
+  return left.domain?.trim().toLowerCase() === right.domain?.trim().toLowerCase();
+}
+
+function classificationOverridePriority(scope: ClassificationCorrectionTarget["scope"]) {
+  return scope === "message" ? 3 : scope === "sender_address" ? 2 : 1;
+}
+
+function shouldApplyClassificationTarget(
+  message: Pick<InboxMessage, "humanClassification">,
+  target: ClassificationCorrectionTarget,
+  classification: HumanClassification | "reset",
+) {
+  const existing = message.humanClassification?.userOverride ?? message.humanClassification?.effective.userOverride ?? null;
+  if (classification === "reset") return Boolean(existing && classificationTargetsEqual(existing.target, target));
+  if (!existing || classificationTargetsEqual(existing.target, target)) return true;
+  return classificationOverridePriority(target.scope) > classificationOverridePriority(existing.target.scope);
+}
+
+export function getLatestThreadRows(messages: InboxMessage[]) {
+  const latest = new Map<string, InboxMessage>();
+  for (const message of messages) {
+    const current = latest.get(message.threadId);
+    if (!current || message.receivedAt.localeCompare(current.receivedAt) > 0 || (message.receivedAt === current.receivedAt && message.id.localeCompare(current.id) > 0)) {
+      latest.set(message.threadId, message);
+    }
+  }
+  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || a.id.localeCompare(b.id));
+}
+
+export function mergeMessages(existing: InboxMessage[], incoming: InboxMessage[]) {
+  const merged = new Map(existing.map((message) => [message.id, message]));
+  for (const message of incoming) merged.set(message.id, message);
+  return [...merged.values()];
+}
+
 export function buildThreadDetailRequest(message: Pick<InboxMessage, "threadId" | "accountId">) {
   return `/v1/threads/${encodeURIComponent(message.threadId)}?accountId=${encodeURIComponent(message.accountId)}`;
 }
@@ -3680,7 +4071,7 @@ export function isSessionUnauthorizedError(error: unknown) {
 }
 
 export function isTidelineMessage(message: InboxMessage) {
-  return message.humanSignal !== null && message.humanSignal <= 3;
+  return message.humanClassification?.effective.classification === "automated_or_bulk";
 }
 
 export function getStreamMessages(messages: InboxMessage[], viewMode: "collection" | Mailbox, query = "") {
@@ -3689,7 +4080,6 @@ export function getStreamMessages(messages: InboxMessage[], viewMode: "collectio
   return messages.filter((message) => {
     if (seen.has(message.threadId)) return false;
     seen.add(message.threadId);
-    if (viewMode === "inbox" && isTidelineMessage(message)) return false;
     if (!normalizedQuery) return true;
     return [message.from.name, message.from.email, message.subject, message.snippet]
       .filter((value): value is string => Boolean(value))
@@ -3996,10 +4386,10 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function createDemoThreadDetail(account: MailAccount, threadId: string, messages: InboxMessage[]): ThreadDetail {
+function createDemoThreadDetail(account: MailAccount, threadId: string, messages: InboxMessage[], sourceMessages = messages): ThreadDetail {
   const demoMessagesForThread = threadId === "thread_1"
-    ? [...messages, ...demoThreadHistoryExtras].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
-    : messages;
+    ? [...sourceMessages.filter((message) => message.threadId === threadId), ...demoThreadHistoryExtras].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
+    : sourceMessages.filter((message) => message.threadId === threadId).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
   const latest = demoMessagesForThread[demoMessagesForThread.length - 1];
   const recipients = [{ name: account.displayName, email: account.email }];
   return {

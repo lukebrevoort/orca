@@ -1,4 +1,4 @@
-import type { InboxMessage, MailAccount } from "@orca/shared";
+import type { HumanClassification, HumanClassificationResult, InboxMessage, MailAccount } from "@orca/shared";
 
 export const demoAccount: MailAccount = {
   id: "acct_demo",
@@ -7,6 +7,53 @@ export const demoAccount: MailAccount = {
   displayName: "Luke Brevoort",
   capabilities: { read: true, draft: true, send: true },
 };
+
+function automaticClassification(
+  classification: HumanClassification,
+  score: number | null,
+  reasonCodes: HumanClassificationResult["effective"]["reasonCodes"],
+): HumanClassificationResult {
+  const assessment = {
+    classification,
+    score,
+    reasonCodes,
+    classifierVersion: "m5-v1",
+  } as const;
+  return {
+    automatic: assessment,
+    effective: { ...assessment, source: "automatic_heuristic", userOverride: null },
+    userOverride: null,
+  };
+}
+
+function overriddenClassification(
+  messageId: string,
+  classification: HumanClassification,
+  automatic: ReturnType<typeof automaticClassification>,
+): HumanClassificationResult {
+  const now = "2026-07-08T00:00:00.000Z";
+  const override = {
+    id: `classification-override:demo:${messageId}`,
+    accountId: demoAccount.id,
+    target: { scope: "message" as const, messageId },
+    classification,
+    source: "user_choice" as const,
+    createdAt: now,
+    updatedAt: now,
+  };
+  return {
+    ...automatic,
+    effective: {
+      classification,
+      score: null,
+      reasonCodes: ["user_message_override"],
+      classifierVersion: null,
+      source: "user_override",
+      userOverride: override,
+    },
+    userOverride: override,
+  };
+}
 
 export const demoMessages: InboxMessage[] = [
   {
@@ -23,7 +70,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "focus",
     humanSignal: 9,
-    humanClassification: null,
+    humanClassification: automaticClassification("likely_human", 9, ["direct_recipient"]),
   },
   {
     id: "msg_1_reply",
@@ -39,7 +86,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["SENT"],
     attentionBehavior: "normal",
     humanSignal: 10,
-    humanClassification: null,
+    humanClassification: automaticClassification("likely_human", 10, ["reply_context"]),
   },
   {
     id: "msg_2",
@@ -55,7 +102,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "focus",
     humanSignal: 0,
-    humanClassification: null,
+    humanClassification: automaticClassification("automated_or_bulk", 2, ["provider_transactional_signal"]),
   },
   {
     id: "msg_3",
@@ -70,8 +117,8 @@ export const demoMessages: InboxMessage[] = [
     unread: true,
     labels: ["INBOX"],
     attentionBehavior: "notify",
-    humanSignal: 10,
-    humanClassification: null,
+    humanSignal: null,
+    humanClassification: overriddenClassification("msg_3", "likely_human", automaticClassification("likely_human", 10, ["direct_recipient"])),
   },
   {
     id: "msg_4",
@@ -87,7 +134,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "normal",
     humanSignal: 8,
-    humanClassification: null,
+    humanClassification: automaticClassification("uncertain", null, ["conflicting_evidence"]),
   },
   {
     id: "msg_5",
@@ -103,7 +150,7 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "quiet",
     humanSignal: 7,
-    humanClassification: null,
+    humanClassification: automaticClassification("likely_human", 7, ["direct_recipient"]),
   },
   {
     id: "msg_6",
@@ -119,15 +166,47 @@ export const demoMessages: InboxMessage[] = [
     labels: ["INBOX"],
     attentionBehavior: "hidden",
     humanSignal: 9,
-    humanClassification: null,
+    humanClassification: automaticClassification("automated_or_bulk", 1, ["provider_bulk_signal", "list_id_header"]),
+  },
+  {
+    id: "msg_7_mixed_automated",
+    accountId: "acct_demo",
+    provider: "gmail",
+    providerMessageId: "gmail_7_mixed_automated",
+    threadId: "thread_7",
+    from: { name: "Events Weekly", email: "digest@events.example" },
+    subject: "Re: Team offsite planning",
+    snippet: "A calendar digest was added to this conversation before the personal reply.",
+    receivedAt: "2026-07-07T08:30:00.000Z",
+    unread: false,
+    labels: ["INBOX"],
+    attentionBehavior: "normal",
+    humanSignal: 2,
+    humanClassification: automaticClassification("automated_or_bulk", 2, ["list_id_header"]),
+  },
+  {
+    id: "msg_7_mixed_human",
+    accountId: "acct_demo",
+    provider: "gmail",
+    providerMessageId: "gmail_7_mixed_human",
+    threadId: "thread_7",
+    from: { name: "Jordan Bell", email: "jordan@example.com" },
+    subject: "Re: Team offsite planning",
+    snippet: "I can make Thursday afternoon. I’ll bring the venue notes and a short agenda.",
+    receivedAt: "2026-07-08T09:10:00.000Z",
+    unread: true,
+    labels: ["INBOX"],
+    attentionBehavior: "focus",
+    humanSignal: 8,
+    humanClassification: automaticClassification("likely_human", 8, ["reply_context", "direct_recipient"]),
   },
 ];
 
 export const demoThreadHistoryExtras: InboxMessage[] = [
-  { id: "msg_1_followup", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_followup", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "Exactly. I tightened the reader notes around quoted replies and metadata.", receivedAt: "2026-07-04T15:02:00.000Z", unread: false, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: null },
-  { id: "msg_1_reply_2", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_reply_2", threadId: "thread_1", from: { name: "Luke Brevoort", email: "luke@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "The calmer metadata treatment works. Can we make long threads easier to scan?", receivedAt: "2026-07-05T18:44:00.000Z", unread: false, labels: ["SENT"], attentionBehavior: "normal", humanSignal: 10, humanClassification: null },
-  { id: "msg_1_unread", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_unread", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "I grouped the history by day and kept every quoted reply recoverable.", receivedAt: "2026-07-06T16:20:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: null },
-  { id: "msg_1_latest", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_latest", threadId: "thread_1", from: { name: "Anika Lee", email: "anika@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "One last pass: the unread boundary should be unmistakable in either theme.", receivedAt: "2026-07-07T19:08:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 8, humanClassification: null },
+  { id: "msg_1_followup", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_followup", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "Exactly. I tightened the reader notes around quoted replies and metadata.", receivedAt: "2026-07-04T15:02:00.000Z", unread: false, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: automaticClassification("likely_human", 9, ["reply_context"]) },
+  { id: "msg_1_reply_2", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_reply_2", threadId: "thread_1", from: { name: "Luke Brevoort", email: "luke@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "The calmer metadata treatment works. Can we make long threads easier to scan?", receivedAt: "2026-07-05T18:44:00.000Z", unread: false, labels: ["SENT"], attentionBehavior: "normal", humanSignal: 10, humanClassification: automaticClassification("likely_human", 10, ["reply_context"]) },
+  { id: "msg_1_unread", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_unread", threadId: "thread_1", from: { name: "Maya Chen", email: "maya@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "I grouped the history by day and kept every quoted reply recoverable.", receivedAt: "2026-07-06T16:20:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "focus", humanSignal: 9, humanClassification: automaticClassification("likely_human", 9, ["reply_context"]) },
+  { id: "msg_1_latest", accountId: "acct_demo", provider: "gmail", providerMessageId: "gmail_1_latest", threadId: "thread_1", from: { name: "Anika Lee", email: "anika@example.com" }, subject: "Re: Launch notes for Orca Mail", snippet: "One last pass: the unread boundary should be unmistakable in either theme.", receivedAt: "2026-07-07T19:08:00.000Z", unread: true, labels: ["INBOX"], attentionBehavior: "normal", humanSignal: 8, humanClassification: automaticClassification("likely_human", 8, ["reply_context"]) },
 ];
 
 export const messageBodies: Record<string, string> = {
@@ -149,6 +228,8 @@ export const messageBodies: Record<string, string> = {
   msg_4: "Keeping the palette orca-simple: black or white surfaces, one accent at most.\n\n— Anika",
   msg_5: "Adding you to the thread about inbox filtering — Maya had great notes.\n\n— Dana",
   msg_6: "Seven stories from the product community, collected in your weekly digest.\n\n— Product Dispatch",
+  msg_7_mixed_automated: "This digest was automatically added to the planning conversation.\n\n— Events Weekly",
+  msg_7_mixed_human: "I can make Thursday afternoon. I’ll bring the venue notes and a short agenda.\n\n— Jordan",
 };
 
 export const messageHtmlBodies: Record<string, string> = {

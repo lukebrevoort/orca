@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
-import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId } from "./App";
+import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId } from "./App";
 import { demoMessages } from "./demo-data";
+import { ClassificationTabs } from "./classification-ui";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
@@ -180,22 +181,50 @@ describe("App", () => {
   });
 
   test("separates attention treatments into recoverable inbox views", () => {
-    expect(getMessagesForMailbox(demoMessages, "inbox")).toHaveLength(5);
-    expect(getMessagesForMailbox(demoMessages, "focus")).toHaveLength(3);
+    expect(getMessagesForMailbox(demoMessages, "inbox")).toHaveLength(7);
+    expect(getMessagesForMailbox(demoMessages, "focus")).toHaveLength(4);
     expect(getMessagesForMailbox(demoMessages, "quiet")).toHaveLength(1);
     expect(getMessagesForMailbox(demoMessages, "hidden")).toHaveLength(1);
-    expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(7);
+    expect(getMessagesForMailbox(demoMessages, "all")).toHaveLength(9);
   });
 
-  test("keeps Tideline filtering scoped to Inbox and searches the rendered stream", () => {
+  test("keeps classification filtering server-owned and searches the rendered stream", () => {
     const lowSignal = { ...demoMessages[0]!, id: "low", providerMessageId: "low", threadId: "low", humanSignal: 2 };
     const unknownSignal = { ...demoMessages[1]!, id: "unknown", providerMessageId: "unknown", threadId: "unknown", humanSignal: null, subject: "A singular lighthouse note" };
     const hidden = { ...demoMessages[3]!, id: "hidden", providerMessageId: "hidden", threadId: "hidden", attentionBehavior: "hidden" as const };
 
-    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "inbox").map((message) => message.id)).toEqual(["unknown", "hidden"]);
+    expect(getStreamMessages([lowSignal, unknownSignal, hidden], "inbox").map((message) => message.id)).toEqual(["low", "unknown", "hidden"]);
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "hidden").map((message) => message.id)).toEqual(["low", "unknown", "hidden"]);
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "all", "lighthouse").map((message) => message.id)).toEqual(["unknown"]);
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "collection")).toHaveLength(3);
+  });
+
+  test("uses the latest message as the mixed-thread row while retaining both classes", () => {
+    const mixed = demoMessages.filter((message) => message.threadId === "thread_7");
+    expect(getLatestThreadRows(mixed).map((message) => message.id)).toEqual(["msg_7_mixed_human"]);
+    expect(mixed.find((message) => message.id === "msg_7_mixed_automated")?.humanClassification?.effective.classification).toBe("automated_or_bulk");
+  });
+
+  test("merges paginated messages without losing refreshed rows", () => {
+    const first = demoMessages[0]!;
+    const refreshed = { ...first, snippet: "Updated after the next page loaded." };
+    const appended = { ...demoMessages[1]!, id: "page-two-message", providerMessageId: "page-two-message" };
+
+    expect(mergeMessages([first], [refreshed, appended])).toEqual([refreshed, appended]);
+  });
+
+  test("keeps classification tab counts and the controlled panel accessible", () => {
+    const html = renderToStaticMarkup(
+      <ClassificationTabs
+        active="human"
+        counts={{ likely_human: 4, automated_or_bulk: 2, uncertain: 1, unclassified: 0, all: 7 }}
+        onChange={() => {}}
+      />,
+    );
+
+    expect(html).toContain('aria-controls="classification-panel"');
+    expect(html).toContain('aria-label="Human Inbox, 4 messages"');
+    expect(html).toContain("message counts");
   });
 
   test("groups stream rows by local calendar date instead of read state", () => {
@@ -425,7 +454,9 @@ describe("App", () => {
     expect(collectComposeContacts(demoMessages, "luke@example.com").map((contact) => contact.email)).toEqual([
       "anika@example.com",
       "dana@example.com",
+      "digest@events.example",
       "alerts@harborbank.example",
+      "jordan@example.com",
       "maya@example.com",
       "family@example.com",
       "digest@dispatch.example",
