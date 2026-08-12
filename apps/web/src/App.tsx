@@ -2604,7 +2604,7 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
             type="button"
           >
             <span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span>
-            <small>{pinTopBarLabel(pin, person)}</small>
+            <small>{pin.label}</small>
           </button>
           <button aria-label={`Customize ${pin.label} pin`} className="pinned-pin-edit" onClick={() => setEditingPinId(pin.id)} title={`Customize ${pin.label}`} type="button">✎</button>
         </div>;
@@ -2620,8 +2620,9 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
 function PinAppearanceEditor({ pin, onClose, onSave }: {
   pin: Pin;
   onClose: () => void;
-  onSave: (pin: Pin, patch: Partial<Pick<Pin, "icon" | "color">>) => Promise<void>;
+  onSave: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
+  const [label, setLabel] = useState(pin.label);
   const [icon, setIcon] = useState<PinIcon>(pin.icon);
   const [color, setColor] = useState<string>(pin.color);
   const [saving, setSaving] = useState(false);
@@ -2676,10 +2677,15 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    const trimmedLabel = label.trim();
+    if (!trimmedLabel) {
+      setError("Give this pin a display name.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      await onSave(pin, { icon, color });
+      await onSave(pin, { label: trimmedLabel, icon, color });
       onClose();
     } catch (saveError) {
       setError(getErrorMessage(saveError));
@@ -2698,8 +2704,12 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
       <form onSubmit={submit}>
         <div className="pin-appearance-preview" style={{ "--pin-color": color } as CSSProperties}>
           <span>{pinTopBarMark({ ...pin, icon }, null)}</span>
-          <div><strong>{pin.label}</strong><small>{pinTopBarLabel({ ...pin, icon }, null)}</small></div>
+          <div><strong>{label || "Untitled pin"}</strong><small>{pinTopBarLabel({ ...pin, icon }, null)}</small></div>
         </div>
+        <label className="pin-appearance-name">
+          <span>Display name</span>
+          <input aria-label="Pin display name" disabled={saving} maxLength={120} onChange={(event) => setLabel(event.target.value)} value={label} />
+        </label>
         <fieldset className="pin-appearance-icons">
           <legend>Icon</legend>
           <div aria-label="Pin icons" role="group">
@@ -3069,7 +3079,11 @@ function InboxView({
                     <div className="pin-builder-icon-options" aria-label="Choose a pin icon" role="group">
                       {pinIconOptions.map((option) => <button aria-label={`${option.label}${pinFilterIcon === option.id ? ", selected" : ""}`} aria-pressed={pinFilterIcon === option.id} className={pinFilterIcon === option.id ? "pin-builder-icon-selected" : ""} key={option.id} onClick={() => setPinFilterIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span></button>)}
                     </div>
-                    <label className="pin-builder-color-field"><span>Color</span><input aria-label="Pin color" onChange={(event) => setPinFilterColor(event.target.value)} type="color" value={pinFilterColor} /><code>{pinFilterColor}</code></label>
+                    <div className="pin-builder-color-options" aria-label="Choose a pin color" role="group">
+                      {pinColorOptions.map((option) => <button aria-label={`${option.name}${pinFilterColor.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={pinFilterColor.toLowerCase() === option.value} className="pin-builder-color-swatch" key={option.value} onClick={() => setPinFilterColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
+                      <label className="pin-builder-custom-color"><span>Custom</span><input aria-label="Custom pin color" onChange={(event) => setPinFilterColor(event.target.value)} type="color" value={pinFilterColor} /></label>
+                      <code>{pinFilterColor}</code>
+                    </div>
                   </fieldset>
                   <section aria-live="polite" className="pin-builder-preview">
                     <header><div><span>Preview</span><strong>{pinPreview.count} matching {pinPreview.count === 1 ? "thread" : "threads"}</strong></div><small>{pinFilterDisplayLabel}</small></header>
