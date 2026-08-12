@@ -831,10 +831,7 @@ describe("Orca API", () => {
       assert.equal(focus.messages[0].humanSignal, null);
       assert.equal(focus.messages[1].humanSignal, null);
       assert.equal(focus.messages[0].humanClassification.effective.classification, "unclassified");
-      assert.deepEqual(focus.counts, {
-        attention: { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 },
-        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 4, all: 4 },
-      });
+      assert.deepEqual(focus.counts, { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 });
       assert.deepEqual((await (await request("quiet")).json()).messages.map((message: { id: string }) => message.id), ["email_news"]);
       assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden"]);
     } finally {
@@ -909,10 +906,7 @@ describe("Orca API", () => {
         { id: "secondary_notify", accountId: "acct_secondary", attentionBehavior: "notify" },
         { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
       ]);
-      assert.deepEqual(firstPage.counts, {
-        attention: { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 },
-        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 4, all: 4 },
-      });
+      assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
       assert.equal(typeof firstPage.nextCursor, "string");
 
       const secondResponse = await testApp.request(`/v1/inbox?view=all&limit=2&cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers });
@@ -1008,7 +1002,11 @@ describe("Orca API", () => {
         attention: { focus: 0, normal: 7, quiet: 0, hidden: 0, all: 7 },
         classification: { likely_human: 1, automated_or_bulk: 4, uncertain: 1, unclassified: 1, all: 7 },
       });
-      const second = await (await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).json();
+      db.insert(oauthAccounts).values({ id: "new_account", userId: "human_user", provider: "gmail", providerEmail: "new@gmail.com", providerId: "new-gmail" }).run();
+      const changedAccountSet = await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(first.nextCursor)}`, { headers });
+      assert.equal(changedAccountSet.status, 400);
+      const fresh = await (await testApp.request("/v1/inbox?view=normal&classification=tideline&limit=2", { headers })).json();
+      const second = await (await testApp.request(`/v1/inbox?view=normal&classification=tideline&limit=2&cursor=${encodeURIComponent(fresh.nextCursor)}`, { headers })).json();
       assert.deepEqual(second.messages.map((message: { id: string }) => message.id), ["bulk_page_2", "outlook_same_sender"]);
       assert.equal(second.nextCursor, null);
       assert.equal((await testApp.request(`/v1/inbox?view=normal&classification=human&cursor=${encodeURIComponent(first.nextCursor)}`, { headers })).status, 400);
@@ -1142,6 +1140,62 @@ describe("Orca API", () => {
         ["m5_gmail_mixed_human", "likely_human"],
       ]);
       assert.equal((await testApp.request("/v1/threads/gmail:acct_m5_gmail:mixed-thread?accountId=acct_m5_outlook", { headers })).status, 404);
+
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("resolves classification for a mailbox-sized page with account overrides loaded once", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 24).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-human-inbox-mailbox-test-"));
+    const dbPath = join(tempDir, "human-inbox-mailbox.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "mailbox_user", email: "mailbox@example.com", displayName: "Mailbox User" }).run();
+      db.insert(oauthAccounts).values({ id: "mailbox_account", userId: "mailbox_user", provider: "gmail", providerEmail: "mailbox@gmail.com", providerId: "mailbox-gmail" }).run();
+      const messageCount = 250;
+      db.insert(threads).values(Array.from({ length: messageCount }, (_, index) => ({
+        id: `mailbox_thread_${index}`,
+        accountId: "mailbox_account",
+        providerThreadId: `mailbox-provider-thread-${index}`,
+        subject: `Mailbox message ${index}`,
+        latestReceivedAt: new Date(2026, 7, 10, 12, 0, index),
+        messageCount: 1,
+        isRead: false,
+      }))).run();
+      db.insert(emails).values(Array.from({ length: messageCount }, (_, index) => ({
+        id: `mailbox_email_${index}`,
+        accountId: "mailbox_account",
+        threadId: `mailbox_thread_${index}`,
+        providerMessageId: `mailbox-provider-message-${index}`,
+        fromAddress: `sender-${index}@example.com`,
+        subject: `Mailbox message ${index}`,
+        receivedAt: new Date(2026, 7, 10, 12, 0, index),
+        isRead: false,
+        humanSignal: 8,
+        humanClassification: "likely_human",
+        humanClassificationReasons: JSON.stringify(["direct_recipient"]),
+        humanClassifierVersion: "m5-v1",
+      }))).run();
+      const now = new Date("2026-08-10T13:00:00.000Z");
+      db.insert(humanClassificationOverrides).values({
+        id: "mailbox-domain-rule", accountId: "mailbox_account", targetType: "sender_domain", targetValue: "example.com", classification: "likely_human", createdAt: now, updatedAt: now,
+      }).run();
+
+      const session = await createSession(db, "mailbox_user");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const response = await testApp.request("/v1/inbox?classification=human&limit=10", { headers: { cookie: `orca_session=${session.token}` } });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.messages.length, 10);
+      assert.equal(body.counts.classification.likely_human, messageCount);
+      assert.equal(typeof body.nextCursor, "string");
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

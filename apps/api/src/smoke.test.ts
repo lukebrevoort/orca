@@ -89,10 +89,7 @@ describe("first-slice API smoke test", () => {
           effective: { classification: "unclassified", score: null, reasonCodes: ["insufficient_evidence"], classifierVersion: null, source: "automatic_heuristic", userOverride: null },
         },
       }]);
-      assert.deepEqual(inbox.counts, {
-        attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
-        classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 1, all: 1 },
-      });
+      assert.deepEqual(inbox.counts, { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 });
     } finally {
       sqlite.close();
     }
