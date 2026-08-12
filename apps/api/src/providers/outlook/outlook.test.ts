@@ -117,7 +117,7 @@ describe("Outlook provider", () => {
   });
 
   test("normalizes a Graph message into the shared provider model", () => {
-    expect(normalizeOutlookMessage(outlookMessageFixture, { accountId: "account-1" })).toEqual({
+    expect(normalizeOutlookMessage(outlookMessageFixture, { accountId: "account-1", accountEmail: "luke@example.com" })).toEqual({
       id: "outlook:account-1:message-1",
       accountId: "account-1",
       provider: "outlook",
@@ -136,6 +136,14 @@ describe("Outlook provider", () => {
       bodyHtml: "<p>Hello from Microsoft Graph</p>",
       internetMessageId: "<message-1@example.com>",
       references: ["<earlier@example.com>"],
+      classificationEvidence: {
+        sender: { name: "Ada", email: "ada@example.com" },
+        recipients: [{ name: "Luke", email: "luke@example.com" }, { name: "Grace", email: "grace@example.com" }],
+        recipientRelationship: "direct",
+        reply: { hasInReplyTo: false, referenceCount: 1 },
+        headerSignals: [],
+        providerSignals: [],
+      },
       raw: {
         provider: "outlook",
         accountId: "account-1",
@@ -144,6 +152,20 @@ describe("Outlook provider", () => {
         labelIds: ["Focused"],
       },
     });
+  });
+
+  test("reduces Outlook headers and categories to provider-neutral classifier evidence", () => {
+    const normalized = normalizeOutlookMessage({
+      ...outlookMessageFixture,
+      internetMessageHeaders: [
+        { name: "List-Id", value: "<weekly.example>" },
+        { name: "Auto-Submitted", value: "auto-generated" },
+      ],
+      categories: ["Marketing updates", "System notifications"],
+    }, { accountId: "account-1", accountEmail: "luke@example.com" });
+
+    expect(normalized.classificationEvidence?.headerSignals).toEqual(["list_id", "auto_submitted"]);
+    expect(normalized.classificationEvidence?.providerSignals).toEqual(["promotions_label", "automated_category"]);
   });
 
   test("normalizes missing optional fields deterministically", () => {

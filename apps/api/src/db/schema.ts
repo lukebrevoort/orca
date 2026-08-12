@@ -148,6 +148,10 @@ export const emails = sqliteTable(
     isStarred: integer("is_starred", { mode: "boolean" }).notNull().default(false),
     isDraft: integer("is_draft", { mode: "boolean" }).notNull().default(false),
     humanSignal: integer("human_signal"),
+    humanClassification: text("human_classification"),
+    humanClassificationReasons: text("human_classification_reasons"),
+    humanClassifierVersion: text("human_classifier_version"),
+    humanClassificationEvidence: text("human_classification_evidence"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(createdAtDefault),
@@ -163,6 +167,10 @@ export const emails = sqliteTable(
     accountReceivedAtIdx: index("emails_account_received_at_idx").on(
       table.accountId,
       table.receivedAt,
+    ),
+    accountHumanClassificationIdx: index("emails_account_human_classification_idx").on(
+      table.accountId,
+      table.humanClassification,
     ),
     threadIdx: index("emails_thread_idx").on(table.threadId),
   }),

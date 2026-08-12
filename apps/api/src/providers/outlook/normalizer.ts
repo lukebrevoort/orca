@@ -1,9 +1,10 @@
 import type { MailContact, NormalizedMessage } from "@orca/shared";
+import { buildHumanClassificationEvidence } from "../../classification/evidence.ts";
 import type { GraphContact, GraphMessage } from "./types.ts";
 
 export function normalizeOutlookMessage(
   message: GraphMessage,
-  options: { accountId: string },
+  options: { accountId: string; accountEmail?: string | null },
 ): NormalizedMessage {
   const threadId = message.conversationId || message.id;
   const headers = new Map(
@@ -18,6 +19,10 @@ export function normalizeOutlookMessage(
   const text = message.body?.contentType?.toLowerCase() === "text"
     ? message.body.content ?? null
     : null;
+  const from = contact(message.from);
+  const to = (message.toRecipients ?? []).map(contact);
+  const cc = (message.ccRecipients ?? []).map(contact);
+  const bcc = (message.bccRecipients ?? []).map(contact);
 
   return {
     id: `outlook:${options.accountId}:${message.id}`,
@@ -25,10 +30,10 @@ export function normalizeOutlookMessage(
     provider: "outlook",
     providerMessageId: message.id,
     threadId: `outlook:${options.accountId}:${threadId}`,
-    from: contact(message.from),
-    to: (message.toRecipients ?? []).map(contact),
-    cc: (message.ccRecipients ?? []).map(contact),
-    bcc: (message.bccRecipients ?? []).map(contact),
+    from,
+    to,
+    cc,
+    bcc,
     subject: message.subject ?? "(No subject)",
     snippet: message.bodyPreview ?? "",
     receivedAt: validDate(message.receivedDateTime),
@@ -38,6 +43,13 @@ export function normalizeOutlookMessage(
     bodyHtml: html,
     internetMessageId: message.internetMessageId ?? null,
     references: parseReferences(headers.get("references")),
+    classificationEvidence: buildHumanClassificationEvidence({
+      sender: from,
+      recipients: [...to, ...cc, ...bcc],
+      accountEmail: options.accountEmail,
+      headers,
+      providerSignals: outlookProviderSignals(message.categories ?? []),
+    }),
     raw: {
       provider: "outlook",
       accountId: options.accountId,
@@ -46,6 +58,18 @@ export function normalizeOutlookMessage(
       labelIds: message.categories ?? [],
     },
   };
+}
+
+function outlookProviderSignals(categories: string[]) {
+  const signals = new Set<"bulk_or_marketing_label" | "promotions_label" | "transactional_category" | "automated_category">();
+  for (const category of categories) {
+    const normalized = category.trim().toLowerCase();
+    if (/promotion|marketing/.test(normalized)) signals.add("promotions_label");
+    if (/newsletter|bulk|mailing list/.test(normalized)) signals.add("bulk_or_marketing_label");
+    if (/receipt|billing|transaction/.test(normalized)) signals.add("transactional_category");
+    if (/automated|notification|system/.test(normalized)) signals.add("automated_category");
+  }
+  return [...signals];
 }
 
 function contact(value: GraphContact | null | undefined): MailContact {

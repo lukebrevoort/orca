@@ -11,6 +11,7 @@ describe("Gmail normalizer", () => {
   test("maps Gmail messages to normalized Orca messages", () => {
     const normalized = normalizeGmailMessage(gmailMessageFixture, {
       accountId: "acct_123",
+      accountEmail: "luke@example.com",
     });
 
     assert.equal(normalized.provider, "gmail");
@@ -36,6 +37,33 @@ describe("Gmail normalizer", () => {
       threadId: "thread_123",
       labelIds: ["INBOX", "UNREAD", "Label_42"],
     });
+    assert.deepEqual(normalized.classificationEvidence, {
+      sender: { name: "Maya Chen", email: "maya@example.com" },
+      recipients: [{ name: "Luke Brevoort", email: "luke@example.com" }],
+      recipientRelationship: "direct",
+      reply: { hasInReplyTo: false, referenceCount: 0 },
+      headerSignals: [],
+      providerSignals: [],
+    });
+  });
+
+  test("reduces Gmail list headers and categories to safe classifier evidence", () => {
+    const normalized = normalizeGmailMessage({
+      ...gmailMessageFixture,
+      labelIds: ["INBOX", "CATEGORY_PROMOTIONS", "CATEGORY_UPDATES"],
+      payload: {
+        ...gmailMessageFixture.payload,
+        headers: [
+          ...(gmailMessageFixture.payload?.headers ?? []),
+          { name: "List-Id", value: "<weekly.example>" },
+          { name: "List-Unsubscribe", value: "<https://example.com/unsubscribe>" },
+          { name: "Precedence", value: "bulk" },
+        ],
+      },
+    }, { accountId: "acct_123", accountEmail: "luke@example.com" });
+
+    assert.deepEqual(normalized.classificationEvidence?.headerSignals, ["list_id", "list_unsubscribe", "precedence_bulk"]);
+    assert.deepEqual(normalized.classificationEvidence?.providerSignals, ["promotions_label", "automated_category"]);
   });
 
   test("maps Gmail labels to normalized labels", () => {
