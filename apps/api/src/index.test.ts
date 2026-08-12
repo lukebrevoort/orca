@@ -8,8 +8,8 @@ import { eq } from "drizzle-orm";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
-import { app, createApp } from "./index.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
 import { GmailSyncError } from "./providers/gmail/sync.ts";
 import { gmailProvider } from "./providers/gmail/provider.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
@@ -1461,6 +1461,151 @@ describe("Orca API", () => {
       delete process.env.SESSION_SECRET;
       delete process.env.TOKEN_ENCRYPTION_KEY;
     }
+  });
+
+  test("keeps local human classification overrides account-scoped and resolves precedence without provider mutations", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-classification-overrides-test-"));
+    const dbPath = join(tempDir, "classification-overrides.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([
+        { id: "owner", email: "owner@example.com" },
+        { id: "other", email: "other@example.com" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "gmail", userId: "owner", provider: "gmail", providerEmail: "owner@gmail.com", providerId: "owner-gmail" },
+        { id: "outlook", userId: "owner", provider: "outlook", providerEmail: "owner@outlook.com", providerId: "owner-outlook" },
+        { id: "other-account", userId: "other", provider: "gmail", providerEmail: "other@gmail.com", providerId: "other-gmail" },
+      ]).run();
+      db.insert(threads).values([
+        { id: "gmail-thread", accountId: "gmail", providerThreadId: "gmail-thread" },
+        { id: "outlook-thread", accountId: "outlook", providerThreadId: "outlook-thread" },
+        { id: "other-thread", accountId: "other-account", providerThreadId: "other-thread" },
+      ]).run();
+      db.insert(emails).values([
+        {
+          id: "gmail-message", accountId: "gmail", threadId: "gmail-thread", providerMessageId: "gmail-message",
+          fromAddress: "Maya@Example.com", humanSignal: 2, humanClassification: "automated_or_bulk",
+          humanClassificationReasons: JSON.stringify(["list_id_header"]), humanClassifierVersion: "m5-v1",
+        },
+        {
+          id: "gmail-second", accountId: "gmail", threadId: "gmail-thread", providerMessageId: "gmail-second",
+          fromAddress: "maya@example.com", humanSignal: 2, humanClassification: "automated_or_bulk",
+          humanClassificationReasons: JSON.stringify(["list_id_header"]), humanClassifierVersion: "m5-v1",
+        },
+        {
+          id: "outlook-message", accountId: "outlook", threadId: "outlook-thread", providerMessageId: "outlook-message",
+          fromAddress: "news@outlook.example", humanSignal: 7, humanClassification: "likely_human",
+          humanClassificationReasons: JSON.stringify(["direct_recipient"]), humanClassifierVersion: "m5-v1",
+        },
+        { id: "other-message", accountId: "other-account", threadId: "other-thread", providerMessageId: "other-message", fromAddress: "other@example.com" },
+      ]).run();
+
+      const session = await createSession(db, "owner");
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      const providerCalls: string[] = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        gmailTransport: {
+          async saveDraft() { providerCalls.push("save"); return { providerDraftId: "unused" }; },
+          async deleteDraft() { providerCalls.push("delete"); },
+          async send() { providerCalls.push("send"); return { providerMessageId: "unused", providerThreadId: "unused" }; },
+        },
+      });
+      const create = async (body: unknown) => testApp.request("/v1/classification/overrides", {
+        method: "POST", headers, body: JSON.stringify(body),
+      });
+      const resolve = async (accountId: string, messageId: string) => testApp.request(
+        `/v1/classification/resolve?accountId=${accountId}&messageId=${messageId}`, { headers },
+      );
+
+      assert.equal((await create({ accountId: "gmail", target: { scope: "message", messageId: "missing" }, classification: "likely_human" })).status, 404);
+      assert.equal((await create({ accountId: "gmail", target: { scope: "message", messageId: "   " }, classification: "likely_human" })).status, 400);
+      assert.equal((await create({ accountId: "gmail", target: { scope: "sender_domain", domain: "invalid domain" }, classification: "likely_human" })).status, 400);
+      assert.equal((await create({ accountId: "other-account", target: { scope: "sender_domain", domain: "example.com" }, classification: "likely_human" })).status, 404);
+      assert.equal((await create({ accountId: "outlook", target: { scope: "message", messageId: "gmail-message" }, classification: "likely_human" })).status, 404);
+      assert.equal((await resolve("outlook", "gmail-message")).status, 404);
+      assert.equal((await testApp.request("/v1/classification/resolve?accountId=gmail&messageId=%20gmail-message%20", { headers })).status, 200);
+
+      const domain = await create({ accountId: "gmail", target: { scope: "sender_domain", domain: "EXAMPLE.COM" }, classification: "uncertain" });
+      assert.equal(domain.status, 201);
+      const domainRule = await domain.json();
+      assert.equal(domainRule.target.domain, "example.com");
+      assert.deepEqual((await (await testApp.request("/v1/classification/overrides?accountId=gmail", { headers })).json()).map((rule: { id: string }) => rule.id), [domainRule.id]);
+      assert.equal((await create({ accountId: "gmail", target: { scope: "sender_domain", domain: "example.com" }, classification: "likely_human" })).status, 409);
+      let resolved = await (await resolve("gmail", "gmail-message")).json();
+      assert.equal(resolved.effective.classification, "uncertain");
+      assert.equal(resolved.effective.userOverride.target.scope, "sender_domain");
+      assert.deepEqual(resolved.automatic, {
+        classification: "automated_or_bulk", score: 2, reasonCodes: ["list_id_header"], classifierVersion: "m5-v1",
+      });
+
+      const address = await create({ accountId: "gmail", target: { scope: "sender_address", address: "MAYA@EXAMPLE.COM" }, classification: "likely_human" });
+      assert.equal(address.status, 201);
+      const addressRule = await address.json();
+      assert.equal(addressRule.target.address, "maya@example.com");
+      assert.equal((await create({ accountId: "gmail", target: { scope: "sender_address", address: "maya@example.com" }, classification: "uncertain" })).status, 409);
+      resolved = await (await resolve("gmail", "gmail-message")).json();
+      assert.equal(resolved.effective.userOverride.id, addressRule.id);
+
+      const message = await create({ accountId: "gmail", target: { scope: "message", messageId: "gmail-message" }, classification: "automated_or_bulk" });
+      assert.equal(message.status, 201);
+      const messageRule = await message.json();
+      resolved = await (await resolve("gmail", "gmail-message")).json();
+      assert.equal(resolved.effective.userOverride.id, messageRule.id);
+      assert.equal((await testApp.request(`/v1/classification/overrides/${messageRule.id}?accountId=other-account`, { method: "PATCH", headers, body: JSON.stringify({ classification: "uncertain" }) })).status, 404);
+      const updated = await testApp.request(`/v1/classification/overrides/${messageRule.id}?accountId=gmail`, { method: "PATCH", headers, body: JSON.stringify({ classification: "likely_human" }) });
+      assert.equal(updated.status, 200);
+      assert.equal((await updated.json()).classification, "likely_human");
+
+      assert.equal((await testApp.request(`/v1/classification/overrides/${messageRule.id}?accountId=gmail`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await (await resolve("gmail", "gmail-message")).json()).effective.userOverride.id, addressRule.id);
+      assert.equal((await testApp.request(`/v1/classification/overrides/${addressRule.id}?accountId=gmail`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await (await resolve("gmail", "gmail-message")).json()).effective.userOverride.id, domainRule.id);
+      assert.equal((await testApp.request(`/v1/classification/overrides/${domainRule.id}?accountId=gmail`, { method: "DELETE", headers })).status, 204);
+      resolved = await (await resolve("gmail", "gmail-message")).json();
+      assert.equal(resolved.userOverride, null);
+      assert.equal(resolved.effective.source, "automatic_heuristic");
+      assert.equal(resolved.effective.classification, "automated_or_bulk");
+
+      const outlook = await create({ accountId: "outlook", target: { scope: "sender_domain", domain: "outlook.example" }, classification: "automated_or_bulk" });
+      assert.equal(outlook.status, 201);
+      assert.equal((await (await resolve("outlook", "outlook-message")).json()).effective.classification, "automated_or_bulk");
+      assert.deepEqual((await (await testApp.request("/v1/classification/overrides?accountId=gmail", { headers })).json()), []);
+      assert.deepEqual(providerCalls, []);
+
+      db.delete(oauthAccounts).where(eq(oauthAccounts.id, "outlook")).run();
+      assert.equal(db.select().from(humanClassificationOverrides).where(eq(humanClassificationOverrides.accountId, "outlook")).get(), undefined);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("resolves a large message batch from one preloaded classification override map", () => {
+    const rules = Array.from({ length: 300 }, (_, index) => ({
+      id: `rule_${index}`,
+      accountId: "account",
+      targetType: "sender_address",
+      targetValue: `sender-${index}@example.com`,
+      classification: "likely_human",
+      source: "user_choice",
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    }));
+    const resolve = createHumanClassificationOverrideResolver(rules);
+    const resolved = Array.from({ length: 300 }, (_, index) => resolve({
+      id: `message_${index}`,
+      fromAddress: `Sender-${index}@Example.com`,
+    }));
+
+    assert.equal(resolved.filter(Boolean).length, 300);
+    assert.equal(resolved[299]?.id, "rule_299");
   });
 
   test("marks entire thread as read including all emails", async () => {

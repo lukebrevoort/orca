@@ -83,6 +83,13 @@ export const humanClassificationSourceSchema = z.enum([
 ]);
 export type HumanClassificationSource = z.infer<typeof humanClassificationSourceSchema>;
 
+export const humanClassificationOverrideScopeSchema = z.enum([
+  "message",
+  "sender_address",
+  "sender_domain",
+]);
+export type HumanClassificationOverrideScope = z.infer<typeof humanClassificationOverrideScopeSchema>;
+
 /**
  * These codes describe evidence, not an assertion about who authored a
  * message. Keep them stable: clients can render the codes as user-safe copy.
@@ -114,6 +121,71 @@ export const humanClassificationAssessmentSchema = z.object({
 }).strict();
 export type HumanClassificationAssessment = z.infer<typeof humanClassificationAssessmentSchema>;
 
+const humanClassificationOverrideValueSchema = z.string().trim().min(1).max(320);
+const humanClassificationMessageIdSchema = z.string().trim().min(1).max(512);
+
+export const humanClassificationOverrideTargetSchema = z.discriminatedUnion("scope", [
+  z.object({
+    scope: z.literal("message"),
+    messageId: humanClassificationMessageIdSchema,
+  }).strict(),
+  z.object({
+    scope: z.literal("sender_address"),
+    address: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+  }).strict(),
+  z.object({
+    scope: z.literal("sender_domain"),
+    domain: humanClassificationOverrideValueSchema.transform((value) => value.toLowerCase()),
+  }).strict(),
+]).superRefine((target, context) => {
+  if (target.scope === "sender_domain" && !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(target.domain)) {
+    context.addIssue({ code: "custom", path: ["domain"], message: "Expected a domain name for sender-domain overrides" });
+  }
+});
+export type HumanClassificationOverrideTarget = z.infer<typeof humanClassificationOverrideTargetSchema>;
+
+/** Use this before comparing an existing rule target with a proposed one. */
+export function normalizeHumanClassificationOverrideTarget(target: unknown): HumanClassificationOverrideTarget {
+  return humanClassificationOverrideTargetSchema.parse(target);
+}
+
+export const humanClassificationOverrideSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  target: humanClassificationOverrideTargetSchema,
+  classification: humanClassificationSchema,
+  source: z.literal("user_choice"),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type HumanClassificationOverride = z.infer<typeof humanClassificationOverrideSchema>;
+
+export const createHumanClassificationOverrideSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  target: humanClassificationOverrideTargetSchema,
+  classification: humanClassificationSchema,
+}).strict();
+export type CreateHumanClassificationOverride = z.infer<typeof createHumanClassificationOverrideSchema>;
+
+export const updateHumanClassificationOverrideSchema = z.object({
+  classification: humanClassificationSchema,
+}).strict();
+export type UpdateHumanClassificationOverride = z.infer<typeof updateHumanClassificationOverrideSchema>;
+
+export const listHumanClassificationOverridesSchema = z.object({
+  accountId: nonEmptyStringSchema,
+}).strict();
+export type ListHumanClassificationOverrides = z.infer<typeof listHumanClassificationOverridesSchema>;
+
+export const deleteHumanClassificationOverrideSchema = listHumanClassificationOverridesSchema;
+export type DeleteHumanClassificationOverride = z.infer<typeof deleteHumanClassificationOverrideSchema>;
+
+export const resolveHumanClassificationSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  messageId: humanClassificationMessageIdSchema,
+}).strict();
+export type ResolveHumanClassification = z.infer<typeof resolveHumanClassificationSchema>;
+
 /**
  * The automatic assessment is retained when a person corrects Orca. The
  * effective assessment is the one surfaces should use for filtering and copy.
@@ -122,7 +194,9 @@ export const humanClassificationResultSchema = z.object({
   automatic: humanClassificationAssessmentSchema.nullable(),
   effective: humanClassificationAssessmentSchema.extend({
     source: humanClassificationSourceSchema,
+    userOverride: humanClassificationOverrideSchema.nullable().default(null),
   }).strict(),
+  userOverride: humanClassificationOverrideSchema.nullable().default(null),
 }).strict();
 export type HumanClassificationResult = z.infer<typeof humanClassificationResultSchema>;
 

@@ -279,6 +279,34 @@ export const senderAttentionRules = sqliteTable(
   }),
 );
 
+export const humanClassificationOverrides = sqliteTable(
+  "human_classification_overrides",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    targetType: text("target_type").notNull(),
+    targetValue: text("target_value").notNull(),
+    classification: text("classification").notNull(),
+    source: text("source").notNull().default("user_choice"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    accountTargetUniqueIdx: uniqueIndex("human_classification_overrides_account_target_unique_idx").on(
+      table.accountId,
+      table.targetType,
+      table.targetValue,
+    ),
+    accountIdx: index("human_classification_overrides_account_idx").on(table.accountId),
+  }),
+);
+
 export const attentionViewSettings = sqliteTable(
   "attention_view_settings",
   {
