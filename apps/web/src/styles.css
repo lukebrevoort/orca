@@ -4616,7 +4616,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   }
 
   :root[data-reader-density="compact"] .message-meta > span:last-child {
-    right: 14px;
+    right: 340px;
     top: 11px;
   }
 
@@ -4631,6 +4631,15 @@ button, input, textarea { font-family: var(--orca-font-body); }
 
   :root[data-reader-density="compact"] .message-row-wrap > .sender-attention-control {
     top: 11px;
+  }
+
+  :root[data-reader-density="compact"] .inbox-view-later .message-row {
+    min-height: 88px;
+    padding-right: 305px;
+  }
+
+  :root[data-reader-density="compact"] .inbox-view-later .message-meta > span:last-child {
+    right: 305px;
   }
 }
 
