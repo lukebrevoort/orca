@@ -171,6 +171,8 @@ The BRE-151 manual verification card is available at
 `http://localhost:5173/docs/bre-151-validation.html`.
 The BRE-159 M3 writing and delivery verification guide is available at
 `http://localhost:5173/docs/bre-159-validation.html`.
+The BRE-252 M5 fixture, Human Inbox, and milestone closeout guide is available at
+`http://localhost:5173/docs/bre-252-validation.html`.
 
 ### Local feedback
 

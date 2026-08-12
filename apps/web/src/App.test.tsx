@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
+import { m5InboxFixture } from "@orca/shared";
 import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId } from "./App";
+import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
-import { ClassificationTabs } from "./classification-ui";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
@@ -197,6 +198,29 @@ describe("App", () => {
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "hidden").map((message) => message.id)).toEqual(["low", "unknown", "hidden"]);
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "all", "lighthouse").map((message) => message.id)).toEqual(["unknown"]);
     expect(getStreamMessages([lowSignal, unknownSignal, hidden], "collection")).toHaveLength(3);
+  });
+
+  test("renders all M5 classification views and keeps corrections account-scoped", () => {
+    const counts = { likely_human: 5, automated_or_bulk: 3, uncertain: 2, unclassified: 1, all: 10 } as const;
+    const review = m5InboxFixture.filter((message) => ["uncertain", "unclassified"].includes(message.humanClassification?.effective.classification ?? ""));
+    const human = m5InboxFixture.filter((message) => message.humanClassification?.effective.classification === "likely_human");
+    const override = m5InboxFixture.find((message) => message.id === "m5_gmail_override")!;
+    const tabs = renderToStaticMarkup(<ClassificationTabs active="uncertain" counts={counts} onChange={() => {}} />);
+    const correction = renderToStaticMarkup(<ClassificationCorrection message={override} onCorrect={async () => {}} />);
+
+    expect(human).toHaveLength(5);
+    expect(review.map((message) => message.id)).toEqual(["m5_gmail_ambiguous", "m5_outlook_unknown"]);
+    expect(new Set(m5InboxFixture.map((message) => message.accountId))).toEqual(new Set(["acct_m5_gmail", "acct_m5_outlook"]));
+    expect(tabs).toContain('aria-label="Inbox classification views"');
+    expect(tabs).toContain('aria-selected="true"');
+    expect(tabs).toContain("Human Inbox");
+    expect(tabs).toContain("Tideline");
+    expect(tabs).toContain("Review");
+    expect(tabs).toContain("All mail");
+    expect(correction).toContain("Correct classification: Likely human");
+    expect(correction).toContain("You");
+    expect(classificationExplanation(override)).toContain("Your correction");
+    expect(override.accountId).toBe("acct_m5_gmail");
   });
 
   test("uses the latest message as the mixed-thread row while retaining both classes", () => {

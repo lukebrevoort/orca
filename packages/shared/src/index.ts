@@ -1,4 +1,14 @@
-export { accountFixture, authSessionFixture, inboxFixture } from "./fixtures.ts";
+export {
+  accountFixture,
+  authSessionFixture,
+  inboxFixture,
+  m5FixtureAccounts,
+  m5FixtureExpectedClassifications,
+  m5FixtureOverride,
+  m5FixtureReasonCodeCases,
+  m5InboxFixture,
+  m5NormalizedFixtureMessages,
+} from "./fixtures.ts";
 
 export {
   authSessionSchema,

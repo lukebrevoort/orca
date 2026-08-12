@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import {
+  m5FixtureExpectedClassifications,
+  m5FixtureReasonCodeCases,
+  m5NormalizedFixtureMessages,
+} from "@orca/shared";
 import type { HumanClassificationEvidence } from "@orca/shared";
 
 import { gmailMessageFixture } from "../providers/gmail/fixtures/message.fixture.ts";
@@ -122,5 +127,40 @@ describe("Human Signal classifier", () => {
       classifyHumanSignal(gmail.classificationEvidence),
       classifyHumanSignal(outlook.classificationEvidence),
     );
+  });
+
+  test("covers every M5 state, provider, account, and mixed thread", () => {
+    for (const message of m5NormalizedFixtureMessages) {
+      const expected = m5FixtureExpectedClassifications[message.id];
+      assert.ok(expected, `Missing expected M5 classification for ${message.id}`);
+      assert.deepEqual(classifyHumanSignal(message.classificationEvidence), expected, message.id);
+      assert.equal(message.provider, message.raw.provider);
+      assert.equal(message.accountId, message.raw.accountId);
+    }
+
+    const mixedThread = m5NormalizedFixtureMessages.filter((message) => message.threadId.endsWith("mixed-thread"));
+    assert.equal(mixedThread.length, 2);
+    assert.deepEqual(
+      mixedThread.map((message) => m5FixtureExpectedClassifications[message.id]?.classification),
+      ["automated_or_bulk", "likely_human"],
+    );
+    assert.deepEqual(
+      [...new Set(m5NormalizedFixtureMessages.map((message) => message.provider))],
+      ["gmail", "outlook"],
+    );
+  });
+
+  test("covers every M5 precedence and auto-response header reason branch", () => {
+    const signalNames = new Set<string>();
+    const reasonCodes = new Set<string>();
+
+    for (const fixture of m5FixtureReasonCodeCases) {
+      assert.deepEqual(classifyHumanSignal(fixture.evidence), fixture.expected, fixture.id);
+      for (const signal of fixture.evidence.headerSignals) signalNames.add(signal);
+      for (const reasonCode of fixture.expected.reasonCodes) reasonCodes.add(reasonCode);
+    }
+
+    assert.deepEqual([...signalNames].sort(), ["auto_submitted", "precedence_bulk", "precedence_list", "x_auto_response_suppress"]);
+    assert.deepEqual([...reasonCodes].sort(), ["auto_submitted_header", "bulk_precedence_header", "insufficient_evidence"]);
   });
 });

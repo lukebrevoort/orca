@@ -326,7 +326,7 @@ export function ClassificationCorrection({
             <button aria-pressed={effective === "automated_or_bulk"} disabled={pending !== null} onClick={() => void apply("automated_or_bulk")} type="button"><span>Automated or bulk</span><small>Tideline</small></button>
             <button aria-pressed={effective === "uncertain"} disabled={pending !== null} onClick={() => void apply("uncertain")} type="button"><span>Leave uncertain</span><small>Review later</small></button>
           </div>
-          <button className="classification-reset" disabled={pending !== null || !override} onClick={() => void apply("reset")} type="button">
+          <button aria-busy={pending === "reset" || undefined} className="classification-reset" disabled={pending === "reset" || !override} onClick={() => void apply("reset")} type="button">
             {pending === "reset" ? "Resetting…" : "Reset to Orca estimate"}
           </button>
           {error ? <p className="classification-correction-error" role="alert">{error}</p> : null}

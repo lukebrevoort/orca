@@ -3956,7 +3956,9 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .classification-choice-grid button { display: grid; gap: 3px; min-height: 51px; text-align: left; }
 .classification-choice-grid button span { color: var(--orca-ink); font-size: 10px; }
 .classification-choice-grid button small { color: var(--orca-muted); font-size: 9px; font-weight: 500; }
-.classification-choice-grid button:disabled, .classification-reset:disabled { cursor: wait; opacity: .55; }
+.classification-choice-grid button:disabled { cursor: wait; opacity: .55; }
+.classification-reset:disabled { cursor: not-allowed; opacity: .55; }
+.classification-reset[aria-busy="true"] { cursor: wait; }
 .classification-reset { background: transparent; margin-top: 10px; text-align: left; width: 100%; }
 .classification-reset:not(:disabled):hover, .classification-reset:not(:disabled):focus-visible { background: var(--orca-surface-hover); color: var(--orca-ink); }
 .classification-correction-error { color: var(--orca-danger); font-size: 10px; line-height: 1.4; margin: 9px 0 0; }
@@ -4135,8 +4137,21 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .classification-tabs-status { margin-left: 0; min-height: 12px; text-align: left; }
   .classification-tab-list { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; padding: 2px 1px 4px; }
   .classification-tab { flex: 0 0 auto; }
-  .classification-correction { right: 152px; top: 29px; }
-  .classification-correction-menu { max-width: calc(100vw - 24px); width: calc(100vw - 24px); }
+  .classification-correction { right: 152px; top: 29px; z-index: 80; }
+  .reader-document:has(.classification-correction-menu) { animation: none; }
+  .classification-correction-menu,
+  .reader-sender .classification-correction-menu {
+    bottom: 160px;
+    left: 16px;
+    max-height: calc(100vh - 120px);
+    max-width: calc(100vw - 32px);
+    min-width: min(310px, calc(100vw - 32px));
+    overflow-y: auto;
+    position: fixed;
+    right: 16px;
+    top: auto;
+    z-index: 80;
+  }
 }
 
 /* Immersive reader */

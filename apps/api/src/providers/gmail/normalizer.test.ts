@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { m5NormalizedFixtureMessages } from "@orca/shared";
 import {
   normalizeGmailLabel,
   normalizeGmailMessage,
@@ -64,6 +65,30 @@ describe("Gmail normalizer", () => {
 
     assert.deepEqual(normalized.classificationEvidence?.headerSignals, ["list_id", "list_unsubscribe", "precedence_bulk"]);
     assert.deepEqual(normalized.classificationEvidence?.providerSignals, ["promotions_label", "automated_category"]);
+  });
+
+  test("keeps the M5 Gmail category cases aligned with adapter evidence", () => {
+    const fixtures = m5NormalizedFixtureMessages.filter((message) => ["m5_gmail_transactional", "m5_gmail_override"].includes(message.id));
+
+    for (const fixture of fixtures) {
+      const normalized = normalizeGmailMessage({
+        id: fixture.raw.messageId,
+        threadId: fixture.raw.threadId,
+        labelIds: fixture.raw.labelIds,
+        snippet: fixture.snippet,
+        internalDate: String(Date.parse(fixture.receivedAt)),
+        payload: {
+          headers: [
+            { name: "From", value: `${fixture.from.name} <${fixture.from.email}>` },
+            { name: "To", value: fixture.to.map((recipient) => `${recipient.name} <${recipient.email}>`).join(", ") },
+            { name: "Subject", value: fixture.subject },
+          ],
+        },
+      }, { accountId: fixture.accountId, accountEmail: "luke@gmail.com" });
+
+      assert.deepEqual(normalized.raw, fixture.raw, fixture.id);
+      assert.deepEqual(normalized.classificationEvidence?.providerSignals, fixture.classificationEvidence?.providerSignals, fixture.id);
+    }
   });
 
   test("maps Gmail labels to normalized labels", () => {

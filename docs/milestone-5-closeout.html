@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orca M5 | milestone closeout</title>
+</head>
+<body>
+  <h1>M5: Human Filtering + Machine Mail Separation</h1>
+  <p><strong>Status:</strong> closeout evidence is recorded in the <a href="bre-252-validation.html">BRE-252 validation guide</a>.</p>
+  <h2>Done</h2>
+  <ul>
+    <li>Gmail and Outlook-normalized fixture cases share one deterministic classifier and include all four classification states.</li>
+    <li>Mixed threads, account/provider attribution, API filters/counts/cursors, thread detail, account isolation, overrides, reset behavior, persistence/backfill, and web correction surfaces have automated coverage.</li>
+    <li>Gmail-only demo UI validation is runnable from <code>/dev/inbox</code> without a live Microsoft tenant grant; the provider-neutral matrix/API lane runs from the shared and API test commands.</li>
+    <li>Classification is local-only: provider mail is never archived, deleted, relabeled, or otherwise mutated.</li>
+  </ul>
+  <h2>Deferred M4 boundary</h2>
+  <p>Microsoft tenant approval, live Outlook OAuth login/sync, and provider write verification remain deferred. M5 makes no live Outlook readiness claim and uses normalized fixtures plus Gmail/demo data for repeatable evidence.</p>
+</body>
+</html>
