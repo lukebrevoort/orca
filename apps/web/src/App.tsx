@@ -724,7 +724,7 @@ function AttentionViewSettingsPage({
   );
 }
 
-function InboxApp({
+export function InboxApp({
   demoMode = false,
   preferences = defaultReaderPreferences,
   theme,
@@ -775,6 +775,8 @@ function InboxApp({
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
   const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
+  const readerNavigationGenerationRef = useRef(0);
+  const readerFocusFrameRef = useRef<number | null>(null);
   const demoDataInitializedRef = useRef(false);
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
@@ -1112,9 +1114,15 @@ function InboxApp({
   useLayoutEffect(() => {
     if (selectedThreadId || !inboxViewportRef.current) return;
     const viewport = inboxViewportRef.current;
+    const originMessageId = originMessageIdRef.current;
+    const navigationGeneration = readerNavigationGenerationRef.current;
     inboxViewportRef.current = null;
     restoreInboxViewport(viewport);
-    window.requestAnimationFrame(() => messageRowRefs.current.get(originMessageIdRef.current ?? "")?.focus({ preventScroll: true }));
+    readerFocusFrameRef.current = window.requestAnimationFrame(() => {
+      readerFocusFrameRef.current = null;
+      if (readerNavigationGenerationRef.current !== navigationGeneration) return;
+      messageRowRefs.current.get(originMessageId ?? "")?.focus({ preventScroll: true });
+    });
   }, [selectedThreadId]);
 
   const mailboxItems = useMemo(
@@ -1223,7 +1231,14 @@ function InboxApp({
       return;
     }
 
-    inboxViewportRef.current = captureInboxViewport();
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    if (!selectedThreadId && !inboxViewportRef.current) {
+      inboxViewportRef.current = captureInboxViewport();
+    }
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
@@ -1248,6 +1263,11 @@ function InboxApp({
   }
 
   function closeThread() {
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
     runUiTransition("reader-back", () => {
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
