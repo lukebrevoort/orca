@@ -2480,10 +2480,17 @@ function toPublicSyncError(error: unknown) {
 const { port } = serverConfig;
 
 if (import.meta.main) {
-  serve({
+  const server = serve({
     fetch: app.fetch,
     port,
   });
 
   console.log(`Orca API listening on http://localhost:${port}`);
+
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.on(signal, () => {
+      console.log(`${signal} received, shutting down gracefully`);
+      server.close(() => process.exit(0));
+    });
+  }
 }
