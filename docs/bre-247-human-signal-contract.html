@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-247 · Orca Human Signal contract</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f5f4ee;
+        --card: #fffefa;
+        --ink: #18231f;
+        --muted: #617069;
+        --line: #d4ddd6;
+        --accent: #0d766d;
+        --accent-soft: #d9f0ea;
+        --code: #18231f;
+        --danger: #a64235;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101816;
+          --card: #18221f;
+          --ink: #edf5f0;
+          --muted: #aab8b0;
+          --line: #34433d;
+          --accent: #7bd8ca;
+          --accent-soft: #173b36;
+          --code: #0b100f;
+          --danger: #ffab9e;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.58 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0 88px; }
+      header { max-width: 790px; margin-bottom: 36px; }
+      .eyebrow { color: var(--accent); font-size: .76rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+      h1, h2, h3 { letter-spacing: -.035em; line-height: 1.12; }
+      h1 { margin: 10px 0 16px; font-size: clamp(2.4rem, 7vw, 5.1rem); }
+      h2 { margin: 0 0 12px; font-size: 1.45rem; }
+      h3 { margin: 0 0 8px; font-size: 1.05rem; }
+      p { margin: 0 0 14px; }
+      .lede { color: var(--muted); font-size: 1.1rem; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+      .wide { grid-column: 1 / -1; }
+      section { border: 1px solid var(--line); border-radius: 18px; background: var(--card); padding: 24px; }
+      .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+      .callout strong { display: block; margin-bottom: 4px; }
+      .danger { border-left-color: var(--danger); }
+      .danger strong { color: var(--danger); }
+      ul { margin: 0; padding-left: 1.3rem; }
+      li + li { margin-top: 7px; }
+      table { width: 100%; border-collapse: collapse; font-size: .94rem; }
+      th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { color: var(--muted); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
+      tr:last-child td { border-bottom: 0; }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      code { color: var(--accent); font-size: .92em; }
+      pre { overflow: auto; margin: 0; padding: 18px; border-radius: 12px; background: var(--code); color: #dff1ea; font-size: .82rem; line-height: 1.55; }
+      .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: stretch; margin-top: 16px; }
+      .flow > div { position: relative; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--bg); }
+      .flow > div:not(:last-child)::after { content: "→"; position: absolute; right: -17px; top: 50%; z-index: 1; color: var(--accent); font-size: 1.35rem; transform: translateY(-50%); }
+      .label { display: block; margin-bottom: 5px; color: var(--accent); font-size: .72rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+      .example { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 14px; border-top: 1px solid var(--line); padding: 16px 0 0; margin-top: 16px; }
+      .example:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+      .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; margin: 0 5px 5px 0; padding: 3px 8px; color: var(--muted); font-size: .8rem; }
+      .muted { color: var(--muted); }
+      @media (max-width: 760px) {
+        main { padding-top: 38px; }
+        .grid, .flow { grid-template-columns: 1fr; }
+        .wide { grid-column: auto; }
+        .flow > div:not(:last-child)::after { content: "↓"; right: auto; left: 50%; top: auto; bottom: -20px; transform: translateX(-50%); }
+        .example { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Orca M5 · BRE-247</div>
+        <h1>Human Signal is an explainable estimate, never a verdict.</h1>
+        <p class="lede">This is the provider-neutral contract for separating likely human messages from automated or bulk mail. It gives people the final say, keeps Orca’s reasoning inspectable, and deliberately does not claim to detect AI-written text, identity, safety, or intent.</p>
+      </header>
+
+      <div class="grid">
+        <section class="callout wide">
+          <strong>Product promise</strong>
+          Orca can say <em>Likely human</em>, <em>Automated or bulk</em>, <em>Uncertain</em>, or <em>Unclassified</em>. It must not say “definitely human,” “AI-written,” “safe,” or imply that a provider label proves authorship. Classification does not change a provider mailbox and is independent of attention, read state, stars, labels, and account/provider identity.
+        </section>
+
+        <section>
+          <h2>Canonical wire model</h2>
+          <p>The legacy nullable <code>humanSignal</code> stays for compatibility. New clients use <code>humanClassification.effective</code>; a raw score alone is never a filter policy.</p>
+          <pre><code>{
+  "humanSignal": 8,
+  "humanClassification": {
+    "automatic": {
+      "classification": "likely_human",
+      "score": 8,
+      "reasonCodes": ["direct_recipient", "reply_context"],
+      "classifierVersion": "m5-v1"
+    },
+    "effective": {
+      "classification": "likely_human",
+      "score": 8,
+      "reasonCodes": ["direct_recipient", "reply_context"],
+      "classifierVersion": "m5-v1",
+      "source": "automatic_heuristic"
+    }
+  }
+}</code></pre>
+        </section>
+
+        <section>
+          <h2>What consumers use</h2>
+          <ul>
+            <li><code>effective.classification</code> drives Human Inbox, Tideline, and Review views.</li>
+            <li><code>effective.source</code> tells the UI whether Orca estimated it or the user chose it.</li>
+            <li><code>automatic</code> remains intact after a correction so reset-to-automatic is honest and reversible.</li>
+            <li><code>reasonCodes</code> are stable, user-safe evidence labels—never raw header values or message contents.</li>
+            <li><code>humanSignal</code> mirrors the effective score when one exists; it is nullable and must not be thresholded by a client.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Classification bands</h2>
+          <table>
+            <thead><tr><th>Internal value</th><th>User-facing copy</th><th>Score convention</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>likely_human</code></td><td>Likely human</td><td>Usually 7–10</td><td>Evidence such as a direct recipient relationship or reply context supports ordinary person-to-person correspondence. It remains an estimate.</td></tr>
+              <tr><td><code>automated_or_bulk</code></td><td>Automated or bulk</td><td>Usually 0–3</td><td>Transparent delivery, list, subscription, transactional, or automation metadata outweighs human correspondence evidence.</td></tr>
+              <tr><td><code>uncertain</code></td><td>Uncertain</td><td>Usually 4–6 or <code>null</code></td><td>Evidence is weak or conflicts. Orca intentionally leaves this for review rather than forcing it into Tideline.</td></tr>
+              <tr><td><code>unclassified</code></td><td>Unclassified</td><td><code>null</code></td><td>There is not enough stored evidence yet—for example, a historical row that predates normalized evidence/backfill.</td></tr>
+            </tbody>
+          </table>
+          <p class="muted">The classifier selects a band from all evidence. The numeric ranges are conventions for explainability, not a license for a client to reproduce policy with a magic threshold.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Evidence boundary</h2>
+          <p>Provider adapters reduce Gmail and Outlook data to <code>HumanClassificationEvidence</code> before the deterministic classifier runs. The classifier is pure and may inspect only the normalized facts below.</p>
+          <div class="flow" aria-label="Classification evidence flow">
+            <div><span class="label">Gmail / Outlook</span>Headers, labels/categories, contacts, reply metadata</div>
+            <div><span class="label">Normalized evidence</span>Sender, recipients, directness, reply context, header and provider signals</div>
+            <div><span class="label">Deterministic rules</span>Bounded score, class, stable reasons, version</div>
+            <div><span class="label">Effective result</span>Automatic estimate or a local user correction</div>
+          </div>
+          <p class="muted" style="margin-top:16px">Allowed header signals are <code>List-Id</code>, <code>List-Unsubscribe</code>, <code>Precedence</code>, <code>Auto-Submitted</code>, and <code>X-Auto-Response-Suppress</code>, normalized to enum values. Gmail <code>labelIds</code> and Outlook <code>categories</code> are mapped to provider-neutral signals before scoring. The classifier must not inspect message body text, upload content, call a network service, train from corrections, or infer AI authorship.</p>
+        </section>
+
+        <section>
+          <h2>Override precedence</h2>
+          <p>A correction is local to Orca and account-scoped. It does not archive, delete, label, categorize, or otherwise mutate Gmail or Outlook.</p>
+          <ol>
+            <li>Message-specific override</li>
+            <li>Sender-address rule</li>
+            <li>Sender-domain rule</li>
+            <li>Automatic classifier result</li>
+          </ol>
+          <p class="muted" style="margin-top:14px">Removing an override immediately reveals the current automatic assessment. Attention rules remain separate: a user may keep machine mail focused or leave likely-human mail quiet.</p>
+        </section>
+
+        <section class="danger">
+          <strong>Do not overclaim</strong>
+          <ul>
+            <li>No “definitely human,” “AI-generated,” “safe,” “trusted,” or equivalent certainty claims.</li>
+            <li>No mailbox-, provider-, domain-, or thread-wide truth. Every message has its own result.</li>
+            <li>No destructive sweep. Any default-view hide is a reversible local disposition, never a provider mutation.</li>
+            <li>No live Microsoft OAuth dependency. Gmail, Outlook-normalized fixtures, and demo data are valid M5 verification inputs.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Worked examples</h2>
+          <div class="example">
+            <div><h3>Likely human correspondence</h3><span class="pill">Direct recipient</span><span class="pill">Reply context</span></div>
+            <div><code>likely_human</code> · score 8 · <code>direct_recipient</code>, <code>reply_context</code>. The reader says “Orca estimates this is likely human,” not a statement about identity or writing method.</div>
+          </div>
+          <div class="example">
+            <div><h3>Automated bank notice</h3><span class="pill">No-reply pattern</span><span class="pill">Transactional category</span></div>
+            <div><code>automated_or_bulk</code> · score 2 · <code>sender_no_reply_pattern</code>, <code>provider_transactional_signal</code>. A user can still explicitly keep it in their Human Inbox without changing the provider mailbox.</div>
+          </div>
+          <div class="example">
+            <div><h3>Ambiguous mailing-list note</h3><span class="pill">List header</span><span class="pill">Direct reply evidence</span></div>
+            <div><code>uncertain</code> · score 5 · <code>list_id_header</code>, <code>reply_context</code>, <code>conflicting_evidence</code>. It belongs in Review until the person chooses otherwise.</div>
+          </div>
+          <div class="example">
+            <div><h3>Historical row with no evidence</h3><span class="pill">No stored evidence</span></div>
+            <div><code>unclassified</code> · score <code>null</code> · <code>insufficient_evidence</code>. It is not silently downgraded to bulk merely because the old sync cannot reconstruct headers.</div>
+          </div>
+        </section>
+
+        <section class="wide">
+          <h2>Downstream handoff</h2>
+          <table>
+            <thead><tr><th>Ticket</th><th>Consumes this contract</th></tr></thead>
+            <tbody>
+              <tr><td><code>BRE-248</code></td><td>Map Gmail/Outlook facts to normalized evidence, classify on sync, persist automatic results, and run safe versioned backfill.</td></tr>
+              <tr><td><code>BRE-249</code></td><td>Persist account-scoped message/address/domain overrides and resolve the effective result without deleting automatic evidence.</td></tr>
+              <tr><td><code>BRE-250</code></td><td>Expose per-message effective results, server-side classification filtering, counts, and cursor-safe pagination.</td></tr>
+              <tr><td><code>BRE-251</code></td><td>Build Human Inbox, Tideline, Uncertain/Review, All mail, and explicit local correction affordances from server data.</td></tr>
+              <tr><td><code>BRE-252</code></td><td>Verify the complete fixture/demo path in both themes without live Microsoft approval or provider mutation.</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

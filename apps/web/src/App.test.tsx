@@ -762,6 +762,8 @@ function makeThreadMessage(id: string, receivedAt: string, unread = false, bodyT
     receivedAt,
     unread,
     labels: ["INBOX"],
+    humanSignal: 10,
+    humanClassification: null,
     bodyText,
     bodyHtml: null,
     internetMessageId: `<${id}@example.com>`,

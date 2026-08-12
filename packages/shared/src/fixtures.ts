@@ -38,5 +38,6 @@ export const inboxFixture = z.array(inboxMessageSchema).parse([
     labels: ["INBOX"],
     attentionBehavior: "normal",
     humanSignal: 9,
+    humanClassification: null,
   },
 ]);

@@ -1160,6 +1160,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
             unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
             internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
+            humanSignal: message.humanSignal,
+            humanClassification: null,
             attachments: attachmentsByMessage.get(message.id) ?? [],
           };
         });
