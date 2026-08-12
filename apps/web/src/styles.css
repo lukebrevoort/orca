@@ -3199,7 +3199,7 @@ textarea {
 :root[data-reader-density="compact"] .reader-message { padding-bottom: 34px; padding-top: 34px; }
 :root[data-reader-density="compact"] .reader-sender { margin-bottom: 22px; }
 
-/* Compact keeps the inbox and its sibling mailbox views scannable without hiding the snippet. */
+/* Compact keeps the inbox and its sibling mailbox views scannable without hiding message actions. */
 :root[data-reader-density="compact"] .message-row {
   gap: 10px;
   padding-bottom: 10px;
@@ -4568,8 +4568,13 @@ button, input, textarea { font-family: var(--orca-font-body); }
 }
 
 :root[data-reader-density="compact"] .message-copy > p {
-  line-height: 1.3;
-  margin-top: 1px;
+  display: none;
+}
+
+@media (min-width: 900px) {
+  :root[data-reader-density="compact"] .message-copy {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
 }
 
 :root[data-reader-density="compact"] .reader-document {
