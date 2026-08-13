@@ -3269,18 +3269,20 @@ function InboxView({
                       className={`pin-sender-button${senderPinned ? " pin-sender-button-pinned" : ""}`}
                       disabled={senderPinned}
                       onClick={() => onPinPerson(message)}
-                      title={senderPinned ? "Person pinned" : "Pin person"}
+                      title={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
                       type="button"
                     >
-                      <span aria-hidden="true">{senderPinned ? "✓" : "＋"}</span>
-                      <span className="pin-sender-label">{senderPinned ? "Pinned" : "Pin"}</span>
+                      <MessageActionGlyph name="pin" />
                     </button> : null}
                     {viewMode !== "later" ? <button
+                      aria-haspopup={onRemoveFromCollection ? undefined : "dialog"}
+                      aria-label={onRemoveFromCollection ? `Remove ${message.subject || "this thread"} from collection` : `Keep ${message.subject || "this thread"} in a collection`}
                       className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
                       onClick={() => onRemoveFromCollection ? onRemoveFromCollection(message) : onOpenOrganizer(message)}
+                      title={onRemoveFromCollection ? "Remove from collection" : "Keep in collection"}
                       type="button"
                     >
-                      <span aria-hidden="true">{onRemoveFromCollection ? "−" : "＋"}</span> {onRemoveFromCollection ? "Remove" : "Keep"}
+                      <MessageActionGlyph mode={onRemoveFromCollection ? "remove" : "add"} name="keep" />
                     </button> : null}
                     {viewMode === "later" ? (() => {
                       const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
@@ -3938,8 +3940,8 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
 
   return (
     <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${presence.rendered ? " sender-attention-control-expanded" : ""}${presence.closing ? " sender-attention-control-closing" : ""}`} ref={controlRef}>
-      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} type="button">
-        {reader ? "Attention" : <><span aria-hidden="true">{compact ? "⌁" : "✦"}</span> {compact ? "Tune" : "Manage this sender"}</>}
+      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} title={reader ? "Manage attention" : `Tune mail from ${senderName}`} type="button">
+        {reader ? "Attention" : <MessageActionGlyph name="tune" />}
       </button>
       {presence.rendered ? (
         <section className={`sender-attention-menu${presence.closing ? " sender-attention-menu-closing" : ""}`} id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
@@ -3966,6 +3968,34 @@ function SenderAttentionControl({ message, compact = false, initialBehavior, rea
         </section>
       ) : null}
     </div>
+  );
+}
+
+function MessageActionGlyph({ name, mode = "add" }: { name: "pin" | "keep" | "tune"; mode?: "add" | "remove" }) {
+  if (name === "pin") {
+    return (
+      <svg aria-hidden="true" className="message-action-icon" fill="none" viewBox="0 0 24 24">
+        <path d="M8.5 4.5h7l-1.3 5 3.3 3.1H6.5l3.3-3.1zM12 12.6v7" />
+      </svg>
+    );
+  }
+
+  if (name === "keep") {
+    return (
+      <svg aria-hidden="true" className="message-action-icon" fill="none" viewBox="0 0 24 24">
+        <path d="M6.5 4.5h11v15l-5.5-3.4-5.5 3.4z" />
+        <path d={mode === "remove" ? "M8.8 11.5h6.4" : "M12 8.5v6M9 11.5h6"} />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden="true" className="message-action-icon" fill="none" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+      <circle cx="9" cy="7" r="1.8" />
+      <circle cx="15" cy="12" r="1.8" />
+      <circle cx="10" cy="17" r="1.8" />
+    </svg>
   );
 }
 
