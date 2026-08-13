@@ -819,6 +819,7 @@ export function ComposeWorkspace({
   controller,
   contacts,
   autoFocusTo = false,
+  closing = false,
   variant = "panel",
   onExitZen,
   onClose,
@@ -831,6 +832,7 @@ export function ComposeWorkspace({
   controller: ComposeDraftController;
   contacts: MailContact[];
   autoFocusTo?: boolean;
+  closing?: boolean;
   variant?: "panel" | "zen" | "reply";
   onExitZen?: () => void;
   onClose?: () => void;
@@ -987,7 +989,7 @@ export function ComposeWorkspace({
 
   if (variant === "zen") {
     return (
-      <section aria-label="Zen writing mode" aria-modal="true" className="zen-canvas" onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
+      <section aria-label="Zen writing mode" aria-modal="true" className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
           <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />

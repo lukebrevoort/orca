@@ -113,7 +113,7 @@ type OAuthReturnStatus =
   | null;
 
 const PANEL_ANIM_MS = 650;
-const ZEN_ANIM_MS = 550;
+const ZEN_ANIM_MS = 500;
 const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
@@ -1290,13 +1290,22 @@ export function InboxApp({
       return;
     }
 
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    if (shouldReduceMotion()) {
+      setPanelMode(null);
+      setZen(false);
+      setPanelClosing(false);
+      setZenClosing(false);
+      return;
+    }
+
     setPanelClosing(true);
     if (zen) {
       setZenClosing(true);
-    }
-
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
     }
 
     closeTimerRef.current = setTimeout(() => {
@@ -1313,12 +1322,18 @@ export function InboxApp({
       return;
     }
 
-    setZenClosing(true);
-
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
     }
 
+    if (shouldReduceMotion()) {
+      setZen(false);
+      setZenClosing(false);
+      return;
+    }
+
+    setZenClosing(true);
     closeTimerRef.current = setTimeout(() => {
       setZen(false);
       setZenClosing(false);
@@ -1956,6 +1971,7 @@ export function InboxApp({
               canSend={account?.capabilities.send ?? false}
               contacts={composeContacts}
               controller={composeDraft}
+              closing={zenClosing}
               onExitZen={exitZen}
               onRequestSendAccess={() => setShowSendPermission(true)}
               variant="zen"
