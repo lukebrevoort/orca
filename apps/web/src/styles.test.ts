@@ -33,3 +33,13 @@ describe("Zen canvas surface", () => {
     expect(zenCanvas).toContain("color: var(--orca-ink)");
   });
 });
+
+describe("long message subjects", () => {
+  test("reserves the action rail and gives narrow rows a separate affordance band", () => {
+    expect(styles).toContain("/* BRE-258: keep long subjects inside the message content area");
+    expect(styles).toContain(".message-subject-row h2");
+    expect(styles).toContain("padding-right: 340px;");
+    expect(styles).toContain("padding-bottom: 54px;");
+    expect(styles).toContain("@media (max-width: 360px)");
+  });
+});
