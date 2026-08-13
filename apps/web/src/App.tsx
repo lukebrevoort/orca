@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -117,6 +118,13 @@ const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
 
+type InboxViewportPosition = {
+  windowX: number;
+  windowY: number;
+  contentX: number | null;
+  contentY: number | null;
+};
+
 function runUiTransition(name: OrcaTransition, update: () => void) {
   const transitionDocument = document as Document & {
     startViewTransition?: (callback: () => void) => { finished: Promise<void> };
@@ -136,6 +144,28 @@ function shouldReduceMotion() {
   const preference = document.documentElement.dataset.motion;
   return preference === "reduced"
     || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+function getInboxContentPane() {
+  return document.querySelector<HTMLElement>(".content-pane:not(.content-pane-reader)");
+}
+
+function captureInboxViewport(): InboxViewportPosition {
+  const contentPane = getInboxContentPane();
+  return {
+    windowX: window.scrollX,
+    windowY: window.scrollY,
+    contentX: contentPane?.scrollLeft ?? null,
+    contentY: contentPane?.scrollTop ?? null,
+  };
+}
+
+function restoreInboxViewport(position: InboxViewportPosition) {
+  window.scrollTo({ left: position.windowX, top: position.windowY, behavior: "instant" });
+  const contentPane = getInboxContentPane();
+  if (!contentPane || position.contentX === null || position.contentY === null) return;
+  contentPane.scrollLeft = position.contentX;
+  contentPane.scrollTop = position.contentY;
 }
 
 function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
@@ -694,7 +724,7 @@ function AttentionViewSettingsPage({
   );
 }
 
-function InboxApp({
+export function InboxApp({
   demoMode = false,
   preferences = defaultReaderPreferences,
   theme,
@@ -744,6 +774,9 @@ function InboxApp({
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
+  const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
+  const readerNavigationGenerationRef = useRef(0);
+  const readerFocusFrameRef = useRef<number | null>(null);
   const demoDataInitializedRef = useRef(false);
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
@@ -1078,6 +1111,20 @@ function InboxApp({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedThreadId]);
 
+  useLayoutEffect(() => {
+    if (selectedThreadId || !inboxViewportRef.current) return;
+    const viewport = inboxViewportRef.current;
+    const originMessageId = originMessageIdRef.current;
+    const navigationGeneration = readerNavigationGenerationRef.current;
+    inboxViewportRef.current = null;
+    restoreInboxViewport(viewport);
+    readerFocusFrameRef.current = window.requestAnimationFrame(() => {
+      readerFocusFrameRef.current = null;
+      if (readerNavigationGenerationRef.current !== navigationGeneration) return;
+      messageRowRefs.current.get(originMessageId ?? "")?.focus({ preventScroll: true });
+    });
+  }, [selectedThreadId]);
+
   const mailboxItems = useMemo(
     () =>
       mailboxes.map((mailbox) => ({
@@ -1184,6 +1231,14 @@ function InboxApp({
       return;
     }
 
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    if (!selectedThreadId && !inboxViewportRef.current) {
+      inboxViewportRef.current = captureInboxViewport();
+    }
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
@@ -1208,13 +1263,17 @@ function InboxApp({
   }
 
   function closeThread() {
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
     runUiTransition("reader-back", () => {
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
       setThreadDetail(null);
       setReaderStatus("idle");
     });
-    window.requestAnimationFrame(() => messageRowRefs.current.get(originMessageIdRef.current ?? "")?.focus());
   }
 
   async function reconcileSentMessage() {
