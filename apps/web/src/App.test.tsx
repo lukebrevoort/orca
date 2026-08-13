@@ -484,6 +484,31 @@ describe("App", () => {
     expect(html).toContain('aria-label="Manage mail from Maya Chen"');
   });
 
+  test("renders a local organization mark without changing the sender's accessible label", () => {
+    const message = {
+      ...makeThreadMessage("railway", "2026-07-12T18:00:00.000Z"),
+      from: { name: "Railway", email: "alerts@railway.app" },
+    };
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([message])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).toContain('data-contact-identity="organization"');
+    expect(html).toContain('data-contact-identity-label="railway.app"');
+    expect(html).toContain('class="contact-organization-mark">RA</span>');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain(">Railway</h3>");
+  });
+
   test("normalizes realistic recipient paste and rejects incomplete addresses", () => {
     expect(parseRecipientText("Maya Chen <MAYA@example.com>, dana@example.com\nno-address")).toEqual([
       { name: "Maya Chen", email: "maya@example.com" },
