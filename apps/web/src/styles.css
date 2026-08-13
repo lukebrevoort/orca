@@ -4372,6 +4372,11 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .compose-workspace-zen > .compose-delivery-bar { border: 0; bottom: 36px; padding: 0; position: fixed; right: max(36px, calc((100vw - 600px) / 2 + 10px)); z-index: 5; }
 .compose-workspace-zen > .compose-delivery-bar .compose-delivery-actions::before { content: "Later"; }
 
+@media (max-width: 760px) {
+  .compose-delivery-bar { grid-template-columns: 1fr; }
+  .compose-delivery-actions { justify-content: flex-end; }
+}
+
 @media (max-width: 600px) {
   .slide-panel { border-radius: 0; }
   .panel-header { padding: 18px 20px; }
