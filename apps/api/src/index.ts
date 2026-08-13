@@ -731,7 +731,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const input = c.req.valid("json");
         validatePinTarget(db, account.id, input.kind, input.targetId);
         const id = `pin:${crypto.randomUUID()}`;
-        db.insert(pins).values({ id, accountId: account.id, kind: input.kind, targetId: input.targetId.trim(), label: input.label.trim(), position: listPins(db, account.id).length }).run();
+        db.insert(pins).values({
+          id,
+          accountId: account.id,
+          kind: input.kind,
+          targetId: input.targetId.trim(),
+          label: input.label.trim(),
+          icon: input.icon ?? defaultPinIcon(input.kind),
+          color: input.color ?? "#70867d",
+          position: listPins(db, account.id).length,
+        }).run();
         return c.json(pinSchema.parse(toPin(db.select().from(pins).where(eq(pins.id, id)).get()!)), 201);
       } catch (error) {
         if (error instanceof OrganizationTargetError) return c.json({ error: { code: "validation_error", message: error.message } }, 400);
@@ -753,8 +762,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return noConnectedAccount(c);
         const current = getPin(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-        updatePinRecord(db, account.id, current, c.req.valid("json"));
-        return jsonWithSchema(c, pinSchema, toPin(getPin(db, account.id, current.id)!));
+        if (!updatePinRecord(db, account.id, current, c.req.valid("json"))) {
+          return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+        }
+        const updatedPin = getPin(db, account.id, current.id);
+        if (!updatedPin) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
+        return jsonWithSchema(c, pinSchema, toPin(updatedPin));
+      } catch (error) {
+        return organizationConflict(c, error, "That pin order changed. Try moving it again.");
       } finally {
         sqlite.close();
       }
@@ -2141,27 +2156,49 @@ function getPin(db: Database, accountId: string, id: string) {
 function toPin(pin: PinRecord) {
   return pinSchema.parse({
     id: pin.id, accountId: pin.accountId, kind: pin.kind, targetId: pin.targetId, label: pin.label,
+    icon: pin.icon, color: pin.color,
     position: pin.position, createdAt: pin.createdAt.toISOString(), updatedAt: pin.updatedAt.toISOString(),
   });
 }
 
-function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; position?: number }) {
-  const records = listPins(db, accountId);
-  const nextPosition = Math.min(input.position ?? current.position, Math.max(records.length - 1, 0));
+function updatePinRecord(db: Database, accountId: string, current: PinRecord, input: { label?: string; icon?: string; color?: string; position?: number }) {
+  let updated = false;
   db.transaction((tx) => {
-    if (nextPosition !== current.position) {
-      tx.update(pins).set({ position: -1 }).where(eq(pins.id, current.id)).run();
-      const moving = records.filter((item) => item.id !== current.id && (
-        nextPosition < current.position
-          ? item.position >= nextPosition && item.position < current.position
-          : item.position > current.position && item.position <= nextPosition
+    // Re-read both the target row and the ordered list after the transaction
+    // starts. The request may have waited behind another reorder, so using the
+    // route-level snapshot here can shift rows into occupied unique positions.
+    const freshCurrent = tx.select().from(pins).where(and(eq(pins.accountId, accountId), eq(pins.id, current.id))).get();
+    if (!freshCurrent) return;
+    const records = tx.select().from(pins).where(eq(pins.accountId, accountId)).orderBy(asc(pins.position)).all();
+    const nextPosition = Math.min(input.position ?? freshCurrent.position, Math.max(records.length - 1, 0));
+    if (nextPosition !== freshCurrent.position) {
+      tx.update(pins).set({ position: -1 }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
+      const moving = records.filter((item) => item.id !== freshCurrent.id && (
+        nextPosition < freshCurrent.position
+          ? item.position >= nextPosition && item.position < freshCurrent.position
+          : item.position > freshCurrent.position && item.position <= nextPosition
       ));
-      for (const item of moving.sort((a, b) => nextPosition < current.position ? b.position - a.position : a.position - b.position)) {
-        tx.update(pins).set({ position: item.position + (nextPosition < current.position ? 1 : -1) }).where(eq(pins.id, item.id)).run();
+      for (const item of moving.sort((a, b) => nextPosition < freshCurrent.position ? b.position - a.position : a.position - b.position)) {
+        tx.update(pins).set({ position: item.position + (nextPosition < freshCurrent.position ? 1 : -1) }).where(and(eq(pins.accountId, accountId), eq(pins.id, item.id))).run();
       }
     }
-    tx.update(pins).set({ label: input.label?.trim() ?? current.label, position: nextPosition, updatedAt: new Date() }).where(eq(pins.id, current.id)).run();
+    tx.update(pins).set({
+      label: input.label?.trim() ?? freshCurrent.label,
+      icon: input.icon ?? freshCurrent.icon,
+      color: input.color ?? freshCurrent.color,
+      position: nextPosition,
+      updatedAt: new Date(),
+    }).where(and(eq(pins.accountId, accountId), eq(pins.id, freshCurrent.id))).run();
+    updated = true;
   });
+  return updated;
+}
+
+function defaultPinIcon(kind: "sender" | "thread" | "view" | "filter") {
+  if (kind === "sender") return "person" as const;
+  if (kind === "thread") return "thread" as const;
+  if (kind === "filter") return "search" as const;
+  return "grid" as const;
 }
 
 function validatePinTarget(db: Database, accountId: string, kind: "sender" | "thread" | "view" | "filter", targetId: string) {

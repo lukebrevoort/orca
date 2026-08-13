@@ -651,6 +651,11 @@ export type UpdateCollection = z.infer<typeof updateCollectionSchema>;
 export const pinKindSchema = z.enum(["sender", "thread", "view", "filter"]);
 export type PinKind = z.infer<typeof pinKindSchema>;
 
+export const pinIconSchema = z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]);
+export type PinIcon = z.infer<typeof pinIconSchema>;
+
+export const pinColorSchema = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/);
+
 export const pinFilterSchema = z.object({
   mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]),
   attention: z.enum(["all", "notify", "focus", "normal"]),
@@ -665,16 +670,21 @@ export const pinSchema = z.object({
   kind: pinKindSchema,
   targetId: z.string().trim().min(1).max(500),
   label: z.string().trim().min(1).max(120),
+  icon: pinIconSchema,
+  color: pinColorSchema,
   position: z.number().int().nonnegative(),
   createdAt: isoDateTimeStringSchema,
   updatedAt: isoDateTimeStringSchema,
 }).strict();
 export type Pin = z.infer<typeof pinSchema>;
 
-export const createPinSchema = pinSchema.pick({ kind: true, targetId: true, label: true }).strict();
+export const createPinSchema = pinSchema.pick({ kind: true, targetId: true, label: true }).extend({
+  icon: pinIconSchema.optional(),
+  color: pinColorSchema.optional(),
+}).strict();
 export type CreatePin = z.infer<typeof createPinSchema>;
 
-export const updatePinSchema = pinSchema.pick({ label: true, position: true }).partial()
+export const updatePinSchema = pinSchema.pick({ label: true, icon: true, color: true, position: true }).partial()
   .refine((value) => Object.keys(value).length > 0, "Expected at least one field to update");
 export type UpdatePin = z.infer<typeof updatePinSchema>;
 

@@ -284,9 +284,9 @@ describe("App", () => {
 
   test("derives pinned people only from persisted sender pins", () => {
     const pins: Pin[] = [
-      { id: "thread", accountId: "account", kind: "thread", targetId: demoMessages[0]!.threadId, label: "Thread", position: 0, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
-      { id: "anika", accountId: "account", kind: "sender", targetId: "anika@example.com", label: "Pinned Anika", position: 2, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
-      { id: "maya", accountId: "account", kind: "sender", targetId: "maya@example.com", label: "Pinned Maya", position: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "thread", accountId: "account", kind: "thread", targetId: demoMessages[0]!.threadId, label: "Thread", icon: "thread", color: "#70867d", position: 0, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "anika", accountId: "account", kind: "sender", targetId: "anika@example.com", label: "Pinned Anika", icon: "person", color: "#a87360", position: 2, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "maya", accountId: "account", kind: "sender", targetId: "maya@example.com", label: "Pinned Maya", icon: "person", color: "#6c8195", position: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
     ];
     const people = buildPinnedPeopleFromPins(pins, demoMessages);
 
