@@ -164,6 +164,7 @@ describe("App", () => {
 
   test("gives every settings category a discoverable home and preserves legacy destinations", () => {
     const html = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="light" />);
+    const darkHtml = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="dark" />);
 
     expect(html).toContain("Make Orca");
     expect(html).toContain("Appearance &amp; reading");
@@ -177,6 +178,10 @@ describe("App", () => {
     expect(html).toContain("Writing");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
+    expect(darkHtml).toContain('aria-label="Switch to light mode"');
+    expect(darkHtml).toContain("Appearance &amp; reading");
+    expect(darkHtml).toContain('value="dark"');
+    expect(darkHtml.match(/preference-option-selected/g)).toHaveLength(6);
   });
 
   test("resumes Gmail sync until label migration data is ready", async () => {
