@@ -150,6 +150,18 @@ describe("App", () => {
     expect(html).toContain("checked=\"\"");
   });
 
+  test("keeps Calm and Compact density choices explicit and selectable", () => {
+    const calmHtml = renderToStaticMarkup(<ReaderPreferencesPage preferences={{ ...defaultReaderPreferences, density: "calm" }} setPreferences={() => {}} systemTheme="light" />);
+    const compactHtml = renderToStaticMarkup(<ReaderPreferencesPage preferences={{ ...defaultReaderPreferences, density: "compact" }} setPreferences={() => {}} systemTheme="light" />);
+
+    expect(calmHtml).toContain("Calm gives each message more room. Compact fits more mail and thread history on screen.");
+    expect(calmHtml).toContain('value="calm"');
+    expect(calmHtml).toContain('value="compact"');
+    expect(calmHtml.match(/preference-option-selected/g)).toHaveLength(4);
+    expect(compactHtml).toContain('value="compact"');
+    expect(compactHtml.match(/preference-option-selected/g)).toHaveLength(4);
+  });
+
   test("gives every settings category a discoverable home and preserves legacy destinations", () => {
     const html = renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="light" />);
 
