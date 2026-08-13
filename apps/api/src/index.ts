@@ -62,7 +62,18 @@ import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
-import { GmailSyncError, syncGmailAccountPage } from "./providers/gmail/sync.ts";
+import { GmailSyncError, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
+import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
+import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
+import {
+  backfillGmailAccount,
+  ensureGmailWatch,
+  GmailPushError,
+  parseGmailPubSubNotification,
+  syncGmailAccountHistory,
+  verifyGmailPushToken,
+} from "./providers/gmail/push.ts";
+import { startGmailSyncScheduler } from "./providers/gmail/scheduler.ts";
 import type { GmailDraftMirrorInput, GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 import { providerRegistry as defaultProviderRegistry, type ProviderRegistry } from "./providers/registry.ts";
@@ -77,6 +88,8 @@ type CreateAppOptions = {
   dbFactory?: typeof createDatabaseClient;
   syncPage?: typeof syncGmailAccountPage;
   gmailTransport?: GmailTransport;
+  gmailClient?: GmailClient;
+  gmailPushConfig?: GmailPushConfig;
   providerRegistry?: ProviderRegistry;
   now?: () => Date;
   mirrorDraft?: (db: Database, input: GmailDraftMirrorInput) => Promise<GmailDraftMirrorResult>;
@@ -129,6 +142,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     : providerFor(account).syncPage;
   const capabilitiesFor = (account: ConnectedAccount) => providerFor(account).detectCapabilities(account.scope);
   const now = options.now ?? (() => new Date());
+  const gmailClient = options.gmailClient ?? createGmailClient();
+  const gmailPushConfig = options.gmailPushConfig ?? loadGmailPushConfig();
   const syncStatuses = new Map<string, SyncStatusRecord>();
   const draftMirrorJobs = new Set<string>();
 
@@ -147,6 +162,83 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       service: "orca-api",
     }),
   );
+
+  const handleGmailPush = async (c: Context<{ Variables: AuthVariables }>) => {
+    if (!gmailPushConfig.verificationToken) {
+      return c.json({ error: { code: "push_not_configured", message: "Gmail push verification is not configured" } }, 503);
+    }
+    if (!verifyGmailPushToken(c.req.raw, gmailPushConfig)) {
+      return c.json({ error: { code: "unauthorized", message: "Gmail push verification failed" } }, 401);
+    }
+
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: { code: "invalid_notification", message: "Gmail push notification was not valid JSON" } }, 400);
+    }
+
+    const notification = parseGmailPubSubNotification(body);
+    if (!notification) {
+      return c.json({ error: { code: "invalid_notification", message: "Gmail push notification was malformed" } }, 400);
+    }
+
+    const { db, sqlite } = dbFactory();
+    try {
+      const accounts = db
+        .select({ id: oauthAccounts.id, providerEmail: oauthAccounts.providerEmail })
+        .from(oauthAccounts)
+        .where(eq(oauthAccounts.provider, "gmail"))
+        .all()
+        .filter((candidate) => candidate.providerEmail.trim().toLowerCase() === notification.emailAddress);
+
+      // Pub/Sub retries are not useful for an account that has been removed.
+      // Acknowledge unknown addresses without disclosing account existence.
+      if (accounts.length === 0) {
+        return c.body(null, 204);
+      }
+
+      let failedError: unknown;
+      for (const account of accounts) {
+        syncStatuses.set(account.id, { state: "syncing", error: null });
+        try {
+          await withGmailSyncLock(account.id, async () => {
+            await syncGmailAccountHistory(db, {
+              accountId: account.id,
+              historyId: notification.historyId,
+              gmailClient,
+              config: gmailPushConfig,
+              now: now(),
+              pageSize: gmailPushConfig.backfillPageSize,
+              maxPages: gmailPushConfig.backfillMaxPages,
+            });
+          });
+          syncStatuses.delete(account.id);
+        } catch (error) {
+          failedError ??= error;
+          const publicError = toPublicPushError(error);
+          syncStatuses.set(account.id, { state: "error", error: publicError.message });
+        }
+      }
+
+      if (failedError) {
+        const publicError = toPublicPushError(failedError);
+        return c.json({ error: { code: publicError.code, message: publicError.message } }, publicError.status);
+      }
+
+      return c.body(null, 204);
+    } catch (error) {
+      const publicError = toPublicPushError(error);
+      return c.json({ error: { code: publicError.code, message: publicError.message } }, publicError.status);
+    } finally {
+      sqlite.close();
+    }
+  };
+
+  // Keep the canonical webhook path stable while accepting the shorter path
+  // during local Pub/Sub emulator setup.
+  app.post("/v1/webhooks/gmail", handleGmailPush);
+  app.post("/v1/gmail/push", handleGmailPush);
 
   app.all("/v1/feedback", (c) => handleFeedbackRequest(c.req.raw, {
     allowedOrigin: serverConfig.webOrigin,
@@ -1411,6 +1503,52 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   }
 
   app.post(
+    "/v1/gmail/watch",
+    requireAuth({ dbFactory }),
+    async (c) => {
+      if (!gmailPushConfig.verificationToken || !gmailPushConfig.topicName) {
+        return c.json({ error: { code: "push_not_configured", message: "Gmail push verification is not configured" } }, 503);
+      }
+      const { db, sqlite } = dbFactory();
+      try {
+        const accountId = c.req.query("accountId");
+        const account = accountId
+          ? getConnectedGmailAccount(db, c.get("auth").userId, accountId)
+          : getPreferredConnectedAccount(db, c.get("auth").userId);
+        if (!account) {
+          return c.json({ error: { code: "not_found", message: "No Gmail account is connected for this user" } }, 404);
+        }
+
+        const result = await withGmailSyncLock(account.id, async () => {
+          const watch = await ensureGmailWatch(db, {
+            accountId: account.id,
+            gmailClient,
+            config: gmailPushConfig,
+            now: now(),
+          });
+          const backfill = account.lastSyncedAt || account.syncCursor
+            ? null
+            : await backfillGmailAccount(db, {
+                accountId: account.id,
+                gmailClient,
+                now: now(),
+                pageSize: gmailPushConfig.backfillPageSize,
+                maxPages: gmailPushConfig.backfillMaxPages,
+              });
+          return { watch, backfill };
+        });
+
+        return c.json(result, 200);
+      } catch (error) {
+        const publicError = toPublicPushError(error);
+        return c.json({ error: { code: publicError.code, message: publicError.message } }, publicError.status);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.post(
     "/v1/sync/gmail",
     requireAuth({ dbFactory }),
     async (c) => {
@@ -1436,24 +1574,28 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           );
         }
 
-        syncStatuses.set(account.id, { state: "syncing", error: null });
-        const syncPage = syncPageFor(account);
-        let result = await syncPage(db, { accountId: account.id, pageSize: 25 });
-        let pages = 1;
-        let emailCount = result.emailCount;
-        let threadCount = result.threadCount;
-        let labelCount = result.labelCount;
-        let contactCount = result.contactCount;
-        while (result.nextCursor && pages < 20) {
-          result = await syncPage(db, { accountId: account.id, pageSize: 25 });
-          pages += 1;
-          emailCount += result.emailCount;
-          threadCount += result.threadCount;
-          labelCount += result.labelCount;
-          contactCount += result.contactCount;
-        }
-        syncStatuses.delete(account.id);
-        return c.json({ ...result, emailCount, threadCount, labelCount, contactCount, pages }, 200);
+        const connectedAccount = account;
+        syncStatuses.set(connectedAccount.id, { state: "syncing", error: null });
+        const result = await withGmailSyncLock(connectedAccount.id, async () => {
+          const syncPage = syncPageFor(connectedAccount);
+          let pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
+          let pages = 1;
+          let emailCount = pageResult.emailCount;
+          let threadCount = pageResult.threadCount;
+          let labelCount = pageResult.labelCount;
+          let contactCount = pageResult.contactCount;
+          while (pageResult.nextCursor && pages < 20) {
+            pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
+            pages += 1;
+            emailCount += pageResult.emailCount;
+            threadCount += pageResult.threadCount;
+            labelCount += pageResult.labelCount;
+            contactCount += pageResult.contactCount;
+          }
+          return { ...pageResult, emailCount, threadCount, labelCount, contactCount, pages };
+        });
+        syncStatuses.delete(connectedAccount.id);
+        return c.json(result, 200);
       } catch (error) {
         console.error(`${account?.provider ?? "mail"} sync failed`, {
           userId: auth.userId,
@@ -1490,6 +1632,7 @@ type ConnectedAccount = {
   displayName: string | null;
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
+  syncCursor: string | null;
   lastSyncedAt: Date | null;
   scope: string | null;
 };
@@ -2263,6 +2406,7 @@ function getAccountById(db: ReturnType<typeof createDatabaseClient>["db"], accou
     displayName: users.displayName,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    syncCursor: oauthAccounts.syncCursor,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
     scope: oauthAccounts.scope,
   })
@@ -2514,6 +2658,47 @@ function toPublicSyncError(error: unknown) {
   } as const;
 }
 
+function toPublicPushError(error: unknown) {
+  if (error instanceof GmailSyncError) {
+    return toPublicPushError(new GmailPushError(error.message, error.code));
+  }
+  if (error instanceof GmailPushError) {
+    switch (error.code) {
+      case "push_not_configured":
+        return {
+          code: "push_not_configured",
+          message: "Gmail push notifications are not configured",
+          status: 503,
+        } as const;
+      case "provider_auth_error":
+        return {
+          code: "provider_auth_error",
+          message: "Gmail needs to be reconnected before push sync can continue",
+          status: 401,
+        } as const;
+      case "sync_conflict":
+        return {
+          code: "sync_conflict",
+          message: "Gmail push sync cannot start until the connected account is fully configured",
+          status: 409,
+        } as const;
+      case "provider_error":
+      default:
+        return {
+          code: "provider_error",
+          message: "Gmail push sync is temporarily unavailable",
+          status: 502,
+        } as const;
+    }
+  }
+
+  return {
+    code: "internal_error",
+    message: "Gmail push sync failed unexpectedly",
+    status: 500,
+  } as const;
+}
+
 const { port } = serverConfig;
 
 if (import.meta.main) {
@@ -2530,4 +2715,5 @@ if (import.meta.main) {
       server.close(() => process.exit(0));
     });
   }
+  startGmailSyncScheduler();
 }

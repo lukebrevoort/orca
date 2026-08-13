@@ -174,6 +174,33 @@ The BRE-159 M3 writing and delivery verification guide is available at
 The BRE-252 M5 fixture, Human Inbox, and milestone closeout guide is available at
 `http://localhost:5173/docs/bre-252-validation.html`.
 
+### Gmail push sync
+
+When Pub/Sub is configured, the API establishes a Gmail `watch` cursor and
+processes Gmail history IDs from the verified webhook at
+`POST /v1/webhooks/gmail` (the shorter `/v1/gmail/push` alias is also accepted).
+The first watch setup backfills existing inbox messages before relying on
+history deltas. A background scheduler renews the watch and polls through the
+regular Gmail sync path every 15 minutes by default, so mail continues to
+arrive when Pub/Sub delivery is delayed or unavailable.
+
+To configure it:
+
+1. Enable Gmail and Pub/Sub APIs in the Google Cloud project, and create a
+   topic such as `projects/my-project/topics/orca-gmail`.
+2. Create a push subscription targeting the deployed
+   `/v1/webhooks/gmail?token=<long-random-secret>` URL. Keep the token in the
+   subscription configuration and `.env`, never in source control.
+3. Set `GMAIL_PUBSUB_TOPIC` and `GMAIL_PUBSUB_VERIFICATION_TOKEN`, then restart
+   the API. Set `GMAIL_SYNC_INTERVAL_MS` or `GMAIL_WATCH_RENEWAL_WINDOW_MS` only
+   when the defaults need to change.
+4. Call `POST /v1/gmail/watch` with an authenticated Orca session after Gmail
+   is connected, or let the periodic scheduler establish the watch.
+
+The webhook acknowledges removed/unknown accounts without exposing account
+existence. Invalid history cursors trigger a complete existing-message
+backfill, and provider failures return a non-2xx response so Pub/Sub retries.
+
 ### Local feedback
 
 In Vite development mode, every React route includes the Feedback button from

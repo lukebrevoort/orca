@@ -47,6 +47,9 @@ export const oauthAccounts = sqliteTable(
     tokenExpiry: integer("token_expiry", { mode: "timestamp_ms" }),
     scope: text("scope"),
     syncCursor: text("sync_cursor"),
+    syncHistoryId: text("sync_history_id"),
+    watchExpirationAt: integer("watch_expiration_at", { mode: "timestamp_ms" }),
+    watchTopic: text("watch_topic"),
     lastSyncedAt: integer("last_synced_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
