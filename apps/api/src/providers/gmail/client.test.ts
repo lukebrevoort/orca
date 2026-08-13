@@ -61,4 +61,22 @@ describe("Gmail push API client", () => {
       (error: unknown) => error instanceof GmailApiError && error.status === 404 && error.message === "Gmail API request failed",
     );
   });
+
+  test("overlaps incremental message queries at the local checkpoint boundary", async () => {
+    const urls: string[] = [];
+    const fetchImpl = async (input: string | URL | Request) => {
+      urls.push(String(input));
+      return Response.json({ messages: [], nextPageToken: null });
+    };
+    const client = createGmailClient(fetchImpl as typeof fetch);
+    const since = new Date("2026-08-12T12:00:00.500Z");
+
+    await client.listInboxMessagePage({
+      accessToken: "access-token",
+      since,
+    });
+
+    const query = new URL(urls[0]!).searchParams.get("q");
+    assert.equal(query, `after:${Math.floor((since.getTime() - 60_000) / 1000)}`);
+  });
 });
