@@ -3758,7 +3758,16 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .wave-rail button:hover, .wave-rail nav a:hover, .wave-rail button[aria-current="page"], .wave-rail .wave-rail-selected { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .wave-rail button.wave-rail-brand { background: var(--orca-accent); border-color: var(--orca-accent); color: #fff; }
 .wave-rail button.wave-rail-brand:hover { background: color-mix(in srgb, var(--orca-accent) 88%, var(--orca-ink)); border-color: transparent; color: #fff; }
-.wave-rail-account { align-items: center; background: var(--color-sand); border-radius: 50%; color: #8a7046; display: flex; font-size: 13px; font-weight: 600; height: 40px; justify-content: center; width: 40px; }
+.wave-rail-account-wrap { align-items: center; display: flex; justify-content: center; position: relative; }
+.wave-rail-account { align-items: center; background: var(--color-sand); border-radius: 50%; color: #8a7046; display: flex; font-size: 13px; font-weight: 600; height: 40px; justify-content: center; overflow: hidden; position: relative; width: 40px; }
+.wave-rail-account:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.wave-rail-account-image { display: block; height: 100%; object-fit: cover; width: 100%; }
+.wave-rail-account-change { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 50%; bottom: -4px; color: var(--orca-ink); cursor: pointer; display: flex; height: 18px; justify-content: center; position: absolute; right: -4px; width: 18px; z-index: 1; }
+.wave-rail-account-change:hover { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
+.wave-rail-account-change:focus-within,
+.wave-rail-account-change input:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }
+.wave-rail-account-change input { cursor: pointer; inset: 0; opacity: 0; position: absolute; }
+.wave-rail-account-change svg { height: 11px; pointer-events: none; width: 11px; }
 
 .rail-library {
   background: var(--color-white, var(--orca-paper));
@@ -4132,7 +4141,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .wave-rail { bottom: 12px; flex-direction: row; height: 60px; left: 50%; padding: 8px; top: auto; transform: translateX(-50%); width: min(390px, calc(100vw - 24px)); }
   .wave-rail nav { flex-direction: row; justify-content: center; padding: 0; }
   .wave-rail nav button:nth-child(3), .wave-rail nav a { display: none; }
-  .wave-rail-account { display: none; }
+  .wave-rail-account-wrap { display: none; }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }

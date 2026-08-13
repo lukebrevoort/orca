@@ -1743,6 +1743,7 @@ export function InboxApp({
       </button>
       <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
         <WaveRail
+          account={account}
           activeMailbox={activeMailbox}
           libraryOpen={organizationOpen}
           onOpenLibrary={toggleLibrary}
@@ -2548,7 +2549,133 @@ function RailGlyph({ name }: { name: "inbox" | "focus" | "quiet" | "later" | "li
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>;
 }
 
-function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }: {
+type ProfilePhotoStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export const PROFILE_PHOTO_FALLBACK_SRC = "/profile-avatar.svg";
+export const PROFILE_PHOTO_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+export const MAX_PROFILE_PHOTO_BYTES = 2_000_000;
+
+const profilePhotoStoragePrefix = "orca-profile-photo:";
+const profilePhotoDataUrlPattern = /^data:image\/(?:gif|jpe?g|png|webp);base64,[a-z0-9+/]+={0,2}$/i;
+const profilePhotoMimeTypes = new Set(PROFILE_PHOTO_ACCEPT.split(","));
+
+function profilePhotoStorage(): ProfilePhotoStorage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function profilePhotoStorageKey(account: Pick<MailAccount, "id">) {
+  return `${profilePhotoStoragePrefix}${account.id}`;
+}
+
+export function isProfilePhotoDataUrl(value: string) {
+  return profilePhotoDataUrlPattern.test(value);
+}
+
+export function readStoredProfilePhoto(account: Pick<MailAccount, "id">, storage: ProfilePhotoStorage | null = profilePhotoStorage()) {
+  if (!storage) return null;
+  try {
+    const value = storage.getItem(profilePhotoStorageKey(account));
+    return value && isProfilePhotoDataUrl(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredProfilePhoto(account: Pick<MailAccount, "id">, value: string, storage: ProfilePhotoStorage | null = profilePhotoStorage()) {
+  if (!storage || !isProfilePhotoDataUrl(value)) return false;
+  try {
+    storage.setItem(profilePhotoStorageKey(account), value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeStoredProfilePhoto(account: Pick<MailAccount, "id">) {
+  const storage = profilePhotoStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(profilePhotoStorageKey(account));
+  } catch {
+    // A private browsing context may reject storage access. The in-memory
+    // fallback still keeps the current avatar usable for this session.
+  }
+}
+
+export function profileInitials(account: Pick<MailAccount, "displayName" | "email"> | null) {
+  const identity = account?.displayName.trim() || account?.email.split("@")[0] || "?";
+  return identity.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "?";
+}
+
+export function ProfileAvatar({ account }: { account: MailAccount | null }) {
+  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+  const [photoError, setPhotoError] = useState("");
+  const accountId = account?.id ?? "preview";
+  const accountLabel = account?.displayName.trim() || account?.email || "your account";
+
+  useEffect(() => {
+    setImageSource(readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+    setPhotoError("");
+  }, [accountId]);
+
+  function handleImageError() {
+    if (imageSource !== PROFILE_PHOTO_FALLBACK_SRC) {
+      if (account) removeStoredProfilePhoto(account);
+      setImageSource(PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError("That profile photo could not be loaded. The default avatar is being used.");
+      return;
+    }
+    setImageSource(null);
+    setPhotoError("The default profile avatar could not be loaded. Showing your initials instead.");
+  }
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (!profilePhotoMimeTypes.has(file.type)) {
+      setPhotoError("Choose a PNG, JPEG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+      setPhotoError("Profile photos must be 2 MB or smaller.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      const value = typeof reader.result === "string" ? reader.result : "";
+      if (!isProfilePhotoDataUrl(value)) {
+        setPhotoError("That file could not be used as a profile photo.");
+        return;
+      }
+      const saved = account ? writeStoredProfilePhoto(account, value) : false;
+      setImageSource(value);
+      setPhotoError(saved || !account ? "" : "Photo changed for this session; browser storage is unavailable.");
+    }, { once: true });
+    reader.addEventListener("error", () => setPhotoError("That file could not be read as a profile photo."), { once: true });
+    reader.readAsDataURL(file);
+  }
+
+  return <div className="wave-rail-account-wrap">
+    <a aria-label={`Account settings for ${accountLabel}`} className="wave-rail-account" href="/settings">
+      {imageSource ? <img alt="" className="wave-rail-account-image" onError={handleImageError} src={imageSource} /> : <span aria-hidden="true">{profileInitials(account)}</span>}
+    </a>
+    <label className="wave-rail-account-change" title="Change profile photo">
+      <input accept={PROFILE_PHOTO_ACCEPT} aria-label="Change profile photo" onChange={handlePhotoChange} type="file" />
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v9h-15z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8"/><circle cx="12" cy="13" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
+    </label>
+    <span aria-live="polite" className="visually-hidden">{photoError}</span>
+  </div>;
+}
+
+function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }: {
+  account: MailAccount | null;
   activeMailbox: Mailbox;
   libraryOpen: boolean;
   onOpenLibrary: () => void;
@@ -2563,7 +2690,7 @@ function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }
       <button aria-controls="collections-and-pins-drawer" aria-expanded={libraryOpen} aria-label={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} className={libraryOpen ? "wave-rail-selected" : ""} onClick={onOpenLibrary} title={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} type="button"><RailGlyph name="library" /></button>
       <a aria-label="Settings" href="/settings" title="Settings"><RailGlyph name="settings" /></a>
     </nav>
-    <a aria-label="Account settings" className="wave-rail-account" href="/settings">L</a>
+    <ProfileAvatar account={account} />
   </aside>;
 }
 

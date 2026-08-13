@@ -43,3 +43,12 @@ describe("long message subjects", () => {
     expect(styles).toContain("@media (max-width: 360px)");
   });
 });
+
+describe("profile avatar controls", () => {
+  test("keeps the photo picker visible, theme-safe, and hidden with the mobile rail", () => {
+    expect(styles).toContain(".wave-rail-account-image { display: block; height: 100%; object-fit: cover; width: 100%; }");
+    expect(styles).toContain(".wave-rail-account-change:hover { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }");
+    expect(styles).toContain(".wave-rail-account-change input:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }");
+    expect(styles).toContain(".wave-rail-account-wrap { display: none; }");
+  });
+});
