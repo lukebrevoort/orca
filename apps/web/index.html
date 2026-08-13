@@ -5,6 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Orca</title>
+    <script>
+      (() => {
+        const systemTheme = typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        let theme = systemTheme;
+
+        try {
+          const storedPreferences = window.localStorage.getItem("orca-reader-preferences");
+          const storedTheme = storedPreferences ? JSON.parse(storedPreferences).theme : window.localStorage.getItem("orca-theme");
+          if (storedTheme === "dark" || storedTheme === "light") theme = storedTheme;
+        } catch {
+          // Keep the system theme when browser storage is unavailable or malformed.
+        }
+
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <style>
+      @layer orca-theme-bootstrap {
+        html,
+        body {
+          background: #f7faf8;
+        }
+
+        html[data-theme="dark"],
+        html[data-theme="dark"] body {
+          background: #191918;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
