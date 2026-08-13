@@ -8,11 +8,28 @@ function cssRuleWithDeclaration(selector: string, declaration: string) {
   return styles.slice(start, styles.indexOf("}", start) + 1);
 }
 
+function latestCssRule(selector: string) {
+  const start = styles.lastIndexOf(`${selector} {`);
+  if (start < 0) throw new Error(`Missing CSS rule for ${selector}`);
+  return styles.slice(start, styles.indexOf("}", start) + 1);
+}
+
 describe("compose panel surfaces", () => {
   test("keeps every panel layer opaque without removing the backdrop blur", () => {
     expect(cssRuleWithDeclaration(".slide-panel", "background: var(--orca-paper)")).toContain("background: var(--orca-paper)");
     expect(cssRuleWithDeclaration(".panel-header", "background: var(--orca-paper)")).toContain("background: var(--orca-paper)");
     expect(cssRuleWithDeclaration(".panel-body", "background: var(--orca-paper)")).toContain("background: var(--orca-paper)");
     expect(styles).toContain("backdrop-filter: blur(2px) saturate(.92)");
+  });
+});
+
+describe("Zen canvas surface", () => {
+  test("uses the sand palette with a restrained flow while keeping writing ink themed", () => {
+    const zenCanvas = latestCssRule(".zen-canvas");
+    expect(zenCanvas).toContain("background-color: var(--color-sand)");
+    expect(zenCanvas).toContain("radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--orca-accent) 13%, transparent), transparent 54%)");
+    expect(zenCanvas).toContain("radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--orca-paper) 65%, transparent), transparent 56%)");
+    expect(zenCanvas).toContain("var(--color-sand)");
+    expect(zenCanvas).toContain("color: var(--orca-ink)");
   });
 });
