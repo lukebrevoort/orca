@@ -4112,6 +4112,11 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .stream-avatar-variant-1 { border-radius: 11px; }
 .stream-avatar-variant-2 { border-radius: 9px 50% 50% 9px; }
 .stream-avatar-variant-3 { border-radius: 50% 9px 50% 9px; }
+.stream-avatar.contact-mark-organization { border-radius: 11px; font-size: 10px; letter-spacing: .06em; }
+.stream-avatar svg { height: 20px; width: 20px; }
+.contact-organization-mark { align-items: center; background: color-mix(in srgb, currentColor 14%, transparent); border: 1px solid color-mix(in srgb, currentColor 28%, transparent); border-radius: 7px; display: inline-flex; height: 25px; justify-content: center; min-width: 25px; padding: 0 4px; }
+.message-mark.contact-mark-organization { border-radius: 9px; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.message-mark .contact-organization-mark { height: 21px; min-width: 21px; }
 .message-copy { display: block; min-width: 0; }
 .message-meta { align-items: baseline; display: flex; gap: 8px; line-height: 1.35; margin: 0 0 3px; min-height: 18px; }
 .message-meta strong { color: var(--orca-ink); font-size: 13px; font-weight: 600; }
@@ -4694,6 +4699,11 @@ button, input, textarea { font-family: var(--orca-font-body); }
     font-size: 10px;
     height: 32px;
     width: 32px;
+  }
+
+  :root[data-reader-density="compact"] .stream-avatar .contact-organization-mark {
+    height: 20px;
+    min-width: 20px;
   }
 
   :root[data-reader-density="compact"] .message-copy {
