@@ -3684,30 +3684,30 @@ textarea {
 }
 
 :root[data-theme="dark"] {
-  --color-foam: #101b1a;
-  --color-white: #162422;
-  --color-tideline: #2a3c39;
-  --color-kelp: #a9bbb7;
-  --color-current: #f2f8f6;
-  --color-lagoon: #2bc8af;
-  --color-lagoon-soft: rgb(43 200 175 / 14%);
-  --color-sand: #2b261e;
+  --color-foam: #111a22;
+  --color-white: #1a2730;
+  --color-tideline: #304149;
+  --color-kelp: #9cafb1;
+  --color-current: #edf3f1;
+  --color-lagoon: #8fb7ad;
+  --color-lagoon-soft: rgb(143 183 173 / 14%);
+  --color-sand: #2a2927;
   --orca-ink: var(--color-current);
   --orca-paper: var(--color-foam);
   --orca-muted: var(--color-kelp);
   --orca-border: var(--color-tideline);
   --orca-surface: var(--color-white);
-  --orca-surface-hover: #20322f;
+  --orca-surface-hover: #24353e;
   --orca-accent: var(--color-lagoon);
   --orca-accent-soft: var(--color-lagoon-soft);
-  --orca-danger: #ef8c7f;
+  --orca-danger: #e7a197;
   --orca-canvas: var(--color-foam);
   --orca-canvas-ink: var(--color-current);
-  --orca-control: #1c2c2a;
-  --orca-control-hover: #273b38;
+  --orca-control: #1b2930;
+  --orca-control-hover: #283b43;
   --orca-control-ink: var(--color-current);
-  --orca-blur-tint: rgb(16 27 26 / 86%);
-  --orca-shadow: 0 22px 64px rgb(0 0 0 / 42%);
+  --orca-blur-tint: rgb(17 26 34 / 88%);
+  --orca-shadow: 0 22px 64px rgb(0 0 0 / 34%);
 }
 
 html { background: var(--orca-paper); }
@@ -4492,7 +4492,9 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .settings-save-button { background: var(--orca-ink); border-color: var(--orca-ink); color: var(--orca-paper); }
 .settings-save-button:disabled, .settings-outlook-button:disabled { background: var(--orca-surface); border-color: var(--orca-border); color: var(--orca-muted); opacity: 1; }
 .preference-options { background: var(--orca-control); border-radius: 999px; padding: 3px; }
-:root[data-theme="dark"] .settings-home-page .preference-options { background: transparent; border: 1px solid var(--orca-border); border-radius: 12px; }
+:root[data-theme="dark"] .settings-home-page .preference-options { background: transparent; border: 0; border-radius: 0; padding: 3px 0; }
+:root[data-theme="dark"] .settings-home-page .preference-option:hover span { background: var(--orca-surface); }
+:root[data-theme="dark"] .settings-home-page .preference-option-selected span { background: var(--orca-surface-hover); }
 .preference-option { border: 0; border-radius: 999px; color: var(--orca-muted); }
 .preference-option-selected { background: var(--orca-surface); border-color: var(--orca-border); box-shadow: 0 2px 8px rgb(15 36 34 / 8%); color: var(--orca-ink); }
 
