@@ -21,7 +21,7 @@ import {
   messageBodies,
   messageHtmlBodies,
 } from "./demo-data";
-import { getContactSignature, type ContactSignature } from "./contact-signature";
+import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { createPortal } from "react-dom";
@@ -2531,15 +2531,25 @@ function oauthErrorMessage(reason: string | null, preserveReading: boolean, prov
   }
 }
 
-function MessageMark({ signature, unread }: { signature: ContactSignature; unread: boolean }) {
+function ContactMark({ className, contact, personMark = "initials", signature, style, unread = false }: { className: string; contact: MailContact; personMark?: "glyph" | "initials"; signature: ContactSignature; style?: CSSProperties; unread?: boolean }) {
+  const identity = getContactIdentity(contact);
+
   return (
     <span
       aria-hidden="true"
-      className={`message-mark${unread ? " message-mark-unread" : ""}`}
-      data-variant={signature.variant}
+      className={`${className} contact-mark-${identity.kind}${unread ? " message-mark-unread" : ""}`}
+      data-contact-identity={identity.kind}
+      data-contact-identity-label={identity.kind === "organization" ? identity.label : undefined}
+      style={style}
     >
-      <ContactGlyph variant={signature.variant} />
+      {identity.kind === "organization" ? <span className="contact-organization-mark">{identity.mark}</span> : identity.kind === "person" && personMark === "initials" ? identity.mark : <ContactGlyph variant={signature.variant} />}
     </span>
+  );
+}
+
+function MessageMark({ contact, signature, unread }: { contact: MailContact; signature: ContactSignature; unread: boolean }) {
+  return (
+    <ContactMark className="message-mark" contact={contact} personMark="glyph" signature={signature} unread={unread} />
   );
 }
 
@@ -3426,7 +3436,12 @@ function InboxView({
                       }
                       type="button"
                     >
-                      <span aria-hidden="true" className={`stream-avatar stream-avatar-variant-${signature.variant}`} style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span>
+                      <ContactMark
+                        className={`stream-avatar stream-avatar-variant-${signature.variant}`}
+                        contact={message.from}
+                        signature={signature}
+                        style={{ background: signature.palette.bg, color: signature.palette.fg }}
+                      />
                       <div className="message-copy">
                         <div className="message-meta">
                           <strong>{message.from.name ?? message.from.email}</strong>
@@ -3692,7 +3707,7 @@ export function MessageReader({
                           tabIndex={-1}
                         >
                     <header className="reader-sender">
-                      <MessageMark signature={signature} unread={message.unread} />
+                      <MessageMark contact={message.from} signature={signature} unread={message.unread} />
                       <div className="reader-sender-copy">
                         <div className="reader-sender-line">
                           <h3 id={`reader-sender-${message.id}`}>{message.from.name ?? message.from.email}</h3>
