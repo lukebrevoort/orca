@@ -425,6 +425,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   function connectOutlook() {
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
   }
+  const profileAccount = connectedAccounts[0] ?? null;
 
   return <main className="settings-home-page">
     <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
@@ -433,7 +434,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
-        <SettingsSection id="account" title="Account" note="Account-level"><div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a></SettingsSection>
+        <SettingsSection id="account" title="Account" note="Account-level">
+          {profileAccount ? <div className="settings-profile">
+            <ProfileAvatar account={profileAccount} editable variant="settings" />
+            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Shown in your navigation rail. Changes are saved on this device.</span></div>
+          </div> : connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking your profile…</p> : null}
+          <div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a>
+        </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
         <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
@@ -2612,7 +2619,11 @@ export function profileInitials(account: Pick<MailAccount, "displayName" | "emai
   return identity.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "?";
 }
 
-export function ProfileAvatar({ account }: { account: MailAccount | null }) {
+export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
+  account: MailAccount | null;
+  editable?: boolean;
+  variant?: "rail" | "settings";
+}) {
   const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
   const [photoError, setPhotoError] = useState("");
   const accountId = account?.id ?? "preview";
@@ -2662,15 +2673,20 @@ export function ProfileAvatar({ account }: { account: MailAccount | null }) {
     reader.readAsDataURL(file);
   }
 
-  return <div className="wave-rail-account-wrap">
-    <a aria-label={`Account settings for ${accountLabel}`} className="wave-rail-account" href="/settings">
-      {imageSource ? <img alt="" className="wave-rail-account-image" onError={handleImageError} src={imageSource} /> : <span aria-hidden="true">{profileInitials(account)}</span>}
-    </a>
-    <label className="wave-rail-account-change" title="Change profile photo">
+  const image = imageSource
+    ? <img alt="" className="profile-avatar-image" onError={handleImageError} src={imageSource} />
+    : <span aria-hidden="true">{profileInitials(account)}</span>;
+  const avatar = variant === "rail"
+    ? <a aria-label={`Account settings for ${accountLabel}`} className="wave-rail-account" href="/settings">{image}</a>
+    : <div aria-label={`Profile photo for ${accountLabel}`} className="settings-profile-avatar" role="img">{image}</div>;
+
+  return <div className={variant === "rail" ? "wave-rail-account-wrap" : "settings-profile-photo"}>
+    {avatar}
+    {editable ? <label className="settings-profile-photo-change">
+      Change photo
       <input accept={PROFILE_PHOTO_ACCEPT} aria-label="Change profile photo" onChange={handlePhotoChange} type="file" />
-      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M4.5 8.5h3l1.5-2h6l1.5 2h3v9h-15z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8"/><circle cx="12" cy="13" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
-    </label>
-    <span aria-live="polite" className="visually-hidden">{photoError}</span>
+    </label> : null}
+    <span aria-live="polite" className={variant === "rail" ? "visually-hidden" : "settings-profile-photo-status"}>{photoError}</span>
   </div>;
 }
 
