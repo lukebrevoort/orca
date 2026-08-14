@@ -201,6 +201,59 @@ async function goBackToInbox() {
   });
 }
 
+describe("Inbox row action affordances", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("uses icon-first controls while keeping accessible names and states", async () => {
+    await renderApp();
+    const wrap = messageRow("Jordan Bell").parentElement as unknown as HTMLElement;
+    const pin = wrap.querySelector("button.pin-sender-button") as unknown as HTMLButtonElement | null;
+    const keep = wrap.querySelector("button.keep-thread-button") as unknown as HTMLButtonElement | null;
+    const tune = wrap.querySelector("button.sender-attention-trigger") as unknown as HTMLButtonElement | null;
+
+    expect(pin).not.toBeNull();
+    expect(pin?.querySelector("svg.message-action-icon")).not.toBeNull();
+    expect(pin?.getAttribute("aria-label")).toBe("Pin Jordan Bell");
+    expect(pin?.getAttribute("title")).toBe("Pin Jordan Bell");
+
+    expect(keep).not.toBeNull();
+    expect(keep?.querySelector("svg.message-action-icon")).not.toBeNull();
+    expect(keep?.getAttribute("aria-label")).toContain("Keep ");
+    expect(keep?.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(keep?.getAttribute("title")).toBe("Keep in collection");
+
+    expect(tune).not.toBeNull();
+    expect(tune?.querySelector("svg.message-action-icon")).not.toBeNull();
+    expect(tune?.getAttribute("aria-label")).toBe("Manage mail from Jordan Bell");
+    expect(tune?.getAttribute("title")).toBe("Tune mail from Jordan Bell");
+    expect(tune?.getAttribute("aria-expanded")).toBe("false");
+
+    await act(async () => {
+      pin?.click();
+    });
+    const pinned = (messageRow("Jordan Bell").parentElement as unknown as HTMLElement).querySelector("button.pin-sender-button") as unknown as HTMLButtonElement;
+    expect(pinned.disabled).toBe(true);
+    expect(pinned.getAttribute("aria-pressed")).toBe("true");
+
+    await act(async () => {
+      tune?.click();
+    });
+    expect(tune?.getAttribute("aria-expanded")).toBe("true");
+  });
+});
+
 describe("Inbox reader viewport restoration", () => {
   beforeEach(() => {
     installDom();
