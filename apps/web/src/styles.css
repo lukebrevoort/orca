@@ -4313,13 +4313,14 @@ button, input, textarea { font-family: var(--orca-font-body); }
 /* Compose panel and zen canvas */
 @keyframes backdrop-in { from { background: transparent; backdrop-filter: blur(0); } to { background: rgb(15 36 34 / 30%); backdrop-filter: blur(2px) saturate(.92); } }
 @keyframes backdrop-out { from { background: rgb(15 36 34 / 30%); backdrop-filter: blur(2px) saturate(.92); opacity: 1; } to { background: transparent; backdrop-filter: blur(0); opacity: 0; } }
-.slide-panel { background: var(--orca-surface); border: 0; border-radius: 28px 0 0 28px; box-shadow: -20px 0 60px rgb(15 36 34 / 14%); width: min(560px, 100vw); }
-.panel-header { background: var(--orca-surface); border-bottom: 1px solid var(--orca-border); padding: 26px 30px 20px 34px; }
+/* Keep the write surface opaque while the overlay backdrop continues to blur the inbox behind it. */
+.slide-panel { background: var(--orca-paper); border: 0; border-radius: 28px 0 0 28px; box-shadow: -20px 0 60px rgb(15 36 34 / 14%); width: min(560px, 100vw); }
+.panel-header { background: var(--orca-paper); border-bottom: 1px solid var(--orca-border); padding: 26px 30px 20px 34px; }
 .panel-header h2 { font-size: 18px; font-weight: 600; letter-spacing: -.025em; }
 .panel-zen { border: 0; color: #8b6d35; font-size: 12px; padding: 0 8px; }
 .panel-close { border-radius: 50%; height: 34px; width: 34px; }
 .panel-close span { font-size: 21px; font-weight: 300; line-height: 1; }
-.panel-body { background: var(--orca-surface); }
+.panel-body { background: var(--orca-paper); }
 .compose-workspace-panel { padding: 16px 34px 20px; }
 .compose-workspace-intro { display: none; }
 .compose-addressing { border-top: 0; padding: 8px 0; }
