@@ -4369,13 +4369,16 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .compose-workspace-zen .compose-subject-label { display: none; }
 .compose-workspace-zen .compose-subject-field input { font-size: 30px; font-weight: 600; line-height: 1.2; padding: 10px 0 20px; }
 .compose-workspace-zen .compose-writing-area { font-family: var(--orca-font-reader); font-size: 20px; line-height: 1.65; min-height: 40vh; padding-top: 8px; }
-.compose-workspace-zen .compose-formatting { background: var(--orca-surface); border-radius: 999px; bottom: 28px; box-shadow: 0 16px 38px rgb(90 70 35 / 14%); left: 50%; margin: 0; padding: 8px 14px; position: fixed; transform: translateX(-50%); width: min(600px, calc(100vw - 48px)); z-index: 4; }
+.compose-workspace-zen .compose-formatting { background: transparent; border-radius: 0; bottom: 36px; box-shadow: none; left: clamp(36px, 7.5vw, 94px); margin: 0; padding: 0; position: fixed; transform: none; width: auto; z-index: 4; }
+.compose-workspace-zen > .compose-delivery-bar .compose-delivery-empty { display: none; }
 .compose-workspace-zen > .compose-delivery-bar { border: 0; bottom: 36px; padding: 0; position: fixed; right: max(36px, calc((100vw - 600px) / 2 + 10px)); z-index: 5; }
 .compose-workspace-zen > .compose-delivery-bar .compose-delivery-actions::before { content: "Later"; }
 
 @media (max-width: 760px) {
   .compose-delivery-bar { grid-template-columns: 1fr; }
   .compose-delivery-actions { justify-content: flex-end; }
+  .compose-workspace-zen .compose-formatting { bottom: 24px; }
+  .compose-workspace-zen > .compose-delivery-bar { bottom: 88px; right: 20px; }
 }
 
 @media (max-width: 600px) {
