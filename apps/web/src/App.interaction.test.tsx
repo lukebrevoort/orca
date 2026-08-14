@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -136,12 +136,12 @@ function restoreDom() {
   browserWindow.close();
 }
 
-async function renderApp() {
+async function renderApp(preferences: ReaderPreferences = defaultReaderPreferences) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
   await act(async () => {
-    root!.render(<InboxApp demoMode preferences={defaultReaderPreferences} theme="light" setTheme={() => {}} />);
+    root!.render(<InboxApp demoMode preferences={preferences} theme="light" setTheme={() => {}} />);
   });
   return container;
 }
@@ -201,6 +201,29 @@ async function goBackToInbox() {
   });
 }
 
+async function openZen() {
+  const compose = browserWindow.document.querySelector("button.tidal-compose-fab") as unknown as HTMLButtonElement | null;
+  if (!compose) throw new Error("Could not find compose button");
+  await act(async () => {
+    compose.click();
+  });
+
+  const zenButton = browserWindow.document.querySelector("button.panel-zen") as unknown as HTMLButtonElement | null;
+  if (!zenButton) throw new Error("Could not find Open in Zen control");
+  await act(async () => {
+    zenButton.click();
+  });
+
+  const canvas = browserWindow.document.querySelector(".zen-canvas") as unknown as HTMLElement | null;
+  if (!canvas) throw new Error("Could not find Zen canvas");
+  return canvas;
+}
+
+async function waitFor(milliseconds: number) {
+  await act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+  });
+}
 describe("Inbox row action affordances", () => {
   beforeEach(() => {
     installDom();
@@ -354,5 +377,77 @@ describe("Inbox reader viewport restoration", () => {
       browserWindow.dispatchEvent(new browserWindow.CustomEvent(PROFILE_PHOTO_CHANGED_EVENT, { detail: { accountId: "acct_demo" } }));
     });
     expect(avatar?.getAttribute("src")).toBe(secondPhoto);
+  });
+});
+
+describe("Zen exit presence", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("keeps the canvas mounted with its exit state until Save & close finishes", async () => {
+    await renderApp();
+    const canvas = await openZen();
+    const saveAndClose = canvas.querySelector("button.zen-back") as unknown as HTMLButtonElement | null;
+    if (!saveAndClose) throw new Error("Could not find Save & close control");
+
+    await act(async () => {
+      saveAndClose.click();
+    });
+
+    const closingCanvas = browserWindow.document.querySelector(".zen-canvas");
+    expect(closingCanvas).not.toBeNull();
+    expect(closingCanvas?.classList.contains("zen-canvas-closing")).toBe(true);
+
+    await waitFor(550);
+
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+    const panel = browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]");
+    expect(panel?.getAttribute("aria-hidden")).toBeNull();
+    expect(panel?.hasAttribute("inert")).toBe(false);
+  });
+
+  test("uses the same closing lifecycle for Escape", async () => {
+    await renderApp();
+    const canvas = await openZen();
+
+    await act(async () => {
+      canvas.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as Event);
+    });
+
+    expect(browserWindow.document.querySelector(".zen-canvas")?.classList.contains("zen-canvas-closing")).toBe(true);
+  });
+
+  test("returns immediately for reduced motion without delaying panel controls", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    const canvas = await openZen();
+    const saveAndClose = canvas.querySelector("button.zen-back") as unknown as HTMLButtonElement | null;
+    if (!saveAndClose) throw new Error("Could not find Save & close control");
+
+    await act(async () => {
+      saveAndClose.click();
+    });
+
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+    const panelAfterZenExit = browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]");
+    expect(panelAfterZenExit?.getAttribute("aria-hidden")).toBeNull();
+
+    const closePanelButton = browserWindow.document.querySelector("button[aria-label=\"Close panel\"]") as unknown as HTMLButtonElement | null;
+    if (!closePanelButton) throw new Error("Could not find panel close control");
+    await act(async () => {
+      closePanelButton.click();
+    });
+    expect(browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]")).toBeNull();
   });
 });
