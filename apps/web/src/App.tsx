@@ -2561,6 +2561,7 @@ type ProfilePhotoStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export const PROFILE_PHOTO_FALLBACK_SRC = "/profile-avatar.svg";
 export const PROFILE_PHOTO_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 export const MAX_PROFILE_PHOTO_BYTES = 2_000_000;
+export const PROFILE_PHOTO_CHANGED_EVENT = "orca-profile-photo-changed";
 
 const profilePhotoStoragePrefix = "orca-profile-photo:";
 const profilePhotoDataUrlPattern = /^data:image\/(?:gif|jpe?g|png|webp);base64,[a-z0-9+/]+={0,2}$/i;
@@ -2614,6 +2615,11 @@ function removeStoredProfilePhoto(account: Pick<MailAccount, "id">) {
   }
 }
 
+function notifyProfilePhotoChanged(account: Pick<MailAccount, "id">) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PROFILE_PHOTO_CHANGED_EVENT, { detail: { accountId: account.id } }));
+}
+
 export function profileInitials(account: Pick<MailAccount, "displayName" | "email"> | null) {
   const identity = account?.displayName.trim() || account?.email.split("@")[0] || "?";
   return identity.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "?";
@@ -2630,8 +2636,28 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   const accountLabel = account?.displayName.trim() || account?.email || "your account";
 
   useEffect(() => {
-    setImageSource(readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
-    setPhotoError("");
+    const storageKey = profilePhotoStorageKey({ id: accountId });
+    const refreshStoredPhoto = () => {
+      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError("");
+    };
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === storageKey || event.key === null) refreshStoredPhoto();
+    };
+    const handlePhotoChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ accountId?: string }>).detail;
+      if (!detail?.accountId || detail.accountId === accountId) refreshStoredPhoto();
+    };
+
+    refreshStoredPhoto();
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
+    window.addEventListener("pageshow", refreshStoredPhoto);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
+      window.removeEventListener("pageshow", refreshStoredPhoto);
+    };
   }, [accountId]);
 
   function handleImageError() {
@@ -2667,6 +2693,7 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
       }
       const saved = account ? writeStoredProfilePhoto(account, value) : false;
       setImageSource(value);
+      if (saved && account) notifyProfilePhotoChanged(account);
       setPhotoError(saved || !account ? "" : "Photo changed for this session; browser storage is unavailable.");
     }, { once: true });
     reader.addEventListener("error", () => setPhotoError("That file could not be read as a profile photo."), { once: true });
