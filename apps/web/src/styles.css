@@ -195,6 +195,17 @@ textarea {
 .settings-section > header { align-items: baseline; display: flex; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .settings-section h2 { font-family: var(--orca-font-display); font-size: 30px; font-weight: 400; letter-spacing: -.03em; margin: 0; }
 .settings-section > header span { color: var(--orca-muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.settings-profile { align-items: center; display: flex; gap: 18px; margin-bottom: 22px; }
+.settings-profile-copy { display: grid; gap: 4px; min-width: 0; }
+.settings-profile-copy strong { font-size: 15px; }
+.settings-profile-copy span { color: var(--orca-muted); font-size: 13px; line-height: 1.5; }
+.settings-profile-photo { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }
+.settings-profile-avatar { align-items: center; background: var(--color-sand); border: 1px solid var(--orca-border); border-radius: 50%; color: #8a7046; display: flex; flex: 0 0 72px; font-size: 18px; font-weight: 650; height: 72px; justify-content: center; overflow: hidden; width: 72px; }
+.settings-profile-photo-change { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; display: inline-flex; font-size: 12px; font-weight: 750; min-height: 38px; padding: 0 14px; position: relative; }
+.settings-profile-photo-change:hover,
+.settings-profile-photo-change:focus-within { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent); outline-offset: 2px; }
+.settings-profile-photo-change input { cursor: pointer; inset: 0; opacity: 0; position: absolute; }
+.settings-profile-photo-status { color: var(--orca-danger); flex-basis: 100%; font-size: 12px; line-height: 1.45; }
 .settings-detail { display: grid; gap: 5px; margin-bottom: 12px; }
 .settings-detail strong { font-size: 15px; }.settings-detail span, .settings-capability { color: var(--orca-muted); font-size: 13px; line-height: 1.5; margin: 0; }
 .settings-row-link { border-bottom: 1px solid var(--orca-border); color: var(--orca-ink); display: block; font-size: 14px; font-weight: 700; padding: 14px 0; transform-origin: left center; }
@@ -3758,7 +3769,10 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .wave-rail button:hover, .wave-rail nav a:hover, .wave-rail button[aria-current="page"], .wave-rail .wave-rail-selected { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .wave-rail button.wave-rail-brand { background: var(--orca-accent); border-color: var(--orca-accent); color: #fff; }
 .wave-rail button.wave-rail-brand:hover { background: color-mix(in srgb, var(--orca-accent) 88%, var(--orca-ink)); border-color: transparent; color: #fff; }
-.wave-rail-account { align-items: center; background: var(--color-sand); border-radius: 50%; color: #8a7046; display: flex; font-size: 13px; font-weight: 600; height: 40px; justify-content: center; width: 40px; }
+.wave-rail-account-wrap { align-items: center; display: flex; justify-content: center; position: relative; }
+.wave-rail-account { align-items: center; background: var(--color-sand); border-radius: 50%; color: #8a7046; display: flex; font-size: 13px; font-weight: 600; height: 40px; justify-content: center; overflow: hidden; position: relative; width: 40px; }
+.wave-rail-account:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.profile-avatar-image { display: block; height: 100%; object-fit: cover; width: 100%; }
 
 .rail-library {
   background: var(--color-white, var(--orca-paper));
@@ -4132,7 +4146,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .wave-rail { bottom: 12px; flex-direction: row; height: 60px; left: 50%; padding: 8px; top: auto; transform: translateX(-50%); width: min(390px, calc(100vw - 24px)); }
   .wave-rail nav { flex-direction: row; justify-content: center; padding: 0; }
   .wave-rail nav button:nth-child(3), .wave-rail nav a { display: none; }
-  .wave-rail-account { display: none; }
+  .wave-rail-account-wrap { display: none; }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }

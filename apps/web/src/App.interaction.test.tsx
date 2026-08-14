@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { InboxApp, defaultReaderPreferences } from "./App";
+import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, writeStoredProfilePhoto } from "./App";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -280,5 +280,26 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.activeElement).not.toBe(first);
     expect(browserWindow.document.activeElement).not.toBe(second);
     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+  });
+
+  test("refreshes the rail avatar when a changed photo returns from settings", async () => {
+    await renderApp();
+    const avatar = browserWindow.document.querySelector(".wave-rail-account img");
+    expect(avatar?.getAttribute("src")).toBe(PROFILE_PHOTO_FALLBACK_SRC);
+
+    const changedPhoto = "data:image/png;base64,ZmFrZS1wcm9maWxl";
+    expect(writeStoredProfilePhoto({ id: "acct_demo" }, changedPhoto, browserWindow.localStorage)).toBe(true);
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.Event("pageshow"));
+    });
+
+    expect(avatar?.getAttribute("src")).toBe(changedPhoto);
+
+    const secondPhoto = "data:image/png;base64,ZmFrZS1zZWNvbmQ=";
+    expect(writeStoredProfilePhoto({ id: "acct_demo" }, secondPhoto, browserWindow.localStorage)).toBe(true);
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.CustomEvent(PROFILE_PHOTO_CHANGED_EVENT, { detail: { accountId: "acct_demo" } }));
+    });
+    expect(avatar?.getAttribute("src")).toBe(secondPhoto);
   });
 });

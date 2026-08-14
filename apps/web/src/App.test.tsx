@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { m5InboxFixture } from "@orca/shared";
-import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MessageReader, MessageSubject, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, readStoredPreferences, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId } from "./App";
+import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readStoredPreferences, readStoredProfilePhoto, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
@@ -172,6 +172,8 @@ describe("App", () => {
     expect(html).toContain("/settings/integrations/gmail");
     expect(html).toContain("Add Microsoft Outlook");
     expect(html).toContain("Connect Outlook");
+    expect(html).toContain("Profile photo");
+    expect(html).toContain("Change photo");
     expect(html).toContain("Writing");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
@@ -820,6 +822,53 @@ describe("message subject containment", () => {
     const html = renderToStaticMarkup(<MessageSubject subject={subject} unread={false} />);
 
     expect(html).toContain(`<h2 title="${subject}">${subject}</h2>`);
+  });
+});
+
+describe("profile avatar", () => {
+  const account: MailAccount = {
+    id: "acct_profile",
+    provider: "gmail",
+    email: "luke@example.com",
+    displayName: "Luke Brevoort",
+    capabilities: { read: true, draft: false, send: false },
+  };
+
+  test("keeps the rail display-only while settings owns the photo picker", () => {
+    const html = renderToStaticMarkup(<ProfileAvatar account={account} />);
+    const settingsHtml = renderToStaticMarkup(<ProfileAvatar account={account} editable variant="settings" />);
+
+    expect(html).toContain('aria-label="Account settings for Luke Brevoort"');
+    expect(html).toContain(`src="${PROFILE_PHOTO_FALLBACK_SRC}"`);
+    expect(html).not.toContain("Change photo");
+    expect(html).not.toContain('type="file"');
+    expect(settingsHtml).toContain('aria-label="Profile photo for Luke Brevoort"');
+    expect(settingsHtml).toContain("Change photo");
+    expect(settingsHtml).toContain('aria-label="Change profile photo"');
+    expect(settingsHtml).toContain(`accept="${PROFILE_PHOTO_ACCEPT}"`);
+    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain(">L</a>");
+    expect(profileInitials(account)).toBe("LB");
+    expect(profileInitials(null)).toBe("?");
+  });
+
+  test("validates and namespaces locally stored photos per account", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => { values.set(key, value); },
+      removeItem: (key: string) => { values.delete(key); },
+    };
+    const photo = "data:image/png;base64,ZmFrZQ==";
+
+    expect(isProfilePhotoDataUrl(photo)).toBe(true);
+    expect(isProfilePhotoDataUrl("data:image/svg+xml;base64,ZmFrZQ==")).toBe(false);
+    expect(writeStoredProfilePhoto(account, photo, storage)).toBe(true);
+    expect(readStoredProfilePhoto(account, storage)).toBe(photo);
+    expect(readStoredProfilePhoto({ id: "another-account" }, storage)).toBeNull();
+    expect(profilePhotoStorageKey(account)).toBe("orca-profile-photo:acct_profile");
+    expect(writeStoredProfilePhoto(account, "data:text/html;base64,ZmFrZQ==", storage)).toBe(false);
+    expect(MAX_PROFILE_PHOTO_BYTES).toBe(2_000_000);
   });
 });
 
