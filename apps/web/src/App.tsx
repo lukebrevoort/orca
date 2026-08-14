@@ -425,6 +425,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   function connectOutlook() {
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
   }
+  const profileAccount = connectedAccounts[0] ?? null;
 
   return <main className="settings-home-page">
     <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
@@ -433,7 +434,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
-        <SettingsSection id="account" title="Account" note="Account-level"><div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a></SettingsSection>
+        <SettingsSection id="account" title="Account" note="Account-level">
+          {profileAccount ? <div className="settings-profile">
+            <ProfileAvatar account={profileAccount} editable variant="settings" />
+            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Shown in your navigation rail. Changes are saved on this device.</span></div>
+          </div> : connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking your profile…</p> : null}
+          <div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a>
+        </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
         <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
@@ -1758,6 +1765,7 @@ export function InboxApp({
       </button>
       <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
         <WaveRail
+          account={account}
           activeMailbox={activeMailbox}
           libraryOpen={organizationOpen}
           onOpenLibrary={toggleLibrary}
@@ -2574,7 +2582,169 @@ function RailGlyph({ name }: { name: "inbox" | "focus" | "quiet" | "later" | "li
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>;
 }
 
-function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }: {
+type ProfilePhotoStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export const PROFILE_PHOTO_FALLBACK_SRC = "/profile-avatar.svg";
+export const PROFILE_PHOTO_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+export const MAX_PROFILE_PHOTO_BYTES = 2_000_000;
+export const PROFILE_PHOTO_CHANGED_EVENT = "orca-profile-photo-changed";
+
+const profilePhotoStoragePrefix = "orca-profile-photo:";
+const profilePhotoDataUrlPattern = /^data:image\/(?:gif|jpe?g|png|webp);base64,[a-z0-9+/]+={0,2}$/i;
+const profilePhotoMimeTypes = new Set(PROFILE_PHOTO_ACCEPT.split(","));
+
+function profilePhotoStorage(): ProfilePhotoStorage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function profilePhotoStorageKey(account: Pick<MailAccount, "id">) {
+  return `${profilePhotoStoragePrefix}${account.id}`;
+}
+
+export function isProfilePhotoDataUrl(value: string) {
+  return profilePhotoDataUrlPattern.test(value);
+}
+
+export function readStoredProfilePhoto(account: Pick<MailAccount, "id">, storage: ProfilePhotoStorage | null = profilePhotoStorage()) {
+  if (!storage) return null;
+  try {
+    const value = storage.getItem(profilePhotoStorageKey(account));
+    return value && isProfilePhotoDataUrl(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredProfilePhoto(account: Pick<MailAccount, "id">, value: string, storage: ProfilePhotoStorage | null = profilePhotoStorage()) {
+  if (!storage || !isProfilePhotoDataUrl(value)) return false;
+  try {
+    storage.setItem(profilePhotoStorageKey(account), value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeStoredProfilePhoto(account: Pick<MailAccount, "id">) {
+  const storage = profilePhotoStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(profilePhotoStorageKey(account));
+  } catch {
+    // A private browsing context may reject storage access. The in-memory
+    // fallback still keeps the current avatar usable for this session.
+  }
+}
+
+function notifyProfilePhotoChanged(account: Pick<MailAccount, "id">) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PROFILE_PHOTO_CHANGED_EVENT, { detail: { accountId: account.id } }));
+}
+
+export function profileInitials(account: Pick<MailAccount, "displayName" | "email"> | null) {
+  const identity = account?.displayName.trim() || account?.email.split("@")[0] || "?";
+  return identity.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "?";
+}
+
+export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
+  account: MailAccount | null;
+  editable?: boolean;
+  variant?: "rail" | "settings";
+}) {
+  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+  const [photoError, setPhotoError] = useState("");
+  const accountId = account?.id ?? "preview";
+  const accountLabel = account?.displayName.trim() || account?.email || "your account";
+
+  useEffect(() => {
+    const storageKey = profilePhotoStorageKey({ id: accountId });
+    const refreshStoredPhoto = () => {
+      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError("");
+    };
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === storageKey || event.key === null) refreshStoredPhoto();
+    };
+    const handlePhotoChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ accountId?: string }>).detail;
+      if (!detail?.accountId || detail.accountId === accountId) refreshStoredPhoto();
+    };
+
+    refreshStoredPhoto();
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
+    window.addEventListener("pageshow", refreshStoredPhoto);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
+      window.removeEventListener("pageshow", refreshStoredPhoto);
+    };
+  }, [accountId]);
+
+  function handleImageError() {
+    if (imageSource !== PROFILE_PHOTO_FALLBACK_SRC) {
+      if (account) removeStoredProfilePhoto(account);
+      setImageSource(PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError("That profile photo could not be loaded. The default avatar is being used.");
+      return;
+    }
+    setImageSource(null);
+    setPhotoError("The default profile avatar could not be loaded. Showing your initials instead.");
+  }
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (!profilePhotoMimeTypes.has(file.type)) {
+      setPhotoError("Choose a PNG, JPEG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+      setPhotoError("Profile photos must be 2 MB or smaller.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      const value = typeof reader.result === "string" ? reader.result : "";
+      if (!isProfilePhotoDataUrl(value)) {
+        setPhotoError("That file could not be used as a profile photo.");
+        return;
+      }
+      const saved = account ? writeStoredProfilePhoto(account, value) : false;
+      setImageSource(value);
+      if (saved && account) notifyProfilePhotoChanged(account);
+      setPhotoError(saved || !account ? "" : "Photo changed for this session; browser storage is unavailable.");
+    }, { once: true });
+    reader.addEventListener("error", () => setPhotoError("That file could not be read as a profile photo."), { once: true });
+    reader.readAsDataURL(file);
+  }
+
+  const image = imageSource
+    ? <img alt="" className="profile-avatar-image" onError={handleImageError} src={imageSource} />
+    : <span aria-hidden="true">{profileInitials(account)}</span>;
+  const avatar = variant === "rail"
+    ? <a aria-label={`Account settings for ${accountLabel}`} className="wave-rail-account" href="/settings">{image}</a>
+    : <div aria-label={`Profile photo for ${accountLabel}`} className="settings-profile-avatar" role="img">{image}</div>;
+
+  return <div className={variant === "rail" ? "wave-rail-account-wrap" : "settings-profile-photo"}>
+    {avatar}
+    {editable ? <label className="settings-profile-photo-change">
+      Change photo
+      <input accept={PROFILE_PHOTO_ACCEPT} aria-label="Change profile photo" onChange={handlePhotoChange} type="file" />
+    </label> : null}
+    <span aria-live="polite" className={variant === "rail" ? "visually-hidden" : "settings-profile-photo-status"}>{photoError}</span>
+  </div>;
+}
+
+function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }: {
+  account: MailAccount | null;
   activeMailbox: Mailbox;
   libraryOpen: boolean;
   onOpenLibrary: () => void;
@@ -2589,7 +2759,7 @@ function WaveRail({ activeMailbox, libraryOpen, onOpenLibrary, onSelectMailbox }
       <button aria-controls="collections-and-pins-drawer" aria-expanded={libraryOpen} aria-label={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} className={libraryOpen ? "wave-rail-selected" : ""} onClick={onOpenLibrary} title={libraryOpen ? "Close collections and pins menu" : "Open collections and pins menu"} type="button"><RailGlyph name="library" /></button>
       <a aria-label="Settings" href="/settings" title="Settings"><RailGlyph name="settings" /></a>
     </nav>
-    <a aria-label="Account settings" className="wave-rail-account" href="/settings">L</a>
+    <ProfileAvatar account={account} />
   </aside>;
 }
 
@@ -2817,6 +2987,16 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
     </section>
   </div>;
   return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
+}
+
+export function MessageSubject({ subject, unread }: { subject: string; unread: boolean }) {
+  const label = subject || "(no subject)";
+  return (
+    <div className="message-subject-row">
+      <h2 title={label}>{label}</h2>
+      {unread ? <span className="message-unread-dot" /> : null}
+    </div>
+  );
 }
 
 function InboxView({
@@ -3286,10 +3466,7 @@ function InboxView({
                           </span>
                           <span>{formatReceivedAt(message.receivedAt)}</span>
                         </div>
-                        <div className="message-subject-row">
-                          <h2>{message.subject || "(no subject)"}</h2>
-                          {message.unread ? <span className="message-unread-dot" /> : null}
-                        </div>
+                        <MessageSubject subject={message.subject} unread={message.unread} />
                         <p>{message.snippet}</p>
                       </div>
                   </button>

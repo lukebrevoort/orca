@@ -1,0 +1,19 @@
+<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <linearGradient id="profile-sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#d9e4df"/>
+      <stop offset="1" stop-color="#9eb6ac"/>
+    </linearGradient>
+    <linearGradient id="profile-shirt" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#315b59"/>
+      <stop offset="1" stop-color="#183f43"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" fill="url(#profile-sky)"/>
+  <circle cx="48" cy="39" r="19" fill="#f0c8a6"/>
+  <path d="M28 38c1-17 10-25 21-25 12 0 21 8 20 25-5-7-11-10-20-10-8 0-15 3-21 10Z" fill="#34464b"/>
+  <path d="M18 96c2-22 13-34 30-34s28 12 30 34Z" fill="url(#profile-shirt)"/>
+  <path d="M40 49c5 4 11 4 16 0" fill="none" stroke="#a96555" stroke-linecap="round" stroke-width="2"/>
+  <circle cx="41" cy="38" r="2" fill="#34464b"/>
+  <circle cx="55" cy="38" r="2" fill="#34464b"/>
+</svg>
