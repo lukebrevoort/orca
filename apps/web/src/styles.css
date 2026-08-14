@@ -4678,3 +4678,69 @@ button, input, textarea { font-family: var(--orca-font-body); }
     top: auto;
   }
 }
+
+/* BRE-258: keep long subjects inside the message content area instead of
+   letting them run beneath the classification and row action rail. */
+.message-copy,
+.message-subject-row,
+.message-subject-row h2,
+.message-copy > p {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 761px) {
+  .message-row {
+    padding-right: 340px;
+  }
+
+  .inbox-view-later .message-row {
+    padding-right: 305px;
+  }
+
+  .inbox-view-collection .message-row {
+    padding-right: 390px;
+  }
+}
+
+@media (max-width: 760px) {
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .message-row {
+    padding-bottom: 54px;
+    padding-right: 16px;
+  }
+
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .message-meta {
+    padding-right: 40px;
+  }
+
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .classification-correction {
+    bottom: 8px;
+    left: 80px;
+    right: auto;
+    top: auto;
+  }
+
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .pin-sender-button {
+    bottom: 8px;
+    right: 112px;
+    top: auto;
+  }
+
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .keep-thread-button {
+    bottom: 8px;
+    right: 8px;
+    top: auto;
+  }
+
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .message-row-wrap > .sender-attention-control {
+    bottom: 8px;
+    right: 48px;
+    top: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .classification-correction {
+    left: 0;
+  }
+}

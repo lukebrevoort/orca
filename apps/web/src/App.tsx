@@ -2793,6 +2793,16 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
   return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
 }
 
+export function MessageSubject({ subject, unread }: { subject: string; unread: boolean }) {
+  const label = subject || "(no subject)";
+  return (
+    <div className="message-subject-row">
+      <h2 title={label}>{label}</h2>
+      {unread ? <span className="message-unread-dot" /> : null}
+    </div>
+  );
+}
+
 function InboxView({
   account,
   automatedMessages,
@@ -3255,10 +3265,7 @@ function InboxView({
                           </span>
                           <span>{formatReceivedAt(message.receivedAt)}</span>
                         </div>
-                        <div className="message-subject-row">
-                          <h2>{message.subject || "(no subject)"}</h2>
-                          {message.unread ? <span className="message-unread-dot" /> : null}
-                        </div>
+                        <MessageSubject subject={message.subject} unread={message.unread} />
                         <p>{message.snippet}</p>
                       </div>
                   </button>
