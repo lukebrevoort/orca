@@ -1244,7 +1244,7 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
   } = controller;
   return (
     <footer className="compose-delivery-bar">
-      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
+      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
         <button
