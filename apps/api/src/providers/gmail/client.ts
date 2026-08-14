@@ -2,6 +2,10 @@ import type { GmailLabel, GmailMessage } from "./types.ts";
 
 const gmailApiBaseUrl = "https://gmail.googleapis.com/gmail/v1/users/me";
 const defaultPageSize = 25;
+// Gmail's `after:` search is exclusive, while the local checkpoint is a
+// wall-clock high-water mark. Re-read a small window so a message accepted at
+// the boundary (or indexed just after the checkpoint) cannot be skipped.
+const incrementalSyncOverlapMs = 60_000;
 
 type GmailListMessagesResponse = {
   messages?: Array<{
@@ -284,10 +288,11 @@ async function gmailMutation<T>(
 }
 
 function buildInboxQuery(since: Date) {
-  if (since.getTime() <= 0) {
+  const querySince = Math.max(0, since.getTime() - incrementalSyncOverlapMs);
+  if (querySince <= 0) {
     return null;
   }
 
-  const unixSeconds = Math.floor(since.getTime() / 1000);
+  const unixSeconds = Math.floor(querySince / 1000);
   return `after:${unixSeconds}`;
 }
