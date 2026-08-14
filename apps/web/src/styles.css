@@ -4356,7 +4356,15 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .compose-send:disabled { background: var(--orca-control); border-color: var(--orca-border); color: var(--orca-muted); opacity: .65; }
 .later-error { color: #b4533c; font-size: 11px; margin: 12px 16px; }
 
-.zen-canvas { background: var(--color-sand); color: var(--orca-ink); }
+/* Keep the Zen canvas calm but intentional: a stable sand fallback with a restrained directional wash. */
+.zen-canvas {
+  background-color: var(--color-sand);
+  background:
+    radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--orca-accent) 13%, transparent), transparent 54%),
+    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--orca-paper) 65%, transparent), transparent 56%),
+    var(--color-sand);
+  color: var(--orca-ink);
+}
 .zen-header { padding: 28px 34px 0; }
 .zen-back { background: var(--orca-surface); border: 1px solid color-mix(in srgb, var(--orca-border) 65%, transparent); border-radius: 999px; color: var(--orca-ink); font-size: 12px; font-weight: 600; padding: 11px 16px; }
 .zen-stage { align-items: flex-start; display: flex; justify-content: center; padding: 116px 24px 130px; }
