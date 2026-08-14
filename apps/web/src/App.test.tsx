@@ -172,6 +172,8 @@ describe("App", () => {
     expect(html).toContain("/settings/integrations/gmail");
     expect(html).toContain("Add Microsoft Outlook");
     expect(html).toContain("Connect Outlook");
+    expect(html).toContain("Profile photo");
+    expect(html).toContain("Change photo");
     expect(html).toContain("Writing");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
@@ -832,13 +834,18 @@ describe("profile avatar", () => {
     capabilities: { read: true, draft: false, send: false },
   };
 
-  test("renders an account-aware local image, picker, and accessible fallback contract", () => {
+  test("keeps the rail display-only while settings owns the photo picker", () => {
     const html = renderToStaticMarkup(<ProfileAvatar account={account} />);
+    const settingsHtml = renderToStaticMarkup(<ProfileAvatar account={account} editable variant="settings" />);
 
     expect(html).toContain('aria-label="Account settings for Luke Brevoort"');
     expect(html).toContain(`src="${PROFILE_PHOTO_FALLBACK_SRC}"`);
-    expect(html).toContain('aria-label="Change profile photo"');
-    expect(html).toContain(`accept="${PROFILE_PHOTO_ACCEPT}"`);
+    expect(html).not.toContain("Change photo");
+    expect(html).not.toContain('type="file"');
+    expect(settingsHtml).toContain('aria-label="Profile photo for Luke Brevoort"');
+    expect(settingsHtml).toContain("Change photo");
+    expect(settingsHtml).toContain('aria-label="Change profile photo"');
+    expect(settingsHtml).toContain(`accept="${PROFILE_PHOTO_ACCEPT}"`);
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain(">L</a>");
     expect(profileInitials(account)).toBe("LB");
