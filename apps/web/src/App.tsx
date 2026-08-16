@@ -33,6 +33,7 @@ export type ReaderPreferences = {
   density: "calm" | "compact";
   motion: "system" | "reduced" | "full";
   notifyByDefault: boolean;
+  composeZenByDefault: boolean;
 };
 
 export const defaultReaderPreferences: ReaderPreferences = {
@@ -41,6 +42,7 @@ export const defaultReaderPreferences: ReaderPreferences = {
   density: "compact",
   motion: "system",
   notifyByDefault: false,
+  composeZenByDefault: false,
 };
 
 const readerDensityHint = "Calm gives each message more room. Compact fits more mail and thread history on screen.";
@@ -443,7 +445,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
-        <SettingsSection id="writing" title="Writing" note="Account-level"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /></SettingsSection>
+        <SettingsSection id="writing" title="Writing" note="Account + device"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /><label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>Start every new draft in the distraction-free editor.</small></span></label></SettingsSection>
         <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
           <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
@@ -465,7 +467,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           <a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
         </SettingsSection>
         <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores normalized mail locally and only requests the read-first permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google or Microsoft prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a><a className="settings-row-link" href="https://myaccount.microsoft.com/organizations">Manage Microsoft provider access →</a></SettingsSection>
-        <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices follow your account."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
+        <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
       </section>
     </div>
   </main>;
@@ -504,6 +506,13 @@ export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme
             <label className="preference-switch">
               <input checked={preferences.notifyByDefault} onChange={(event) => update("notifyByDefault", event.target.checked)} type="checkbox" />
               <span><strong>Notify me by default</strong><small>New reminders start with notifications checked. You can still change each reminder.</small></span>
+            </label>
+          </fieldset>
+          <fieldset className="preference-group">
+            <legend>Writing</legend>
+            <label className="preference-switch">
+              <input checked={preferences.composeZenByDefault} onChange={(event) => update("composeZenByDefault", event.target.checked)} type="checkbox" />
+              <span><strong>Start new writing in Zen mode</strong><small>Open every new draft in the distraction-free editor.</small></span>
             </label>
           </fieldset>
         </div>
@@ -792,7 +801,10 @@ export function InboxApp({
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const composeDraft = useComposeDraft(account?.id ?? "preview", "new", demoMode);
-  const [zen, setZen] = useState(false);
+  const [zen, setZen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("compose") === "1" && preferences.composeZenByDefault;
+  });
   const [panelClosing, setPanelClosing] = useState(false);
   const [showSendPermission, setShowSendPermission] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -1132,6 +1144,32 @@ export function InboxApp({
     });
   }, [selectedThreadId]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        event.defaultPrevented ||
+        !(event.metaKey || event.ctrlKey) ||
+        event.altKey ||
+        !event.shiftKey ||
+        event.isComposing ||
+        event.repeat ||
+        event.key.toLowerCase() !== "m" ||
+        panelMode ||
+        panelClosing ||
+        (target instanceof HTMLElement && target.matches("input, textarea, [contenteditable=true]"))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      openCompose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [panelClosing, panelMode, preferences.composeZenByDefault]);
+
   const mailboxItems = useMemo(
     () =>
       mailboxes.map((mailbox) => ({
@@ -1197,7 +1235,7 @@ export function InboxApp({
     setPanelClosing(false);
     setZenClosing(false);
     setPanelMode("compose");
-    setZen(false);
+    setZen(preferences.composeZenByDefault);
   }
 
   function openLibrary() {
@@ -1908,7 +1946,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {!selectedThreadId ? <button className="tidal-compose-fab" inert={organizationOpen || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span> Write</button> : null}
+      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -5017,6 +5055,7 @@ export function readStoredPreferences(storage?: Pick<Storage, "getItem">): Reade
         density: ["calm", "compact"].includes(value.density ?? "") ? value.density! : defaultReaderPreferences.density,
         motion: ["system", "reduced", "full"].includes(value.motion ?? "") ? value.motion! : "system",
         notifyByDefault: value.notifyByDefault === true,
+        composeZenByDefault: value.composeZenByDefault === true,
       };
     }
     const legacyTheme = source.getItem("orca-theme");

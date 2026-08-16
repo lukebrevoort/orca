@@ -135,8 +135,8 @@ describe("App", () => {
   test("defaults reader preferences to OS behavior and safely restores saved choices", () => {
     expect(readStoredPreferences({ getItem: () => null })).toEqual(defaultReaderPreferences);
     expect(readStoredPreferences({ getItem: (key) => key === "orca-theme" ? "dark" : null })).toEqual({ ...defaultReaderPreferences, theme: "dark" });
-    expect(readStoredPreferences({ getItem: () => JSON.stringify({ theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true }) })).toEqual({
-      theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true,
+    expect(readStoredPreferences({ getItem: () => JSON.stringify({ theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true, composeZenByDefault: true }) })).toEqual({
+      theme: "light", textSize: "large", density: "compact", motion: "reduced", notifyByDefault: true, composeZenByDefault: true,
     });
     expect(readStoredPreferences({ getItem: () => "not-json" })).toEqual(defaultReaderPreferences);
   });
@@ -148,6 +148,7 @@ describe("App", () => {
     expect(html).toContain("System is currently light");
     expect(html).toContain("preference-option preference-option-selected");
     expect(html).toContain("Notify me by default");
+    expect(html).toContain("Start new writing in Zen mode");
     expect(html).toContain("checked=\"\"");
   });
 
@@ -177,6 +178,7 @@ describe("App", () => {
     expect(html).toContain("Profile photo");
     expect(html).toContain("Change photo");
     expect(html).toContain("Writing");
+    expect(html).toContain("Open new writing in Zen mode");
     expect(html).toContain("Privacy &amp; data");
     expect(html).toContain("Save account choices");
     expect(darkHtml).toContain('aria-label="Switch to light mode"');
