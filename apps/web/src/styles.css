@@ -4190,6 +4190,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 
 .tidal-compose-fab { align-items: center; background: var(--orca-accent); border: 0; border-radius: 999px; bottom: 28px; box-shadow: 0 14px 30px rgb(14 159 138 / 26%); color: #fff; cursor: pointer; display: flex; font-size: 14px; font-weight: 600; gap: 9px; left: 50%; padding: 13px 25px; position: fixed; transform: translateX(-50%); z-index: 46; }
 .tidal-compose-fab:hover { background: color-mix(in srgb, var(--orca-accent) 88%, var(--orca-ink)); transform: translateX(-50%) translateY(-2px); }
+.tidal-compose-fab kbd { background: rgb(255 255 255 / 18%); border: 1px solid rgb(255 255 255 / 30%); border-radius: 5px; color: inherit; font: 700 10px/1 var(--orca-font-body); padding: 4px 5px; }
 
 .inbox-view-collection .stream-search { display: none; }
 .inbox-view-collection .pane-header { margin-bottom: 28px; }

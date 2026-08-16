@@ -224,6 +224,56 @@ async function waitFor(milliseconds: number) {
     await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
   });
 }
+
+describe("Write shortcut", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("opens writing with Cmd/Ctrl+Shift+M and keeps other keys available", async () => {
+    await renderApp();
+    const compose = browserWindow.document.querySelector("button.tidal-compose-fab") as unknown as HTMLButtonElement | null;
+    expect(compose?.getAttribute("aria-keyshortcuts")).toBe("Meta+Shift+M Control+Shift+M");
+    expect(compose?.querySelector("kbd")?.textContent).toBe("⌘⇧M");
+
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
+    });
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+  });
+
+  test("starts writing in Zen mode when the preference is enabled", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true });
+
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    });
+
+    expect(browserWindow.document.querySelector(".zen-canvas")).not.toBeNull();
+  });
+});
+
 describe("Inbox row action affordances", () => {
   beforeEach(() => {
     installDom();
