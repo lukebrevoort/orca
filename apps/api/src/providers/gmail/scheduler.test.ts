@@ -129,6 +129,64 @@ describe("Gmail periodic sync scheduler", () => {
     }
   });
 
+  test("full-backfills an existing account when its first push watch is established", async () => {
+    setAuthEnv();
+    const { db, sqlite, path } = createMigratedClient();
+    const sinceValues: string[] = [];
+    const gmailClient: GmailClient = {
+      async getMessage() {
+        return {
+          id: "legacy-message",
+          threadId: "legacy-thread",
+          labelIds: ["INBOX"],
+          internalDate: "1783512000000",
+          payload: {
+            mimeType: "text/plain",
+            headers: [
+              { name: "From", value: "Maya <maya@example.com>" },
+              { name: "To", value: "Luke <luke@example.com>" },
+              { name: "Subject", value: "Legacy migration" },
+            ],
+            body: { data: Buffer.from("Legacy migration").toString("base64") },
+          },
+        };
+      },
+      async listInboxMessagePage({ since }) {
+        sinceValues.push(since.toISOString());
+        return { messageIds: ["legacy-message"], nextCursor: null };
+      },
+      async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
+      async watch() { return { historyId: "200", expiration: "1800000000000" }; },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1",
+        userId: "user_1",
+        provider: "gmail",
+        providerEmail: "luke@example.com",
+        providerId: "gmail-user-1",
+        lastSyncedAt: new Date("2026-08-04T00:00:00.000Z"),
+      }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+
+      const result = await runGmailPeriodicSync({
+        dbFactory: () => createDatabaseClient(path),
+        gmailClient,
+        config,
+        now: () => new Date("2026-08-15T00:00:00.000Z"),
+        logger: { warn() {}, error() {} },
+      });
+
+      assert.equal(result.accounts[0]?.ok, true);
+      assert.deepEqual(sinceValues, ["1970-01-01T00:00:00.000Z"]);
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string }).sync_history_id, "200");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("keeps polling when watch setup fails", async () => {
     setAuthEnv();
     const { db, sqlite, path } = createMigratedClient();

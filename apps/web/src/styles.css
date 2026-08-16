@@ -4530,6 +4530,8 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .gmail-account-action:disabled { cursor: wait; opacity: .62; }
 .gmail-account-card .gmail-upgrade-explainer { background: var(--orca-surface-hover); box-shadow: none; }
 .gmail-account-card .gmail-upgrade-explainer .gmail-account-action { grid-column: 2; grid-row: 1 / 4; }
+.gmail-resync-panel { border-top: 1px solid var(--orca-border); margin-top: 20px; padding-top: 16px; }
+.gmail-resync-panel p { color: var(--orca-muted); font-size: 12px; line-height: 1.5; margin: 0 0 11px; }
 .gmail-empty-state { color: var(--orca-muted); line-height: 1.55; margin: 0; }
 .oauth-notice .gmail-account-action { justify-self: start; margin-top: 6px; }
 

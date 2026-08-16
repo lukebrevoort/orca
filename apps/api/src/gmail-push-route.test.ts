@@ -189,4 +189,60 @@ describe("Gmail push routes", () => {
       sqlite.close();
     }
   });
+
+  test("full resync clears legacy checkpoints, rebuilds mail, and re-establishes the watch", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const calls: string[] = [];
+    const gmailClient: GmailClient = {
+      async getMessage(_token, id) { return createMessage(id); },
+      async listInboxMessagePage({ since }) {
+        calls.push(`list:${since.toISOString()}`);
+        return { messageIds: ["reset-message"], nextCursor: null };
+      },
+      async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
+      async watch() {
+        calls.push("watch");
+        return { historyId: "60", expiration: "1800000000000" };
+      },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1",
+        userId: "user_1",
+        provider: "gmail",
+        providerEmail: "luke@example.com",
+        providerId: "gmail-user-1",
+        syncCursor: "legacy-cursor",
+        syncHistoryId: "50",
+        watchExpirationAt: new Date("2026-08-12T00:00:00.000Z"),
+        watchTopic: pushConfig.topicName,
+        lastSyncedAt: new Date("2026-08-04T00:00:00.000Z"),
+      }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite")),
+        gmailClient,
+        gmailPushConfig: pushConfig,
+        now: () => new Date("2026-08-15T00:00:00.000Z"),
+      });
+
+      const response = await testApp.request("/v1/sync/gmail/reset?accountId=acct_1", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(calls, ["watch", "list:1970-01-01T00:00:00.000Z"]);
+      const syncState = sqlite.query("select sync_cursor, sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get() as { sync_cursor: string | null; sync_history_id: string | null; last_synced_at: number | null };
+      assert.equal(syncState.sync_cursor, null);
+      assert.equal(syncState.sync_history_id, "60");
+      assert.equal(new Date(syncState.last_synced_at ?? 0).toISOString(), "2026-08-15T00:00:00.000Z");
+    } finally {
+      sqlite.close();
+    }
+  });
 });

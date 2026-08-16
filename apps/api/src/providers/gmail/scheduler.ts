@@ -53,6 +53,7 @@ export async function runGmailPeriodicSync(options: {
         let pages = 0;
         try {
           const current = getGmailAccount(db, account.id);
+          const wasLegacyAccount = !current.syncHistoryId;
           const shouldEnsureWatch = Boolean(config.topicName && config.verificationToken) && (
             !current.syncHistoryId ||
             !current.watchExpirationAt ||
@@ -77,10 +78,18 @@ export async function runGmailPeriodicSync(options: {
             }
           }
 
-          // A newly connected account is deliberately backfilled from the
+          const afterWatch = getGmailAccount(db, account.id);
+          const watchEstablishedForLegacyAccount = wasLegacyAccount && Boolean(afterWatch.syncHistoryId);
+
+          // A newly connected account, and an account first seen before Gmail
+          // history push was enabled, are deliberately backfilled from the
           // beginning after the watch cursor is established. That ordering
-          // keeps messages arriving during the backfill recoverable via history.
-          if (!current.lastSyncedAt && !current.syncCursor) {
+          // keeps messages arriving during the backfill recoverable via history
+          // and repairs legacy accounts whose cached checkpoint predates push.
+          if (
+            (!afterWatch.lastSyncedAt && !afterWatch.syncCursor) ||
+            watchEstablishedForLegacyAccount
+          ) {
             const backfill = await backfillGmailAccount(db, {
               accountId: account.id,
               gmailClient,

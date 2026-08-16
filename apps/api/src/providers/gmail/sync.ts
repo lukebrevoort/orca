@@ -92,6 +92,30 @@ export function withGmailSyncLock<T>(accountId: string, task: () => Promise<T>):
   return run;
 }
 
+/**
+ * Drop provider pagination/history checkpoints without touching the normalized
+ * mail or any Orca organization data. The next sync can safely rebuild the
+ * local copy from Gmail.
+ */
+export function resetGmailSyncState(
+  db: DatabaseExecutor,
+  accountId: string,
+  now = new Date(),
+) {
+  db
+    .update(oauthAccounts)
+    .set({
+      syncCursor: null,
+      syncHistoryId: null,
+      watchExpirationAt: null,
+      watchTopic: null,
+      lastSyncedAt: null,
+      updatedAt: now,
+    })
+    .where(eq(oauthAccounts.id, accountId))
+    .run();
+}
+
 export async function syncGmailAccountPage(
   db: DatabaseClient,
   options: SyncOptions,
