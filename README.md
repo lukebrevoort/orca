@@ -78,6 +78,12 @@ Gmail sync and label migration keep the existing routes and accept an optional
 and the matching label import/skip routes. Without it, these endpoints retain
 their original first-connected-Gmail-account behavior for backwards compatibility.
 
+If a local inbox appears stuck on an old date, the Gmail settings page's
+**Rebuild local inbox** action calls `POST /v1/sync/gmail/reset?accountId=:id`.
+This clears only Orca's provider checkpoints, re-establishes the Gmail push watch
+when configured, and backfills mail again. It does not delete or modify anything
+in Gmail or remove Orca's locally stored organization data.
+
 ## Checks
 
 ```bash

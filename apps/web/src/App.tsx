@@ -2025,11 +2025,17 @@ export function buildGmailLabelMigrationPath(accountId?: string | null) {
 export function GmailAccountSettingsList({
   accounts,
   authorization,
+  onResync = () => {},
   onAuthorize,
+  resyncError = null,
+  resyncingAccountId = null,
 }: {
   accounts: MailAccount[];
   authorization: GmailAuthorizationState;
   onAuthorize: (intent: "connect" | "upgrade", accountId: string) => void;
+  onResync?: (accountId: string) => void;
+  resyncError?: { accountId: string; message: string } | null;
+  resyncingAccountId?: string | null;
 }) {
   return <div className="gmail-account-list" aria-label="Connected Gmail accounts">
     {accounts.map((account) => {
@@ -2052,6 +2058,20 @@ export function GmailAccountSettingsList({
           <button aria-label={`Enable drafts and sending for ${account.email}`} className="gmail-account-action gmail-account-action-primary" disabled={authorization.status === "loading"} onClick={() => onAuthorize("upgrade", account.id)} type="button">{accountIsLoading ? "Opening Google…" : "Enable drafts and sending"}</button>
         </div> : <div className="gmail-upgrade-confirmed"><span aria-hidden="true">✓</span><div><strong>Google confirmed compose access</strong><p>Orca can now use the future draft and delivery transport for this account.</p></div></div>}
         {accountHasError ? <p className="gmail-authorization-error" role="alert">{authorization.errorMessage}</p> : null}
+        {resyncError?.accountId === account.id ? <p className="gmail-authorization-error" role="alert">{resyncError.message}</p> : null}
+        <div className="gmail-resync-panel">
+          <p>Mail stays in Gmail. This re-reads it into Orca and repairs an older local sync checkpoint.</p>
+          <button
+            aria-busy={resyncingAccountId === account.id || undefined}
+            aria-label={`Rebuild the local inbox for ${account.email}`}
+            className="gmail-account-action"
+            disabled={authorization.status === "loading" || resyncingAccountId !== null}
+            onClick={() => onResync(account.id)}
+            type="button"
+          >
+            {resyncingAccountId === account.id ? "Rebuilding local inbox…" : "Rebuild local inbox"}
+          </button>
+        </div>
         <footer className="gmail-settings-actions">
           <button aria-label={`Reconnect Gmail for ${account.email}`} className="gmail-account-action" disabled={authorization.status === "loading"} onClick={() => onAuthorize("connect", account.id)} type="button">{accountIsLoading ? "Opening Google…" : "Reconnect Gmail"}</button>
           <a aria-label={`Import Gmail labels for ${account.email}`} className="gmail-account-action-link" href={buildGmailLabelMigrationPath(account.id)}>Import Gmail labels →</a>
@@ -2068,6 +2088,8 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [authorization, setAuthorization] = useState<GmailAuthorizationState>({ accountId: null, status: "idle", errorMessage: null });
+  const [resyncingAccountId, setResyncingAccountId] = useState<string | null>(null);
+  const [resyncError, setResyncError] = useState<{ accountId: string; message: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -2100,6 +2122,20 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
     );
   }
 
+  async function resync(accountId: string) {
+    if (resyncingAccountId) return;
+    setResyncingAccountId(accountId);
+    setResyncError(null);
+    try {
+      await fetchJson(withGmailAccountId("/v1/sync/gmail/reset", accountId), { parse: (value: unknown) => value });
+      setReloadToken((current) => current + 1);
+    } catch (error) {
+      setResyncError({ accountId, message: `Could not rebuild this inbox. ${getErrorMessage(error)}` });
+    } finally {
+      setResyncingAccountId(null);
+    }
+  }
+
   return (
     <main className="gmail-settings-page">
       <header className="attention-settings-topbar">
@@ -2120,7 +2156,7 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
           {status === "loading" ? <p aria-live="polite" role="status">Checking the confirmed Google grant…</p> : null}
           {status === "error" ? <div className="oauth-notice oauth-notice-error" role="alert"><strong>Connection needs attention</strong><span>{errorMessage}</span><button className="gmail-account-action" onClick={() => setReloadToken((current) => current + 1)} type="button">Try again</button></div> : null}
           {returnStatus?.intent === "upgrade" ? <OAuthUpgradeReturnNotice status={returnStatus} /> : null}
-          {status === "ready" && accounts.length > 0 ? <GmailAccountSettingsList accounts={accounts} authorization={authorization} onAuthorize={(intent, accountId) => authorize(intent, accountId)} /> : null}
+          {status === "ready" && accounts.length > 0 ? <GmailAccountSettingsList accounts={accounts} authorization={authorization} onAuthorize={(intent, accountId) => authorize(intent, accountId)} onResync={(accountId) => void resync(accountId)} resyncError={resyncError} resyncingAccountId={resyncingAccountId} /> : null}
           {status === "ready" && accounts.length === 0 ? <p aria-live="polite" className="gmail-empty-state" role="status">No Gmail accounts are connected yet. Add one to start your inbox.</p> : null}
           <footer className="gmail-settings-actions"><button aria-label="Add a Gmail account" className="gmail-account-action gmail-account-action-primary" disabled={status === "loading" || authorization.status === "loading"} onClick={() => authorize("connect", null)} type="button">{authorization.status === "loading" && authorization.accountId === null ? "Opening Google…" : "Add Gmail account"}</button></footer>
         </section>

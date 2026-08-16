@@ -62,7 +62,7 @@ import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
-import { GmailSyncError, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
+import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
 import {
@@ -1599,6 +1599,92 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       } catch (error) {
         console.error(`${account?.provider ?? "mail"} sync failed`, {
           userId: auth.userId,
+          error,
+        });
+
+        const publicError = toPublicSyncError(error);
+        if (account?.id) {
+          syncStatuses.set(account.id, { state: "error", error: publicError.message });
+        }
+
+        return c.json(
+          {
+            error: {
+              code: publicError.code,
+              message: publicError.message,
+            },
+          },
+          publicError.status,
+        );
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.post(
+    "/v1/sync/gmail/reset",
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const auth = c.get("auth");
+      const { db, sqlite } = dbFactory();
+      let account: ConnectedAccount | undefined;
+
+      try {
+        const accountId = c.req.query("accountId");
+        account = accountId
+          ? getConnectedGmailAccount(db, auth.userId, accountId)
+          : getPreferredConnectedAccount(db, auth.userId);
+
+        if (!account) {
+          return c.json(
+            {
+              error: {
+                code: "not_found",
+                message: "No Gmail account is connected for this user",
+              },
+            },
+            404,
+          );
+        }
+
+        const connectedAccount = account;
+        syncStatuses.set(connectedAccount.id, { state: "syncing", error: null });
+        const result = await withGmailSyncLock(connectedAccount.id, async () => {
+          const resetAt = now();
+          resetGmailSyncState(db, connectedAccount.id, resetAt);
+
+          let watch = null;
+          let watchError: string | null = null;
+          if (gmailPushConfig.topicName && gmailPushConfig.verificationToken) {
+            try {
+              watch = await ensureGmailWatch(db, {
+                accountId: connectedAccount.id,
+                gmailClient,
+                config: gmailPushConfig,
+                now: resetAt,
+                force: true,
+              });
+            } catch (error) {
+              watchError = toPublicPushError(error).message;
+            }
+          }
+
+          const backfill = await backfillGmailAccount(db, {
+            accountId: connectedAccount.id,
+            gmailClient,
+            now: resetAt,
+            pageSize: gmailPushConfig.backfillPageSize,
+            maxPages: gmailPushConfig.backfillMaxPages,
+          });
+          return { watch, watchError, backfill };
+        });
+        syncStatuses.delete(connectedAccount.id);
+        return c.json(result, 200);
+      } catch (error) {
+        console.error("Gmail full resync failed", {
+          userId: auth.userId,
+          accountId: account?.id,
           error,
         });
 
