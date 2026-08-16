@@ -834,7 +834,7 @@ export function ComposeWorkspace({
   autoFocusTo?: boolean;
   closing?: boolean;
   variant?: "panel" | "zen" | "reply";
-  onExitZen?: () => void;
+  onExitZen?: (reason: "escape" | "button") => void;
   onClose?: () => void;
   replyLabel?: string;
   actionLabel?: "Reply" | "Reply all" | "Forward";
@@ -989,9 +989,9 @@ export function ComposeWorkspace({
 
   if (variant === "zen") {
     return (
-      <section aria-label="Zen writing mode" aria-modal="true" className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} onKeyDown={(event) => { if (event.key === "Escape") onExitZen?.(); }} role="dialog" {...dropHandlers}>
+      <section aria-label="Zen writing mode" aria-modal="true" className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); onExitZen?.("escape"); } }} role="dialog" {...dropHandlers}>
         <header className="zen-header compose-zen-header">
-          <button className="zen-back" onClick={onExitZen} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
+          <button className="zen-back" onClick={() => onExitZen?.("button")} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
           <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
         </header>
         <div className="zen-stage">
