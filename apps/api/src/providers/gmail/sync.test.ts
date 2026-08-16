@@ -6,16 +6,29 @@ import { afterEach, describe, test } from "node:test";
 
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { storeProviderTokens } from "../../auth/session-store.ts";
+import type { GmailOAuthConfig } from "../../auth/gmail/config.ts";
+import { readProviderTokens, storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
 import { humanClassifierVersion } from "../../classification/human-signal.ts";
-import { syncGmailAccountPage } from "./sync.ts";
-import type { GmailClient } from "./client.ts";
+import { GmailApiError, type GmailClient } from "./client.ts";
+import { GmailSyncError, syncGmailAccountPage } from "./sync.ts";
 import type { GmailLabel, GmailMessage } from "./types.ts";
 
 const tempDirs: string[] = [];
 const migrationsFolder = resolve(import.meta.dir, "../../../drizzle");
+const testOAuthConfig: GmailOAuthConfig = {
+  clientId: "test-client-id",
+  clientSecret: "test-client-secret",
+  redirectUri: "http://localhost:3000/v1/auth/gmail/callback",
+  scopes: [],
+  composeScopes: [],
+  tokenEncryptionKey: Buffer.alloc(32, 9).toString("base64"),
+  stateSecret: "test-state-secret",
+  successRedirectUrl: null,
+  errorRedirectUrl: null,
+  webOrigin: "http://localhost:5173",
+};
 
 function setAuthEnv() {
   process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
@@ -46,6 +59,232 @@ afterEach(() => {
 });
 
 describe("syncGmailAccountPage", () => {
+  test("refreshes an expired access token before syncing and persists rotated credentials", async () => {
+    setAuthEnv();
+
+    const { db, sqlite } = createMigratedClient();
+    const now = new Date("2026-08-15T12:00:00.000Z");
+    const seenTokens: string[] = [];
+    const refreshBodies: URLSearchParams[] = [];
+    const message = createMessage({
+      id: "refresh-message",
+      threadId: "refresh-thread",
+      internalDate: "1783512000000",
+      labelIds: ["INBOX"],
+      from: "Maya Chen <maya@example.com>",
+      to: "Luke Brevoort <luke@example.com>",
+      subject: "Refreshed sync",
+      snippet: "Refreshed sync",
+    });
+    const gmailClient: GmailClient = {
+      async getMessage(accessToken) {
+        seenTokens.push(accessToken);
+        return message;
+      },
+      async listInboxMessagePage({ accessToken }) {
+        seenTokens.push(accessToken);
+        return { messageIds: [message.id], nextCursor: null };
+      },
+      async listLabels(accessToken) {
+        seenTokens.push(accessToken);
+        return [{ id: "INBOX", name: "Inbox" }];
+      },
+    };
+    const tokenFetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      refreshBodies.push(new URLSearchParams(String(init?.body ?? "")));
+      return Response.json({
+        access_token: "refreshed-access-token",
+        refresh_token: "rotated-refresh-token",
+        expires_in: 3600,
+      });
+    };
+
+    try {
+      db.insert(users).values({ id: "user_refresh", email: "refresh@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_refresh",
+        userId: "user_refresh",
+        provider: "gmail",
+        providerEmail: "refresh@example.com",
+        providerId: "gmail-refresh-user",
+      }).run();
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_refresh",
+        accessToken: "expired-access-token",
+        refreshToken: "original-refresh-token",
+        tokenExpiry: new Date(now.getTime() - 1_000),
+      });
+
+      const result = await syncGmailAccountPage(db, {
+        accountId: "acct_refresh",
+        gmailClient,
+        now,
+        oauthConfig: testOAuthConfig,
+        tokenFetch,
+      });
+
+      assert.equal(result.emailCount, 1);
+      assert.deepEqual(seenTokens, [
+        "refreshed-access-token",
+        "refreshed-access-token",
+        "refreshed-access-token",
+      ]);
+      assert.equal(refreshBodies.length, 1);
+      assert.equal(refreshBodies[0]?.get("grant_type"), "refresh_token");
+      assert.equal(refreshBodies[0]?.get("refresh_token"), "original-refresh-token");
+      assert.equal(refreshBodies[0]?.get("client_id"), testOAuthConfig.clientId);
+
+      const stored = await readProviderTokens(db, "acct_refresh");
+      assert.equal(stored?.accessToken, "refreshed-access-token");
+      assert.equal(stored?.refreshToken, "rotated-refresh-token");
+      assert.equal(stored?.tokenExpiry?.toISOString(), "2026-08-15T13:00:00.000Z");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("refreshes and retries a sync once after Gmail rejects an access token", async () => {
+    setAuthEnv();
+
+    const { db, sqlite } = createMigratedClient();
+    const now = new Date("2026-08-15T12:00:00.000Z");
+    const labelTokens: string[] = [];
+    const inboxTokens: string[] = [];
+    const message = createMessage({
+      id: "retry-message",
+      threadId: "retry-thread",
+      internalDate: "1783512000000",
+      labelIds: ["INBOX"],
+      from: "Maya Chen <maya@example.com>",
+      to: "Luke Brevoort <luke@example.com>",
+      subject: "Retried sync",
+      snippet: "Retried sync",
+    });
+    const gmailClient: GmailClient = {
+      async getMessage(accessToken) {
+        assert.equal(accessToken, "retry-access-token");
+        return message;
+      },
+      async listInboxMessagePage({ accessToken }) {
+        inboxTokens.push(accessToken);
+        return { messageIds: [message.id], nextCursor: null };
+      },
+      async listLabels(accessToken) {
+        labelTokens.push(accessToken);
+        if (accessToken === "expired-access-token") {
+          throw new GmailApiError("expired", 401);
+        }
+        return [{ id: "INBOX", name: "Inbox" }];
+      },
+    };
+    let refreshCalls = 0;
+    const tokenFetch = async () => {
+      refreshCalls += 1;
+      return Response.json({
+        access_token: "retry-access-token",
+        refresh_token: "rotated-retry-refresh-token",
+        expires_in: 1800,
+      });
+    };
+
+    try {
+      db.insert(users).values({ id: "user_retry", email: "retry@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_retry",
+        userId: "user_retry",
+        provider: "gmail",
+        providerEmail: "retry@example.com",
+        providerId: "gmail-retry-user",
+      }).run();
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_retry",
+        accessToken: "expired-access-token",
+        refreshToken: "retry-refresh-token",
+        tokenExpiry: new Date(now.getTime() + 3_600_000),
+      });
+
+      const result = await syncGmailAccountPage(db, {
+        accountId: "acct_retry",
+        gmailClient,
+        now,
+        oauthConfig: testOAuthConfig,
+        tokenFetch,
+      });
+
+      assert.equal(result.emailCount, 1);
+      assert.deepEqual(labelTokens, ["expired-access-token", "retry-access-token"]);
+      assert.deepEqual(inboxTokens, ["expired-access-token", "retry-access-token"]);
+      assert.equal(refreshCalls, 1);
+
+      const stored = await readProviderTokens(db, "acct_retry");
+      assert.equal(stored?.accessToken, "retry-access-token");
+      assert.equal(stored?.refreshToken, "rotated-retry-refresh-token");
+      assert.equal(stored?.tokenExpiry?.toISOString(), "2026-08-15T12:30:00.000Z");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("surfaces reconnect only when Google rejects the refresh token", async () => {
+    setAuthEnv();
+
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage() {
+        throw new Error("message fetch should not run");
+      },
+      async listInboxMessagePage() {
+        return { messageIds: [], nextCursor: null };
+      },
+      async listLabels() {
+        throw new GmailApiError("expired", 401);
+      },
+    };
+    let refreshCalls = 0;
+    const tokenFetch = async () => {
+      refreshCalls += 1;
+      return Response.json(
+        { error: "invalid_grant", error_description: "Token has been revoked" },
+        { status: 400 },
+      );
+    };
+
+    try {
+      db.insert(users).values({ id: "user_revoked", email: "revoked@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_revoked",
+        userId: "user_revoked",
+        provider: "gmail",
+        providerEmail: "revoked@example.com",
+        providerId: "gmail-revoked-user",
+      }).run();
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_revoked",
+        accessToken: "expired-access-token",
+        refreshToken: "revoked-refresh-token",
+        tokenExpiry: null,
+      });
+
+      await assert.rejects(
+        () => syncGmailAccountPage(db, {
+          accountId: "acct_revoked",
+          gmailClient,
+          now: new Date("2026-08-15T12:00:00.000Z"),
+          oauthConfig: testOAuthConfig,
+          tokenFetch,
+        }),
+        (error: unknown) => error instanceof GmailSyncError && error.code === "provider_auth_error",
+      );
+      assert.equal(refreshCalls, 1);
+
+      const stored = await readProviderTokens(db, "acct_revoked");
+      assert.equal(stored?.accessToken, "expired-access-token");
+      assert.equal(stored?.refreshToken, "revoked-refresh-token");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("persists paginated Gmail inbox data and remains safe to rerun", async () => {
     setAuthEnv();
 

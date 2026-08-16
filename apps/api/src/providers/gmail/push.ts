@@ -12,8 +12,8 @@ import type { GmailMessage } from "./types.ts";
 import {
   getGmailAccount,
   GmailSyncError,
+  getGmailProviderTokens,
   persistGmailMessages,
-  readGmailProviderTokens,
   refreshThreads,
   syncGmailAccountPage,
 } from "./sync.ts";
@@ -99,7 +99,7 @@ export async function watchGmailAccount(
   const account = getGmailAccount(db, input.accountId);
   let tokenRecord;
   try {
-    tokenRecord = await readGmailProviderTokens(db, account.id);
+    tokenRecord = await getGmailProviderTokens(db, account.id, { now });
   } catch (error) {
     throw mapGmailPushError(error);
   }
@@ -255,7 +255,7 @@ export async function syncGmailAccountHistory(
   const gmailClient = input.gmailClient ?? createGmailClient();
   let tokenRecord;
   try {
-    tokenRecord = await readGmailProviderTokens(db, account.id);
+    tokenRecord = await getGmailProviderTokens(db, account.id, { now });
   } catch (error) {
     throw mapGmailPushError(error);
   }

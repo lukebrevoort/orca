@@ -33,6 +33,7 @@ type TokenResponse = {
   refresh_token?: string;
   expires_in?: number;
   scope?: string;
+  error?: string;
 };
 
 type UserInfoResponse = {
@@ -273,6 +274,109 @@ export function createGmailOAuthService(options: {
       };
     },
   };
+}
+
+export type GmailTokenRefreshResult =
+  | {
+      ok: true;
+      accessToken: string;
+      refreshToken: string | null;
+      expiresAt: Date | null;
+    }
+  | {
+      ok: false;
+      code: "oauth_not_configured" | "refresh_token_rejected" | "provider_error";
+      message: string;
+    };
+
+/** Exchange a stored Gmail refresh grant for a current access token. */
+export async function refreshGmailAccessToken(options: {
+  refreshToken: string;
+  config: GmailOAuthConfig;
+  fetchImpl?: FetchLike;
+  now?: Date;
+}): Promise<GmailTokenRefreshResult> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const now = options.now ?? new Date();
+
+  if (!options.config.clientId || !options.config.clientSecret) {
+    return {
+      ok: false,
+      code: "oauth_not_configured",
+      message: "Gmail OAuth is not configured for token refresh.",
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetchImpl(googleTokenUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        client_id: options.config.clientId,
+        client_secret: options.config.clientSecret,
+        refresh_token: options.refreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+  } catch {
+    return {
+      ok: false,
+      code: "provider_error",
+      message: "Google could not refresh the Gmail access token.",
+    };
+  }
+
+  if (!response.ok) {
+    const providerError = await readTokenErrorCode(response);
+    return {
+      ok: false,
+      code: providerError === "invalid_grant" ? "refresh_token_rejected" : "provider_error",
+      message: providerError === "invalid_grant"
+        ? "Google rejected the Gmail refresh token."
+        : "Google could not refresh the Gmail access token.",
+    };
+  }
+
+  let tokens: TokenResponse;
+  try {
+    tokens = (await response.json()) as TokenResponse;
+  } catch {
+    return {
+      ok: false,
+      code: "provider_error",
+      message: "Google returned an invalid Gmail token response.",
+    };
+  }
+
+  if (!tokens.access_token) {
+    return {
+      ok: false,
+      code: "provider_error",
+      message: "Google did not return a Gmail access token.",
+    };
+  }
+
+  return {
+    ok: true,
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token?.trim() || null,
+    expiresAt: typeof tokens.expires_in === "number"
+      ? new Date(now.getTime() + tokens.expires_in * 1000)
+      : null,
+  };
+}
+
+async function readTokenErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as TokenResponse;
+    return typeof body.error === "string" ? body.error : null;
+  } catch {
+    await response.body?.cancel();
+    return null;
+  }
 }
 
 async function exchangeCode(options: {
