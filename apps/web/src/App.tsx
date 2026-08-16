@@ -2011,6 +2011,13 @@ export function withGmailAccountId(path: string, accountId?: string | null) {
   return `${path}${separator}accountId=${encodeURIComponent(accountId)}`;
 }
 
+export function buildGmailResyncRequest(accountId: string) {
+  return {
+    path: withGmailAccountId("/v1/sync/gmail/reset", accountId),
+    method: "POST" as const,
+  };
+}
+
 export function buildGmailAuthorizationRequestPath(intent: "connect" | "upgrade", returnTo: string, accountId?: string | null) {
   const endpoint = intent === "upgrade" ? "/v1/auth/gmail/upgrade" : "/v1/auth/gmail/connect";
   const query = new URLSearchParams({ returnTo });
@@ -2127,7 +2134,8 @@ export function GmailConnectionSettingsPage({ theme, setTheme }: {
     setResyncingAccountId(accountId);
     setResyncError(null);
     try {
-      await fetchJson(withGmailAccountId("/v1/sync/gmail/reset", accountId), { parse: (value: unknown) => value });
+      const request = buildGmailResyncRequest(accountId);
+      await fetchJson(request.path, { parse: (value: unknown) => value }, undefined, { method: request.method });
       setReloadToken((current) => current + 1);
     } catch (error) {
       setResyncError({ accountId, message: `Could not rebuild this inbox. ${getErrorMessage(error)}` });
