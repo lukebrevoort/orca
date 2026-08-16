@@ -3373,6 +3373,8 @@ function InboxView({
         </div>
       </header>
 
+      {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} /> : null}
+
       {!collection ? <ClassificationTabs counts={classificationCounts} active={classificationView} loading={classificationLoading} onChange={onSelectClassification} /> : null}
       <div
         aria-labelledby={!collection ? `classification-tab-${classificationView}` : undefined}
@@ -3596,12 +3598,18 @@ function InboxView({
         {status === "ready" && viewMode === "inbox" && !searchQuery.trim() && automatedMessages.length ? <section className="tideline-section" aria-label="Automated messages"><div className="tideline-label"><span /><strong><WaveGlyph /> Tideline</strong><small>machines and newsletters rest below</small><span /></div><div className="automation-summary"><span className="automation-mark">⌁</span><div><strong>{automatedMessages.length} automated threads</strong><small>{automatedMessages.map((message) => message.from.name ?? message.from.email).slice(0, 2).join(" · ")}</small></div><button onClick={() => onSelectClassification("tideline")} type="button">Review</button>{sweptThreadIds.size ? <button className="sweep-button" onClick={() => setSweptThreadIds(new Set())} type="button">Undo sweep</button> : <button className="sweep-button" onClick={() => setSweptThreadIds(new Set(automatedMessages.map((message) => message.threadId)))} type="button">◇ Sweep away</button>}</div>{sweptThreadIds.size ? <p className="tideline-local-note" role="status">{sweptThreadIds.size} thread{sweptThreadIds.size === 1 ? " is" : "s are"} hidden for this preview only. Nothing changed at Gmail or Outlook.</p> : null}</section> : null}
         </section>
 
-        {errorMessage && status === "ready" ? (
-          <p className="filter-chip-label" style={{ marginTop: 12 }}>
-            {errorMessage} <a className="inbox-reconnect-link" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>Reconnect Gmail</a>
-          </p>
-        ) : null}
       </div>
+    </div>
+  );
+}
+
+export function InboxSyncAlert({ errorMessage, errorStatus }: { errorMessage: string; errorStatus: number | null }) {
+  return (
+    <div className="inbox-sync-alert" role="alert">
+      <span>{errorMessage}</span>
+      <a className="inbox-reconnect-link inbox-sync-alert-action" href={errorStatus === 404 ? "/login" : "/settings/integrations/gmail"}>
+        Reconnect Gmail <span aria-hidden="true">→</span>
+      </a>
     </div>
   );
 }
