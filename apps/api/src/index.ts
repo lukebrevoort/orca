@@ -1632,16 +1632,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
       try {
         const accountId = c.req.query("accountId");
-        account = accountId
-          ? getConnectedGmailAccount(db, auth.userId, accountId)
-          : getPreferredConnectedAccount(db, auth.userId);
+        account = getGmailRecoveryAccount(db, auth.userId, accountId);
 
         if (!account) {
           return c.json(
             {
               error: {
                 code: "not_found",
-                message: "No Gmail account is connected for this user",
+                message: accountId
+                  ? "The selected Gmail connection was not found. Refresh settings and try again."
+                  : "No Gmail account is connected for this user",
               },
             },
             404,
@@ -2512,6 +2512,24 @@ function getConnectedGmailAccount(
     ? getConnectedAccountById(db, userId, accountId)
     : getConnectedAccounts(db, userId).find((candidate) => candidate.provider === "gmail");
   return account?.provider === "gmail" ? account : undefined;
+}
+
+function getGmailRecoveryAccount(
+  db: ReturnType<typeof createDatabaseClient>["db"],
+  userId: string,
+  accountId?: string,
+) {
+  if (!accountId) return getConnectedAccounts(db, userId)[0];
+
+  const requested = getConnectedGmailAccount(db, userId, accountId);
+  if (requested) return requested;
+
+  // A settings page can outlive a reconnect and retain the previous opaque
+  // account ID. If this user has exactly one Gmail connection, it is safe to
+  // recover against that connection; never guess when multiple Gmail accounts
+  // are connected.
+  const gmailAccounts = getConnectedAccounts(db, userId);
+  return gmailAccounts.length === 1 ? gmailAccounts[0] : undefined;
 }
 
 function getConnectedAccounts(db: ReturnType<typeof createDatabaseClient>["db"], userId: string): ConnectedAccount[] {
