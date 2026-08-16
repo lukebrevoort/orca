@@ -1362,8 +1362,13 @@ export function InboxApp({
     }, PANEL_ANIM_MS);
   }
 
-  function exitZen() {
+  function exitZen(reason: "escape" | "button" = "button") {
     if (!zen || zenClosing) {
+      return;
+    }
+
+    if (reason === "escape" && preferences.composeZenByDefault) {
+      closePanel();
       return;
     }
 

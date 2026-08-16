@@ -476,6 +476,45 @@ describe("Zen exit presence", () => {
     });
 
     expect(browserWindow.document.querySelector(".zen-canvas")?.classList.contains("zen-canvas-closing")).toBe(true);
+    await waitFor(550);
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+  });
+
+  test("returns straight to the inbox on Escape when Zen is the default", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    const canvas = browserWindow.document.querySelector(".zen-canvas") as unknown as HTMLElement | null;
+    if (!canvas) throw new Error("Could not find Zen canvas");
+
+    await act(async () => {
+      canvas.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }) as unknown as Event);
+    });
+
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+  });
+
+  test("keeps Save & close returning to the panel when Zen is the default", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    });
+    const canvas = browserWindow.document.querySelector(".zen-canvas") as unknown as HTMLElement | null;
+    if (!canvas) throw new Error("Could not find Zen canvas");
+    const saveAndClose = canvas.querySelector("button.zen-back") as unknown as HTMLButtonElement | null;
+    if (!saveAndClose) throw new Error("Could not find Save & close control");
+
+    await act(async () => {
+      saveAndClose.click();
+    });
+
+    expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
   });
 
   test("returns immediately for reduced motion without delaying panel controls", async () => {
