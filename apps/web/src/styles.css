@@ -4715,7 +4715,8 @@ button, input, textarea { font-family: var(--orca-font-body); }
   }
 
   :root[data-reader-density="compact"] .message-meta > span:last-child {
-    right: 340px;
+    /* Give the date its own slot between the assessment and sender pin. */
+    right: 150px;
     top: 11px;
   }
 
