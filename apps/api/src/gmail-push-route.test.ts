@@ -230,7 +230,7 @@ describe("Gmail push routes", () => {
         now: () => new Date("2026-08-15T00:00:00.000Z"),
       });
 
-      const response = await testApp.request("/v1/sync/gmail/reset?accountId=acct_1", {
+      const response = await testApp.request("/v1/sync/gmail/reset?accountId=stale-account-id", {
         method: "POST",
         headers: { cookie: `orca_session=${session.token}` },
       });
