@@ -125,6 +125,11 @@ export async function storeProviderTokens(
     accessToken: string | null;
     refreshToken: string | null;
     tokenExpiry: Date | null;
+    expected?: {
+      accessTokenEncrypted: string | null;
+      refreshTokenEncrypted: string | null;
+      tokenExpiry: Date | null;
+    };
   },
 ) {
   const accessTokenEncrypted = input.accessToken
@@ -134,7 +139,22 @@ export async function storeProviderTokens(
     ? await encryptToken(input.refreshToken)
     : null;
 
-  db
+  const accountWhere = input.expected
+    ? and(
+        eq(oauthAccounts.id, input.oauthAccountId),
+        input.expected.accessTokenEncrypted === null
+          ? isNull(oauthAccounts.accessTokenEncrypted)
+          : eq(oauthAccounts.accessTokenEncrypted, input.expected.accessTokenEncrypted),
+        input.expected.refreshTokenEncrypted === null
+          ? isNull(oauthAccounts.refreshTokenEncrypted)
+          : eq(oauthAccounts.refreshTokenEncrypted, input.expected.refreshTokenEncrypted),
+        input.expected.tokenExpiry === null
+          ? isNull(oauthAccounts.tokenExpiry)
+          : eq(oauthAccounts.tokenExpiry, input.expected.tokenExpiry),
+      )
+    : eq(oauthAccounts.id, input.oauthAccountId);
+
+  const result = db
     .update(oauthAccounts)
     .set({
       accessTokenEncrypted,
@@ -142,8 +162,11 @@ export async function storeProviderTokens(
       tokenExpiry: input.tokenExpiry,
       updatedAt: new Date(),
     })
-    .where(eq(oauthAccounts.id, input.oauthAccountId))
-    .run();
+    .where(accountWhere)
+    .returning({ id: oauthAccounts.id })
+    .get();
+
+  return Boolean(result);
 }
 
 export async function readProviderTokens(db: DatabaseClient, oauthAccountId: string) {

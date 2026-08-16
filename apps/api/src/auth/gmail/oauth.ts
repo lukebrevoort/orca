@@ -340,9 +340,9 @@ export async function refreshGmailAccessToken(options: {
     };
   }
 
-  let tokens: TokenResponse;
+  let rawTokens: unknown;
   try {
-    tokens = (await response.json()) as TokenResponse;
+    rawTokens = await response.json();
   } catch {
     return {
       ok: false,
@@ -351,22 +351,59 @@ export async function refreshGmailAccessToken(options: {
     };
   }
 
-  if (!tokens.access_token) {
+  const tokens = parseRefreshTokenResponse(rawTokens, now);
+  if (!tokens) {
     return {
       ok: false,
       code: "provider_error",
-      message: "Google did not return a Gmail access token.",
+      message: "Google returned an invalid Gmail token response.",
     };
   }
 
   return {
     ok: true,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token?.trim() || null,
-    expiresAt: typeof tokens.expires_in === "number"
-      ? new Date(now.getTime() + tokens.expires_in * 1000)
-      : null,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    expiresAt: tokens.expiresAt,
   };
+}
+
+function parseRefreshTokenResponse(
+  value: unknown,
+  now: Date,
+): { accessToken: string; refreshToken: string | null; expiresAt: Date } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const response = value as Record<string, unknown>;
+  const accessToken = typeof response.access_token === "string"
+    ? response.access_token.trim()
+    : "";
+  const refreshTokenValue = response.refresh_token;
+  const refreshToken = refreshTokenValue === undefined
+    ? null
+    : typeof refreshTokenValue === "string"
+      ? refreshTokenValue.trim() || null
+      : null;
+  const expiresIn = response.expires_in;
+
+  if (
+    !accessToken
+    || (refreshTokenValue !== undefined && typeof refreshTokenValue !== "string")
+    || typeof expiresIn !== "number"
+    || !Number.isFinite(expiresIn)
+    || expiresIn < 0
+  ) {
+    return null;
+  }
+
+  const expiresAt = new Date(now.getTime() + expiresIn * 1000);
+  if (!Number.isFinite(expiresAt.getTime())) {
+    return null;
+  }
+
+  return { accessToken, refreshToken, expiresAt };
 }
 
 async function readTokenErrorCode(response: Response): Promise<string | null> {

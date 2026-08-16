@@ -12,7 +12,7 @@ export type AuthConfig = {
 
 export function getAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
   const sessionSecret = env.SESSION_SECRET;
-  const tokenEncryptionKey = env.TOKEN_ENCRYPTION_KEY;
+  const tokenEncryptionKey = env.TOKEN_ENCRYPTION_KEY ?? env.OAUTH_TOKEN_ENCRYPTION_KEY;
 
   if (!sessionSecret || sessionSecret.length < minimumSessionSecretLength) {
     throw new Error(
@@ -21,7 +21,7 @@ export function getAuthConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig 
   }
 
   if (!tokenEncryptionKey) {
-    throw new Error("TOKEN_ENCRYPTION_KEY must be set");
+    throw new Error("TOKEN_ENCRYPTION_KEY or OAUTH_TOKEN_ENCRYPTION_KEY must be set");
   }
 
   const keyBytes = Buffer.from(tokenEncryptionKey, "base64");
