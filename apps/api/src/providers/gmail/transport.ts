@@ -2,7 +2,7 @@ import type { MessageDraft } from "@orca/shared";
 import { createDatabaseClient } from "../../db/client.ts";
 import { encodeGmailMessage } from "./mime.ts";
 import { createGmailClient, GmailApiError, type GmailClient, type GmailTransportClient } from "./client.ts";
-import { readGmailProviderTokens } from "./sync.ts";
+import { getGmailProviderTokens, GmailSyncError } from "./sync.ts";
 import type { ProviderDraftResult } from "../shared/interfaces.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
@@ -25,7 +25,15 @@ type GmailThreadingClient = GmailTransportClient & Partial<Pick<GmailClient, "ge
 
 export function createGmailTransport(gmailClient: GmailThreadingClient = createGmailClient()): GmailTransport {
   async function token(db: DatabaseClient, accountId: string) {
-    const tokens = await readGmailProviderTokens(db, accountId);
+    let tokens: Awaited<ReturnType<typeof getGmailProviderTokens>>;
+    try {
+      tokens = await getGmailProviderTokens(db, accountId);
+    } catch (error) {
+      if (error instanceof GmailSyncError && error.code === "provider_auth_error") {
+        throw new GmailTransportError("Gmail needs to be reconnected before mail can be delivered", "auth", false);
+      }
+      throw error;
+    }
     if (!tokens?.accessToken) throw new GmailTransportError("Gmail needs to be reconnected before mail can be delivered", "auth", false);
     return tokens.accessToken;
   }
@@ -92,6 +100,9 @@ function parseReferences(value: string | undefined) {
 
 function normalizeTransportError(error: unknown): GmailTransportError {
   if (error instanceof GmailTransportError) return error;
+  if (error instanceof GmailSyncError) {
+    return new GmailTransportError("Gmail token refresh is temporarily unavailable", "ambiguous", true);
+  }
   if (error instanceof GmailApiError) {
     if (error.status === 401 || error.status === 403) return new GmailTransportError("Gmail authorization was revoked or no longer permits this action", "auth", false);
     if (error.status === 429) return new GmailTransportError("Gmail is rate limiting delivery; retry later", "rate_limit", true);

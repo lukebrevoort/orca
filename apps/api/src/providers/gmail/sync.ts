@@ -4,9 +4,10 @@ import type { MailContact, NormalizedMessage } from "@orca/shared";
 
 import { backfillHumanClassifications } from "../../classification/backfill.ts";
 import { automaticClassificationColumns, classifyHumanSignal } from "../../classification/human-signal.ts";
-import { loadGmailOAuthConfig } from "../../auth/gmail/config.ts";
+import { loadGmailOAuthConfig, type GmailOAuthConfig } from "../../auth/gmail/config.ts";
 import { decryptSecret } from "../../auth/gmail/crypto.ts";
-import { readProviderTokens } from "../../auth/session-store.ts";
+import { refreshGmailAccessToken, type FetchLike } from "../../auth/gmail/oauth.ts";
+import { readProviderTokens, storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   contacts,
@@ -57,6 +58,19 @@ export type SyncOptions = {
   now?: Date;
   pageSize?: number;
   gmailClient?: GmailClient;
+  tokenFetch?: FetchLike;
+  oauthConfig?: GmailOAuthConfig;
+};
+
+export type GmailProviderTokenRecord = {
+  accessToken: string | null;
+  refreshToken: string | null;
+  tokenExpiry: Date | null;
+};
+
+type GmailProviderTokenSnapshot = GmailProviderTokenRecord & {
+  accessTokenEncrypted: string;
+  refreshTokenEncrypted: string | null;
 };
 
 type PersistedLabel = {
@@ -76,17 +90,28 @@ export class GmailSyncError extends Error {
   }
 }
 
+const gmailAccessTokenRefreshSkewMs = 60_000;
+
 const accountSyncLocks = new Map<string, Promise<void>>();
+const accountTokenRefreshLocks = new Map<string, Promise<void>>();
 
 /** Serialize push, periodic, and manual sync work for one account. */
 export function withGmailSyncLock<T>(accountId: string, task: () => Promise<T>): Promise<T> {
-  const previous = accountSyncLocks.get(accountId) ?? Promise.resolve();
+  return withAccountLock(accountSyncLocks, accountId, task);
+}
+
+function withAccountLock<T>(
+  locks: Map<string, Promise<void>>,
+  accountId: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const previous = locks.get(accountId) ?? Promise.resolve();
   const run = previous.catch(() => undefined).then(task);
   const tracked = run.then(() => undefined, () => undefined);
-  accountSyncLocks.set(accountId, tracked);
+  locks.set(accountId, tracked);
   void tracked.finally(() => {
-    if (accountSyncLocks.get(accountId) === tracked) {
-      accountSyncLocks.delete(accountId);
+    if (locks.get(accountId) === tracked) {
+      locks.delete(accountId);
     }
   });
   return run;
@@ -124,7 +149,11 @@ export async function syncGmailAccountPage(
   const gmailClient = options.gmailClient ?? createGmailClient();
   const account = getGmailAccount(db, options.accountId);
 
-  const tokenRecord = await readGmailProviderTokens(db, account.id);
+  const tokenRecord = await getGmailProviderTokens(db, account.id, {
+    now,
+    tokenFetch: options.tokenFetch,
+    oauthConfig: options.oauthConfig,
+  });
   if (!tokenRecord?.accessToken) {
     throw new GmailSyncError("Connected Gmail account is missing provider credentials", "sync_conflict");
   }
@@ -138,77 +167,85 @@ export async function syncGmailAccountPage(
   });
   const since = new Date(syncState.startedAt);
 
-  let labelList;
-  let page;
-
-  try {
-    [labelList, page] = await Promise.all([
-      gmailClient.listLabels(tokenRecord.accessToken),
+  const syncWithAccessToken = async (accessToken: string): Promise<GmailSyncResult> => {
+    const [labelList, page] = await Promise.all([
+      gmailClient.listLabels(accessToken),
       gmailClient.listInboxMessagePage({
-        accessToken: tokenRecord.accessToken,
+        accessToken,
         cursor: syncState.pageToken,
         pageSize: options.pageSize,
         since,
       }),
     ]);
-  } catch (error) {
-    throw mapGmailError(error);
-  }
+    const gmailMessages = await fetchMessageDetails(gmailClient, accessToken, page.messageIds);
+    const nowDate = new Date(now);
+    const persisted = persistGmailMessages(db, {
+      accountId: account.id,
+      accountEmail: account.providerEmail,
+      gmailMessages,
+      labelList,
+      now: nowDate,
+      afterPersist: (tx) => {
+        tx
+          .update(oauthAccounts)
+          .set({
+            syncCursor: page.nextCursor
+              ? JSON.stringify({
+                  pageToken: page.nextCursor,
+                  startedAt: syncState.startedAt,
+                  checkpointAt: syncState.checkpointAt,
+                } satisfies SyncCursorState)
+              : null,
+            // A completed page sequence advances the durable high-water mark. While
+            // pagination is in progress we keep the previous checkpoint so a failed
+            // import can safely resume without skipping mail.
+            lastSyncedAt: page.nextCursor ? account.lastSyncedAt : new Date(syncState.checkpointAt),
+            updatedAt: nowDate,
+          })
+          .where(eq(oauthAccounts.id, account.id))
+          .run();
+      },
+    });
 
-  let gmailMessages;
-  try {
-    gmailMessages = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, page.messageIds);
-  } catch (error) {
-    throw mapGmailError(error);
-  }
+    // Older cached rows may predate normalized evidence. Each normal sync moves
+    // one bounded, provider-free backfill batch forward without blocking on a
+    // live Outlook path or a complete mailbox history.
+    backfillHumanClassifications(db, { accountId: account.id, limit: 100, now: nowDate });
 
-  const normalizedMessages = gmailMessages.map((message) =>
-    normalizeGmailMessage(message, { accountId: account.id, accountEmail: account.providerEmail }),
-  );
-
-  const nowDate = new Date(now);
-  const persisted = persistGmailMessages(db, {
-    accountId: account.id,
-    accountEmail: account.providerEmail,
-    gmailMessages,
-    labelList,
-    now: nowDate,
-    afterPersist: (tx) => {
-      tx
-        .update(oauthAccounts)
-        .set({
-          syncCursor: page.nextCursor
-            ? JSON.stringify({
-                pageToken: page.nextCursor,
-                startedAt: syncState.startedAt,
-                checkpointAt: syncState.checkpointAt,
-              } satisfies SyncCursorState)
-            : null,
-          // A completed page sequence advances the durable high-water mark. While
-          // pagination is in progress we keep the previous checkpoint so a failed
-          // import can safely resume without skipping mail.
-          lastSyncedAt: page.nextCursor ? account.lastSyncedAt : new Date(syncState.checkpointAt),
-          updatedAt: nowDate,
-        })
-        .where(eq(oauthAccounts.id, account.id))
-        .run();
-    },
-  });
-
-  // Older cached rows may predate normalized evidence. Each normal sync moves
-  // one bounded, provider-free backfill batch forward without blocking on a
-  // live Outlook path or a complete mailbox history.
-  backfillHumanClassifications(db, { accountId: account.id, limit: 100, now: nowDate });
-
-  return {
-    accountId: account.id,
-    emailCount: persisted.emailCount,
-    threadCount: persisted.threadCount,
-    labelCount: persisted.labelCount,
-    contactCount: persisted.contactCount,
-    nextCursor: page.nextCursor,
-    lastSyncedAt: nowDate.toISOString(),
+    return {
+      accountId: account.id,
+      emailCount: persisted.emailCount,
+      threadCount: persisted.threadCount,
+      labelCount: persisted.labelCount,
+      contactCount: persisted.contactCount,
+      nextCursor: page.nextCursor,
+      lastSyncedAt: nowDate.toISOString(),
+    };
   };
+
+  try {
+    return await syncWithAccessToken(tokenRecord.accessToken);
+  } catch (error) {
+    if (!isGmailAuthorizationError(error) || !tokenRecord.refreshToken) {
+      throw mapGmailError(error);
+    }
+
+    const refreshedTokenRecord = await getGmailProviderTokens(db, account.id, {
+      forceRefresh: true,
+      now,
+      tokenFetch: options.tokenFetch,
+      oauthConfig: options.oauthConfig,
+    });
+    if (!refreshedTokenRecord?.accessToken) {
+      throw new GmailSyncError("Connected Gmail account is missing provider credentials", "sync_conflict");
+    }
+
+    try {
+      return await syncWithAccessToken(refreshedTokenRecord.accessToken);
+    } catch (retryError) {
+      throw mapGmailError(retryError);
+    }
+  }
 }
 
 export type GmailMessagePersistenceInput = {
@@ -310,7 +347,20 @@ export function getGmailAccount(db: DatabaseClient, accountId: string): GmailAcc
   return account;
 }
 
-export async function readGmailProviderTokens(db: DatabaseClient, accountId: string) {
+export async function readGmailProviderTokens(
+  db: DatabaseClient,
+  accountId: string,
+  oauthConfig?: GmailOAuthConfig,
+): Promise<GmailProviderTokenRecord | null> {
+  const snapshot = await readGmailProviderTokenSnapshot(db, accountId, oauthConfig);
+  return snapshot ? toGmailProviderTokenRecord(snapshot) : null;
+}
+
+async function readGmailProviderTokenSnapshot(
+  db: DatabaseClient,
+  accountId: string,
+  oauthConfig?: GmailOAuthConfig,
+): Promise<GmailProviderTokenSnapshot | null> {
   const account = db.select({
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
@@ -321,22 +371,155 @@ export async function readGmailProviderTokens(db: DatabaseClient, accountId: str
     return null;
   }
 
-  if (!account.accessTokenEncrypted.startsWith("v1:")) {
-    return readProviderTokens(db, accountId);
-  }
-
   try {
-    const config = loadGmailOAuthConfig();
+    const tokens = account.accessTokenEncrypted.startsWith("v1:")
+      ? {
+          accessToken: decryptSecret(
+            account.accessTokenEncrypted,
+            (oauthConfig ?? loadGmailOAuthConfig()).tokenEncryptionKey,
+          ),
+          refreshToken: account.refreshTokenEncrypted
+            ? decryptSecret(
+                account.refreshTokenEncrypted,
+                (oauthConfig ?? loadGmailOAuthConfig()).tokenEncryptionKey,
+              )
+            : null,
+          tokenExpiry: account.tokenExpiry,
+        }
+      : await readProviderTokens(db, accountId);
+
+    if (!tokens) {
+      return null;
+    }
+
     return {
-      accessToken: decryptSecret(account.accessTokenEncrypted, config.tokenEncryptionKey),
-      refreshToken: account.refreshTokenEncrypted
-        ? decryptSecret(account.refreshTokenEncrypted, config.tokenEncryptionKey)
-        : null,
-      tokenExpiry: account.tokenExpiry,
+      ...tokens,
+      accessTokenEncrypted: account.accessTokenEncrypted,
+      refreshTokenEncrypted: account.refreshTokenEncrypted,
     };
   } catch {
     throw new GmailSyncError("Gmail credentials can no longer be decrypted", "provider_auth_error");
   }
+}
+
+export async function getGmailProviderTokens(
+  db: DatabaseClient,
+  accountId: string,
+  options: {
+    forceRefresh?: boolean;
+    now?: Date;
+    tokenFetch?: FetchLike;
+    oauthConfig?: GmailOAuthConfig;
+  } = {},
+): Promise<GmailProviderTokenRecord | null> {
+  const observed = await readGmailProviderTokenSnapshot(db, accountId, options.oauthConfig);
+  if (!observed?.accessToken) {
+    return observed ? toGmailProviderTokenRecord(observed) : null;
+  }
+
+  const now = options.now ?? new Date();
+  if (!shouldRefreshGmailAccessToken(observed, now, options.forceRefresh)) {
+    return toGmailProviderTokenRecord(observed);
+  }
+
+  return withAccountLock(accountTokenRefreshLocks, accountId, async () => {
+    const current = await readGmailProviderTokenSnapshot(db, accountId, options.oauthConfig);
+    if (!current?.accessToken) {
+      return current ? toGmailProviderTokenRecord(current) : null;
+    }
+
+    // Another request may have refreshed this account while this request was
+    // waiting for the in-process lock. Reuse its credentials instead of
+    // submitting the old refresh token again.
+    if (!sameGmailCredentialSnapshot(current, observed)) {
+      return toGmailProviderTokenRecord(current);
+    }
+
+    if (!shouldRefreshGmailAccessToken(current, now, options.forceRefresh)) {
+      return toGmailProviderTokenRecord(current);
+    }
+
+    if (!current.refreshToken) {
+      return toGmailProviderTokenRecord(current);
+    }
+
+    const refreshed = await refreshGmailAccessToken({
+      refreshToken: current.refreshToken,
+      config: options.oauthConfig ?? loadGmailOAuthConfig(),
+      fetchImpl: options.tokenFetch,
+      now,
+    });
+    if (!refreshed.ok) {
+      const winner = await readGmailProviderTokenSnapshot(db, accountId, options.oauthConfig);
+      if (winner?.accessToken && !sameGmailCredentialSnapshot(winner, current)) {
+        return toGmailProviderTokenRecord(winner);
+      }
+
+      throw new GmailSyncError(
+        refreshed.message,
+        refreshed.code === "refresh_token_rejected" ? "provider_auth_error" : "provider_error",
+      );
+    }
+
+    const refreshToken = refreshed.refreshToken ?? current.refreshToken;
+    const stored = await storeProviderTokens(db, {
+      oauthAccountId: accountId,
+      accessToken: refreshed.accessToken,
+      refreshToken,
+      tokenExpiry: refreshed.expiresAt,
+      expected: {
+        accessTokenEncrypted: current.accessTokenEncrypted,
+        refreshTokenEncrypted: current.refreshTokenEncrypted,
+        tokenExpiry: current.tokenExpiry,
+      },
+    });
+
+    if (!stored) {
+      const winner = await readGmailProviderTokenSnapshot(db, accountId, options.oauthConfig);
+      if (winner?.accessToken && !sameGmailCredentialSnapshot(winner, current)) {
+        return toGmailProviderTokenRecord(winner);
+      }
+
+      throw new GmailSyncError("Gmail credentials changed while refreshing", "sync_conflict");
+    }
+
+    return {
+      accessToken: refreshed.accessToken,
+      refreshToken,
+      tokenExpiry: refreshed.expiresAt,
+    };
+  });
+}
+
+function toGmailProviderTokenRecord(snapshot: GmailProviderTokenSnapshot): GmailProviderTokenRecord {
+  return {
+    accessToken: snapshot.accessToken,
+    refreshToken: snapshot.refreshToken,
+    tokenExpiry: snapshot.tokenExpiry,
+  };
+}
+
+function shouldRefreshGmailAccessToken(
+  tokenRecord: GmailProviderTokenRecord,
+  now: Date,
+  forceRefresh = false,
+): boolean {
+  if (forceRefresh) {
+    return Boolean(tokenRecord.refreshToken);
+  }
+
+  const expiresSoon = tokenRecord.tokenExpiry !== null
+    && tokenRecord.tokenExpiry.getTime() <= now.getTime() + gmailAccessTokenRefreshSkewMs;
+  return expiresSoon && Boolean(tokenRecord.refreshToken);
+}
+
+function sameGmailCredentialSnapshot(
+  left: GmailProviderTokenSnapshot,
+  right: GmailProviderTokenSnapshot,
+): boolean {
+  return left.accessTokenEncrypted === right.accessTokenEncrypted
+    && left.refreshTokenEncrypted === right.refreshTokenEncrypted
+    && left.tokenExpiry?.getTime() === right.tokenExpiry?.getTime();
 }
 
 function buildPersistedLabels(
@@ -759,4 +942,8 @@ function mapGmailError(error: unknown): GmailSyncError {
   }
 
   return new GmailSyncError("Unknown Gmail sync failure", "provider_error");
+}
+
+function isGmailAuthorizationError(error: unknown): error is GmailApiError {
+  return error instanceof GmailApiError && (error.status === 401 || error.status === 403);
 }

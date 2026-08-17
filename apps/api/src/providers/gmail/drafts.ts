@@ -1,8 +1,8 @@
 import type { CreateMessageDraft } from "@orca/shared";
 
-import { readProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { createGmailDraftClient, GmailApiError, type GmailDraftClient } from "./client.ts";
+import { getGmailProviderTokens } from "./sync.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 
@@ -23,7 +23,7 @@ export async function mirrorGmailDraft(
   input: GmailDraftMirrorInput,
   client: GmailDraftClient = createGmailDraftClient(),
 ): Promise<GmailDraftMirrorResult> {
-  const tokens = await readProviderTokens(db, input.accountId);
+  const tokens = await getGmailProviderTokens(db, input.accountId);
   if (!tokens?.accessToken) throw new Error("Gmail draft access is unavailable");
 
   const raw = encodeDraftMime(input.content);
@@ -63,7 +63,7 @@ export async function deleteGmailDraft(
   providerDraftId: string,
   client: GmailDraftClient = createGmailDraftClient(),
 ) {
-  const tokens = await readProviderTokens(db, accountId);
+  const tokens = await getGmailProviderTokens(db, accountId);
   if (!tokens?.accessToken) throw new Error("Gmail draft access is unavailable");
   await client.deleteDraft(tokens.accessToken, providerDraftId);
 }
