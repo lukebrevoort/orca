@@ -894,6 +894,13 @@ describe("profile avatar", () => {
     expect(profileInitials(null)).toBe("?");
   });
 
+  test("uses the connected provider photo without requiring a local upload", () => {
+    const providerPhoto = "https://lh3.googleusercontent.com/orca-profile";
+    const html = renderToStaticMarkup(<ProfileAvatar account={{ ...account, avatarUrl: providerPhoto }} />);
+
+    expect(html).toContain(`src="${providerPhoto}"`);
+  });
+
   test("validates and namespaces locally stored photos per account", () => {
     const values = new Map<string, string>();
     const storage = {

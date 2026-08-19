@@ -357,6 +357,7 @@ describe("Gmail auth routes", () => {
           return Response.json({
             id: "google-user-1",
             email: "luke@gmail.com",
+            picture: "https://lh3.googleusercontent.com/profile-photo",
           });
         }
 
@@ -386,6 +387,7 @@ describe("Gmail auth routes", () => {
       provider: "gmail",
       providerAccountId: "google-user-1",
       providerEmail: "luke@gmail.com",
+      profileImageUrl: "https://lh3.googleusercontent.com/profile-photo",
       grantedScopes: config.scopes,
     });
     expect(records[0].encryptedAccessToken).not.toBe("access-token-123");

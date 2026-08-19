@@ -325,6 +325,155 @@ describe("Inbox row action affordances", () => {
     });
     expect(tune?.getAttribute("aria-expanded")).toBe("true");
   });
+
+  test("presents thread saving as an immediate, accessible collection checklist", async () => {
+    await renderApp();
+    const wrap = messageRow("Luke Brevoort").parentElement as unknown as HTMLElement;
+    const keep = wrap.querySelector("button.keep-thread-button") as unknown as HTMLButtonElement;
+
+    await act(async () => {
+      keep.click();
+    });
+
+    const dialog = browserWindow.document.querySelector('.thread-organizer[role="dialog"]') as unknown as HTMLElement | null;
+    expect(dialog).not.toBeNull();
+    if (!dialog) throw new Error("Could not find the thread organizer dialog");
+    expect(dialog.getAttribute("aria-describedby")).toBe("organizer-description");
+    expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("dialog");
+    expect(browserWindow.document.querySelector("main.app-shell")?.hasAttribute("inert")).toBe(true);
+    expect(browserWindow.document.querySelector(".app-theme-toggle")?.hasAttribute("inert")).toBe(true);
+    expect(dialog.querySelector(".organizer-pin-section h3")?.textContent).toBe("Quick access");
+    expect(dialog.querySelector(".organizer-collections h3")?.textContent).toBe("Collections");
+
+    const collectionButtons = [...dialog.querySelectorAll(".organizer-collection-list > button")] as unknown as HTMLButtonElement[];
+    expect(collectionButtons).toHaveLength(2);
+    expect(collectionButtons[0].getAttribute("aria-pressed")).toBe("true");
+    expect(collectionButtons[1].getAttribute("aria-pressed")).toBe("false");
+
+    await act(async () => {
+      collectionButtons[1].click();
+    });
+    expect(dialog.querySelector(".organizer-selection-count")?.textContent).toBe("2 selected");
+    expect(collectionButtons[1].getAttribute("aria-pressed")).toBe("true");
+
+    const newCollection = dialog.querySelector("button.organizer-new-collection") as unknown as HTMLButtonElement;
+    await act(async () => {
+      newCollection.click();
+    });
+    expect(dialog.querySelector('input[aria-label="New collection name"]')).not.toBeNull();
+    expect([...dialog.querySelectorAll("footer button")].map((button) => button.textContent)).toEqual(["Done"]);
+  });
+});
+
+describe("Pin navigation and bulk sender actions", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  function buttonByName(name: string) {
+    const button = browserWindow.document.querySelector(`button[aria-label="${name}"]`) as unknown as HTMLButtonElement | null;
+    if (!button) throw new Error(`Could not find ${name}`);
+    return button;
+  }
+
+  test("keeps a person pin active while moving between signal views", async () => {
+    await renderApp();
+
+    await act(async () => {
+      buttonByName("Open Maya Chen pin").click();
+    });
+    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
+    expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
+
+    await act(async () => {
+      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+    });
+
+    expect(browserWindow.document.querySelector("#classification-tab-tideline")?.getAttribute("aria-selected")).toBe("true");
+    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
+    expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("opens a pinned thread from outside its current signal view", async () => {
+    await renderApp();
+    await act(async () => {
+      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      buttonByName("Open Dinner on Sunday? pin").click();
+    });
+
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Dinner on Sunday?");
+  });
+
+  test("lets keyboard users unpin a saved thread directly from the rail", async () => {
+    await renderApp();
+    const pin = buttonByName("Open Dinner on Sunday? pin");
+
+    await act(async () => {
+      pin.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, key: "Delete" }) as unknown as Event);
+    });
+
+    expect(browserWindow.document.querySelector('button[aria-label="Open Dinner on Sunday? pin"]')).toBeNull();
+  });
+
+  test("saves and restores the signal view with a filter pin", async () => {
+    await renderApp();
+    await act(async () => {
+      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      (browserWindow.document.querySelector("button.pinned-person-add") as unknown as HTMLButtonElement).click();
+    });
+
+    const signal = browserWindow.document.querySelectorAll(".pin-builder-fields select")[1] as unknown as HTMLSelectElement;
+    expect(signal.value).toBe("tideline");
+    await act(async () => {
+      (browserWindow.document.querySelector("button.pin-builder-save") as unknown as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      (browserWindow.document.querySelector("#classification-tab-human") as unknown as HTMLButtonElement).click();
+    });
+    await act(async () => {
+      buttonByName("Open Tideline pin").click();
+    });
+
+    expect(browserWindow.document.querySelector("#classification-tab-tideline")?.getAttribute("aria-selected")).toBe("true");
+    expect(buttonByName("Open Tideline pin").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("moves multiple selected senders to Quiet in one action", async () => {
+    await renderApp();
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+    await act(async () => {
+      selectMode.click();
+    });
+    expect(browserWindow.document.querySelector("button.message-select-button")).toBeNull();
+    expect(browserWindow.document.querySelector(".message-row-wrap-selecting .message-select-indicator")).not.toBeNull();
+    await act(async () => {
+      buttonByName("Select Mom: Dinner on Sunday?").click();
+      buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
+    });
+    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+    await act(async () => {
+      quiet.click();
+    });
+
+    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("2 senders moved to Quiet.");
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Jordan Bell"))).toBe(false);
+  });
 });
 
 describe("Inbox reader viewport restoration", () => {

@@ -3,6 +3,7 @@ const defaultRedirectUri = "http://localhost:3000/v1/auth/gmail/callback";
 export const gmailReadScopes = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
 ] as const;
 
 // gmail.compose is the narrowest single grant that covers creating and updating

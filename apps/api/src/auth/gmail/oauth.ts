@@ -39,6 +39,7 @@ type TokenResponse = {
 type UserInfoResponse = {
   id?: string;
   email?: string;
+  picture?: string;
 };
 
 type SignedStatePayload = {
@@ -237,6 +238,7 @@ export function createGmailOAuthService(options: {
           provider: "gmail",
           providerAccountId: userInfoResponse.providerAccountId,
           providerEmail: userInfoResponse.providerEmail,
+          profileImageUrl: userInfoResponse.profileImageUrl,
           grantedScopes: tokenResponse.scopeReturned
             ? tokenResponse.grantedScopes
             : [...new Set([...(existingUpgradeAccount?.grantedScopes ?? []), ...tokenResponse.grantedScopes])],
@@ -511,6 +513,7 @@ async function fetchUserInfo(
       ok: true;
       providerAccountId: string | null;
       providerEmail: string | null;
+      profileImageUrl: string | null;
     }
   | {
       ok: false;
@@ -548,7 +551,18 @@ async function fetchUserInfo(
     ok: true,
     providerAccountId: data.id ?? null,
     providerEmail: data.email ?? null,
+    profileImageUrl: normalizeProviderImageUrl(data.picture),
   };
+}
+
+function normalizeProviderImageUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function signState(payload: SignedStatePayload, secret: string): string {

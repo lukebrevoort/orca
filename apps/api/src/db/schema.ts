@@ -42,6 +42,7 @@ export const oauthAccounts = sqliteTable(
     provider: text("provider").notNull(),
     providerEmail: text("provider_email").notNull(),
     providerId: text("provider_id").notNull(),
+    profileImageUrl: text("profile_image_url"),
     accessTokenEncrypted: text("access_token_encrypted"),
     refreshTokenEncrypted: text("refresh_token_encrypted"),
     tokenExpiry: integer("token_expiry", { mode: "timestamp_ms" }),

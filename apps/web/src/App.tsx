@@ -66,6 +66,12 @@ const pinAttentionOptions: Array<{ id: InboxFilter; label: string }> = [
   { id: "normal", label: "Flow" },
 ];
 
+const pinClassificationOptions: Array<{ id: Exclude<ClassificationView, "all">; label: string }> = [
+  { id: "human", label: "Human Inbox" },
+  { id: "tideline", label: "Tideline" },
+  { id: "uncertain", label: "Review" },
+];
+
 const pinIconOptions: Array<{ id: PinIcon; label: string; glyph: string }> = [
   { id: "person", label: "Person", glyph: "@" },
   { id: "thread", label: "Thread", glyph: "↗" },
@@ -439,7 +445,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         <SettingsSection id="account" title="Account" note="Account-level">
           {profileAccount ? <div className="settings-profile">
             <ProfileAvatar account={profileAccount} editable variant="settings" />
-            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Shown in your navigation rail. Changes are saved on this device.</span></div>
+            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Uses your {formatProvider(profileAccount.provider)} photo automatically when available. Choose another photo here only if you want a device-specific override.</span></div>
           </div> : connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking your profile…</p> : null}
           <div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a>
         </SettingsSection>
@@ -1196,12 +1202,13 @@ export function InboxApp({
   );
   const activePin = useMemo(
     () => pins.find((pin) => (pin.kind === "sender" || pin.kind === "filter") && isTopBarPinActive(pin, {
+      classificationView,
       inboxFilter,
       personFilter,
       searchQuery: streamQuery,
       viewMode: activeCollectionId ? "collection" : activeMailbox,
     })) ?? null,
-    [activeCollectionId, activeMailbox, inboxFilter, personFilter, pins, streamQuery],
+    [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
   const automatedMessages = useMemo(
     () => getLatestThreadRows(allMailMessages).filter(isTidelineMessage),
@@ -1441,7 +1448,6 @@ export function InboxApp({
     runUiTransition("content", () => {
       setClassificationView(view);
       setActiveCollectionId(null);
-      setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
       setClassificationActionError(null);
@@ -1624,13 +1630,15 @@ export function InboxApp({
         threadIds: hasThread ? item.threadIds.filter((id) => id !== threadId) : [...item.threadIds, threadId],
         updatedAt: new Date().toISOString(),
       } : item));
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
   async function createPin(input: PinInput) {
-    if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return;
+    if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return false;
     setOrganizationError(null);
     try {
       const normalizedInput = {
@@ -1642,8 +1650,10 @@ export function InboxApp({
         ? pinSchema.parse({ ...normalizedInput, id: `pin_demo_${Date.now()}`, accountId: account.id, position: pins.length, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
         : await fetchJson("/v1/pins", pinSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(normalizedInput) });
       setPins((current) => [...current, created]);
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
@@ -1713,13 +1723,15 @@ export function InboxApp({
   }
 
   async function removePin(pin: Pin) {
-    if (!account) return;
+    if (!account) return false;
     setOrganizationError(null);
     try {
       if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
       setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
@@ -1731,6 +1743,9 @@ export function InboxApp({
       if (!filter) return;
       runUiTransition("content", () => {
         setActiveMailbox(filter.mailbox);
+        if (filter.mailbox === "inbox" || filter.mailbox === "all") {
+          setClassificationView(pinFilterClassificationView(filter) ?? "human");
+        }
         setActiveCollectionId(null);
         setInboxFilter(filter.attention);
         setPersonFilter(filter.person);
@@ -1741,9 +1756,31 @@ export function InboxApp({
       });
     }
     if (pin.kind === "thread") {
-      const message = messages.find((item) => item.threadId === pin.targetId);
+      const message = allMailMessages.find((item) => item.threadId === pin.targetId);
       if (message) openThread(message);
     }
+  }
+
+  async function updateSelectedSenderAttention(selectedMessages: InboxMessage[], behavior: AttentionBehavior) {
+    const addresses = [...new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
+    if (!addresses.length) return;
+    if (!demoMode) {
+      await Promise.all(addresses.map(async (address) => {
+        const resolution = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
+        const existingRule = resolution.rule?.scope === "address" && resolution.rule.value === address
+          ? resolution.rule
+          : null;
+        await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
+          method: existingRule ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
+        });
+      }));
+    }
+    setAttentionByAddress((current) => Object.fromEntries([
+      ...Object.entries(current),
+      ...addresses.map((address) => [address, behavior] as const),
+    ]));
   }
 
   function selectInboxFilter(filter: InboxFilter) {
@@ -1800,13 +1837,14 @@ export function InboxApp({
       <button
         aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         className="theme-toggle app-theme-toggle"
+        inert={Boolean(organizerMessage) || undefined}
         onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         type="button"
       >
         {theme === "dark" ? "☾" : "☀"}
       </button>
-      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
+      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
         <WaveRail
           account={account}
           activeMailbox={activeMailbox}
@@ -1888,7 +1926,6 @@ export function InboxApp({
               isLoadingMoreMessages={isLoadingMoreMessages}
               isCollectionView={Boolean(activeCollection)}
               collection={activeCollection}
-              currentViewLabel={activeMailboxLabel}
               allMessages={allMailMessages}
               attentionByAddress={attentionByAddress}
               activePin={activePin}
@@ -1903,7 +1940,7 @@ export function InboxApp({
               onClassificationChange={correctClassification}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
-              onRemovePin={(pin) => void removePin(pin)}
+              onRemovePin={removePin}
               onReorderPin={reorderPin}
               onUpdatePin={(pin, patch) => updatePin(pin, patch)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
@@ -1915,6 +1952,7 @@ export function InboxApp({
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
+              onBulkAttentionChange={updateSelectedSenderAttention}
               onInboxFilterChange={selectInboxFilter}
               onOpenOrganizer={openOrganizer}
               onFinishLater={(reminder) => void finishReminder(reminder)}
@@ -1951,7 +1989,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
+      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || Boolean(organizerMessage) || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -1961,10 +1999,12 @@ export function InboxApp({
           onClose={closeOrganizer}
           onCreateCollection={async (name) => {
             const created = await createCollection(name, false);
-            if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
+            if (!created) return { created: false, saved: false };
+            const saved = await toggleCollectionMembership(created, organizerMessage.threadId);
+            return { created: true, saved };
           }}
-          onPin={(input) => void createPin(input)}
-          onToggleCollection={(collection) => void toggleCollectionMembership(collection, organizerMessage.threadId)}
+          onPin={createPin}
+          onToggleCollection={(collection) => toggleCollectionMembership(collection, organizerMessage.threadId)}
           pins={pins}
         />
       ) : null}
@@ -2743,7 +2783,8 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   editable?: boolean;
   variant?: "rail" | "settings";
 }) {
-  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+  const providerImageSource = account?.avatarUrl ?? null;
+  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
   const [photoError, setPhotoError] = useState("");
   const accountId = account?.id ?? "preview";
   const accountLabel = account?.displayName.trim() || account?.email || "your account";
@@ -2751,7 +2792,7 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   useEffect(() => {
     const storageKey = profilePhotoStorageKey({ id: accountId });
     const refreshStoredPhoto = () => {
-      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
       setPhotoError("");
     };
     const handleStorageChange = (event: StorageEvent) => {
@@ -2771,13 +2812,19 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
       window.removeEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
       window.removeEventListener("pageshow", refreshStoredPhoto);
     };
-  }, [accountId]);
+  }, [accountId, providerImageSource]);
 
   function handleImageError() {
-    if (imageSource !== PROFILE_PHOTO_FALLBACK_SRC) {
-      if (account) removeStoredProfilePhoto(account);
+    const storedImageSource = account ? readStoredProfilePhoto(account) : null;
+    if (account && storedImageSource && imageSource === storedImageSource) {
+      removeStoredProfilePhoto(account);
+      setImageSource(providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError(`That custom photo could not be loaded. Your ${formatProvider(account.provider)} photo is being used instead.`);
+      return;
+    }
+    if (account && providerImageSource && imageSource === providerImageSource) {
       setImageSource(PROFILE_PHOTO_FALLBACK_SRC);
-      setPhotoError("That profile photo could not be loaded. The default avatar is being used.");
+      setPhotoError(`Your ${formatProvider(account.provider)} profile photo could not be loaded. The default avatar is being used.`);
       return;
     }
     setImageSource(null);
@@ -2850,19 +2897,22 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   </aside>;
 }
 
-function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onReorderPin, onUpdatePin }: {
+function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
   pins: Pin[];
   pinnedPeople: PersonItem[];
+  classificationView: ClassificationView;
   inboxFilter: InboxFilter;
   personFilter: string | null;
   searchQuery: string;
   viewMode: "collection" | Mailbox;
   onSelectPin: (pin: Pin) => void;
+  onRemovePin: (pin: Pin) => Promise<boolean>;
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
   const [draggedPinId, setDraggedPinId] = useState<string | null>(null);
   const [dropPinId, setDropPinId] = useState<string | null>(null);
+  const [willUnpin, setWillUnpin] = useState(false);
   const [editingPinId, setEditingPinId] = useState<string | null>(null);
   const [moveMessage, setMoveMessage] = useState("");
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -2871,7 +2921,43 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
   function clearDragState() {
     setDraggedPinId(null);
     setDropPinId(null);
+    setWillUnpin(false);
   }
+
+  function isPointOutsideRail(clientX: number, clientY: number) {
+    if (clientX === 0 && clientY === 0) return false;
+    const rail = document.querySelector<HTMLElement>(".pinned-people");
+    if (!rail) return false;
+    const bounds = rail.getBoundingClientRect();
+    return clientX < bounds.left || clientX > bounds.right || clientY < bounds.top || clientY > bounds.bottom;
+  }
+
+  function handlePinDragEnd(event: React.DragEvent<HTMLButtonElement>, pin: Pin) {
+    const shouldUnpin = willUnpin || isPointOutsideRail(event.clientX, event.clientY);
+    clearDragState();
+    if (!shouldUnpin) return;
+    void onRemovePin(pin).then((removed) => {
+      if (removed) setMoveMessage(`${pin.label} unpinned.`);
+      else setMoveError(`Could not unpin ${pin.label}.`);
+    });
+  }
+
+  useEffect(() => {
+    if (!draggedPinId) return;
+    const handleDocumentDragOver = (event: DragEvent) => {
+      const outside = isPointOutsideRail(event.clientX, event.clientY);
+      setWillUnpin(outside);
+      if (outside) {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      }
+    };
+
+    document.addEventListener("dragover", handleDocumentDragOver);
+    return () => {
+      document.removeEventListener("dragover", handleDocumentDragOver);
+    };
+  }, [draggedPinId]);
 
   async function handleDrop(event: React.DragEvent<HTMLButtonElement>, targetPin: Pin) {
     event.preventDefault();
@@ -2916,12 +3002,12 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
   }
 
   return <>
-    <div className="pin-rail-items" onDragEnd={clearDragState}>
+    <div className="pin-rail-items">
       {pins.map((pin) => {
         const person = pin.kind === "sender"
           ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
           : null;
-        const active = isTopBarPinActive(pin, { inboxFilter, personFilter, searchQuery, viewMode });
+        const active = isTopBarPinActive(pin, { classificationView, inboxFilter, personFilter, searchQuery, viewMode });
         const isDragging = draggedPinId === pin.id;
         const isDropTarget = dropPinId === pin.id && !isDragging;
         return <div className={`pinned-pin-item${isDragging ? " pinned-pin-item-dragging" : ""}${isDropTarget ? " pinned-pin-item-drop-target" : ""}`} key={pin.id}>
@@ -2934,17 +3020,27 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
             className={`pinned-pin pinned-pin-${pin.kind}`}
             draggable
             onClick={() => onSelectPin(pin)}
+            onDrag={(event) => setWillUnpin(isPointOutsideRail(event.clientX, event.clientY))}
+            onDragEnd={(event) => handlePinDragEnd(event, pin)}
             onDragEnter={() => { if (draggedPinId && draggedPinId !== pin.id) setDropPinId(pin.id); }}
             onDragOver={(event) => { if (!draggedPinId || draggedPinId === pin.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropPinId(pin.id); }}
-            onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setMoveMessage(""); }}
+            onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setWillUnpin(false); setMoveMessage(""); setMoveError(null); }}
             onDrop={(event) => void handleDrop(event, pin)}
             onKeyDown={(event) => {
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.preventDefault();
+                void onRemovePin(pin).then((removed) => {
+                  if (removed) setMoveMessage(`${pin.label} unpinned.`);
+                  else setMoveError(`Could not unpin ${pin.label}.`);
+                });
+                return;
+              }
               if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
               event.preventDefault();
               void moveWithKeyboard(pin, event.key === "ArrowLeft" ? -1 : 1);
             }}
             style={{ "--pin-color": pin.color } as CSSProperties}
-            title={`${pin.label} · drag to reorder`}
+            title={`${pin.label} · drag to reorder or drag out to unpin`}
             type="button"
           >
             <span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span>
@@ -2953,29 +3049,31 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
           <button aria-label={`Customize ${pin.label} pin`} className="pinned-pin-edit" onClick={() => setEditingPinId(pin.id)} title={`Customize ${pin.label}`} type="button">✎</button>
         </div>;
       })}
-      <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder · select the customize button to choose an icon and color · Option plus arrow keys also move pins.</p>
+      {draggedPinId ? <span aria-hidden="true" className={`pin-unpin-hint${willUnpin ? " pin-unpin-hint-ready" : ""}`}>{willUnpin ? "Release to unpin" : "Drag outside to unpin"}</span> : null}
+      <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder, drag outside the saved pin rail to unpin, or press Delete. Select the customize button to choose an icon and color or remove the pin. Option plus arrow keys also move pins.</p>
       {moveError ? <p className="pin-rail-error" role="alert">{moveError}</p> : null}
       <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
     </div>
-    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onSave={onUpdatePin} /> : null}
+    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
   </>;
 }
 
-function PinAppearanceEditor({ pin, onClose, onSave }: {
+function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
   pin: Pin;
   onClose: () => void;
+  onRemove: (pin: Pin) => Promise<boolean>;
   onSave: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
   const [label, setLabel] = useState(pin.label);
   const [icon, setIcon] = useState<PinIcon>(pin.icon);
   const [color, setColor] = useState<string>(pin.color);
-  const [saving, setSaving] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"idle" | "saving" | "removing">("idle");
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
-  const savingRef = useRef(saving);
+  const savingRef = useRef(pendingAction !== "idle");
   onCloseRef.current = onClose;
-  savingRef.current = saving;
+  savingRef.current = pendingAction !== "idle";
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -3026,24 +3124,35 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
       setError("Give this pin a display name.");
       return;
     }
-    setSaving(true);
+    setPendingAction("saving");
     setError(null);
     try {
       await onSave(pin, { label: trimmedLabel, icon, color });
       onClose();
     } catch (saveError) {
-      setError(getErrorMessage(saveError));
+      setError(`Could not save this pin. ${getErrorMessage(saveError)}`);
     } finally {
-      setSaving(false);
+      setPendingAction("idle");
     }
   }
 
+  async function remove() {
+    setPendingAction("removing");
+    setError(null);
+    const removed = await onRemove(pin);
+    if (removed) onClose();
+    else setError(`Could not remove ${pin.label}. Try again.`);
+    setPendingAction("idle");
+  }
+
+  const busy = pendingAction !== "idle";
+
   const dialog = <div className="pin-appearance-layer" role="presentation">
-    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={saving} onClick={onClose} type="button" />
+    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={busy} onClick={onClose} type="button" />
     <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" ref={dialogRef} role="dialog">
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
-        <button aria-label="Close pin customization" data-dialog-initial-focus disabled={saving} onClick={onClose} type="button">×</button>
+        <button aria-label="Close pin customization" data-dialog-initial-focus disabled={busy} onClick={onClose} type="button">×</button>
       </header>
       <form onSubmit={submit}>
         <div className="pin-appearance-preview" style={{ "--pin-color": color } as CSSProperties}>
@@ -3052,24 +3161,24 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
         </div>
         <label className="pin-appearance-name">
           <span>Display name</span>
-          <input aria-label="Pin display name" disabled={saving} maxLength={120} onChange={(event) => setLabel(event.target.value)} value={label} />
+          <input aria-label="Pin display name" disabled={busy} maxLength={120} onChange={(event) => setLabel(event.target.value)} value={label} />
         </label>
         <fieldset className="pin-appearance-icons">
           <legend>Icon</legend>
           <div aria-label="Pin icons" role="group">
-            {pinIconOptions.map((option) => <button aria-label={`${option.label}${icon === option.id ? ", selected" : ""}`} aria-pressed={icon === option.id} className={icon === option.id ? "pin-appearance-icon-selected" : ""} disabled={saving} key={option.id} onClick={() => setIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span><small>{option.label}</small></button>)}
+            {pinIconOptions.map((option) => <button aria-label={`${option.label}${icon === option.id ? ", selected" : ""}`} aria-pressed={icon === option.id} className={icon === option.id ? "pin-appearance-icon-selected" : ""} disabled={busy} key={option.id} onClick={() => setIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span><small>{option.label}</small></button>)}
           </div>
         </fieldset>
         <fieldset className="pin-appearance-colors">
           <legend>Color</legend>
           <div aria-label="Pin colors" role="group">
-            {pinColorOptions.map((option) => <button aria-label={`${option.name}${color.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={color.toLowerCase() === option.value} className="pin-appearance-color-swatch" disabled={saving} key={option.value} onClick={() => setColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
-            <label className="pin-appearance-custom-color"><span>Custom</span><input aria-label="Custom pin color" disabled={saving} onChange={(event) => setColor(event.target.value)} type="color" value={color} /></label>
+            {pinColorOptions.map((option) => <button aria-label={`${option.name}${color.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={color.toLowerCase() === option.value} className="pin-appearance-color-swatch" disabled={busy} key={option.value} onClick={() => setColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
+            <label className="pin-appearance-custom-color"><span>Custom</span><input aria-label="Custom pin color" disabled={busy} onChange={(event) => setColor(event.target.value)} type="color" value={color} /></label>
           </div>
           <code>{color}</code>
         </fieldset>
-        {error ? <p className="pin-appearance-error" role="alert">Could not save this pin. {error}</p> : null}
-        <footer className="pin-appearance-actions"><button disabled={saving} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={saving} type="submit">{saving ? "Saving…" : "Save pin style"}</button></footer>
+        {error ? <p className="pin-appearance-error" role="alert">{error}</p> : null}
+        <footer className="pin-appearance-actions"><button className="pin-appearance-remove" disabled={busy} onClick={() => void remove()} type="button">{pendingAction === "removing" ? "Removing…" : "Remove pin"}</button><button disabled={busy} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={busy} type="submit">{pendingAction === "saving" ? "Saving…" : "Save pin style"}</button></footer>
       </form>
     </section>
   </div>;
@@ -3111,7 +3220,6 @@ function InboxView({
   pins,
   pinnedPeople,
   pinnedSenderAddresses,
-  currentViewLabel,
   reminders,
   personFilter,
   status,
@@ -3131,6 +3239,7 @@ function InboxView({
   onSelectPin,
   onRefresh,
   onAttentionChange,
+  onBulkAttentionChange,
   onInboxFilterChange,
   onOpenOrganizer,
   onFinishLater,
@@ -3160,7 +3269,6 @@ function InboxView({
   hasMoreMessages: boolean;
   isLoadingMoreMessages: boolean;
   isCollectionView: boolean;
-  currentViewLabel: string;
   allMessages: InboxMessage[];
   attentionByAddress: Record<string, AttentionBehavior>;
   activePin: Pin | null;
@@ -3179,7 +3287,7 @@ function InboxView({
   onRetry: () => void;
   onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   onCreatePin: (input: PinInput) => void;
-  onRemovePin: (pin: Pin) => void;
+  onRemovePin: (pin: Pin) => Promise<boolean>;
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
   onOpenThread: (message: InboxMessage) => void;
@@ -3187,6 +3295,7 @@ function InboxView({
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
+  onBulkAttentionChange: (messages: InboxMessage[], behavior: AttentionBehavior) => Promise<void>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onFinishLater: (reminder: Reminder) => void;
@@ -3214,12 +3323,25 @@ function InboxView({
   const [sweptThreadIds, setSweptThreadIds] = useState<Set<string>>(new Set());
   const [pinMenuOpen, setPinMenuOpen] = useState(false);
   const [pinFilterMailbox, setPinFilterMailbox] = useState<PinMailbox>("inbox");
+  const [pinFilterClassification, setPinFilterClassification] = useState<Exclude<ClassificationView, "all">>("human");
   const [pinFilterAttention, setPinFilterAttention] = useState<InboxFilter>("all");
   const [pinFilterPerson, setPinFilterPerson] = useState<string | null>(null);
   const [pinFilterQuery, setPinFilterQuery] = useState("");
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
+  const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery).filter((message) => !sweptThreadIds.has(message.threadId)), [messages, searchQuery, sweptThreadIds, viewMode]);
+  const selectedMessages = useMemo(
+    () => displayMessages.filter((message) => selectedMessageIds.has(message.id)),
+    [displayMessages, selectedMessageIds],
+  );
+  const selectedSenderCount = useMemo(
+    () => new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase())).size,
+    [selectedMessages],
+  );
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -3234,11 +3356,14 @@ function InboxView({
   const pinFilter = useMemo<PinFilter>(() => ({
     mailbox: pinFilterMailbox,
     attention: pinFilterMailbox === "inbox" ? pinFilterAttention : "all",
+    classification: pinFilterMailbox === "inbox" ? pinFilterClassification : pinFilterMailbox === "all" ? "all" : undefined,
     person: pinFilterPerson,
     query: pinFilterQuery.trim(),
-  }), [pinFilterAttention, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
+  }), [pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
   const pinPreview = useMemo(() => {
     let candidates = getMessagesForMailbox(allMessages, pinFilter.mailbox, attentionByAddress);
+    const signalView = pinFilterClassificationView(pinFilter);
+    if (signalView) candidates = candidates.filter((message) => classificationMatchesView(message, signalView));
     if (pinFilter.mailbox === "inbox" && pinFilter.attention !== "all") {
       candidates = candidates.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) === pinFilter.attention);
     }
@@ -3268,6 +3393,13 @@ function InboxView({
   }, [collection]);
 
   useEffect(() => {
+    setSelectionMode(false);
+    setSelectedMessageIds(new Set());
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+  }, [classificationView, personFilter, searchQuery, viewMode]);
+
+  useEffect(() => {
     if (!pinMenuOpen) return;
     const closeOnPointerDown = (event: PointerEvent) => {
       if (!pinMenuRef.current?.contains(event.target as Node)) setPinMenuOpen(false);
@@ -3292,6 +3424,7 @@ function InboxView({
 
   function openPinBuilder() {
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
+    setPinFilterClassification(classificationView === "all" ? "human" : classificationView);
     setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all");
     setPinFilterPerson(personFilter);
     setPinFilterQuery(searchQuery);
@@ -3323,6 +3456,40 @@ function InboxView({
       setSnoozingThreadId(null);
     }
   }
+
+  function toggleSelection(messageId: string) {
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+    setSelectedMessageIds((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  }
+
+  function closeSelectionMode() {
+    setSelectionMode(false);
+    setSelectedMessageIds(new Set());
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+  }
+
+  async function applyBulkAttention(behavior: AttentionBehavior) {
+    if (!selectedMessages.length || bulkAttentionStatus === "saving") return;
+    const count = selectedSenderCount;
+    setBulkAttentionStatus("saving");
+    setBulkAttentionMessage("");
+    try {
+      await onBulkAttentionChange(selectedMessages, behavior);
+      setSelectedMessageIds(new Set());
+      setBulkAttentionStatus("saved");
+      setBulkAttentionMessage(`${count} ${count === 1 ? "sender" : "senders"} moved to ${behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : "Hidden"}.`);
+    } catch (error) {
+      setBulkAttentionStatus("error");
+      setBulkAttentionMessage(`Could not update the selected senders. ${getErrorMessage(error)}`);
+    }
+  }
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       <header className="pane-header">
@@ -3339,8 +3506,8 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
-        {!collection ? <label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -3388,7 +3555,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        <PinRail pins={pins} pinnedPeople={pinnedPeople} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -3416,6 +3583,7 @@ function InboxView({
                   </label>
                   <div className="pin-builder-fields">
                     <label><span>View</span><select onChange={(event) => setPinFilterMailbox(event.target.value as PinMailbox)} value={pinFilterMailbox}>{pinMailboxOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                    <label><span>Signal</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterClassification(event.target.value as Exclude<ClassificationView, "all">)} value={pinFilterClassification}>{pinClassificationOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                     <label><span>Attention</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterAttention(event.target.value as InboxFilter)} value={pinFilterAttention}>{pinAttentionOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                   </div>
                   <fieldset className="pin-builder-people">
@@ -3427,7 +3595,7 @@ function InboxView({
                   </fieldset>
                   <div className="pin-builder-presets">
                     <span>Quick start</span>
-                    {canPinCurrentView ? <button onClick={() => { setPinFilterMailbox(viewMode as PinMailbox); setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all"); setPinFilterPerson(null); setPinFilterQuery(""); }} type="button">Use {currentViewLabel}</button> : null}
+                    {canPinCurrentView ? <button onClick={() => { setPinFilterMailbox(viewMode as PinMailbox); setPinFilterClassification(classificationView === "all" ? "human" : classificationView); setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all"); setPinFilterPerson(null); setPinFilterQuery(""); }} type="button">Use {classificationViewLabel(classificationView)}</button> : null}
                     {pinPeople.slice(0, 3).map((person) => <button key={person.email} onClick={() => { setPinFilterPerson(person.email); setPinFilterQuery(""); }} type="button">{person.name}</button>)}
                   </div>
                   <fieldset className="pin-builder-appearance">
@@ -3478,6 +3646,28 @@ function InboxView({
           </nav>
         ) : null}
 
+        {selectionMode ? (
+          <section aria-label="Bulk sender actions" className="bulk-action-bar">
+            <div>
+              <strong>{selectedSenderCount ? `${selectedSenderCount} ${selectedSenderCount === 1 ? "sender" : "senders"} selected` : "Select messages"}</strong>
+              <span>Changes apply to future mail from each sender.</span>
+            </div>
+            <button
+              className="bulk-select-all"
+              onClick={() => setSelectedMessageIds(selectedMessages.length === displayMessages.length ? new Set() : new Set(displayMessages.map((message) => message.id)))}
+              type="button"
+            >
+              {selectedMessages.length === displayMessages.length ? "Clear all" : "Select all visible"}
+            </button>
+            <div aria-label="Move selected senders" role="group">
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">Keep in inbox</button>
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">Quiet</button>
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">Hide</button>
+            </div>
+            {bulkAttentionMessage ? <p className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" ? "alert" : "status"}>{bulkAttentionMessage}</p> : null}
+          </section>
+        ) : null}
+
         <section className="inbox-body" aria-live="polite">
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
@@ -3524,10 +3714,12 @@ function InboxView({
               return (
                 <li key={message.id}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
-                  <div className="message-row-wrap">
+                  <div className={`message-row-wrap${selectedMessageIds.has(message.id) ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
+                      aria-label={selectionMode ? `${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
+                      aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                      onClick={() => onOpenThread(message)}
+                      onClick={() => selectionMode ? toggleSelection(message.id) : onOpenThread(message)}
                       ref={(node) => {
                         if (node) rowRefs.current.set(message.id, node);
                         else rowRefs.current.delete(message.id);
@@ -3541,6 +3733,7 @@ function InboxView({
                       }
                       type="button"
                     >
+                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selectedMessageIds.has(message.id) ? "✓" : ""}</span></span> : null}
                       <ContactMark
                         className={`stream-avatar stream-avatar-variant-${signature.variant}`}
                         contact={message.from}
@@ -3559,8 +3752,8 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                   </button>
-                    <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
-                    {viewMode !== "later" ? <button
+                    {!selectionMode ? <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact /> : null}
+                    {!selectionMode && viewMode !== "later" ? <button
                       aria-label={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
                       aria-pressed={senderPinned}
                       className={`pin-sender-button${senderPinned ? " pin-sender-button-pinned" : ""}`}
@@ -3571,7 +3764,7 @@ function InboxView({
                     >
                       <MessageActionGlyph name="pin" />
                     </button> : null}
-                    {viewMode !== "later" ? <button
+                    {!selectionMode && viewMode !== "later" ? <button
                       aria-haspopup={onRemoveFromCollection ? undefined : "dialog"}
                       aria-label={onRemoveFromCollection ? `Remove ${message.subject || "this thread"} from collection` : `Keep ${message.subject || "this thread"} in a collection`}
                       className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
@@ -3581,12 +3774,12 @@ function InboxView({
                     >
                       <MessageActionGlyph mode={onRemoveFromCollection ? "remove" : "add"} name="keep" />
                     </button> : null}
-                    {viewMode === "later" ? (() => {
+                    {!selectionMode && viewMode === "later" ? (() => {
                       const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
                       const snoozing = snoozingThreadId === message.threadId;
                       return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
-                    <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} />
+                    {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
                   </div>
                 </li>
               );
@@ -4445,46 +4638,141 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
   collections: Collection[];
   message: InboxMessage;
   onClose: () => void;
-  onCreateCollection: (name: string) => Promise<void>;
-  onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
-  onToggleCollection: (collection: Collection) => void;
+  onCreateCollection: (name: string) => Promise<{ created: boolean; saved: boolean }>;
+  onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => Promise<boolean>;
+  onToggleCollection: (collection: Collection) => Promise<boolean>;
   pins: Pin[];
 }) {
   const [name, setName] = useState("");
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const organizerRef = useRef<HTMLElement>(null);
   useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const feedbackRoot = document.querySelector<HTMLElement>("[data-feedback-kit-root]");
+    feedbackRoot?.setAttribute("aria-hidden", "true");
+    feedbackRoot?.setAttribute("inert", "");
+    organizerRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      if (event.key !== "Tab" || !organizerRef.current) return;
+      const focusable = Array.from(organizerRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      feedbackRoot?.removeAttribute("aria-hidden");
+      feedbackRoot?.removeAttribute("inert");
+      previouslyFocused?.focus();
+    };
   }, [onClose]);
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
+  const savedCollectionCount = collections.filter((collection) => collection.threadIds.includes(message.threadId)).length;
+  const senderLabel = message.from.name ?? message.from.email;
+  const senderInitials = senderLabel.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  async function saveAction(key: string, action: () => Promise<boolean>, errorMessage: string) {
+    setPendingAction(key);
+    setActionError(null);
+    try {
+      const saved = await action();
+      if (!saved) setActionError(errorMessage);
+      return saved;
+    } catch {
+      setActionError(errorMessage);
+      return false;
+    } finally {
+      setPendingAction(null);
+    }
+  }
   return (
     <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
       <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} role="dialog">
-        <header>
-          <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
-          <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
+      <section aria-busy={Boolean(pendingAction)} aria-describedby="organizer-description" aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} ref={organizerRef} role="dialog" tabIndex={-1}>
+        <header className="organizer-heading">
+          <div>
+            <p>Keep close</p>
+            <h2 id="organizer-title">Save this thread</h2>
+            <span id="organizer-description">Pin it for quick access or group it with related conversations.</span>
+          </div>
+          <button aria-label="Close organizer" className="organizer-close" onClick={onClose} type="button">×</button>
         </header>
-        <div className="organizer-thread-preview"><span>Conversation</span><strong>{message.subject || "(no subject)"}</strong><small>{message.from.name ?? message.from.email}</small></div>
-        <div className="organizer-pin-grid">
-          <button aria-pressed={senderPinned} disabled={senderPinned} onClick={() => onPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })} type="button"><span>@</span><strong>{senderPinned ? "Person pinned" : "Pin person"}</strong><small>{message.from.email}</small></button>
-          <button aria-pressed={threadPinned} disabled={threadPinned} onClick={() => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" })} type="button"><span>↗</span><strong>{threadPinned ? "Thread pinned" : "Pin thread"}</strong><small>Return straight here</small></button>
+        <div className="organizer-thread-preview">
+          <span aria-hidden="true" className="organizer-thread-avatar">{senderInitials}</span>
+          <span className="organizer-thread-copy"><strong>{message.subject || "(no subject)"}</strong><small>{senderLabel}</small></span>
         </div>
-        <div className="organizer-collections">
-          <h3>Add to collections</h3>
-          {collections.map((collection) => {
-            const included = collection.threadIds.includes(message.threadId);
-            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
-          })}
-          <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
-            <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />
-            <button disabled={!name.trim()} type="submit">Create</button>
-          </form>
-        </div>
-        <footer><span>Saved in {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length} {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length === 1 ? "collection" : "collections"} · elsewhere untouched</span><button onClick={onClose} type="button">Cancel</button><button className="organizer-keep" onClick={onClose} type="button">Keep thread</button></footer>
+        <section aria-labelledby="organizer-quick-access-title" className="organizer-section organizer-pin-section">
+          <div className="organizer-section-heading">
+            <div><h3 id="organizer-quick-access-title">Quick access</h3><p>Optional shortcuts that stay at the top of your inbox.</p></div>
+          </div>
+          <div className="organizer-pin-grid">
+            <button aria-pressed={senderPinned} disabled={senderPinned || Boolean(pendingAction)} onClick={() => void saveAction("sender-pin", () => onPin({ kind: "sender", targetId: message.from.email, label: senderLabel }), "Couldn’t pin this person. Try again.")} type="button">
+              <span aria-hidden="true" className="organizer-option-icon">@</span>
+              <span className="organizer-option-copy"><strong>Person</strong><small>{message.from.email}</small></span>
+              <span aria-hidden="true" className="organizer-option-state">{senderPinned ? "✓ Pinned" : "＋ Pin"}</span>
+            </button>
+            <button aria-pressed={threadPinned} disabled={threadPinned || Boolean(pendingAction)} onClick={() => void saveAction("thread-pin", () => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" }), "Couldn’t pin this thread. Try again.")} type="button">
+              <span aria-hidden="true" className="organizer-option-icon">↗</span>
+              <span className="organizer-option-copy"><strong>Thread</strong><small>Return straight here</small></span>
+              <span aria-hidden="true" className="organizer-option-state">{threadPinned ? "✓ Pinned" : "＋ Pin"}</span>
+            </button>
+          </div>
+        </section>
+        <section aria-labelledby="organizer-collections-title" className="organizer-section organizer-collections">
+          <div className="organizer-section-heading">
+            <div><h3 id="organizer-collections-title">Collections</h3><p>Organize without moving the thread from your inbox.</p></div>
+            <span aria-live="polite" className="organizer-selection-count">{savedCollectionCount} selected</span>
+          </div>
+          {collections.length ? <div aria-label="Choose collections" className="organizer-collection-list" role="group">
+            {collections.map((collection) => {
+              const included = collection.threadIds.includes(message.threadId);
+              return (
+                <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} disabled={Boolean(pendingAction)} key={collection.id} onClick={() => void saveAction(`collection-${collection.id}`, () => onToggleCollection(collection), `Couldn’t update “${collection.name}.” Select it to try again.`)} type="button">
+                  <span aria-hidden="true" className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} />
+                  <span className="organizer-collection-copy"><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
+                  <span aria-hidden="true" className="organizer-collection-check">{included ? "✓" : ""}</span>
+                </button>
+              );
+            })}
+          </div> : <p className="organizer-collection-empty">No collections yet. Make one for this thread.</p>}
+          {creatingCollection ? (
+            <form className="organizer-collection-create" onSubmit={(event) => {
+              event.preventDefault();
+              if (!name.trim()) return;
+              setPendingAction("create-collection");
+              setActionError(null);
+              void onCreateCollection(name).then((result) => {
+                if (result.created) {
+                  setName("");
+                  setCreatingCollection(false);
+                }
+                if (!result.saved) setActionError(result.created
+                  ? "The collection was created, but this thread wasn’t added. Select the collection to try again."
+                  : "Couldn’t create that collection. Try again.");
+              }).catch(() => setActionError("Couldn’t create that collection. Try again.")).finally(() => setPendingAction(null));
+            }}>
+              <input aria-label="New collection name" autoFocus maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Collection name" value={name} />
+              <button disabled={!name.trim() || Boolean(pendingAction)} type="submit">{pendingAction === "create-collection" ? "Adding…" : "Add"}</button>
+              <button aria-label="Cancel new collection" disabled={Boolean(pendingAction)} onClick={() => { setName(""); setCreatingCollection(false); }} type="button">×</button>
+            </form>
+          ) : <button aria-expanded="false" className="organizer-new-collection" disabled={Boolean(pendingAction)} onClick={() => setCreatingCollection(true)} type="button"><span aria-hidden="true">＋</span> New collection</button>}
+        </section>
+        {actionError ? <div className="organizer-action-error" role="alert"><strong>Not saved</strong><span>{actionError}</span></div> : null}
+        <footer>
+          <span><span aria-hidden="true">{actionError ? "!" : pendingAction ? "…" : "✓"}</span> {actionError ? "Resolve the change above" : pendingAction ? "Saving changes…" : "Changes save automatically"}</span>
+          <button className="organizer-done" disabled={Boolean(actionError || pendingAction)} onClick={onClose} type="button">Done</button>
+        </footer>
       </section>
     </div>
   );
@@ -4850,9 +5138,18 @@ function parsePinFilterTarget(targetId: string): PinFilter | null {
   }
 }
 
+function pinFilterClassificationView(filter: PinFilter): ClassificationView | null {
+  if (filter.mailbox === "all") return "all";
+  if (filter.mailbox !== "inbox") return null;
+  return filter.classification ?? "human";
+}
+
 function pinFilterLabel(filter: PinFilter, personName?: string | null) {
-  const mailboxLabel = pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
-  const parts = [mailboxLabel];
+  const signalView = pinFilterClassificationView(filter);
+  const viewLabel = signalView
+    ? classificationViewLabel(signalView)
+    : pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
+  const parts = [viewLabel];
   if (filter.attention !== "all") parts.push(pinAttentionOptions.find((option) => option.id === filter.attention)?.label ?? filter.attention);
   if (personName) parts.push(personName);
   if (filter.query) parts.push(`“${filter.query}”`);
@@ -4883,15 +5180,20 @@ function pinTopBarLabel(pin: Pin, person: PersonItem | null) {
   const personLabel = filter.person ? (person?.name ?? filter.person.split("@")[0]) : null;
   const parts = [personLabel?.split(/\s+/)[0], filter.query ? `“${filter.query}”` : null].filter(Boolean);
   if (parts.length) return parts.join(" · ");
-  return pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
+  const signalView = pinFilterClassificationView(filter);
+  return signalView
+    ? classificationViewLabel(signalView)
+    : pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
 }
 
-function isTopBarPinActive(pin: Pin, current: { inboxFilter: InboxFilter; personFilter: string | null; searchQuery: string; viewMode: "collection" | Mailbox }) {
+function isTopBarPinActive(pin: Pin, current: { classificationView: ClassificationView; inboxFilter: InboxFilter; personFilter: string | null; searchQuery: string; viewMode: "collection" | Mailbox }) {
   if (pin.kind === "sender") return current.personFilter?.trim().toLowerCase() === pin.targetId.trim().toLowerCase();
   if (pin.kind === "view") return current.viewMode === pin.targetId;
   if (pin.kind !== "filter") return false;
   const filter = parsePinFilterTarget(pin.targetId);
   if (!filter || current.viewMode !== filter.mailbox) return false;
+  const signalView = pinFilterClassificationView(filter);
+  if (signalView && current.classificationView !== signalView) return false;
   const samePerson = (current.personFilter ?? "").trim().toLowerCase() === (filter.person ?? "").trim().toLowerCase();
   return samePerson
     && current.searchQuery.trim() === filter.query
