@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-260 · Orca M6 agent product and integration contract</title>
+    <style>
+      :root { color-scheme: light dark; --paper:#f4f1e9; --card:#fffdf7; --ink:#17322f; --muted:#62716d; --line:#d8ddd7; --sea:#147e78; --sea-soft:#d9efeb; --coral:#b95847; --coral-soft:#f5dfd7; --night:#102522; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.6 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      main { max-width:1180px; margin:0 auto; padding:52px 24px 80px; }
+      header { background:var(--night); color:#f7f5ed; border-radius:30px; padding:42px; box-shadow:0 20px 48px rgb(11 40 36 / 18%); }
+      h1 { max-width:850px; margin:8px 0 12px; font:700 clamp(34px,6vw,68px)/1.02 Georgia,serif; letter-spacing:-.035em; }
+      h2 { margin:0 0 12px; font:700 25px/1.2 Georgia,serif; }
+      h3 { margin:0 0 8px; font-size:15px; }
+      p { margin:0 0 12px; }
+      a { color:var(--sea); }
+      header a { color:#aee7de; }
+      code { font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+      pre { overflow:auto; margin:12px 0 0; border:1px solid var(--line); border-radius:16px; background:#0e211f; color:#e9f4ef; padding:18px; }
+      table { width:100%; border-collapse:collapse; }
+      th,td { padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+      ul,ol { margin:8px 0 0; padding-left:20px; }
+      .eyebrow { color:#9bd7ce; font-size:12px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+      .lede { max-width:880px; color:#cbd9d4; font-size:18px; }
+      .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
+      .badge,.pill { display:inline-flex; border-radius:999px; font-size:12px; font-weight:750; padding:6px 10px; }
+      .badge { border:1px solid #41645e; color:#d8e6e1; }
+      .pill { background:var(--sea-soft); color:#155f59; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:20px; }
+      section { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:24px; }
+      .wide { grid-column:1/-1; }
+      .promise { border-color:#8bc7be; background:linear-gradient(135deg,var(--sea-soft),var(--card)); font-size:18px; }
+      .warning { border-color:#dea99c; background:linear-gradient(135deg,var(--coral-soft),var(--card)); }
+      .flow { display:grid; grid-template-columns:repeat(5,1fr); gap:22px; margin-top:18px; }
+      .flow > div { position:relative; border:1px solid var(--line); border-radius:16px; padding:16px; background:var(--card); }
+      .flow > div:not(:last-child)::after { content:"→"; position:absolute; right:-18px; top:50%; color:var(--sea); font-weight:900; transform:translateY(-50%); }
+      .step { display:block; color:var(--sea); font-size:11px; font-weight:850; letter-spacing:.1em; text-transform:uppercase; }
+      .terms { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+      .terms > div { border-top:3px solid var(--sea); padding-top:12px; }
+      .example { display:grid; grid-template-columns:190px 1fr 140px; gap:14px; align-items:start; padding:14px 0; border-bottom:1px solid var(--line); }
+      .example:last-child { border-bottom:0; }
+      .muted { color:var(--muted); }
+      .decision { border-left:4px solid var(--sea); padding-left:14px; }
+      @media (prefers-color-scheme:dark) {
+        :root { --paper:#0b1816; --card:#122522; --ink:#eef5f1; --muted:#a6b7b2; --line:#2b4843; --sea:#67c7bc; --sea-soft:#193b36; --coral:#f0a18f; --coral-soft:#422820; }
+        pre { background:#091512; }
+        .pill { color:#bce9e2; }
+      }
+      @media (max-width:820px) {
+        header { padding:30px 24px; }
+        .grid,.terms,.flow { grid-template-columns:1fr; }
+        .wide { grid-column:auto; }
+        .flow > div:not(:last-child)::after { content:"↓"; right:auto; left:50%; top:auto; bottom:-22px; transform:translateX(-50%); }
+        .example { grid-template-columns:1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Orca M6 · BRE-260 · Contract v1</div>
+        <h1>Keep the timeline calm. Propagate the machine mail that matters.</h1>
+        <p class="lede">M6 adds an explainable, local projection over normalized mail. It does not replace Human Signal, silently change attention, mutate Gmail or Outlook, or turn a ChatGPT subscription into an Orca model runtime.</p>
+        <div class="badges"><span class="badge">Provider-neutral</span><span class="badge">Deterministic first</span><span class="badge">Read-only MCP</span><span class="badge">OAuth 2.1</span><span class="badge">Default off</span></div>
+      </header>
+
+      <div class="grid">
+        <section class="wide promise">
+          <h2>The product promise</h2>
+          <p><strong>Orca remains the source of truth</strong> for normalized mail, account ownership, Human Signal, and user attention choices. An agent may create a short, source-linked event when an automated message has a concrete consequence. The original message stays in Tideline and the projection stays reversible.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Four independent answers</h2>
+          <div class="terms">
+            <div><h3>Human Signal</h3><p>How does Orca estimate the message was produced?</p><code>automated_or_bulk</code></div>
+            <div><h3>Attention</h3><p>Where did the person choose to place this sender?</p><code>normal</code></div>
+            <div><h3>Agent importance</h3><p>Does this specific event have a likely consequence?</p><code>high</code></div>
+            <div><h3>Propagation</h3><p>Should a local explanation appear somewhere else?</p><code>timeline</code></div>
+          </div>
+          <p class="muted" style="margin-top:16px">None of these fields may be inferred from another. “Automated” does not mean unsafe or unimportant. “Propagated” does not move the source out of Tideline or change provider state.</p>
+        </section>
+
+        <section class="wide">
+          <h2>End-to-end flow</h2>
+          <div class="flow" aria-label="M6 event flow">
+            <div><span class="step">1 · Ingest</span>Gmail push/sync or future Outlook sync stores normalized mail.</div>
+            <div><span class="step">2 · Classify</span>M5 computes the independent effective Human Signal result.</div>
+            <div><span class="step">3 · Assess</span>A post-classification agent evaluates conservative local policy.</div>
+            <div><span class="step">4 · Project</span>Retry-safe storage upserts a short event or suppresses it.</div>
+            <div><span class="step">5 · Inspect</span>Orca UI renders locally; optional OAuth-scoped MCP reads it.</div>
+          </div>
+          <p class="muted" style="margin-top:16px">A propagation failure is isolated: normalized mail and Human Signal still commit. ChatGPT/Codex is not in the ingestion path and no OpenAI credential is needed for steps 1–4.</p>
+        </section>
+
+        <section>
+          <h2>Canonical event shape</h2>
+          <pre><code>{
+  "id": "agent_event_1",
+  "source": {
+    "ownerUserId": "user_1",
+    "accountId": "account_1",
+    "provider": "gmail",
+    "messageId": "message_testflight",
+    "threadId": "thread_testflight",
+    "sender": { "name": "TestFlight", "email": "…" },
+    "subject": "Orca 2.1 is ready to test",
+    "receivedAt": "2026-08-19T16:00:00.000Z",
+    "sourceUrl": "https://orca.example/thread/…"
+  },
+  "provenance": {
+    "trigger": "push",
+    "policyVersion": "m6-v0",
+    "agentId": "orca-deterministic-propagator",
+    "agentVersion": "0.1.0",
+    "executionMode": "deterministic"
+  },
+  "eventKind": "release_available",
+  "importance": "high",
+  "relevance": "matched",
+  "destination": "timeline",
+  "reasonCodes": ["release_became_available"],
+  "title": "A new Orca beta is ready",
+  "summary": "TestFlight says Orca 2.1 is available.",
+  "whyThisMatters": "This build is ready for review.",
+  "suggestedNextStep": "Open the original message.",
+  "humanClassification": {
+    "classification": "automated_or_bulk",
+    "score": 2,
+    "reasonCodes": ["auto_submitted_header"],
+    "classifierVersion": "m5-v1",
+    "source": "automatic_heuristic"
+  },
+  "deduplicationKey": "account_1:message_testflight:release_available:m6-v0",
+  "evaluatedAt": "2026-08-19T16:00:01.000Z",
+  "lifecycle": {
+    "state": "new", "revision": 1,
+    "createdAt": "2026-08-19T16:00:01.000Z",
+    "updatedAt": "2026-08-19T16:00:01.000Z",
+    "seenAt": null, "snoozedUntil": null
+  }
+}</code></pre>
+        </section>
+
+        <section>
+          <h2>Stable vocabulary</h2>
+          <table>
+            <tr><th>Field</th><th>Values / rule</th></tr>
+            <tr><td>Event kind</td><td>Release, CI/deploy failure, security/account alert, receipt/renewal, travel/booking change, marketing/newsletter, other.</td></tr>
+            <tr><td>Importance</td><td><code>high</code>, <code>medium</code>, <code>low</code>, <code>unknown</code>. It is scoped to this user/event, never a universal verdict.</td></tr>
+            <tr><td>Relevance</td><td><code>matched</code>, <code>not_matched</code>, <code>uncertain</code>.</td></tr>
+            <tr><td>Destination</td><td><code>timeline</code>, <code>focus</code>, <code>notify</code>, future <code>agent_view</code>, or <code>none</code>.</td></tr>
+            <tr><td>Execution</td><td><code>deterministic</code> in M6. <code>model_assisted</code> is reserved behind a separate runtime, billing, and retention decision.</td></tr>
+            <tr><td>Source link</td><td>Stable Orca deep link only. The event never links directly to a provider token-bearing URL.</td></tr>
+          </table>
+        </section>
+
+        <section class="wide">
+          <h2>State, updates, and idempotency</h2>
+          <table>
+            <thead><tr><th>Case</th><th>Required behavior</th><th>Result</th></tr></thead>
+            <tbody>
+              <tr><td>First match</td><td>Insert by the unique tuple <code>(ownerUserId, accountId, deduplicationKey)</code>.</td><td><code>new</code>, revision 1</td></tr>
+              <tr><td>Duplicate push / retry</td><td>The same source message, event kind, and policy version produces the same key. Do not create another row or notification.</td><td>No-op or metadata-only update</td></tr>
+              <tr><td>Meaningful follow-up</td><td>Upsert the same logical source/thread event, increment revision, preserve user lifecycle unless the source invalidates it.</td><td>Updated content, same event ID</td></tr>
+              <tr><td>Source invalidated</td><td>Keep the audit/source reference and mark the projection retracted.</td><td><code>retracted</code></td></tr>
+              <tr><td>User saw it</td><td>Set <code>seenAt</code>; never mark the provider message read.</td><td><code>seen</code></td></tr>
+              <tr><td>Dismiss / snooze</td><td>Change only Orca’s local projection. <code>restore</code> reverses the disposition.</td><td><code>dismissed</code> / <code>snoozed</code></td></tr>
+              <tr><td>Not useful / mute</td><td>Record a local false positive or sender/category policy. Keep automatic provenance and Human Signal unchanged.</td><td><code>false_positive</code> / <code>muted</code></td></tr>
+            </tbody>
+          </table>
+          <p class="muted">“Created” and “updated” are timestamps/revision transitions, not user-facing lifecycle states. Every mutation uses optimistic revision checks in the downstream API. Provider mutations are out of contract.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Required examples</h2>
+          <div class="example"><strong>Propagated</strong><span>TestFlight build available → <code>high</code>, <code>matched</code>, <code>timeline</code>. Original remains <code>automated_or_bulk</code> in Tideline.</span><span class="pill">Visible</span></div>
+          <div class="example"><strong>Not propagated</strong><span>Routine product newsletter → <code>low</code>, <code>not_matched</code>, <code>none</code>; reason <code>routine_bulk_content</code>.</span><span class="pill">Tideline only</span></div>
+          <div class="example"><strong>False positive</strong><span>User chooses “Not useful.” Event becomes <code>false_positive</code>; the source and automatic assessment are retained; restore remains possible.</span><span class="pill">Reversible</span></div>
+          <div class="example"><strong>Update / retract</strong><span>A corrected booking change updates the same event and revision. A canceled/invalid source marks that event <code>retracted</code>.</span><span class="pill">Same ID</span></div>
+          <div class="example"><strong>Duplicate delivery</strong><span>A push retry recomputes the identical account-scoped key and cannot produce a second timeline row.</span><span class="pill">No spam</span></div>
+          <div class="example"><strong>Mixed thread</strong><span>Every event points to its exact source message and account. A human reply in the same thread does not inherit the machine event or change its classification.</span><span class="pill">Message scoped</span></div>
+        </section>
+
+        <section class="warning">
+          <h2>Trust boundary</h2>
+          <ul>
+            <li>Email subject, body, headers, links, and attachments are untrusted content—not instructions, policy, authorization, or tool calls.</li>
+            <li>Store a bounded derived title/summary/reason plus source IDs. Do not duplicate full bodies into the event row.</li>
+            <li>Ordinary logs contain IDs, rule/version, reason codes, disposition, and latency—not bodies, tokens, authorization codes, secrets, or API keys.</li>
+            <li>No send, draft, archive, delete, relabel, provider navigation, or provider write exists in M6 MCP or lifecycle actions.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Conservative defaults</h2>
+          <table>
+            <tr><th>Category</th><th>Default</th></tr>
+            <tr><td>Release / TestFlight</td><td>Eligible</td></tr>
+            <tr><td>CI / deploy failure</td><td>Eligible</td></tr>
+            <tr><td>Security / account alert</td><td>Eligible</td></tr>
+            <tr><td>Receipt / renewal</td><td>Eligible</td></tr>
+            <tr><td>Travel / booking change</td><td>Eligible</td></tr>
+            <tr><td>Marketing / newsletter</td><td>Suppressed</td></tr>
+            <tr><td>Other / unknown</td><td>Suppressed</td></tr>
+          </table>
+          <p class="muted">Eligible means rules may propagate when evidence is sufficient. It is not an unconditional match.</p>
+        </section>
+
+        <section class="wide">
+          <h2>ChatGPT/Codex integration decision</h2>
+          <p class="decision"><strong>M6 means “Use Orca from ChatGPT/Codex.”</strong> ChatGPT or Codex acts as an OAuth client of Orca’s read-only remote MCP resource. Orca does not “sign in with ChatGPT,” consume a ChatGPT subscription for background work, store a ChatGPT credential, or require a user OpenAI API key.</p>
+          <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+            <div><span class="step">Client</span>ChatGPT / Codex requests Orca tools.</div>
+            <div><span class="step">Authorize</span>OAuth 2.1 authorization code + PKCE S256 and explicit consent.</div>
+            <div><span class="step">Bind</span>Token verifies issuer, exact resource/audience, user, account allowlist, scopes, issue/expiry, and revocation.</div>
+            <div><span class="step">Read</span>HTTPS streamable MCP serves bounded Orca projections only.</div>
+          </div>
+          <p class="muted" style="margin-top:16px">The production resource identifier is the canonical HTTPS MCP endpoint, <code>https://&lt;deployment-origin&gt;/mcp</code>. The authorization server issuer is deployment configuration and must exactly match discovery metadata. Access tokens live at most 600 seconds. Reauthorization and revocation are explicit. Refresh-token storage, if selected downstream, must be encrypted and connection-scoped.</p>
+        </section>
+
+        <section>
+          <h2>Read scopes</h2>
+          <ul>
+            <li><code>orca:mail.metadata:read</code></li>
+            <li><code>orca:mail.content:read</code></li>
+            <li><code>orca:agent-events:read</code></li>
+            <li><code>orca:connection-status:read</code></li>
+          </ul>
+          <p class="muted">Content is intentionally separate from list/search metadata. No write, send, draft, archive, delete, or relabel scope is defined.</p>
+        </section>
+
+        <section>
+          <h2>Read-only MCP tools</h2>
+          <table>
+            <tr><th>Tool</th><th>Action / exposure</th></tr>
+            <tr><td><code>search_mail</code></td><td><code>mail.list</code> · metadata</td></tr>
+            <tr><td><code>get_thread</code></td><td><code>mail.read</code> · content</td></tr>
+            <tr><td><code>list_agent_events</code></td><td><code>agent_events.list</code> · derived event</td></tr>
+            <tr><td><code>get_connection_status</code></td><td><code>connection_status.read</code> · readiness</td></tr>
+          </table>
+          <p class="muted">Each implementation must define focused input/output Zod schemas, bounded pagination/excerpts, stable errors, and annotations <code>readOnlyHint: true</code>, <code>destructiveHint: false</code>, <code>openWorldHint: false</code>.</p>
+        </section>
+
+        <section class="wide">
+          <h2>OAuth/MCP protocol requirements</h2>
+          <ul>
+            <li>Publish protected-resource metadata and authorization-server/OIDC discovery. Echo the exact <code>resource</code> through authorization and token exchange.</li>
+            <li>Use authorization code + PKCE S256. Support the selected OpenAI client-registration path (CIMD, DCR, or predefined client) and allowlist the exact redirect URI.</li>
+            <li>Validate signature, issuer, exact audience/resource, subject-to-Orca-user mapping, issued/expiry times, explicit account allowlist, scopes, and revocation before every tool read.</li>
+            <li>Return <code>401</code> with a standards-compliant <code>WWW-Authenticate</code> challenge and protected-resource metadata link for missing/invalid authorization; use <code>403</code> for valid tokens missing a required scope/account.</li>
+            <li>Authorize the source deep link using the same user/account context. A URL is never evidence of access.</li>
+          </ul>
+          <p class="muted">Current basis: official OpenAI documentation for <a href="https://developers.openai.com/plugins/build/auth">plugin MCP authentication</a> and <a href="https://developers.openai.com/plugins/build/mcp-server">building MCP servers</a>. The official guidance requires OAuth 2.1 for authenticated MCP, protected-resource metadata, PKCE S256, explicit schemas, accurate safety annotations, and authorization in each handler.</p>
+        </section>
+
+        <section>
+          <h2>Feature gates</h2>
+          <ul>
+            <li><code>ORCA_M6_PROPAGATION_ENABLED=false</code></li>
+            <li><code>ORCA_M6_MCP_ENABLED=false</code></li>
+          </ul>
+          <p>Both flags default off and are independent. Turning on one does not turn on the other, configure a model, or grant provider write access.</p>
+        </section>
+
+        <section>
+          <h2>Storage handoff</h2>
+          <p>BRE-263/264 should add an account-owned <code>agent_events</code> table matching the shared schema. Minimum indexed fields:</p>
+          <p><code>id</code>, <code>owner_user_id</code>, <code>account_id</code>, <code>message_id</code>, <code>thread_id</code>, <code>event_kind</code>, <code>deduplication_key</code>, <code>state</code>, <code>revision</code>, <code>created_at</code>, <code>updated_at</code>.</p>
+          <p class="muted">Unique: <code>(owner_user_id, account_id, deduplication_key)</code>. Foreign keys cascade with the local account/source. No backfill is required; feature enablement evaluates newly ingested mail only unless a separately bounded backfill is approved.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Implementation extension points</h2>
+          <table>
+            <thead><tr><th>Location</th><th>Contract</th><th>Downstream responsibility</th></tr></thead>
+            <tbody>
+              <tr><td><code>@orca/shared</code><br><span class="muted">packages/shared/src/agent-contract.ts</span></td><td>Zod wire schemas, enums, conservative defaults, auth context, scope/action/exposure/tool mapping.</td><td>Import; do not duplicate enum strings.</td></tr>
+              <tr><td><code>AgentPropagationEvaluator</code></td><td>Post-normalization input → one provider-neutral assessment.</td><td>BRE-264 implements deterministic rules. Future model agents return the same shape.</td></tr>
+              <tr><td><code>AgentEventStore</code></td><td>Account-scoped upsert/list/lifecycle boundary.</td><td>BRE-264/268 add Drizzle persistence and optimistic local actions.</td></tr>
+              <tr><td><code>orcaMcpReadOnlyTools</code></td><td>Stable names, actions, exposure type, required scope, safety annotations.</td><td>BRE-265 registers focused input/output schemas and handlers.</td></tr>
+              <tr><td><code>OrcaMcpAuthorizationContext</code></td><td>Verified user, accounts, issuer, exact resource, scopes, issue/expiry.</td><td>BRE-261/267 establish issuer and token verification/revocation.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="wide">
+          <h2>Downstream PR notes</h2>
+          <table>
+            <thead><tr><th>Ticket</th><th>Expected seam</th><th>Must preserve</th></tr></thead>
+            <tbody>
+              <tr><td><code>BRE-261</code></td><td>Architecture decision and protocol-neutral action/scope enforcement.</td><td>No ChatGPT credential/API-key promise; exact issuer/resource/account binding.</td></tr>
+              <tr><td><code>BRE-263</code></td><td>Persisted schema, lifecycle, fixtures, and state/idempotency implementation details.</td><td>Shared vocabulary and per-message/account source identity.</td></tr>
+              <tr><td><code>BRE-264</code></td><td>Deterministic evaluator after classification; isolated retry-safe persistence.</td><td>Sync success and provider immutability.</td></tr>
+              <tr><td><code>BRE-265</code></td><td>Streamable HTTP MCP with four focused read-only tools.</td><td>Server-side filters, bounded content, tool annotations, prompt-injection boundary.</td></tr>
+              <tr><td><code>BRE-267</code></td><td>OAuth 2.1 metadata, PKCE, scoped/revocable tokens, settings connection state.</td><td>600-second access maximum, no secrets in logs, no cross-account access.</td></tr>
+              <tr><td><code>BRE-268</code></td><td>Timeline projection and reversible local lifecycle controls.</td><td>Original stays in Tideline; Human Signal and attention remain unchanged.</td></tr>
+              <tr><td><code>BRE-269</code></td><td>Fixture/safety/privacy/usefulness validation.</td><td>No live Outlook or OpenAI credential dependency.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="wide warning">
+          <h2>Backward-compatibility line</h2>
+          <p>M6 does not add required fields to existing inbox, thread, account, auth-session, Human Signal, or attention responses. Existing routes do not evaluate, persist, or return agent events while the flags are off. New storage and routes are additive. Old databases require no agent backfill to start. Unknown future enum values require a versioned contract change—not silent client reinterpretation.</p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
