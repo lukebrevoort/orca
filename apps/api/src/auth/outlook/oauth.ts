@@ -14,6 +14,8 @@ type OutlookOAuthState = {
 };
 
 const maxStateAgeMs = 1000 * 60 * 10;
+const maxProviderProfileImageBytes = 2_000_000;
+const providerProfileImageTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
 
 export function createOutlookOAuthService(options: { config: OutlookOAuthConfig; store: OAuthAccountStore; fetch?: OutlookFetch }) {
   const fetchImpl = options.fetch ?? fetch;
@@ -74,10 +76,35 @@ export function createOutlookOAuthService(options: { config: OutlookOAuthConfig;
       const profile = await profileResponse.json() as { id?: string; mail?: string; userPrincipalName?: string };
       const email = profile.mail ?? profile.userPrincipalName;
       if (!profile.id || !email) return failure("account_identity_missing", "Microsoft did not return an account id and email.", redirect);
-      await options.store.upsert({ userId, provider: "outlook", providerAccountId: profile.id, providerEmail: email, grantedScopes: (tokens.scope ?? options.config.scopes.join(" ")).split(/\s+/), encryptedAccessToken: encryptSecret(tokens.access_token, options.config.tokenEncryptionKey), encryptedRefreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token, options.config.tokenEncryptionKey) : null, expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null });
+      const profileImageUrl = await fetchOutlookProfileImage(tokens.access_token, fetchImpl);
+      await options.store.upsert({ userId, provider: "outlook", providerAccountId: profile.id, providerEmail: email, profileImageUrl, grantedScopes: (tokens.scope ?? options.config.scopes.join(" ")).split(/\s+/), encryptedAccessToken: encryptSecret(tokens.access_token, options.config.tokenEncryptionKey), encryptedRefreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token, options.config.tokenEncryptionKey) : null, expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null });
       return { ok: true as const, initialLogin: state.initialLogin, redirectUrl: statusUrl(state.returnTo ?? options.config.successRedirectUrl, "success"), account: { providerEmail: email, providerAccountId: profile.id } };
     },
   };
+}
+
+async function fetchOutlookProfileImage(accessToken: string, fetchImpl: OutlookFetch): Promise<string | null> {
+  try {
+    const response = await fetchImpl("https://graph.microsoft.com/v1.0/me/photo/$value", {
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return null;
+    }
+    const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+    const contentLength = Number(response.headers.get("content-length") ?? "0");
+    if (!providerProfileImageTypes.has(contentType) || contentLength > maxProviderProfileImageBytes) {
+      await response.body?.cancel();
+      return null;
+    }
+    const image = Buffer.from(await response.arrayBuffer());
+    if (!image.length || image.byteLength > maxProviderProfileImageBytes) return null;
+    return `data:${contentType};base64,${image.toString("base64")}`;
+  } catch {
+    // A missing provider photo should never block account connection.
+    return null;
+  }
 }
 
 function sign(value: object, secret: string) {

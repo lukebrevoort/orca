@@ -5,6 +5,7 @@ export const demoAccount: MailAccount = {
   provider: "gmail",
   email: "luke@example.com",
   displayName: "Luke Brevoort",
+  avatarUrl: "/profile-avatar.svg",
   capabilities: { read: true, draft: true, send: true },
 };
 

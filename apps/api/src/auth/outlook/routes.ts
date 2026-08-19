@@ -70,6 +70,7 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
               .set({
                 providerEmail: pendingAccount.providerEmail,
                 providerId: pendingAccount.providerId,
+                profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
                 accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
                 refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
                 tokenExpiry: pendingAccount.tokenExpiry,

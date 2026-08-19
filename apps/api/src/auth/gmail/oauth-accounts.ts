@@ -12,6 +12,7 @@ export type OAuthAccountRecord = {
   provider: MailProvider;
   providerAccountId: string;
   providerEmail: string;
+  profileImageUrl: string | null;
   grantedScopes: string[];
   encryptedAccessToken: string;
   encryptedRefreshToken: string | null;
@@ -25,6 +26,7 @@ export type OAuthAccountUpsert = {
   provider: MailProvider;
   providerAccountId: string;
   providerEmail: string;
+  profileImageUrl?: string | null;
   grantedScopes: string[];
   encryptedAccessToken: string;
   encryptedRefreshToken: string | null;
@@ -56,6 +58,7 @@ export class InMemoryOAuthAccountStore implements OAuthAccountStore {
     const existing = this.records.get(key);
     const record: OAuthAccountRecord = {
       ...input,
+      profileImageUrl: input.profileImageUrl ?? existing?.profileImageUrl ?? null,
       grantedScopes: input.grantedScopes,
       encryptedRefreshToken: input.encryptedRefreshToken ?? existing?.encryptedRefreshToken ?? null,
       id: existing?.id ?? `oauth_${crypto.randomUUID()}`,
@@ -118,6 +121,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           provider: input.provider,
           providerEmail: input.providerEmail,
           providerId: input.providerAccountId,
+          profileImageUrl: input.profileImageUrl,
           accessTokenEncrypted: input.encryptedAccessToken,
           refreshTokenEncrypted: input.encryptedRefreshToken,
           tokenExpiry: input.expiresAt,
@@ -132,6 +136,7 @@ export class DatabaseOAuthAccountStore implements OAuthAccountStore {
           ],
           set: {
             providerEmail: input.providerEmail,
+            profileImageUrl: sql<string | null>`coalesce(excluded.profile_image_url, ${oauthAccounts.profileImageUrl})`,
             accessTokenEncrypted: input.encryptedAccessToken,
             refreshTokenEncrypted: sql<string | null>`coalesce(excluded.refresh_token_encrypted, ${oauthAccounts.refreshTokenEncrypted})`,
             tokenExpiry: input.expiresAt,
@@ -171,6 +176,7 @@ function mapRecord(record: typeof oauthAccounts.$inferSelect): OAuthAccountRecor
     provider: record.provider as MailProvider,
     providerAccountId: record.providerId,
     providerEmail: record.providerEmail,
+    profileImageUrl: record.profileImageUrl,
     grantedScopes: record.scope ? record.scope.split(/\s+/).filter(Boolean) : [],
     encryptedAccessToken: record.accessTokenEncrypted ?? "",
     encryptedRefreshToken: record.refreshTokenEncrypted,

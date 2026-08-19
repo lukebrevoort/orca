@@ -445,7 +445,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         <SettingsSection id="account" title="Account" note="Account-level">
           {profileAccount ? <div className="settings-profile">
             <ProfileAvatar account={profileAccount} editable variant="settings" />
-            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Shown in your navigation rail. Changes are saved on this device.</span></div>
+            <div className="settings-profile-copy"><strong>Profile photo</strong><span>Uses your {formatProvider(profileAccount.provider)} photo automatically when available. Choose another photo here only if you want a device-specific override.</span></div>
           </div> : connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking your profile…</p> : null}
           <div className="settings-detail"><strong>Signed-in Orca account</strong><span>Your identity is managed through your connected mail provider.</span></div><a className="settings-row-link" href="#connected">Review connected accounts →</a>
         </SettingsSection>
@@ -1719,13 +1719,15 @@ export function InboxApp({
   }
 
   async function removePin(pin: Pin) {
-    if (!account) return;
+    if (!account) return false;
     setOrganizationError(null);
     try {
       if (!demoMode) await fetchNoContent(`/v1/pins/${encodeURIComponent(pin.id)}`, { method: "DELETE" });
       setPins((current) => current.filter((item) => item.id !== pin.id).map((item, position) => ({ ...item, position })));
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
@@ -1933,7 +1935,7 @@ export function InboxApp({
               onClassificationChange={correctClassification}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
-              onRemovePin={(pin) => void removePin(pin)}
+              onRemovePin={removePin}
               onReorderPin={reorderPin}
               onUpdatePin={(pin, patch) => updatePin(pin, patch)}
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
@@ -2774,7 +2776,8 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   editable?: boolean;
   variant?: "rail" | "settings";
 }) {
-  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+  const providerImageSource = account?.avatarUrl ?? null;
+  const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
   const [photoError, setPhotoError] = useState("");
   const accountId = account?.id ?? "preview";
   const accountLabel = account?.displayName.trim() || account?.email || "your account";
@@ -2782,7 +2785,7 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   useEffect(() => {
     const storageKey = profilePhotoStorageKey({ id: accountId });
     const refreshStoredPhoto = () => {
-      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setImageSource(readStoredProfilePhoto({ id: accountId }) ?? providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
       setPhotoError("");
     };
     const handleStorageChange = (event: StorageEvent) => {
@@ -2802,13 +2805,19 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
       window.removeEventListener(PROFILE_PHOTO_CHANGED_EVENT, handlePhotoChange);
       window.removeEventListener("pageshow", refreshStoredPhoto);
     };
-  }, [accountId]);
+  }, [accountId, providerImageSource]);
 
   function handleImageError() {
-    if (imageSource !== PROFILE_PHOTO_FALLBACK_SRC) {
-      if (account) removeStoredProfilePhoto(account);
+    const storedImageSource = account ? readStoredProfilePhoto(account) : null;
+    if (account && storedImageSource && imageSource === storedImageSource) {
+      removeStoredProfilePhoto(account);
+      setImageSource(providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
+      setPhotoError(`That custom photo could not be loaded. Your ${formatProvider(account.provider)} photo is being used instead.`);
+      return;
+    }
+    if (account && providerImageSource && imageSource === providerImageSource) {
       setImageSource(PROFILE_PHOTO_FALLBACK_SRC);
-      setPhotoError("That profile photo could not be loaded. The default avatar is being used.");
+      setPhotoError(`Your ${formatProvider(account.provider)} profile photo could not be loaded. The default avatar is being used.`);
       return;
     }
     setImageSource(null);
@@ -2881,7 +2890,7 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   </aside>;
 }
 
-function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onReorderPin, onUpdatePin }: {
+function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
   pins: Pin[];
   pinnedPeople: PersonItem[];
   classificationView: ClassificationView;
@@ -2890,11 +2899,13 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
   searchQuery: string;
   viewMode: "collection" | Mailbox;
   onSelectPin: (pin: Pin) => void;
+  onRemovePin: (pin: Pin) => Promise<boolean>;
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
   const [draggedPinId, setDraggedPinId] = useState<string | null>(null);
   const [dropPinId, setDropPinId] = useState<string | null>(null);
+  const [willUnpin, setWillUnpin] = useState(false);
   const [editingPinId, setEditingPinId] = useState<string | null>(null);
   const [moveMessage, setMoveMessage] = useState("");
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -2903,7 +2914,43 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
   function clearDragState() {
     setDraggedPinId(null);
     setDropPinId(null);
+    setWillUnpin(false);
   }
+
+  function isPointOutsideRail(clientX: number, clientY: number) {
+    if (clientX === 0 && clientY === 0) return false;
+    const rail = document.querySelector<HTMLElement>(".pinned-people");
+    if (!rail) return false;
+    const bounds = rail.getBoundingClientRect();
+    return clientX < bounds.left || clientX > bounds.right || clientY < bounds.top || clientY > bounds.bottom;
+  }
+
+  function handlePinDragEnd(event: React.DragEvent<HTMLButtonElement>, pin: Pin) {
+    const shouldUnpin = willUnpin || isPointOutsideRail(event.clientX, event.clientY);
+    clearDragState();
+    if (!shouldUnpin) return;
+    void onRemovePin(pin).then((removed) => {
+      if (removed) setMoveMessage(`${pin.label} unpinned.`);
+      else setMoveError(`Could not unpin ${pin.label}.`);
+    });
+  }
+
+  useEffect(() => {
+    if (!draggedPinId) return;
+    const handleDocumentDragOver = (event: DragEvent) => {
+      const outside = isPointOutsideRail(event.clientX, event.clientY);
+      setWillUnpin(outside);
+      if (outside) {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      }
+    };
+
+    document.addEventListener("dragover", handleDocumentDragOver);
+    return () => {
+      document.removeEventListener("dragover", handleDocumentDragOver);
+    };
+  }, [draggedPinId]);
 
   async function handleDrop(event: React.DragEvent<HTMLButtonElement>, targetPin: Pin) {
     event.preventDefault();
@@ -2948,7 +2995,7 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
   }
 
   return <>
-    <div className="pin-rail-items" onDragEnd={clearDragState}>
+    <div className="pin-rail-items">
       {pins.map((pin) => {
         const person = pin.kind === "sender"
           ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
@@ -2966,17 +3013,27 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
             className={`pinned-pin pinned-pin-${pin.kind}`}
             draggable
             onClick={() => onSelectPin(pin)}
+            onDrag={(event) => setWillUnpin(isPointOutsideRail(event.clientX, event.clientY))}
+            onDragEnd={(event) => handlePinDragEnd(event, pin)}
             onDragEnter={() => { if (draggedPinId && draggedPinId !== pin.id) setDropPinId(pin.id); }}
             onDragOver={(event) => { if (!draggedPinId || draggedPinId === pin.id) return; event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropPinId(pin.id); }}
-            onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setMoveMessage(""); }}
+            onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", pin.id); setDraggedPinId(pin.id); setWillUnpin(false); setMoveMessage(""); setMoveError(null); }}
             onDrop={(event) => void handleDrop(event, pin)}
             onKeyDown={(event) => {
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.preventDefault();
+                void onRemovePin(pin).then((removed) => {
+                  if (removed) setMoveMessage(`${pin.label} unpinned.`);
+                  else setMoveError(`Could not unpin ${pin.label}.`);
+                });
+                return;
+              }
               if (!event.altKey || (event.key !== "ArrowLeft" && event.key !== "ArrowRight")) return;
               event.preventDefault();
               void moveWithKeyboard(pin, event.key === "ArrowLeft" ? -1 : 1);
             }}
             style={{ "--pin-color": pin.color } as CSSProperties}
-            title={`${pin.label} · drag to reorder`}
+            title={`${pin.label} · drag to reorder or drag out to unpin`}
             type="button"
           >
             <span className="pinned-avatar">{pinTopBarMark(pin, person)}{person?.unread ? <i /> : null}</span>
@@ -2985,29 +3042,31 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
           <button aria-label={`Customize ${pin.label} pin`} className="pinned-pin-edit" onClick={() => setEditingPinId(pin.id)} title={`Customize ${pin.label}`} type="button">✎</button>
         </div>;
       })}
-      <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder · select the customize button to choose an icon and color · Option plus arrow keys also move pins.</p>
+      {draggedPinId ? <span aria-hidden="true" className={`pin-unpin-hint${willUnpin ? " pin-unpin-hint-ready" : ""}`}>{willUnpin ? "Release to unpin" : "Drag outside to unpin"}</span> : null}
+      <p className="pin-rail-instructions visually-hidden" id="pin-rail-instructions">Drag to reorder, drag outside the saved pin rail to unpin, or press Delete. Select the customize button to choose an icon and color or remove the pin. Option plus arrow keys also move pins.</p>
       {moveError ? <p className="pin-rail-error" role="alert">{moveError}</p> : null}
       <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
     </div>
-    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onSave={onUpdatePin} /> : null}
+    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
   </>;
 }
 
-function PinAppearanceEditor({ pin, onClose, onSave }: {
+function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
   pin: Pin;
   onClose: () => void;
+  onRemove: (pin: Pin) => Promise<boolean>;
   onSave: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
 }) {
   const [label, setLabel] = useState(pin.label);
   const [icon, setIcon] = useState<PinIcon>(pin.icon);
   const [color, setColor] = useState<string>(pin.color);
-  const [saving, setSaving] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"idle" | "saving" | "removing">("idle");
   const [error, setError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
-  const savingRef = useRef(saving);
+  const savingRef = useRef(pendingAction !== "idle");
   onCloseRef.current = onClose;
-  savingRef.current = saving;
+  savingRef.current = pendingAction !== "idle";
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -3058,24 +3117,35 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
       setError("Give this pin a display name.");
       return;
     }
-    setSaving(true);
+    setPendingAction("saving");
     setError(null);
     try {
       await onSave(pin, { label: trimmedLabel, icon, color });
       onClose();
     } catch (saveError) {
-      setError(getErrorMessage(saveError));
+      setError(`Could not save this pin. ${getErrorMessage(saveError)}`);
     } finally {
-      setSaving(false);
+      setPendingAction("idle");
     }
   }
 
+  async function remove() {
+    setPendingAction("removing");
+    setError(null);
+    const removed = await onRemove(pin);
+    if (removed) onClose();
+    else setError(`Could not remove ${pin.label}. Try again.`);
+    setPendingAction("idle");
+  }
+
+  const busy = pendingAction !== "idle";
+
   const dialog = <div className="pin-appearance-layer" role="presentation">
-    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={saving} onClick={onClose} type="button" />
+    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={busy} onClick={onClose} type="button" />
     <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" ref={dialogRef} role="dialog">
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
-        <button aria-label="Close pin customization" data-dialog-initial-focus disabled={saving} onClick={onClose} type="button">×</button>
+        <button aria-label="Close pin customization" data-dialog-initial-focus disabled={busy} onClick={onClose} type="button">×</button>
       </header>
       <form onSubmit={submit}>
         <div className="pin-appearance-preview" style={{ "--pin-color": color } as CSSProperties}>
@@ -3084,24 +3154,24 @@ function PinAppearanceEditor({ pin, onClose, onSave }: {
         </div>
         <label className="pin-appearance-name">
           <span>Display name</span>
-          <input aria-label="Pin display name" disabled={saving} maxLength={120} onChange={(event) => setLabel(event.target.value)} value={label} />
+          <input aria-label="Pin display name" disabled={busy} maxLength={120} onChange={(event) => setLabel(event.target.value)} value={label} />
         </label>
         <fieldset className="pin-appearance-icons">
           <legend>Icon</legend>
           <div aria-label="Pin icons" role="group">
-            {pinIconOptions.map((option) => <button aria-label={`${option.label}${icon === option.id ? ", selected" : ""}`} aria-pressed={icon === option.id} className={icon === option.id ? "pin-appearance-icon-selected" : ""} disabled={saving} key={option.id} onClick={() => setIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span><small>{option.label}</small></button>)}
+            {pinIconOptions.map((option) => <button aria-label={`${option.label}${icon === option.id ? ", selected" : ""}`} aria-pressed={icon === option.id} className={icon === option.id ? "pin-appearance-icon-selected" : ""} disabled={busy} key={option.id} onClick={() => setIcon(option.id)} title={option.label} type="button"><span aria-hidden="true">{option.glyph}</span><small>{option.label}</small></button>)}
           </div>
         </fieldset>
         <fieldset className="pin-appearance-colors">
           <legend>Color</legend>
           <div aria-label="Pin colors" role="group">
-            {pinColorOptions.map((option) => <button aria-label={`${option.name}${color.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={color.toLowerCase() === option.value} className="pin-appearance-color-swatch" disabled={saving} key={option.value} onClick={() => setColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
-            <label className="pin-appearance-custom-color"><span>Custom</span><input aria-label="Custom pin color" disabled={saving} onChange={(event) => setColor(event.target.value)} type="color" value={color} /></label>
+            {pinColorOptions.map((option) => <button aria-label={`${option.name}${color.toLowerCase() === option.value ? ", selected" : ""}`} aria-pressed={color.toLowerCase() === option.value} className="pin-appearance-color-swatch" disabled={busy} key={option.value} onClick={() => setColor(option.value)} style={{ "--swatch-color": option.value } as CSSProperties} title={option.name} type="button" />)}
+            <label className="pin-appearance-custom-color"><span>Custom</span><input aria-label="Custom pin color" disabled={busy} onChange={(event) => setColor(event.target.value)} type="color" value={color} /></label>
           </div>
           <code>{color}</code>
         </fieldset>
-        {error ? <p className="pin-appearance-error" role="alert">Could not save this pin. {error}</p> : null}
-        <footer className="pin-appearance-actions"><button disabled={saving} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={saving} type="submit">{saving ? "Saving…" : "Save pin style"}</button></footer>
+        {error ? <p className="pin-appearance-error" role="alert">{error}</p> : null}
+        <footer className="pin-appearance-actions"><button className="pin-appearance-remove" disabled={busy} onClick={() => void remove()} type="button">{pendingAction === "removing" ? "Removing…" : "Remove pin"}</button><button disabled={busy} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={busy} type="submit">{pendingAction === "saving" ? "Saving…" : "Save pin style"}</button></footer>
       </form>
     </section>
   </div>;
@@ -3210,7 +3280,7 @@ function InboxView({
   onRetry: () => void;
   onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   onCreatePin: (input: PinInput) => void;
-  onRemovePin: (pin: Pin) => void;
+  onRemovePin: (pin: Pin) => Promise<boolean>;
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
   onUpdatePin: (pin: Pin, patch: Partial<Pick<Pin, "label" | "icon" | "color">>) => Promise<void>;
   onOpenThread: (message: InboxMessage) => void;
@@ -3478,7 +3548,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -3638,14 +3708,8 @@ function InboxView({
                 <li key={message.id}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className={`message-row-wrap${selectedMessageIds.has(message.id) ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
-                    {selectionMode ? <button
-                      aria-label={`${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}`}
-                      aria-pressed={selectedMessageIds.has(message.id)}
-                      className="message-select-button"
-                      onClick={() => toggleSelection(message.id)}
-                      type="button"
-                    ><span aria-hidden="true">{selectedMessageIds.has(message.id) ? "✓" : ""}</span></button> : null}
                     <button
+                      aria-label={selectionMode ? `${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
                       aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
                       onClick={() => selectionMode ? toggleSelection(message.id) : onOpenThread(message)}
@@ -3662,6 +3726,7 @@ function InboxView({
                       }
                       type="button"
                     >
+                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selectedMessageIds.has(message.id) ? "✓" : ""}</span></span> : null}
                       <ContactMark
                         className={`stream-avatar stream-avatar-variant-${signature.variant}`}
                         contact={message.from}

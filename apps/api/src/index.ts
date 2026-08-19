@@ -127,6 +127,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     provider: account.provider,
     email: account.providerEmail,
     displayName: account.displayName ?? account.providerEmail.split("@")[0] ?? account.providerEmail,
+    ...(account.profileImageUrl ? { avatarUrl: `/v1/accounts/${encodeURIComponent(account.id)}/avatar` } : {}),
     capabilities: providerFor(account).detectCapabilities(account.scope),
   });
   const transportFor = (account: ConnectedAccount) => {
@@ -303,6 +304,32 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         items: getUnifiedInboxAccounts(db, c.get("auth").userId).map(serializeMailAccount),
         nextCursor: null,
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/accounts/:id/avatar", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const account = getConnectedAccountById(db, c.get("auth").userId, c.req.param("id"));
+      if (!account?.profileImageUrl) return c.body(null, 404);
+      const dataImage = /^data:(image\/(?:gif|jpe?g|png|webp));base64,([a-z0-9+/]+={0,2})$/i.exec(account.profileImageUrl);
+      if (dataImage) {
+        return new Response(Buffer.from(dataImage[2]!, "base64"), {
+          headers: {
+            "cache-control": "private, max-age=3600",
+            "content-type": dataImage[1]!.toLowerCase(),
+          },
+        });
+      }
+      try {
+        const imageUrl = new URL(account.profileImageUrl);
+        if (imageUrl.protocol === "https:") return c.redirect(imageUrl.toString(), 302);
+      } catch {
+        // Invalid legacy values fall through to a bounded not-found response.
+      }
+      return c.body(null, 404);
     } finally {
       sqlite.close();
     }
@@ -1716,6 +1743,7 @@ type ConnectedAccount = {
   provider: MailProvider;
   providerEmail: string;
   displayName: string | null;
+  profileImageUrl: string | null;
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
   syncCursor: string | null;
@@ -2490,6 +2518,7 @@ function getAccountById(db: ReturnType<typeof createDatabaseClient>["db"], accou
     provider: oauthAccounts.provider,
     providerEmail: oauthAccounts.providerEmail,
     displayName: users.displayName,
+    profileImageUrl: oauthAccounts.profileImageUrl,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
     syncCursor: oauthAccounts.syncCursor,
@@ -2553,6 +2582,7 @@ function selectConnectedAccounts(
     provider: oauthAccounts.provider,
     providerEmail: oauthAccounts.providerEmail,
     displayName: users.displayName,
+    profileImageUrl: oauthAccounts.profileImageUrl,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
     lastSyncedAt: oauthAccounts.lastSyncedAt,

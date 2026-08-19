@@ -57,8 +57,8 @@ describe("Orca API", () => {
         { id: "accounts_other", email: "other@example.com", displayName: "Other" },
       ]).run();
       db.insert(oauthAccounts).values([
-        { id: "gmail_account", userId: "accounts_user", provider: "gmail", providerEmail: "owner@gmail.com", providerId: "gmail-owner", scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "gmail-access", refreshTokenEncrypted: "gmail-refresh", createdAt: new Date(1) },
-        { id: "outlook_account", userId: "accounts_user", provider: "outlook", providerEmail: "owner@outlook.com", providerId: "outlook-owner", accessTokenEncrypted: "outlook-access", refreshTokenEncrypted: "outlook-refresh", createdAt: new Date(2) },
+        { id: "gmail_account", userId: "accounts_user", provider: "gmail", providerEmail: "owner@gmail.com", providerId: "gmail-owner", profileImageUrl: "https://lh3.googleusercontent.com/profile", scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "gmail-access", refreshTokenEncrypted: "gmail-refresh", createdAt: new Date(1) },
+        { id: "outlook_account", userId: "accounts_user", provider: "outlook", providerEmail: "owner@outlook.com", providerId: "outlook-owner", profileImageUrl: "data:image/png;base64,AQID", accessTokenEncrypted: "outlook-access", refreshTokenEncrypted: "outlook-refresh", createdAt: new Date(2) },
         { id: "other_account", userId: "accounts_other", provider: "gmail", providerEmail: "other@gmail.com", providerId: "gmail-other", createdAt: new Date(3) },
       ]).run();
       db.insert(threads).values({ id: "outlook_thread", accountId: "outlook_account", providerThreadId: "provider-thread" }).run();
@@ -70,11 +70,20 @@ describe("Orca API", () => {
       assert.equal(list.status, 200);
       assert.deepEqual(await list.json(), {
         items: [
-          { id: "gmail_account", provider: "gmail", email: "owner@gmail.com", displayName: "Owner", capabilities: { read: true, draft: false, send: false } },
-          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", capabilities: { read: false, draft: false, send: false } },
+          { id: "gmail_account", provider: "gmail", email: "owner@gmail.com", displayName: "Owner", avatarUrl: "/v1/accounts/gmail_account/avatar", capabilities: { read: true, draft: false, send: false } },
+          { id: "outlook_account", provider: "outlook", email: "owner@outlook.com", displayName: "Owner", avatarUrl: "/v1/accounts/outlook_account/avatar", capabilities: { read: false, draft: false, send: false } },
         ],
         nextCursor: null,
       });
+
+      const gmailAvatar = await testApp.request("/v1/accounts/gmail_account/avatar", { headers, redirect: "manual" });
+      assert.equal(gmailAvatar.status, 302);
+      assert.equal(gmailAvatar.headers.get("location"), "https://lh3.googleusercontent.com/profile");
+      const outlookAvatar = await testApp.request("/v1/accounts/outlook_account/avatar", { headers });
+      assert.equal(outlookAvatar.status, 200);
+      assert.equal(outlookAvatar.headers.get("content-type"), "image/png");
+      assert.deepEqual(new Uint8Array(await outlookAvatar.arrayBuffer()), new Uint8Array([1, 2, 3]));
+      assert.equal((await testApp.request("/v1/accounts/other_account/avatar", { headers })).status, 404);
 
       assert.equal((await testApp.request("/v1/accounts/other_account", { method: "DELETE", headers })).status, 404);
       assert.ok(db.select().from(oauthAccounts).where(eq(oauthAccounts.id, "other_account")).get());

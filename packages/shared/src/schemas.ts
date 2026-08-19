@@ -37,6 +37,7 @@ export const mailAccountSchema = z
     provider: mailProviderSchema,
     email: nonEmptyStringSchema,
     displayName: nonEmptyStringSchema,
+    avatarUrl: z.string().nullable().optional(),
     capabilities: mailCapabilitiesSchema,
   })
   .strict();

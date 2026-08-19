@@ -21,6 +21,9 @@ describe("Outlook OAuth", () => {
         expect(body.get("code_verifier")).toBe(expectedCodeVerifier);
         return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 3600, scope: "User.Read Mail.Read offline_access" });
       }
+      if (String(input).endsWith("/photo/$value")) {
+        return new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "image/png" } });
+      }
       return Response.json({ id: "microsoft-user", mail: "person@outlook.com" });
     } });
     const authorization = service.getAuthorizationUrl("http://localhost:5173/onboarding", true);
@@ -37,11 +40,12 @@ describe("Outlook OAuth", () => {
 
     const result = await service.handleCallback(new URLSearchParams({ code: "code", state: authorization.state }), "user-1");
     expect(result.ok).toBe(true);
-    expect(requests).toEqual([expect.stringContaining("/token"), "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName"]);
+    expect(requests).toEqual([expect.stringContaining("/token"), "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName", "https://graph.microsoft.com/v1.0/me/photo/$value"]);
     const account = store.getAll()[0]!;
     expect(account.provider).toBe("outlook");
     expect(account.encryptedAccessToken).not.toContain("access");
     expect(decryptSecret(account.encryptedAccessToken, key)).toBe("access");
+    expect(account.profileImageUrl).toBe("data:image/png;base64,AQID");
   });
 
   test("rejects a tampered state before exchanging tokens", async () => {

@@ -151,6 +151,7 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
               .set({
                 providerEmail: pendingAccount.providerEmail,
                 providerId: pendingAccount.providerId,
+                profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
                 accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
                 refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
                 tokenExpiry: pendingAccount.tokenExpiry,

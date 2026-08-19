@@ -379,6 +379,17 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Dinner on Sunday?");
   });
 
+  test("lets keyboard users unpin a saved thread directly from the rail", async () => {
+    await renderApp();
+    const pin = buttonByName("Open Dinner on Sunday? pin");
+
+    await act(async () => {
+      pin.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, key: "Delete" }) as unknown as Event);
+    });
+
+    expect(browserWindow.document.querySelector('button[aria-label="Open Dinner on Sunday? pin"]')).toBeNull();
+  });
+
   test("saves and restores the signal view with a filter pin", async () => {
     await renderApp();
     await act(async () => {
@@ -410,6 +421,8 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => {
       selectMode.click();
     });
+    expect(browserWindow.document.querySelector("button.message-select-button")).toBeNull();
+    expect(browserWindow.document.querySelector(".message-row-wrap-selecting .message-select-indicator")).not.toBeNull();
     await act(async () => {
       buttonByName("Select Mom: Dinner on Sunday?").click();
       buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
