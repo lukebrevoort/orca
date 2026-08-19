@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-261 · OpenAI / ChatGPT integration boundary</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #eef5f2;
+        --surface: #fcfffd;
+        --ink: #17312d;
+        --muted: #62756f;
+        --line: #c9d9d3;
+        --accent: #08776c;
+        --soft: #d9eee8;
+        --danger: #a23b35;
+        --danger-soft: #f9e3df;
+        --code: #10211e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1715;
+          --surface: #172320;
+          --ink: #edf6f2;
+          --muted: #aabcb5;
+          --line: #344740;
+          --accent: #74d9c8;
+          --soft: #173a34;
+          --danger: #ffaca2;
+          --danger-soft: #432723;
+          --code: #09100e;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.58 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 60px 0 88px; }
+      header { max-width: 850px; margin-bottom: 32px; }
+      h1, h2, h3 { letter-spacing: -.035em; line-height: 1.12; }
+      h1 { margin: 8px 0 16px; font-size: clamp(2.45rem, 7vw, 5.3rem); }
+      h2 { margin: 0 0 13px; font-size: 1.42rem; }
+      h3 { margin: 0 0 7px; font-size: 1rem; }
+      p { margin: 0 0 14px; }
+      a { color: var(--accent); }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      code { color: var(--accent); font-size: .91em; }
+      pre { overflow: auto; margin: 0; padding: 17px; border-radius: 12px; background: var(--code); color: #dcf3ec; font-size: .82rem; line-height: 1.58; }
+      table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+      th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      th { color: var(--muted); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+      tr:last-child td { border-bottom: 0; }
+      ul, ol { margin: 0; padding-left: 1.3rem; }
+      li + li { margin-top: 7px; }
+      .eyebrow { color: var(--accent); font-size: .74rem; font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+      .lede { color: var(--muted); font-size: 1.1rem; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .wide { grid-column: 1 / -1; }
+      section { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 24px; }
+      .decision { border-left: 5px solid var(--accent); background: var(--soft); }
+      .decision strong { display: block; margin-bottom: 5px; font-size: 1.08rem; }
+      .danger { border-left: 5px solid var(--danger); background: var(--danger-soft); }
+      .danger h2, .danger strong { color: var(--danger); }
+      .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; margin: 0 5px 6px 0; padding: 4px 9px; color: var(--muted); font-size: .78rem; }
+      .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; margin-top: 16px; }
+      .flow article { position: relative; min-height: 145px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 16px; }
+      .flow article:not(:last-child)::after { content: "→"; position: absolute; z-index: 1; top: 50%; right: -19px; color: var(--accent); font-size: 1.45rem; transform: translateY(-50%); }
+      .flow b { display: block; margin-bottom: 8px; color: var(--accent); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+      .option { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+      .option:last-child { border-bottom: 0; padding-bottom: 0; }
+      .option:first-of-type { padding-top: 0; }
+      .mark { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--soft); color: var(--accent); font-size: .72rem; font-weight: 900; }
+      .no .mark { border: 2px solid var(--danger); background: var(--surface); color: var(--ink); }
+      .muted { color: var(--muted); }
+      @media (max-width: 780px) {
+        main { padding-top: 38px; }
+        .grid, .flow { grid-template-columns: 1fr; }
+        .wide { grid-column: auto; }
+        .flow article { min-height: auto; }
+        .flow article:not(:last-child)::after { content: "↓"; top: auto; right: auto; bottom: -22px; left: 50%; transform: translateX(-50%); }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Orca M6 · BRE-261 · Architecture decision</div>
+        <h1>ChatGPT visits Orca. Orca does not become ChatGPT.</h1>
+        <p class="lede">M6 supports “Use Orca from ChatGPT or Codex” through a revocable, OAuth 2.1-protected, read-only Orca resource. It does not treat a ChatGPT subscription as API credit, store an OpenAI key, run a model in the background, or let model output mutate a mailbox.</p>
+      </header>
+
+      <div class="grid">
+        <section class="decision wide">
+          <strong>Selected boundary</strong>
+          ChatGPT/Codex is the OAuth client. Orca is the authorization and resource boundary. The existing Orca sign-in authenticates the person; a narrow OAuth authorization layer issues account- and scope-bound Orca grants. The remote client receives only the result of four read operations after live ownership checks and explicit redaction.
+        </section>
+
+        <section>
+          <h2>Three directions considered</h2>
+          <div class="option"><span class="mark">✓</span><div><h3>External host → Orca</h3><p>Supported for M6. ChatGPT/Codex connects to a read-only Orca MCP resource with OAuth 2.1 and per-account consent.</p></div></div>
+          <div class="option no"><span class="mark">×</span><div><h3>Orca → OpenAI API</h3><p>Deferred. This requires a separately billed API provider, retention decision, rate limits, operational isolation, and a new user promise.</p></div></div>
+          <div class="option no"><span class="mark">×</span><div><h3>“Sign in with ChatGPT”</h3><p>Rejected for M6. There is no product promise that ChatGPT identity or subscription entitlement powers Orca jobs.</p></div></div>
+        </section>
+
+        <section class="danger">
+          <h2>Never crosses this boundary</h2>
+          <ul>
+            <li>Gmail/Outlook access or refresh tokens, Orca sessions, cookies, authorization headers, OpenAI keys, or ChatGPT credentials.</li>
+            <li>HTML bodies, remote images, raw provider payloads/headers, BCC, attachment bytes/URLs, drafts, or unrelated contacts/accounts.</li>
+            <li>Send, draft, archive, delete, relabel, mark read, change attention, or agent-event lifecycle actions.</li>
+            <li>Instructions contained in email. Mail is untrusted data, never authority to invoke another tool.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Authorization flow</h2>
+          <div class="flow" role="group" aria-label="ChatGPT and Codex authorization flow">
+            <article><b>1 · Client</b>ChatGPT or Codex discovers Orca’s protected resource metadata and starts authorization with the exact <code>resource</code>, requested read scopes, redirect URI, state, and PKCE S256 challenge.</article>
+            <article><b>2 · Orca consent</b>The existing signed-in Orca session identifies the user. Orca shows scope copy and only that user’s currently connected accounts. Approval creates a revocable Orca grant.</article>
+            <article><b>3 · Bearer</b>The authorization-code exchange yields a ≤10-minute access token and a rotating refresh token valid no longer than 30 days. The access context binds issuer, resource/audience, user, accounts, scopes, issue time, and expiry.</article>
+            <article><b>4 · Resource</b>Every call verifies the token and active grant, intersects claimed accounts with current ownership, authorizes a contract operation, then applies its allowlisted output projection and redaction.</article>
+          </div>
+        </section>
+
+        <section>
+          <h2>Canonical identifiers</h2>
+          <table>
+            <tbody>
+              <tr><th>Resource / audience</th><td><code>https://orca-api-production-fbf9.up.railway.app/mcp</code> for the current production API. It is configured as <code>ORCA_M6_MCP_RESOURCE</code> and must match exactly. Moving it creates a new resource and requires reauthorization.</td></tr>
+              <tr><th>Issuer</th><td>The exact credential-free HTTPS issuer configured as <code>ORCA_M6_MCP_ISSUER</code>. M6 reuses Orca’s established sign-in identity and implements only the narrow authorization layer needed to mint Orca grants. No alias or fallback issuer is accepted.</td></tr>
+              <tr><th>Feature gate</th><td><code>ORCA_M6_MCP_ENABLED=true</code>. Missing, false, or invalid configuration fails closed; no endpoints should be published when disabled.</td></tr>
+              <tr><th>Client registration</th><td>Prefer Client ID Metadata Documents when supported; otherwise standards-conforming dynamic client registration. Public clients use <code>token_endpoint_auth_method=none</code> and PKCE S256. Redirect URIs are registered and matched exactly; HTTPS is required except loopback development callbacks.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>Token and account rules</h2>
+          <ul>
+            <li><code>iss</code> equals the configured issuer; <code>aud</code> and OAuth <code>resource</code> equal the canonical resource.</li>
+            <li><code>sub</code> maps to exactly one Orca user. Account claims are an explicit subset selected at consent.</li>
+            <li>The resource server intersects token accounts with live DB ownership on every request. A disconnected or transferred account stops working immediately.</li>
+            <li>Access tokens live no longer than 600 seconds. Refresh tokens rotate on every use, expire within 30 days, and replay revokes the connection.</li>
+            <li>Scope expansion, adding accounts, changing the resource/issuer, expiry, or revocation requires a fresh authorization flow. Refresh may only preserve or narrow a grant.</li>
+            <li>Orca stores grant/revocation state and only hashes of its own opaque refresh tokens. It stores no ChatGPT credential or user OpenAI API key.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Contract operations and exposure</h2>
+          <table>
+            <thead><tr><th>Operation</th><th>Scope</th><th>May expose</th><th>Must exclude</th></tr></thead>
+            <tbody>
+              <tr><td><code>mail.list</code><br><span class="muted"><code>search_mail</code></span></td><td><code>orca:mail.metadata:read</code></td><td>Internal message/thread/account ids, provider, sender, subject, bounded snippet, received time, unread/labels/attention, effective Human Signal.</td><td>Body, recipients, HTML, raw/provider ids, headers, attachments, BCC, credentials.</td></tr>
+              <tr><td><code>mail.read</code><br><span class="muted"><code>get_thread</code></span></td><td><code>orca:mail.content:read</code></td><td>Metadata plus To/CC and bounded plain-text body. Content is marked <code>untrusted_external_content</code>.</td><td>HTML/remote images, BCC, attachments, provider payload, active instructions or actions.</td></tr>
+              <tr><td><code>agent_events.list</code><br><span class="muted"><code>list_agent_events</code></span></td><td><code>orca:agent-events:read</code></td><td>Event explanation, source link without query/fragment, provenance, lifecycle state, source ids/account.</td><td>Owner user id, deduplication internals, signed URL parameters, lifecycle mutations.</td></tr>
+              <tr><td><code>connection_status.read</code><br><span class="muted"><code>get_connection_status</code></span></td><td><code>orca:connection-status:read</code></td><td>Only authorized account id, provider, email/display name, and whether read connectivity is active.</td><td>Draft/send capabilities, provider scopes/tokens, errors, avatar or other account data.</td></tr>
+            </tbody>
+          </table>
+          <p class="muted" style="margin-top:14px">Tool names are an adapter detail. The authorization layer enforces the shared action, scope, exposure, and read-only annotations from BRE-260; unknown tools/actions/scopes are denied.</p>
+        </section>
+
+        <section>
+          <h2>Consent, reauthorization, revocation</h2>
+          <p>Consent copy must name the client, selected Orca accounts, and each requested exposure in plain language. It must say that message data will be sent to ChatGPT/Codex and that Orca cannot control the client’s downstream retention.</p>
+          <p>Users can revoke one connection or all connections in Orca. Revocation blocks active access tokens at the grant check and invalidates refresh-token families. A client reconnects through the complete consent flow; there is no silent re-grant.</p>
+        </section>
+
+        <section>
+          <h2>Redaction policy</h2>
+          <p>Projection is allowlist-first: unsupported fields never enter the result. A second pass redacts sensitive key names and credential-shaped values such as bearer tokens, JWTs, OpenAI-style keys, Google tokens, cookies, passwords, and client secrets. Text is stripped of control characters and bounded to 20,000 characters per field.</p>
+          <p class="muted">Redaction is defense in depth, not a claim that arbitrary email can be made non-sensitive. The user’s explicit content scope remains the authorization for exposing message text.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Threat model</h2>
+          <table>
+            <thead><tr><th>Threat</th><th>Required control</th><th>Failure mode</th></tr></thead>
+            <tbody>
+              <tr><td>Bearer replay</td><td>TLS, ≤10-minute access tokens, active-grant lookup, rotating refresh tokens, replay-family revocation, no token logging.</td><td><code>401 invalid_token</code>; revoke connection on refresh replay.</td></tr>
+              <tr><td>Wrong resource / token confusion</td><td>Exact configured issuer and resource; JWT audience equals resource; OAuth <code>resource</code> echoed through authorization and token exchange.</td><td>Deny before handler execution.</td></tr>
+              <tr><td>Scope escalation</td><td>Closed scope enum, per-operation required scope, refresh can only narrow, unknown scope fails closed.</td><td><code>insufficient_scope</code> or boundary denial.</td></tr>
+              <tr><td>Cross-user/account access</td><td>Current Orca session owns consent; <code>sub</code> equals Orca user; selected account claims intersect live ownership on every call and projection.</td><td>Return no data; do not reveal whether another user/account exists.</td></tr>
+              <tr><td>Prompt injection from mail</td><td>Plain-text-only projection, explicit untrusted-content marker, closed-world read-only tools, no tool call driven solely by message text, no mailbox writes.</td><td>Model may summarize text but cannot turn it into Orca authority.</td></tr>
+              <tr><td>Credential leakage</td><td>Allowlist projection plus structural/lexical redaction; remove URL query/fragment; never place bearer material in authorization context or outputs.</td><td>Redact value and record only non-content telemetry.</td></tr>
+              <tr><td>Accidental OpenAI runtime</td><td>No OpenAI SDK, API endpoint, key env var, subscription lookup, background model call, or MCP-to-model forwarding in M6.</td><td>Feature remains unavailable until a separate reviewed runtime decision lands.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>Deferred Orca-hosted runtime</h2>
+          <p>BRE-276 must separately decide provider and model, who owns billing, whether credentials are Orca-managed or user-managed, provider retention/ZDR requirements, rate/cost limits, prompt/data minimization, tenant isolation, logging, deletion, failure behavior, and evaluation. Until then <code>model_assisted</code> is a contract placeholder, not an enabled execution path.</p>
+          <p>Official OpenAI documentation says API data is not used for training by default, while abuse-monitoring and endpoint application-state retention can still apply. That is why this decision does not equate “not trained on” with “not retained.”</p>
+        </section>
+
+        <section>
+          <h2>Stack and follow-ups</h2>
+          <table>
+            <tbody>
+              <tr><th>BRE-260</th><td>Prerequisite: shared M6 actions, exposures, scopes, tools, authorization context, and feature flags.</td></tr>
+              <tr><th>BRE-265</th><td>Consumes this authorizer and output projection for the read-only resource/server. No handler may bypass them.</td></tr>
+              <tr><th>BRE-267</th><td>Implements authorization, account consent, rotation/revocation, metadata, and client registration against these invariants.</td></tr>
+              <tr><th>BRE-276</th><td>Owns the deferred OpenAI/runtime/data boundary. It cannot silently widen this external read-only boundary.</td></tr>
+              <tr><th>BRE-277</th><td>Defines human-owned reply guidance; still no autonomous draft or send action.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="wide">
+          <h2>Official references</h2>
+          <p><a href="https://developers.openai.com/plugins/build/auth">OpenAI plugin MCP authentication</a> requires OAuth 2.1, protected-resource and authorization-server metadata, resource propagation, and PKCE S256. <a href="https://developers.openai.com/plugins/build/mcp-server">OpenAI MCP server guidance</a> says tools should expose only necessary data/actions, declare accurate safety annotations, authorize in each handler, and keep secrets/unnecessary personal data out of results. <a href="https://developers.openai.com/api/docs/guides/your-data">OpenAI API data controls</a> document training and retention behavior for the separately deferred API-runtime direction.</p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
