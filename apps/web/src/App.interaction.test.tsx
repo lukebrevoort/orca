@@ -325,6 +325,44 @@ describe("Inbox row action affordances", () => {
     });
     expect(tune?.getAttribute("aria-expanded")).toBe("true");
   });
+
+  test("presents thread saving as an immediate, accessible collection checklist", async () => {
+    await renderApp();
+    const wrap = messageRow("Luke Brevoort").parentElement as unknown as HTMLElement;
+    const keep = wrap.querySelector("button.keep-thread-button") as unknown as HTMLButtonElement;
+
+    await act(async () => {
+      keep.click();
+    });
+
+    const dialog = browserWindow.document.querySelector('.thread-organizer[role="dialog"]') as unknown as HTMLElement | null;
+    expect(dialog).not.toBeNull();
+    if (!dialog) throw new Error("Could not find the thread organizer dialog");
+    expect(dialog.getAttribute("aria-describedby")).toBe("organizer-description");
+    expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("dialog");
+    expect(browserWindow.document.querySelector("main.app-shell")?.hasAttribute("inert")).toBe(true);
+    expect(browserWindow.document.querySelector(".app-theme-toggle")?.hasAttribute("inert")).toBe(true);
+    expect(dialog.querySelector(".organizer-pin-section h3")?.textContent).toBe("Quick access");
+    expect(dialog.querySelector(".organizer-collections h3")?.textContent).toBe("Collections");
+
+    const collectionButtons = [...dialog.querySelectorAll(".organizer-collection-list > button")] as unknown as HTMLButtonElement[];
+    expect(collectionButtons).toHaveLength(2);
+    expect(collectionButtons[0].getAttribute("aria-pressed")).toBe("true");
+    expect(collectionButtons[1].getAttribute("aria-pressed")).toBe("false");
+
+    await act(async () => {
+      collectionButtons[1].click();
+    });
+    expect(dialog.querySelector(".organizer-selection-count")?.textContent).toBe("2 selected");
+    expect(collectionButtons[1].getAttribute("aria-pressed")).toBe("true");
+
+    const newCollection = dialog.querySelector("button.organizer-new-collection") as unknown as HTMLButtonElement;
+    await act(async () => {
+      newCollection.click();
+    });
+    expect(dialog.querySelector('input[aria-label="New collection name"]')).not.toBeNull();
+    expect([...dialog.querySelectorAll("footer button")].map((button) => button.textContent)).toEqual(["Done"]);
+  });
 });
 
 describe("Pin navigation and bulk sender actions", () => {

@@ -1630,13 +1630,15 @@ export function InboxApp({
         threadIds: hasThread ? item.threadIds.filter((id) => id !== threadId) : [...item.threadIds, threadId],
         updatedAt: new Date().toISOString(),
       } : item));
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
   async function createPin(input: PinInput) {
-    if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return;
+    if (!account || pins.some((pin) => pin.kind === input.kind && pin.targetId === input.targetId)) return false;
     setOrganizationError(null);
     try {
       const normalizedInput = {
@@ -1648,8 +1650,10 @@ export function InboxApp({
         ? pinSchema.parse({ ...normalizedInput, id: `pin_demo_${Date.now()}`, accountId: account.id, position: pins.length, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
         : await fetchJson("/v1/pins", pinSchema, undefined, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(normalizedInput) });
       setPins((current) => [...current, created]);
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
@@ -1833,13 +1837,14 @@ export function InboxApp({
       <button
         aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         className="theme-toggle app-theme-toggle"
+        inert={Boolean(organizerMessage) || undefined}
         onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         type="button"
       >
         {theme === "dark" ? "☾" : "☀"}
       </button>
-      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`}>
+      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
         <WaveRail
           account={account}
           activeMailbox={activeMailbox}
@@ -1984,7 +1989,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
+      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || Boolean(organizerMessage) || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -1994,10 +1999,12 @@ export function InboxApp({
           onClose={closeOrganizer}
           onCreateCollection={async (name) => {
             const created = await createCollection(name, false);
-            if (created) await toggleCollectionMembership(created, organizerMessage.threadId);
+            if (!created) return { created: false, saved: false };
+            const saved = await toggleCollectionMembership(created, organizerMessage.threadId);
+            return { created: true, saved };
           }}
-          onPin={(input) => void createPin(input)}
-          onToggleCollection={(collection) => void toggleCollectionMembership(collection, organizerMessage.threadId)}
+          onPin={createPin}
+          onToggleCollection={(collection) => toggleCollectionMembership(collection, organizerMessage.threadId)}
           pins={pins}
         />
       ) : null}
@@ -4631,46 +4638,141 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
   collections: Collection[];
   message: InboxMessage;
   onClose: () => void;
-  onCreateCollection: (name: string) => Promise<void>;
-  onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => void;
-  onToggleCollection: (collection: Collection) => void;
+  onCreateCollection: (name: string) => Promise<{ created: boolean; saved: boolean }>;
+  onPin: (input: Pick<Pin, "kind" | "targetId" | "label">) => Promise<boolean>;
+  onToggleCollection: (collection: Collection) => Promise<boolean>;
   pins: Pin[];
 }) {
   const [name, setName] = useState("");
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const organizerRef = useRef<HTMLElement>(null);
   useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const feedbackRoot = document.querySelector<HTMLElement>("[data-feedback-kit-root]");
+    feedbackRoot?.setAttribute("aria-hidden", "true");
+    feedbackRoot?.setAttribute("inert", "");
+    organizerRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      if (event.key !== "Tab" || !organizerRef.current) return;
+      const focusable = Array.from(organizerRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      feedbackRoot?.removeAttribute("aria-hidden");
+      feedbackRoot?.removeAttribute("inert");
+      previouslyFocused?.focus();
+    };
   }, [onClose]);
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
+  const savedCollectionCount = collections.filter((collection) => collection.threadIds.includes(message.threadId)).length;
+  const senderLabel = message.from.name ?? message.from.email;
+  const senderInitials = senderLabel.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  async function saveAction(key: string, action: () => Promise<boolean>, errorMessage: string) {
+    setPendingAction(key);
+    setActionError(null);
+    try {
+      const saved = await action();
+      if (!saved) setActionError(errorMessage);
+      return saved;
+    } catch {
+      setActionError(errorMessage);
+      return false;
+    } finally {
+      setPendingAction(null);
+    }
+  }
   return (
     <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
       <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} role="dialog">
-        <header>
-          <div><p>Keep, don’t move</p><h2 id="organizer-title">Save this thread</h2></div>
-          <button aria-label="Close organizer" autoFocus onClick={onClose} type="button">×</button>
+      <section aria-busy={Boolean(pendingAction)} aria-describedby="organizer-description" aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} ref={organizerRef} role="dialog" tabIndex={-1}>
+        <header className="organizer-heading">
+          <div>
+            <p>Keep close</p>
+            <h2 id="organizer-title">Save this thread</h2>
+            <span id="organizer-description">Pin it for quick access or group it with related conversations.</span>
+          </div>
+          <button aria-label="Close organizer" className="organizer-close" onClick={onClose} type="button">×</button>
         </header>
-        <div className="organizer-thread-preview"><span>Conversation</span><strong>{message.subject || "(no subject)"}</strong><small>{message.from.name ?? message.from.email}</small></div>
-        <div className="organizer-pin-grid">
-          <button aria-pressed={senderPinned} disabled={senderPinned} onClick={() => onPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })} type="button"><span>@</span><strong>{senderPinned ? "Person pinned" : "Pin person"}</strong><small>{message.from.email}</small></button>
-          <button aria-pressed={threadPinned} disabled={threadPinned} onClick={() => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" })} type="button"><span>↗</span><strong>{threadPinned ? "Thread pinned" : "Pin thread"}</strong><small>Return straight here</small></button>
+        <div className="organizer-thread-preview">
+          <span aria-hidden="true" className="organizer-thread-avatar">{senderInitials}</span>
+          <span className="organizer-thread-copy"><strong>{message.subject || "(no subject)"}</strong><small>{senderLabel}</small></span>
         </div>
-        <div className="organizer-collections">
-          <h3>Add to collections</h3>
-          {collections.map((collection) => {
-            const included = collection.threadIds.includes(message.threadId);
-            return <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} key={collection.id} onClick={() => onToggleCollection(collection)} type="button"><span className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} /><strong>{collection.name}</strong><small>{included ? "Added" : `${collection.threadIds.length} threads`}</small><span aria-hidden="true">{included ? "✓" : "＋"}</span></button>;
-          })}
-          <form onSubmit={(event) => { event.preventDefault(); if (name.trim()) void onCreateCollection(name).then(() => setName("")); }}>
-            <input aria-label="New collection name" maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Create a new collection" value={name} />
-            <button disabled={!name.trim()} type="submit">Create</button>
-          </form>
-        </div>
-        <footer><span>Saved in {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length} {collections.filter((collection) => collection.threadIds.includes(message.threadId)).length === 1 ? "collection" : "collections"} · elsewhere untouched</span><button onClick={onClose} type="button">Cancel</button><button className="organizer-keep" onClick={onClose} type="button">Keep thread</button></footer>
+        <section aria-labelledby="organizer-quick-access-title" className="organizer-section organizer-pin-section">
+          <div className="organizer-section-heading">
+            <div><h3 id="organizer-quick-access-title">Quick access</h3><p>Optional shortcuts that stay at the top of your inbox.</p></div>
+          </div>
+          <div className="organizer-pin-grid">
+            <button aria-pressed={senderPinned} disabled={senderPinned || Boolean(pendingAction)} onClick={() => void saveAction("sender-pin", () => onPin({ kind: "sender", targetId: message.from.email, label: senderLabel }), "Couldn’t pin this person. Try again.")} type="button">
+              <span aria-hidden="true" className="organizer-option-icon">@</span>
+              <span className="organizer-option-copy"><strong>Person</strong><small>{message.from.email}</small></span>
+              <span aria-hidden="true" className="organizer-option-state">{senderPinned ? "✓ Pinned" : "＋ Pin"}</span>
+            </button>
+            <button aria-pressed={threadPinned} disabled={threadPinned || Boolean(pendingAction)} onClick={() => void saveAction("thread-pin", () => onPin({ kind: "thread", targetId: message.threadId, label: message.subject || "(no subject)" }), "Couldn’t pin this thread. Try again.")} type="button">
+              <span aria-hidden="true" className="organizer-option-icon">↗</span>
+              <span className="organizer-option-copy"><strong>Thread</strong><small>Return straight here</small></span>
+              <span aria-hidden="true" className="organizer-option-state">{threadPinned ? "✓ Pinned" : "＋ Pin"}</span>
+            </button>
+          </div>
+        </section>
+        <section aria-labelledby="organizer-collections-title" className="organizer-section organizer-collections">
+          <div className="organizer-section-heading">
+            <div><h3 id="organizer-collections-title">Collections</h3><p>Organize without moving the thread from your inbox.</p></div>
+            <span aria-live="polite" className="organizer-selection-count">{savedCollectionCount} selected</span>
+          </div>
+          {collections.length ? <div aria-label="Choose collections" className="organizer-collection-list" role="group">
+            {collections.map((collection) => {
+              const included = collection.threadIds.includes(message.threadId);
+              return (
+                <button aria-pressed={included} className={included ? "organizer-collection-active" : ""} disabled={Boolean(pendingAction)} key={collection.id} onClick={() => void saveAction(`collection-${collection.id}`, () => onToggleCollection(collection), `Couldn’t update “${collection.name}.” Select it to try again.`)} type="button">
+                  <span aria-hidden="true" className="collection-mark" style={{ "--collection-color": collection.color } as CSSProperties} />
+                  <span className="organizer-collection-copy"><strong>{collection.name}</strong><small>{collection.threadIds.length} {collection.threadIds.length === 1 ? "thread" : "threads"}</small></span>
+                  <span aria-hidden="true" className="organizer-collection-check">{included ? "✓" : ""}</span>
+                </button>
+              );
+            })}
+          </div> : <p className="organizer-collection-empty">No collections yet. Make one for this thread.</p>}
+          {creatingCollection ? (
+            <form className="organizer-collection-create" onSubmit={(event) => {
+              event.preventDefault();
+              if (!name.trim()) return;
+              setPendingAction("create-collection");
+              setActionError(null);
+              void onCreateCollection(name).then((result) => {
+                if (result.created) {
+                  setName("");
+                  setCreatingCollection(false);
+                }
+                if (!result.saved) setActionError(result.created
+                  ? "The collection was created, but this thread wasn’t added. Select the collection to try again."
+                  : "Couldn’t create that collection. Try again.");
+              }).catch(() => setActionError("Couldn’t create that collection. Try again.")).finally(() => setPendingAction(null));
+            }}>
+              <input aria-label="New collection name" autoFocus maxLength={80} onChange={(event) => setName(event.target.value)} placeholder="Collection name" value={name} />
+              <button disabled={!name.trim() || Boolean(pendingAction)} type="submit">{pendingAction === "create-collection" ? "Adding…" : "Add"}</button>
+              <button aria-label="Cancel new collection" disabled={Boolean(pendingAction)} onClick={() => { setName(""); setCreatingCollection(false); }} type="button">×</button>
+            </form>
+          ) : <button aria-expanded="false" className="organizer-new-collection" disabled={Boolean(pendingAction)} onClick={() => setCreatingCollection(true)} type="button"><span aria-hidden="true">＋</span> New collection</button>}
+        </section>
+        {actionError ? <div className="organizer-action-error" role="alert"><strong>Not saved</strong><span>{actionError}</span></div> : null}
+        <footer>
+          <span><span aria-hidden="true">{actionError ? "!" : pendingAction ? "…" : "✓"}</span> {actionError ? "Resolve the change above" : pendingAction ? "Saving changes…" : "Changes save automatically"}</span>
+          <button className="organizer-done" disabled={Boolean(actionError || pendingAction)} onClick={onClose} type="button">Done</button>
+        </footer>
       </section>
     </div>
   );
