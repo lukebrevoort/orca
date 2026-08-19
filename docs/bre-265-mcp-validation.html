@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-265 · Orca read-only MCP validation</title>
+  <style>
+    :root { color-scheme: light dark; --paper:#f6f1e8; --card:#fffaf2; --ink:#18231f; --muted:#65716b; --line:#d9d4c8; --sea:#176c62; --foam:#d8eee8; --sand:#e8c980; --code:#112520; }
+    @media (prefers-color-scheme:dark) { :root { --paper:#121916; --card:#18211d; --ink:#eff7f2; --muted:#a7b5ae; --line:#34413b; --sea:#7ed5c5; --foam:#203e37; --sand:#e5c67e; --code:#0d1512; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:48px auto 80px; }
+    header { display:grid; gap:18px; grid-template-columns:minmax(0,1fr) auto; align-items:end; border-bottom:1px solid var(--line); padding-bottom:28px; }
+    .eyebrow { color:var(--sea); font-size:.76rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { font-family:Georgia,serif; font-size:clamp(2.35rem,6vw,5.2rem); letter-spacing:-.045em; line-height:.93; margin:.3rem 0 .8rem; max-width:840px; }
+    .lede { color:var(--muted); font-size:1.08rem; max-width:760px; margin:0; }
+    .stamp { border:1px solid var(--sea); color:var(--sea); border-radius:999px; font-weight:800; padding:.55rem .9rem; white-space:nowrap; }
+    section { margin-top:34px; }
+    h2 { font-size:1rem; letter-spacing:.08em; text-transform:uppercase; margin:0 0 14px; }
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:14px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+    .tool { grid-column:span 3; min-height:190px; display:flex; flex-direction:column; }
+    .tool code { color:var(--sea); font-size:.98rem; }
+    .tool p { color:var(--muted); margin:.7rem 0 1rem; }
+    .tool small { margin-top:auto; color:var(--ink); }
+    .matrix { grid-column:span 8; }
+    .security { grid-column:span 4; background:var(--foam); }
+    table { width:100%; border-collapse:collapse; }
+    th,td { text-align:left; vertical-align:top; padding:.65rem .45rem; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-size:.76rem; letter-spacing:.08em; text-transform:uppercase; }
+    tr:last-child td { border-bottom:0; }
+    .pass { color:var(--sea); font-weight:800; }
+    ul { padding-left:1.15rem; margin:.5rem 0 0; }
+    li + li { margin-top:.45rem; }
+    pre { margin:0; padding:18px; overflow:auto; border-radius:14px; background:var(--code); color:#d9eee7; font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .flow { display:grid; grid-template-columns:repeat(7,auto); align-items:center; gap:10px; overflow:auto; padding:8px 0; }
+    .node { border:1px solid var(--line); border-radius:14px; background:var(--card); min-width:148px; padding:14px; text-align:center; }
+    .arrow { color:var(--sea); font-size:1.4rem; }
+    .note { border-left:4px solid var(--sand); padding:4px 0 4px 16px; color:var(--muted); }
+    footer { border-top:1px solid var(--line); color:var(--muted); margin-top:42px; padding-top:18px; font-size:.9rem; }
+    @media (max-width:850px) { header { grid-template-columns:1fr; } .stamp { justify-self:start; } .tool,.matrix,.security { grid-column:1/-1; } .tool { min-height:0; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow">BRE-265 · M6 Agents</div>
+      <h1>Orca mail,<br>quietly readable.</h1>
+      <p class="lede">A narrow Streamable HTTP MCP surface for inspecting normalized mail and propagated events. Every operation is account-scoped, read-only, bounded, schema-defined, and explicit about untrusted email content.</p>
+    </div>
+    <div class="stamp">Implementation verified</div>
+  </header>
+
+  <section>
+    <h2>The four-tool surface</h2>
+    <div class="grid">
+      <article class="card tool"><code>search_mail</code><p>Find mail by text, account, sender, time, attention, Human Inbox/Tideline class, and bound cursor.</p><small>metadata scope · max 50</small></article>
+      <article class="card tool"><code>get_thread</code><p>Read one account-attributed thread with plain-text excerpts and per-message Human Signal explanations.</p><small>content scope · no HTML or attachments</small></article>
+      <article class="card tool"><code>list_agent_events</code><p>Review concise propagated events with lifecycle, provenance, explanations, and stable source references.</p><small>event scope · no owner or dedupe internals</small></article>
+      <article class="card tool"><code>get_connection_status</code><p>Check authorized account identity, sync state, and read readiness without provider grants or credentials.</p><small>status scope · read-only capability</small></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Request boundary</h2>
+    <div class="flow" aria-label="MCP request boundary flow">
+      <div class="node">MCP client</div><div class="arrow">→</div>
+      <div class="node">Bearer JWT<br><small>issuer · audience · expiry</small></div><div class="arrow">→</div>
+      <div class="node">live user/account intersection</div><div class="arrow">→</div>
+      <div class="node">allowlisted projection + redaction</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="card matrix">
+      <h2>Acceptance evidence</h2>
+      <table>
+        <thead><tr><th>Check</th><th>Evidence</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Stable discovery</td><td><code>orca-mail-readonly@1.0.0</code>; exactly four tools</td><td class="pass">Pass</td></tr>
+          <tr><td>Structured contracts</td><td>Zod input/output schemas exposed as JSON Schema by the SDK</td><td class="pass">Pass</td></tr>
+          <tr><td>Read-only surface</td><td>All tools: readOnly true, destructive false, openWorld false</td><td class="pass">Pass</td></tr>
+          <tr><td>Authorization</td><td>Missing, expired, wrong-audience, and insufficient-scope challenges tested</td><td class="pass">Pass</td></tr>
+          <tr><td>Isolation</td><td>Every tool intersects signed claims with live account ownership</td><td class="pass">Pass</td></tr>
+          <tr><td>Safe content</td><td>Allowlisted fields, credential redaction, bounded text, untrusted-content marker</td><td class="pass">Pass</td></tr>
+          <tr><td>Regression suite</td><td>283 tests total: shared 17, web 77, API 189</td><td class="pass">Pass</td></tr>
+          <tr><td>Build</td><td>Shared, API, and Vite production builds</td><td class="pass">Pass</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <aside class="card security">
+      <h2>Intentionally absent</h2>
+      <ul>
+        <li>No send or draft tool</li>
+        <li>No archive, delete, or relabel</li>
+        <li>No provider token or scope exposure</li>
+        <li>No raw HTML, headers, BCC, or attachment bytes</li>
+        <li>No model invocation or OpenAI API key</li>
+      </ul>
+    </aside>
+  </section>
+
+  <section>
+    <h2>Inspector proof</h2>
+    <div class="card">
+      <p>The official MCP Inspector CLI connected to the live local <code>/mcp</code> Streamable HTTP endpoint, discovered all four tools, and called <code>get_connection_status</code> with a short-lived account-scoped Bearer token.</p>
+      <pre><code>Inspector tools/list → 4 tools
+search_mail · get_thread · list_agent_events · get_connection_status
+
+Inspector tools/call get_connection_status →
+{
+  "id": "inspector_account",
+  "provider": "gmail",
+  "connectedForRead": true,
+  "agentAccess": "read_only",
+  "syncState": "idle",
+  "ready": true
+}</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reviewer commands</h2>
+    <pre><code>bun run typecheck
+bun run test
+bun run build
+
+# Enable only with dedicated values; loopback HTTP is development-only.
+ORCA_M6_MCP_ENABLED=true
+ORCA_M6_MCP_ISSUER=https://identity.example.com
+ORCA_M6_MCP_RESOURCE=https://api.example.com/mcp
+ORCA_M6_MCP_SIGNING_SECRET=&lt;at-least-32-random-characters&gt;</code></pre>
+    <p class="note">Developer-mode hosted OAuth connection validation follows once BRE-267 supplies the authorization, consent, refresh, and revocation endpoints. This ticket already exposes the protected-resource metadata and replaceable resource-side token-verifier seam needed for that work.</p>
+  </section>
+
+  <footer>Generated for Orca review · 19 August 2026 · Branch <code>luke/bre-265</code></footer>
+</main>
+</body>
+</html>

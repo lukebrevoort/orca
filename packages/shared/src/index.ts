@@ -11,6 +11,39 @@ export {
 } from "./fixtures.ts";
 
 export {
+  mcpAgentEventSchema,
+  mcpContentSafetySchema,
+  mcpGetConnectionStatusInputSchema,
+  mcpGetConnectionStatusOutputSchema,
+  mcpGetThreadInputSchema,
+  mcpGetThreadOutputSchema,
+  mcpInboxCountsSchema,
+  mcpHumanClassificationResultSchema,
+  mcpListAgentEventsInputSchema,
+  mcpListAgentEventsOutputSchema,
+  mcpMailMessageSchema,
+  mcpSearchMailInputSchema,
+  mcpSearchMailOutputSchema,
+  mcpThreadMessageSchema,
+  mcpToolErrorCodeSchema,
+  mcpToolErrorSchema,
+} from "./mcp-contract.ts";
+
+export type {
+  McpGetConnectionStatusInput,
+  McpGetConnectionStatusOutput,
+  McpGetThreadInput,
+  McpGetThreadOutput,
+  McpListAgentEventsInput,
+  McpListAgentEventsOutput,
+  McpMailMessage,
+  McpSearchMailInput,
+  McpSearchMailOutput,
+  McpToolError,
+  McpToolErrorCode,
+} from "./mcp-contract.ts";
+
+export {
   authSessionSchema,
   authUserSchema,
   createProviderPageSchema,

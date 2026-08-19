@@ -249,7 +249,7 @@ export function redactAgentText(value: string, maximumLength = MAX_AGENT_TEXT_LE
  * Mail and event results must still use the explicit projection functions.
  */
 export function redactAgentData(value: unknown): unknown {
-  const seen = new WeakSet<object>();
+  const active = new WeakSet<object>();
 
   function visit(current: unknown, depth: number): unknown {
     if (depth > MAX_AGENT_DATA_DEPTH) return "[MAX_DEPTH]";
@@ -261,17 +261,20 @@ export function redactAgentData(value: unknown): unknown {
     if (current instanceof Date) return current.toISOString();
     if (current instanceof Error) return { name: current.name, message: redactAgentText(current.message) };
     if (typeof current !== "object") return String(current);
-    if (seen.has(current)) return "[CIRCULAR]";
-    seen.add(current);
+    if (active.has(current)) return "[CIRCULAR]";
+    active.add(current);
+    try {
+      if (Array.isArray(current)) return current.map((item) => visit(item, depth + 1));
 
-    if (Array.isArray(current)) return current.map((item) => visit(item, depth + 1));
-
-    return Object.fromEntries(
-      Object.entries(current).map(([key, item]) => [
-        key,
-        sensitiveKeyNames.has(normalizeSensitiveKey(key)) ? REDACTED : visit(item, depth + 1),
-      ]),
-    );
+      return Object.fromEntries(
+        Object.entries(current).map(([key, item]) => [
+          key,
+          sensitiveKeyNames.has(normalizeSensitiveKey(key)) ? REDACTED : visit(item, depth + 1),
+        ]),
+      );
+    } finally {
+      active.delete(current);
+    }
   }
 
   return visit(value, 0);
@@ -313,9 +316,13 @@ function projectContact(contact: { name: string | null; email: string }): {
 function projectSourceUrl(value: string): string {
   try {
     const url = new URL(value);
+    const threadId = url.searchParams.get("thread");
+    const accountId = url.searchParams.get("accountId");
     url.username = "";
     url.password = "";
     url.search = "";
+    if (threadId) url.searchParams.set("thread", threadId);
+    if (accountId) url.searchParams.set("accountId", accountId);
     url.hash = "";
     return url.toString();
   } catch {

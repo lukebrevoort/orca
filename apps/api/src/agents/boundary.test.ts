@@ -255,6 +255,22 @@ describe("Orca agent boundary redaction and projection", () => {
     assert.equal(redactAgentText("cookie: sid=secret\nhello"), "[REDACTED]\nhello");
   });
 
+  test("preserves repeated non-circular values while still rejecting cycles", () => {
+    const sharedReasons = ["direct_recipient"];
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const result = redactAgentData({
+      automatic: { reasonCodes: sharedReasons },
+      effective: { reasonCodes: sharedReasons },
+    });
+
+    assert.deepEqual(result, {
+      automatic: { reasonCodes: ["direct_recipient"] },
+      effective: { reasonCodes: ["direct_recipient"] },
+    });
+    assert.deepEqual(redactAgentData(circular), { self: "[CIRCULAR]" });
+  });
+
   test("projects metadata through an allowlist and marks email content untrusted", () => {
     const result = projectMailForAgent(mailSource, allowedDecision("search_mail"));
 
