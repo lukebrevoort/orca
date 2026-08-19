@@ -2,6 +2,8 @@ import {
   McpServer,
   createMcpHandler,
   getOAuthProtectedResourceMetadataUrl,
+  hostHeaderValidationResponse,
+  originValidationResponse,
   requireBearerAuth,
   type AuthInfo,
 } from "@modelcontextprotocol/server";
@@ -136,6 +138,24 @@ function mapReadError(error: unknown) {
 
 function toSourceUrl(dataSource: OrcaMcpDataSource, accountId: string, threadId: string): string {
   return dataSource.sourceUrl(accountId, threadId);
+}
+
+function allowedBrowserOriginHostnames(env: NodeJS.ProcessEnv | undefined): string[] {
+  const configured = env?.ORCA_M6_MCP_ALLOWED_ORIGINS?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean) ?? [];
+  return [...new Set(configured.map((value) => {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new Error("ORCA_M6_MCP_ALLOWED_ORIGINS must contain valid origins");
+    }
+    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash || !["http:", "https:"].includes(url.protocol)) {
+      throw new Error("ORCA_M6_MCP_ALLOWED_ORIGINS entries must be credential-free HTTP(S) origins without paths, queries, or fragments");
+    }
+    return url.hostname;
+  }))];
 }
 
 function createServer(
@@ -282,7 +302,13 @@ function createServer(
           query,
         });
         const output = mcpListAgentEventsOutputSchema.parse({
-          events: page.events.map((event: PropagatedAgentEvent) => projectAgentEventForAgent(event, decision)),
+          events: page.events.map((event: PropagatedAgentEvent) => projectAgentEventForAgent({
+            ...event,
+            source: {
+              ...event.source,
+              sourceUrl: toSourceUrl(dataSource, event.source.accountId, event.source.threadId),
+            },
+          }, decision)),
           nextCursor: page.nextCursor,
         });
         return {
@@ -358,7 +384,10 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
   }
 
   const policy = options.policy;
-  const verifier = options.verifier ?? createOrcaMcpAccessTokenVerifier(policy, options.env);
+  const env = options.env ?? process.env;
+  const verifier = options.verifier ?? createOrcaMcpAccessTokenVerifier(policy, env);
+  const allowedHostnames = [new URL(policy.resource).hostname];
+  const allowedOriginHostnames = allowedBrowserOriginHostnames(env);
   const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(new URL(policy.resource));
   const handler = createMcpHandler(
     (context) => {
@@ -379,6 +408,10 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
     metadataPaths: [...new Set([standardMetadataPath, "/.well-known/oauth-protected-resource"])],
     metadata,
     async fetch(request: Request) {
+      const rejected = hostHeaderValidationResponse(request, allowedHostnames)
+        ?? originValidationResponse(request, allowedOriginHostnames);
+      if (rejected) return rejected;
+
       let requiredScopes: string[] = [];
       if (request.method === "POST") {
         const body = await request.clone().json().catch(() => null);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -32,6 +32,7 @@ async function signToken(input: {
   userId?: string;
   accountIds?: string[];
   scopes?: string[];
+  issuer?: string;
   audience?: string;
   issuedAt?: number;
   expiresAt?: number;
@@ -43,7 +44,7 @@ async function signToken(input: {
     client_id: "https://chatgpt.com/oauth/client.json",
   })
     .setProtectedHeader({ alg: "HS256" })
-    .setIssuer(issuer)
+    .setIssuer(input.issuer ?? issuer)
     .setAudience(input.audience ?? resource)
     .setSubject(input.userId ?? "user_a")
     .setIssuedAt(input.issuedAt ?? now)
@@ -55,13 +56,21 @@ function rpc(method: string, params?: unknown, id = 1) {
   return JSON.stringify({ jsonrpc: "2.0", id, method, ...(params === undefined ? {} : { params }) });
 }
 
-async function callMcp(app: ReturnType<typeof createApp>, token: string | null, method: string, params?: unknown) {
+async function callMcp(
+  app: ReturnType<typeof createApp>,
+  token: string | null,
+  method: string,
+  params?: unknown,
+  headers: Record<string, string> = {},
+) {
   const response = await app.request("/mcp", {
     method: "POST",
     headers: {
       accept: "application/json, text/event-stream",
       "content-type": "application/json",
+      host: new URL(resource).host,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...headers,
     },
     body: rpc(method, params),
   });
@@ -76,7 +85,10 @@ async function rpcBody(response: Response) {
   return JSON.parse(data);
 }
 
-function createFixture() {
+function createFixture(options: {
+  mcpBoundaryPolicy?: { enabled: true; issuer: string; resource: string };
+  mcpEnv?: NodeJS.ProcessEnv;
+} = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-mcp-"));
   tempDirs.push(directory);
   const dbPath = join(directory, "mcp.sqlite");
@@ -135,7 +147,7 @@ function createFixture() {
       source: {
         ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_2", threadId: "thread_a_2",
         sender: { name: "CI", email: "ci@example.dev" }, subject: "Build failed", receivedAt: "2026-08-19T15:00:00.000Z",
-        sourceUrl: "https://orca.example/?thread=thread_a_2&token=provider-secret",
+        sourceUrl: "https://evil.invalid/unrelated?thread=wrong&accountId=account_b&token=provider-secret",
       },
       provenance: { trigger: "push", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
       eventKind: "ci_or_deploy_failure", importance: "high", relevance: "matched", destination: "timeline", reasonCodes: ["workflow_failed"],
@@ -143,6 +155,20 @@ function createFixture() {
       humanClassification: { classification: "automated_or_bulk", score: 2, reasonCodes: ["auto_submitted_header"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
       deduplicationKey: "account_a:message_a_2:ci_or_deploy_failure:m6-v0", evaluatedAt: "2026-08-19T15:00:01.000Z",
       lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T15:00:01.000Z", updatedAt: "2026-08-19T15:00:01.000Z", seenAt: null, snoozedUntil: null },
+    }),
+    propagatedAgentEventSchema.parse({
+      id: "event_a_missing_account",
+      source: {
+        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_1", threadId: "thread_a_1",
+        sender: { name: "Maya", email: "maya@example.com" }, subject: "Launch review", receivedAt: "2026-08-19T16:00:00.000Z",
+        sourceUrl: "https://elsewhere.invalid/no-account?thread=wrong",
+      },
+      provenance: { trigger: "sync", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
+      eventKind: "release_available", importance: "medium", relevance: "matched", destination: "timeline", reasonCodes: ["release_became_available"],
+      title: "Launch review", summary: "The release is ready for review.", whyThisMatters: "The team is waiting.", suggestedNextStep: "Open the source message.",
+      humanClassification: { classification: "likely_human", score: 9, reasonCodes: ["direct_recipient"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
+      deduplicationKey: "account_a:message_a_1:release_available:m6-v0", evaluatedAt: "2026-08-19T16:00:01.000Z",
+      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T16:00:01.000Z", updatedAt: "2026-08-19T16:00:01.000Z", seenAt: null, snoozedUntil: null },
     }),
     propagatedAgentEventSchema.parse({
       id: "event_b",
@@ -161,8 +187,11 @@ function createFixture() {
 
   const app = createApp({
     dbFactory: () => createDatabaseClient(dbPath),
-    mcpBoundaryPolicy: { enabled: true, issuer, resource },
-    mcpEnv: { ORCA_M6_MCP_SIGNING_SECRET: signingSecret },
+    mcpBoundaryPolicy: options.mcpBoundaryPolicy ?? { enabled: true, issuer, resource },
+    mcpEnv: options.mcpEnv ?? {
+      ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
+      ORCA_M6_MCP_ALLOWED_ORIGINS: "https://chatgpt.com,http://127.0.0.1:6274",
+    },
     agentEventStore: {
       async list(query): Promise<AgentEventListPage> {
         const allowed = new Set(query.accountIds);
@@ -181,6 +210,67 @@ afterEach(() => {
 });
 
 describe("Orca read-only MCP server", () => {
+  test("fails startup while the sample MCP signing secret is blank", () => {
+    const sampleEnv = readFileSync(resolve(import.meta.dir, "../../../../.env.example"), "utf8");
+    const sampleSigningSecret = /^ORCA_M6_MCP_SIGNING_SECRET=(.*)$/m.exec(sampleEnv)?.[1];
+    assert.notEqual(sampleSigningSecret, undefined);
+    assert.throws(
+      () => createApp({
+        mcpBoundaryPolicy: { enabled: true, issuer, resource },
+        mcpEnv: { ORCA_M6_MCP_SIGNING_SECRET: sampleSigningSecret },
+      }),
+      /ORCA_M6_MCP_SIGNING_SECRET must be at least 32 characters/,
+    );
+  });
+
+  test("rejects hostile Host and Origin headers before bearer dispatch", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const token = await signToken();
+      const hostileHost = await callMcp(app, token, "tools/list", {}, { host: "evil.invalid" });
+      assert.equal(hostileHost.status, 403);
+      assert.match(await hostileHost.text(), /Invalid Host/);
+
+      const hostileOrigin = await callMcp(app, token, "tools/list", {}, { origin: "https://evil.invalid" });
+      assert.equal(hostileOrigin.status, 403);
+      assert.match(await hostileOrigin.text(), /Invalid Origin/);
+
+      const allowedOrigin = await callMcp(app, token, "tools/list", {}, { origin: "https://chatgpt.com" });
+      assert.equal(allowedOrigin.status, 200);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("prevents DNS rebinding against a loopback MCP resource", async () => {
+    const loopbackIssuer = "http://127.0.0.1:33165";
+    const loopbackResource = `${loopbackIssuer}/mcp`;
+    const { app, sqlite } = createFixture({
+      mcpBoundaryPolicy: { enabled: true, issuer: loopbackIssuer, resource: loopbackResource },
+      mcpEnv: {
+        ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
+        ORCA_M6_MCP_ALLOWED_ORIGINS: "http://127.0.0.1:6274",
+      },
+    });
+    try {
+      const token = await signToken({ issuer: loopbackIssuer, audience: loopbackResource });
+      const accepted = await callMcp(app, token, "tools/list", {}, {
+        host: "127.0.0.1:33165",
+        origin: "http://127.0.0.1:6274",
+      });
+      assert.equal(accepted.status, 200);
+
+      const rebound = await callMcp(app, token, "tools/list", {}, {
+        host: "attacker.invalid:33165",
+        origin: "http://127.0.0.1:6274",
+      });
+      assert.equal(rebound.status, 403);
+      assert.match(await rebound.text(), /Invalid Host/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("publishes protected-resource metadata and standards-compliant bearer challenges", async () => {
     const { app, sqlite } = createFixture();
     try {
@@ -315,9 +405,18 @@ describe("Orca read-only MCP server", () => {
 
       const events = await callMcp(app, token, "tools/call", { name: "list_agent_events", arguments: { limit: 25 } });
       const eventsBody = await rpcBody(events);
-      assert.deepEqual(eventsBody.result.structuredContent.events.map((event: { id: string }) => event.id), ["event_a"]);
-      assert.equal(eventsBody.result.structuredContent.events[0].source.sourceUrl, "https://orca.example/?thread=thread_a_2");
-      assert.doesNotMatch(JSON.stringify(eventsBody), /event_b|account_b|token=provider-secret|deduplicationKey|ownerUserId/);
+      assert.deepEqual(eventsBody.result.structuredContent.events.map((event: { id: string }) => event.id), ["event_a", "event_a_missing_account"]);
+      const eventSourceUrls = eventsBody.result.structuredContent.events.map((event: { source: { threadId: string; sourceUrl: string } }) => ({
+        threadId: event.source.threadId,
+        url: new URL(event.source.sourceUrl),
+      }));
+      const expectedOrigin = new URL(searchBody.result.structuredContent.messages[0].sourceUrl).origin;
+      for (const source of eventSourceUrls) {
+        assert.equal(source.url.origin, expectedOrigin);
+        assert.equal(source.url.searchParams.get("thread"), source.threadId);
+        assert.equal(source.url.searchParams.get("accountId"), "account_a");
+      }
+      assert.doesNotMatch(JSON.stringify(eventsBody), /event_b|account_b|evil\.invalid|elsewhere\.invalid|token=provider-secret|deduplicationKey|ownerUserId/);
 
       const status = await callMcp(app, token, "tools/call", { name: "get_connection_status", arguments: {} });
       const statusBody = await rpcBody(status);
