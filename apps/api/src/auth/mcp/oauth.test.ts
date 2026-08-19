@@ -139,6 +139,19 @@ describe("Orca MCP OAuth 2.1", () => {
     });
   }
 
+  function callMcp(app: ReturnType<typeof createApp>, accessToken: string, toolName: string, args: Record<string, unknown> = {}) {
+    return app.request("/mcp", {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+        host: new URL(config.resource).host,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: toolName, arguments: args } }),
+    });
+  }
+
   test("publishes discovery and completes stateful authorization code + S256 PKCE", async () => {
     const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
     const resourceMetadata = await app.request("/.well-known/oauth-protected-resource/mcp");
@@ -218,6 +231,41 @@ describe("Orca MCP OAuth 2.1", () => {
     assert.equal(metadataResponse.status, 200);
     assert.equal((await metadataResponse.json()).resource, nestedConfig.resource);
     assert.equal((await app.request("/.well-known/oauth-protected-resource")).status, 404);
+  });
+
+  test("carries issued OAuth grants through /mcp and enforces live revocation and disconnect", async () => {
+    const app = createApp({
+      dbFactory: () => createDatabaseClient(dbPath),
+      mcpOAuthConfig: config,
+      mcpBoundaryPolicy: { enabled: true, issuer: config.issuer, resource: config.resource },
+    });
+    const client = await registerClient(app);
+    const mailGrant = await authorize(app, client.client_id, "mail:read");
+    const mailTokens = await (await exchange(app, client.client_id, mailGrant.code, mailGrant.verifier)).json();
+
+    assert.equal((await callMcp(app, mailTokens.access_token, "search_mail", { classification: "all", attention: "all" })).status, 200);
+    const missingEventScope = await callMcp(app, mailTokens.access_token, "list_agent_events");
+    assert.equal(missingEventScope.status, 403);
+    assert.match(missingEventScope.headers.get("www-authenticate") ?? "", /scope="agent_events:read"/);
+
+    const revokeDb = createDatabaseClient(dbPath);
+    const session = await createSession(revokeDb.db, "user_a");
+    const connection = revokeDb.db.select().from(mcpConnections).where(eq(mcpConnections.userId, "user_a")).get();
+    revokeDb.sqlite.close();
+    assert.ok(connection);
+    assert.equal((await app.request(`/v1/mcp/connections/${connection.id}`, {
+      method: "DELETE",
+      headers: { cookie: `orca_session=${session.token}` },
+    })).status, 204);
+    assert.equal((await callMcp(app, mailTokens.access_token, "search_mail", { classification: "all", attention: "all" })).status, 401);
+
+    const replacementGrant = await authorize(app, client.client_id, "mail:read agent_events:read");
+    const replacementTokens = await (await exchange(app, client.client_id, replacementGrant.code, replacementGrant.verifier)).json();
+    assert.equal((await callMcp(app, replacementTokens.access_token, "list_agent_events")).status, 200);
+    const disconnectDb = createDatabaseClient(dbPath);
+    disconnectDb.db.delete(oauthAccounts).where(eq(oauthAccounts.id, "account_a")).run();
+    disconnectDb.sqlite.close();
+    assert.equal((await callMcp(app, replacementTokens.access_token, "search_mail", { classification: "all", attention: "all" })).status, 401);
   });
 
   test("rotates refresh tokens, detects replay, and immediately revokes the connection", async () => {

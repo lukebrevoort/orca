@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
-  orcaMcpMaximumAccessTokenLifetimeSeconds,
   type MailAccount,
-  type OrcaMcpAuthorizationContext,
   type PropagatedAgentEvent,
 } from "@orca/shared";
 
@@ -18,6 +16,10 @@ import {
   redactAgentText,
   type AgentMailProjectionSource,
 } from "./boundary.ts";
+import {
+  orcaMcpMaximumAccessTokenLifetimeSeconds,
+  type OrcaAgentAuthorizationContext,
+} from "./authorization.ts";
 
 const now = new Date("2026-08-19T18:00:00.000Z");
 const issuer = "https://identity.orca.example";
@@ -30,8 +32,8 @@ const enabledPolicy = getOrcaAgentBoundaryPolicy({
 });
 
 function authorization(
-  overrides: Partial<OrcaMcpAuthorizationContext> = {},
-): OrcaMcpAuthorizationContext {
+  overrides: Partial<OrcaAgentAuthorizationContext> = {},
+): OrcaAgentAuthorizationContext {
   return {
     userId: "user_1",
     accountIds: ["account_1", "account_stale"],
@@ -43,8 +45,8 @@ function authorization(
       "orca:agent-events:read",
       "orca:connection-status:read",
     ],
-    issuedAt: "2026-08-19T17:50:01.000Z",
-    expiresAt: "2026-08-19T18:00:01.000Z",
+    issuedAt: new Date("2026-08-19T17:50:01.000Z"),
+    expiresAt: new Date("2026-08-19T18:00:01.000Z"),
     ...overrides,
   };
 }
@@ -155,7 +157,7 @@ describe("Orca agent boundary authorization", () => {
     const escalated = {
       ...authorization(),
       scopes: ["orca:mail.metadata:read", "orca:mail:write"],
-    } as unknown as OrcaMcpAuthorizationContext;
+    } as unknown as OrcaAgentAuthorizationContext;
     assert.deepEqual(
       authorizeAgentToolRequest(enabledPolicy, request({ authorization: escalated })),
       { allowed: false, code: "scope_escalation" },
@@ -187,20 +189,20 @@ describe("Orca agent boundary authorization", () => {
 
   test("rejects expired, overlong, future-issued, and revoked grants", () => {
     assert.deepEqual(
-      authorizeAgentToolRequest(enabledPolicy, request({ authorization: authorization({ expiresAt: now.toISOString() }) })),
+      authorizeAgentToolRequest(enabledPolicy, request({ authorization: authorization({ expiresAt: now }) })),
       { allowed: false, code: "token_expired" },
     );
 
     const overlongExpiry = new Date(
       Date.parse("2026-08-19T17:50:01.000Z") +
         (orcaMcpMaximumAccessTokenLifetimeSeconds + 1) * 1_000,
-    ).toISOString();
+    );
     assert.deepEqual(
       authorizeAgentToolRequest(enabledPolicy, request({ authorization: authorization({ expiresAt: overlongExpiry }) })),
       { allowed: false, code: "token_lifetime_exceeded" },
     );
     assert.deepEqual(
-      authorizeAgentToolRequest(enabledPolicy, request({ authorization: authorization({ issuedAt: "2026-08-19T18:00:01.000Z" }) })),
+      authorizeAgentToolRequest(enabledPolicy, request({ authorization: authorization({ issuedAt: new Date("2026-08-19T18:00:01.000Z") }) })),
       { allowed: false, code: "invalid_authorization_time" },
     );
     assert.deepEqual(

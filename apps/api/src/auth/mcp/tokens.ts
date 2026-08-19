@@ -243,7 +243,7 @@ export async function verifyMcpAccessToken(
   const clientId = payload.client_id;
   const resource = payload.resource;
   const scopeValue = payload.scope;
-  if ([tokenId, userId, clientId, resource, scopeValue].some((value) => typeof value !== "string")) {
+  if ([tokenId, userId, clientId, resource, scopeValue].some((value) => typeof value !== "string") || typeof payload.iat !== "number" || typeof payload.exp !== "number") {
     throw new McpTokenError("invalid_token", "The access token claims are incomplete");
   }
 
@@ -284,10 +284,12 @@ export async function verifyMcpAccessToken(
     userId: record.userId,
     clientId: record.clientId,
     clientName: record.clientName,
+    issuer: input.config.issuer,
     resource: record.resource,
     scopes,
     accountIds,
-    expiresAt: new Date((payload.exp as number) * 1000),
+    issuedAt: new Date(payload.iat * 1000),
+    expiresAt: new Date(payload.exp * 1000),
   });
 }
 

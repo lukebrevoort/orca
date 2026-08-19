@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { afterEach, describe, test } from "bun:test";
-import { SignJWT } from "jose";
+import { jwtVerify, SignJWT } from "jose";
+import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   propagatedAgentEventSchema,
@@ -16,6 +17,9 @@ import {
 import { createDatabaseClient } from "../db/client.ts";
 import { emails, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createApp } from "../index.ts";
+import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
+import { createOrcaMcpHttpHandler } from "./mcp.ts";
+import { getOAuthScopeForResourceScope, mapOAuthScopesToResourceScopes, type OrcaMcpTokenVerifier } from "./access-token.ts";
 
 const issuer = "https://identity.orca.test";
 const resource = "https://api.orca.test/mcp";
@@ -26,6 +30,7 @@ const allScopes: OrcaMcpScope[] = [
   "orca:agent-events:read",
   "orca:connection-status:read",
 ];
+const oauthScopes = ["mail:read", "agent_events:read"];
 const tempDirs: string[] = [];
 
 async function signToken(input: {
@@ -50,6 +55,40 @@ async function signToken(input: {
     .setIssuedAt(input.issuedAt ?? now)
     .setExpirationTime(input.expiresAt ?? now + 600)
     .sign(new TextEncoder().encode(signingSecret));
+}
+
+function createTestTokenVerifier(policy: { issuer: string; resource: string }): OrcaMcpTokenVerifier {
+  return {
+    async verifyAccessToken(token) {
+      try {
+        const { payload } = await jwtVerify(token, new TextEncoder().encode(signingSecret), {
+          algorithms: ["HS256"], issuer: policy.issuer, audience: policy.resource,
+        });
+        const scopes = typeof payload.scope === "string" ? payload.scope.split(/\s+/).filter(Boolean) : [];
+        const publicScopes = [...new Set(scopes.map((scope) => getOAuthScopeForResourceScope(scope as OrcaMcpScope)))];
+        const accountIds = Array.isArray(payload.account_ids) ? payload.account_ids : [];
+        const authorization = orcaAgentAuthorizationContextSchema.parse({
+          userId: payload.sub,
+          accountIds,
+          issuer: payload.iss,
+          resource: policy.resource,
+          scopes,
+          issuedAt: new Date(Number(payload.iat) * 1_000),
+          expiresAt: new Date(Number(payload.exp) * 1_000),
+        });
+        return {
+          token,
+          clientId: String(payload.client_id),
+          scopes: publicScopes,
+          expiresAt: payload.exp,
+          resource: new URL(policy.resource),
+          extra: { orcaAuthorization: authorization, grantRevokedAt: null },
+        };
+      } catch {
+        throw new OAuthError(OAuthErrorCode.InvalidToken, "The access token is invalid or expired");
+      }
+    },
+  };
 }
 
 function rpc(method: string, params?: unknown, id = 1) {
@@ -185,11 +224,12 @@ function createFixture(options: {
     }),
   ];
 
+  const policy = options.mcpBoundaryPolicy ?? { enabled: true as const, issuer, resource };
   const app = createApp({
     dbFactory: () => createDatabaseClient(dbPath),
-    mcpBoundaryPolicy: options.mcpBoundaryPolicy ?? { enabled: true, issuer, resource },
+    mcpBoundaryPolicy: policy,
+    mcpTokenVerifier: createTestTokenVerifier(policy),
     mcpEnv: options.mcpEnv ?? {
-      ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
       ORCA_M6_MCP_ALLOWED_ORIGINS: "https://chatgpt.com,http://127.0.0.1:6274",
     },
     agentEventStore: {
@@ -210,16 +250,19 @@ afterEach(() => {
 });
 
 describe("Orca read-only MCP server", () => {
-  test("fails startup while the sample MCP signing secret is blank", () => {
-    const sampleEnv = readFileSync(resolve(import.meta.dir, "../../../../.env.example"), "utf8");
-    const sampleSigningSecret = /^ORCA_M6_MCP_SIGNING_SECRET=(.*)$/m.exec(sampleEnv)?.[1];
-    assert.notEqual(sampleSigningSecret, undefined);
+  test("maps the public OAuth scopes to only their resource capabilities", () => {
+    assert.deepEqual(mapOAuthScopesToResourceScopes(["mail:read"]), [
+      "orca:mail.metadata:read",
+      "orca:mail.content:read",
+      "orca:connection-status:read",
+    ]);
+    assert.deepEqual(mapOAuthScopesToResourceScopes(["agent_events:read"]), ["orca:agent-events:read"]);
+  });
+
+  test("requires the enabled resource to receive an OAuth verifier", () => {
     assert.throws(
-      () => createApp({
-        mcpBoundaryPolicy: { enabled: true, issuer, resource },
-        mcpEnv: { ORCA_M6_MCP_SIGNING_SECRET: sampleSigningSecret },
-      }),
-      /ORCA_M6_MCP_SIGNING_SECRET must be at least 32 characters/,
+      () => createOrcaMcpHttpHandler({ dataSource: {} as never, policy: { enabled: true, issuer, resource } }),
+      /requires a live OAuth token verifier/,
     );
   });
 
@@ -248,7 +291,6 @@ describe("Orca read-only MCP server", () => {
     const { app, sqlite } = createFixture({
       mcpBoundaryPolicy: { enabled: true, issuer: loopbackIssuer, resource: loopbackResource },
       mcpEnv: {
-        ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
         ORCA_M6_MCP_ALLOWED_ORIGINS: "http://127.0.0.1:6274",
       },
     });
@@ -279,7 +321,7 @@ describe("Orca read-only MCP server", () => {
       assert.deepEqual(await metadata.json(), {
         resource,
         authorization_servers: [issuer],
-        scopes_supported: allScopes,
+        scopes_supported: oauthScopes,
         resource_name: "Orca mail and agent events (read only)",
       });
 
@@ -297,11 +339,11 @@ describe("Orca read-only MCP server", () => {
       assert.equal(expired.status, 401);
       assert.match(expired.headers.get("www-authenticate") ?? "", /error="invalid_token"/);
 
-      const metadataOnly = await signToken({ scopes: ["orca:mail.metadata:read"] });
-      const insufficient = await callMcp(app, metadataOnly, "tools/call", { name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" } });
+      const mailOnly = await signToken({ scopes: ["orca:mail.metadata:read", "orca:mail.content:read", "orca:connection-status:read"] });
+      const insufficient = await callMcp(app, mailOnly, "tools/call", { name: "list_agent_events", arguments: {} });
       assert.equal(insufficient.status, 403);
       assert.match(insufficient.headers.get("www-authenticate") ?? "", /error="insufficient_scope"/);
-      assert.match(insufficient.headers.get("www-authenticate") ?? "", /scope="orca:mail.content:read"/);
+      assert.match(insufficient.headers.get("www-authenticate") ?? "", /scope="agent_events:read"/);
     } finally {
       sqlite.close();
     }

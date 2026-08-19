@@ -210,6 +210,11 @@ entire connection. Authorization codes and access tokens are also stored only by
 hash. Revocation therefore takes effect on the next MCP request rather than waiting
 for access-token expiry.
 
+The public OAuth taxonomy is `mail:read` and `agent_events:read`. At the `/mcp`
+boundary, the API-owned verifier maps `mail:read` to the mail metadata, mail content,
+and connection-status read capabilities, and maps `agent_events:read` only to the
+agent-event capability. The resource never accepts a JWT by signature alone.
+
 Operational requirements:
 
 1. Apply `apps/api/drizzle/0020_mcp_oauth.sql` before enabling the feature.

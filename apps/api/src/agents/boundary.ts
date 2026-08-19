@@ -1,15 +1,17 @@
 import {
-  orcaMcpMaximumAccessTokenLifetimeSeconds,
   orcaMcpReadOnlyTools,
   type MailAccount,
   type OrcaAgentExposure,
-  type OrcaMcpAuthorizationContext,
   type OrcaMcpScope,
   type OrcaMcpToolName,
   type PropagatedAgentEvent,
 } from "@orca/shared";
 
 import { getAgentFeatureFlags } from "./config.ts";
+import {
+  orcaMcpMaximumAccessTokenLifetimeSeconds,
+  type OrcaAgentAuthorizationContext,
+} from "./authorization.ts";
 
 const REDACTED = "[REDACTED]";
 const MAX_AGENT_TEXT_LENGTH = 20_000;
@@ -79,7 +81,7 @@ export type AgentBoundaryDecision =
 export type AllowedAgentBoundaryDecision = Extract<AgentBoundaryDecision, { allowed: true }>;
 
 export type OrcaAgentAuthorizationInput = {
-  authorization: OrcaMcpAuthorizationContext;
+  authorization: OrcaAgentAuthorizationContext;
   currentAccountIds: readonly string[];
   expectedUserId: string;
   grantRevokedAt?: string | null;
@@ -161,7 +163,7 @@ function deny(code: AgentBoundaryDenialCode): AgentBoundaryDecision {
 
 /**
  * Authorizes one contract operation after signature verification has produced
- * an OrcaMcpAuthorizationContext. Every handler must use the returned account
+ * an API-owned OrcaAgentAuthorizationContext. Every handler must use the returned account
  * intersection for its query; claims alone never establish current ownership.
  */
 export function authorizeAgentToolRequest(
@@ -180,8 +182,8 @@ export function authorizeAgentToolRequest(
   if (!input.authorization.scopes.includes(tool.requiredScope)) return deny("missing_scope");
 
   const now = (input.now ?? new Date()).getTime();
-  const issuedAt = Date.parse(input.authorization.issuedAt);
-  const expiresAt = Date.parse(input.authorization.expiresAt);
+  const issuedAt = input.authorization.issuedAt.getTime();
+  const expiresAt = input.authorization.expiresAt.getTime();
   if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt) || issuedAt > now) {
     return deny("invalid_authorization_time");
   }

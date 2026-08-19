@@ -81,10 +81,10 @@
           <tr><td>Stable discovery</td><td><code>orca-mail-readonly@1.0.0</code>; exactly four tools</td><td class="pass">Pass</td></tr>
           <tr><td>Structured contracts</td><td>Zod input/output schemas exposed as JSON Schema by the SDK</td><td class="pass">Pass</td></tr>
           <tr><td>Read-only surface</td><td>All tools: readOnly true, destructive false, openWorld false</td><td class="pass">Pass</td></tr>
-          <tr><td>Authorization</td><td>Missing, expired, wrong-audience, and insufficient-scope challenges tested</td><td class="pass">Pass</td></tr>
-          <tr><td>Isolation</td><td>Every tool intersects signed claims with live account ownership</td><td class="pass">Pass</td></tr>
+          <tr><td>Authorization</td><td>OAuth issuance, derived-key JWT validation, live grant lookup, and insufficient-scope challenges tested</td><td class="pass">Pass</td></tr>
+          <tr><td>Isolation</td><td>Every tool intersects the database-backed grant with live account ownership</td><td class="pass">Pass</td></tr>
           <tr><td>Safe content</td><td>Allowlisted fields, credential redaction, bounded text, untrusted-content marker</td><td class="pass">Pass</td></tr>
-          <tr><td>Regression suite</td><td>286 tests total: shared 17, web 77, API 192</td><td class="pass">Pass</td></tr>
+          <tr><td>Regression suite</td><td>307 tests total: shared 17, web 78, API 212</td><td class="pass">Pass</td></tr>
           <tr><td>Build</td><td>Shared, API, and Vite production builds</td><td class="pass">Pass</td></tr>
         </tbody>
       </table>
@@ -130,8 +130,9 @@ bun run build
 ORCA_M6_MCP_ENABLED=true
 ORCA_M6_MCP_ISSUER=https://identity.example.com
 ORCA_M6_MCP_RESOURCE=https://api.example.com/mcp
-ORCA_M6_MCP_SIGNING_SECRET=&lt;at-least-32-random-characters&gt;</code></pre>
-    <p class="note">Developer-mode hosted OAuth connection validation follows once BRE-267 supplies the authorization, consent, refresh, and revocation endpoints. This ticket already exposes the protected-resource metadata and replaceable resource-side token-verifier seam needed for that work.</p>
+ORCA_M6_MCP_SIGNING_KEY=&lt;base64-encoded-32-byte-key&gt;
+ORCA_M6_MCP_SIGNING_KEY_ID=mcp-v1</code></pre>
+    <p class="note">BRE-267 now supplies authorization, consent, refresh, revocation, and the production database-backed resource verifier. Public OAuth scopes are explicitly mapped to the narrower resource capabilities before tool dispatch.</p>
   </section>
 
   <footer>Generated for Orca review · 19 August 2026 · Branch <code>luke/bre-265</code></footer>

@@ -92,7 +92,7 @@ import { handleFeedbackRequest } from "./feedback.ts";
 import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agents/boundary.ts";
 import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
-import type { OrcaMcpTokenVerifier } from "./agents/access-token.ts";
+import { createOrcaMcpAccessTokenVerifier, type OrcaMcpTokenVerifier } from "./agents/access-token.ts";
 import type { AgentEventStore } from "./agents/interfaces.ts";
 
 const serverConfig = getServerConfig();
@@ -177,6 +177,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   );
 
   const mcpPolicy = options.mcpBoundaryPolicy ?? getOrcaAgentBoundaryPolicy(options.mcpEnv);
+  const mcpOAuthConfig = options.mcpOAuthConfig ?? getMcpOAuthConfig(options.mcpEnv ?? process.env);
   const mcpDataSource: OrcaMcpDataSource = {
     getCurrentAccountIds(userId) {
       const { db, sqlite } = dbFactory();
@@ -257,11 +258,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       return url.toString();
     },
   };
+  let mcpTokenVerifier = options.mcpTokenVerifier;
+  if (mcpPolicy.enabled && !mcpTokenVerifier) {
+    if (mcpOAuthConfig.issuer !== mcpPolicy.issuer || mcpOAuthConfig.resource !== mcpPolicy.resource) {
+      throw new Error("The /mcp boundary and OAuth server must use the same issuer and resource identifiers");
+    }
+    mcpTokenVerifier = createOrcaMcpAccessTokenVerifier(mcpOAuthConfig, dbFactory);
+  }
   const mcpHandler = createOrcaMcpHttpHandler({
     dataSource: mcpDataSource,
     env: options.mcpEnv,
     policy: mcpPolicy,
-    verifier: options.mcpTokenVerifier,
+    verifier: mcpTokenVerifier,
   });
   for (const metadataPath of mcpHandler.metadataPaths) {
     app.get(metadataPath, (c) => c.json(mcpHandler.metadata!));
@@ -269,7 +277,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   app.all("/mcp", (c) => mcpHandler.fetch(c.req.raw));
   registerMcpOAuthRoutes(app, {
     dbFactory,
-    config: options.mcpOAuthConfig ?? getMcpOAuthConfig(),
+    config: mcpOAuthConfig,
     now,
   });
 

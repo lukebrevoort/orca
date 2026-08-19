@@ -56,6 +56,7 @@
     <article><h2>What is granted</h2><ul><li><code>mail:read</code> — bounded mail and thread reads.</li><li><code>agent_events:read</code> — propagated agent-event reads.</li><li>Only explicitly checked, user-owned connected accounts.</li><li>No draft, send, archive, delete, relabel, or provider-write permission.</li></ul></article>
     <article><h2>What is never stored</h2><ul><li>No OpenAI API key or ChatGPT credential.</li><li>No OAuth client secret; DCR clients are public and use PKCE.</li><li>No plaintext authorization code, access token, or refresh token in SQLite.</li><li>No provider access/refresh token is copied into an MCP grant.</li></ul></article>
   </div>
+  <p><code>mail:read</code> maps only to the resource’s mail metadata, mail content, and connection-status read capabilities; <code>agent_events:read</code> maps only to agent-event reads. Every <code>/mcp</code> request rechecks the token hash, live connection, granted scopes, and current account ownership in SQLite.</p>
 
   <section>
     <h2>Deployment and migration</h2>
@@ -115,7 +116,7 @@ bun test apps/web/src/App.test.tsx
 bun run typecheck
 bun run test
 bun run build</pre>
-    <p>The focused API suite covers metadata, trusted callback enforcement, DCR limits, consent, state, S256 PKCE, wrong-resource rejection, scope enforcement, account isolation, code replay, transaction rollback injection, refresh rotation/replay and retention, key separation, per-link/all-link revocation, provider disconnect, user deletion, and the default-off boundary.</p>
+    <p>The focused API suite covers metadata, trusted callback enforcement, DCR limits, consent, state, S256 PKCE, issuance through the real <code>/mcp</code> verifier, OAuth-to-tool scope mapping, wrong-resource rejection, live revocation/disconnect, account isolation, code replay, transaction rollback injection, refresh rotation/replay and retention, key separation, user deletion, and the default-off boundary.</p>
     <p>Reference: <a href="https://developers.openai.com/plugins/build/auth">official OpenAI MCP authentication documentation</a>.</p>
   </section>
 </main>
