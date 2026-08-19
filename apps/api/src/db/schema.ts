@@ -507,6 +507,9 @@ export const mcpOAuthClients = sqliteTable(
       .notNull()
       .default(createdAtDefault),
   },
+  (table) => ({
+    createdAtIdx: index("mcp_oauth_clients_created_at_idx").on(table.createdAt),
+  }),
 );
 
 export const mcpAuthorizationCodes = sqliteTable(
@@ -560,6 +563,7 @@ export const mcpConnections = sqliteTable(
   },
   (table) => ({
     userIdx: index("mcp_connections_user_idx").on(table.userId),
+    revokedAtIdx: index("mcp_connections_revoked_at_idx").on(table.revokedAt),
   }),
 );
 
@@ -602,6 +606,7 @@ export const mcpAccessTokens = sqliteTable(
     tokenHashUniqueIdx: uniqueIndex("mcp_access_tokens_token_hash_unique_idx").on(table.tokenHash),
     connectionIdx: index("mcp_access_tokens_connection_idx").on(table.connectionId),
     expiresAtIdx: index("mcp_access_tokens_expires_at_idx").on(table.expiresAt),
+    revokedAtIdx: index("mcp_access_tokens_revoked_at_idx").on(table.revokedAt),
   }),
 );
 
@@ -624,5 +629,7 @@ export const mcpRefreshTokens = sqliteTable(
     tokenHashUniqueIdx: uniqueIndex("mcp_refresh_tokens_token_hash_unique_idx").on(table.tokenHash),
     connectionIdx: index("mcp_refresh_tokens_connection_idx").on(table.connectionId),
     expiresAtIdx: index("mcp_refresh_tokens_expires_at_idx").on(table.expiresAt),
+    consumedAtIdx: index("mcp_refresh_tokens_consumed_at_idx").on(table.consumedAt),
+    revokedAtIdx: index("mcp_refresh_tokens_revoked_at_idx").on(table.revokedAt),
   }),
 );

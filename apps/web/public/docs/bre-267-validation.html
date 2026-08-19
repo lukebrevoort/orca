@@ -61,13 +61,16 @@
     <h2>Deployment and migration</h2>
     <ol>
       <li>Apply <code>apps/api/drizzle/0020_mcp_oauth.sql</code>. It adds OAuth clients, single-use codes, connections, account grants, hashed access-token records, and rotating hashed refresh-token records.</li>
-      <li>Use durable shared SQLite storage and the same <code>SESSION_SECRET</code> on every API instance. Secret rotation invalidates outstanding MCP access tokens and pending consent requests.</li>
+      <li>Use durable shared SQLite storage and the same versioned <code>ORCA_M6_MCP_SIGNING_KEY</code> on every API instance. It is separate from browser <code>SESSION_SECRET</code>; rotating the MCP key invalidates outstanding access tokens and pending consent requests.</li>
       <li>Set exact public HTTPS values for <code>ORCA_M6_MCP_ISSUER</code> and <code>ORCA_M6_MCP_RESOURCE</code>. The intended resource ends in <code>/mcp</code>.</li>
       <li>Leave <code>ORCA_M6_MCP_ENABLED=false</code> until the BRE-261 contract and BRE-265 MCP server are merged. Then enable it and restart the API.</li>
     </ol>
     <pre>ORCA_M6_MCP_ENABLED=true
 ORCA_M6_MCP_ISSUER=https://api.example.com
 ORCA_M6_MCP_RESOURCE=https://api.example.com/mcp
+ORCA_M6_MCP_SIGNING_KEY=&lt;base64-encoded-32-byte-key&gt;
+ORCA_M6_MCP_SIGNING_KEY_ID=mcp-v1
+ORCA_M6_MCP_REDIRECT_URIS=https://chatgpt.com/connector_platform_oauth_redirect
 ORCA_M6_MCP_ACCESS_TOKEN_TTL_SECONDS=600
 ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS=2592000</pre>
   </section>
@@ -75,9 +78,9 @@ ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS=2592000</pre>
   <section>
     <h2>Published contract</h2>
     <table><thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead><tbody>
-      <tr><td><code>GET /.well-known/oauth-protected-resource</code></td><td>Exact MCP resource, issuer, and supported read-only scopes.</td></tr>
+      <tr><td><code>GET /.well-known/oauth-protected-resource/mcp</code></td><td>Exact MCP resource, issuer, and supported read-only scopes; the suffix follows the configured resource path.</td></tr>
       <tr><td><code>GET /.well-known/oauth-authorization-server</code></td><td>Authorization, token, registration, revocation, S256, and public-client metadata.</td></tr>
-      <tr><td><code>POST /oauth/register</code></td><td>DCR with an exact persisted redirect allowlist. HTTPS callbacks; loopback HTTP only for development.</td></tr>
+      <tr><td><code>POST /oauth/register</code></td><td>Bounded, rate-limited DCR restricted to the exact configured OpenAI callback allowlist.</td></tr>
       <tr><td><code>GET/POST /oauth/authorize</code></td><td>Authenticated consent with signed short-lived request context, state/issuer round-trip, scopes, and accounts.</td></tr>
       <tr><td><code>POST /oauth/token</code></td><td>Single-use code exchange or rotating refresh; exact resource and client binding.</td></tr>
       <tr><td><code>POST /oauth/revoke</code></td><td>Standards-compatible token revocation.</td></tr>
@@ -85,6 +88,11 @@ ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS=2592000</pre>
       <tr><td><code>DELETE /v1/mcp/connections/:id</code></td><td>Immediate owned-connection revocation.</td></tr>
       <tr><td><code>POST /v1/mcp/connections/revoke-all</code></td><td>Immediate revocation of every active agent connection for the user.</td></tr>
     </tbody></table>
+  </section>
+
+  <section>
+    <h2>Retention and rollback guarantees</h2>
+    <p>Code exchange and refresh rotation commit consumption plus every replacement credential in one SQLite transaction. Injected insert failures are tested to roll back the original credential. Opportunistic GC retains expired codes/access tokens for 24 hours, consumed refresh tokens for a 24-hour replay window, revoked connections for 30 days, and unused registrations for 24 hours.</p>
   </section>
 
   <section>
@@ -107,7 +115,7 @@ bun test apps/web/src/App.test.tsx
 bun run typecheck
 bun run test
 bun run build</pre>
-    <p>The focused API suite covers metadata, DCR, consent, state, S256 PKCE, wrong-resource rejection, scope enforcement, account isolation, code replay, refresh rotation/replay, per-link/all-link revocation, provider disconnect, user deletion, and the default-off boundary.</p>
+    <p>The focused API suite covers metadata, trusted callback enforcement, DCR limits, consent, state, S256 PKCE, wrong-resource rejection, scope enforcement, account isolation, code replay, transaction rollback injection, refresh rotation/replay and retention, key separation, per-link/all-link revocation, provider disconnect, user deletion, and the default-off boundary.</p>
     <p>Reference: <a href="https://developers.openai.com/plugins/build/auth">official OpenAI MCP authentication documentation</a>.</p>
   </section>
 </main>

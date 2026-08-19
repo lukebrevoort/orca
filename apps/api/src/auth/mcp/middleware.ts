@@ -1,8 +1,7 @@
 import type { MiddlewareHandler } from "hono";
-import type { OrcaMcpAuthorizationContext } from "@orca/shared";
-
 import { createDatabaseClient } from "../../db/client.ts";
 import { getMcpProtectedResourceMetadataUrl, type McpOAuthConfig, type McpOAuthScope } from "./config.ts";
+import type { OrcaMcpAuthorizationContext } from "./context.ts";
 import { McpTokenError, verifyMcpAccessToken } from "./tokens.ts";
 
 export type McpAuthVariables = {

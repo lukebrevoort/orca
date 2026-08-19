@@ -141,6 +141,10 @@ Variables for the default-off M6 ChatGPT/Codex MCP OAuth boundary:
 - `ORCA_M6_MCP_ENABLED`: set to `true` only after the read-only MCP resource is deployed. Disabled environments return `404` from discovery, registration, token, and connection APIs.
 - `ORCA_M6_MCP_ISSUER`: exact public authorization-server identifier. Use HTTPS in production and keep it identical across discovery, consent responses, and access-token `iss` validation.
 - `ORCA_M6_MCP_RESOURCE`: exact public MCP resource identifier, normally `https://<host>/mcp`. It is round-tripped through authorization/token requests and becomes both the access-token `aud` and `resource` claim.
+- `ORCA_M6_MCP_SIGNING_KEY`: base64-encoded 32-byte MCP root key, separate from `SESSION_SECRET`. Distinct HKDF-derived subkeys sign consent and access tokens.
+- `ORCA_M6_MCP_SIGNING_KEY_ID`: versioned `kid` published in MCP JWT headers; rotate this with the MCP signing key.
+- `ORCA_M6_MCP_REDIRECT_URIS`: exact comma- or whitespace-separated OpenAI callback allowlist. Arbitrary HTTPS origins are rejected.
+- `ORCA_M6_MCP_DCR_PER_MINUTE`: database-backed dynamic-registration limit, capped at 60 and defaulting to 30.
 - `ORCA_M6_MCP_ACCESS_TOKEN_TTL_SECONDS`: optional access-token lifetime, capped at 600 seconds.
 - `ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS`: optional rotating refresh-token lifetime, capped at 30 days.
 - `ORCA_M6_MCP_AUTHORIZATION_CODE_TTL_SECONDS`: optional single-use authorization-code lifetime; defaults to 300 seconds.
@@ -210,8 +214,9 @@ Operational requirements:
 
 1. Apply `apps/api/drizzle/0020_mcp_oauth.sql` before enabling the feature.
 2. Use durable SQLite storage shared by every API instance. All instances must use
-   the same `SESSION_SECRET`, which signs Orca sessions, consent requests, and MCP
-   access tokens. Rotating it invalidates outstanding access/consent material.
+   the same versioned `ORCA_M6_MCP_SIGNING_KEY`; it is intentionally independent of
+   browser `SESSION_SECRET` rotation. Changing the MCP key or `kid` invalidates
+   outstanding MCP access tokens and consent requests but leaves refresh grants usable.
 3. Deploy the authorization and MCP resource identifiers over HTTPS and set the
    exact values above. Do not change trailing paths after clients are linked.
 4. Keep `ORCA_M6_MCP_ENABLED=false` until the BRE-261 boundary and BRE-265 `/mcp`
@@ -219,6 +224,10 @@ Operational requirements:
    per-tool required scope and use `buildMcpWwwAuthenticate` for `401` challenges.
 5. Do not log authorization codes, access/refresh tokens, provider tokens, request
    authorization headers, client secrets, OpenAI keys, or email bodies.
+6. Credential GC runs opportunistically on registration and token requests. Expired
+   codes/access tokens are retained for 24 hours, consumed/revoked refresh tokens for
+   a 24-hour replay-detection window, revoked connections for 30 days, and unused
+   clients for 24 hours before cascade deletion.
 
 The user can inspect active and revoked links, their exact scopes/accounts, and last
 use in Settings → Agent connections. Revoking one link or all links immediately

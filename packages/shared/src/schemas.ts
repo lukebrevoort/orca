@@ -513,7 +513,8 @@ export const authSessionSchema = z
   });
 export type AuthSession = z.infer<typeof authSessionSchema>;
 
-export const mcpOAuthScopeSchema = z.enum(["mail:read", "agent_events:read"]);
+export const mcpOAuthScopes = ["mail:read", "agent_events:read"] as const;
+export const mcpOAuthScopeSchema = z.enum(mcpOAuthScopes);
 export type McpOAuthScope = z.infer<typeof mcpOAuthScopeSchema>;
 
 export const mcpConnectionAccountSchema = z.object({
@@ -538,18 +539,6 @@ export const mcpConnectionPageSchema = z.object({
   items: z.array(mcpConnectionSchema),
 }).strict();
 export type McpConnectionPage = z.infer<typeof mcpConnectionPageSchema>;
-
-export const orcaMcpAuthorizationContextSchema = z.object({
-  connectionId: nonEmptyStringSchema,
-  userId: nonEmptyStringSchema,
-  clientId: nonEmptyStringSchema,
-  clientName: nonEmptyStringSchema,
-  resource: z.string().url(),
-  scopes: z.array(mcpOAuthScopeSchema),
-  accountIds: z.array(nonEmptyStringSchema),
-  expiresAt: z.date(),
-}).strict();
-export type OrcaMcpAuthorizationContext = z.infer<typeof orcaMcpAuthorizationContextSchema>;
 
 export const inboxQuerySchema = z
   .object({

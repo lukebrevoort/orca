@@ -5,6 +5,8 @@ CREATE TABLE `mcp_oauth_clients` (
 	`created_at` integer DEFAULT (unixepoch() * 1000) NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `mcp_oauth_clients_created_at_idx` ON `mcp_oauth_clients` (`created_at`);
+--> statement-breakpoint
 CREATE TABLE `mcp_authorization_codes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`code_hash` text NOT NULL,
@@ -42,6 +44,8 @@ CREATE TABLE `mcp_connections` (
 --> statement-breakpoint
 CREATE INDEX `mcp_connections_user_idx` ON `mcp_connections` (`user_id`);
 --> statement-breakpoint
+CREATE INDEX `mcp_connections_revoked_at_idx` ON `mcp_connections` (`revoked_at`);
+--> statement-breakpoint
 CREATE TABLE `mcp_connection_accounts` (
 	`id` text PRIMARY KEY NOT NULL,
 	`connection_id` text NOT NULL,
@@ -72,6 +76,8 @@ CREATE INDEX `mcp_access_tokens_connection_idx` ON `mcp_access_tokens` (`connect
 --> statement-breakpoint
 CREATE INDEX `mcp_access_tokens_expires_at_idx` ON `mcp_access_tokens` (`expires_at`);
 --> statement-breakpoint
+CREATE INDEX `mcp_access_tokens_revoked_at_idx` ON `mcp_access_tokens` (`revoked_at`);
+--> statement-breakpoint
 CREATE TABLE `mcp_refresh_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`token_hash` text NOT NULL,
@@ -88,3 +94,7 @@ CREATE UNIQUE INDEX `mcp_refresh_tokens_token_hash_unique_idx` ON `mcp_refresh_t
 CREATE INDEX `mcp_refresh_tokens_connection_idx` ON `mcp_refresh_tokens` (`connection_id`);
 --> statement-breakpoint
 CREATE INDEX `mcp_refresh_tokens_expires_at_idx` ON `mcp_refresh_tokens` (`expires_at`);
+--> statement-breakpoint
+CREATE INDEX `mcp_refresh_tokens_consumed_at_idx` ON `mcp_refresh_tokens` (`consumed_at`);
+--> statement-breakpoint
+CREATE INDEX `mcp_refresh_tokens_revoked_at_idx` ON `mcp_refresh_tokens` (`revoked_at`);

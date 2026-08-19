@@ -1,12 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { createHash, hkdfSync, randomBytes } from "node:crypto";
+import { and, eq, gt, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
-import { orcaMcpAuthorizationContextSchema } from "@orca/shared";
 
-import { getAuthConfig } from "../config.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   mcpAccessTokens,
+  mcpAuthorizationCodes,
   mcpConnectionAccounts,
   mcpConnections,
   mcpOAuthClients,
@@ -14,6 +13,8 @@ import {
   oauthAccounts,
 } from "../../db/schema.ts";
 import type { McpOAuthConfig, McpOAuthScope } from "./config.ts";
+import { mcpOAuthRetention } from "./config.ts";
+import { orcaMcpAuthorizationContextSchema } from "./context.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 
@@ -27,8 +28,11 @@ export class McpTokenError extends Error {
   }
 }
 
-function signingKey() {
-  return new TextEncoder().encode(getAuthConfig().sessionSecret);
+class RefreshReplayError extends Error {}
+
+export function deriveMcpSigningKey(config: McpOAuthConfig, purpose: "access" | "consent") {
+  if (!config.signingKey) throw new Error("MCP OAuth signing key is unavailable while the feature is disabled");
+  return new Uint8Array(hkdfSync("sha256", config.signingKey, new Uint8Array(), `orca-mcp:${purpose}:v1`, 32));
 }
 
 export function hashMcpSecret(value: string) {
@@ -62,15 +66,17 @@ function getConnectionAccounts(db: Database, connectionId: string, userId: strin
 }
 
 export function revokeMcpConnection(db: Database, connectionId: string, now = new Date()) {
-  const revoked = db.update(mcpConnections)
-    .set({ revokedAt: now, updatedAt: now })
-    .where(and(eq(mcpConnections.id, connectionId), isNull(mcpConnections.revokedAt)))
-    .returning({ id: mcpConnections.id })
-    .get();
-  if (!revoked) return false;
-  db.update(mcpAccessTokens).set({ revokedAt: now }).where(and(eq(mcpAccessTokens.connectionId, connectionId), isNull(mcpAccessTokens.revokedAt))).run();
-  db.update(mcpRefreshTokens).set({ revokedAt: now }).where(and(eq(mcpRefreshTokens.connectionId, connectionId), isNull(mcpRefreshTokens.revokedAt))).run();
-  return true;
+  return db.transaction((tx) => {
+    const revoked = tx.update(mcpConnections)
+      .set({ revokedAt: now, updatedAt: now })
+      .where(and(eq(mcpConnections.id, connectionId), isNull(mcpConnections.revokedAt)))
+      .returning({ id: mcpConnections.id })
+      .get();
+    if (!revoked) return false;
+    tx.update(mcpAccessTokens).set({ revokedAt: now }).where(and(eq(mcpAccessTokens.connectionId, connectionId), isNull(mcpAccessTokens.revokedAt))).run();
+    tx.update(mcpRefreshTokens).set({ revokedAt: now }).where(and(eq(mcpRefreshTokens.connectionId, connectionId), isNull(mcpRefreshTokens.revokedAt))).run();
+    return true;
+  });
 }
 
 export function revokeAllMcpConnections(db: Database, userId: string, now = new Date()) {
@@ -82,69 +88,58 @@ export function revokeAllMcpConnections(db: Database, userId: string, now = new 
   return connections.length;
 }
 
-export async function issueMcpTokenPair(
-  db: Database,
-  connectionId: string,
+export async function prepareMcpTokenPair(
+  input: {
+    connectionId: string;
+    userId: string;
+    clientId: string;
+    resource: string;
+    scopes: McpOAuthScope[];
+    accountIds: string[];
+  },
   config: McpOAuthConfig,
   now = new Date(),
-  requestedScopes?: McpOAuthScope[],
 ) {
-  const connection = db.select({
-    id: mcpConnections.id,
-    userId: mcpConnections.userId,
-    clientId: mcpConnections.clientId,
-    resource: mcpConnections.resource,
-    scopes: mcpConnections.scopes,
-    revokedAt: mcpConnections.revokedAt,
-  }).from(mcpConnections).where(eq(mcpConnections.id, connectionId)).get();
-  if (!connection || connection.revokedAt) throw new McpTokenError("invalid_token", "The agent connection is no longer active");
-
-  const grantedScopes = parseScopes(connection.scopes);
-  const scopes = requestedScopes?.length ? requestedScopes : grantedScopes;
-  if (scopes.some((scope) => !grantedScopes.includes(scope))) {
-    throw new McpTokenError("insufficient_scope", "The requested scope was not granted to this connection");
-  }
-
-  const accountIds = getConnectionAccounts(db, connection.id, connection.userId);
+  const scopes = [...new Set(input.scopes)].sort();
+  const accountIds = [...new Set(input.accountIds)].sort();
   const accessTokenId = crypto.randomUUID();
   const accessExpiresAt = new Date(now.getTime() + config.accessTokenTtlMs);
   const accessToken = await new SignJWT({
-    client_id: connection.clientId,
-    resource: connection.resource,
+    client_id: input.clientId,
+    resource: input.resource,
     scope: serializeScopes(scopes),
     account_ids: accountIds,
   })
-    .setProtectedHeader({ alg: "HS256", typ: "at+jwt" })
+    .setProtectedHeader({ alg: "HS256", typ: "at+jwt", kid: config.signingKeyId })
     .setIssuer(config.issuer)
-    .setAudience(connection.resource)
-    .setSubject(connection.userId)
+    .setAudience(input.resource)
+    .setSubject(input.userId)
     .setJti(accessTokenId)
     .setIssuedAt(Math.floor(now.getTime() / 1000))
     .setExpirationTime(Math.floor(accessExpiresAt.getTime() / 1000))
-    .sign(signingKey());
+    .sign(deriveMcpSigningKey(config, "access"));
 
   const refreshToken = createOpaqueMcpToken("mcp_rt");
   const refreshExpiresAt = new Date(now.getTime() + config.refreshTokenTtlMs);
-  db.insert(mcpAccessTokens).values({
-    id: accessTokenId,
-    tokenHash: hashMcpSecret(accessToken),
-    connectionId: connection.id,
-    expiresAt: accessExpiresAt,
-    createdAt: now,
-  }).run();
-  db.insert(mcpRefreshTokens).values({
-    id: crypto.randomUUID(),
-    tokenHash: hashMcpSecret(refreshToken),
-    connectionId: connection.id,
-    expiresAt: refreshExpiresAt,
-    createdAt: now,
-  }).run();
-
   return {
     accessToken,
     refreshToken,
     expiresIn: Math.floor(config.accessTokenTtlMs / 1000),
     scope: serializeScopes(scopes),
+    accessRecord: {
+      id: accessTokenId,
+      tokenHash: hashMcpSecret(accessToken),
+      connectionId: input.connectionId,
+      expiresAt: accessExpiresAt,
+      createdAt: now,
+    },
+    refreshRecord: {
+      id: crypto.randomUUID(),
+      tokenHash: hashMcpSecret(refreshToken),
+      connectionId: input.connectionId,
+      expiresAt: refreshExpiresAt,
+      createdAt: now,
+    },
   };
 }
 
@@ -166,6 +161,7 @@ export async function rotateMcpRefreshToken(
     consumedAt: mcpRefreshTokens.consumedAt,
     revokedAt: mcpRefreshTokens.revokedAt,
     expiresAt: mcpRefreshTokens.expiresAt,
+    userId: mcpConnections.userId,
     clientId: mcpConnections.clientId,
     resource: mcpConnections.resource,
     scopes: mcpConnections.scopes,
@@ -182,7 +178,8 @@ export async function rotateMcpRefreshToken(
     throw new McpTokenError("invalid_token", "The refresh token was issued to a different client or resource");
   }
   const grantedScopes = parseScopes(existing.scopes);
-  if (input.scopes?.some((scope) => !grantedScopes.includes(scope))) {
+  const scopes = input.scopes?.length ? input.scopes : grantedScopes;
+  if (scopes.some((scope) => !grantedScopes.includes(scope))) {
     throw new McpTokenError("insufficient_scope", "The requested scope was not granted to this connection");
   }
   if (existing.consumedAt) {
@@ -190,17 +187,33 @@ export async function rotateMcpRefreshToken(
     throw new McpTokenError("invalid_token", "Refresh token replay detected; the connection was revoked");
   }
 
-  const consumed = db.update(mcpRefreshTokens)
-    .set({ consumedAt: now })
-    .where(and(eq(mcpRefreshTokens.id, existing.id), isNull(mcpRefreshTokens.consumedAt), isNull(mcpRefreshTokens.revokedAt)))
-    .returning({ id: mcpRefreshTokens.id })
-    .get();
-  if (!consumed) {
+  const pair = await prepareMcpTokenPair({
+    connectionId: existing.connectionId,
+    userId: existing.userId,
+    clientId: existing.clientId,
+    resource: existing.resource,
+    scopes,
+    accountIds: getConnectionAccounts(db, existing.connectionId, existing.userId),
+  }, config, now);
+
+  try {
+    db.transaction((tx) => {
+      const consumed = tx.update(mcpRefreshTokens)
+        .set({ consumedAt: now })
+        .where(and(eq(mcpRefreshTokens.id, existing.id), isNull(mcpRefreshTokens.consumedAt), isNull(mcpRefreshTokens.revokedAt)))
+        .returning({ id: mcpRefreshTokens.id })
+        .get();
+      if (!consumed) throw new RefreshReplayError();
+      tx.insert(mcpAccessTokens).values(pair.accessRecord).run();
+      tx.insert(mcpRefreshTokens).values(pair.refreshRecord).run();
+    });
+  } catch (error) {
+    if (!(error instanceof RefreshReplayError)) throw error;
     revokeMcpConnection(db, existing.connectionId, now);
     throw new McpTokenError("invalid_token", "Refresh token replay detected; the connection was revoked");
   }
 
-  return issueMcpTokenPair(db, existing.connectionId, config, now, input.scopes);
+  return pair;
 }
 
 export async function verifyMcpAccessToken(
@@ -211,12 +224,16 @@ export async function verifyMcpAccessToken(
   const now = input.now ?? new Date();
   let payload;
   try {
-    ({ payload } = await jwtVerify(token, signingKey(), {
+    const verified = await jwtVerify(token, deriveMcpSigningKey(input.config, "access"), {
       algorithms: ["HS256"],
       issuer: input.config.issuer,
       audience: input.config.resource,
       currentDate: now,
-    }));
+    });
+    if (verified.protectedHeader.kid !== input.config.signingKeyId || verified.protectedHeader.typ !== "at+jwt") {
+      throw new Error("Unexpected MCP signing key or token type");
+    }
+    payload = verified.payload;
   } catch {
     throw new McpTokenError("invalid_token", "The access token is invalid, expired, or intended for another resource");
   }
@@ -288,4 +305,30 @@ export function revokeMcpToken(db: Database, token: string, now = new Date()) {
     .get();
   if (!refresh) return false;
   return revokeMcpConnection(db, refresh.connectionId, now);
+}
+
+export function collectMcpOAuthGarbage(db: Database, now = new Date()) {
+  const credentialCutoff = new Date(now.getTime() - mcpOAuthRetention.expiredCredentialMs);
+  const replayCutoff = new Date(now.getTime() - mcpOAuthRetention.refreshReplayMs);
+  const connectionCutoff = new Date(now.getTime() - mcpOAuthRetention.revokedConnectionMs);
+  const clientCutoff = new Date(now.getTime() - mcpOAuthRetention.unusedClientMs);
+  return db.transaction((tx) => {
+    const authorizationCodes = tx.delete(mcpAuthorizationCodes).where(lt(mcpAuthorizationCodes.expiresAt, credentialCutoff)).returning({ id: mcpAuthorizationCodes.id }).all().length;
+    const accessTokens = tx.delete(mcpAccessTokens).where(or(
+      lt(mcpAccessTokens.expiresAt, credentialCutoff),
+      lt(mcpAccessTokens.revokedAt, credentialCutoff),
+    )).returning({ id: mcpAccessTokens.id }).all().length;
+    const refreshTokens = tx.delete(mcpRefreshTokens).where(or(
+      lt(mcpRefreshTokens.expiresAt, credentialCutoff),
+      lt(mcpRefreshTokens.consumedAt, replayCutoff),
+      lt(mcpRefreshTokens.revokedAt, replayCutoff),
+    )).returning({ id: mcpRefreshTokens.id }).all().length;
+    const connections = tx.delete(mcpConnections).where(lt(mcpConnections.revokedAt, connectionCutoff)).returning({ id: mcpConnections.id }).all().length;
+    const clients = tx.delete(mcpOAuthClients).where(and(
+      lt(mcpOAuthClients.createdAt, clientCutoff),
+      notExists(tx.select({ value: sql<number>`1` }).from(mcpConnections).where(eq(mcpConnections.clientId, mcpOAuthClients.id))),
+      notExists(tx.select({ value: sql<number>`1` }).from(mcpAuthorizationCodes).where(eq(mcpAuthorizationCodes.clientId, mcpOAuthClients.id))),
+    )).returning({ id: mcpOAuthClients.id }).all().length;
+    return { authorizationCodes, accessTokens, refreshTokens, connections, clients };
+  });
 }

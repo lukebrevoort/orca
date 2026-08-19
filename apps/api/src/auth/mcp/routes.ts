@@ -1,26 +1,36 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, isNull } from "drizzle-orm";
 import type { Context, Hono, MiddlewareHandler } from "hono";
 import { SignJWT, jwtVerify } from "jose";
 import { mcpConnectionPageSchema, mcpOAuthScopeSchema } from "@orca/shared";
 
-import { getAuthConfig } from "../config.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import {
   mcpAuthorizationCodes,
+  mcpAccessTokens,
   mcpConnectionAccounts,
   mcpConnections,
   mcpOAuthClients,
+  mcpRefreshTokens,
   oauthAccounts,
 } from "../../db/schema.ts";
-import { isAllowedMcpRedirectUri, mcpOAuthScopes, type McpOAuthConfig, type McpOAuthScope } from "./config.ts";
 import {
+  getMcpProtectedResourceMetadataUrl,
+  isAllowedMcpRedirectUri,
+  mcpOAuthLimits,
+  mcpOAuthScopes,
+  type McpOAuthConfig,
+  type McpOAuthScope,
+} from "./config.ts";
+import {
+  collectMcpOAuthGarbage,
   createOpaqueMcpToken,
+  deriveMcpSigningKey,
   hashMcpSecret,
-  issueMcpTokenPair,
   McpTokenError,
   parseScopes,
+  prepareMcpTokenPair,
   revokeAllMcpConnections,
   revokeMcpConnection,
   revokeMcpToken,
@@ -40,10 +50,6 @@ type AuthorizationRequest = {
   state: string | null;
   codeChallenge: string;
 };
-
-function signingKey() {
-  return new TextEncoder().encode(getAuthConfig().sessionSecret);
-}
 
 function parseJsonList(value: string) {
   try {
@@ -76,22 +82,23 @@ function appendAuthorizationResult(request: Pick<AuthorizationRequest, "redirect
 
 async function createConsentToken(request: AuthorizationRequest, config: McpOAuthConfig, now: Date) {
   return new SignJWT({ ...request, state: request.state ?? undefined })
-    .setProtectedHeader({ alg: "HS256" })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT", kid: config.signingKeyId })
     .setIssuer(config.issuer)
     .setAudience("orca:mcp:consent")
     .setSubject(request.userId)
     .setIssuedAt(Math.floor(now.getTime() / 1000))
     .setExpirationTime(Math.floor((now.getTime() + config.authorizationCodeTtlMs) / 1000))
-    .sign(signingKey());
+    .sign(deriveMcpSigningKey(config, "consent"));
 }
 
 async function verifyConsentToken(token: string, config: McpOAuthConfig, now: Date): Promise<AuthorizationRequest> {
-  const { payload } = await jwtVerify(token, signingKey(), {
+  const { payload, protectedHeader } = await jwtVerify(token, deriveMcpSigningKey(config, "consent"), {
     algorithms: ["HS256"],
     issuer: config.issuer,
     audience: "orca:mcp:consent",
     currentDate: now,
   });
+  if (protectedHeader.kid !== config.signingKeyId || protectedHeader.typ !== "JWT") throw new Error("Consent signing key is invalid");
   const scopes = Array.isArray(payload.scopes) ? payload.scopes.map((scope) => mcpOAuthScopeSchema.parse(scope)) : [];
   if (
     typeof payload.sub !== "string" ||
@@ -112,10 +119,28 @@ async function verifyConsentToken(token: string, config: McpOAuthConfig, now: Da
   };
 }
 
-function oauthError(c: McpContext, status: 400 | 401, error: string, description: string) {
+function oauthError(c: McpContext, status: 400 | 401 | 413 | 429 | 500, error: string, description: string) {
   c.header("Cache-Control", "no-store");
   c.header("Pragma", "no-cache");
   return c.json({ error, error_description: description }, status);
+}
+
+async function readBoundedBody(c: McpContext, maximumBytes: number) {
+  const contentLength = Number(c.req.header("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maximumBytes) return null;
+  const text = await c.req.text();
+  return new TextEncoder().encode(text).byteLength <= maximumBytes ? text : null;
+}
+
+async function readBoundedForm(c: McpContext, maximumBytes: number) {
+  const text = await readBoundedBody(c, maximumBytes);
+  if (text === null) return null;
+  const entries: Record<string, string | string[]> = {};
+  for (const [key, value] of new URLSearchParams(text)) {
+    const existing = entries[key];
+    entries[key] = existing === undefined ? value : Array.isArray(existing) ? [...existing, value] : [existing, value];
+  }
+  return entries;
 }
 
 function featureDisabled(c: McpContext, config: McpOAuthConfig) {
@@ -142,6 +167,7 @@ export function registerMcpOAuthRoutes(
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const config = options.config;
   const now = options.now ?? (() => new Date());
+  const resourceMetadataPath = new URL(getMcpProtectedResourceMetadataUrl(config.resource)).pathname;
   const requireMcpFeature: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
     const disabled = featureDisabled(c, config);
     if (disabled) return disabled;
@@ -149,8 +175,7 @@ export function registerMcpOAuthRoutes(
   };
 
   const metadataHandler = (c: McpContext) => featureDisabled(c, config) ?? c.json(protectedResourceMetadata(config));
-  app.get("/.well-known/oauth-protected-resource", metadataHandler);
-  app.get("/.well-known/oauth-protected-resource/mcp", metadataHandler);
+  app.get(resourceMetadataPath, metadataHandler);
 
   app.get("/.well-known/oauth-authorization-server", (c) => {
     const disabled = featureDisabled(c, config); if (disabled) return disabled;
@@ -171,11 +196,14 @@ export function registerMcpOAuthRoutes(
 
   app.post("/oauth/register", async (c) => {
     const disabled = featureDisabled(c, config); if (disabled) return disabled;
+    const rawBody = await readBoundedBody(c, mcpOAuthLimits.registrationBodyBytes);
+    if (rawBody === null) return oauthError(c, 413, "invalid_client_metadata", "Client registration document is too large");
     let body: any;
-    try { body = await c.req.json(); } catch { return oauthError(c, 400, "invalid_client_metadata", "Expected a JSON client registration document"); }
+    try { body = JSON.parse(rawBody); } catch { return oauthError(c, 400, "invalid_client_metadata", "Expected a JSON client registration document"); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return oauthError(c, 400, "invalid_client_metadata", "Expected a JSON client registration object");
     const redirects = Array.isArray(body.redirect_uris) ? [...new Set(body.redirect_uris)] : [];
-    if (redirects.length === 0 || redirects.length > 10 || redirects.some((uri) => typeof uri !== "string" || !isAllowedMcpRedirectUri(uri))) {
-      return oauthError(c, 400, "invalid_redirect_uri", "Redirect URIs must be HTTPS, except loopback development callbacks");
+    if (redirects.length === 0 || redirects.length > mcpOAuthLimits.redirectsPerClient || redirects.some((uri) => typeof uri !== "string" || !isAllowedMcpRedirectUri(uri, config))) {
+      return oauthError(c, 400, "invalid_redirect_uri", "Redirect URIs must exactly match a configured OpenAI callback");
     }
     if (body.token_endpoint_auth_method !== undefined && body.token_endpoint_auth_method !== "none") {
       return oauthError(c, 400, "invalid_client_metadata", "Only public clients using token_endpoint_auth_method=none are supported");
@@ -187,10 +215,26 @@ export function registerMcpOAuthRoutes(
       return oauthError(c, 400, "invalid_client_metadata", "Only the code response type is supported");
     }
     const clientId = crypto.randomUUID();
-    const clientName = typeof body.client_name === "string" && body.client_name.trim() ? body.client_name.trim().slice(0, 120) : "ChatGPT or Codex";
+    if (typeof body.client_name === "string" && body.client_name.length > mcpOAuthLimits.clientNameCharacters) {
+      return oauthError(c, 400, "invalid_client_metadata", `client_name must not exceed ${mcpOAuthLimits.clientNameCharacters} characters`);
+    }
+    // This surface is deliberately OpenAI-only; never turn caller-supplied branding into trusted consent copy.
+    const clientName = "ChatGPT or Codex";
     const { db, sqlite } = dbFactory();
     try {
-      db.insert(mcpOAuthClients).values({ id: clientId, name: clientName, redirectUris: JSON.stringify(redirects), createdAt: now() }).run();
+      const registrationAt = now();
+      collectMcpOAuthGarbage(db, registrationAt);
+      const registered = db.transaction((tx) => {
+        const since = new Date(registrationAt.getTime() - 60_000);
+        const recent = tx.select({ value: count() }).from(mcpOAuthClients).where(gte(mcpOAuthClients.createdAt, since)).get()?.value ?? 0;
+        if (recent >= config.registrationLimitPerMinute) return false;
+        tx.insert(mcpOAuthClients).values({ id: clientId, name: clientName, redirectUris: JSON.stringify(redirects), createdAt: registrationAt }).run();
+        return true;
+      });
+      if (!registered) {
+        c.header("Retry-After", "60");
+        return oauthError(c, 429, "temporarily_unavailable", "Client registration rate limit exceeded");
+      }
       return c.json({
         client_id: clientId,
         client_name: clientName,
@@ -230,7 +274,8 @@ export function registerMcpOAuthRoutes(
   });
 
   app.post("/oauth/authorize", requireMcpFeature, requireAuth({ dbFactory }), async (c) => {
-    const body = await c.req.parseBody({ all: true });
+    const body = await readBoundedForm(c, mcpOAuthLimits.tokenRequestBodyBytes);
+    if (!body) return oauthError(c, 413, "invalid_request", "Consent response is too large");
     const token = typeof body.consent_request === "string" ? body.consent_request : "";
     let request: AuthorizationRequest;
     try { request = await verifyConsentToken(token, config, now()); } catch { return oauthError(c, 400, "invalid_request", "The consent request expired or is invalid"); }
@@ -255,7 +300,8 @@ export function registerMcpOAuthRoutes(
 
   app.post("/oauth/token", async (c) => {
     const disabled = featureDisabled(c, config); if (disabled) return disabled;
-    const body = await c.req.parseBody();
+    const body = await readBoundedForm(c, mcpOAuthLimits.tokenRequestBodyBytes);
+    if (!body) return oauthError(c, 413, "invalid_request", "Token request is too large");
     const grantType = typeof body.grant_type === "string" ? body.grant_type : "";
     const clientId = typeof body.client_id === "string" ? body.client_id : "";
     const resource = typeof body.resource === "string" ? body.resource : "";
@@ -263,7 +309,8 @@ export function registerMcpOAuthRoutes(
     if (resource !== config.resource) return oauthError(c, 400, "invalid_target", "The resource parameter must exactly match the Orca MCP resource");
     const { db, sqlite } = dbFactory();
     try {
-      let pair;
+      collectMcpOAuthGarbage(db, now());
+      let pair: Awaited<ReturnType<typeof prepareMcpTokenPair>>;
       if (grantType === "authorization_code") {
         const code = typeof body.code === "string" ? body.code : "";
         const redirectUri = typeof body.redirect_uri === "string" ? body.redirect_uri : "";
@@ -278,18 +325,34 @@ export function registerMcpOAuthRoutes(
         const ownedIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, record.userId)).all().map((account) => account.id);
         const activeAccountIds = accountIds.filter((id) => ownedIds.includes(id));
         if (activeAccountIds.length === 0) return oauthError(c, 400, "invalid_grant", "The authorized Orca accounts are no longer connected");
-        const consumed = db.update(mcpAuthorizationCodes).set({ consumedAt: exchangeAt }).where(and(eq(mcpAuthorizationCodes.id, record.id), isNull(mcpAuthorizationCodes.consumedAt), gt(mcpAuthorizationCodes.expiresAt, exchangeAt))).returning({ id: mcpAuthorizationCodes.id }).get();
-        if (!consumed) return oauthError(c, 400, "invalid_grant", "The authorization code is invalid, expired, or already used");
         const connectionId = crypto.randomUUID();
-        db.insert(mcpConnections).values({ id: connectionId, userId: record.userId, clientId, resource, scopes: record.scopes, createdAt: exchangeAt, updatedAt: exchangeAt }).run();
-        for (const accountId of activeAccountIds) db.insert(mcpConnectionAccounts).values({ id: crypto.randomUUID(), connectionId, accountId, createdAt: exchangeAt }).run();
-        pair = await issueMcpTokenPair(db, connectionId, config, exchangeAt);
+        pair = await prepareMcpTokenPair({
+          connectionId,
+          userId: record.userId,
+          clientId,
+          resource,
+          scopes: parseScopes(record.scopes),
+          accountIds: activeAccountIds,
+        }, config, exchangeAt);
+        const committed = db.transaction((tx) => {
+          const consumed = tx.update(mcpAuthorizationCodes).set({ consumedAt: exchangeAt }).where(and(eq(mcpAuthorizationCodes.id, record.id), isNull(mcpAuthorizationCodes.consumedAt), gt(mcpAuthorizationCodes.expiresAt, exchangeAt))).returning({ id: mcpAuthorizationCodes.id }).get();
+          if (!consumed) return false;
+          tx.insert(mcpConnections).values({ id: connectionId, userId: record.userId, clientId, resource, scopes: record.scopes, createdAt: exchangeAt, updatedAt: exchangeAt }).run();
+          tx.insert(mcpConnectionAccounts).values(activeAccountIds.map((accountId) => ({ id: crypto.randomUUID(), connectionId, accountId, createdAt: exchangeAt }))).run();
+          tx.insert(mcpAccessTokens).values(pair.accessRecord).run();
+          tx.insert(mcpRefreshTokens).values(pair.refreshRecord).run();
+          return true;
+        });
+        if (!committed) return oauthError(c, 400, "invalid_grant", "The authorization code is invalid, expired, or already used");
       } else if (grantType === "refresh_token") {
         const refreshToken = typeof body.refresh_token === "string" ? body.refresh_token : "";
         const scopes = body.scope === undefined ? undefined : parseRequestedScopes(typeof body.scope === "string" ? body.scope : "");
         if (body.scope !== undefined && !scopes) return oauthError(c, 400, "invalid_scope", "Refresh scope must be a subset of the original read-only grant");
         try { pair = await rotateMcpRefreshToken(db, { refreshToken, clientId, resource, scopes: scopes ?? undefined }, config, now()); }
-        catch (error) { return oauthError(c, 400, error instanceof McpTokenError && error.code === "insufficient_scope" ? "invalid_scope" : "invalid_grant", error instanceof Error ? error.message : "Refresh failed"); }
+        catch (error) {
+          if (!(error instanceof McpTokenError)) throw error;
+          return oauthError(c, 400, error.code === "insufficient_scope" ? "invalid_scope" : "invalid_grant", error.message);
+        }
       } else {
         return oauthError(c, 400, "unsupported_grant_type", "Only authorization_code and refresh_token grants are supported");
       }
@@ -300,7 +363,8 @@ export function registerMcpOAuthRoutes(
 
   app.post("/oauth/revoke", async (c) => {
     const disabled = featureDisabled(c, config); if (disabled) return disabled;
-    const body = await c.req.parseBody();
+    const body = await readBoundedForm(c, mcpOAuthLimits.tokenRequestBodyBytes);
+    if (!body) return oauthError(c, 413, "invalid_request", "Revocation request is too large");
     const token = typeof body.token === "string" ? body.token : "";
     const { db, sqlite } = dbFactory();
     try { if (token) revokeMcpToken(db, token, now()); return c.body(null, 200); }

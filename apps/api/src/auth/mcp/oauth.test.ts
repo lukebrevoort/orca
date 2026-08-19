@@ -7,14 +7,14 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { decodeJwt } from "jose";
+import { decodeJwt, decodeProtectedHeader } from "jose";
 
 import { createSession } from "../session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { mcpAccessTokens, mcpConnections, mcpRefreshTokens, oauthAccounts, users } from "../../db/schema.ts";
+import { mcpAccessTokens, mcpAuthorizationCodes, mcpConnections, mcpOAuthClients, mcpRefreshTokens, oauthAccounts, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 import type { McpOAuthConfig } from "./config.ts";
-import { McpTokenError, verifyMcpAccessToken } from "./tokens.ts";
+import { collectMcpOAuthGarbage, hashMcpSecret, McpTokenError, verifyMcpAccessToken } from "./tokens.ts";
 import { requireMcpAuthorization } from "./middleware.ts";
 
 const config: McpOAuthConfig = {
@@ -24,7 +24,13 @@ const config: McpOAuthConfig = {
   accessTokenTtlMs: 10 * 60 * 1000,
   refreshTokenTtlMs: 30 * 24 * 60 * 60 * 1000,
   authorizationCodeTtlMs: 5 * 60 * 1000,
+  signingKey: new Uint8Array(32).fill(17),
+  signingKeyId: "test-mcp-v1",
+  allowedRedirectUris: ["https://chatgpt.com/connector_platform_oauth_redirect"],
+  registrationLimitPerMinute: 30,
 };
+
+const chatGptRedirect = "https://chatgpt.com/connector_platform_oauth_redirect";
 
 function pkce(value: string) {
   return createHash("sha256").update(value).digest("base64url");
@@ -64,14 +70,14 @@ describe("Orca MCP OAuth 2.1", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         client_name: "ChatGPT development connection",
-        redirect_uris: ["https://chatgpt.com/oauth/callback"],
+        redirect_uris: ["https://chatgpt.com/connector_platform_oauth_redirect"],
         token_endpoint_auth_method: "none",
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
       }),
     });
     assert.equal(response.status, 201);
-    return (await response.json()) as { client_id: string };
+    return (await response.json()) as { client_id: string; client_name: string };
   }
 
   async function authorize(app: ReturnType<typeof createApp>, clientId: string, scope = "mail:read") {
@@ -82,7 +88,7 @@ describe("Orca MCP OAuth 2.1", () => {
     const query = new URLSearchParams({
       response_type: "code",
       client_id: clientId,
-      redirect_uri: "https://chatgpt.com/oauth/callback",
+      redirect_uri: "https://chatgpt.com/connector_platform_oauth_redirect",
       resource: config.resource,
       scope,
       state: "client-state-123",
@@ -119,15 +125,23 @@ describe("Orca MCP OAuth 2.1", () => {
         client_id: clientId,
         code,
         code_verifier: verifier,
-        redirect_uri: "https://chatgpt.com/oauth/callback",
+        redirect_uri: "https://chatgpt.com/connector_platform_oauth_redirect",
         resource: config.resource,
       }).toString(),
     });
   }
 
+  function refresh(app: ReturnType<typeof createApp>, clientId: string, refreshToken: string) {
+    return app.request("/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "refresh_token", client_id: clientId, refresh_token: refreshToken, resource: config.resource }).toString(),
+    });
+  }
+
   test("publishes discovery and completes stateful authorization code + S256 PKCE", async () => {
     const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
-    const resourceMetadata = await app.request("/.well-known/oauth-protected-resource");
+    const resourceMetadata = await app.request("/.well-known/oauth-protected-resource/mcp");
     assert.equal(resourceMetadata.status, 200);
     assert.deepEqual((await resourceMetadata.json()).scopes_supported, ["mail:read", "agent_events:read"]);
     const authorizationMetadata = await app.request("/.well-known/oauth-authorization-server");
@@ -144,7 +158,7 @@ describe("Orca MCP OAuth 2.1", () => {
     const wrongResource = await app.request("/oauth/token", {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "authorization_code", client_id: client.client_id, code, code_verifier: verifier, redirect_uri: "https://chatgpt.com/oauth/callback", resource: "https://other.orca.test/mcp" }).toString(),
+      body: new URLSearchParams({ grant_type: "authorization_code", client_id: client.client_id, code, code_verifier: verifier, redirect_uri: "https://chatgpt.com/connector_platform_oauth_redirect", resource: "https://other.orca.test/mcp" }).toString(),
     });
     assert.equal(wrongResource.status, 400);
     assert.equal((await wrongResource.json()).error, "invalid_target");
@@ -158,6 +172,7 @@ describe("Orca MCP OAuth 2.1", () => {
     assert.equal(tokens.scope, "mail:read");
     assert.ok(tokens.access_token);
     assert.ok(tokens.refresh_token);
+    assert.deepEqual(decodeProtectedHeader(tokens.access_token), { alg: "HS256", typ: "at+jwt", kid: "test-mcp-v1" });
     const claims = decodeJwt(tokens.access_token);
     assert.equal(claims.iss, config.issuer);
     assert.equal(claims.aud, config.resource);
@@ -179,6 +194,12 @@ describe("Orca MCP OAuth 2.1", () => {
       const context = await verifyMcpAccessToken(db, tokens.access_token, { config, requiredScopes: ["mail:read"] });
       assert.equal(context.userId, "user_a");
       assert.deepEqual(context.accountIds, ["account_a"]);
+      process.env.SESSION_SECRET = "rotated-browser-session-secret-that-is-long-enough";
+      assert.equal((await verifyMcpAccessToken(db, tokens.access_token, { config })).userId, "user_a");
+      await assert.rejects(
+        verifyMcpAccessToken(db, tokens.access_token, { config: { ...config, signingKey: new Uint8Array(32).fill(99) } }),
+        (error: unknown) => error instanceof McpTokenError && error.code === "invalid_token",
+      );
       await assert.rejects(
         verifyMcpAccessToken(db, tokens.access_token, { config, requiredScopes: ["agent_events:read"] }),
         (error: unknown) => error instanceof McpTokenError && error.code === "insufficient_scope",
@@ -188,6 +209,15 @@ describe("Orca MCP OAuth 2.1", () => {
         (error: unknown) => error instanceof McpTokenError && error.code === "invalid_token",
       );
     } finally { sqlite.close(); }
+  });
+
+  test("registers protected-resource metadata at the full configured resource path", async () => {
+    const nestedConfig = { ...config, resource: "https://mcp.orca.test/orca/mcp" };
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: nestedConfig });
+    const metadataResponse = await app.request("/.well-known/oauth-protected-resource/orca/mcp");
+    assert.equal(metadataResponse.status, 200);
+    assert.equal((await metadataResponse.json()).resource, nestedConfig.resource);
+    assert.equal((await app.request("/.well-known/oauth-protected-resource")).status, 404);
   });
 
   test("rotates refresh tokens, detects replay, and immediately revokes the connection", async () => {
@@ -216,6 +246,90 @@ describe("Orca MCP OAuth 2.1", () => {
     try {
       await assert.rejects(verifyMcpAccessToken(db, refreshed.access_token, { config }), McpTokenError);
       assert.ok(db.select().from(mcpConnections).where(eq(mcpConnections.userId, "user_a")).get()?.revokedAt);
+    } finally { sqlite.close(); }
+  });
+
+  test("rolls back authorization-code consumption when credential persistence fails", async () => {
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
+    const client = await registerClient(app);
+    const grant = await authorize(app, client.client_id);
+    const failureDb = createDatabaseClient(dbPath);
+    failureDb.sqlite.exec("CREATE TRIGGER fail_access_insert BEFORE INSERT ON mcp_access_tokens BEGIN SELECT RAISE(ABORT, 'injected access insert failure'); END");
+    failureDb.sqlite.close();
+
+    assert.equal((await exchange(app, client.client_id, grant.code, grant.verifier)).status, 500);
+    const check = createDatabaseClient(dbPath);
+    try {
+      assert.equal(check.db.select().from(mcpAuthorizationCodes).where(eq(mcpAuthorizationCodes.codeHash, hashMcpSecret(grant.code))).get()?.consumedAt, null);
+      assert.equal(check.db.select().from(mcpConnections).all().length, 0);
+      check.sqlite.exec("DROP TRIGGER fail_access_insert");
+    } finally { check.sqlite.close(); }
+    assert.equal((await exchange(app, client.client_id, grant.code, grant.verifier)).status, 200);
+  });
+
+  test("rolls back refresh consumption when replacement credential persistence fails", async () => {
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
+    const client = await registerClient(app);
+    const grant = await authorize(app, client.client_id);
+    const initial = await (await exchange(app, client.client_id, grant.code, grant.verifier)).json();
+    const failureDb = createDatabaseClient(dbPath);
+    failureDb.sqlite.exec("CREATE TRIGGER fail_refresh_insert BEFORE INSERT ON mcp_refresh_tokens BEGIN SELECT RAISE(ABORT, 'injected refresh insert failure'); END");
+    failureDb.sqlite.close();
+
+    assert.equal((await refresh(app, client.client_id, initial.refresh_token)).status, 500);
+    const check = createDatabaseClient(dbPath);
+    try {
+      assert.equal(check.db.select().from(mcpRefreshTokens).where(eq(mcpRefreshTokens.tokenHash, hashMcpSecret(initial.refresh_token))).get()?.consumedAt, null);
+      assert.equal(check.db.select().from(mcpRefreshTokens).all().length, 1);
+      check.sqlite.exec("DROP TRIGGER fail_refresh_insert");
+    } finally { check.sqlite.close(); }
+    assert.equal((await refresh(app, client.client_id, initial.refresh_token)).status, 200);
+  });
+
+  test("bounds dynamic registration and rejects untrusted callback origins", async () => {
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: { ...config, registrationLimitPerMinute: 1 } });
+    const attacker = await app.request("/oauth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client_name: "ChatGPT", redirect_uris: ["https://attacker.example/callback"] }),
+    });
+    assert.equal(attacker.status, 400);
+    assert.equal((await attacker.json()).error, "invalid_redirect_uri");
+    const inspection = createDatabaseClient(dbPath);
+    assert.equal(inspection.db.select().from(mcpOAuthClients).all().length, 0);
+    inspection.sqlite.close();
+    const registered = await registerClient(app);
+    assert.equal(registered.client_id.length > 0, true);
+    assert.equal(registered.client_name, "ChatGPT or Codex");
+    const limited = await app.request("/oauth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client_name: "ChatGPT", redirect_uris: [chatGptRedirect] }),
+    });
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get("retry-after"), "60");
+    const oversized = await app.request("/oauth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client_name: "x".repeat(17_000), redirect_uris: [chatGptRedirect] }),
+    });
+    assert.equal(oversized.status, 413);
+  });
+
+  test("retains consumed refresh tokens for replay detection, then garbage-collects them", async () => {
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
+    const client = await registerClient(app);
+    const grant = await authorize(app, client.client_id);
+    const initial = await (await exchange(app, client.client_id, grant.code, grant.verifier)).json();
+    assert.equal((await refresh(app, client.client_id, initial.refresh_token)).status, 200);
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    try {
+      const initialHash = hashMcpSecret(initial.refresh_token);
+      assert.ok(db.select().from(mcpRefreshTokens).where(eq(mcpRefreshTokens.tokenHash, initialHash)).get()?.consumedAt);
+      collectMcpOAuthGarbage(db, new Date(Date.now() + 23 * 60 * 60 * 1000));
+      assert.ok(db.select().from(mcpRefreshTokens).where(eq(mcpRefreshTokens.tokenHash, initialHash)).get());
+      collectMcpOAuthGarbage(db, new Date(Date.now() + 25 * 60 * 60 * 1000));
+      assert.equal(db.select().from(mcpRefreshTokens).where(eq(mcpRefreshTokens.tokenHash, initialHash)).get(), undefined);
     } finally { sqlite.close(); }
   });
 
@@ -283,7 +397,7 @@ describe("Orca MCP OAuth 2.1", () => {
     resource.get("/mcp", requireMcpAuthorization({ config, requiredScopes: ["mail:read"] }), (c) => c.json({ ok: true }));
     const response = await resource.request("/mcp");
     assert.equal(response.status, 401);
-    assert.equal(response.headers.get("www-authenticate"), "Bearer resource_metadata=\"https://mcp.orca.test/.well-known/oauth-protected-resource\", scope=\"mail:read\"");
+    assert.equal(response.headers.get("www-authenticate"), "Bearer resource_metadata=\"https://mcp.orca.test/.well-known/oauth-protected-resource/mcp\", scope=\"mail:read\"");
     assert.equal((await response.json()).error.code, "invalid_token");
   });
 
@@ -294,7 +408,7 @@ describe("Orca MCP OAuth 2.1", () => {
     const session = await createSession(db, "user_a");
     sqlite.close();
     const query = new URLSearchParams({
-      response_type: "code", client_id: client.client_id, redirect_uri: "https://chatgpt.com/oauth/callback",
+      response_type: "code", client_id: client.client_id, redirect_uri: "https://chatgpt.com/connector_platform_oauth_redirect",
       resource: config.resource, scope: "mail:write", state: "write-state",
       code_challenge: pkce("write-scope-verifier-with-at-least-forty-three-characters"), code_challenge_method: "S256",
     });
