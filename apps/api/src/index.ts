@@ -67,6 +67,8 @@ import {
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
+import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
+import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
@@ -110,6 +112,7 @@ type CreateAppOptions = {
   mcpBoundaryPolicy?: OrcaAgentBoundaryPolicy;
   mcpTokenVerifier?: OrcaMcpTokenVerifier;
   mcpEnv?: NodeJS.ProcessEnv;
+  mcpOAuthConfig?: McpOAuthConfig;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -264,6 +267,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     app.get(metadataPath, (c) => c.json(mcpHandler.metadata!));
   }
   app.all("/mcp", (c) => mcpHandler.fetch(c.req.raw));
+  registerMcpOAuthRoutes(app, {
+    dbFactory,
+    config: options.mcpOAuthConfig ?? getMcpOAuthConfig(),
+    now,
+  });
 
   app.get("/health", (c) =>
     c.json({

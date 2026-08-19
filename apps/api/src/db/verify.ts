@@ -22,6 +22,12 @@ const requiredTables = [
   "gmail_label_migrations",
   "gmail_label_collection_imports",
   "contacts",
+  "mcp_oauth_clients",
+  "mcp_authorization_codes",
+  "mcp_connections",
+  "mcp_connection_accounts",
+  "mcp_access_tokens",
+  "mcp_refresh_tokens",
 ];
 
 const { db, sqlite } = createDatabaseClient(databasePath);

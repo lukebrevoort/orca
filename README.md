@@ -136,6 +136,15 @@ Variables required by the auth/session foundation when that code path is exercis
 - `SESSION_SECRET`: signing secret for the Orca session cookie. Must be at least 32 characters.
 - `TOKEN_ENCRYPTION_KEY`: base64-encoded 32-byte key used for AES-GCM encryption of provider tokens at rest.
 
+Variables for the default-off M6 ChatGPT/Codex MCP OAuth boundary:
+
+- `ORCA_M6_MCP_ENABLED`: set to `true` only after the read-only MCP resource is deployed. Disabled environments return `404` from discovery, registration, token, and connection APIs.
+- `ORCA_M6_MCP_ISSUER`: exact public authorization-server identifier. Use HTTPS in production and keep it identical across discovery, consent responses, and access-token `iss` validation.
+- `ORCA_M6_MCP_RESOURCE`: exact public MCP resource identifier, normally `https://<host>/mcp`. It is round-tripped through authorization/token requests and becomes both the access-token `aud` and `resource` claim.
+- `ORCA_M6_MCP_ACCESS_TOKEN_TTL_SECONDS`: optional access-token lifetime, capped at 600 seconds.
+- `ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS`: optional rotating refresh-token lifetime, capped at 30 days.
+- `ORCA_M6_MCP_AUTHORIZATION_CODE_TTL_SECONDS`: optional single-use authorization-code lifetime; defaults to 300 seconds.
+
 Variables reserved for the upcoming Gmail connect flow:
 
 - `GMAIL_CLIENT_ID`
@@ -179,6 +188,45 @@ The BRE-159 M3 writing and delivery verification guide is available at
 `http://localhost:5173/docs/bre-159-validation.html`.
 The BRE-252 M5 fixture, Human Inbox, and milestone closeout guide is available at
 `http://localhost:5173/docs/bre-252-validation.html`.
+
+## ChatGPT/Codex MCP OAuth 2.1
+
+BRE-267 adds Orca's authorization layer for the read-only MCP resource planned in
+BRE-265. ChatGPT or Codex is the OAuth client; Orca does not sign into ChatGPT,
+invoke an OpenAI model, or store an OpenAI API key or ChatGPT credential.
+
+The authorization server publishes protected-resource and authorization-server
+metadata, supports dynamic client registration for public clients, and requires
+authorization code + S256 PKCE. A signed, 10-minute access token carries exact
+issuer, audience/resource, subject, client, scope, account, expiry, and token-ID
+claims. Every use is also checked against the hashed token record, live connection,
+current scope grant, and currently connected user-owned accounts. Rotating refresh
+tokens are random opaque values stored only as SHA-256 hashes; replay revokes the
+entire connection. Authorization codes and access tokens are also stored only by
+hash. Revocation therefore takes effect on the next MCP request rather than waiting
+for access-token expiry.
+
+Operational requirements:
+
+1. Apply `apps/api/drizzle/0020_mcp_oauth.sql` before enabling the feature.
+2. Use durable SQLite storage shared by every API instance. All instances must use
+   the same `SESSION_SECRET`, which signs Orca sessions, consent requests, and MCP
+   access tokens. Rotating it invalidates outstanding access/consent material.
+3. Deploy the authorization and MCP resource identifiers over HTTPS and set the
+   exact values above. Do not change trailing paths after clients are linked.
+4. Keep `ORCA_M6_MCP_ENABLED=false` until the BRE-261 boundary and BRE-265 `/mcp`
+   resource are present. The MCP resource should call `verifyMcpAccessToken` with a
+   per-tool required scope and use `buildMcpWwwAuthenticate` for `401` challenges.
+5. Do not log authorization codes, access/refresh tokens, provider tokens, request
+   authorization headers, client secrets, OpenAI keys, or email bodies.
+
+The user can inspect active and revoked links, their exact scopes/accounts, and last
+use in Settings → Agent connections. Revoking one link or all links immediately
+invalidates access and refresh material. Removing a mail account also removes it
+from every live agent authorization; deleting the Orca user cascades all grants.
+
+The manual setup, endpoint contract, migration notes, and review checklist are at
+`http://localhost:5173/docs/bre-267-validation.html`.
 
 ### Gmail push sync
 

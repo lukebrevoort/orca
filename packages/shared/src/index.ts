@@ -46,6 +46,11 @@ export type {
 export {
   authSessionSchema,
   authUserSchema,
+  mcpConnectionAccountSchema,
+  mcpConnectionPageSchema,
+  mcpConnectionSchema,
+  mcpOAuthScopeSchema,
+  orcaMcpAuthorizationContextSchema,
   createProviderPageSchema,
   inboxMessagePageSchema,
   inboxMessageSchema,
@@ -189,6 +194,11 @@ export type {
 export type {
   AuthSession,
   AuthUser,
+  McpConnection,
+  McpConnectionAccount,
+  McpConnectionPage,
+  McpOAuthScope,
+  OrcaMcpAuthorizationContext,
   AttentionBehavior,
   AttentionViewSetting,
   HumanClassification,

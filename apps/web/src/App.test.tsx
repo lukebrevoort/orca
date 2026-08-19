@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { m5InboxFixture } from "@orca/shared";
-import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readStoredPreferences, readStoredProfilePhoto, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
+import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
@@ -189,11 +189,36 @@ describe("App", () => {
     expect(html).toContain("Writing");
     expect(html).toContain("Open new writing in Zen mode");
     expect(html).toContain("Privacy &amp; data");
+    expect(html).toContain("Agent connections");
+    expect(html).toContain("ChatGPT development connection");
+    expect(html).toContain("Revoke connection");
+    expect(html).toContain("Revoke all agent connections");
+    expect(html).toContain("Mail read · Agent events read");
     expect(html).toContain("Save account choices");
     expect(darkHtml).toContain('aria-label="Switch to light mode"');
     expect(darkHtml).toContain("Appearance &amp; reading");
     expect(darkHtml).toContain('value="dark"');
     expect(darkHtml.match(/preference-option-selected/g)).toHaveLength(6);
+  });
+
+  test("uses authenticated revocation endpoints for one or every agent connection", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ input: string; method: string | undefined; credentials: RequestCredentials | undefined }> = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      requests.push({ input: String(input), method: init?.method, credentials: init?.credentials });
+      return new Response(init?.method === "POST" ? JSON.stringify({ revoked: 2 }) : null, {
+        status: init?.method === "POST" ? 200 : 204,
+        headers: init?.method === "POST" ? { "content-type": "application/json" } : undefined,
+      });
+    }) as typeof fetch;
+    try {
+      await revokeAgentConnection("connection/with spaces");
+      expect(await revokeAllAgentConnections()).toEqual({ revoked: 2 });
+      expect(requests).toEqual([
+        { input: "/v1/mcp/connections/connection%2Fwith%20spaces", method: "DELETE", credentials: "include" },
+        { input: "/v1/mcp/connections/revoke-all", method: "POST", credentials: "include" },
+      ]);
+    } finally { globalThis.fetch = originalFetch; }
   });
 
   test("resumes Gmail sync until label migration data is ready", async () => {

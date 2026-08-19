@@ -496,3 +496,133 @@ export const sessions = sqliteTable(
     expiresAtIdx: index("sessions_expires_at_idx").on(table.expiresAt),
   }),
 );
+
+export const mcpOAuthClients = sqliteTable(
+  "mcp_oauth_clients",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    redirectUris: text("redirect_uris").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+);
+
+export const mcpAuthorizationCodes = sqliteTable(
+  "mcp_authorization_codes",
+  {
+    id: text("id").primaryKey(),
+    codeHash: text("code_hash").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => mcpOAuthClients.id, { onDelete: "cascade" }),
+    redirectUri: text("redirect_uri").notNull(),
+    resource: text("resource").notNull(),
+    scopes: text("scopes").notNull(),
+    accountIds: text("account_ids").notNull(),
+    codeChallenge: text("code_challenge").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    codeHashUniqueIdx: uniqueIndex("mcp_authorization_codes_code_hash_unique_idx").on(table.codeHash),
+    expiresAtIdx: index("mcp_authorization_codes_expires_at_idx").on(table.expiresAt),
+  }),
+);
+
+export const mcpConnections = sqliteTable(
+  "mcp_connections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => mcpOAuthClients.id, { onDelete: "cascade" }),
+    resource: text("resource").notNull(),
+    scopes: text("scopes").notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    userIdx: index("mcp_connections_user_idx").on(table.userId),
+  }),
+);
+
+export const mcpConnectionAccounts = sqliteTable(
+  "mcp_connection_accounts",
+  {
+    id: text("id").primaryKey(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => mcpConnections.id, { onDelete: "cascade" }),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    connectionAccountUniqueIdx: uniqueIndex("mcp_connection_accounts_connection_account_unique_idx").on(table.connectionId, table.accountId),
+    accountIdx: index("mcp_connection_accounts_account_idx").on(table.accountId),
+  }),
+);
+
+export const mcpAccessTokens = sqliteTable(
+  "mcp_access_tokens",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => mcpConnections.id, { onDelete: "cascade" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    tokenHashUniqueIdx: uniqueIndex("mcp_access_tokens_token_hash_unique_idx").on(table.tokenHash),
+    connectionIdx: index("mcp_access_tokens_connection_idx").on(table.connectionId),
+    expiresAtIdx: index("mcp_access_tokens_expires_at_idx").on(table.expiresAt),
+  }),
+);
+
+export const mcpRefreshTokens = sqliteTable(
+  "mcp_refresh_tokens",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    connectionId: text("connection_id")
+      .notNull()
+      .references(() => mcpConnections.id, { onDelete: "cascade" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    tokenHashUniqueIdx: uniqueIndex("mcp_refresh_tokens_token_hash_unique_idx").on(table.tokenHash),
+    connectionIdx: index("mcp_refresh_tokens_connection_idx").on(table.connectionId),
+    expiresAtIdx: index("mcp_refresh_tokens_expires_at_idx").on(table.expiresAt),
+  }),
+);

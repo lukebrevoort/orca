@@ -215,6 +215,19 @@ textarea {
 .settings-account-row { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 12px; display: flex; gap: 16px; justify-content: space-between; padding: 13px 14px; }
 .settings-account-row > div { display: grid; gap: 4px; min-width: 0; }
 .settings-account-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-connection-list { display: grid; gap: 10px; margin-top: 18px; }
+.agent-connection-row { align-items: center; background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 14px; display: grid; gap: 12px 18px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; padding: 15px; }
+.agent-connection-row[data-revoked="true"] { background: var(--orca-control); }
+.agent-connection-main, .agent-connection-detail { display: grid; gap: 4px; min-width: 0; }
+.agent-connection-main strong, .agent-connection-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-connection-main small, .agent-connection-detail small, .agent-connection-detail span { color: var(--orca-muted); font-size: 11px; }
+.agent-connection-status { color: var(--orca-accent); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.agent-connection-row[data-revoked="true"] .agent-connection-status { color: var(--orca-muted); }
+.agent-connection-actions { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-top: 16px; }
+.agent-connection-revoke, .agent-connection-revoke-all { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 11px; font-weight: 700; padding: 9px 13px; }
+.agent-connection-revoke:hover:not(:disabled), .agent-connection-revoke-all:hover:not(:disabled) { background: var(--orca-surface); border-color: var(--orca-accent); color: var(--orca-ink); }
+.agent-connection-revoke:focus-visible, .agent-connection-revoke-all:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.agent-connection-revoke:disabled, .agent-connection-revoke-all:disabled { background: var(--orca-control); border-color: var(--orca-border); color: var(--orca-muted); cursor: not-allowed; opacity: 1; }
 .settings-account-provider { color: var(--orca-muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .settings-account-capability { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); flex: none; font-size: 10px; font-weight: 750; padding: 7px 9px; }
 .settings-account-status { color: var(--orca-muted); font-size: 13px; line-height: 1.5; margin: 0; }
@@ -324,6 +337,12 @@ textarea {
   .preferences-intro h1 { font-size: clamp(50px, 15vw, 70px); }
   .settings-home-page { padding: 18px 16px 48px; }.settings-home-layout { grid-template-columns: 1fr; margin-top: 46px; }.settings-home-nav { border-bottom: 1px solid var(--orca-border); display: flex; overflow-x: auto; padding-bottom: 12px; position: static; }.settings-home-nav .settings-eyebrow { display: none; }.settings-home-nav a { border-left: 0; white-space: nowrap; }.settings-save-bar { align-items: start; flex-direction: column; gap: 10px; }.settings-save-button { width: 100%; }
   .onboarding-page { padding: 18px 16px 36px; }.onboarding-card { margin: 34px 0 0; padding: 28px 24px; }.onboarding-actions { align-items: stretch; flex-direction: column; }.onboarding-enter { justify-content: space-between; }.onboarding-actions p { max-width: none; }
+}
+
+@media (max-width: 760px) {
+  .agent-connection-row { align-items: start; grid-template-columns: 1fr; }
+  .agent-connection-revoke { justify-self: start; }
+  .agent-connection-actions { align-items: flex-start; flex-direction: column; }
 }
 
 .attention-settings-page {
