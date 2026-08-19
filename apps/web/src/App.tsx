@@ -66,6 +66,12 @@ const pinAttentionOptions: Array<{ id: InboxFilter; label: string }> = [
   { id: "normal", label: "Flow" },
 ];
 
+const pinClassificationOptions: Array<{ id: Exclude<ClassificationView, "all">; label: string }> = [
+  { id: "human", label: "Human Inbox" },
+  { id: "tideline", label: "Tideline" },
+  { id: "uncertain", label: "Review" },
+];
+
 const pinIconOptions: Array<{ id: PinIcon; label: string; glyph: string }> = [
   { id: "person", label: "Person", glyph: "@" },
   { id: "thread", label: "Thread", glyph: "↗" },
@@ -1196,12 +1202,13 @@ export function InboxApp({
   );
   const activePin = useMemo(
     () => pins.find((pin) => (pin.kind === "sender" || pin.kind === "filter") && isTopBarPinActive(pin, {
+      classificationView,
       inboxFilter,
       personFilter,
       searchQuery: streamQuery,
       viewMode: activeCollectionId ? "collection" : activeMailbox,
     })) ?? null,
-    [activeCollectionId, activeMailbox, inboxFilter, personFilter, pins, streamQuery],
+    [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
   const automatedMessages = useMemo(
     () => getLatestThreadRows(allMailMessages).filter(isTidelineMessage),
@@ -1441,7 +1448,6 @@ export function InboxApp({
     runUiTransition("content", () => {
       setClassificationView(view);
       setActiveCollectionId(null);
-      setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
       setClassificationActionError(null);
@@ -1731,6 +1737,9 @@ export function InboxApp({
       if (!filter) return;
       runUiTransition("content", () => {
         setActiveMailbox(filter.mailbox);
+        if (filter.mailbox === "inbox" || filter.mailbox === "all") {
+          setClassificationView(pinFilterClassificationView(filter) ?? "human");
+        }
         setActiveCollectionId(null);
         setInboxFilter(filter.attention);
         setPersonFilter(filter.person);
@@ -1741,9 +1750,31 @@ export function InboxApp({
       });
     }
     if (pin.kind === "thread") {
-      const message = messages.find((item) => item.threadId === pin.targetId);
+      const message = allMailMessages.find((item) => item.threadId === pin.targetId);
       if (message) openThread(message);
     }
+  }
+
+  async function updateSelectedSenderAttention(selectedMessages: InboxMessage[], behavior: AttentionBehavior) {
+    const addresses = [...new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
+    if (!addresses.length) return;
+    if (!demoMode) {
+      await Promise.all(addresses.map(async (address) => {
+        const resolution = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
+        const existingRule = resolution.rule?.scope === "address" && resolution.rule.value === address
+          ? resolution.rule
+          : null;
+        await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
+          method: existingRule ? "PATCH" : "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
+        });
+      }));
+    }
+    setAttentionByAddress((current) => Object.fromEntries([
+      ...Object.entries(current),
+      ...addresses.map((address) => [address, behavior] as const),
+    ]));
   }
 
   function selectInboxFilter(filter: InboxFilter) {
@@ -1888,7 +1919,6 @@ export function InboxApp({
               isLoadingMoreMessages={isLoadingMoreMessages}
               isCollectionView={Boolean(activeCollection)}
               collection={activeCollection}
-              currentViewLabel={activeMailboxLabel}
               allMessages={allMailMessages}
               attentionByAddress={attentionByAddress}
               activePin={activePin}
@@ -1915,6 +1945,7 @@ export function InboxApp({
               isRefreshing={status === "syncing" && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
+              onBulkAttentionChange={updateSelectedSenderAttention}
               onInboxFilterChange={selectInboxFilter}
               onOpenOrganizer={openOrganizer}
               onFinishLater={(reminder) => void finishReminder(reminder)}
@@ -2850,9 +2881,10 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   </aside>;
 }
 
-function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onReorderPin, onUpdatePin }: {
+function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onReorderPin, onUpdatePin }: {
   pins: Pin[];
   pinnedPeople: PersonItem[];
+  classificationView: ClassificationView;
   inboxFilter: InboxFilter;
   personFilter: string | null;
   searchQuery: string;
@@ -2921,7 +2953,7 @@ function PinRail({ pins, pinnedPeople, inboxFilter, personFilter, searchQuery, v
         const person = pin.kind === "sender"
           ? pinnedPeople.find((item) => item.filterValue === pin.targetId.trim().toLowerCase()) ?? null
           : null;
-        const active = isTopBarPinActive(pin, { inboxFilter, personFilter, searchQuery, viewMode });
+        const active = isTopBarPinActive(pin, { classificationView, inboxFilter, personFilter, searchQuery, viewMode });
         const isDragging = draggedPinId === pin.id;
         const isDropTarget = dropPinId === pin.id && !isDragging;
         return <div className={`pinned-pin-item${isDragging ? " pinned-pin-item-dragging" : ""}${isDropTarget ? " pinned-pin-item-drop-target" : ""}`} key={pin.id}>
@@ -3111,7 +3143,6 @@ function InboxView({
   pins,
   pinnedPeople,
   pinnedSenderAddresses,
-  currentViewLabel,
   reminders,
   personFilter,
   status,
@@ -3131,6 +3162,7 @@ function InboxView({
   onSelectPin,
   onRefresh,
   onAttentionChange,
+  onBulkAttentionChange,
   onInboxFilterChange,
   onOpenOrganizer,
   onFinishLater,
@@ -3160,7 +3192,6 @@ function InboxView({
   hasMoreMessages: boolean;
   isLoadingMoreMessages: boolean;
   isCollectionView: boolean;
-  currentViewLabel: string;
   allMessages: InboxMessage[];
   attentionByAddress: Record<string, AttentionBehavior>;
   activePin: Pin | null;
@@ -3187,6 +3218,7 @@ function InboxView({
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
+  onBulkAttentionChange: (messages: InboxMessage[], behavior: AttentionBehavior) => Promise<void>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onFinishLater: (reminder: Reminder) => void;
@@ -3214,12 +3246,25 @@ function InboxView({
   const [sweptThreadIds, setSweptThreadIds] = useState<Set<string>>(new Set());
   const [pinMenuOpen, setPinMenuOpen] = useState(false);
   const [pinFilterMailbox, setPinFilterMailbox] = useState<PinMailbox>("inbox");
+  const [pinFilterClassification, setPinFilterClassification] = useState<Exclude<ClassificationView, "all">>("human");
   const [pinFilterAttention, setPinFilterAttention] = useState<InboxFilter>("all");
   const [pinFilterPerson, setPinFilterPerson] = useState<string | null>(null);
   const [pinFilterQuery, setPinFilterQuery] = useState("");
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
+  const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery).filter((message) => !sweptThreadIds.has(message.threadId)), [messages, searchQuery, sweptThreadIds, viewMode]);
+  const selectedMessages = useMemo(
+    () => displayMessages.filter((message) => selectedMessageIds.has(message.id)),
+    [displayMessages, selectedMessageIds],
+  );
+  const selectedSenderCount = useMemo(
+    () => new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase())).size,
+    [selectedMessages],
+  );
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -3234,11 +3279,14 @@ function InboxView({
   const pinFilter = useMemo<PinFilter>(() => ({
     mailbox: pinFilterMailbox,
     attention: pinFilterMailbox === "inbox" ? pinFilterAttention : "all",
+    classification: pinFilterMailbox === "inbox" ? pinFilterClassification : pinFilterMailbox === "all" ? "all" : undefined,
     person: pinFilterPerson,
     query: pinFilterQuery.trim(),
-  }), [pinFilterAttention, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
+  }), [pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
   const pinPreview = useMemo(() => {
     let candidates = getMessagesForMailbox(allMessages, pinFilter.mailbox, attentionByAddress);
+    const signalView = pinFilterClassificationView(pinFilter);
+    if (signalView) candidates = candidates.filter((message) => classificationMatchesView(message, signalView));
     if (pinFilter.mailbox === "inbox" && pinFilter.attention !== "all") {
       candidates = candidates.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) === pinFilter.attention);
     }
@@ -3268,6 +3316,13 @@ function InboxView({
   }, [collection]);
 
   useEffect(() => {
+    setSelectionMode(false);
+    setSelectedMessageIds(new Set());
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+  }, [classificationView, personFilter, searchQuery, viewMode]);
+
+  useEffect(() => {
     if (!pinMenuOpen) return;
     const closeOnPointerDown = (event: PointerEvent) => {
       if (!pinMenuRef.current?.contains(event.target as Node)) setPinMenuOpen(false);
@@ -3292,6 +3347,7 @@ function InboxView({
 
   function openPinBuilder() {
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
+    setPinFilterClassification(classificationView === "all" ? "human" : classificationView);
     setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all");
     setPinFilterPerson(personFilter);
     setPinFilterQuery(searchQuery);
@@ -3323,6 +3379,40 @@ function InboxView({
       setSnoozingThreadId(null);
     }
   }
+
+  function toggleSelection(messageId: string) {
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+    setSelectedMessageIds((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  }
+
+  function closeSelectionMode() {
+    setSelectionMode(false);
+    setSelectedMessageIds(new Set());
+    setBulkAttentionStatus("idle");
+    setBulkAttentionMessage("");
+  }
+
+  async function applyBulkAttention(behavior: AttentionBehavior) {
+    if (!selectedMessages.length || bulkAttentionStatus === "saving") return;
+    const count = selectedSenderCount;
+    setBulkAttentionStatus("saving");
+    setBulkAttentionMessage("");
+    try {
+      await onBulkAttentionChange(selectedMessages, behavior);
+      setSelectedMessageIds(new Set());
+      setBulkAttentionStatus("saved");
+      setBulkAttentionMessage(`${count} ${count === 1 ? "sender" : "senders"} moved to ${behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : "Hidden"}.`);
+    } catch (error) {
+      setBulkAttentionStatus("error");
+      setBulkAttentionMessage(`Could not update the selected senders. ${getErrorMessage(error)}`);
+    }
+  }
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       <header className="pane-header">
@@ -3339,8 +3429,8 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button></div> : null}
-        {!collection ? <label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -3388,7 +3478,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        <PinRail pins={pins} pinnedPeople={pinnedPeople} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -3416,6 +3506,7 @@ function InboxView({
                   </label>
                   <div className="pin-builder-fields">
                     <label><span>View</span><select onChange={(event) => setPinFilterMailbox(event.target.value as PinMailbox)} value={pinFilterMailbox}>{pinMailboxOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                    <label><span>Signal</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterClassification(event.target.value as Exclude<ClassificationView, "all">)} value={pinFilterClassification}>{pinClassificationOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                     <label><span>Attention</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterAttention(event.target.value as InboxFilter)} value={pinFilterAttention}>{pinAttentionOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                   </div>
                   <fieldset className="pin-builder-people">
@@ -3427,7 +3518,7 @@ function InboxView({
                   </fieldset>
                   <div className="pin-builder-presets">
                     <span>Quick start</span>
-                    {canPinCurrentView ? <button onClick={() => { setPinFilterMailbox(viewMode as PinMailbox); setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all"); setPinFilterPerson(null); setPinFilterQuery(""); }} type="button">Use {currentViewLabel}</button> : null}
+                    {canPinCurrentView ? <button onClick={() => { setPinFilterMailbox(viewMode as PinMailbox); setPinFilterClassification(classificationView === "all" ? "human" : classificationView); setPinFilterAttention(viewMode === "inbox" ? inboxFilter : "all"); setPinFilterPerson(null); setPinFilterQuery(""); }} type="button">Use {classificationViewLabel(classificationView)}</button> : null}
                     {pinPeople.slice(0, 3).map((person) => <button key={person.email} onClick={() => { setPinFilterPerson(person.email); setPinFilterQuery(""); }} type="button">{person.name}</button>)}
                   </div>
                   <fieldset className="pin-builder-appearance">
@@ -3478,6 +3569,28 @@ function InboxView({
           </nav>
         ) : null}
 
+        {selectionMode ? (
+          <section aria-label="Bulk sender actions" className="bulk-action-bar">
+            <div>
+              <strong>{selectedSenderCount ? `${selectedSenderCount} ${selectedSenderCount === 1 ? "sender" : "senders"} selected` : "Select messages"}</strong>
+              <span>Changes apply to future mail from each sender.</span>
+            </div>
+            <button
+              className="bulk-select-all"
+              onClick={() => setSelectedMessageIds(selectedMessages.length === displayMessages.length ? new Set() : new Set(displayMessages.map((message) => message.id)))}
+              type="button"
+            >
+              {selectedMessages.length === displayMessages.length ? "Clear all" : "Select all visible"}
+            </button>
+            <div aria-label="Move selected senders" role="group">
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">Keep in inbox</button>
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">Quiet</button>
+              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">Hide</button>
+            </div>
+            {bulkAttentionMessage ? <p className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" ? "alert" : "status"}>{bulkAttentionMessage}</p> : null}
+          </section>
+        ) : null}
+
         <section className="inbox-body" aria-live="polite">
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
@@ -3524,10 +3637,18 @@ function InboxView({
               return (
                 <li key={message.id}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
-                  <div className="message-row-wrap">
+                  <div className={`message-row-wrap${selectedMessageIds.has(message.id) ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
+                    {selectionMode ? <button
+                      aria-label={`${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}`}
+                      aria-pressed={selectedMessageIds.has(message.id)}
+                      className="message-select-button"
+                      onClick={() => toggleSelection(message.id)}
+                      type="button"
+                    ><span aria-hidden="true">{selectedMessageIds.has(message.id) ? "✓" : ""}</span></button> : null}
                     <button
+                      aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                      onClick={() => onOpenThread(message)}
+                      onClick={() => selectionMode ? toggleSelection(message.id) : onOpenThread(message)}
                       ref={(node) => {
                         if (node) rowRefs.current.set(message.id, node);
                         else rowRefs.current.delete(message.id);
@@ -3559,8 +3680,8 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                   </button>
-                    <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
-                    {viewMode !== "later" ? <button
+                    {!selectionMode ? <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact /> : null}
+                    {!selectionMode && viewMode !== "later" ? <button
                       aria-label={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
                       aria-pressed={senderPinned}
                       className={`pin-sender-button${senderPinned ? " pin-sender-button-pinned" : ""}`}
@@ -3571,7 +3692,7 @@ function InboxView({
                     >
                       <MessageActionGlyph name="pin" />
                     </button> : null}
-                    {viewMode !== "later" ? <button
+                    {!selectionMode && viewMode !== "later" ? <button
                       aria-haspopup={onRemoveFromCollection ? undefined : "dialog"}
                       aria-label={onRemoveFromCollection ? `Remove ${message.subject || "this thread"} from collection` : `Keep ${message.subject || "this thread"} in a collection`}
                       className={`keep-thread-button${onRemoveFromCollection ? " keep-thread-button-remove" : ""}`}
@@ -3581,12 +3702,12 @@ function InboxView({
                     >
                       <MessageActionGlyph mode={onRemoveFromCollection ? "remove" : "add"} name="keep" />
                     </button> : null}
-                    {viewMode === "later" ? (() => {
+                    {!selectionMode && viewMode === "later" ? (() => {
                       const activeReminder = reminders.find((item) => item.threadId === message.threadId && (item.status === "scheduled" || item.status === "resurfaced"));
                       const snoozing = snoozingThreadId === message.threadId;
                       return <div className="later-row-actions"><span>◷ {activeReminder?.status === "resurfaced" ? "Ready now" : activeReminder ? `Returns ${formatReceivedAt(activeReminder.scheduledFor)}` : "Ready now"}</span>{activeReminder ? <button disabled={snoozing} onClick={() => onFinishLater(activeReminder)} type="button">Done</button> : null}<button aria-busy={snoozing || undefined} disabled={snoozing} onClick={() => void snoozeLater(message, activeReminder ?? null)} type="button">{snoozing ? "Snoozing…" : "Snooze"}</button></div>;
                     })() : null}
-                    <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} />
+                    {!selectionMode ? <SenderAttentionControl compact initialBehavior={message.attentionBehavior} message={message} onBehaviorChange={onAttentionChange} /> : null}
                   </div>
                 </li>
               );
@@ -4850,9 +4971,18 @@ function parsePinFilterTarget(targetId: string): PinFilter | null {
   }
 }
 
+function pinFilterClassificationView(filter: PinFilter): ClassificationView | null {
+  if (filter.mailbox === "all") return "all";
+  if (filter.mailbox !== "inbox") return null;
+  return filter.classification ?? "human";
+}
+
 function pinFilterLabel(filter: PinFilter, personName?: string | null) {
-  const mailboxLabel = pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
-  const parts = [mailboxLabel];
+  const signalView = pinFilterClassificationView(filter);
+  const viewLabel = signalView
+    ? classificationViewLabel(signalView)
+    : pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
+  const parts = [viewLabel];
   if (filter.attention !== "all") parts.push(pinAttentionOptions.find((option) => option.id === filter.attention)?.label ?? filter.attention);
   if (personName) parts.push(personName);
   if (filter.query) parts.push(`“${filter.query}”`);
@@ -4883,15 +5013,20 @@ function pinTopBarLabel(pin: Pin, person: PersonItem | null) {
   const personLabel = filter.person ? (person?.name ?? filter.person.split("@")[0]) : null;
   const parts = [personLabel?.split(/\s+/)[0], filter.query ? `“${filter.query}”` : null].filter(Boolean);
   if (parts.length) return parts.join(" · ");
-  return pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
+  const signalView = pinFilterClassificationView(filter);
+  return signalView
+    ? classificationViewLabel(signalView)
+    : pinMailboxOptions.find((option) => option.id === filter.mailbox)?.label ?? filter.mailbox;
 }
 
-function isTopBarPinActive(pin: Pin, current: { inboxFilter: InboxFilter; personFilter: string | null; searchQuery: string; viewMode: "collection" | Mailbox }) {
+function isTopBarPinActive(pin: Pin, current: { classificationView: ClassificationView; inboxFilter: InboxFilter; personFilter: string | null; searchQuery: string; viewMode: "collection" | Mailbox }) {
   if (pin.kind === "sender") return current.personFilter?.trim().toLowerCase() === pin.targetId.trim().toLowerCase();
   if (pin.kind === "view") return current.viewMode === pin.targetId;
   if (pin.kind !== "filter") return false;
   const filter = parsePinFilterTarget(pin.targetId);
   if (!filter || current.viewMode !== filter.mailbox) return false;
+  const signalView = pinFilterClassificationView(filter);
+  if (signalView && current.classificationView !== signalView) return false;
   const samePerson = (current.personFilter ?? "").trim().toLowerCase() === (filter.person ?? "").trim().toLowerCase();
   return samePerson
     && current.searchQuery.trim() === filter.query

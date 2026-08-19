@@ -659,6 +659,7 @@ export const pinColorSchema = z.string().trim().regex(/^#[0-9a-fA-F]{6}$/);
 export const pinFilterSchema = z.object({
   mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]),
   attention: z.enum(["all", "notify", "focus", "normal"]),
+  classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
   person: z.string().trim().max(500).nullable(),
   query: z.string().trim().max(200),
 }).strict();
