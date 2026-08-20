@@ -20,6 +20,7 @@ export {
   createReplyBriefInterpretationEnvelope,
   humanOwnedReplyBriefPolicy,
   m6ReplyBriefRuntimeDecision,
+  replyBriefAvailabilityContextSchema,
   replyBriefClaimCertaintySchema,
   replyBriefContractVersion,
   replyBriefContextBundleSchema,
@@ -39,6 +40,7 @@ export {
 } from "./reply-brief.ts";
 
 export type {
+  ReplyBriefAvailabilityContext,
   ReplyBriefClaimCertainty,
   ReplyBriefContextBundle,
   ReplyBriefContextMessage,

@@ -193,6 +193,59 @@ export type ReplyBriefUnavailableReason = z.infer<typeof replyBriefUnavailableRe
 
 export const replyBriefContractVersion = "reply-brief.v1" as const;
 
+export const replyBriefAvailabilityContextSchema = z.object({
+  status: z.enum(["not_requested", "free_busy_only", "unavailable"]),
+  timeZone: z.string().trim().min(1).max(100).nullable(),
+  windowStart: isoDateTimeStringSchema.nullable(),
+  windowEnd: isoDateTimeStringSchema.nullable(),
+  busy: z.array(z.object({
+    start: isoDateTimeStringSchema,
+    end: isoDateTimeStringSchema,
+  }).strict()).max(200),
+  sourceRefs: z.array(nonEmptyStringSchema.max(512)).max(10),
+}).strict().superRefine((value, context) => {
+  if (value.status === "not_requested") {
+    if (value.timeZone !== null) {
+      context.addIssue({ code: "custom", path: ["timeZone"], message: "not_requested availability cannot include a time zone" });
+    }
+    if (value.windowStart !== null || value.windowEnd !== null) {
+      context.addIssue({ code: "custom", path: ["windowStart"], message: "not_requested availability cannot include a window" });
+    }
+    if (value.busy.length > 0) {
+      context.addIssue({ code: "custom", path: ["busy"], message: "not_requested availability cannot include busy intervals" });
+    }
+    if (value.sourceRefs.length > 0) {
+      context.addIssue({ code: "custom", path: ["sourceRefs"], message: "not_requested availability cannot include source references" });
+    }
+    return;
+  }
+
+  if (value.status === "free_busy_only") {
+    if (value.timeZone === null) {
+      context.addIssue({ code: "custom", path: ["timeZone"], message: "free_busy_only availability requires a time zone" });
+    }
+    if (value.windowStart === null || value.windowEnd === null) {
+      context.addIssue({ code: "custom", path: ["windowStart"], message: "free_busy_only availability requires a complete window" });
+    } else {
+      if (Date.parse(value.windowStart) >= Date.parse(value.windowEnd)) {
+        context.addIssue({ code: "custom", path: ["windowEnd"], message: "Availability windowEnd must be after windowStart" });
+      }
+      value.busy.forEach((interval, index) => {
+        if (Date.parse(interval.start) >= Date.parse(interval.end)) {
+          context.addIssue({ code: "custom", path: ["busy", index, "end"], message: "Busy interval end must be after start" });
+        }
+        if (Date.parse(interval.start) < Date.parse(value.windowStart!) || Date.parse(interval.end) > Date.parse(value.windowEnd!)) {
+          context.addIssue({ code: "custom", path: ["busy", index], message: "Busy intervals must stay inside the availability window" });
+        }
+      });
+    }
+    if (value.sourceRefs.length === 0) {
+      context.addIssue({ code: "custom", path: ["sourceRefs"], message: "free_busy_only availability requires a source reference" });
+    }
+  }
+});
+export type ReplyBriefAvailabilityContext = z.infer<typeof replyBriefAvailabilityContextSchema>;
+
 /**
  * Closed-world guidance only. Strict objects at every level make draftText,
  * replyBody, suggestedCopy, action, compose, and send payloads invalid.
@@ -223,17 +276,7 @@ export const replyBriefOutputSchema = z.object({
     status: z.enum(["current", "stale", "unknown"]),
     statusDetail: nonEmptyStringSchema.max(240).nullable(),
   }).strict(),
-  availabilityContext: z.object({
-    status: z.enum(["not_requested", "free_busy_only", "unavailable"]),
-    timeZone: z.string().trim().min(1).max(100).nullable(),
-    windowStart: isoDateTimeStringSchema.nullable(),
-    windowEnd: isoDateTimeStringSchema.nullable(),
-    busy: z.array(z.object({
-      start: isoDateTimeStringSchema,
-      end: isoDateTimeStringSchema,
-    }).strict()).max(200),
-    sourceRefs: z.array(nonEmptyStringSchema.max(512)).max(10),
-  }).strict(),
+  availabilityContext: replyBriefAvailabilityContextSchema,
   humanAuthorship: z.object({
     owner: z.literal("human"),
     guidanceOnly: z.literal(true),
