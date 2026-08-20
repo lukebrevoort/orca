@@ -92,7 +92,7 @@ export function getMcpOAuthConfig(env: NodeJS.ProcessEnv = process.env): McpOAut
   const issuer = canonicalUrl(env.ORCA_M6_MCP_ISSUER ?? "http://localhost:3000", "ORCA_M6_MCP_ISSUER");
   const resource = canonicalUrl(env.ORCA_M6_MCP_RESOURCE ?? `${issuer}/mcp`, "ORCA_M6_MCP_RESOURCE");
   if (new URL(issuer).pathname !== "/") throw new Error("ORCA_M6_MCP_ISSUER must be an origin without a path");
-  if (env.NODE_ENV === "production" && (new URL(issuer).protocol !== "https:" || new URL(resource).protocol !== "https:")) {
+  if (enabled && env.NODE_ENV === "production" && (new URL(issuer).protocol !== "https:" || new URL(resource).protocol !== "https:")) {
     throw new Error("ORCA_M6_MCP_ISSUER and ORCA_M6_MCP_RESOURCE must use HTTPS in production");
   }
   const signingKeyId = env.ORCA_M6_MCP_SIGNING_KEY_ID ?? "mcp-v1";
