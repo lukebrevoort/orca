@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { afterEach, describe, test } from "bun:test";
+import { serve } from "@hono/node-server";
 import { jwtVerify, SignJWT } from "jose";
 import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -345,6 +346,43 @@ describe("Orca read-only MCP server", () => {
       assert.match(insufficient.headers.get("www-authenticate") ?? "", /error="insufficient_scope"/);
       assert.match(insufficient.headers.get("www-authenticate") ?? "", /scope="agent_events:read"/);
     } finally {
+      sqlite.close();
+    }
+  });
+
+  test("keeps the bearer gate closed through the live Node server adapter", async () => {
+    const requestDescriptor = Object.getOwnPropertyDescriptor(globalThis, "Request")!;
+    const responseDescriptor = Object.getOwnPropertyDescriptor(globalThis, "Response")!;
+    const loopbackIssuer = "http://127.0.0.1";
+    const loopbackResource = `${loopbackIssuer}/mcp`;
+    const { app, sqlite } = createFixture({
+      mcpBoundaryPolicy: { enabled: true, issuer: loopbackIssuer, resource: loopbackResource },
+    });
+    const server = serve({ fetch: app.fetch, port: 0 });
+
+    try {
+      if (!server.listening) await new Promise<void>((resolve) => server.once("listening", resolve));
+      const address = server.address();
+      assert.ok(address && typeof address !== "string");
+      const response = await fetch(`http://127.0.0.1:${address.port}/mcp`, {
+        method: "POST",
+        headers: {
+          accept: "application/json, text/event-stream",
+          "content-type": "application/json",
+        },
+        body: rpc("tools/list"),
+      });
+
+      assert.equal(response.status, 401);
+      assert.match(response.headers.get("www-authenticate") ?? "", /error="invalid_token"/);
+      assert.deepEqual(await response.json(), {
+        error: "invalid_token",
+        error_description: "Missing Authorization header",
+      });
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      Object.defineProperty(globalThis, "Request", requestDescriptor);
+      Object.defineProperty(globalThis, "Response", responseDescriptor);
       sqlite.close();
     }
   });

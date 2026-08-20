@@ -1,10 +1,11 @@
 import {
+  bearerAuthChallengeResponse,
   McpServer,
   createMcpHandler,
   getOAuthProtectedResourceMetadataUrl,
   hostHeaderValidationResponse,
   originValidationResponse,
-  requireBearerAuth,
+  verifyBearerToken,
   type AuthInfo,
 } from "@modelcontextprotocol/server";
 import {
@@ -421,10 +422,17 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
         const tool = orcaMcpReadOnlyTools.find((candidate) => candidate.name === name);
         if (tool) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScope)];
       }
-      const gate = requireBearerAuth({ verifier, requiredScopes, resourceMetadataUrl });
-      const authInfo = await gate(request);
-      if (authInfo instanceof Response) return authInfo;
-      return handler.fetch(request, { authInfo });
+      const bearerOptions = { verifier, requiredScopes, resourceMetadataUrl };
+      const [authorizationHeader] = (request.headers.get("authorization") ?? "").split(",");
+      // Keep the success and challenge branches explicit: @hono/node-server
+      // swaps the global Response constructor, so cross-realm instanceof checks
+      // can misclassify a 401 challenge as AuthInfo in the live Bun process.
+      try {
+        const authInfo = await verifyBearerToken(authorizationHeader || undefined, bearerOptions);
+        return handler.fetch(request, { authInfo });
+      } catch (error) {
+        return bearerAuthChallengeResponse(error, bearerOptions);
+      }
     },
   };
 }
