@@ -45,6 +45,49 @@ describe("M6 Reply Brief runtime and data boundary", () => {
     }).success, false);
   });
 
+  test("allows only credential-free, query-free HTTP(S) source links", () => {
+    const validBrief = createDeterministicReplyBrief(redactedSchedulingReplyBriefFixture);
+    const unsafeUrls = [
+      "javascript:alert(document.domain)",
+      "data:text/html,<script>alert(1)</script>",
+      "file:///etc/passwd",
+    ];
+
+    for (const sourceUrl of unsafeUrls) {
+      assert.equal(replyBriefContextBundleSchema.safeParse({
+        ...redactedSchedulingReplyBriefFixture,
+        sources: redactedSchedulingReplyBriefFixture.sources.map((source, index) =>
+          index === 0 ? { ...source, sourceUrl } : source
+        ),
+      }).success, false, `context should reject ${sourceUrl}`);
+
+      assert.equal(replyBriefOutputSchema.safeParse({
+        ...validBrief,
+        sourceRefs: validBrief.sourceRefs.map((source, index) =>
+          index === 0 ? { ...source, sourceUrl } : source
+        ),
+      }).success, false, `output should reject ${sourceUrl}`);
+    }
+
+    for (const sourceUrl of ["https://orca.example/thread/1#message-2", "http://localhost:5173/thread/1"]) {
+      assert.equal(replyBriefOutputSchema.safeParse({
+        ...validBrief,
+        sourceRefs: validBrief.sourceRefs.map((source, index) =>
+          index === 0 ? { ...source, sourceUrl } : source
+        ),
+      }).success, true, `output should allow ${sourceUrl}`);
+    }
+
+    for (const sourceUrl of ["https://user@orca.example/thread/1", "https://orca.example/thread/1?token=secret"]) {
+      assert.equal(replyBriefOutputSchema.safeParse({
+        ...validBrief,
+        sourceRefs: validBrief.sourceRefs.map((source, index) =>
+          index === 0 ? { ...source, sourceUrl } : source
+        ),
+      }).success, false, `output should retain sensitive URL restrictions for ${sourceUrl}`);
+    }
+  });
+
   test("rejects a model response that includes draft copy", () => {
     const valid = createDeterministicReplyBrief(redactedSchedulingReplyBriefFixture);
 

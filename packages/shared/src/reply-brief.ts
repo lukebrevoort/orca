@@ -42,14 +42,26 @@ export const replyBriefDisclosureCopy = Object.freeze({
   },
 });
 
+/** Source references are rendered as links, so only web URLs may cross this boundary. */
+export const replyBriefSourceUrlSchema = z.string().url().max(2_048).refine((value) => {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.username === "" &&
+      url.password === "" &&
+      url.search === ""
+    );
+  } catch {
+    return false;
+  }
+}, { message: "Source URLs must use HTTP(S) and contain no credentials or query parameters" });
+
 export const replyBriefContextSourceSchema = z.object({
   id: nonEmptyStringSchema.max(512),
   kind: z.enum(["message", "thread"]),
   label: nonEmptyStringSchema.max(160),
-  sourceUrl: z.string().url().max(2_048).refine((value) => {
-    const url = new URL(value);
-    return url.username === "" && url.password === "" && url.search === "";
-  }, { message: "Source URLs must not contain credentials or query parameters" }),
+  sourceUrl: replyBriefSourceUrlSchema,
   observedAt: isoDateTimeStringSchema,
 }).strict();
 export type ReplyBriefContextSource = z.infer<typeof replyBriefContextSourceSchema>;
@@ -141,7 +153,7 @@ export const replyBriefSourceRefSchema = z.object({
   id: nonEmptyStringSchema.max(512),
   kind: z.enum(["message", "thread", "availability"]),
   label: nonEmptyStringSchema.max(160),
-  sourceUrl: z.string().url().max(2_048).nullable(),
+  sourceUrl: replyBriefSourceUrlSchema.nullable(),
   observedAt: isoDateTimeStringSchema,
 }).strict();
 export type ReplyBriefSourceRef = z.infer<typeof replyBriefSourceRefSchema>;

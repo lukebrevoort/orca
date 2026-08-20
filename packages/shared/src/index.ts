@@ -22,6 +22,7 @@ export {
   replyBriefFreeBusySchema,
   replyBriefOutputSchema,
   replyBriefSourceRefSchema,
+  replyBriefSourceUrlSchema,
 } from "./reply-brief.ts";
 
 export type {
