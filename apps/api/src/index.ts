@@ -10,7 +10,15 @@ import {
   type HumanClassificationResult,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
+  type InboxClassificationResponse,
+  type InboxMessage,
+  type MailAccount,
   type MailProvider,
+  type McpGetConnectionStatusInput,
+  type McpGetThreadInput,
+  type McpListAgentEventsInput,
+  type McpSearchMailInput,
+  type ThreadDetail,
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
@@ -80,6 +88,10 @@ import { providerRegistry as defaultProviderRegistry, type ProviderRegistry } fr
 import { ProviderNotImplementedError, type ProviderTransport } from "./providers/shared/interfaces.ts";
 import { handleFeedbackRequest } from "./feedback.ts";
 import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
+import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agents/boundary.ts";
+import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
+import type { OrcaMcpTokenVerifier } from "./agents/access-token.ts";
+import type { AgentEventStore } from "./agents/interfaces.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -94,6 +106,10 @@ type CreateAppOptions = {
   now?: () => Date;
   mirrorDraft?: (db: Database, input: GmailDraftMirrorInput) => Promise<GmailDraftMirrorResult>;
   deleteProviderDraft?: (db: Database, accountId: string, providerDraftId: string) => Promise<void>;
+  agentEventStore?: Pick<AgentEventStore, "list">;
+  mcpBoundaryPolicy?: OrcaAgentBoundaryPolicy;
+  mcpTokenVerifier?: OrcaMcpTokenVerifier;
+  mcpEnv?: NodeJS.ProcessEnv;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -156,6 +172,98 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       origin: [serverConfig.webOrigin],
     }),
   );
+
+  const mcpPolicy = options.mcpBoundaryPolicy ?? getOrcaAgentBoundaryPolicy(options.mcpEnv);
+  const mcpDataSource: OrcaMcpDataSource = {
+    getCurrentAccountIds(userId) {
+      const { db, sqlite } = dbFactory();
+      try {
+        return getUnifiedInboxAccounts(db, userId).map((account) => account.id);
+      } finally {
+        sqlite.close();
+      }
+    },
+    searchMail({ userId, allowedAccountIds, query }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const allowed = new Set(allowedAccountIds);
+        const accounts = getUnifiedInboxAccounts(db, userId).filter((account) => allowed.has(account.id));
+        if (accounts.length === 0) throw new McpReadError("account_denied", "No authorized mail account is connected");
+        return readUnifiedInbox(db, accounts, accounts.map(serializeMailAccount), {
+          cursor: query.cursor,
+          limit: query.limit ?? 25,
+          view: query.attention,
+          classification: query.classification,
+          query: query.query,
+          sender: query.sender,
+          receivedAfter: query.receivedAfter,
+          receivedBefore: query.receivedBefore,
+        });
+      } finally {
+        sqlite.close();
+      }
+    },
+    getThread({ userId, allowedAccountIds, query }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccountById(db, userId, query.accountId);
+        if (!account || !allowedAccountIds.includes(account.id)) {
+          throw new McpReadError("not_found", "Thread not found");
+        }
+        return readThreadDetail(db, account, serializeMailAccount(account), query.threadId);
+      } finally {
+        sqlite.close();
+      }
+    },
+    async listAgentEvents({ userId, allowedAccountIds, query }) {
+      if (!options.agentEventStore) return { events: [], nextCursor: null };
+      return options.agentEventStore.list({
+        ownerUserId: userId,
+        accountIds: allowedAccountIds,
+        states: query.states,
+        limit: query.limit ?? 25,
+        cursor: query.cursor,
+      });
+    },
+    getConnectionStatus({ userId, allowedAccountIds }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const allowed = new Set(allowedAccountIds);
+        return getUnifiedInboxAccounts(db, userId)
+          .filter((account) => allowed.has(account.id))
+          .map((account) => {
+            const activeStatus = syncStatuses.get(account.id);
+            const authNeeded = !account.accessTokenEncrypted || !account.refreshTokenEncrypted;
+            const syncState = activeStatus?.state ?? (authNeeded ? "auth_needed" : "idle");
+            const serialized = serializeMailAccount(account);
+            return {
+              account: serialized,
+              syncState,
+              ready: serialized.capabilities.read && syncState !== "auth_needed" && syncState !== "error",
+              lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
+            };
+          });
+      } finally {
+        sqlite.close();
+      }
+    },
+    sourceUrl(accountId, threadId) {
+      const url = new URL("/", serverConfig.webOrigin);
+      url.searchParams.set("thread", threadId);
+      url.searchParams.set("accountId", accountId);
+      return url.toString();
+    },
+  };
+  const mcpHandler = createOrcaMcpHttpHandler({
+    dataSource: mcpDataSource,
+    env: options.mcpEnv,
+    policy: mcpPolicy,
+    verifier: options.mcpTokenVerifier,
+  });
+  for (const metadataPath of mcpHandler.metadataPaths) {
+    app.get(metadataPath, (c) => c.json(mcpHandler.metadata!));
+  }
+  app.all("/mcp", (c) => mcpHandler.fetch(c.req.raw));
 
   app.get("/health", (c) =>
     c.json({
@@ -1268,7 +1376,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     requireAuth({ dbFactory }),
     (c) => {
       const { cursor, limit = defaultInboxLimit, view, classification } = c.req.valid("query");
-      const classificationFilter = classification ?? "all";
       const useClassificationResponse = classification !== undefined;
       const { db, sqlite } = dbFactory();
       try {
@@ -1276,130 +1383,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (accounts.length === 0) {
           return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
         }
-        const accountIds = accounts.map((account) => account.id).sort();
-
-        const resolved: ResolvedInboxMessage[] = [];
-        for (const account of accounts) {
-          const rows = db.select({
-            id: emails.id,
-            accountId: emails.accountId,
-            providerMessageId: emails.providerMessageId,
-            threadId: emails.threadId,
-            fromAddress: emails.fromAddress,
-            fromName: emails.fromName,
-            subject: emails.subject,
-            snippet: emails.snippet,
-            receivedAt: emails.receivedAt,
-            isRead: emails.isRead,
-            humanSignal: emails.humanSignal,
-            humanClassification: emails.humanClassification,
-            humanClassificationReasons: emails.humanClassificationReasons,
-            humanClassifierVersion: emails.humanClassifierVersion,
-            labelName: labels.name,
-          }).from(emails)
-            .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
-            .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-            .where(eq(emails.accountId, account.id))
-            .orderBy(desc(emails.receivedAt), asc(emails.id), asc(labels.name))
-            .all();
-          const byId = new Map<string, InboxDatabaseMessage>();
-          for (const row of rows) {
-            const message = byId.get(row.id) ?? {
-              id: row.id,
-              accountId: row.accountId,
-              providerMessageId: row.providerMessageId,
-              threadId: row.threadId,
-              fromAddress: row.fromAddress,
-              fromName: row.fromName,
-              subject: row.subject,
-              snippet: row.snippet,
-              receivedAt: row.receivedAt,
-              isRead: row.isRead,
-              humanSignal: row.humanSignal,
-              humanClassification: row.humanClassification,
-              humanClassificationReasons: row.humanClassificationReasons,
-              humanClassifierVersion: row.humanClassifierVersion,
-              labels: [],
-            };
-            if (row.labelName && !message.labels.includes(row.labelName)) message.labels.push(row.labelName);
-            byId.set(row.id, message);
+        try {
+          const result = readUnifiedInbox(db, accounts, accounts.map(serializeMailAccount), {
+            cursor,
+            limit,
+            view,
+            classification,
+          });
+          return jsonWithSchema(c, inboxResponseSchema, {
+            ...result,
+            counts: useClassificationResponse ? result.counts : result.counts.attention,
+          });
+        } catch (error) {
+          if (error instanceof McpReadError && error.code === "invalid_cursor") {
+            return c.json({ error: { code: error.code, message: error.message } }, 400);
           }
-
-          const rules = listSenderRules(db, account.id);
-          const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
-          for (const message of byId.values()) {
-            const humanClassification = resolveHumanClassification(message, resolveClassification);
-            resolved.push({
-              ...message,
-              provider: account.provider,
-              attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
-              humanSignal: humanClassification.effective.score,
-              humanClassification,
-            });
-          }
+          throw error;
         }
-
-        const counts = {
-          attention: {
-            focus: resolved.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
-            normal: resolved.filter((message) => message.attentionBehavior === "normal").length,
-            quiet: resolved.filter((message) => message.attentionBehavior === "quiet").length,
-            hidden: resolved.filter((message) => message.attentionBehavior === "hidden").length,
-            all: resolved.length,
-          },
-          classification: {
-            likely_human: resolved.filter((message) => message.humanClassification.effective.classification === "likely_human").length,
-            automated_or_bulk: resolved.filter((message) => message.humanClassification.effective.classification === "automated_or_bulk").length,
-            uncertain: resolved.filter((message) => message.humanClassification.effective.classification === "uncertain").length,
-            unclassified: resolved.filter((message) => message.humanClassification.effective.classification === "unclassified").length,
-            all: resolved.length,
-          },
-        };
-        const filtered = resolved.filter((message) =>
-          matchesAttentionView(message.attentionBehavior, view)
-          && matchesHumanClassificationView(message.humanClassification.effective.classification, classificationFilter),
-        );
-        filtered.sort(compareInboxMessages);
-        const cursorTarget = decodeInboxCursor(cursor);
-        if (cursor && (!cursorTarget
-          || cursorTarget.view !== (view ?? "default")
-          || cursorTarget.classification !== classificationFilter
-          || JSON.stringify(cursorTarget.accountIds) !== JSON.stringify(accountIds)
-          || !accounts.some((account) => account.id === cursorTarget.accountId))) {
-          return c.json({ error: { code: "invalid_cursor", message: "The inbox cursor does not match this account set or filter" } }, 400);
-        }
-        const cursorIndex = cursorTarget
-          ? filtered.findIndex((message) => message.id === cursorTarget.id && message.accountId === cursorTarget.accountId)
-          : -1;
-        if (cursorTarget && cursorIndex < 0) {
-          return c.json({ error: { code: "invalid_cursor", message: "The inbox cursor is not part of this filtered result" } }, 400);
-        }
-        const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-        const page = filtered.slice(start, start + limit);
-        const lastMessage = page.at(-1);
-        return jsonWithSchema(c, inboxResponseSchema, {
-          accounts: accounts.map(serializeMailAccount),
-          messages: page.map((message) => ({
-            id: message.id,
-            accountId: message.accountId,
-            provider: message.provider,
-            providerMessageId: message.providerMessageId,
-            threadId: message.threadId,
-            from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
-            subject: message.subject ?? "",
-            snippet: message.snippet ?? "",
-            receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
-            unread: !message.isRead,
-            labels: message.labels,
-            attentionBehavior: message.attentionBehavior,
-            humanSignal: message.humanSignal,
-            humanClassification: message.humanClassification,
-          })),
-          counts: useClassificationResponse ? counts : counts.attention,
-          nextCursor: lastMessage && start + page.length < filtered.length
-            ? encodeInboxCursor(lastMessage, view ?? "default", classificationFilter, accountIds)
-            : null,
-        });
       } finally {
         sqlite.close();
       }
@@ -1419,71 +1419,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       try {
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-        const thread = db.select().from(threads)
-          .where(and(eq(threads.id, c.req.param("threadId")), eq(threads.accountId, account.id))).get();
-        if (!thread) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
-
-        const messageRows = db.select({
-          id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
-          toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
-          subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
-          internetMessageId: emails.internetMessageId, references: emails.references,
-          receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
-          humanSignal: emails.humanSignal, humanClassification: emails.humanClassification,
-          humanClassificationReasons: emails.humanClassificationReasons, humanClassifierVersion: emails.humanClassifierVersion,
-          labelName: labels.name,
-        }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
-          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
-          .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
-        const attachmentRows = db.select().from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
-          .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
-        const messagesById = new Map<string, typeof messageRows[number]>();
-        const labelsByMessage = new Map<string, string[]>();
-        for (const row of messageRows) {
-          messagesById.set(row.id, row);
-          const names = labelsByMessage.get(row.id) ?? [];
-          if (row.labelName) names.push(row.labelName);
-          labelsByMessage.set(row.id, names);
+        try {
+          return jsonWithSchema(c, threadDetailSchema, readThreadDetail(
+            db,
+            account,
+            serializeMailAccount(account),
+            c.req.param("threadId"),
+          ));
+        } catch (error) {
+          if (error instanceof McpReadError && error.code === "not_found") {
+            return c.json({ error: { code: error.code, message: error.message } }, 404);
+          }
+          throw error;
         }
-        const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
-        for (const { email_attachments: attachment } of attachmentRows) {
-          const attachments = attachmentsByMessage.get(attachment.emailId) ?? [];
-          attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
-          attachmentsByMessage.set(attachment.emailId, attachments);
-        }
-        const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
-        const messages = [...messagesById.values()].map((message) => {
-          const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
-          const humanClassification = resolveHumanClassification(message, resolveClassification);
-          return {
-            id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
-            from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
-            to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
-            subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
-            unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
-            internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
-            humanSignal: humanClassification.effective.score,
-            humanClassification,
-            attachments: attachmentsByMessage.get(message.id) ?? [],
-          };
-        });
-        const sourceMessages = [...messagesById.values()];
-        return jsonWithSchema(c, threadDetailSchema, {
-          account: serializeMailAccount(account),
-          thread: {
-            id: thread.id, provider: account.provider, providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
-            latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
-            labels: [...new Set(messages.flatMap((message) => message.labels))],
-            participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
-            readState: thread.isRead ? "read" : "unread",
-            attention: {
-              hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
-              hasDraft: sourceMessages.some((message) => message.isDraft),
-              humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),
-            },
-          },
-          messages,
-        });
       } finally {
         sqlite.close();
       }
@@ -1779,6 +1727,18 @@ type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
   view: "default" | "focus" | "normal" | "quiet" | "hidden" | "all";
   classification: "human" | "tideline" | "uncertain" | "all";
   accountIds: string[];
+  scope?: string;
+};
+
+type UnifiedInboxReadQuery = {
+  cursor?: string;
+  limit: number;
+  view?: "focus" | "normal" | "quiet" | "hidden" | "all";
+  classification?: "human" | "tideline" | "uncertain" | "all";
+  query?: string;
+  sender?: string;
+  receivedAfter?: string;
+  receivedBefore?: string;
 };
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -2209,8 +2169,9 @@ function encodeInboxCursor(
   view: InboxCursor["view"],
   classification: InboxCursor["classification"],
   accountIds: string[],
+  scope?: string,
 ) {
-  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification, accountIds } satisfies InboxCursor), "utf8").toString("base64url");
+  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification, accountIds, ...(scope ? { scope } : {}) } satisfies InboxCursor), "utf8").toString("base64url");
 }
 
 function decodeInboxCursor(value: string | undefined): InboxCursor | null {
@@ -2226,12 +2187,245 @@ function decodeInboxCursor(value: string | undefined): InboxCursor | null {
       && Array.isArray(parsed.accountIds)
       && parsed.accountIds.length > 0
       && parsed.accountIds.every((accountId) => typeof accountId === "string" && accountId.length > 0)
+      && (parsed.scope === undefined || typeof parsed.scope === "string")
     ) {
       return parsed as InboxCursor;
     }
   } catch { /* Invalid cursors are rejected by the route. */ }
 
   return null;
+}
+
+function readUnifiedInbox(
+  db: Database,
+  accounts: ConnectedAccount[],
+  serializedAccounts: MailAccount[],
+  input: UnifiedInboxReadQuery,
+): InboxClassificationResponse {
+  const { cursor, limit, view, classification } = input;
+  const classificationFilter = classification ?? "all";
+  const accountIds = accounts.map((account) => account.id).sort();
+  const resolved: ResolvedInboxMessage[] = [];
+
+  for (const account of accounts) {
+    const rows = db.select({
+      id: emails.id,
+      accountId: emails.accountId,
+      providerMessageId: emails.providerMessageId,
+      threadId: emails.threadId,
+      fromAddress: emails.fromAddress,
+      fromName: emails.fromName,
+      subject: emails.subject,
+      snippet: emails.snippet,
+      receivedAt: emails.receivedAt,
+      isRead: emails.isRead,
+      humanSignal: emails.humanSignal,
+      humanClassification: emails.humanClassification,
+      humanClassificationReasons: emails.humanClassificationReasons,
+      humanClassifierVersion: emails.humanClassifierVersion,
+      labelName: labels.name,
+    }).from(emails)
+      .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
+      .leftJoin(labels, eq(labels.id, emailLabels.labelId))
+      .where(eq(emails.accountId, account.id))
+      .orderBy(desc(emails.receivedAt), asc(emails.id), asc(labels.name))
+      .all();
+    const byId = new Map<string, InboxDatabaseMessage>();
+    for (const row of rows) {
+      const message = byId.get(row.id) ?? {
+        id: row.id,
+        accountId: row.accountId,
+        providerMessageId: row.providerMessageId,
+        threadId: row.threadId,
+        fromAddress: row.fromAddress,
+        fromName: row.fromName,
+        subject: row.subject,
+        snippet: row.snippet,
+        receivedAt: row.receivedAt,
+        isRead: row.isRead,
+        humanSignal: row.humanSignal,
+        humanClassification: row.humanClassification,
+        humanClassificationReasons: row.humanClassificationReasons,
+        humanClassifierVersion: row.humanClassifierVersion,
+        labels: [],
+      };
+      if (row.labelName && !message.labels.includes(row.labelName)) message.labels.push(row.labelName);
+      byId.set(row.id, message);
+    }
+
+    const rules = listSenderRules(db, account.id);
+    const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
+    for (const message of byId.values()) {
+      const humanClassification = resolveHumanClassification(message, resolveClassification);
+      resolved.push({
+        ...message,
+        provider: account.provider,
+        attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
+        humanSignal: humanClassification.effective.score,
+        humanClassification,
+      });
+    }
+  }
+
+  const textQuery = input.query?.trim().toLocaleLowerCase() ?? "";
+  const senderQuery = input.sender?.trim().toLocaleLowerCase() ?? "";
+  const receivedAfter = input.receivedAfter ? Date.parse(input.receivedAfter) : null;
+  const receivedBefore = input.receivedBefore ? Date.parse(input.receivedBefore) : null;
+  const scoped = resolved.filter((message) => {
+    const receivedAt = message.receivedAt?.getTime() ?? 0;
+    if (receivedAfter !== null && receivedAt < receivedAfter) return false;
+    if (receivedBefore !== null && receivedAt > receivedBefore) return false;
+    const sender = `${message.fromName ?? ""}\n${message.fromAddress ?? ""}`.toLocaleLowerCase();
+    if (senderQuery && !sender.includes(senderQuery)) return false;
+    if (textQuery) {
+      const haystack = `${sender}\n${message.subject ?? ""}\n${message.snippet ?? ""}`.toLocaleLowerCase();
+      if (!haystack.includes(textQuery)) return false;
+    }
+    return true;
+  });
+  const counts = {
+    attention: {
+      focus: scoped.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
+      normal: scoped.filter((message) => message.attentionBehavior === "normal").length,
+      quiet: scoped.filter((message) => message.attentionBehavior === "quiet").length,
+      hidden: scoped.filter((message) => message.attentionBehavior === "hidden").length,
+      all: scoped.length,
+    },
+    classification: {
+      likely_human: scoped.filter((message) => message.humanClassification.effective.classification === "likely_human").length,
+      automated_or_bulk: scoped.filter((message) => message.humanClassification.effective.classification === "automated_or_bulk").length,
+      uncertain: scoped.filter((message) => message.humanClassification.effective.classification === "uncertain").length,
+      unclassified: scoped.filter((message) => message.humanClassification.effective.classification === "unclassified").length,
+      all: scoped.length,
+    },
+  };
+  const filtered = scoped.filter((message) =>
+    matchesAttentionView(message.attentionBehavior, view)
+    && matchesHumanClassificationView(message.humanClassification.effective.classification, classificationFilter),
+  );
+  filtered.sort(compareInboxMessages);
+  const cursorScope = input.query || input.sender || input.receivedAfter || input.receivedBefore
+    ? JSON.stringify({
+        query: input.query?.trim() ?? null,
+        sender: input.sender?.trim().toLocaleLowerCase() ?? null,
+        receivedAfter: input.receivedAfter ?? null,
+        receivedBefore: input.receivedBefore ?? null,
+      })
+    : undefined;
+  const cursorTarget = decodeInboxCursor(cursor);
+  if (cursor && (!cursorTarget
+    || cursorTarget.view !== (view ?? "default")
+    || cursorTarget.classification !== classificationFilter
+    || JSON.stringify(cursorTarget.accountIds) !== JSON.stringify(accountIds)
+    || cursorTarget.scope !== cursorScope
+    || !accounts.some((account) => account.id === cursorTarget.accountId))) {
+    throw new McpReadError("invalid_cursor", "The inbox cursor does not match this account set or filter");
+  }
+  const cursorIndex = cursorTarget
+    ? filtered.findIndex((message) => message.id === cursorTarget.id && message.accountId === cursorTarget.accountId)
+    : -1;
+  if (cursorTarget && cursorIndex < 0) {
+    throw new McpReadError("invalid_cursor", "The inbox cursor is not part of this filtered result");
+  }
+  const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+  const page = filtered.slice(start, start + limit);
+  const lastMessage = page.at(-1);
+  return {
+    accounts: serializedAccounts,
+    messages: page.map((message): InboxMessage => ({
+      id: message.id,
+      accountId: message.accountId,
+      provider: message.provider,
+      providerMessageId: message.providerMessageId,
+      threadId: message.threadId,
+      from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
+      subject: message.subject ?? "",
+      snippet: message.snippet ?? "",
+      receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
+      unread: !message.isRead,
+      labels: message.labels,
+      attentionBehavior: message.attentionBehavior,
+      humanSignal: message.humanSignal,
+      humanClassification: message.humanClassification,
+    })),
+    counts,
+    nextCursor: lastMessage && start + page.length < filtered.length
+      ? encodeInboxCursor(lastMessage, view ?? "default", classificationFilter, accountIds, cursorScope)
+      : null,
+  };
+}
+
+function readThreadDetail(
+  db: Database,
+  account: ConnectedAccount,
+  serializedAccount: MailAccount,
+  threadId: string,
+): ThreadDetail {
+  const thread = db.select().from(threads)
+    .where(and(eq(threads.id, threadId), eq(threads.accountId, account.id))).get();
+  if (!thread) throw new McpReadError("not_found", "Thread not found");
+
+  const messageRows = db.select({
+    id: emails.id, accountId: emails.accountId, providerMessageId: emails.providerMessageId, fromAddress: emails.fromAddress, fromName: emails.fromName,
+    toRecipients: emails.toRecipients, ccRecipients: emails.ccRecipients, bccRecipients: emails.bccRecipients,
+    subject: emails.subject, snippet: emails.snippet, bodyText: emails.bodyText, bodyHtml: emails.bodyHtml,
+    internetMessageId: emails.internetMessageId, references: emails.references,
+    receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
+    humanSignal: emails.humanSignal, humanClassification: emails.humanClassification,
+    humanClassificationReasons: emails.humanClassificationReasons, humanClassifierVersion: emails.humanClassifierVersion,
+    labelName: labels.name,
+  }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
+    .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
+    .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
+  const attachmentRows = db.select().from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
+    .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
+  const messagesById = new Map<string, typeof messageRows[number]>();
+  const labelsByMessage = new Map<string, string[]>();
+  for (const row of messageRows) {
+    messagesById.set(row.id, row);
+    const names = labelsByMessage.get(row.id) ?? [];
+    if (row.labelName) names.push(row.labelName);
+    labelsByMessage.set(row.id, names);
+  }
+  const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
+  for (const { email_attachments: attachment } of attachmentRows) {
+    const attachments = attachmentsByMessage.get(attachment.emailId) ?? [];
+    attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
+    attachmentsByMessage.set(attachment.emailId, attachments);
+  }
+  const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
+  const messages = [...messagesById.values()].map((message) => {
+    const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
+    const humanClassification = resolveHumanClassification(message, resolveClassification);
+    return {
+      id: message.id, accountId: account.id, provider: account.provider, providerMessageId: message.providerMessageId,
+      from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
+      to: parseContacts(message.toRecipients), cc: parseContacts(message.ccRecipients), bcc: parseContacts(message.bccRecipients),
+      subject: message.subject ?? "", snippet: message.snippet ?? "", receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
+      unread: !message.isRead, labels: labelsByMessage.get(message.id) ?? [], bodyText: message.bodyText ?? htmlToText(bodyHtml), bodyHtml,
+      internetMessageId: message.internetMessageId, references: parseDraftJson(message.references, []),
+      humanSignal: humanClassification.effective.score,
+      humanClassification,
+      attachments: attachmentsByMessage.get(message.id) ?? [],
+    };
+  });
+  const sourceMessages = [...messagesById.values()];
+  return threadDetailSchema.parse({
+    account: serializedAccount,
+    thread: {
+      id: thread.id, provider: account.provider, providerThreadId: thread.providerThreadId, subject: thread.subject ?? "",
+      latestReceivedAt: (thread.latestReceivedAt ?? new Date(0)).toISOString(), messageCount: thread.messageCount,
+      labels: [...new Set(messages.flatMap((message) => message.labels))],
+      participants: dedupeContacts(messages.flatMap((message) => [message.from, ...message.to, ...message.cc, ...message.bcc])),
+      readState: thread.isRead ? "read" : "unread",
+      attention: {
+        hasUnread: messages.some((message) => message.unread), hasStarred: sourceMessages.some((message) => message.isStarred),
+        hasDraft: sourceMessages.some((message) => message.isDraft),
+        humanSignal: maxHumanSignal(sourceMessages.map((message) => message.humanSignal)),
+      },
+    },
+    messages,
+  });
 }
 
 function uniqueRuleError(c: Context, error: unknown) {

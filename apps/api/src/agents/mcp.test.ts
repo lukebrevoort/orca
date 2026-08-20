@@ -1,0 +1,430 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
+import { afterEach, describe, test } from "bun:test";
+import { SignJWT } from "jose";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import {
+  propagatedAgentEventSchema,
+  type AgentEventListPage,
+  type OrcaMcpScope,
+  type PropagatedAgentEvent,
+} from "@orca/shared";
+
+import { createDatabaseClient } from "../db/client.ts";
+import { emails, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { createApp } from "../index.ts";
+
+const issuer = "https://identity.orca.test";
+const resource = "https://api.orca.test/mcp";
+const signingSecret = "test-mcp-signing-secret-that-is-long-enough";
+const allScopes: OrcaMcpScope[] = [
+  "orca:mail.metadata:read",
+  "orca:mail.content:read",
+  "orca:agent-events:read",
+  "orca:connection-status:read",
+];
+const tempDirs: string[] = [];
+
+async function signToken(input: {
+  userId?: string;
+  accountIds?: string[];
+  scopes?: string[];
+  issuer?: string;
+  audience?: string;
+  issuedAt?: number;
+  expiresAt?: number;
+} = {}) {
+  const now = Math.floor(Date.now() / 1_000);
+  return new SignJWT({
+    account_ids: input.accountIds ?? ["account_a"],
+    scope: (input.scopes ?? allScopes).join(" "),
+    client_id: "https://chatgpt.com/oauth/client.json",
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(input.issuer ?? issuer)
+    .setAudience(input.audience ?? resource)
+    .setSubject(input.userId ?? "user_a")
+    .setIssuedAt(input.issuedAt ?? now)
+    .setExpirationTime(input.expiresAt ?? now + 600)
+    .sign(new TextEncoder().encode(signingSecret));
+}
+
+function rpc(method: string, params?: unknown, id = 1) {
+  return JSON.stringify({ jsonrpc: "2.0", id, method, ...(params === undefined ? {} : { params }) });
+}
+
+async function callMcp(
+  app: ReturnType<typeof createApp>,
+  token: string | null,
+  method: string,
+  params?: unknown,
+  headers: Record<string, string> = {},
+) {
+  const response = await app.request("/mcp", {
+    method: "POST",
+    headers: {
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      host: new URL(resource).host,
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body: rpc(method, params),
+  });
+  return response;
+}
+
+async function rpcBody(response: Response) {
+  const text = await response.text();
+  if (response.headers.get("content-type")?.includes("application/json")) return JSON.parse(text);
+  const data = text.split(/\r?\n/).find((line) => line.startsWith("data: "))?.slice(6);
+  if (!data) throw new Error(`MCP response did not contain a JSON or SSE result: ${text.slice(0, 120)}`);
+  return JSON.parse(data);
+}
+
+function createFixture(options: {
+  mcpBoundaryPolicy?: { enabled: true; issuer: string; resource: string };
+  mcpEnv?: NodeJS.ProcessEnv;
+} = {}) {
+  const directory = mkdtempSync(join(tmpdir(), "orca-mcp-"));
+  tempDirs.push(directory);
+  const dbPath = join(directory, "mcp.sqlite");
+  const { db, sqlite } = createDatabaseClient(dbPath);
+  migrate(db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+
+  db.insert(users).values([
+    { id: "user_a", email: "a@example.com", displayName: "User A" },
+    { id: "user_b", email: "b@example.com", displayName: "User B" },
+  ]).run();
+  db.insert(oauthAccounts).values([
+    {
+      id: "account_a", userId: "user_a", provider: "gmail", providerEmail: "a@gmail.com", providerId: "provider-a",
+      scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "provider-access-a", refreshTokenEncrypted: "provider-refresh-a",
+      lastSyncedAt: new Date("2026-08-19T17:00:00.000Z"), createdAt: new Date(1),
+    },
+    {
+      id: "account_b", userId: "user_b", provider: "gmail", providerEmail: "b@gmail.com", providerId: "provider-b",
+      scope: "https://www.googleapis.com/auth/gmail.readonly", accessTokenEncrypted: "provider-access-b", refreshTokenEncrypted: "provider-refresh-b",
+      lastSyncedAt: new Date("2026-08-19T17:05:00.000Z"), createdAt: new Date(2),
+    },
+  ]).run();
+  db.insert(threads).values([
+    { id: "thread_a_1", accountId: "account_a", providerThreadId: "provider-thread-a-1", subject: "Launch review", latestReceivedAt: new Date("2026-08-19T16:00:00.000Z"), messageCount: 1 },
+    { id: "thread_a_2", accountId: "account_a", providerThreadId: "provider-thread-a-2", subject: "Build failed", latestReceivedAt: new Date("2026-08-19T15:00:00.000Z"), messageCount: 1 },
+    { id: "thread_b", accountId: "account_b", providerThreadId: "provider-thread-b", subject: "Private B", latestReceivedAt: new Date("2026-08-19T17:00:00.000Z"), messageCount: 1 },
+  ]).run();
+  db.insert(emails).values([
+    {
+      id: "message_a_1", accountId: "account_a", threadId: "thread_a_1", providerMessageId: "provider-message-a-1",
+      fromAddress: "maya@example.com", fromName: "Maya", toRecipients: JSON.stringify([{ name: "User A", email: "a@example.com" }]),
+      subject: "Launch review", snippet: "Review the release", bodyText: "Please review. Authorization: Bearer super-secret-token-value",
+      receivedAt: new Date("2026-08-19T16:00:00.000Z"), humanSignal: 9, humanClassification: "likely_human",
+      humanClassificationReasons: JSON.stringify(["direct_recipient"]), humanClassifierVersion: "m5-v1",
+    },
+    {
+      id: "message_a_2", accountId: "account_a", threadId: "thread_a_2", providerMessageId: "provider-message-a-2",
+      fromAddress: "ci@example.dev", fromName: "CI", subject: "Build failed", snippet: "Main is red", bodyText: "The deploy failed.",
+      receivedAt: new Date("2026-08-19T15:00:00.000Z"), humanSignal: 2, humanClassification: "automated_or_bulk",
+      humanClassificationReasons: JSON.stringify(["auto_submitted_header"]), humanClassifierVersion: "m5-v1",
+    },
+    {
+      id: "message_b", accountId: "account_b", threadId: "thread_b", providerMessageId: "provider-message-b",
+      fromAddress: "private@example.com", fromName: "Private B", subject: "Private B", snippet: "Never disclose", bodyText: "private body",
+      receivedAt: new Date("2026-08-19T17:00:00.000Z"), humanSignal: 8, humanClassification: "likely_human",
+      humanClassificationReasons: JSON.stringify(["direct_recipient"]), humanClassifierVersion: "m5-v1",
+    },
+  ]).run();
+  db.insert(senderAttentionRules).values({
+    id: "focus-a", accountId: "account_a", scope: "address", value: "maya@example.com", behavior: "focus", source: "user_choice",
+  }).run();
+
+  const events: PropagatedAgentEvent[] = [
+    propagatedAgentEventSchema.parse({
+      id: "event_a",
+      source: {
+        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_2", threadId: "thread_a_2",
+        sender: { name: "CI", email: "ci@example.dev" }, subject: "Build failed", receivedAt: "2026-08-19T15:00:00.000Z",
+        sourceUrl: "https://evil.invalid/unrelated?thread=wrong&accountId=account_b&token=provider-secret",
+      },
+      provenance: { trigger: "push", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
+      eventKind: "ci_or_deploy_failure", importance: "high", relevance: "matched", destination: "timeline", reasonCodes: ["workflow_failed"],
+      title: "The main build failed", summary: "CI reports a failed build.", whyThisMatters: "The release is blocked.", suggestedNextStep: "Open the source message.",
+      humanClassification: { classification: "automated_or_bulk", score: 2, reasonCodes: ["auto_submitted_header"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
+      deduplicationKey: "account_a:message_a_2:ci_or_deploy_failure:m6-v0", evaluatedAt: "2026-08-19T15:00:01.000Z",
+      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T15:00:01.000Z", updatedAt: "2026-08-19T15:00:01.000Z", seenAt: null, snoozedUntil: null },
+    }),
+    propagatedAgentEventSchema.parse({
+      id: "event_a_missing_account",
+      source: {
+        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_1", threadId: "thread_a_1",
+        sender: { name: "Maya", email: "maya@example.com" }, subject: "Launch review", receivedAt: "2026-08-19T16:00:00.000Z",
+        sourceUrl: "https://elsewhere.invalid/no-account?thread=wrong",
+      },
+      provenance: { trigger: "sync", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
+      eventKind: "release_available", importance: "medium", relevance: "matched", destination: "timeline", reasonCodes: ["release_became_available"],
+      title: "Launch review", summary: "The release is ready for review.", whyThisMatters: "The team is waiting.", suggestedNextStep: "Open the source message.",
+      humanClassification: { classification: "likely_human", score: 9, reasonCodes: ["direct_recipient"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
+      deduplicationKey: "account_a:message_a_1:release_available:m6-v0", evaluatedAt: "2026-08-19T16:00:01.000Z",
+      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T16:00:01.000Z", updatedAt: "2026-08-19T16:00:01.000Z", seenAt: null, snoozedUntil: null },
+    }),
+    propagatedAgentEventSchema.parse({
+      id: "event_b",
+      source: {
+        ownerUserId: "user_b", accountId: "account_b", provider: "gmail", messageId: "message_b", threadId: "thread_b",
+        sender: { name: "Private B", email: "private@example.com" }, subject: "Private B", receivedAt: "2026-08-19T17:00:00.000Z",
+        sourceUrl: "https://orca.example/?thread=thread_b",
+      },
+      provenance: { trigger: "sync", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
+      eventKind: "other", importance: "medium", relevance: "matched", destination: "timeline", reasonCodes: ["insufficient_evidence"],
+      title: "Private B", summary: "Private B", whyThisMatters: "Private B", suggestedNextStep: null, humanClassification: null,
+      deduplicationKey: "account_b:message_b:other:m6-v0", evaluatedAt: "2026-08-19T17:00:01.000Z",
+      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T17:00:01.000Z", updatedAt: "2026-08-19T17:00:01.000Z", seenAt: null, snoozedUntil: null },
+    }),
+  ];
+
+  const app = createApp({
+    dbFactory: () => createDatabaseClient(dbPath),
+    mcpBoundaryPolicy: options.mcpBoundaryPolicy ?? { enabled: true, issuer, resource },
+    mcpEnv: options.mcpEnv ?? {
+      ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
+      ORCA_M6_MCP_ALLOWED_ORIGINS: "https://chatgpt.com,http://127.0.0.1:6274",
+    },
+    agentEventStore: {
+      async list(query): Promise<AgentEventListPage> {
+        const allowed = new Set(query.accountIds);
+        return {
+          events: events.filter((event) => event.source.ownerUserId === query.ownerUserId && allowed.has(event.source.accountId)).slice(0, query.limit),
+          nextCursor: null,
+        };
+      },
+    },
+  });
+  return { app, db, sqlite };
+}
+
+afterEach(() => {
+  while (tempDirs.length) rmSync(tempDirs.pop()!, { recursive: true, force: true });
+});
+
+describe("Orca read-only MCP server", () => {
+  test("fails startup while the sample MCP signing secret is blank", () => {
+    const sampleEnv = readFileSync(resolve(import.meta.dir, "../../../../.env.example"), "utf8");
+    const sampleSigningSecret = /^ORCA_M6_MCP_SIGNING_SECRET=(.*)$/m.exec(sampleEnv)?.[1];
+    assert.notEqual(sampleSigningSecret, undefined);
+    assert.throws(
+      () => createApp({
+        mcpBoundaryPolicy: { enabled: true, issuer, resource },
+        mcpEnv: { ORCA_M6_MCP_SIGNING_SECRET: sampleSigningSecret },
+      }),
+      /ORCA_M6_MCP_SIGNING_SECRET must be at least 32 characters/,
+    );
+  });
+
+  test("rejects hostile Host and Origin headers before bearer dispatch", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const token = await signToken();
+      const hostileHost = await callMcp(app, token, "tools/list", {}, { host: "evil.invalid" });
+      assert.equal(hostileHost.status, 403);
+      assert.match(await hostileHost.text(), /Invalid Host/);
+
+      const hostileOrigin = await callMcp(app, token, "tools/list", {}, { origin: "https://evil.invalid" });
+      assert.equal(hostileOrigin.status, 403);
+      assert.match(await hostileOrigin.text(), /Invalid Origin/);
+
+      const allowedOrigin = await callMcp(app, token, "tools/list", {}, { origin: "https://chatgpt.com" });
+      assert.equal(allowedOrigin.status, 200);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("prevents DNS rebinding against a loopback MCP resource", async () => {
+    const loopbackIssuer = "http://127.0.0.1:33165";
+    const loopbackResource = `${loopbackIssuer}/mcp`;
+    const { app, sqlite } = createFixture({
+      mcpBoundaryPolicy: { enabled: true, issuer: loopbackIssuer, resource: loopbackResource },
+      mcpEnv: {
+        ORCA_M6_MCP_SIGNING_SECRET: signingSecret,
+        ORCA_M6_MCP_ALLOWED_ORIGINS: "http://127.0.0.1:6274",
+      },
+    });
+    try {
+      const token = await signToken({ issuer: loopbackIssuer, audience: loopbackResource });
+      const accepted = await callMcp(app, token, "tools/list", {}, {
+        host: "127.0.0.1:33165",
+        origin: "http://127.0.0.1:6274",
+      });
+      assert.equal(accepted.status, 200);
+
+      const rebound = await callMcp(app, token, "tools/list", {}, {
+        host: "attacker.invalid:33165",
+        origin: "http://127.0.0.1:6274",
+      });
+      assert.equal(rebound.status, 403);
+      assert.match(await rebound.text(), /Invalid Host/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("publishes protected-resource metadata and standards-compliant bearer challenges", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const metadata = await app.request("/.well-known/oauth-protected-resource/mcp");
+      assert.equal(metadata.status, 200);
+      assert.deepEqual(await metadata.json(), {
+        resource,
+        authorization_servers: [issuer],
+        scopes_supported: allScopes,
+        resource_name: "Orca mail and agent events (read only)",
+      });
+
+      const missing = await callMcp(app, null, "tools/list", {});
+      assert.equal(missing.status, 401);
+      assert.match(missing.headers.get("www-authenticate") ?? "", /Bearer/);
+      assert.match(missing.headers.get("www-authenticate") ?? "", /resource_metadata="https:\/\/api\.orca\.test\/\.well-known\/oauth-protected-resource\/mcp"/);
+
+      const wrongAudience = await callMcp(app, await signToken({ audience: "https://attacker.example/mcp" }), "tools/list", {});
+      assert.equal(wrongAudience.status, 401);
+      assert.match(wrongAudience.headers.get("www-authenticate") ?? "", /error="invalid_token"/);
+
+      const now = Math.floor(Date.now() / 1_000);
+      const expired = await callMcp(app, await signToken({ issuedAt: now - 100, expiresAt: now - 1 }), "tools/list", {});
+      assert.equal(expired.status, 401);
+      assert.match(expired.headers.get("www-authenticate") ?? "", /error="invalid_token"/);
+
+      const metadataOnly = await signToken({ scopes: ["orca:mail.metadata:read"] });
+      const insufficient = await callMcp(app, metadataOnly, "tools/call", { name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" } });
+      assert.equal(insufficient.status, 403);
+      assert.match(insufficient.headers.get("www-authenticate") ?? "", /error="insufficient_scope"/);
+      assert.match(insufficient.headers.get("www-authenticate") ?? "", /scope="orca:mail.content:read"/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("initializes with stable metadata and lists only the four annotated read tools", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const token = await signToken();
+      const initialized = await callMcp(app, token, "initialize", {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "orca-test", version: "1.0.0" },
+      });
+      assert.equal(initialized.status, 200);
+      const initializeBody = await rpcBody(initialized);
+      assert.deepEqual(initializeBody.result.serverInfo, { name: "orca-mail-readonly", version: "1.0.0" });
+
+      const tools = await callMcp(app, token, "tools/list", {});
+      assert.equal(tools.status, 200);
+      const body = await rpcBody(tools);
+      assert.ok(body.result, JSON.stringify(body));
+      assert.deepEqual(body.result.tools.map((tool: { name: string }) => tool.name), [
+        "search_mail", "get_thread", "list_agent_events", "get_connection_status",
+      ]);
+      for (const tool of body.result.tools) {
+        assert.deepEqual(tool.annotations, { readOnlyHint: true, destructiveHint: false, openWorldHint: false });
+        assert.equal(tool.inputSchema.type, "object");
+        assert.equal(tool.outputSchema.type, "object");
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("keeps every tool and source link inside the live user/account intersection", async () => {
+    const { app, sqlite } = createFixture();
+    try {
+      const token = await signToken({ accountIds: ["account_a", "account_b"] });
+
+      const search = await callMcp(app, token, "tools/call", {
+        name: "search_mail",
+        arguments: { classification: "all", attention: "all", limit: 1 },
+      });
+      assert.equal(search.status, 200);
+      const searchBody = await rpcBody(search);
+      assert.ok(searchBody.result, JSON.stringify(searchBody));
+      assert.ok(searchBody.result.structuredContent, JSON.stringify(searchBody));
+      assert.deepEqual(searchBody.result.structuredContent.messages.map((message: { accountId: string }) => message.accountId), ["account_a"]);
+      assert.equal(searchBody.result.structuredContent.counts.attention.all, 2);
+      assert.ok(searchBody.result.structuredContent.nextCursor);
+      assert.match(searchBody.result.structuredContent.messages[0].sourceUrl, /accountId=account_a/);
+      assert.doesNotMatch(JSON.stringify(searchBody), /account_b|Private B|provider-access|provider-refresh/);
+
+      const next = await callMcp(app, token, "tools/call", {
+        name: "search_mail",
+        arguments: { classification: "all", attention: "all", limit: 1, cursor: searchBody.result.structuredContent.nextCursor },
+      });
+      assert.equal((await rpcBody(next)).result.structuredContent.messages[0].id, "message_a_2");
+
+      const filtered = await callMcp(app, token, "tools/call", {
+        name: "search_mail",
+        arguments: {
+          query: "release",
+          sender: "maya",
+          receivedAfter: "2026-08-19T15:30:00.000Z",
+          receivedBefore: "2026-08-19T16:30:00.000Z",
+          classification: "human",
+          attention: "focus",
+        },
+      });
+      const filteredBody = await rpcBody(filtered);
+      assert.deepEqual(filteredBody.result.structuredContent.messages.map((message: { id: string }) => message.id), ["message_a_1"]);
+      assert.equal(filteredBody.result.structuredContent.counts.attention.all, 1);
+
+      const cursorReplay = await callMcp(app, token, "tools/call", {
+        name: "search_mail",
+        arguments: { classification: "all", attention: "all", sender: "ci", limit: 1, cursor: searchBody.result.structuredContent.nextCursor },
+      });
+      const cursorReplayBody = await rpcBody(cursorReplay);
+      assert.equal(cursorReplayBody.result.isError, true);
+      assert.equal(JSON.parse(cursorReplayBody.result.content[0].text).error.code, "invalid_cursor");
+
+      const thread = await callMcp(app, token, "tools/call", {
+        name: "get_thread",
+        arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      });
+      const threadBody = await rpcBody(thread);
+      assert.equal(threadBody.result.structuredContent.messages[0].bodyExcerpt, "Please review. [REDACTED]");
+      assert.equal(threadBody.result.structuredContent.messages[0].safety.contentTrust, "untrusted_external_content");
+      assert.match(threadBody.result.structuredContent.thread.sourceUrl, /accountId=account_a/);
+      assert.doesNotMatch(JSON.stringify(threadBody), /super-secret-token-value|provider-access|provider-refresh/);
+
+      const deniedThread = await callMcp(app, token, "tools/call", {
+        name: "get_thread",
+        arguments: { accountId: "account_b", threadId: "thread_b" },
+      });
+      const deniedBody = await rpcBody(deniedThread);
+      assert.equal(deniedBody.result.isError, true);
+      assert.equal(JSON.parse(deniedBody.result.content[0].text).error.code, "account_denied");
+
+      const events = await callMcp(app, token, "tools/call", { name: "list_agent_events", arguments: { limit: 25 } });
+      const eventsBody = await rpcBody(events);
+      assert.deepEqual(eventsBody.result.structuredContent.events.map((event: { id: string }) => event.id), ["event_a", "event_a_missing_account"]);
+      const eventSourceUrls = eventsBody.result.structuredContent.events.map((event: { source: { threadId: string; sourceUrl: string } }) => ({
+        threadId: event.source.threadId,
+        url: new URL(event.source.sourceUrl),
+      }));
+      const expectedOrigin = new URL(searchBody.result.structuredContent.messages[0].sourceUrl).origin;
+      for (const source of eventSourceUrls) {
+        assert.equal(source.url.origin, expectedOrigin);
+        assert.equal(source.url.searchParams.get("thread"), source.threadId);
+        assert.equal(source.url.searchParams.get("accountId"), "account_a");
+      }
+      assert.doesNotMatch(JSON.stringify(eventsBody), /event_b|account_b|evil\.invalid|elsewhere\.invalid|token=provider-secret|deduplicationKey|ownerUserId/);
+
+      const status = await callMcp(app, token, "tools/call", { name: "get_connection_status", arguments: {} });
+      const statusBody = await rpcBody(status);
+      assert.deepEqual(statusBody.result.structuredContent.accounts.map((account: { id: string }) => account.id), ["account_a"]);
+      assert.equal(statusBody.result.structuredContent.accounts[0].ready, true);
+      assert.doesNotMatch(JSON.stringify(statusBody), /account_b|provider-access|provider-refresh|gmail\.readonly/);
+    } finally {
+      sqlite.close();
+    }
+  });
+});

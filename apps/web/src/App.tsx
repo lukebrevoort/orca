@@ -790,7 +790,7 @@ export function InboxApp({
   const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
-  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(null);
+  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("accountId"));
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
