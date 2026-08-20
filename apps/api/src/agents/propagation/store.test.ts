@@ -153,6 +153,54 @@ describe("SQLite agent event store", () => {
     }
   });
 
+  test("rejects a concurrent stale lifecycle writer instead of returning the winner's transition", async () => {
+    const { db, sqlite } = createMigratedClient();
+    try {
+      insertSource(db, { ownerUserId: "user_1", accountId: "account_1", messageId: "message_1" });
+      const winner = new SqliteAgentEventStore(db, () => new Date("2026-08-19T17:00:00.000Z"));
+      const created = await winner.upsert(assessment({
+        ownerUserId: "user_1",
+        accountId: "account_1",
+        messageId: "message_1",
+      }));
+      let winnerUpdate: Promise<typeof created> | undefined;
+      const staleWriter = new SqliteAgentEventStore(db, () => {
+        winnerUpdate = winner.updateLifecycle({
+          ownerUserId: "user_1",
+          accountId: "account_1",
+          eventId: created.id,
+          update: { action: "mark_seen", expectedRevision: 1 },
+        });
+        return new Date("2026-08-19T17:00:01.000Z");
+      });
+
+      await assert.rejects(
+        () => staleWriter.updateLifecycle({
+          ownerUserId: "user_1",
+          accountId: "account_1",
+          eventId: created.id,
+          update: { action: "dismiss", expectedRevision: 1 },
+        }),
+        AgentEventRevisionConflictError,
+      );
+      assert.ok(winnerUpdate);
+      const winnerResult = await winnerUpdate;
+
+      assert.equal(winnerResult.lifecycle.state, "seen");
+      assert.equal(winnerResult.lifecycle.lastTransition, "seen");
+      assert.equal(winnerResult.lifecycle.revision, 2);
+      const [persisted] = (await winner.list({
+        ownerUserId: "user_1",
+        accountIds: ["account_1"],
+        limit: 1,
+      })).events;
+      assert.equal(persisted?.lifecycle.state, "seen");
+      assert.equal(persisted?.lifecycle.revision, 2);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("resolves account policy and reversible mutes without provider writes", async () => {
     const { db, sqlite } = createMigratedClient();
     try {

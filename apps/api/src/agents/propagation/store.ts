@@ -169,7 +169,22 @@ export class SqliteAgentEventStore implements AgentEventStore {
 
     const now = this.now();
     const transition = lifecycleColumns(input.update, existing, now);
-    this.db.transaction((tx) => {
+    const updated = this.db.transaction((tx) => {
+      const updatedRow = tx.update(agentEvents).set({
+        ...transition,
+        revision: existing.revision + 1,
+        updatedAt: now,
+      }).where(and(
+        eq(agentEvents.id, input.eventId),
+        eq(agentEvents.ownerUserId, input.ownerUserId),
+        eq(agentEvents.accountId, input.accountId),
+        eq(agentEvents.revision, existing.revision),
+      )).returning().get();
+
+      if (!updatedRow) {
+        throw new AgentEventRevisionConflictError();
+      }
+
       if (input.update.action === "mute") {
         tx.insert(agentPropagationMutes).values({
           id: randomUUID(),
@@ -187,22 +202,8 @@ export class SqliteAgentEventStore implements AgentEventStore {
           set: { updatedAt: now },
         }).run();
       }
-      tx.update(agentEvents).set({
-        ...transition,
-        revision: existing.revision + 1,
-        updatedAt: now,
-      }).where(and(
-        eq(agentEvents.id, input.eventId),
-        eq(agentEvents.ownerUserId, input.ownerUserId),
-        eq(agentEvents.accountId, input.accountId),
-        eq(agentEvents.revision, existing.revision),
-      )).run();
+      return updatedRow;
     });
-
-    const updated = this.readOwned(input.eventId, input.ownerUserId, input.accountId);
-    if (!updated || updated.revision !== existing.revision + 1) {
-      throw new AgentEventRevisionConflictError();
-    }
     return toPropagatedAgentEvent(updated);
   }
 
