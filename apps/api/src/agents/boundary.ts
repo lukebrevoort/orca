@@ -21,6 +21,7 @@ const sensitiveKeyNames = new Set([
   "accesstoken",
   "apikey",
   "authorization",
+  "authorizationcode",
   "bearertoken",
   "clientsecret",
   "cookie",
@@ -36,6 +37,17 @@ const sensitiveKeyNames = new Set([
   "setcookie",
   "token",
 ]);
+
+const sensitiveKeySuffixes = [
+  "accesstoken",
+  "apikey",
+  "authorizationcode",
+  "bearertoken",
+  "clientsecret",
+  "idtoken",
+  "privatekey",
+  "refreshtoken",
+] as const;
 
 const credentialValuePatterns: ReadonlyArray<RegExp> = [
   /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi,
@@ -221,6 +233,13 @@ function normalizeSensitiveKey(key: string): string {
   return key.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
 
+function isSensitiveKey(key: string): boolean {
+  const normalized = normalizeSensitiveKey(key);
+  return sensitiveKeyNames.has(normalized) || sensitiveKeySuffixes.some((suffix) =>
+    normalized.endsWith(suffix)
+  );
+}
+
 function redactTextWithState(value: string, maximumLength = MAX_AGENT_TEXT_LENGTH): {
   value: string;
   state: RedactionState;
@@ -271,7 +290,7 @@ export function redactAgentData(value: unknown): unknown {
       return Object.fromEntries(
         Object.entries(current).map(([key, item]) => [
           key,
-          sensitiveKeyNames.has(normalizeSensitiveKey(key)) ? REDACTED : visit(item, depth + 1),
+          isSensitiveKey(key) ? REDACTED : visit(item, depth + 1),
         ]),
       );
     } finally {

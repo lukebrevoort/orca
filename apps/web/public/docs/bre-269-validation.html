@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-269 · M6 safety, privacy, and usefulness validation</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --paper:#f4f0e7; --surface:#fffdf8; --ink:#19302c; --muted:#687570;
+      --line:#d8d4c8; --accent:#356f65; --accent-soft:#dceae5; --warn:#815d20;
+      --warn-soft:#f5e9c8; --ok:#246456; --code:#10221e;
+    }
+    @media (prefers-color-scheme:dark) {
+      :root {
+        --paper:#101614; --surface:#19221f; --ink:#edf4f1; --muted:#a7b4af;
+        --line:#36433f; --accent:#8bc9bc; --accent-soft:#213b35; --warn:#e6c176;
+        --warn-soft:#3b321e; --ok:#91d0c1; --code:#0a1210;
+      }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.58 Inter,ui-sans-serif,system-ui,sans-serif; }
+    main { width:min(1180px,calc(100% - 32px)); margin:0 auto; padding:54px 0 90px; }
+    header { border-bottom:1px solid var(--line); display:grid; gap:20px; grid-template-columns:minmax(0,1fr) auto; padding-bottom:30px; }
+    .eyebrow { color:var(--accent); font-size:11px; font-weight:850; letter-spacing:.14em; text-transform:uppercase; }
+    h1,h2 { font-family:Georgia,serif; letter-spacing:-.03em; }
+    h1 { font-size:clamp(40px,7vw,76px); line-height:.95; margin:10px 0 18px; max-width:860px; }
+    h2 { font-size:27px; margin:0 0 10px; }
+    h3 { font-size:15px; margin:0 0 7px; }
+    p { color:var(--muted); }
+    a { color:var(--accent); }
+    .lede { font-size:18px; max-width:780px; }
+    .stamp { align-self:end; background:var(--accent-soft); border:1px solid var(--accent); border-radius:999px; color:var(--accent); font-size:12px; font-weight:800; padding:8px 13px; white-space:nowrap; }
+    section { margin-top:34px; }
+    .grid { display:grid; gap:14px; grid-template-columns:repeat(12,minmax(0,1fr)); }
+    .card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:21px; }
+    .span-4 { grid-column:span 4; } .span-6 { grid-column:span 6; } .span-8 { grid-column:span 8; } .span-12 { grid-column:1/-1; }
+    .metric { color:var(--accent); font:700 32px/1 Georgia,serif; margin:9px 0; }
+    .badge { border:1px solid currentColor; border-radius:999px; display:inline-block; font-size:10px; font-weight:850; letter-spacing:.07em; padding:3px 7px; text-transform:uppercase; }
+    .pass { color:var(--ok); } .manual { color:var(--warn); }
+    table { border-collapse:collapse; width:100%; }
+    th,td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+    tr:last-child td { border-bottom:0; }
+    code,pre { font-family:"SFMono-Regular",Consolas,monospace; }
+    code { background:var(--accent-soft); border-radius:5px; color:var(--ink); padding:2px 5px; }
+    pre { background:var(--code); border-radius:14px; color:#dceae5; overflow:auto; padding:17px; white-space:pre-wrap; }
+    ol,ul { padding-left:20px; } li + li { margin-top:7px; }
+    .flow { display:grid; gap:8px; grid-template-columns:repeat(5,1fr); }
+    .flow div { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    .flow strong { display:block; font-size:12px; }
+    .flow small { color:var(--muted); }
+    .callout { background:var(--warn-soft); border-left:4px solid var(--warn); border-radius:8px; color:var(--ink); padding:12px 15px; }
+    .evidence { aspect-ratio:16/9; background:linear-gradient(135deg,var(--accent-soft),var(--surface)); border:1px dashed var(--line); border-radius:14px; display:grid; place-items:center; overflow:hidden; }
+    .evidence img { height:100%; object-fit:cover; width:100%; }
+    footer { border-top:1px solid var(--line); color:var(--muted); margin-top:42px; padding-top:20px; }
+    @media (max-width:820px) {
+      header { grid-template-columns:1fr; } .stamp { justify-self:start; }
+      .span-4,.span-6,.span-8 { grid-column:1/-1; } .flow { grid-template-columns:1fr; }
+      .table-scroll { overflow:auto; } table { min-width:760px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <div class="eyebrow">BRE-269 · M6 Agents closeout</div>
+      <h1>Useful signals,<br>without surrendering the inbox.</h1>
+      <p class="lede">A reviewer-facing record of Orca’s deterministic propagation slice: what surfaced, what stayed quiet, what an external agent could read, and where the boundaries held.</p>
+    </div>
+    <div class="stamp">Validation complete · 12 / 12</div>
+  </header>
+
+  <section class="grid" aria-label="Validation summary">
+    <article class="card span-4"><h3>Evaluation coverage</h3><div class="metric">12 / 12</div><p>Required fixture scenarios are named with expected outcomes and executable evidence.</p></article>
+    <article class="card span-4"><h3>Model dependency</h3><div class="metric">None</div><p>The first local slice is deterministic and does not read an OpenAI API key.</p></article>
+    <article class="card span-4"><h3>Provider writes</h3><div class="metric">0 tools</div><p>MCP exposes four bounded read tools; lifecycle actions mutate only Orca’s local projection.</p></article>
+  </section>
+
+  <section>
+    <h2>The path under test</h2>
+    <div class="flow">
+      <div><strong>1 · Receive</strong><small>push, scheduled, or manual sync</small></div>
+      <div><strong>2 · Normalize</strong><small>provider-neutral mail</small></div>
+      <div><strong>3 · Classify</strong><small>Human Signal stays independent</small></div>
+      <div><strong>4 · Propagate</strong><small>deterministic, retry-safe event</small></div>
+      <div><strong>5 · Read</strong><small>local timeline or OAuth MCP</small></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Usefulness fixture matrix</h2>
+    <p>“Observed” points to an executable assertion; live-only limitations are called out separately instead of being reported as passes.</p>
+    <div class="card table-scroll">
+      <table>
+        <thead><tr><th>Fixture</th><th>Expected outcome</th><th>Observed result</th></tr></thead>
+        <tbody>
+          <tr><td>TestFlight / release</td><td>Base timeline; source remains in Tideline</td><td><span class="badge pass">Demo + service pass</span></td></tr>
+          <tr><td>CI / deploy failure</td><td>One high-importance event with plain explanation</td><td><span class="badge pass">Revision pass</span></td></tr>
+          <tr><td>Security / account alert</td><td>Timeline event; content cannot alter authority</td><td><span class="badge pass">Boundary pass</span></td></tr>
+          <tr><td>Receipt / renewal</td><td>Consequential charge or renewal propagates</td><td><span class="badge pass">Demo pass</span></td></tr>
+          <tr><td>Travel / booking change</td><td>Meaningful itinerary change and source link</td><td><span class="badge pass">Demo pass</span></td></tr>
+          <tr><td>Newsletter / marketing</td><td>No propagation by default; Tideline discoverable</td><td><span class="badge pass">No-event pass</span></td></tr>
+          <tr><td>Direct human mail</td><td>No automated event; Human Inbox unchanged</td><td><span class="badge pass">Human Signal pass</span></td></tr>
+          <tr><td>Uncertain mail</td><td>No forced event; Review unchanged</td><td><span class="badge pass">Human Signal pass</span></td></tr>
+          <tr><td>False positive + mute</td><td>Correction persists; future match suppressed locally</td><td><span class="badge pass">Lifecycle pass</span></td></tr>
+          <tr><td>Duplicate + follow-up</td><td>Retry dedupes; meaningful follow-up updates</td><td><span class="badge pass">Idempotency pass</span></td></tr>
+          <tr><td>Mixed thread</td><td>Per-message authorship and source attribution preserved</td><td><span class="badge pass">Attribution pass</span></td></tr>
+          <tr><td>Multiple accounts</td><td>Separate attribution; cross-account reads denied</td><td><span class="badge pass">MCP pass</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="card span-8">
+      <h2>Safety and privacy checks</h2>
+      <table>
+        <tbody>
+          <tr><td>Instruction-like email text</td><td>Returned only as <code>untrusted_external_content</code>; tool catalog and authorization stay fixed.</td><td class="pass">Pass</td></tr>
+          <tr><td>Code / PKCE replay</td><td>Authorization code is single-use; refresh replay revokes the connection.</td><td class="pass">Pass</td></tr>
+          <tr><td>Wrong resource / scope escalation</td><td>Exact audience/resource and allowlisted read scopes fail closed.</td><td class="pass">Pass</td></tr>
+          <tr><td>Revocation / account isolation</td><td>Every call rechecks live grant and current ownership intersection.</td><td class="pass">Pass</td></tr>
+          <tr><td>Secrets in diagnostics</td><td>Provider-prefixed tokens, OAuth codes, API keys, cookies, and bearer values redact recursively.</td><td class="pass">Pass</td></tr>
+          <tr><td>Provider mutations</td><td>No MCP write tool; propagation and lifecycle paths do not call provider write transports.</td><td class="pass">Pass</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <aside class="card span-4">
+      <h2>Credential evidence</h2>
+      <ul>
+        <li>No <code>OPENAI_API_KEY</code> is read by the propagation path.</li>
+        <li>No OpenAI/ChatGPT credential is stored by Orca.</li>
+        <li>Provider tokens remain encrypted and never enter MCP projections.</li>
+        <li>OAuth codes/access/refresh tokens are stored only as hashes.</li>
+      </ul>
+    </aside>
+  </section>
+
+  <section class="grid">
+    <article class="card span-6"><h2>Latency target</h2><div class="metric">45.79 ms</div><p>Observed push-path time from normalized source persistence through committed SQLite event. The manual/fallback observation was <strong>19.33 ms</strong>; both are comfortably below the explicit <strong>2,000 ms</strong> local target. Provider fetch/delivery time is outside this boundary.</p></article>
+    <article class="card span-6"><h2>Failure isolation</h2><div class="metric">Mail survives</div><p>The sync result—not propagation—is authoritative for ingestion. The Gmail integration suite injects storage and evaluator failures, verifies the source message remains stored, and asserts body and exception secret markers never enter structured telemetry.</p></article>
+  </section>
+
+  <section>
+    <h2>Manual local + external-agent path</h2>
+    <ol class="card">
+      <li>Install dependencies and migrate a disposable development database. Do not paste real tokens into terminal output or screenshots.</li>
+      <li>Enable deterministic propagation, load the M6 fixture inbox, and start API + web. No OpenAI environment variable is required.</li>
+      <li>Open the base timeline. Confirm the release event appears, its explanation is plain, and “Open original” returns to the source thread. Confirm the newsletter remains in Tideline.</li>
+      <li>Verify local lifecycle controls in both themes: normal, selected/pressed, hover/focus, loading, error, and disabled. Refresh after a correction and confirm it persists.</li>
+      <li>Expose the API through a reviewer-controlled public HTTPS endpoint. Configure exact issuer/resource values and an allowed ChatGPT/Codex OAuth callback; loopback HTTP is development-only.</li>
+      <li>Connect the remote MCP server, approve only read scopes/accounts, call <code>list_agent_events</code> and <code>get_thread</code>, then inspect the source link.</li>
+      <li>Revoke the connection in Orca and repeat the read. It must fail immediately. Reconnect with one account and confirm another account never appears.</li>
+    </ol>
+    <p class="callout"><strong>Honest environment boundary:</strong> the repository suite proves the full OAuth issuance → MCP read → live revocation path locally. A literal ChatGPT/Codex UI connection requires a reviewer-controlled public HTTPS endpoint and was not claimed from a loopback-only workspace. Live Outlook remains deferred; provider-neutral fixtures cover its normalized shape without depending on Microsoft approval.</p>
+    <p>Current platform safety guidance: <a href="https://developers.openai.com/api/docs/guides/tools-connectors-mcp">official OpenAI documentation for remote MCP servers</a>.</p>
+  </section>
+
+  <section>
+    <h2>Theme evidence</h2>
+    <div class="grid">
+      <article class="card span-6"><div class="evidence"><img alt="Light theme Orca signal timeline in its normal state" src="../../../../docs/evidence/bre-269-timeline-light-normal.png"></div><p>Light · normal. Separate captured artifacts cover pressed/focus, loading, error, action error, and disabled.</p></article>
+      <article class="card span-6"><div class="evidence"><img alt="Dark theme Orca signal timeline with pressed history and focused mute controls" src="../../../../docs/evidence/bre-269-timeline-dark-pressed-focus.png"></div><p>Dark · selected/pressed + focus. Normal, loading, error, and action-error artifacts are captured alongside it.</p></article>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="card span-6">
+      <h2>Shipped in M6</h2>
+      <ul><li>Provider-neutral event contract</li><li>Deterministic local propagation</li><li>Reversible local timeline controls</li><li>Four-tool read-only MCP surface</li><li>OAuth 2.1 consent, scope/account grants, and revocation</li></ul>
+    </article>
+    <article class="card span-6">
+      <h2>Deferred product decisions</h2>
+      <ul><li>Model-assisted summaries and their evaluation bar</li><li>Any provider write actions</li><li>Approval UX for future sensitive actions</li><li>Background model scheduling</li><li>User-managed model billing / API keys</li><li>Live Outlook rollout after provider approval</li></ul>
+    </article>
+  </section>
+
+  <section>
+    <h2>Reviewer commands</h2>
+    <pre><code>bun install --frozen-lockfile
+bun run typecheck
+bun run test
+bun run build
+
+# Focused BRE-269 catalog and latency boundary
+bun run --cwd apps/api test -- src/agents/m6-validation.test.ts src/agents/m6-latency.test.ts
+
+# Stacked propagation, OAuth/MCP, lifecycle, and UI suites
+bun run --cwd apps/api test -- src/agents/propagation/deterministic.test.ts src/agents/propagation/service.test.ts src/agents/propagation/store.test.ts src/agents/propagation/gmail-integration.test.ts
+bun run --cwd apps/api test -- src/agents/mcp.test.ts src/agents/mcp-oauth.test.ts src/agent-events.routes.test.ts
+bun run --cwd apps/web test -- src/agent-event-ui.test.tsx src/App.interaction.test.tsx src/styles.test.ts</code></pre>
+  </section>
+
+  <footer>BRE-269 validation guide · 19 August 2026 · Branch <code>luke/bre-269</code> · No public plugin submission or autonomous provider writes.</footer>
+</main>
+</body>
+</html>
