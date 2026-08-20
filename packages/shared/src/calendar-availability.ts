@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const nonEmpty = z.string().trim().min(1);
 const utcTimestamp = z.string().datetime({ offset: false });
+const httpSourceUrl = z.string().url().max(2_048).refine((value) => {
+  const protocol = new URL(value).protocol;
+  return protocol === "http:" || protocol === "https:";
+}, { message: "Source URLs must use HTTP or HTTPS" });
 
 export const calendarProviderSchema = z.enum(["google", "outlook"]);
 export type CalendarProvider = z.infer<typeof calendarProviderSchema>;
@@ -42,7 +46,7 @@ export const requestedAvailabilityWindowSchema = z.object({
   id: nonEmpty.max(200),
   messageId: nonEmpty.max(512),
   sourceText: nonEmpty.max(1_000),
-  sourceUrl: z.string().url(),
+  sourceUrl: httpSourceUrl,
   originalTimeZone: nonEmpty.max(100).nullable(),
   userTimeZone: nonEmpty.max(100),
   start: utcTimestamp.nullable(),
@@ -152,7 +156,7 @@ export const calendarAvailabilityUnknownReasonSchema = z.enum([
 export type CalendarAvailabilityUnknownReason = z.infer<typeof calendarAvailabilityUnknownReasonSchema>;
 
 export const calendarWindowSourceSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("message"), messageId: nonEmpty, url: z.string().url(), sourceText: nonEmpty.max(1_000) }).strict(),
+  z.object({ kind: z.literal("message"), messageId: nonEmpty, url: httpSourceUrl, sourceText: nonEmpty.max(1_000) }).strict(),
   z.object({ kind: z.literal("calendar_freebusy"), calendarId: nonEmpty, checkedAt: utcTimestamp }).strict(),
 ]);
 export type CalendarWindowSource = z.infer<typeof calendarWindowSourceSchema>;

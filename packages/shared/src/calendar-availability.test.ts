@@ -32,6 +32,28 @@ describe("calendar availability contract", () => {
     }).requestedWindows[0]?.start).toBe(exactWindow.start);
   });
 
+  test("allows only HTTP(S) source links rendered by the availability UI", () => {
+    for (const sourceUrl of [
+      "javascript:alert(document.domain)",
+      "data:text/html,<script>alert(document.domain)</script>",
+      "file:///Users/example/private-message.html",
+    ]) {
+      expect(calendarAvailabilityRequestSchema.safeParse({
+        connectionId: "calendar-connection-1",
+        requestedWindows: [{ ...exactWindow, sourceUrl }],
+        userTimeZone: "America/New_York",
+        workingHours: null,
+      }).success).toBe(false);
+    }
+
+    expect(calendarAvailabilityRequestSchema.safeParse({
+      connectionId: "calendar-connection-1",
+      requestedWindows: [{ ...exactWindow, sourceUrl: "https://orca.example/thread/thread-1" }],
+      userTimeZone: "America/New_York",
+      workingHours: null,
+    }).success).toBe(true);
+  });
+
   test("requires ambiguity to stay explicit rather than guessing a time", () => {
     expect(() => calendarAvailabilityRequestSchema.parse({
       connectionId: "calendar-connection-1",
@@ -71,4 +93,3 @@ describe("calendar availability contract", () => {
     expect(parsed.results[0]?.freshness).toBe("stale");
   });
 });
-
