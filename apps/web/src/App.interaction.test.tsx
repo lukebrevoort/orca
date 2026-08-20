@@ -537,6 +537,78 @@ describe("Inbox reader viewport restoration", () => {
     expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
   });
 
+  test("opens a propagated event source and returns to the same signal position", async () => {
+    await renderApp();
+    const pane = inboxPane();
+    const card = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Orca 2.4 is ready in TestFlight"));
+    const origin = card?.querySelector("button") as unknown as HTMLButtonElement | null;
+    if (!origin) throw new Error("Could not find the propagated event source action");
+    const focusCalls = trackFocus(origin);
+    setScroll({ x: 9, y: 264 });
+    pane.scrollLeft = 3;
+    pane.scrollTop = 188;
+
+    await act(async () => {
+      origin.click();
+      await Promise.resolve();
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Orca 2.4 is ready to test");
+
+    setScroll({ x: 0, y: 0 });
+    pane.scrollLeft = 0;
+    pane.scrollTop = 0;
+    await goBackToInbox();
+
+    expect(scrollPosition).toEqual({ x: 9, y: 264 });
+    expect(pane.scrollLeft).toBe(3);
+    expect(pane.scrollTop).toBe(188);
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(origin);
+    expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
+    expect(browserWindow.localStorage.getItem("orca-demo-agent-event-lifecycles-v1")).toContain('"state":"seen"');
+  });
+
+  test("reveals and restores a quieted local signal without changing its source mail", async () => {
+    await renderApp();
+    const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
+    await act(async () => review.click());
+    const quieted = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Figma renews September 3"));
+    expect(quieted?.textContent).toContain("Dismissed");
+    const restore = [...(quieted?.querySelectorAll("button") ?? [])].find((button) => button.textContent === "Restore") as unknown as HTMLButtonElement;
+    await act(async () => {
+      restore.click();
+      await Promise.resolve();
+    });
+    expect(quieted?.textContent).toContain("Seen");
+    await act(async () => {
+      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+    });
+    expect(messageRow("Figma Billing")).not.toBeNull();
+  });
+
+  test("keeps broad mutes explicitly reversible before restoring the event", async () => {
+    await renderApp();
+    const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
+    await act(async () => review.click());
+    const muted = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Routine Cloud sign-in notice"));
+    if (!muted) throw new Error("Could not find the muted signal fixture");
+    const restore = [...muted.querySelectorAll("button")].find((button) => button.textContent === "Restore event") as unknown as HTMLButtonElement;
+    const unmute = [...muted.querySelectorAll("button")].find((button) => button.textContent?.includes("Unmute alerts@routinecloud.example")) as unknown as HTMLButtonElement;
+    expect(restore.disabled).toBe(true);
+    await act(async () => {
+      unmute.click();
+      await Promise.resolve();
+    });
+    expect(restore.disabled).toBe(false);
+    await act(async () => {
+      restore.click();
+      await Promise.resolve();
+    });
+    expect(muted.textContent).toContain("Seen");
+    expect(browserWindow.localStorage.getItem("orca-demo-agent-event-mutes-v1")).toBe("[]");
+  });
+
   test("cancels an old focus frame when a new reader opens before it runs", async () => {
     await renderApp();
     const first = messageRow("Jordan Bell");

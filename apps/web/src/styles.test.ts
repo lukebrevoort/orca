@@ -54,6 +54,20 @@ describe("profile avatar controls", () => {
   });
 });
 
+describe("propagated signal controls", () => {
+  test("keeps hover, focus, pressed, error, and disabled labels theme-safe", () => {
+    expect(styles).toContain("/* BRE-268: propagated signals are a local projection");
+    expect(styles).toContain('.agent-events-history-toggle[aria-pressed="true"],');
+    expect(styles).toContain("background: var(--orca-surface-hover);");
+    expect(styles).toContain("border-color: var(--orca-border);");
+    expect(styles).toContain("color: var(--orca-ink);");
+    expect(styles).toContain(".agent-event-actions button:focus-visible,");
+    expect(styles).toContain("outline: 2px solid var(--orca-accent);");
+    expect(styles).toContain(".agent-event-actions button:disabled,");
+    expect(styles).toContain(".agent-events-error {");
+  });
+});
+
 describe("Calendar consent controls", () => {
   test("keeps selection, focus, disabled, and motion states theme-safe", () => {
     expect(styles).toContain('.calendar-selection-list > label[data-selected="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border);');

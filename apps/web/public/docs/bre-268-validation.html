@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-268 · Propagated signal validation</title>
+  <style>
+    :root { color-scheme:light dark; --paper:#f5f3ed; --card:#fffdf8; --ink:#15312d; --muted:#697773; --line:#d8ddd7; --sea:#287e73; --soft:#e2f0ec; --warm:#b55d4b; }
+    * { box-sizing:border-box } body { background:var(--paper); color:var(--ink); font:15px/1.55 ui-sans-serif,system-ui,sans-serif; margin:0; padding:40px 20px 70px }
+    main { margin:auto; max-width:1100px } header { border-bottom:1px solid var(--line); margin-bottom:24px; padding-bottom:24px }
+    .eyebrow, th { color:var(--sea); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase } h1 { font:500 clamp(38px,7vw,76px)/.95 Georgia,serif; letter-spacing:-.04em; margin:8px 0 16px; max-width:850px } h2 { font:500 28px/1.1 Georgia,serif; margin:0 0 10px } h3 { font-size:14px; margin:0 0 5px }
+    .lede { color:var(--muted); font-size:18px; max-width:760px } .grid { display:grid; gap:14px; grid-template-columns:repeat(12,1fr) } article { background:var(--card); border:1px solid var(--line); border-radius:14px; grid-column:span 6; padding:20px } article.wide { grid-column:1/-1 } article.signal { border-left:4px solid var(--warm) }
+    code { background:var(--soft); border-radius:5px; color:var(--ink); padding:2px 5px } ul,ol { margin:8px 0 0; padding-left:20px } li+li { margin-top:6px } .check { color:var(--sea); font-weight:800 } .warning { color:var(--warm); font-weight:700 }
+    table { border-collapse:collapse; width:100% } td,th { border-bottom:1px solid var(--line); padding:10px; text-align:left; vertical-align:top } th { color:var(--muted) } .route { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px } .pill { background:var(--soft); border:1px solid var(--line); border-radius:99px; font-size:11px; font-weight:700; padding:5px 8px }
+    .flow { display:grid; gap:8px; grid-template-columns:repeat(5,1fr); margin-top:16px } .flow div { background:var(--soft); border-radius:10px; min-height:92px; padding:12px } .flow b { display:block; font-size:11px; margin-bottom:6px; text-transform:uppercase }
+    a { color:var(--sea) }
+    @media(max-width:760px){ article { grid-column:1/-1 }.flow{grid-template-columns:1fr} }
+    @media(prefers-color-scheme:dark){ :root { --paper:#0d1b18; --card:#142723; --ink:#eef5f1; --muted:#acbbb6; --line:#31504a; --sea:#75c9bd; --soft:#1c3934; --warm:#f1a28e } }
+  </style>
+</head>
+<body><main>
+  <header>
+    <p class="eyebrow">BRE-268 · Manual validation card</p>
+    <h1>Important machine mail, surfaced without pretending it is human.</h1>
+    <p class="lede">Orca adds a short, explainable, local signal to the default timeline. The source remains ordinary provider mail in Tideline and All mail; every user action changes only Orca’s projection.</p>
+    <div class="route"><span class="pill">deterministic M6 rules</span><span class="pill">account scoped</span><span class="pill">no provider writes</span><span class="pill">no OpenAI dependency</span><span class="pill">reversible controls</span></div>
+  </header>
+
+  <section class="grid">
+    <article class="wide signal">
+      <h2>Core flow</h2>
+      <div class="flow">
+        <div><b>1 · Notice</b>Open <code>/dev/inbox</code>. “Worth a look” is visually separate from human rows and Tideline.</div>
+        <div><b>2 · Understand</b>Read what happened, why Orca surfaced it, category, rule/version, sender, subject, account, and lifecycle.</div>
+        <div><b>3 · Source</b>Choose “Open original.” Confirm the exact account/thread reader opens.</div>
+        <div><b>4 · Return</b>Choose Inbox Back. Confirm scroll position and focus return to that event’s source button.</div>
+        <div><b>5 · Recover</b>Dismiss or mark “Not useful,” open “Review quieted,” then Restore. Refresh and confirm the state persists.</div>
+      </div>
+    </article>
+
+    <article>
+      <h2>State gallery</h2>
+      <ol>
+        <li><code>/dev/inbox?agentUi=loading</code> — bounded skeleton with an accessible loading label.</li>
+        <li><code>/dev/inbox?agentUi=error</code> — list failure and “Try signals again.”</li>
+        <li><code>/dev/inbox?agentUi=action-error</code> — per-event save failure; source mail remains available.</li>
+        <li><code>/dev/inbox?agentUi=disabled</code> — readable disabled labels and “Saving locally…” status.</li>
+      </ol>
+    </article>
+
+    <article>
+      <h2>Theme and input pass</h2>
+      <ol>
+        <li>Validate the default card and every action in light mode.</li>
+        <li>Toggle dark mode and repeat default, hover, focus-visible, pressed “Review quieted,” open mute menu, loading, error, and disabled states.</li>
+        <li>Confirm labels—not color alone—communicate New, Seen, Dismissed, Snoozed, Muted, Not useful, and Retracted.</li>
+        <li>Tab through actions; focus rings and all labels must remain readable.</li>
+      </ol>
+    </article>
+
+    <article class="wide">
+      <h2>Demo fixture matrix</h2>
+      <table>
+        <thead><tr><th>Fixture</th><th>Expected projection</th><th>Source semantics</th></tr></thead>
+        <tbody>
+          <tr><td>TestFlight build</td><td>New, high, release available</td><td>Original automated message remains in Tideline/All mail.</td></tr>
+          <tr><td>CI failure follow-up</td><td>Seen, revision 2; one event for retry/follow-up</td><td>Exact latest source message and shared thread are attributed.</td></tr>
+          <tr><td>Recovery-key alert</td><td>Snoozed with visible return time</td><td>Copy avoids claiming the event is safe or unsafe.</td></tr>
+          <tr><td>Annual renewal</td><td>Dismissed and restorable</td><td>Provider read/star/labels remain unchanged.</td></tr>
+          <tr><td>Travel false positive</td><td>Not useful and restorable</td><td>Human Signal remains the original automated-mail estimate.</td></tr>
+          <tr><td>Muted sign-in sender</td><td>Muted and locally recoverable</td><td>Account-scoped mute changes no provider state.</td></tr>
+          <tr><td>Low-value newsletter</td><td>No propagated event (<code>destination:none</code>)</td><td>Still discoverable in Tideline/All mail.</td></tr>
+        </tbody>
+      </table>
+    </article>
+
+    <article>
+      <h2>Safety boundary</h2>
+      <ul>
+        <li><span class="check">✓</span> Lifecycle requests are owner + account scoped.</li>
+        <li><span class="check">✓</span> Revision conflicts are explicit; no last-write-wins overwrite.</li>
+        <li><span class="check">✓</span> “Not useful” never changes Human Signal.</li>
+        <li><span class="check">✓</span> No send, draft, archive, delete, relabel, or provider navigation route is called.</li>
+        <li><span class="check">✓</span> Errors contain bounded local-projection language, not mail content.</li>
+      </ul>
+    </article>
+
+    <article>
+      <h2>Semantic regression pass</h2>
+      <ul>
+        <li>Search for newsletter/source subject: normal mail search behavior remains unchanged.</li>
+        <li>Switch Human Inbox → Tideline → All mail: classification remains message-scoped.</li>
+        <li>Open a mixed/follow-up thread: only the exact machine source owns the event.</li>
+        <li>Check attention filters, collections, reminders, pins, and reader actions: signals do not alter their counts or membership.</li>
+      </ul>
+    </article>
+
+    <article class="wide">
+      <h2>Automated verification</h2>
+      <p><code>bun --cwd apps/web test src/agent-event-ui.test.tsx src/App.interaction.test.tsx</code></p>
+      <p><code>bun --cwd apps/api test src/agent-events.routes.test.ts</code></p>
+      <p><code>bun run typecheck &amp;&amp; bun run test &amp;&amp; bun run build</code></p>
+      <p class="warning">Release blocker: any action label that disappears in either theme, any lifecycle refresh regression, any cross-account read/write, or any provider mailbox mutation.</p>
+    </article>
+  </section>
+</main></body>
+</html>
