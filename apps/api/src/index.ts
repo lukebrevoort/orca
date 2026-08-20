@@ -12,6 +12,8 @@ import {
   type HumanClassificationReasonCode,
   type InboxClassificationResponse,
   type InboxMessage,
+  type CalendarAvailabilityResponse,
+  type CalendarWorkingHours,
   type MailAccount,
   type MailProvider,
   type McpGetConnectionStatusInput,
@@ -22,6 +24,7 @@ import {
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
+  calendarWorkingHoursSchema,
   collectionSchema,
   createCollectionSchema,
   createHumanClassificationOverrideSchema,
@@ -50,6 +53,7 @@ import {
   pinSchema,
   reminderSchema,
   reminderViewSettingsSchema,
+  replyBriefOutputSchema,
   senderAttentionRuleSchema,
   syncStatusSchema,
   sendMessageDraftSchema,
@@ -71,7 +75,7 @@ import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
+import { attentionViewSettings, calendarConnections, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
@@ -88,6 +92,7 @@ import type { GmailDraftMirrorInput, GmailDraftMirrorResult } from "./providers/
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
 import { providerRegistry as defaultProviderRegistry, type ProviderRegistry } from "./providers/registry.ts";
 import { ProviderNotImplementedError, type ProviderTransport } from "./providers/shared/interfaces.ts";
+import { createOnDemandReplyBrief, interpretRequestedAvailabilityWindows, replyBriefInvocationRequestSchema, type ReplyBriefInvocationRequest } from "./reply-brief.ts";
 import { handleFeedbackRequest } from "./feedback.ts";
 import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agents/boundary.ts";
@@ -97,6 +102,7 @@ import type { AgentEventStore } from "./agents/interfaces.ts";
 import { createCalendarApp } from "./auth/calendar/routes.ts";
 import type { GoogleCalendarOAuthConfig } from "./auth/calendar/config.ts";
 import type { CalendarFetch } from "./calendar/google-client.ts";
+import { createCalendarAvailabilityResolver } from "./calendar/resolver.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -118,6 +124,7 @@ type CreateAppOptions = {
   mcpOAuthConfig?: McpOAuthConfig;
   calendarOAuthConfig?: GoogleCalendarOAuthConfig;
   calendarFetch?: CalendarFetch;
+  replyBriefAvailability?: (input: { userId: string; request: ReplyBriefInvocationRequest; thread: ThreadDetail }) => Promise<CalendarAvailabilityResponse | null>;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -291,6 +298,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     fetch: options.calendarFetch,
     now,
   }));
+  const replyBriefCalendarResolver = createCalendarAvailabilityResolver({
+    dbFactory,
+    config: options.calendarOAuthConfig,
+    fetch: options.calendarFetch,
+    now,
+  });
 
   app.get("/health", (c) =>
     c.json({
@@ -1461,6 +1474,98 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
       } finally {
         sqlite.close();
+      }
+    },
+  );
+
+  app.post(
+    "/v1/threads/:threadId/reply-brief",
+    validator("query", (value, c) => {
+      const result = threadQuerySchema.safeParse(value);
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "An accountId is required to request reply guidance" } }, 400);
+      return result.data;
+    }),
+    validator("json", (value, c) => {
+      const result = replyBriefInvocationRequestSchema.safeParse(value);
+      if (!result.success) return c.json({ error: { code: "validation_error", message: "Reply guidance requires an explicit, scoped user request" } }, 400);
+      return result.data;
+    }),
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const request = c.req.valid("json");
+      const accountId = c.req.valid("query").accountId;
+      const threadId = c.req.param("threadId");
+      const userId = c.get("auth").userId;
+      const { db, sqlite } = dbFactory();
+      let thread: ThreadDetail;
+      let calendarConnectionId: string | null = null;
+      let workingHours: CalendarWorkingHours | null = null;
+      try {
+        const account = getConnectedAccountById(db, userId, accountId);
+        if (!account) return c.json({ error: { code: "not_found", message: "Conversation not found" } }, 404);
+        if (request.accountId !== accountId || request.provider !== account.provider || request.threadId !== threadId) {
+          return c.json({ error: { code: "validation_error", message: "Reply guidance scope must match the selected conversation" } }, 400);
+        }
+        try {
+          thread = readThreadDetail(db, account, serializeMailAccount(account), threadId);
+        } catch (error) {
+          if (error instanceof McpReadError && error.code === "not_found") {
+            return c.json({ error: { code: "not_found", message: "Conversation not found" } }, 404);
+          }
+          throw error;
+        }
+        const connectedCalendar = db.select().from(calendarConnections)
+          .where(and(eq(calendarConnections.userId, userId), eq(calendarConnections.state, "connected")))
+          .orderBy(desc(calendarConnections.updatedAt)).get();
+        const latestCalendar = connectedCalendar ?? db.select().from(calendarConnections)
+          .where(eq(calendarConnections.userId, userId))
+          .orderBy(desc(calendarConnections.updatedAt)).get();
+        calendarConnectionId = latestCalendar?.id ?? null;
+        const calendarPreference = db.select().from(calendarPreferences).where(eq(calendarPreferences.userId, userId)).get();
+        if (calendarPreference?.workingHours) {
+          try {
+            const parsedWorkingHours = calendarWorkingHoursSchema.safeParse(JSON.parse(calendarPreference.workingHours));
+            workingHours = parsedWorkingHours.success ? parsedWorkingHours.data : null;
+          } catch {
+            workingHours = null;
+          }
+        }
+      } finally {
+        sqlite.close();
+      }
+      try {
+        let availability: CalendarAvailabilityResponse | null = null;
+        if (options.replyBriefAvailability) {
+          availability = await options.replyBriefAvailability({ userId, request, thread });
+        } else if (calendarConnectionId && request.authorizedContext.includes("calendar_availability")) {
+          availability = await replyBriefCalendarResolver.resolve({
+            userId,
+            request: {
+              connectionId: calendarConnectionId,
+              requestedWindows: interpretRequestedAvailabilityWindows({
+                thread,
+                selectedMessageIds: request.selectedMessageIds,
+                requestedAt: request.requestedAt,
+                userTimeZone: request.userTimeZone,
+                webOrigin: serverConfig.webOrigin,
+              }),
+              userTimeZone: request.userTimeZone,
+              workingHours,
+            },
+          });
+        }
+        return jsonWithSchema(c, replyBriefOutputSchema, createOnDemandReplyBrief({
+          request,
+          thread,
+          availability,
+          now: now(),
+          webOrigin: serverConfig.webOrigin,
+        }));
+      } catch (error) {
+        if (error instanceof Error && /selected|scope|belong|invocation/i.test(error.message)) {
+          return c.json({ error: { code: "validation_error", message: error.message } }, 400);
+        }
+        throw error;
       }
     },
   );

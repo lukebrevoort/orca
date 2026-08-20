@@ -24,6 +24,7 @@ import {
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
+import { ReplyBriefPanel } from "./reply-brief";
 import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
@@ -4158,6 +4159,7 @@ export function MessageReader({
               </section>
             ))}
           </div>
+          <ReplyBriefPanel demoMode={demoMode} detail={detail} />
           <ThreadReplyComposer
             account={detail.account}
             contacts={contacts}
