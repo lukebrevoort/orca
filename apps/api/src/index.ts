@@ -94,6 +94,9 @@ import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agen
 import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
 import { createOrcaMcpAccessTokenVerifier, type OrcaMcpTokenVerifier } from "./agents/access-token.ts";
 import type { AgentEventStore } from "./agents/interfaces.ts";
+import { createCalendarApp } from "./auth/calendar/routes.ts";
+import type { GoogleCalendarOAuthConfig } from "./auth/calendar/config.ts";
+import type { CalendarFetch } from "./calendar/google-client.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -113,6 +116,8 @@ type CreateAppOptions = {
   mcpTokenVerifier?: OrcaMcpTokenVerifier;
   mcpEnv?: NodeJS.ProcessEnv;
   mcpOAuthConfig?: McpOAuthConfig;
+  calendarOAuthConfig?: GoogleCalendarOAuthConfig;
+  calendarFetch?: CalendarFetch;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -280,6 +285,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     config: mcpOAuthConfig,
     now,
   });
+  app.route("/", createCalendarApp({
+    dbFactory,
+    config: options.calendarOAuthConfig,
+    fetch: options.calendarFetch,
+    now,
+  }));
 
   app.get("/health", (c) =>
     c.json({
