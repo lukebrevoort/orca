@@ -11,8 +11,8 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, Pin, PinFilter, PinIcon, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, Pin, PinFilter, PinIcon, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoMessages,
@@ -377,6 +377,33 @@ export function App() {
 
 const defaultAccountPreferences: UserPreferences = { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false };
 
+const demoAgentConnections: McpConnection[] = [{
+  id: "mcp_connection_demo",
+  clientName: "ChatGPT development connection",
+  scopes: ["mail:read", "agent_events:read"],
+  accounts: [{ id: demoAccount.id, email: demoAccount.email, provider: demoAccount.provider }],
+  createdAt: "2026-08-18T16:00:00.000Z",
+  lastUsedAt: "2026-08-19T15:42:00.000Z",
+  revokedAt: null,
+}];
+
+export function formatAgentConnectionTime(value: string | null) {
+  if (!value) return "Never used";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+export async function revokeAgentConnection(connectionId: string) {
+  await fetchNoContent(`/v1/mcp/connections/${encodeURIComponent(connectionId)}`, { method: "DELETE" });
+}
+
+export async function revokeAllAgentConnections() {
+  const response = await fetch("/v1/mcp/connections/revoke-all", { method: "POST", credentials: "include" });
+  if (!response.ok) throw await buildApiRequestError(response);
+  return response.json() as Promise<{ revoked: number }>;
+}
+
 export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
   preferences: ReaderPreferences;
   setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
@@ -394,6 +421,10 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [connectedAccountsError, setConnectedAccountsError] = useState<string | null>(null);
   const [outlookAuthorizationStatus, setOutlookAuthorizationStatus] = useState<OAuthConnectStatus>("idle");
   const [outlookAuthorizationError, setOutlookAuthorizationError] = useState<string | null>(null);
+  const [agentConnections, setAgentConnections] = useState<McpConnection[]>(demoMode ? demoAgentConnections : []);
+  const [agentConnectionsStatus, setAgentConnectionsStatus] = useState<"loading" | "ready" | "disabled" | "error">(demoMode ? "ready" : "loading");
+  const [agentConnectionsError, setAgentConnectionsError] = useState<string | null>(null);
+  const [revokingAgentConnection, setRevokingAgentConnection] = useState<string | "all" | null>(null);
   const [saved, setSaved] = useState(false);
   const returnStatus = readOAuthReturnStatus();
 
@@ -404,6 +435,18 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     fetchJson("/v1/preferences", userPreferencesSchema, controller.signal)
       .then((value) => { if (!controller.signal.aborted) { setAccountPreferences(value); setAccountStatus("ready"); } })
       .catch((error) => { if (!controller.signal.aborted) { setAccountStatus("error"); setAccountError(getErrorMessage(error)); } });
+    return () => controller.abort();
+  }, [demoMode]);
+  useEffect(() => {
+    if (demoMode) return;
+    const controller = new AbortController();
+    fetchJson("/v1/mcp/connections", mcpConnectionPageSchema, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) { setAgentConnections(value.items); setAgentConnectionsStatus("ready"); } })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiRequestError && error.status === 404) setAgentConnectionsStatus("disabled");
+        else { setAgentConnectionsStatus("error"); setAgentConnectionsError(getErrorMessage(error)); }
+      });
     return () => controller.abort();
   }, [demoMode]);
   useEffect(() => {
@@ -433,12 +476,33 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   function connectOutlook() {
     void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
   }
+  async function revokeConnection(connection: McpConnection) {
+    if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
+    setRevokingAgentConnection(connection.id); setAgentConnectionsError(null);
+    try {
+      if (!demoMode) await revokeAgentConnection(connection.id);
+      const revokedAt = new Date().toISOString();
+      setAgentConnections((current) => current.map((item) => item.id === connection.id ? { ...item, revokedAt } : item));
+    } catch (error) { setAgentConnectionsError(`Could not revoke this connection. ${getErrorMessage(error)}`); }
+    finally { setRevokingAgentConnection(null); }
+  }
+  async function revokeAllConnections() {
+    if (!window.confirm("Revoke every active ChatGPT and Codex connection?")) return;
+    setRevokingAgentConnection("all"); setAgentConnectionsError(null);
+    try {
+      if (!demoMode) await revokeAllAgentConnections();
+      const revokedAt = new Date().toISOString();
+      setAgentConnections((current) => current.map((item) => item.revokedAt ? item : { ...item, revokedAt }));
+    } catch (error) { setAgentConnectionsError(`Could not revoke agent connections. ${getErrorMessage(error)}`); }
+    finally { setRevokingAgentConnection(null); }
+  }
   const profileAccount = connectedAccounts[0] ?? null;
+  const activeAgentConnections = agentConnections.filter((connection) => !connection.revokedAt);
 
   return <main className="settings-home-page">
     <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
     <div className="settings-home-layout">
-      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#privacy">Privacy & data</a></aside>
+      <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
         <header className="settings-home-intro"><p className="settings-eyebrow">Settings</p><h1 id="settings-title" ref={titleRef} tabIndex={-1}>Make Orca<br /><em>yours.</em></h1><p>One calm place for the choices that shape how you read, write, and connect. Changes say whether they follow your account or only this device.</p></header>
         {returnStatus ? <OAuthReturnNotice status={returnStatus} /> : null}
@@ -471,6 +535,22 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           {outlookAuthorizationError ? <p className="settings-outlook-error" role="alert">{outlookAuthorizationError}</p> : null}
           <a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a>
           <a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
+        </SettingsSection>
+        <SettingsSection id="agents" title="Agent connections" note="Read-only access">
+          <p className="settings-section-copy">ChatGPT and Codex can connect to Orca through a scoped OAuth link. These connections never receive your provider tokens or an OpenAI API key.</p>
+          {agentConnectionsStatus === "loading" ? <p className="settings-account-status">Checking agent connections…</p> : null}
+          {agentConnectionsStatus === "disabled" ? <p className="settings-account-status">Agent connections are not enabled for this Orca environment.</p> : null}
+          {agentConnectionsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load agent connections. {agentConnectionsError}</p> : null}
+          {agentConnectionsStatus === "ready" && agentConnections.length === 0 ? <p className="settings-account-status">No ChatGPT or Codex connection has access to this workspace.</p> : null}
+          {agentConnectionsStatus === "ready" && agentConnections.length > 0 ? <div className="agent-connection-list">
+            {agentConnections.map((connection) => <article className="agent-connection-row" data-revoked={connection.revokedAt ? "true" : "false"} key={connection.id}>
+              <div className="agent-connection-main"><span className="agent-connection-status">{connection.revokedAt ? "Revoked" : "Active"}</span><strong>{connection.clientName}</strong><small>{connection.accounts.length > 0 ? connection.accounts.map((account) => account.email).join(", ") : "No connected mail accounts"}</small></div>
+              <div className="agent-connection-detail"><span>{connection.scopes.map((scope) => scope === "mail:read" ? "Mail read" : "Agent events read").join(" · ")}</span><small>{connection.revokedAt ? `Revoked ${formatAgentConnectionTime(connection.revokedAt)}` : `Last used ${formatAgentConnectionTime(connection.lastUsedAt)}`}</small></div>
+              {!connection.revokedAt ? <button className="agent-connection-revoke" disabled={revokingAgentConnection !== null} onClick={() => void revokeConnection(connection)} type="button">{revokingAgentConnection === connection.id ? "Revoking…" : "Revoke connection"}</button> : null}
+            </article>)}
+          </div> : null}
+          {agentConnectionsError && agentConnectionsStatus === "ready" ? <p className="settings-account-status settings-account-status-error" role="alert">{agentConnectionsError}</p> : null}
+          <div className="agent-connection-actions"><a className="settings-row-link" href="/docs/bre-267-validation.html">Connection setup & security →</a><button className="agent-connection-revoke-all" disabled={activeAgentConnections.length === 0 || revokingAgentConnection !== null} onClick={() => void revokeAllConnections()} type="button">{revokingAgentConnection === "all" ? "Revoking all…" : "Revoke all agent connections"}</button></div>
         </SettingsSection>
         <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores normalized mail locally and only requests the read-first permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google or Microsoft prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a><a className="settings-row-link" href="https://myaccount.microsoft.com/organizations">Manage Microsoft provider access →</a></SettingsSection>
         <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>

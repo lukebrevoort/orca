@@ -156,7 +156,7 @@
               <tr><td><code>connection_status.read</code><br><span class="muted"><code>get_connection_status</code></span></td><td><code>orca:connection-status:read</code></td><td>Only authorized account id, provider, email/display name, and whether read connectivity is active.</td><td>Draft/send capabilities, provider scopes/tokens, errors, avatar or other account data.</td></tr>
             </tbody>
           </table>
-          <p class="muted" style="margin-top:14px">Tool names are an adapter detail. The authorization layer enforces the shared action, scope, exposure, and read-only annotations from BRE-260; unknown tools/actions/scopes are denied.</p>
+          <p class="muted" style="margin-top:14px">Tool names and the <code>orca:*</code> values above are resource-side capabilities. The API maps OAuth <code>mail:read</code> to the three mail/account capabilities and <code>agent_events:read</code> only to event reads; unknown OAuth scopes, tools, actions, or capabilities are denied.</p>
         </section>
 
         <section>

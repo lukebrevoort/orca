@@ -5,8 +5,6 @@ import {
   agentPropagationAssessmentSchema,
   conservativeAgentPropagationPolicy,
   inboxResponseSchema,
-  orcaMcpAuthorizationContextSchema,
-  orcaMcpMaximumAccessTokenLifetimeSeconds,
   orcaMcpReadOnlyTools,
   propagatedAgentEventSchema,
   updateAgentEventLifecycleSchema,
@@ -117,23 +115,7 @@ describe("M6 agent contract", () => {
     assert.equal(first.deduplicationKey, retry.deduplicationKey);
   });
 
-  test("binds read-only MCP access to issuer, resource, accounts, scopes, and a short lifetime", () => {
-    const context = orcaMcpAuthorizationContextSchema.parse({
-      userId: "user_1",
-      accountIds: ["account_1"],
-      issuer: "https://auth.orca.example",
-      resource: "https://app.orca.example/mcp",
-      scopes: ["orca:mail.metadata:read", "orca:agent-events:read"],
-      issuedAt: "2026-08-19T16:00:00.000Z",
-      expiresAt: "2026-08-19T16:10:00.000Z",
-    });
-
-    assert.equal(context.accountIds.length, 1);
-    assert.equal(orcaMcpMaximumAccessTokenLifetimeSeconds, 600);
-    assert.equal(orcaMcpAuthorizationContextSchema.safeParse({
-      ...context,
-      expiresAt: "2026-08-19T16:10:01.000Z",
-    }).success, false);
+  test("keeps the MCP tool catalog read-only", () => {
     assert.equal(orcaMcpReadOnlyTools.every((tool) =>
       tool.annotations.readOnlyHint && !tool.annotations.destructiveHint && !tool.annotations.openWorldHint
     ), true);

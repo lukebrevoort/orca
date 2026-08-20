@@ -222,14 +222,14 @@
         </section>
 
         <section>
-          <h2>Read scopes</h2>
+          <h2>Resource capabilities</h2>
           <ul>
             <li><code>orca:mail.metadata:read</code></li>
             <li><code>orca:mail.content:read</code></li>
             <li><code>orca:agent-events:read</code></li>
             <li><code>orca:connection-status:read</code></li>
           </ul>
-          <p class="muted">Content is intentionally separate from list/search metadata. No write, send, draft, archive, delete, or relabel scope is defined.</p>
+          <p class="muted">These are internal tool capabilities. BRE-267 maps public OAuth <code>mail:read</code> to mail metadata/content and connection status, while <code>agent_events:read</code> maps only to agent events. No write, send, draft, archive, delete, or relabel capability is defined.</p>
         </section>
 
         <section>
@@ -277,11 +277,11 @@
           <table>
             <thead><tr><th>Location</th><th>Contract</th><th>Downstream responsibility</th></tr></thead>
             <tbody>
-              <tr><td><code>@orca/shared</code><br><span class="muted">packages/shared/src/agent-contract.ts</span></td><td>Zod wire schemas, enums, conservative defaults, auth context, scope/action/exposure/tool mapping.</td><td>Import; do not duplicate enum strings.</td></tr>
+              <tr><td><code>@orca/shared</code><br><span class="muted">packages/shared/src/agent-contract.ts</span></td><td>Zod wire schemas, enums, conservative defaults, and scope/action/exposure/tool mapping.</td><td>Import; do not duplicate enum strings.</td></tr>
               <tr><td><code>AgentPropagationEvaluator</code></td><td>Post-normalization input → one provider-neutral assessment.</td><td>BRE-264 implements deterministic rules. Future model agents return the same shape.</td></tr>
               <tr><td><code>AgentEventStore</code></td><td>Account-scoped upsert/list/lifecycle boundary.</td><td>BRE-264/268 add Drizzle persistence and optimistic local actions.</td></tr>
               <tr><td><code>orcaMcpReadOnlyTools</code></td><td>Stable names, actions, exposure type, required scope, safety annotations.</td><td>BRE-265 registers focused input/output schemas and handlers.</td></tr>
-              <tr><td><code>OrcaMcpAuthorizationContext</code></td><td>Verified user, accounts, issuer, exact resource, scopes, issue/expiry.</td><td>BRE-261/267 establish issuer and token verification/revocation.</td></tr>
+              <tr><td><code>OrcaAgentAuthorizationContext</code><br><span class="muted">API-owned</span></td><td>Verified user, accounts, issuer, exact resource, mapped capabilities, issue/expiry.</td><td>BRE-261/267 establish issuer and live token/grant verification.</td></tr>
             </tbody>
           </table>
         </section>

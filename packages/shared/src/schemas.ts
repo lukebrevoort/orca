@@ -513,6 +513,33 @@ export const authSessionSchema = z
   });
 export type AuthSession = z.infer<typeof authSessionSchema>;
 
+export const mcpOAuthScopes = ["mail:read", "agent_events:read"] as const;
+export const mcpOAuthScopeSchema = z.enum(mcpOAuthScopes);
+export type McpOAuthScope = z.infer<typeof mcpOAuthScopeSchema>;
+
+export const mcpConnectionAccountSchema = z.object({
+  id: nonEmptyStringSchema,
+  email: nonEmptyStringSchema,
+  provider: mailProviderSchema,
+}).strict();
+export type McpConnectionAccount = z.infer<typeof mcpConnectionAccountSchema>;
+
+export const mcpConnectionSchema = z.object({
+  id: nonEmptyStringSchema,
+  clientName: nonEmptyStringSchema,
+  scopes: z.array(mcpOAuthScopeSchema),
+  accounts: z.array(mcpConnectionAccountSchema),
+  createdAt: isoDateTimeStringSchema,
+  lastUsedAt: isoDateTimeStringSchema.nullable(),
+  revokedAt: isoDateTimeStringSchema.nullable(),
+}).strict();
+export type McpConnection = z.infer<typeof mcpConnectionSchema>;
+
+export const mcpConnectionPageSchema = z.object({
+  items: z.array(mcpConnectionSchema),
+}).strict();
+export type McpConnectionPage = z.infer<typeof mcpConnectionPageSchema>;
+
 export const inboxQuerySchema = z
   .object({
     cursor: z.string().trim().min(1).optional(),

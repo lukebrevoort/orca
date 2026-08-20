@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-267 · Orca MCP OAuth validation</title>
+  <style>
+    :root { color-scheme: light dark; --paper:#f3f0e7; --surface:#fffefa; --ink:#19312e; --muted:#687572; --line:#d9d5ca; --accent:#52766d; --soft:#e2ebe7; }
+    @media (prefers-color-scheme: dark) { :root { --paper:#111716; --surface:#1b2422; --ink:#eef3f1; --muted:#aab7b3; --line:#364440; --accent:#91b9ae; --soft:#263632; } }
+    * { box-sizing:border-box; }
+    body { background:var(--paper); color:var(--ink); font:15px/1.6 Inter,ui-sans-serif,system-ui,sans-serif; margin:0; }
+    main { margin:0 auto; max-width:1060px; padding:54px 24px 90px; }
+    header { border-bottom:1px solid var(--line); margin-bottom:34px; padding-bottom:30px; }
+    .eyebrow { color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    h1,h2 { font-family:Georgia,serif; letter-spacing:-.025em; }
+    h1 { font-size:clamp(38px,6vw,68px); line-height:1; margin:12px 0 18px; }
+    h2 { font-size:25px; margin:0 0 12px; }
+    p { color:var(--muted); }
+    .lede { font-size:18px; max-width:760px; }
+    .status { align-items:center; background:var(--soft); border-radius:999px; color:var(--accent); display:inline-flex; font-size:12px; font-weight:800; gap:8px; padding:8px 13px; }
+    .status::before { background:currentColor; border-radius:50%; content:""; height:8px; width:8px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    article, section { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:24px; }
+    section { margin-top:18px; }
+    code, pre { font-family:"SFMono-Regular",Consolas,monospace; }
+    code { background:var(--soft); border-radius:5px; color:var(--ink); padding:2px 5px; }
+    pre { background:#10201d; border-radius:13px; color:#dce9e5; overflow:auto; padding:16px; white-space:pre-wrap; }
+    li { margin:8px 0; }
+    table { border-collapse:collapse; width:100%; }
+    th,td { border-bottom:1px solid var(--line); padding:11px 8px; text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+    .flow { display:grid; gap:8px; grid-template-columns:repeat(4,1fr); margin-top:18px; }
+    .flow div { background:var(--soft); border-radius:12px; padding:13px; text-align:center; }
+    .flow strong { display:block; font-size:12px; }
+    .flow small { color:var(--muted); }
+    a { color:var(--accent); }
+    @media (max-width:760px) { .grid,.flow { grid-template-columns:1fr; } main { padding:32px 16px 70px; } article,section { padding:19px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">BRE-267 · M6 Agents</p>
+    <h1>Read-only access,<br>held by a short leash.</h1>
+    <p class="lede">ChatGPT and Codex connect to Orca as OAuth 2.1 public clients. The user chooses scopes and connected accounts, and can revoke one connection or every connection from Orca.</p>
+    <span class="status">Implementation ready; feature remains default-off</span>
+    <div class="flow">
+      <div><strong>1 · Discover</strong><small>Resource + issuer metadata</small></div>
+      <div><strong>2 · Consent</strong><small>Session, scopes, accounts</small></div>
+      <div><strong>3 · Exchange</strong><small>Code + S256 PKCE</small></div>
+      <div><strong>4 · Verify</strong><small>Claims + live DB grant</small></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <article><h2>What is granted</h2><ul><li><code>mail:read</code> — bounded mail and thread reads.</li><li><code>agent_events:read</code> — propagated agent-event reads.</li><li>Only explicitly checked, user-owned connected accounts.</li><li>No draft, send, archive, delete, relabel, or provider-write permission.</li></ul></article>
+    <article><h2>What is never stored</h2><ul><li>No OpenAI API key or ChatGPT credential.</li><li>No OAuth client secret; DCR clients are public and use PKCE.</li><li>No plaintext authorization code, access token, or refresh token in SQLite.</li><li>No provider access/refresh token is copied into an MCP grant.</li></ul></article>
+  </div>
+  <p><code>mail:read</code> maps only to the resource’s mail metadata, mail content, and connection-status read capabilities; <code>agent_events:read</code> maps only to agent-event reads. Every <code>/mcp</code> request rechecks the token hash, live connection, granted scopes, and current account ownership in SQLite.</p>
+
+  <section>
+    <h2>Deployment and migration</h2>
+    <ol>
+      <li>Apply <code>apps/api/drizzle/0020_mcp_oauth.sql</code>. It adds OAuth clients, single-use codes, connections, account grants, hashed access-token records, and rotating hashed refresh-token records.</li>
+      <li>Use durable shared SQLite storage and the same versioned <code>ORCA_M6_MCP_SIGNING_KEY</code> on every API instance. It is separate from browser <code>SESSION_SECRET</code>; rotating the MCP key invalidates outstanding access tokens and pending consent requests.</li>
+      <li>Set exact public HTTPS values for <code>ORCA_M6_MCP_ISSUER</code> and <code>ORCA_M6_MCP_RESOURCE</code>. The intended resource ends in <code>/mcp</code>.</li>
+      <li>Leave <code>ORCA_M6_MCP_ENABLED=false</code> until the BRE-261 contract and BRE-265 MCP server are merged. Then enable it and restart the API.</li>
+    </ol>
+    <pre>ORCA_M6_MCP_ENABLED=true
+ORCA_M6_MCP_ISSUER=https://api.example.com
+ORCA_M6_MCP_RESOURCE=https://api.example.com/mcp
+ORCA_M6_MCP_SIGNING_KEY=&lt;base64-encoded-32-byte-key&gt;
+ORCA_M6_MCP_SIGNING_KEY_ID=mcp-v1
+ORCA_M6_MCP_REDIRECT_URIS=https://chatgpt.com/connector_platform_oauth_redirect
+ORCA_M6_MCP_ACCESS_TOKEN_TTL_SECONDS=600
+ORCA_M6_MCP_REFRESH_TOKEN_TTL_SECONDS=2592000</pre>
+  </section>
+
+  <section>
+    <h2>Published contract</h2>
+    <table><thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead><tbody>
+      <tr><td><code>GET /.well-known/oauth-protected-resource/mcp</code></td><td>Exact MCP resource, issuer, and supported read-only scopes; the suffix follows the configured resource path.</td></tr>
+      <tr><td><code>GET /.well-known/oauth-authorization-server</code></td><td>Authorization, token, registration, revocation, S256, and public-client metadata.</td></tr>
+      <tr><td><code>POST /oauth/register</code></td><td>Bounded, rate-limited DCR restricted to the exact configured OpenAI callback allowlist.</td></tr>
+      <tr><td><code>GET/POST /oauth/authorize</code></td><td>Authenticated consent with signed short-lived request context, state/issuer round-trip, scopes, and accounts.</td></tr>
+      <tr><td><code>POST /oauth/token</code></td><td>Single-use code exchange or rotating refresh; exact resource and client binding.</td></tr>
+      <tr><td><code>POST /oauth/revoke</code></td><td>Standards-compatible token revocation.</td></tr>
+      <tr><td><code>GET /v1/mcp/connections</code></td><td>User-visible active/revoked state, accounts, scopes, and last use.</td></tr>
+      <tr><td><code>DELETE /v1/mcp/connections/:id</code></td><td>Immediate owned-connection revocation.</td></tr>
+      <tr><td><code>POST /v1/mcp/connections/revoke-all</code></td><td>Immediate revocation of every active agent connection for the user.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section>
+    <h2>Retention and rollback guarantees</h2>
+    <p>Code exchange and refresh rotation commit consumption plus every replacement credential in one SQLite transaction. Injected insert failures are tested to roll back the original credential. Opportunistic GC retains expired codes/access tokens for 24 hours, consumed refresh tokens for a 24-hour replay window, revoked connections for 30 days, and unused registrations for 24 hours.</p>
+  </section>
+
+  <section>
+    <h2>Manual ChatGPT/Codex connection check</h2>
+    <ol>
+      <li>Deploy the combined BRE-261 → BRE-265 → BRE-267 stack over HTTPS and enable the feature.</li>
+      <li>Confirm both well-known endpoints return the same exact issuer/resource values and advertise <code>S256</code>.</li>
+      <li>In the current ChatGPT/Codex plugin connection surface, add the Orca MCP URL from <code>ORCA_M6_MCP_RESOURCE</code>. For issuer-identifying servers like Orca, the current stable ChatGPT callback is <code>https://chatgpt.com/connector_platform_oauth_redirect</code>; use the exact redirect URI shown by the app management page if it differs. The client should dynamically register and open Orca consent—no API key field is involved.</li>
+      <li>While signed into Orca, choose the requested read-only scopes and one or more connected accounts. Confirm the callback includes the original state and the exact issuer.</li>
+      <li>Call one mail-read tool and one agent-event tool. A tool without its required scope must return <code>401</code> with <code>WWW-Authenticate</code> pointing to protected-resource metadata.</li>
+      <li>Open Orca Settings → Agent connections. Confirm client, scopes, accounts, and last-used time. Check default, hover, focus, active, revoked, and disabled controls in light and dark mode.</li>
+      <li>Revoke the connection, then repeat the MCP call. It must fail immediately; refresh must also fail. Reconnect, choose fewer accounts, and confirm inaccessible accounts never appear.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Automated evidence</h2>
+    <pre>bun test apps/api/src/auth/mcp/oauth.test.ts
+bun test apps/web/src/App.test.tsx
+bun run typecheck
+bun run test
+bun run build</pre>
+    <p>The focused API suite covers metadata, trusted callback enforcement, DCR limits, consent, state, S256 PKCE, issuance through the real <code>/mcp</code> verifier, OAuth-to-tool scope mapping, wrong-resource rejection, live revocation/disconnect, account isolation, code replay, transaction rollback injection, refresh rotation/replay and retention, key separation, user deletion, and the default-off boundary.</p>
+    <p>Reference: <a href="https://developers.openai.com/plugins/build/auth">official OpenAI MCP authentication documentation</a>.</p>
+  </section>
+</main>
+</body>
+</html>

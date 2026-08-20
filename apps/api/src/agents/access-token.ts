@@ -4,98 +4,98 @@ import {
   type AuthInfo,
   type OAuthTokenVerifier,
 } from "@modelcontextprotocol/server";
+import type { McpOAuthScope, OrcaMcpScope } from "@orca/shared";
+
+import { createDatabaseClient } from "../db/client.ts";
+import type { McpOAuthConfig } from "../auth/mcp/config.ts";
+import { verifyMcpAccessToken } from "../auth/mcp/tokens.ts";
 import {
-  orcaMcpAuthorizationContextSchema,
-  type OrcaMcpAuthorizationContext,
-} from "@orca/shared";
-import { jwtVerify } from "jose";
+  orcaAgentAuthorizationContextSchema,
+  type OrcaAgentAuthorizationContext,
+} from "./authorization.ts";
 
-import type { OrcaAgentBoundaryPolicy } from "./boundary.ts";
-
-const minimumSigningSecretLength = 32;
 const authorizationExtraKey = "orcaAuthorization";
+type DatabaseFactory = typeof createDatabaseClient;
 
 export type OrcaMcpTokenVerifier = OAuthTokenVerifier;
+
+const resourceScopesByOAuthScope = {
+  "mail:read": [
+    "orca:mail.metadata:read",
+    "orca:mail.content:read",
+    "orca:connection-status:read",
+  ],
+  "agent_events:read": ["orca:agent-events:read"],
+} as const satisfies Record<McpOAuthScope, readonly OrcaMcpScope[]>;
 
 function invalidToken(message = "The access token is invalid or expired"): never {
   throw new OAuthError(OAuthErrorCode.InvalidToken, message);
 }
 
-function readStringArray(value: unknown): string[] | null {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) return null;
-  return value;
+export function mapOAuthScopesToResourceScopes(scopes: readonly McpOAuthScope[]): OrcaMcpScope[] {
+  return [...new Set(scopes.flatMap((scope) => resourceScopesByOAuthScope[scope]))];
 }
 
-function readScopes(value: unknown): string[] | null {
-  if (typeof value === "string") return value.split(/\s+/).filter(Boolean);
-  return readStringArray(value);
+export function getOAuthScopeForResourceScope(scope: OrcaMcpScope): McpOAuthScope {
+  const match = (Object.entries(resourceScopesByOAuthScope) as Array<[McpOAuthScope, readonly OrcaMcpScope[]]>)
+    .find(([, resourceScopes]) => resourceScopes.includes(scope));
+  if (!match) throw new Error(`No OAuth scope maps to the resource capability ${scope}`);
+  return match[0];
 }
 
 /**
- * Validates Orca-issued short-lived JWT access tokens. BRE-267 owns issuance,
- * consent, refresh, and revocation; this verifier is the narrow resource-side
- * seam used by BRE-265 and can be replaced in tests or by a future verifier.
+ * Adapts the live OAuth grant verifier to the MCP SDK. Signature validation is
+ * only the first gate: every request also checks the token hash, connection
+ * revocation, granted scopes, and current account ownership in SQLite.
  */
 export function createOrcaMcpAccessTokenVerifier(
-  policy: Extract<OrcaAgentBoundaryPolicy, { enabled: true }>,
-  env: NodeJS.ProcessEnv = process.env,
+  config: McpOAuthConfig,
+  dbFactory: DatabaseFactory = createDatabaseClient,
 ): OrcaMcpTokenVerifier {
-  const secret = env.ORCA_M6_MCP_SIGNING_SECRET;
-  if (!secret || secret.length < minimumSigningSecretLength) {
-    throw new Error(`ORCA_M6_MCP_SIGNING_SECRET must be at least ${minimumSigningSecretLength} characters when MCP is enabled`);
+  if (!config.enabled || !config.signingKey) {
+    throw new Error("MCP OAuth must be enabled with ORCA_M6_MCP_SIGNING_KEY before the /mcp resource is enabled");
   }
-  const key = new TextEncoder().encode(secret);
 
   return {
     async verifyAccessToken(token): Promise<AuthInfo> {
+      const { db, sqlite } = dbFactory();
       try {
-        const { payload } = await jwtVerify(token, key, {
-          algorithms: ["HS256"],
-          audience: policy.resource,
-          issuer: policy.issuer,
-        });
-        const accountIds = readStringArray(payload.account_ids);
-        const scopes = readScopes(payload.scope);
-        const clientId = typeof payload.client_id === "string" ? payload.client_id : null;
-        if (!payload.sub || !payload.iat || !payload.exp || !accountIds?.length || !scopes?.length || !clientId) {
-          return invalidToken();
-        }
-
-        const authorization = orcaMcpAuthorizationContextSchema.safeParse({
-          userId: payload.sub,
-          accountIds,
-          issuer: payload.iss,
-          resource: policy.resource,
+        const oauthAuthorization = await verifyMcpAccessToken(db, token, { config });
+        const scopes = mapOAuthScopesToResourceScopes(oauthAuthorization.scopes);
+        const authorization = orcaAgentAuthorizationContextSchema.parse({
+          userId: oauthAuthorization.userId,
+          accountIds: oauthAuthorization.accountIds,
+          issuer: oauthAuthorization.issuer,
+          resource: oauthAuthorization.resource,
           scopes,
-          issuedAt: new Date(payload.iat * 1_000).toISOString(),
-          expiresAt: new Date(payload.exp * 1_000).toISOString(),
+          issuedAt: oauthAuthorization.issuedAt,
+          expiresAt: oauthAuthorization.expiresAt,
         });
-        if (!authorization.success) return invalidToken();
-
         return {
           token,
-          clientId,
-          scopes,
-          expiresAt: payload.exp,
-          resource: new URL(policy.resource),
+          clientId: oauthAuthorization.clientId,
+          scopes: oauthAuthorization.scopes,
+          expiresAt: Math.floor(oauthAuthorization.expiresAt.getTime() / 1_000),
+          resource: new URL(oauthAuthorization.resource),
           extra: {
-            [authorizationExtraKey]: authorization.data,
+            [authorizationExtraKey]: authorization,
             grantRevokedAt: null,
           },
         };
-      } catch (error) {
-        if (OAuthError.isInstance(error)) throw error;
+      } catch {
         return invalidToken();
+      } finally {
+        sqlite.close();
       }
     },
   };
 }
 
 export function getOrcaAuthorization(authInfo: AuthInfo): {
-  authorization: OrcaMcpAuthorizationContext;
+  authorization: OrcaAgentAuthorizationContext;
   grantRevokedAt: string | null;
 } {
-  const authorization = orcaMcpAuthorizationContextSchema.safeParse(authInfo.extra?.[authorizationExtraKey]);
+  const authorization = orcaAgentAuthorizationContextSchema.safeParse(authInfo.extra?.[authorizationExtraKey]);
   if (!authorization.success) return invalidToken();
   const grantRevokedAt = authInfo.extra?.grantRevokedAt;
   if (grantRevokedAt !== null && grantRevokedAt !== undefined && typeof grantRevokedAt !== "string") {

@@ -1,10 +1,11 @@
 import {
+  bearerAuthChallengeResponse,
   McpServer,
   createMcpHandler,
   getOAuthProtectedResourceMetadataUrl,
   hostHeaderValidationResponse,
   originValidationResponse,
-  requireBearerAuth,
+  verifyBearerToken,
   type AuthInfo,
 } from "@modelcontextprotocol/server";
 import {
@@ -19,6 +20,7 @@ import {
   mcpSearchMailOutputSchema,
   mcpThreadMessageSchema,
   mcpToolErrorSchema,
+  mcpOAuthScopes,
   orcaMcpReadOnlyTools,
   type AgentEventListPage,
   type InboxClassificationResponse,
@@ -45,7 +47,7 @@ import {
   type OrcaAgentBoundaryPolicy,
 } from "./boundary.ts";
 import {
-  createOrcaMcpAccessTokenVerifier,
+  getOAuthScopeForResourceScope,
   getOrcaAuthorization,
   type OrcaMcpTokenVerifier,
 } from "./access-token.ts";
@@ -385,7 +387,8 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
 
   const policy = options.policy;
   const env = options.env ?? process.env;
-  const verifier = options.verifier ?? createOrcaMcpAccessTokenVerifier(policy, env);
+  const verifier = options.verifier;
+  if (!verifier) throw new Error("The enabled /mcp resource requires a live OAuth token verifier");
   const allowedHostnames = [new URL(policy.resource).hostname];
   const allowedOriginHostnames = allowedBrowserOriginHostnames(env);
   const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(new URL(policy.resource));
@@ -399,7 +402,7 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
   const metadata = {
     resource: policy.resource,
     authorization_servers: [policy.issuer],
-    scopes_supported: orcaMcpReadOnlyTools.map((tool) => tool.requiredScope),
+    scopes_supported: mcpOAuthScopes,
     resource_name: "Orca mail and agent events (read only)",
   };
   const standardMetadataPath = new URL(resourceMetadataUrl).pathname;
@@ -417,12 +420,19 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
         const body = await request.clone().json().catch(() => null);
         const name = requestedToolName(body);
         const tool = orcaMcpReadOnlyTools.find((candidate) => candidate.name === name);
-        if (tool) requiredScopes = [tool.requiredScope];
+        if (tool) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScope)];
       }
-      const gate = requireBearerAuth({ verifier, requiredScopes, resourceMetadataUrl });
-      const authInfo = await gate(request);
-      if (authInfo instanceof Response) return authInfo;
-      return handler.fetch(request, { authInfo });
+      const bearerOptions = { verifier, requiredScopes, resourceMetadataUrl };
+      const [authorizationHeader] = (request.headers.get("authorization") ?? "").split(",");
+      // Keep the success and challenge branches explicit: @hono/node-server
+      // swaps the global Response constructor, so cross-realm instanceof checks
+      // can misclassify a 401 challenge as AuthInfo in the live Bun process.
+      try {
+        const authInfo = await verifyBearerToken(authorizationHeader || undefined, bearerOptions);
+        return handler.fetch(request, { authInfo });
+      } catch (error) {
+        return bearerAuthChallengeResponse(error, bearerOptions);
+      }
     },
   };
 }
