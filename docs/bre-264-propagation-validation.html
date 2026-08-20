@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-264 · Deterministic propagation validation</title>
+    <style>
+      :root { color-scheme:light dark; --paper:#f4f1e9; --card:#fffdf7; --ink:#17322f; --muted:#62716d; --line:#d4ddd7; --sea:#147e78; --soft:#d9efeb; --night:#102522; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+      main { max-width:1060px; margin:auto; padding:48px 22px 72px; }
+      header { padding:38px; border-radius:28px; background:var(--night); color:#f7f5ed; }
+      h1 { margin:4px 0 12px; font:700 clamp(32px,6vw,58px)/1.04 Georgia,serif; }
+      h2 { margin:0 0 12px; font:700 24px/1.2 Georgia,serif; }
+      p { margin:0 0 12px; }
+      code,pre { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+      pre { overflow:auto; padding:17px; border-radius:15px; background:#0d211e; color:#ecf5f0; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:20px; }
+      section { padding:23px; border:1px solid var(--line); border-radius:20px; background:var(--card); }
+      .wide { grid-column:1/-1; }
+      .eyebrow { color:#9edbd2; font-size:12px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+      .lede { max-width:780px; color:#cbd9d4; font-size:18px; }
+      .flow { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+      .flow div { padding:14px; border-top:3px solid var(--sea); background:var(--soft); color:#17322f; border-radius:10px; }
+      table { width:100%; border-collapse:collapse; }
+      th,td { padding:10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+      .ok { color:var(--sea); font-weight:800; }
+      @media (prefers-color-scheme:dark) { :root { --paper:#0b1816; --card:#122522; --ink:#eef5f1; --muted:#a6b7b2; --line:#2b4843; --sea:#67c7bc; --soft:#193b36; } .flow div { color:#eef5f1; } }
+      @media (max-width:760px) { .grid,.flow { grid-template-columns:1fr; } .wide { grid-column:auto; } header { padding:28px 22px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Orca M6 · BRE-264 · Reviewer evidence</div>
+        <h1>Deterministic propagation, end to end.</h1>
+        <p class="lede">Important automated mail becomes a concise local event after normalization and Human Signal classification. The path is account-scoped, retry-safe, provider-read-only, and works without OpenAI or any other model provider.</p>
+      </header>
+
+      <div class="grid">
+        <section class="wide">
+          <h2>Runtime boundary</h2>
+          <div class="flow">
+            <div><strong>Normalize</strong><br />Gmail or Outlook produces the shared message shape.</div>
+            <div><strong>Classify</strong><br />M5 Human Signal remains an independent snapshot.</div>
+            <div><strong>Evaluate</strong><br />Versioned local rules return one shared assessment.</div>
+            <div><strong>Persist</strong><br />SQLite creates, no-ops, or updates by fingerprint.</div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Credential-free demo</h2>
+          <p>From the repository root:</p>
+          <pre><code>bun apps/api/src/agents/propagation/demo.ts</code></pre>
+          <p>This normalizes Gmail and Outlook fixtures and prints only provider/message IDs, event kind, destination, reason codes, execution mode, and the deterministic key. It performs no network call.</p>
+        </section>
+
+        <section>
+          <h2>Focused verification</h2>
+          <pre><code>bun test apps/api/src/agents/propagation \
+  apps/api/src/providers/gmail/sync.test.ts \
+  apps/api/src/providers/gmail/push.test.ts
+
+bun run typecheck</code></pre>
+          <p>The propagation directory covers rules, service isolation, SQLite lifecycle/account ownership, and live Gmail sync/history seams.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Acceptance map</h2>
+          <table>
+            <thead><tr><th>Criterion</th><th>Evidence</th></tr></thead>
+            <tbody>
+              <tr><td>Gmail + Outlook outcomes</td><td><span class="ok">Covered</span> by six provider fixtures: releases, CI/deploy, security, receipts, travel, and newsletter suppression.</td></tr>
+              <tr><td>Duplicate Gmail push</td><td><span class="ok">Covered</span> by a history retry that retains one event at revision 1.</td></tr>
+              <tr><td>Meaningful update</td><td><span class="ok">Covered</span> by same-message fingerprint change: same event ID, incremented revision, preserved user disposition.</td></tr>
+              <tr><td>Independent classification</td><td><span class="ok">Covered</span>: event storage has no attention, provider-label, or Tideline mutation fields; Human Signal is a source snapshot.</td></tr>
+              <tr><td>Failure isolation</td><td><span class="ok">Covered</span>: injected store failure leaves mail committed and sync successful.</td></tr>
+              <tr><td>Cross-account boundary</td><td><span class="ok">Covered</span> for create, list, lifecycle mutation, and mute deletion.</td></tr>
+              <tr><td>Provider read-only</td><td><span class="ok">Covered</span>: integration uses only history/message/label reads; no send, draft, archive, delete, or relabel path exists.</td></tr>
+              <tr><td>No OpenAI credentials</td><td><span class="ok">Covered</span> by the standalone fixture command and deterministic execution mode.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>Privacy and telemetry</h2>
+          <p>Logs contain account/provider source IDs, trigger, rule/agent versions, kind, reason codes, destination, and outcome. Failures log only an error class name. Subjects, bodies, headers, sender addresses, source URLs, exception messages, OAuth tokens, and secrets are excluded.</p>
+        </section>
+
+        <section>
+          <h2>Lifecycle semantics</h2>
+          <p>An identical retry is a strict no-op. A changed assessment for the same provider message updates the bounded projection and increments revision while preserving disposition. A new provider message keeps its own immutable source event; invalidation/retraction remains explicit.</p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
