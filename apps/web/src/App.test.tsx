@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { m5InboxFixture } from "@orca/shared";
-import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
+import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
@@ -393,6 +393,19 @@ describe("App", () => {
 
     expect(getSelectedThreadAccountId([secondaryMessage], secondaryMessage.threadId, null)).toBe("acct_secondary");
     expect(buildThreadDetailRequest(secondaryMessage)).toBe("/v1/threads/secondary-thread?accountId=acct_secondary");
+  });
+
+  test("opens credential-free Reply Brief source paths without requiring query parameters", () => {
+    expect(readInitialThreadSelection({
+      pathname: "/accounts/account%201/threads/thread%2F1",
+      search: "",
+    })).toEqual({ accountId: "account 1", threadId: "thread/1" });
+    expect(readInitialThreadSelection({
+      pathname: "/",
+      search: "?thread=legacy-thread&accountId=legacy-account",
+    })).toEqual({ accountId: "legacy-account", threadId: "legacy-thread" });
+    expect(readInitialThreadSelection({ pathname: "/accounts/%E0%A4%A/threads/thread", search: "" }))
+      .toEqual({ accountId: null, threadId: null });
   });
 
   test("reveals the top jump after meaningful reader scrolling", () => {

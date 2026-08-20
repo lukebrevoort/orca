@@ -6,6 +6,7 @@ import { Window } from "happy-dom";
 import {
   replyBriefOutputSchema,
   schedulingReplyBriefFixture,
+  type CalendarConnection,
   type ReplyBriefOutput,
   type ThreadDetail,
 } from "@orca/shared";
@@ -84,14 +85,17 @@ afterEach(async () => {
   browserWindow.close();
 });
 
-async function renderPanel(loader: (input: Parameters<NonNullable<ComponentProps<typeof ReplyBriefPanel>["loader"]>>[0]) => Promise<ReplyBriefOutput>) {
+async function renderPanel(
+  loader: (input: Parameters<NonNullable<ComponentProps<typeof ReplyBriefPanel>["loader"]>>[0]) => Promise<ReplyBriefOutput>,
+  connectionLoader: NonNullable<ComponentProps<typeof ReplyBriefPanel>["connectionLoader"]> = async () => [],
+) {
   const container = browserWindow.document.createElement("div");
   const composer = browserWindow.document.createElement("textarea");
   composer.setAttribute("aria-label", "Human response");
   container.append(composer);
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  await act(async () => root!.render(<ReplyBriefPanel detail={detail} loader={loader} />));
+  await act(async () => root!.render(<ReplyBriefPanel connectionLoader={connectionLoader} detail={detail} loader={loader} />));
   return { container, composer };
 }
 
@@ -135,6 +139,40 @@ describe("ReplyBriefPanel", () => {
     await click("Dismiss");
     expect(composer.value).toBe("");
     expect(browserWindow.document.body.textContent).toContain("Get reply guidance");
+  });
+
+  test("requires an explicit choice when multiple calendar connections are available", async () => {
+    const connections: CalendarConnection[] = [
+      { id: "calendar-personal", provider: "google", accountLabel: "personal@example.com", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
+      { id: "calendar-work", provider: "google", accountLabel: "work@example.com", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-20T16:00:00.000Z", error: null },
+    ];
+    const selected: Array<string | null> = [];
+    await renderPanel(async (input) => {
+      selected.push(input.calendarConnectionId);
+      return schedulingReplyBriefFixture;
+    }, async () => connections);
+
+    await click("Get reply guidance");
+    expect(selected).toEqual([]);
+    expect(browserWindow.document.body.textContent).toContain("Which calendar account should this brief check?");
+    const work = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent?.includes("work@example.com"));
+    if (!work) throw new Error("work calendar choice was not rendered");
+    await act(async () => (work as unknown as HTMLButtonElement).click());
+
+    expect(selected).toEqual(["calendar-work"]);
+    expect(browserWindow.document.body.textContent).toContain("Reply Brief");
+  });
+
+  test("never renders a non-HTTP source URL as a link", async () => {
+    const unsafeBrief = {
+      ...schedulingReplyBriefFixture,
+      sourceRefs: schedulingReplyBriefFixture.sourceRefs.map((source, index) => index === 0 ? { ...source, sourceUrl: "javascript:alert(document.cookie)" } : source),
+    } as ReplyBriefOutput;
+    await renderPanel(async () => unsafeBrief);
+    await click("Get reply guidance");
+
+    expect(browserWindow.document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(browserWindow.document.querySelectorAll(".reply-brief-source-label").length).toBeGreaterThan(0);
   });
 
   test("keeps a stable loading state and aborts it when dismissed", async () => {

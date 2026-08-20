@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  calendarConnectionPageSchema,
   replyBriefOutputSchema,
   schedulingReplyBriefFixture,
+  type CalendarConnection,
   type ReplyBriefItem,
   type ReplyBriefOutput,
   type ReplyBriefSourceRef,
@@ -11,6 +13,7 @@ import {
 type ReplyBriefPanelState =
   | { state: "idle" }
   | { state: "loading" }
+  | { state: "choose_calendar"; connections: CalendarConnection[] }
   | { state: "ready"; brief: ReplyBriefOutput }
   | { state: "error"; message: string };
 
@@ -19,8 +22,22 @@ export type ReplyBriefLoader = (input: {
   provider: ThreadDetail["account"]["provider"];
   threadId: string;
   selectedMessageId: string;
+  calendarConnectionId: string | null;
   signal: AbortSignal;
 }) => Promise<ReplyBriefOutput>;
+
+export type CalendarConnectionLoader = (input: { signal: AbortSignal }) => Promise<CalendarConnection[]>;
+
+const demoCalendarConnections: CalendarConnection[] = [
+  { id: "demo-calendar-work", provider: "google", accountLabel: "Work calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
+  { id: "demo-calendar-personal", provider: "google", accountLabel: "Personal calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
+];
+
+export async function loadCalendarConnections({ signal }: { signal: AbortSignal }) {
+  const response = await fetch("/v1/calendar/connections", { credentials: "include", signal });
+  if (!response.ok) throw new Error(`Calendar connections could not be loaded (${response.status}).`);
+  return calendarConnectionPageSchema.parse(await response.json()).items.filter((connection) => connection.state === "connected");
+}
 
 export async function loadReplyBrief(input: Parameters<ReplyBriefLoader>[0]) {
   const response = await fetch(
@@ -38,6 +55,7 @@ export async function loadReplyBrief(input: Parameters<ReplyBriefLoader>[0]) {
         selectedMessageIds: [input.selectedMessageId],
         requestedAt: new Date().toISOString(),
         userTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        calendarConnectionId: input.calendarConnectionId,
         authorizedContext: ["calendar_availability"],
       }),
     },
@@ -56,10 +74,12 @@ export function ReplyBriefPanel({
   detail,
   demoMode = false,
   loader = loadReplyBrief,
+  connectionLoader = loadCalendarConnections,
 }: {
   detail: ThreadDetail;
   demoMode?: boolean;
   loader?: ReplyBriefLoader;
+  connectionLoader?: CalendarConnectionLoader;
 }) {
   const [panel, setPanel] = useState<ReplyBriefPanelState>({ state: "idle" });
   const controllerRef = useRef<AbortController | null>(null);
@@ -74,10 +94,7 @@ export function ReplyBriefPanel({
 
   if (!selectedMessage) return null;
 
-  const request = async () => {
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
+  const finishRequest = async (calendarConnectionId: string | null, controller: AbortController) => {
     setPanel({ state: "loading" });
     try {
       const brief = demoMode
@@ -87,9 +104,29 @@ export function ReplyBriefPanel({
             provider: detail.account.provider,
             threadId: detail.thread.id,
             selectedMessageId: selectedMessage.id,
+            calendarConnectionId,
             signal: controller.signal,
           });
       if (!controller.signal.aborted) setPanel({ state: "ready", brief });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setPanel({ state: "error", message: error instanceof Error ? error.message : "Reply guidance could not be loaded." });
+    }
+  };
+
+  const request = async () => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setPanel({ state: "loading" });
+    try {
+      const connections = demoMode ? demoCalendarConnections : await connectionLoader({ signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (connections.length > 1) {
+        setPanel({ state: "choose_calendar", connections });
+        return;
+      }
+      await finishRequest(connections[0]?.id ?? null, controller);
     } catch (error) {
       if (controller.signal.aborted) return;
       setPanel({
@@ -103,6 +140,11 @@ export function ReplyBriefPanel({
     controllerRef.current?.abort();
     controllerRef.current = null;
     setPanel({ state: "idle" });
+  };
+
+  const chooseCalendar = (calendarConnectionId: string | null) => {
+    const controller = controllerRef.current;
+    if (controller && !controller.signal.aborted) void finishRequest(calendarConnectionId, controller);
   };
 
   if (panel.state === "idle") {
@@ -125,6 +167,27 @@ export function ReplyBriefPanel({
         <p className="reply-brief-status-copy">Reading only this conversation and authorized context…</p>
         <div className="reply-brief-loading-line" />
         <div className="reply-brief-loading-line reply-brief-loading-line-short" />
+      </section>
+    );
+  }
+
+  if (panel.state === "choose_calendar") {
+    return (
+      <section className="reply-brief reply-brief-calendar-choice" aria-label="Choose calendar for Reply Brief">
+        <ReplyBriefHeader onDismiss={dismiss} />
+        <div className="reply-brief-state-copy">
+          <p>Authorized context</p>
+          <h3>Which calendar account should this brief check?</h3>
+          <span>Orca checks only the connection you choose and sends only free/busy context into the brief.</span>
+        </div>
+        <div aria-label="Calendar connections" className="reply-brief-calendar-choices" role="group">
+          {panel.connections.map((connection) => (
+            <button key={connection.id} onClick={() => chooseCalendar(connection.id)} type="button">
+              <strong>{connection.accountLabel}</strong><span>{connection.provider} · read-only free/busy</span>
+            </button>
+          ))}
+          <button onClick={() => chooseCalendar(null)} type="button"><strong>Continue without calendar</strong><span>Availability will remain unavailable</span></button>
+        </div>
       </section>
     );
   }
@@ -286,9 +349,20 @@ function ReplyBriefAvailability({ context, sources }: {
 
 function SourceLink({ source, compact = false }: { source: ReplyBriefSourceRef; compact?: boolean }) {
   const label = compact ? (source.kind === "availability" ? "Calendar" : source.kind === "thread" ? "Thread" : "Message") : source.label;
-  return source.sourceUrl
-    ? <a href={source.sourceUrl}>{label}<span aria-hidden="true"> ↗</span></a>
+  const sourceUrl = safeHttpSourceUrl(source.sourceUrl);
+  return sourceUrl
+    ? <a href={sourceUrl} rel="noreferrer">{label}<span aria-hidden="true"> ↗</span></a>
     : <span className="reply-brief-source-label">{label}</span>;
+}
+
+function safeHttpSourceUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function availabilityLabel(status: ReplyBriefOutput["availabilityContext"]["status"]) {
@@ -311,7 +385,7 @@ function createDemoReplyBrief(detail: ThreadDetail, selectedMessageId: string): 
     ...claim,
     sourceRefs: claim.sourceRefs.map(replaceSourceId),
   });
-  const sourceUrl = `${window.location.origin}/?thread=${encodeURIComponent(detail.thread.id)}&accountId=${encodeURIComponent(detail.account.id)}#message-${encodeURIComponent(selected.id)}`;
+  const sourceUrl = `${window.location.origin}${window.location.pathname}#message-${encodeURIComponent(selected.id)}`;
   return replyBriefOutputSchema.parse({
     ...schedulingReplyBriefFixture,
     freshness: { ...schedulingReplyBriefFixture.freshness, generatedAt: new Date().toISOString() },

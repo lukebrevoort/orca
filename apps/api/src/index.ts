@@ -75,7 +75,7 @@ import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, calendarConnections, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
+import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
@@ -1498,7 +1498,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const userId = c.get("auth").userId;
       const { db, sqlite } = dbFactory();
       let thread: ThreadDetail;
-      let calendarConnectionId: string | null = null;
       let workingHours: CalendarWorkingHours | null = null;
       try {
         const account = getConnectedAccountById(db, userId, accountId);
@@ -1514,13 +1513,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           }
           throw error;
         }
-        const connectedCalendar = db.select().from(calendarConnections)
-          .where(and(eq(calendarConnections.userId, userId), eq(calendarConnections.state, "connected")))
-          .orderBy(desc(calendarConnections.updatedAt)).get();
-        const latestCalendar = connectedCalendar ?? db.select().from(calendarConnections)
-          .where(eq(calendarConnections.userId, userId))
-          .orderBy(desc(calendarConnections.updatedAt)).get();
-        calendarConnectionId = latestCalendar?.id ?? null;
         const calendarPreference = db.select().from(calendarPreferences).where(eq(calendarPreferences.userId, userId)).get();
         if (calendarPreference?.workingHours) {
           try {
@@ -1537,11 +1529,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         let availability: CalendarAvailabilityResponse | null = null;
         if (options.replyBriefAvailability) {
           availability = await options.replyBriefAvailability({ userId, request, thread });
-        } else if (calendarConnectionId && request.authorizedContext.includes("calendar_availability")) {
+        } else if (request.calendarConnectionId && request.authorizedContext.includes("calendar_availability")) {
           availability = await replyBriefCalendarResolver.resolve({
             userId,
             request: {
-              connectionId: calendarConnectionId,
+              connectionId: request.calendarConnectionId,
               requestedWindows: interpretRequestedAvailabilityWindows({
                 thread,
                 selectedMessageIds: request.selectedMessageIds,

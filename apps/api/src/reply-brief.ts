@@ -27,8 +27,13 @@ export const replyBriefInvocationRequestSchema = z.object({
   selectedMessageIds: z.array(nonEmpty).min(1).max(25),
   requestedAt: utcTimestamp,
   userTimeZone: timeZone,
+  calendarConnectionId: nonEmpty.nullable(),
   authorizedContext: z.array(z.literal("calendar_availability")).max(1),
-}).strict();
+}).strict().superRefine((request, context) => {
+  if (request.calendarConnectionId && !request.authorizedContext.includes("calendar_availability")) {
+    context.addIssue({ code: "custom", path: ["calendarConnectionId"], message: "Calendar connection selection requires authorized calendar context" });
+  }
+});
 export type ReplyBriefInvocationRequest = z.infer<typeof replyBriefInvocationRequestSchema>;
 
 export type ReplyBriefUnavailableRuntime = "model_unavailable" | "runtime_unavailable";
@@ -55,7 +60,7 @@ export function createOnDemandReplyBrief(input: {
     id: messageSourceId(message.id),
     kind: "message",
     label: `${message.from.name ?? message.from.email} · ${message.subject || "Selected message"}`,
-    sourceUrl: `${webOrigin}/?thread=${encodeURIComponent(input.thread.thread.id)}&accountId=${encodeURIComponent(input.thread.account.id)}#message-${encodeURIComponent(message.id)}`,
+    sourceUrl: messageSourceUrl(webOrigin, input.thread.account.id, input.thread.thread.id, message.id),
     observedAt: message.receivedAt,
     contentTrust: "untrusted_external_content",
   }));
@@ -66,7 +71,7 @@ export function createOnDemandReplyBrief(input: {
   const hasDate = /\b(mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|today|tomorrow|next week|\d{4}-\d{2}-\d{2})\b/i.test(body);
   const hasTime = /\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:a\.?m\.?|p\.?m\.?)\b|\b(?:noon|midnight|morning|afternoon|evening)\b/i.test(body);
   const injection = /\b(ignore (?:all |previous |orca )?(?:instructions|policy)|send_mail|draft (?:a |the )?reply|auto-?reply|accept (?:the )?meeting)\b/i.test(body);
-  const availability = mapAvailability(input.availability ?? null, scheduling ? request : { ...request, authorizedContext: [] }, messages, sourceRefs);
+  const availability = mapAvailability(input.availability ?? null, scheduling ? request : { ...request, calendarConnectionId: null, authorizedContext: [] }, messages, sourceRefs);
   const empty = !body;
 
   const facts: ReplyBriefItem[] = empty ? [] : messages.map((message) => ({
@@ -250,6 +255,10 @@ function messageSourceId(messageId: string) {
   return `message:${messageId}`;
 }
 
+function messageSourceUrl(webOrigin: string, accountId: string, threadId: string, messageId: string) {
+  return `${webOrigin}/accounts/${encodeURIComponent(accountId)}/threads/${encodeURIComponent(threadId)}#message-${encodeURIComponent(messageId)}`;
+}
+
 function normalizeDuration(countValue: string, unitValue: string) {
   const count = Number(countValue);
   const unit = unitValue.toLowerCase().startsWith("h") ? "hour" : "minute";
@@ -280,7 +289,7 @@ export function interpretRequestedAvailabilityWindows(input: {
     if (!originalTimeZone) ambiguities.push({ code: "missing_timezone", message: "The sender did not identify a timezone.", sourceText });
     if (timeRange && !/\b(?:a\.?m\.?|p\.?m\.?|noon|midnight)\b/i.test(sourceText)) ambiguities.push({ code: "multiple_interpretations", message: "The requested time could be AM or PM.", sourceText });
     if (/\b(around|about|roughly|morning|afternoon|evening)\b/i.test(sourceText) && !/\b(?:a\.?m\.?|p\.?m\.?|noon|midnight)\b/i.test(sourceText)) ambiguities.push({ code: "approximate_time", message: "The sender used an approximate time with no exact boundary.", sourceText });
-    const sourceUrl = `${webOrigin}/?thread=${encodeURIComponent(input.thread.thread.id)}&accountId=${encodeURIComponent(input.thread.account.id)}#message-${encodeURIComponent(message.id)}`;
+    const sourceUrl = messageSourceUrl(webOrigin, input.thread.account.id, input.thread.thread.id, message.id);
     return (dates.length ? dates : [null]).map((date, dateIndex) => {
       const exact = Boolean(date && timeRange && originalTimeZone && ambiguities.length === 0);
       const start = exact ? zonedLocalToUtc(date!, timeRange!.startMinutes, originalTimeZone!).toISOString() : null;

@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { emails, messageDrafts, oauthAccounts, threads, users } from "./db/schema.ts";
+import { calendarConnections, emails, messageDrafts, oauthAccounts, threads, users } from "./db/schema.ts";
 import { createApp } from "./index.ts";
 
 const tempDirs: string[] = [];
@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("POST /v1/threads/:threadId/reply-brief", () => {
-  test("requires explicit authenticated invocation and never creates or changes a compose draft", async () => {
+  test("requires explicit invocation, preserves the selected calendar among multiple connections, and never changes a draft", async () => {
     process.env.SESSION_SECRET = "reply-brief-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 21).toString("base64");
     const directory = mkdtempSync(join(tmpdir(), "orca-reply-brief-route-"));
@@ -43,16 +43,20 @@ describe("POST /v1/threads/:threadId/reply-brief", () => {
       { id: "message-2", accountId: "account-2", threadId: "thread-2", providerMessageId: "provider-message-2", fromAddress: "private@example.com", subject: "Private thread", snippet: "Private", bodyText: "Private", receivedAt: new Date("2026-08-19T17:45:00.000Z") },
     ]).run();
     db.insert(messageDrafts).values({ id: "draft-1", accountId: "account-1", subject: "Human-owned draft", bodyText: "The human wrote this." }).run();
+    db.insert(calendarConnections).values([
+      { id: "calendar-connection-1", userId: "user-1", provider: "google", providerAccountId: "calendar-personal", accountLabel: "personal@example.com", scope: "calendar.freebusy", state: "connected", updatedAt: new Date("2026-08-18T18:00:00.000Z") },
+      { id: "calendar-connection-2", userId: "user-1", provider: "google", providerAccountId: "calendar-work", accountLabel: "work@example.com", scope: "calendar.freebusy", state: "connected", updatedAt: new Date("2026-08-20T18:00:00.000Z") },
+    ]).run();
     const session = await createSession(db, "user-1");
     const draftBefore = db.select().from(messageDrafts).all();
     sqlite.close();
 
-    const availabilityInvocation: { current: { userId: string; threadId: string } | null } = { current: null };
+    const availabilityInvocations: Array<{ userId: string; threadId: string; calendarConnectionId: string | null }> = [];
     const app = createApp({
       dbFactory: () => createDatabaseClient(dbPath),
       now: () => new Date("2026-08-19T18:01:00.000Z"),
-      replyBriefAvailability: async ({ userId, thread }) => {
-        availabilityInvocation.current = { userId, threadId: thread.thread.id };
+      replyBriefAvailability: async ({ userId, request: invocation, thread }) => {
+        availabilityInvocations.push({ userId, threadId: thread.thread.id, calendarConnectionId: invocation.calendarConnectionId });
         return null;
       },
     });
@@ -64,6 +68,7 @@ describe("POST /v1/threads/:threadId/reply-brief", () => {
       selectedMessageIds: ["message-1"],
       requestedAt: "2026-08-19T18:01:00.000Z",
       userTimeZone: "America/Denver",
+      calendarConnectionId: "calendar-connection-1",
       authorizedContext: ["calendar_availability"],
     };
 
@@ -77,9 +82,13 @@ describe("POST /v1/threads/:threadId/reply-brief", () => {
     expect(brief.availabilityContext.status).toBe("unavailable");
     expect(brief.humanAuthorship).toEqual({ owner: "human", guidanceOnly: true, composerMutation: "none", composerStartsBlank: true });
     expect(brief.capabilities.writeActions).toEqual([]);
-    const invocation = availabilityInvocation.current;
-    if (!invocation) throw new Error("calendar availability was not invoked");
-    expect(invocation).toEqual({ userId: "user-1", threadId: "thread-1" });
+    expect(availabilityInvocations).toEqual([{ userId: "user-1", threadId: "thread-1", calendarConnectionId: "calendar-connection-1" }]);
+
+    const withoutCalendar = await app.request("/v1/threads/thread-1/reply-brief?accountId=account-1", {
+      method: "POST", headers, body: JSON.stringify({ ...request, calendarConnectionId: null }),
+    });
+    expect(withoutCalendar.status).toBe(200);
+    expect(availabilityInvocations.at(-1)?.calendarConnectionId).toBeNull();
 
     const background = await app.request("/v1/threads/thread-1/reply-brief?accountId=account-1", {
       method: "POST", headers, body: JSON.stringify({ ...request, trigger: "background_sync" }),

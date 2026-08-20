@@ -19,6 +19,7 @@ function makeRequest(authorized = true): ReplyBriefInvocationRequest {
     selectedMessageIds: ["message-1"],
     requestedAt,
     userTimeZone: "America/Denver",
+    calendarConnectionId: authorized ? "calendar-connection-1" : null,
     authorizedContext: authorized ? ["calendar_availability"] : [],
   };
 }
@@ -46,7 +47,7 @@ function makeAvailability(overrides: Partial<CalendarAvailabilityResponse> = {})
       connectionId: "calendar-connection-1",
       requestedWindows: [{
         id: "window-1", messageId: "message-1", sourceText: "Friday between 10:00 AM and noon Mountain Time",
-        sourceUrl: "http://localhost:5173/?thread=thread-1#message-message-1", originalTimeZone: "America/Denver", userTimeZone: "America/Denver",
+        sourceUrl: "http://localhost:5173/accounts/account-1/threads/thread-1#message-message-1", originalTimeZone: "America/Denver", userTimeZone: "America/Denver",
         start: "2026-08-21T16:00:00.000Z", end: "2026-08-21T18:00:00.000Z", durationMinutes: 30, interpretation: "exact", ambiguities: [],
       }],
       userTimeZone: "America/Denver",
@@ -58,7 +59,7 @@ function makeAvailability(overrides: Partial<CalendarAvailabilityResponse> = {})
       windowId: "window-1", status: "free", freshness: "fresh", unknownReason: null, checkedAt: requestedAt,
       calendarResults: [{ calendarId: "calendar-work", status: "free", busy: [], error: null }],
       sources: [
-        { kind: "message", messageId: "message-1", url: "http://localhost:5173/?thread=thread-1#message-message-1", sourceText: "Friday between 10:00 AM and noon Mountain Time" },
+        { kind: "message", messageId: "message-1", url: "http://localhost:5173/accounts/account-1/threads/thread-1#message-message-1", sourceText: "Friday between 10:00 AM and noon Mountain Time" },
         { kind: "calendar_freebusy", calendarId: "calendar-work", checkedAt: requestedAt },
       ],
       explanation: "No busy time overlaps this window on the selected calendars.",
@@ -119,6 +120,14 @@ describe("on-demand Reply Brief service", () => {
     expect(brief.sourceRefs.some((source) => source.kind === "availability" && source.contentTrust === "authorized_read_only_context")).toBe(true);
     expect(brief.humanAuthorship).toEqual({ owner: "human", guidanceOnly: true, composerMutation: "none", composerStartsBlank: true });
     expect(brief.capabilities).toEqual({ mail: "read_only", context: "read_only", allowedTools: [], writeActions: [] });
+    for (const source of brief.sourceRefs) {
+      if (!source.sourceUrl) continue;
+      const sourceUrl = new URL(source.sourceUrl);
+      expect(["http:", "https:"]).toContain(sourceUrl.protocol);
+      expect(sourceUrl.username).toBe("");
+      expect(sourceUrl.password).toBe("");
+      expect(sourceUrl.search).toBe("");
+    }
     for (const field of replyBriefProhibitedOutputFields) expect(field in brief).toBe(false);
   });
 
@@ -131,7 +140,7 @@ describe("on-demand Reply Brief service", () => {
           ...checked.request.requestedWindows,
           {
             id: "window-2", messageId: "message-1", sourceText: "sometime next week",
-            sourceUrl: "http://localhost:5173/?thread=thread-1#message-message-1", originalTimeZone: null, userTimeZone: "America/Denver",
+            sourceUrl: "http://localhost:5173/accounts/account-1/threads/thread-1#message-message-1", originalTimeZone: null, userTimeZone: "America/Denver",
             start: null, end: null, durationMinutes: null, interpretation: "ambiguous",
             ambiguities: [{ code: "missing_date", message: "The requested date is not specific enough to check.", sourceText: "sometime next week" }],
           },
@@ -141,7 +150,7 @@ describe("on-demand Reply Brief service", () => {
         ...checked.results,
         {
           windowId: "window-2", status: "unknown", freshness: "unchecked", unknownReason: "ambiguous_request", checkedAt: null,
-          calendarResults: [], sources: [{ kind: "message", messageId: "message-1", url: "http://localhost:5173/?thread=thread-1#message-message-1", sourceText: "sometime next week" }],
+          calendarResults: [], sources: [{ kind: "message", messageId: "message-1", url: "http://localhost:5173/accounts/account-1/threads/thread-1#message-message-1", sourceText: "sometime next week" }],
           explanation: "The window is ambiguous and was not sent to the provider.",
         },
       ],
