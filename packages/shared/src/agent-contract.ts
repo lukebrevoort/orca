@@ -17,6 +17,16 @@ const isoDateTimeStringSchema = z.string().refine(
   { message: "Expected an ISO 8601 UTC timestamp" },
 );
 
+const stableSourceUrlSchema = z.string().url().superRefine((value, context) => {
+  const url = new URL(value);
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    context.addIssue({ code: "custom", message: "Source URLs must use HTTP or HTTPS" });
+  }
+  if (url.username || url.password) {
+    context.addIssue({ code: "custom", message: "Source URLs must not contain credentials" });
+  }
+});
+
 /**
  * Agent importance answers whether an event merits propagation. It is not a
  * Human Signal classification, a safety judgment, or an attention setting.
@@ -69,17 +79,25 @@ export type AgentPropagationTrigger = z.infer<typeof agentPropagationTriggerSche
 export const agentExecutionModeSchema = z.enum(["deterministic", "model_assisted"]);
 export type AgentExecutionMode = z.infer<typeof agentExecutionModeSchema>;
 
+/**
+ * SHA-256 of the canonical UTF-8 JSON tuple documented in the BRE-263
+ * contract. The value is opaque on external agent surfaces.
+ */
+export const agentDeduplicationKeySchema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+export type AgentDeduplicationKey = z.infer<typeof agentDeduplicationKeySchema>;
+
 /** A source reference is local to one Orca user and connected account. */
 export const agentEventSourceSchema = z.object({
   ownerUserId: nonEmptyStringSchema,
   accountId: nonEmptyStringSchema,
   provider: mailProviderSchema,
   messageId: nonEmptyStringSchema,
+  providerMessageId: nonEmptyStringSchema.max(512),
   threadId: nonEmptyStringSchema,
   sender: mailContactSchema,
   subject: z.string().max(998),
   receivedAt: isoDateTimeStringSchema,
-  sourceUrl: z.string().url(),
+  sourceUrl: stableSourceUrlSchema,
 }).strict();
 export type AgentEventSource = z.infer<typeof agentEventSourceSchema>;
 
@@ -120,7 +138,7 @@ export const agentPropagationAssessmentSchema = z.object({
   whyThisMatters: z.string().trim().min(1).max(500),
   suggestedNextStep: z.string().trim().min(1).max(300).nullable(),
   humanClassification: agentHumanClassificationSnapshotSchema.nullable(),
-  deduplicationKey: nonEmptyStringSchema.max(255),
+  deduplicationKey: agentDeduplicationKeySchema,
   evaluatedAt: isoDateTimeStringSchema,
 }).strict();
 export type AgentPropagationAssessment = z.infer<typeof agentPropagationAssessmentSchema>;
@@ -136,16 +154,44 @@ export const agentEventLifecycleStateSchema = z.enum([
 ]);
 export type AgentEventLifecycleState = z.infer<typeof agentEventLifecycleStateSchema>;
 
+/** Created/updated are transitions; the remaining values are dispositions. */
+export const agentEventLifecycleTransitionSchema = z.enum([
+  "created",
+  "updated",
+  "seen",
+  "dismissed",
+  "snoozed",
+  "muted",
+  "false_positive",
+  "retracted",
+  "restored",
+]);
+export type AgentEventLifecycleTransition = z.infer<typeof agentEventLifecycleTransitionSchema>;
+
 export const agentEventLifecycleSchema = z.object({
   state: agentEventLifecycleStateSchema,
+  lastTransition: agentEventLifecycleTransitionSchema,
   revision: z.number().int().positive(),
   createdAt: isoDateTimeStringSchema,
   updatedAt: isoDateTimeStringSchema,
+  lastTransitionAt: isoDateTimeStringSchema,
   seenAt: isoDateTimeStringSchema.nullable(),
   snoozedUntil: isoDateTimeStringSchema.nullable(),
 }).strict().superRefine((value, context) => {
   if (value.state === "snoozed" && value.snoozedUntil === null) {
     context.addIssue({ code: "custom", path: ["snoozedUntil"], message: "Snoozed events require snoozedUntil" });
+  }
+  if (value.state !== "snoozed" && value.snoozedUntil !== null) {
+    context.addIssue({ code: "custom", path: ["snoozedUntil"], message: "Only snoozed events may have snoozedUntil" });
+  }
+  if (Date.parse(value.updatedAt) < Date.parse(value.createdAt)) {
+    context.addIssue({ code: "custom", path: ["updatedAt"], message: "updatedAt must not precede createdAt" });
+  }
+  if (value.lastTransitionAt !== value.updatedAt) {
+    context.addIssue({ code: "custom", path: ["lastTransitionAt"], message: "lastTransitionAt must equal updatedAt" });
+  }
+  if (value.lastTransition === "created" && value.revision !== 1) {
+    context.addIssue({ code: "custom", path: ["revision"], message: "Created events begin at revision 1" });
   }
 });
 export type AgentEventLifecycle = z.infer<typeof agentEventLifecycleSchema>;
@@ -153,7 +199,15 @@ export type AgentEventLifecycle = z.infer<typeof agentEventLifecycleSchema>;
 export const propagatedAgentEventSchema = agentPropagationAssessmentSchema.extend({
   id: nonEmptyStringSchema,
   lifecycle: agentEventLifecycleSchema,
-}).strict();
+}).strict().superRefine((value, context) => {
+  if (value.destination === "none") {
+    context.addIssue({
+      code: "custom",
+      path: ["destination"],
+      message: "Suppressed assessments are not persisted agent events",
+    });
+  }
+});
 export type PropagatedAgentEvent = z.infer<typeof propagatedAgentEventSchema>;
 
 export const agentEventListPageSchema = z.object({
@@ -162,16 +216,57 @@ export const agentEventListPageSchema = z.object({
 }).strict();
 export type AgentEventListPage = z.infer<typeof agentEventListPageSchema>;
 
+export const agentPropagationMuteTargetSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("sender_address"), value: z.string().trim().email().transform((value) => value.toLowerCase()) }).strict(),
+  z.object({ scope: z.literal("sender_domain"), value: z.string().trim().min(1).max(253).transform((value) => value.toLowerCase()) }).strict(),
+  z.object({ scope: z.literal("event_kind"), value: agentEventKindSchema }).strict(),
+]);
+export type AgentPropagationMuteTarget = z.infer<typeof agentPropagationMuteTargetSchema>;
+
 export const updateAgentEventLifecycleSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("mark_seen") }).strict(),
-  z.object({ action: z.literal("dismiss") }).strict(),
-  z.object({ action: z.literal("restore") }).strict(),
-  z.object({ action: z.literal("snooze"), until: isoDateTimeStringSchema }).strict(),
-  z.object({ action: z.literal("mute") }).strict(),
-  z.object({ action: z.literal("mark_false_positive") }).strict(),
-  z.object({ action: z.literal("retract") }).strict(),
+  z.object({ action: z.literal("mark_seen"), expectedRevision: z.number().int().positive() }).strict(),
+  z.object({ action: z.literal("dismiss"), expectedRevision: z.number().int().positive() }).strict(),
+  z.object({ action: z.literal("restore"), expectedRevision: z.number().int().positive() }).strict(),
+  z.object({ action: z.literal("snooze"), expectedRevision: z.number().int().positive(), until: isoDateTimeStringSchema }).strict(),
+  z.object({ action: z.literal("mute"), expectedRevision: z.number().int().positive(), target: agentPropagationMuteTargetSchema }).strict(),
+  z.object({ action: z.literal("mark_false_positive"), expectedRevision: z.number().int().positive() }).strict(),
+  z.object({ action: z.literal("retract"), expectedRevision: z.number().int().positive() }).strict(),
 ]);
 export type UpdateAgentEventLifecycle = z.infer<typeof updateAgentEventLifecycleSchema>;
+
+export const agentPropagationPolicyCategorySchema = agentEventKindSchema;
+export type AgentPropagationPolicyCategory = z.infer<typeof agentPropagationPolicyCategorySchema>;
+
+export const agentPropagationPolicyOverrideSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  category: agentPropagationPolicyCategorySchema,
+  enabled: z.boolean(),
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type AgentPropagationPolicyOverride = z.infer<typeof agentPropagationPolicyOverrideSchema>;
+
+export const agentPropagationMuteRuleSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  target: agentPropagationMuteTargetSchema,
+  createdAt: isoDateTimeStringSchema,
+  updatedAt: isoDateTimeStringSchema,
+}).strict();
+export type AgentPropagationMuteRule = z.infer<typeof agentPropagationMuteRuleSchema>;
+
+export const createAgentPropagationMuteSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  target: agentPropagationMuteTargetSchema,
+}).strict();
+export type CreateAgentPropagationMute = z.infer<typeof createAgentPropagationMuteSchema>;
+
+export const deleteAgentPropagationMuteSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  muteId: nonEmptyStringSchema,
+}).strict();
+export type DeleteAgentPropagationMute = z.infer<typeof deleteAgentPropagationMuteSchema>;
 
 export const agentPropagationPolicySchema = z.object({
   releaseAvailable: z.boolean(),

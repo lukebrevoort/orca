@@ -159,6 +159,7 @@ export const mcpAgentEventSchema = z.object({
     accountId: nonEmptyStringSchema,
     provider: mailProviderSchema,
     messageId: nonEmptyStringSchema,
+    providerMessageId: nonEmptyStringSchema,
     threadId: nonEmptyStringSchema,
     sender: mailContactSchema,
     subject: z.string(),

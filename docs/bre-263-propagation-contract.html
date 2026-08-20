@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BRE-263 · Agent propagation contract</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f2efe7;--card:#fffdf8;--ink:#17332f;--muted:#61736e;--line:#d5ddd8;--sea:#147d75;--soft:#d9efea;--warn:#a64f3e;--warnsoft:#f5ddd5;--code:#102622}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:48px 22px 80px}header{padding:38px;border-radius:28px;background:var(--code);color:#f5f3ec}h1{margin:6px 0 12px;font:700 clamp(34px,6vw,64px)/1.02 Georgia,serif;letter-spacing:-.035em}h2{margin:0 0 12px;font:700 24px/1.15 Georgia,serif}h3{margin:0 0 5px}p{margin:0 0 12px}.lede{max-width:850px;color:#c9d9d4;font-size:18px}.eyebrow,.kicker{color:#76cfc4;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}section{padding:24px;border:1px solid var(--line);border-radius:20px;background:var(--card)}.wide{grid-column:1/-1}.terms,.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.terms>div,.flow>div{padding:14px;border:1px solid var(--line);border-radius:14px}.terms strong,.step{display:block;color:var(--sea)}code,pre{font:13px/1.45 ui-monospace,monospace}pre{overflow:auto;padding:18px;border-radius:15px;background:var(--code);color:#edf6f2}table{width:100%;border-collapse:collapse}th,td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.case{display:grid;grid-template-columns:170px 1fr 110px;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.case:last-child{border:0}.pill{justify-self:start;padding:4px 9px;border-radius:999px;background:var(--soft);color:#155e58;font-weight:700;font-size:12px}.warning{background:linear-gradient(135deg,var(--warnsoft),var(--card));border-color:#dda99e}.muted{color:var(--muted)}ul,ol{margin:8px 0;padding-left:21px}@media(prefers-color-scheme:dark){:root{--bg:#091714;--card:#112521;--ink:#edf6f2;--muted:#a7b9b4;--line:#2b4943;--sea:#72cec2;--soft:#173c36;--warnsoft:#402820}.pill{color:#c3ece6}}@media(max-width:820px){.grid,.terms,.flow{grid-template-columns:1fr}.wide{grid-column:auto}.case{grid-template-columns:1fr}header{padding:28px 22px}}
+  </style>
+</head>
+<body><main>
+  <header>
+    <div class="eyebrow">Orca · M6 · BRE-263 · Contract v1</div>
+    <h1>Important machine mail becomes a small, explainable event.</h1>
+    <p class="lede">Agent Propagation is a provider-neutral, account-owned projection. It never changes Human Signal, sender attention, provider labels, or provider state.</p>
+  </header>
+
+  <div class="grid">
+    <section class="wide">
+      <h2>Final vocabulary: four independent decisions</h2>
+      <div class="terms">
+        <div><strong>Human Classification</strong>How the source appears to have been produced.</div>
+        <div><strong>Attention Behavior</strong>The user’s sender placement: Notify, Focus, Normal, Quiet, or Hidden.</div>
+        <div><strong>Agent Importance</strong>The likely consequence of this event for this user: high, medium, low, or unknown.</div>
+        <div><strong>Propagation Destination</strong>Timeline, Focus, Notify, future Agent View, or none.</div>
+      </div>
+      <p class="muted" style="margin-top:14px">Automated does not mean unsafe, spam, or unimportant. Propagated does not move the source out of Tideline. No field may be derived from another as a shortcut.</p>
+    </section>
+
+    <section class="wide">
+      <h2>Canonical API event</h2>
+      <pre><code>{
+  "id": "agent_event_testflight",
+  "source": {
+    "ownerUserId": "user_1", "accountId": "account_work",
+    "provider": "gmail", "messageId": "message_testflight_42",
+    "providerMessageId": "provider-testflight-42", "threadId": "thread_testflight",
+    "sender": { "name": "TestFlight", "email": "no_reply@email.apple.com" },
+    "subject": "Orca 2.1 is ready to test",
+    "receivedAt": "2026-08-19T16:00:00.000Z",
+    "sourceUrl": "https://orca.example/mail/accounts/account_work/messages/message_testflight_42"
+  },
+  "provenance": {
+    "trigger": "push", "policyVersion": "m6-policy-v1",
+    "agentId": "orca-deterministic-propagator", "agentVersion": "1.0.0",
+    "executionMode": "deterministic"
+  },
+  "eventKind": "release_available", "importance": "high", "relevance": "matched",
+  "destination": "timeline", "reasonCodes": ["release_became_available"],
+  "title": "A new Orca beta is ready",
+  "summary": "TestFlight says Orca 2.1 is available to install.",
+  "whyThisMatters": "This build is ready for the planned review.",
+  "suggestedNextStep": "Open the original message when you are ready.",
+  "humanClassification": {
+    "classification": "automated_or_bulk", "score": 2,
+    "reasonCodes": ["auto_submitted_header"], "classifierVersion": "m5-v1",
+    "source": "automatic_heuristic"
+  },
+  "deduplicationKey": "sha256:…64 lowercase hex…",
+  "evaluatedAt": "2026-08-19T16:00:01.000Z",
+  "lifecycle": {
+    "state": "new", "lastTransition": "created", "revision": 1,
+    "createdAt": "2026-08-19T16:00:01.000Z",
+    "updatedAt": "2026-08-19T16:00:01.000Z",
+    "lastTransitionAt": "2026-08-19T16:00:01.000Z",
+    "seenAt": null, "snoozedUntil": null
+  }
+}</code></pre>
+      <p class="muted">A destination of <code>none</code> is a valid assessment but is never returned as a persisted event. External agent projections omit <code>ownerUserId</code> and <code>deduplicationKey</code> after authorization.</p>
+    </section>
+
+    <section class="wide">
+      <h2>Required examples</h2>
+      <div class="case"><strong>Propagated</strong><span>A TestFlight release matches with high importance and goes to Timeline. Its source remains <code>automated_or_bulk</code> in Tideline.</span><span class="pill">created</span></div>
+      <div class="case"><strong>Bulk suppressed</strong><span>A routine newsletter is <code>not_matched</code>, destination <code>none</code>, reason <code>routine_bulk_content</code>. No event row exists.</span><span class="pill">no event</span></div>
+      <div class="case"><strong>Not useful</strong><span>The user chooses “Not useful.” Only the local event becomes <code>false_positive</code>; <code>restore</code> remains available.</span><span class="pill">reversible</span></div>
+      <div class="case"><strong>Update/retract</strong><span>A changed re-fetch of the same provider message updates the same ID/revision. If invalidated, that event becomes <code>retracted</code>.</span><span class="pill">same source</span></div>
+      <div class="case"><strong>Duplicate delivery</strong><span>Sync and push retries compute the same dedupe key and assessment fingerprint, producing no revision and no second notification.</span><span class="pill">strict no-op</span></div>
+      <div class="case"><strong>Mixed thread</strong><span>A human reply in the thread retains its own Human Classification. Events point to an exact message; classifications never spread across a thread.</span><span class="pill">message scoped</span></div>
+    </section>
+
+    <section class="wide">
+      <h2>Retry-safe identity and update algorithm</h2>
+      <ol>
+        <li>Serialize the exact UTF-8 JSON array <code>["agent-event-dedupe-v1", ownerUserId, accountId, provider, providerMessageId, eventKind, policyVersion]</code> with no whitespace.</li>
+        <li>Set <code>deduplicationKey</code> to <code>sha256:</code> plus its lowercase SHA-256 hex digest. Insert under unique <code>(owner_user_id, account_id, deduplication_key)</code>.</li>
+        <li>Compute a second SHA-256 <code>assessment_fingerprint</code> from the bounded, persisted meaning fields, excluding trigger, evaluation time, lifecycle, and database timestamps.</li>
+        <li>On conflict: equal fingerprint is a strict no-op; changed fingerprint updates bounded fields, increments revision once, and sets <code>lastTransition=updated</code>. Preserve seen/dismissed/snoozed/muted/false-positive state.</li>
+        <li>Invalidation increments once and retracts. Repeated retraction is a no-op. Never resurrect a retracted event automatically.</li>
+      </ol>
+      <p><strong>Immutable source rule:</strong> a new provider message—even in the same thread—gets a new key and event. It may explicitly retract a prior event, but never replaces that event’s source identity. This avoids hidden source swapping and makes retries deterministic.</p>
+    </section>
+
+    <section class="wide">
+      <h2>Lifecycle state machine</h2>
+      <table><thead><tr><th>Input</th><th>Allowed from</th><th>Result</th><th>Rule</th></tr></thead><tbody>
+        <tr><td>create</td><td>no row</td><td>new / created / rev 1</td><td>Only for a propagating destination.</td></tr>
+        <tr><td>source update</td><td>non-retracted</td><td>state preserved / updated</td><td>Only a changed fingerprint increments revision.</td></tr>
+        <tr><td>mark_seen</td><td>new or seen</td><td>seen</td><td>Sets <code>seenAt</code>; never marks provider mail read.</td></tr>
+        <tr><td>dismiss</td><td>new, seen, snoozed</td><td>dismissed</td><td>Local projection only.</td></tr>
+        <tr><td>snooze</td><td>new, seen, dismissed</td><td>snoozed</td><td>Requires a future <code>snoozedUntil</code>.</td></tr>
+        <tr><td>mute</td><td>non-retracted</td><td>muted</td><td>Creates an account-scoped sender/domain/category mute.</td></tr>
+        <tr><td>mark_false_positive</td><td>non-retracted</td><td>false_positive</td><td>User-facing label is “Not useful,” never “unsafe.”</td></tr>
+        <tr><td>restore</td><td>dismissed, snoozed, muted, false_positive</td><td>seen if <code>seenAt</code>, else new</td><td>Does not silently remove a broad mute rule.</td></tr>
+        <tr><td>retract</td><td>any non-retracted state</td><td>retracted</td><td>System source invalidation only; terminal unless a new source event is created.</td></tr>
+      </tbody></table>
+      <p class="muted">Every user mutation carries <code>expectedRevision</code>. A mismatch is HTTP 409 with the current event/revision. Successful transitions increment once; exact repeats are idempotent.</p>
+    </section>
+
+    <section>
+      <h2>Account isolation</h2>
+      <ul>
+        <li>Composite foreign keys prove owner ↔ account ↔ thread ↔ message membership.</li>
+        <li>All list/update queries begin with authenticated owner and allowed account IDs.</li>
+        <li>Identical provider IDs in two connected accounts remain distinct.</li>
+        <li>A deep link is a locator, never authorization; re-authorize it on open.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Conservative policy</h2>
+      <table><tr><th>Category</th><th>Default eligibility</th></tr><tr><td>Release/TestFlight; CI/deploy failure; security/account alert; receipt/renewal; travel/booking change</td><td>On, but only with sufficient deterministic evidence</td></tr><tr><td>Marketing/newsletter; other/unknown</td><td>Off</td></tr></table>
+      <p>Account-scoped sparse overrides opt any category in or out. Mutes target a sender address, sender domain, or event kind and are reversed by deleting the mute. Eligibility is not unconditional propagation.</p>
+    </section>
+
+    <section class="warning">
+      <h2>Privacy and read-only boundary</h2>
+      <ul>
+        <li>Persist bounded title (160), summary/why (500), next step (300), source identity, and Human Classification snapshot—never body HTML/text, headers, or attachments.</li>
+        <li>Logs contain event/account IDs, versions, reason codes, transition, latency, and fingerprints. Redact sender, subject, summaries, URLs, bodies, tokens, cookies, and authorization values.</li>
+        <li>Agent responses treat all mail-derived text as untrusted, redact secrets, bound lengths, strip source URL query/fragment, and omit owner/dedupe internals.</li>
+        <li>No archive, delete, relabel, send, draft, provider mark-read, or other provider write is authorized.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Deterministic now, model-assisted later</h2>
+      <p>M6 emits <code>executionMode=deterministic</code>. A future model-assisted evaluator must emit the identical Zod wire shape, retain policy/agent versions, obey the same privacy limits, and pass through the same idempotent store. It cannot redefine Human Signal.</p>
+    </section>
+
+    <section class="wide">
+      <h2>SQLite, API, and migration handoff</h2>
+      <div class="flow">
+        <div><span class="step">agent_events</span>Bounded event/source snapshot, provenance, fingerprint, lifecycle, account-safe foreign keys.</div>
+        <div><span class="step">policy_overrides</span>Sparse per-account category choices over versioned conservative defaults.</div>
+        <div><span class="step">propagation_mutes</span>Unique per-account sender/domain/kind targets; deletion reverses.</div>
+        <div><span class="step">Shared API</span><code>AgentPropagationAssessment</code>, <code>PropagatedAgentEvent</code>, list page, lifecycle and policy/mute inputs.</div>
+      </div>
+      <p style="margin-top:14px"><strong>Migration/backfill:</strong> migration 0021 creates empty projection/policy/mute tables and additive composite indexes. It does not scan or classify existing email. Missing override rows resolve to v1 conservative defaults. Only mail newly evaluated after the propagation feature is enabled creates events; any historical backfill requires a separately bounded job with the same dedupe algorithm.</p>
+    </section>
+  </div>
+</main></body></html>

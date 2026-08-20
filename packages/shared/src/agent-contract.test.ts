@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
+  agentContractFixtureSet,
   agentPropagationAssessmentSchema,
   conservativeAgentPropagationPolicy,
   inboxResponseSchema,
@@ -17,6 +18,7 @@ const propagatedAssessment = {
     accountId: "account_1",
     provider: "gmail" as const,
     messageId: "message_testflight",
+    providerMessageId: "provider-message-testflight",
     threadId: "thread_testflight",
     sender: { name: "TestFlight", email: "no_reply@email.apple.com" },
     subject: "Orca 2.1 is ready to test",
@@ -46,11 +48,24 @@ const propagatedAssessment = {
     classifierVersion: "m5-v1",
     source: "automatic_heuristic" as const,
   },
-  deduplicationKey: "account_1:message_testflight:release_available:m6-v0",
+  deduplicationKey: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   evaluatedAt: "2026-08-19T16:00:01.000Z",
 };
 
 describe("M6 agent contract", () => {
+  test("ships the required propagated, suppressed, feedback, update, retraction, and retry examples", () => {
+    const fixtures = agentContractFixtureSet;
+
+    assert.equal(fixtures.propagated.destination, "timeline");
+    assert.equal(fixtures.suppressedBulk.destination, "none");
+    assert.equal(fixtures.falsePositive.lifecycle.state, "false_positive");
+    assert.equal(fixtures.updated.id, fixtures.retracted.id);
+    assert.equal(fixtures.updated.deduplicationKey, fixtures.retracted.deduplicationKey);
+    assert.equal(fixtures.retracted.lifecycle.state, "retracted");
+    assert.equal(fixtures.propagated.deduplicationKey, fixtures.duplicateDelivery.deduplicationKey);
+    assert.notEqual(fixtures.propagated.source.accountId, fixtures.updated.source.accountId);
+  });
+
   test("keeps propagation separate from Human Signal, attention, and provider state", () => {
     const parsed = agentPropagationAssessmentSchema.parse(propagatedAssessment);
 
@@ -73,7 +88,7 @@ describe("M6 agent contract", () => {
       summary: "This message remains available in Tideline.",
       whyThisMatters: "Orca found no consequence that should interrupt the base timeline.",
       suggestedNextStep: null,
-      deduplicationKey: "account_1:message_newsletter:marketing_or_newsletter:m6-v0",
+      deduplicationKey: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     });
 
     assert.equal(suppressed.destination, "none");
@@ -87,19 +102,42 @@ describe("M6 agent contract", () => {
       id: "agent_event_1",
       lifecycle: {
         state: "false_positive",
+        lastTransition: "false_positive",
         revision: 2,
         createdAt: "2026-08-19T16:00:01.000Z",
         updatedAt: "2026-08-19T16:05:00.000Z",
+        lastTransitionAt: "2026-08-19T16:05:00.000Z",
         seenAt: "2026-08-19T16:04:00.000Z",
         snoozedUntil: null,
       },
     });
 
     assert.equal(event.lifecycle.state, "false_positive");
-    assert.deepEqual(updateAgentEventLifecycleSchema.parse({ action: "restore" }), { action: "restore" });
+    assert.deepEqual(updateAgentEventLifecycleSchema.parse({ action: "restore", expectedRevision: 2 }), {
+      action: "restore",
+      expectedRevision: 2,
+    });
     assert.equal(propagatedAgentEventSchema.safeParse({
       ...event,
       lifecycle: { ...event.lifecycle, state: "snoozed", snoozedUntil: null },
+    }).success, false);
+  });
+
+  test("does not persist suppressed assessments as events", () => {
+    assert.equal(propagatedAgentEventSchema.safeParse({
+      ...propagatedAssessment,
+      destination: "none",
+      id: "suppressed",
+      lifecycle: {
+        state: "new",
+        lastTransition: "created",
+        revision: 1,
+        createdAt: "2026-08-19T16:00:01.000Z",
+        updatedAt: "2026-08-19T16:00:01.000Z",
+        lastTransitionAt: "2026-08-19T16:00:01.000Z",
+        seenAt: null,
+        snoozedUntil: null,
+      },
     }).success, false);
   });
 
