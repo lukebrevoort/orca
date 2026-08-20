@@ -45,8 +45,17 @@ describe("MCP OAuth config", () => {
     assert.equal(isAllowedMcpRedirectUri("https://chatgpt.com/connector_platform_oauth_redirect#fragment", redirects), false);
   });
 
-  test("requires HTTPS identifiers in production", () => {
-    assert.throws(() => getMcpOAuthConfig({ NODE_ENV: "production" }), /must use HTTPS/);
+  test("keeps disabled MCP from blocking production startup", () => {
+    const config = getMcpOAuthConfig({ NODE_ENV: "production" });
+    assert.equal(config.enabled, false);
+  });
+
+  test("requires HTTPS identifiers when MCP is enabled in production", () => {
+    assert.throws(() => getMcpOAuthConfig({
+      NODE_ENV: "production",
+      ORCA_M6_MCP_ENABLED: "true",
+      ORCA_M6_MCP_SIGNING_KEY: Buffer.alloc(32, 9).toString("base64"),
+    }), /must use HTTPS/);
     assert.throws(() => getMcpOAuthConfig({ ORCA_M6_MCP_ISSUER: "https://api.example.com/auth" }), /without a path/);
   });
 
