@@ -1,10 +1,10 @@
 import { useState, type Ref } from "react";
-import type { AgentEventKind, AgentEventLifecycleState, AgentPropagationMuteRule, PropagatedAgentEvent } from "@orca/shared";
+import type { AgentEventKind, AgentEventLifecycleState, AgentPropagationMuteRule, AgentPropagationMuteTarget, PropagatedAgentEvent } from "@orca/shared";
 
 export type AgentEventControlAction =
   | { action: "mark_seen" | "dismiss" | "restore" | "mark_false_positive" }
   | { action: "snooze"; until: string }
-  | { action: "mute"; target: { scope: "sender_address" | "sender_domain" | "event_kind"; value: string } };
+  | { action: "mute"; target: AgentPropagationMuteTarget };
 
 type AgentEventTimelineProps = {
   accountLabels?: Record<string, string>;
