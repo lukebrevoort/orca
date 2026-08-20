@@ -2,6 +2,8 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
+import type { DeterministicPropagationRuntimeOptions } from "../../agents/propagation/runtime.ts";
+import { runDeterministicPropagation } from "../../agents/propagation/runtime.ts";
 import { backfillHumanClassifications } from "../../classification/backfill.ts";
 import { automaticClassificationColumns, classifyHumanSignal } from "../../classification/human-signal.ts";
 import { loadGmailOAuthConfig, type GmailOAuthConfig } from "../../auth/gmail/config.ts";
@@ -60,6 +62,7 @@ export type SyncOptions = {
   gmailClient?: GmailClient;
   tokenFetch?: FetchLike;
   oauthConfig?: GmailOAuthConfig;
+  propagation?: DeterministicPropagationRuntimeOptions;
 };
 
 export type GmailProviderTokenRecord = {
@@ -179,12 +182,14 @@ export async function syncGmailAccountPage(
     ]);
     const gmailMessages = await fetchMessageDetails(gmailClient, accessToken, page.messageIds);
     const nowDate = new Date(now);
-    const persisted = persistGmailMessages(db, {
+    const persisted = await persistGmailMessages(db, {
       accountId: account.id,
       accountEmail: account.providerEmail,
       gmailMessages,
       labelList,
       now: nowDate,
+      propagationTrigger: "sync",
+      propagationOptions: options.propagation,
       afterPersist: (tx) => {
         tx
           .update(oauthAccounts)
@@ -254,6 +259,8 @@ export type GmailMessagePersistenceInput = {
   gmailMessages: Awaited<ReturnType<GmailClient["getMessage"]>>[];
   labelList: Array<{ id: string; name: string; type?: "system" | "user" }>;
   now: Date;
+  propagationTrigger: "sync" | "push";
+  propagationOptions?: DeterministicPropagationRuntimeOptions;
   afterPersist?: (db: DatabaseExecutor) => void;
 };
 
@@ -271,10 +278,10 @@ export type GmailMessagePersistenceResult = {
  * use this seam so their provider-specific fetch strategy cannot drift from
  * the existing account isolation and classification behavior.
  */
-export function persistGmailMessages(
+export async function persistGmailMessages(
   db: DatabaseClient,
   input: GmailMessagePersistenceInput,
-): GmailMessagePersistenceResult {
+): Promise<GmailMessagePersistenceResult> {
   const normalizedMessages = input.gmailMessages.map((message) =>
     normalizeGmailMessage(message, {
       accountId: input.accountId,
@@ -293,6 +300,13 @@ export function persistGmailMessages(
     upsertContacts(tx, input.accountId, normalizedMessages, input.now);
     refreshThreads(tx, threadIds, input.now);
     input.afterPersist?.(tx);
+  });
+
+  await runDeterministicPropagation(db, {
+    accountId: input.accountId,
+    messages: normalizedMessages,
+    trigger: input.propagationTrigger,
+    options: input.propagationOptions,
   });
 
   return {
