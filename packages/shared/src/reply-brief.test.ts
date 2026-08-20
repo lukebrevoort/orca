@@ -27,6 +27,7 @@ describe("M6 Reply Brief runtime and data boundary", () => {
   test("processes the redacted scheduling fixture through the deterministic fallback", () => {
     const brief = createDeterministicReplyBrief(redactedSchedulingReplyBriefFixture);
 
+    assert.ok(brief.intent);
     assert.match(brief.intent.summary, /meeting time/i);
     assert.equal(brief.constraints[0]?.text, "The request specifies a 30-minute duration.");
     assert.equal(brief.availabilityContext.status, "free_busy_only");
