@@ -21,6 +21,9 @@ import {
   type McpListAgentEventsInput,
   type McpSearchMailInput,
   type ThreadDetail,
+  agentEventLifecycleStateSchema,
+  agentEventListPageSchema,
+  agentPropagationMuteRuleSchema,
   attentionBehaviorSchema,
   attentionViewSettingSchema,
   authSessionSchema,
@@ -51,6 +54,7 @@ import {
   resolveSenderAttentionSchema,
   resolvedSenderAttentionSchema,
   pinSchema,
+  propagatedAgentEventSchema,
   reminderSchema,
   reminderViewSettingsSchema,
   replyBriefOutputSchema,
@@ -60,6 +64,7 @@ import {
   threadDetailSchema,
   threadQuerySchema,
   updateAttentionViewSettingSchema,
+  updateAgentEventLifecycleSchema,
   updateCollectionSchema,
   updateHumanClassificationOverrideSchema,
   updatePinSchema,
@@ -99,6 +104,13 @@ import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agen
 import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
 import { createOrcaMcpAccessTokenVerifier, type OrcaMcpTokenVerifier } from "./agents/access-token.ts";
 import type { AgentEventStore } from "./agents/interfaces.ts";
+import {
+  AgentEventNotFoundError,
+  AgentEventRevisionConflictError,
+  deleteAgentPropagationMute,
+  listAgentPropagationMutes,
+  SqliteAgentEventStore,
+} from "./agents/propagation/store.ts";
 import { createCalendarApp } from "./auth/calendar/routes.ts";
 import type { GoogleCalendarOAuthConfig } from "./auth/calendar/config.ts";
 import type { CalendarFetch } from "./calendar/google-client.ts";
@@ -117,7 +129,7 @@ type CreateAppOptions = {
   now?: () => Date;
   mirrorDraft?: (db: Database, input: GmailDraftMirrorInput) => Promise<GmailDraftMirrorResult>;
   deleteProviderDraft?: (db: Database, accountId: string, providerDraftId: string) => Promise<void>;
-  agentEventStore?: Pick<AgentEventStore, "list">;
+  agentEventStore?: Pick<AgentEventStore, "list"> & Partial<Pick<AgentEventStore, "updateLifecycle">>;
   mcpBoundaryPolicy?: OrcaAgentBoundaryPolicy;
   mcpTokenVerifier?: OrcaMcpTokenVerifier;
   mcpEnv?: NodeJS.ProcessEnv;
@@ -140,6 +152,7 @@ const defaultViewSettings = [
 const defaultInboxLimit = 100;
 
 const collectionColors = ["#70867d", "#a87360", "#6c8195", "#83728d", "#a18757", "#6d716f"] as const;
+const agentPropagationMuteListSchema = agentPropagationMuteRuleSchema.array();
 
 const providerAuthRoutePrefixes: Record<MailProvider, string> = {
   gmail: "/v1/auth/gmail",
@@ -232,14 +245,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       }
     },
     async listAgentEvents({ userId, allowedAccountIds, query }) {
-      if (!options.agentEventStore) return { events: [], nextCursor: null };
-      return options.agentEventStore.list({
-        ownerUserId: userId,
-        accountIds: allowedAccountIds,
-        states: query.states,
-        limit: query.limit ?? 25,
-        cursor: query.cursor,
-      });
+      const { db, sqlite } = dbFactory();
+      try {
+        const store = options.agentEventStore ?? new SqliteAgentEventStore(db, now);
+        return await store.list({
+          ownerUserId: userId,
+          accountIds: allowedAccountIds,
+          states: query.states,
+          limit: query.limit ?? 25,
+          cursor: query.cursor,
+        });
+      } finally {
+        sqlite.close();
+      }
     },
     getConnectionStatus({ userId, allowedAccountIds }) {
       const { db, sqlite } = dbFactory();
@@ -440,6 +458,107 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         return c.json({ error: { code: "not_found", message: "No Gmail account is connected" } }, 404);
       }
       return jsonWithSchema(c, mailAccountSchema, serializeMailAccount(account));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/agent-events", requireAuth({ dbFactory }), async (c) => {
+    const ownerUserId = c.get("auth").userId;
+    const requestedAccountId = c.req.query("accountId")?.trim();
+    const rawLimit = c.req.query("limit");
+    const limit = rawLimit === undefined ? 50 : Number(rawLimit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return c.json({ error: { code: "invalid_request", message: "limit must be an integer from 1 to 100" } }, 400);
+    }
+    const rawStates = c.req.query("states")?.split(",").map((state) => state.trim()).filter(Boolean);
+    const parsedStates = rawStates?.map((state) => agentEventLifecycleStateSchema.safeParse(state));
+    if (parsedStates?.some((state) => !state.success)) {
+      return c.json({ error: { code: "invalid_request", message: "states contains an unsupported lifecycle state" } }, 400);
+    }
+
+    const { db, sqlite } = dbFactory();
+    try {
+      const ownedIds = getUnifiedInboxAccounts(db, ownerUserId).map((account) => account.id);
+      if (requestedAccountId && !ownedIds.includes(requestedAccountId)) {
+        return c.json({ error: { code: "not_found", message: "Mail account not found" } }, 404);
+      }
+      const accountIds = requestedAccountId ? [requestedAccountId] : ownedIds;
+      if (accountIds.length === 0) return jsonWithSchema(c, agentEventListPageSchema, { events: [], nextCursor: null });
+      const store = options.agentEventStore ?? new SqliteAgentEventStore(db, now);
+      const page = await store.list({
+        ownerUserId,
+        accountIds,
+        states: parsedStates?.map((state) => state.success ? state.data : "new"),
+        limit,
+        cursor: c.req.query("cursor"),
+      });
+      return jsonWithSchema(c, agentEventListPageSchema, page);
+    } catch (error) {
+      return c.json({ error: { code: "agent_events_unavailable", message: publicAgentEventError(error) } }, 503);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.patch(
+    "/v1/agent-events/:id/lifecycle",
+    validator("json", (value, c) => validateJson(c, updateAgentEventLifecycleSchema, value)),
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const ownerUserId = c.get("auth").userId;
+      const accountId = c.req.query("accountId")?.trim();
+      if (!accountId) return c.json({ error: { code: "invalid_request", message: "accountId is required" } }, 400);
+      const { db, sqlite } = dbFactory();
+      try {
+        if (!getConnectedAccountById(db, ownerUserId, accountId)) {
+          return c.json({ error: { code: "not_found", message: "Agent event not found" } }, 404);
+        }
+        const store = options.agentEventStore?.updateLifecycle
+          ? options.agentEventStore as Pick<AgentEventStore, "list" | "updateLifecycle">
+          : new SqliteAgentEventStore(db, now);
+        const event = await store.updateLifecycle({
+          ownerUserId,
+          accountId,
+          eventId: c.req.param("id"),
+          update: c.req.valid("json"),
+        });
+        return jsonWithSchema(c, propagatedAgentEventSchema, event);
+      } catch (error) {
+        const kind = agentEventMutationErrorKind(error);
+        if (kind === "not_found") return c.json({ error: { code: "not_found", message: "Agent event not found" } }, 404);
+        if (kind === "conflict") return c.json({ error: { code: "revision_conflict", message: publicAgentEventError(error) } }, 409);
+        return c.json({ error: { code: "agent_event_update_failed", message: publicAgentEventError(error) } }, 503);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.get("/v1/agent-event-mutes", requireAuth({ dbFactory }), (c) => {
+    const ownerUserId = c.get("auth").userId;
+    const requestedAccountId = c.req.query("accountId")?.trim();
+    const { db, sqlite } = dbFactory();
+    try {
+      const ownedIds = getUnifiedInboxAccounts(db, ownerUserId).map((account) => account.id);
+      if (requestedAccountId && !ownedIds.includes(requestedAccountId)) {
+        return c.json({ error: { code: "not_found", message: "Mail account not found" } }, 404);
+      }
+      const accountIds = requestedAccountId ? [requestedAccountId] : ownedIds;
+      return jsonWithSchema(c, agentPropagationMuteListSchema, accountIds.flatMap((accountId) => listAgentPropagationMutes(db, accountId)));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.delete("/v1/agent-event-mutes/:id", requireAuth({ dbFactory }), (c) => {
+    const ownerUserId = c.get("auth").userId;
+    const accountId = c.req.query("accountId")?.trim();
+    if (!accountId) return c.json({ error: { code: "invalid_request", message: "accountId is required" } }, 400);
+    const { db, sqlite } = dbFactory();
+    try {
+      const deleted = deleteAgentPropagationMute(db, { ownerUserId, accountId, muteId: c.req.param("id") });
+      return deleted ? c.body(null, 204) : c.json({ error: { code: "not_found", message: "Local mute not found" } }, 404);
     } finally {
       sqlite.close();
     }
@@ -3069,6 +3188,24 @@ function jsonWithSchema<T>(
   value: unknown,
 ) {
   return c.json(schema.parse(value));
+}
+
+function agentEventMutationErrorKind(error: unknown): "not_found" | "conflict" | "unknown" {
+  if (error instanceof AgentEventNotFoundError) return "not_found";
+  if (error instanceof AgentEventRevisionConflictError) return "conflict";
+  if (!error || typeof error !== "object") return "unknown";
+  const candidate = error as { code?: unknown; name?: unknown };
+  const marker = `${typeof candidate.code === "string" ? candidate.code : ""} ${typeof candidate.name === "string" ? candidate.name : ""}`.toLowerCase();
+  if (marker.includes("not_found") || marker.includes("notfound")) return "not_found";
+  if (marker.includes("conflict") || marker.includes("revision")) return "conflict";
+  return "unknown";
+}
+
+function publicAgentEventError(error: unknown) {
+  const kind = agentEventMutationErrorKind(error);
+  if (kind === "conflict") return "This signal changed in another Orca view. Refresh and try again.";
+  if (kind === "not_found") return "This signal is no longer available.";
+  return "Orca could not update the local signal projection. Provider mail was not changed.";
 }
 
 function toPublicSyncError(error: unknown) {

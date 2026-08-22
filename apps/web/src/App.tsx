@@ -11,16 +11,20 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, Pin, PinFilter, PinIcon, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, pinFilterSchema, pinSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
+  demoAgentEvents,
+  demoAgentMessages,
+  demoAgentMutes,
   demoMessages,
   demoThreadHistoryExtras,
   messageIncludesPerson,
   messageBodies,
   messageHtmlBodies,
 } from "./demo-data";
+import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
@@ -136,6 +140,73 @@ type InboxViewportPosition = {
   contentY: number | null;
 };
 
+const demoAgentLifecycleStorageKey = "orca-demo-agent-event-lifecycles-v1";
+const demoAgentMuteStorageKey = "orca-demo-agent-event-mutes-v1";
+const agentPropagationMuteListSchema = agentPropagationMuteRuleSchema.array();
+
+type DemoAgentLifecycleMap = Record<string, PropagatedAgentEvent["lifecycle"]>;
+
+export function readDemoAgentEvents(storage: Pick<Storage, "getItem"> | null = typeof window === "undefined" ? null : window.localStorage) {
+  if (!storage) return demoAgentEvents;
+  try {
+    const saved = JSON.parse(storage.getItem(demoAgentLifecycleStorageKey) ?? "{}") as DemoAgentLifecycleMap;
+    return demoAgentEvents.map((event) => saved[event.id] ? { ...event, lifecycle: { ...event.lifecycle, ...saved[event.id] } } : event);
+  } catch {
+    return demoAgentEvents;
+  }
+}
+
+export function applyDemoAgentEventAction(event: PropagatedAgentEvent, action: AgentEventControlAction, now = new Date()): PropagatedAgentEvent {
+  const transitionedAt = now.toISOString();
+  const nextState = action.action === "mark_seen" ? "seen"
+    : action.action === "dismiss" ? "dismissed"
+      : action.action === "snooze" ? "snoozed"
+        : action.action === "mute" ? "muted"
+          : action.action === "mark_false_positive" ? "false_positive"
+            : event.lifecycle.seenAt ? "seen" : "new";
+  const lastTransition = action.action === "mark_seen" ? "seen"
+    : action.action === "dismiss" ? "dismissed"
+      : action.action === "snooze" ? "snoozed"
+        : action.action === "mute" ? "muted"
+          : action.action === "mark_false_positive" ? "false_positive"
+            : "restored";
+  return {
+    ...event,
+    lifecycle: {
+      ...event.lifecycle,
+      state: nextState,
+      lastTransition,
+      revision: event.lifecycle.revision + 1,
+      updatedAt: transitionedAt,
+      lastTransitionAt: transitionedAt,
+      seenAt: action.action === "mark_seen" ? transitionedAt : event.lifecycle.seenAt,
+      snoozedUntil: action.action === "snooze" ? action.until : null,
+    },
+  };
+}
+
+function writeDemoAgentEvents(events: PropagatedAgentEvent[], storage: Pick<Storage, "setItem"> = window.localStorage) {
+  storage.setItem(demoAgentLifecycleStorageKey, JSON.stringify(Object.fromEntries(events.map((event) => [event.id, event.lifecycle]))));
+}
+
+function readDemoAgentMutes(storage: Pick<Storage, "getItem"> | null = typeof window === "undefined" ? null : window.localStorage) {
+  if (!storage) return demoAgentMutes;
+  try {
+    return agentPropagationMuteListSchema.parse(JSON.parse(storage.getItem(demoAgentMuteStorageKey) ?? JSON.stringify(demoAgentMutes)));
+  } catch {
+    return demoAgentMutes;
+  }
+}
+
+function writeDemoAgentMutes(mutes: AgentPropagationMuteRule[], storage: Pick<Storage, "setItem"> = window.localStorage) {
+  storage.setItem(demoAgentMuteStorageKey, JSON.stringify(mutes));
+}
+
+function agentEventPreviewState() {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("agentUi");
+}
+
 function runUiTransition(name: OrcaTransition, update: () => void) {
   const transitionDocument = document as Document & {
     startViewTransition?: (callback: () => void) => { finished: Promise<void> };
@@ -238,7 +309,8 @@ function getClassificationCounts(source: InboxMessage[]): ClassificationCounts {
   };
 }
 
-const demoClassificationCounts = getClassificationCounts(demoMessages);
+const demoMailWithAgentSources = [...demoMessages, ...demoAgentMessages];
+const demoClassificationCounts = getClassificationCounts(demoMailWithAgentSources);
 
 function demoMessagesForClassification(view: ClassificationView, source = demoMessages) {
   return source.filter((message) => classificationMatchesView(message, view));
@@ -855,8 +927,8 @@ export function InboxApp({
   setTheme: Dispatch<SetStateAction<Theme>>;
 }) {
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human") : []);
-  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMessages : []);
+  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
+  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
   const [classificationView, setClassificationView] = useState<ClassificationView>("human");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
@@ -876,6 +948,19 @@ export function InboxApp({
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
+  const [agentEvents, setAgentEvents] = useState<PropagatedAgentEvent[]>(() => demoMode ? readDemoAgentEvents() : []);
+  const [agentMutes, setAgentMutes] = useState<AgentPropagationMuteRule[]>(() => demoMode ? readDemoAgentMutes() : []);
+  const [agentEventsStatus, setAgentEventsStatus] = useState<"idle" | "loading" | "ready" | "error">(() => {
+    if (!demoMode) return "idle";
+    const preview = agentEventPreviewState();
+    return preview === "loading" ? "loading" : preview === "error" ? "error" : "ready";
+  });
+  const [agentEventsError, setAgentEventsError] = useState<string | null>(() => demoMode && agentEventPreviewState() === "error" ? "Previewing a local lifecycle request failure. Mail remains available." : null);
+  const [agentEventsRefreshKey, setAgentEventsRefreshKey] = useState(0);
+  const [busyAgentEventId, setBusyAgentEventId] = useState<string | null>(() => demoMode && agentEventPreviewState() === "disabled" ? demoAgentEvents[0]?.id ?? null : null);
+  const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
+    ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
+    : {});
   const [organizationOpen, setOrganizationOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
@@ -893,6 +978,7 @@ export function InboxApp({
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
   const originMessageIdRef = useRef<string | null>(null);
+  const originAgentEventIdRef = useRef<string | null>(null);
   const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
@@ -903,6 +989,7 @@ export function InboxApp({
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
+  const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
   const composeDraft = useComposeDraft(account?.id ?? "preview", "new", demoMode);
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -980,7 +1067,7 @@ export function InboxApp({
     if (demoMode) {
       setAccount(demoAccount);
       const readThreadIds = readDemoReadState();
-      const readMessages = demoMessages.map((message) =>
+      const readMessages = demoMailWithAgentSources.map((message) =>
         readThreadIds.has(message.threadId) ? { ...message, unread: false } : message,
       );
       const sourceMessages = demoDataInitializedRef.current ? allMailMessages : readMessages;
@@ -1117,6 +1204,38 @@ export function InboxApp({
   }, [account, demoMode, status]);
 
   useEffect(() => {
+    if (demoMode) {
+      const preview = agentEventPreviewState();
+      if (preview === "loading" || preview === "error") return;
+      setAgentEvents(readDemoAgentEvents());
+      setAgentMutes(readDemoAgentMutes());
+      setAgentEventsStatus("ready");
+      setAgentEventsError(null);
+      return;
+    }
+    if (!account || status !== "ready") return;
+    const controller = new AbortController();
+    setAgentEventsStatus("loading");
+    setAgentEventsError(null);
+    Promise.all([
+      fetchJson("/v1/agent-events?limit=50", agentEventListPageSchema, controller.signal),
+      fetchJson("/v1/agent-event-mutes", agentPropagationMuteListSchema, controller.signal),
+    ])
+      .then(([page, mutes]) => {
+        if (controller.signal.aborted) return;
+        setAgentEvents(page.events);
+        setAgentMutes(mutes);
+        setAgentEventsStatus("ready");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setAgentEventsStatus("error");
+        setAgentEventsError(getErrorMessage(error));
+      });
+    return () => controller.abort();
+  }, [account, agentEventsRefreshKey, demoMode, status]);
+
+  useEffect(() => {
     const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
     if (demoMode) {
       setAttentionByAddress(Object.fromEntries(addresses.map((address) => [
@@ -1237,13 +1356,17 @@ export function InboxApp({
     if (selectedThreadId || !inboxViewportRef.current) return;
     const viewport = inboxViewportRef.current;
     const originMessageId = originMessageIdRef.current;
+    const originAgentEventId = originAgentEventIdRef.current;
     const navigationGeneration = readerNavigationGenerationRef.current;
     inboxViewportRef.current = null;
     restoreInboxViewport(viewport);
     readerFocusFrameRef.current = window.requestAnimationFrame(() => {
       readerFocusFrameRef.current = null;
       if (readerNavigationGenerationRef.current !== navigationGeneration) return;
-      messageRowRefs.current.get(originMessageId ?? "")?.focus({ preventScroll: true });
+      const origin = originAgentEventId
+        ? agentEventSourceRefs.current.get(originAgentEventId)
+        : messageRowRefs.current.get(originMessageId ?? "");
+      origin?.focus({ preventScroll: true });
     });
   }, [selectedThreadId]);
 
@@ -1392,6 +1515,7 @@ export function InboxApp({
       setPanelClosing(false);
       setZenClosing(false);
       originMessageIdRef.current = message.id;
+      originAgentEventIdRef.current = null;
       setSelectedThreadId(message.threadId);
       setSelectedThreadAccountId(message.accountId);
     });
@@ -1408,6 +1532,105 @@ export function InboxApp({
       setAllMailMessages((prev) =>
         prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
+    }
+  }
+
+  function openAgentEventSource(event: PropagatedAgentEvent) {
+    if (panelClosing) return;
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    if (!selectedThreadId && !inboxViewportRef.current) inboxViewportRef.current = captureInboxViewport();
+    runUiTransition("reader-forward", () => {
+      setPanelClosing(false);
+      setZenClosing(false);
+      originMessageIdRef.current = null;
+      originAgentEventIdRef.current = event.id;
+      setSelectedThreadId(event.source.threadId);
+      setSelectedThreadAccountId(event.source.accountId);
+    });
+    if (event.lifecycle.state === "new") void updateAgentEvent(event, { action: "mark_seen" });
+  }
+
+  async function updateAgentEvent(event: PropagatedAgentEvent, action: AgentEventControlAction) {
+    if (busyAgentEventId) return;
+    setBusyAgentEventId(event.id);
+    setAgentEventActionErrors((current) => {
+      const next = { ...current };
+      delete next[event.id];
+      return next;
+    });
+    try {
+      let updated: PropagatedAgentEvent;
+      if (demoMode) {
+        await Promise.resolve();
+        updated = applyDemoAgentEventAction(event, action);
+      } else {
+        updated = await fetchJson(
+          `/v1/agent-events/${encodeURIComponent(event.id)}/lifecycle?accountId=${encodeURIComponent(event.source.accountId)}`,
+          propagatedAgentEventSchema,
+          undefined,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...action, expectedRevision: event.lifecycle.revision }),
+          },
+        );
+      }
+      setAgentEvents((current) => {
+        const next = current.map((item) => item.id === updated.id ? updated : item);
+        if (demoMode) writeDemoAgentEvents(next);
+        return next;
+      });
+      if (action.action === "mute") {
+        if (demoMode) {
+          setAgentMutes((current) => {
+            const timestamp = new Date().toISOString();
+            const id = `mute_demo_${event.id}_${action.target.scope}_${action.target.value}`;
+            const next = [...current.filter((mute) => mute.id !== id), { id, accountId: event.source.accountId, target: action.target, createdAt: timestamp, updatedAt: timestamp }];
+            writeDemoAgentMutes(next);
+            return next;
+          });
+        } else {
+          setAgentMutes(await fetchJson("/v1/agent-event-mutes", agentPropagationMuteListSchema));
+        }
+      }
+    } catch (error) {
+      setAgentEventActionErrors((current) => ({
+        ...current,
+        [event.id]: `Could not save this local change. ${getErrorMessage(error)} The original message and Human Signal were not changed.`,
+      }));
+    } finally {
+      setBusyAgentEventId(null);
+    }
+  }
+
+  async function unmuteAgentEvent(event: PropagatedAgentEvent, mute: AgentPropagationMuteRule) {
+    if (busyAgentEventId) return;
+    setBusyAgentEventId(event.id);
+    setAgentEventActionErrors((current) => {
+      const next = { ...current };
+      delete next[event.id];
+      return next;
+    });
+    try {
+      if (!demoMode) {
+        await fetchNoContent(`/v1/agent-event-mutes/${encodeURIComponent(mute.id)}?accountId=${encodeURIComponent(mute.accountId)}`, { method: "DELETE" });
+      }
+      setAgentMutes((current) => {
+        const next = current.filter((item) => item.id !== mute.id);
+        if (demoMode) writeDemoAgentMutes(next);
+        return next;
+      });
+    } catch (error) {
+      setAgentEventActionErrors((current) => ({
+        ...current,
+        [event.id]: `Could not remove this local mute. ${getErrorMessage(error)} Provider mail was not changed.`,
+      }));
+    } finally {
+      setBusyAgentEventId(null);
     }
   }
 
@@ -1532,6 +1755,20 @@ export function InboxApp({
     setClassificationActionError(null);
     setClassificationActionMessage(null);
     setRefreshKey((key) => key + 1);
+  }
+
+  function retryAgentEvents() {
+    if (demoMode) {
+      setAgentEventsStatus("loading");
+      setAgentEventsError(null);
+      window.setTimeout(() => {
+        setAgentEvents(readDemoAgentEvents());
+        setAgentMutes(readDemoAgentMutes());
+        setAgentEventsStatus("ready");
+      }, 180);
+      return;
+    }
+    setAgentEventsRefreshKey((key) => key + 1);
   }
 
   function selectClassification(view: ClassificationView) {
@@ -2007,7 +2244,13 @@ export function InboxApp({
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             <InboxView
               account={account}
+              agentEventActionErrors={agentEventActionErrors}
+              agentEvents={agentEvents}
+              agentEventsError={agentEventsError}
+              agentEventsStatus={agentEventsStatus}
+              agentMutes={agentMutes}
               automatedMessages={automatedMessages}
+              busyAgentEventId={busyAgentEventId}
               errorMessage={errorMessage}
               errorStatus={errorStatus}
               inboxEyebrow={inboxEyebrow}
@@ -2031,6 +2274,10 @@ export function InboxApp({
               pinnedPeople={pinnedPeople}
               pinnedSenderAddresses={pinnedSenderAddresses}
               onClearFilter={() => setPersonFilter(null)}
+              onAgentEventAction={(event, action) => void updateAgentEvent(event, action)}
+              onOpenAgentEvent={openAgentEventSource}
+              onRetryAgentEvents={retryAgentEvents}
+              onUnmuteAgentEvent={(event, mute) => void unmuteAgentEvent(event, mute)}
               onSelectClassification={selectClassification}
               onLoadMoreMessages={() => void loadMoreMessages()}
               onRetry={retryInbox}
@@ -2043,6 +2290,7 @@ export function InboxApp({
               onPinPerson={(message) => void createPin({ kind: "sender", targetId: message.from.email, label: message.from.name ?? message.from.email })}
               onSelectPin={selectPin}
               rowRefs={messageRowRefs}
+              agentEventSourceRefs={agentEventSourceRefs}
               personFilter={personFilter}
               status={status}
               syncStatus={syncStatus}
@@ -3294,7 +3542,14 @@ export function MessageSubject({ subject, unread }: { subject: string; unread: b
 
 function InboxView({
   account,
+  agentEventActionErrors,
+  agentEvents,
+  agentEventsError,
+  agentEventsStatus,
+  agentMutes,
+  agentEventSourceRefs,
   automatedMessages,
+  busyAgentEventId,
   collection,
   errorMessage,
   errorStatus,
@@ -3323,6 +3578,10 @@ function InboxView({
   syncStatus,
   isRefreshing,
   onClearFilter,
+  onAgentEventAction,
+  onOpenAgentEvent,
+  onRetryAgentEvents,
+  onUnmuteAgentEvent,
   onSelectClassification,
   onLoadMoreMessages,
   onRetry,
@@ -3350,7 +3609,14 @@ function InboxView({
   rowRefs,
 }: {
   account: MailAccount | null;
+  agentEventActionErrors: Record<string, string>;
+  agentEvents: PropagatedAgentEvent[];
+  agentEventsError: string | null;
+  agentEventsStatus: "idle" | "loading" | "ready" | "error";
+  agentMutes: AgentPropagationMuteRule[];
+  agentEventSourceRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
   automatedMessages: InboxMessage[];
+  busyAgentEventId: string | null;
   collection: Collection | null;
   errorMessage: string | null;
   errorStatus: number | null;
@@ -3379,6 +3645,10 @@ function InboxView({
   syncStatus: SyncStatus | null;
   isRefreshing: boolean;
   onClearFilter: () => void;
+  onAgentEventAction: (event: PropagatedAgentEvent, action: AgentEventControlAction) => void;
+  onOpenAgentEvent: (event: PropagatedAgentEvent) => void;
+  onRetryAgentEvents: () => void;
+  onUnmuteAgentEvent: (event: PropagatedAgentEvent, mute: AgentPropagationMuteRule) => void;
   onSelectClassification: (view: ClassificationView) => void;
   onLoadMoreMessages: () => void;
   onRetry: () => void;
@@ -3766,6 +4036,25 @@ function InboxView({
         ) : null}
 
         <section className="inbox-body" aria-live="polite">
+        {viewMode === "inbox" && classificationView === "human" && inboxFilter === "all" && !searchQuery.trim() && !personFilter && !selectionMode ? (
+          <AgentEventTimeline
+            accountLabels={account ? { [account.id]: account.email } : {}}
+            actionErrors={agentEventActionErrors}
+            busyEventId={busyAgentEventId}
+            error={agentEventsError}
+            events={agentEvents}
+            mutes={agentMutes}
+            onAction={onAgentEventAction}
+            onOpenSource={onOpenAgentEvent}
+            onRetry={onRetryAgentEvents}
+            onUnmute={onUnmuteAgentEvent}
+            sourceButtonRef={(eventId) => (node) => {
+              if (node) agentEventSourceRefs.current.set(eventId, node);
+              else agentEventSourceRefs.current.delete(eventId);
+            }}
+            status={agentEventsStatus}
+          />
+        ) : null}
         {status === "loading" || (status === "syncing" && messages.length === 0) ? (
           <InboxStatusState
             description={status === "syncing" ? "Reading your Gmail inbox and bringing the latest conversations into Orca." : "Checking your Orca session."}

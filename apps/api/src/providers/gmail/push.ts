@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 
 import { createDatabaseClient } from "../../db/client.ts";
+import type { DeterministicPropagationRuntimeOptions } from "../../agents/propagation/runtime.ts";
 import { emailAttachments, emailLabels, emails, oauthAccounts, threads } from "../../db/schema.ts";
 import {
   createGmailClient,
@@ -39,6 +40,7 @@ export type GmailBackfillOptions = {
   now?: Date;
   pageSize?: number;
   maxPages?: number;
+  propagation?: DeterministicPropagationRuntimeOptions;
 };
 
 export type GmailBackfillResult = {
@@ -218,6 +220,7 @@ export async function backfillGmailAccount(
       fullBackfill: pages === 0,
       now,
       pageSize,
+      propagation: input.propagation,
     });
     pages += 1;
     emailCount += result.emailCount;
@@ -248,6 +251,7 @@ export async function syncGmailAccountHistory(
     now?: Date;
     pageSize?: number;
     maxPages?: number;
+    propagation?: DeterministicPropagationRuntimeOptions;
   },
 ): Promise<GmailHistorySyncResult> {
   const now = input.now ?? new Date();
@@ -271,6 +275,7 @@ export async function syncGmailAccountHistory(
           now,
           pageSize: input.pageSize ?? input.config?.backfillPageSize,
           maxPages: input.maxPages ?? input.config?.backfillMaxPages,
+          propagation: input.propagation,
         })
       : null;
     const nextHistoryId = account.syncHistoryId ?? input.historyId;
@@ -331,6 +336,7 @@ export async function syncGmailAccountHistory(
         now,
         pageSize: input.pageSize ?? input.config?.backfillPageSize,
         maxPages: input.maxPages ?? input.config?.backfillMaxPages,
+        propagation: input.propagation,
       });
       updateHistoryCursor(db, account.id, input.historyId, now);
       return {
@@ -367,12 +373,14 @@ export async function syncGmailAccountHistory(
       }
       if (fetched.messages.length > 0) {
         const labelList = await gmailClient.listLabels(tokenRecord.accessToken);
-        persisted = persistGmailMessages(db, {
+        persisted = await persistGmailMessages(db, {
           accountId: account.id,
           accountEmail: account.providerEmail,
           gmailMessages: fetched.messages,
           labelList,
           now,
+          propagationTrigger: "push",
+          propagationOptions: input.propagation,
         });
       }
     } catch (error) {
