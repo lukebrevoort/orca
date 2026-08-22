@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BRE-279 · On-demand Reply Brief validation</title>
+  <style>
+    :root { color-scheme: light dark; --paper:#f5f2e9; --ink:#183633; --muted:#60726e; --line:#c9d2cc; --card:#fffdf7; --accent:#18776d; --soft:#dceee8; }
+    @media (prefers-color-scheme: dark) { :root { --paper:#11211f; --ink:#edf4f0; --muted:#a7b7b1; --line:#35504b; --card:#172b28; --accent:#77c9bb; --soft:#203d38; } }
+    * { box-sizing:border-box; }
+    body { background:var(--paper); color:var(--ink); font:15px/1.6 ui-sans-serif,system-ui,sans-serif; margin:0; }
+    main { margin:auto; max-width:1100px; padding:56px 24px 80px; }
+    header { border-bottom:1px solid var(--line); display:grid; gap:13px; padding-bottom:30px; }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.13em; margin:0; text-transform:uppercase; }
+    h1 { font-family:Georgia,serif; font-size:clamp(38px,7vw,72px); font-weight:500; letter-spacing:-.04em; line-height:.98; margin:0; max-width:850px; }
+    .lede { color:var(--muted); font-size:18px; margin:0; max-width:760px; }
+    section { margin-top:42px; }
+    h2 { font-family:Georgia,serif; font-size:30px; font-weight:500; margin:0 0 16px; }
+    .grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; }
+    .card strong { display:block; margin-bottom:5px; }
+    .card p { color:var(--muted); margin:0; }
+    .pass { background:var(--soft); border:1px solid var(--line); border-radius:999px; color:var(--ink); display:inline-block; font-size:11px; font-weight:800; letter-spacing:.09em; padding:5px 9px; text-transform:uppercase; }
+    ol { display:grid; gap:11px; padding-left:24px; }
+    code { background:var(--soft); border-radius:5px; color:var(--ink); padding:2px 5px; }
+    pre { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:auto; padding:16px; white-space:pre-wrap; }
+    figure { background:var(--card); border:1px solid var(--line); border-radius:16px; margin:18px 0; overflow:hidden; padding:10px; }
+    img { border-radius:10px; display:block; height:auto; width:100%; }
+    figcaption { color:var(--muted); font-size:12px; padding:10px 5px 3px; }
+    .boundary { border-left:4px solid var(--accent); padding-left:18px; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">BRE-279 · Manual validation</p>
+    <h1>Reply guidance that never becomes the reply.</h1>
+    <p class="lede">An on-demand, source-linked brief reduces the conversation to one ask, up to three key points, one decision, and one calendar line. The human composer remains separate and blank.</p>
+  </header>
+
+  <section>
+    <h2>Acceptance map</h2>
+    <div class="grid">
+      <article class="card"><span class="pass">Covered</span><strong>Explicit invocation</strong><p>The brief is idle until “Get reply guidance” is pressed. It can be refreshed or dismissed; in-flight work is abortable.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Perceivable loading</strong><p>Every request paints an accessible loading phase for at least 600 ms, including the synchronous demo preview, without delaying abort.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Concise result</strong><p>The ask leads, followed by no more than three key points, the first decision, a single availability line, compact quality labels, and collapsed sources.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Inspectable sources</strong><p>Claims link to the selected message; free/busy is labeled as authorized read-only context with timestamps.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Calendar boundary</strong><p>When multiple connections exist, the human chooses the exact account carried by the invocation. Ambiguous, stale, expired, revoked, or missing access stays unknown.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Human authorship</strong><p>No draft text, reply body, compose action, recipients, send action, or calendar write is present in the contract or UI.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Theme safety</strong><p>Default, hover, focus, pressed, loading, and disabled controls preserve readable labels in light and dark themes.</p></article>
+    </div>
+  </section>
+
+  <section class="boundary">
+    <h2>Human-owned writing check</h2>
+    <ol>
+      <li>Open <code>/dev/inbox?thread=thread_3&amp;accountId=acct_demo</code>.</li>
+      <li>Confirm no Reply Brief exists before pressing <strong>Get reply guidance</strong>.</li>
+      <li>Press <strong>Get reply guidance</strong> and verify the “Building a short brief…” loading phase paints before the next state.</li>
+      <li>With multiple Calendar connections, choose one account and verify no brief is generated before that choice.</li>
+      <li>Generate the brief. Verify it shows one ask, at most three key points, one decision, and one availability line; expand the collapsed sources only when needed.</li>
+      <li>Press <strong>Reply</strong>.</li>
+      <li>Confirm the composer opens blank: no generated prose, recipients changed by the brief, or hidden calendar action.</li>
+      <li>Write an independent response in your own words. Dismiss or refresh the brief and confirm existing compose text is untouched.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Automated verification</h2>
+    <pre><code>bun test packages/shared/src/reply-brief.test.ts packages/shared/src/reply-brief-calendar.test.ts apps/api/src/reply-brief.test.ts apps/api/src/reply-brief-route.test.ts apps/web/src/reply-brief.test.tsx apps/web/src/App.test.tsx
+bun run typecheck
+bun run build
+bun run lint</code></pre>
+    <p>The focused suite covers minimum loading duration, abort behavior, concise output limits, prompt injection, strict scoped invocation, mixed and unavailable availability, missing or ambiguous facts, stale context, runtime failure, composer non-mutation, and theme-safe control tokens. Final command results are recorded with the ticket handoff.</p>
+  </section>
+
+  <section>
+    <h2>Headless browser evidence</h2>
+    <figure><img src="evidence/bre-279-reply-brief-loading-light.png" alt="Reply Brief accessible loading state in Orca's light theme" /><figcaption>Perceivable loading: the synchronous demo path holds the accessible loading state before showing the next step.</figcaption></figure>
+    <figure><img src="evidence/bre-279-calendar-choice-light.png" alt="Reply Brief calendar account chooser in Orca's light theme" /><figcaption>Explicit selection: multiple authorized connections are visible, and no brief has been generated before the human chooses one.</figcaption></figure>
+    <figure><img src="evidence/bre-279-reply-brief-light.png" alt="Reply Brief generated in Orca's light theme" /><figcaption>Light theme: generated guidance, confidence and freshness labels, source-linked facts, and free/busy disclosure.</figcaption></figure>
+    <figure><img src="evidence/bre-279-reply-brief-dark.png" alt="Reply Brief generated in Orca's dark theme" /><figcaption>Dark theme: the same flow with readable default, focused, and selected controls.</figcaption></figure>
+  </section>
+</main>
+</body>
+</html>

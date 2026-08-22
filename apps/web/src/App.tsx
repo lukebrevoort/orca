@@ -24,6 +24,7 @@ import {
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
+import { ReplyBriefPanel } from "./reply-brief";
 import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
@@ -885,8 +886,8 @@ export function InboxApp({
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
-  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("accountId"));
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
+  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -4158,6 +4159,7 @@ export function MessageReader({
               </section>
             ))}
           </div>
+          <ReplyBriefPanel demoMode={demoMode} detail={detail} />
           <ThreadReplyComposer
             account={detail.account}
             contacts={contacts}
@@ -5022,6 +5024,26 @@ export function getSelectedThreadAccountId(
   return selectedThreadAccountId
     ?? messages.find((message) => message.threadId === selectedThreadId)?.accountId
     ?? null;
+}
+
+export function readInitialThreadSelection(location: { pathname: string; search: string }) {
+  const query = new URLSearchParams(location.search);
+  const queryThreadId = query.get("thread");
+  const queryAccountId = query.get("accountId");
+  if (queryThreadId || queryAccountId) {
+    return { threadId: queryThreadId, accountId: queryAccountId };
+  }
+
+  const pathMatch = location.pathname.match(/^\/accounts\/([^/]+)\/threads\/([^/]+)$/);
+  if (!pathMatch) return { threadId: null, accountId: null };
+  try {
+    return {
+      accountId: decodeURIComponent(pathMatch[1]!),
+      threadId: decodeURIComponent(pathMatch[2]!),
+    };
+  } catch {
+    return { threadId: null, accountId: null };
+  }
 }
 
 function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {
