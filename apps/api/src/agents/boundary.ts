@@ -403,6 +403,7 @@ export function projectAgentEventForAgent(
       accountId: event.source.accountId,
       provider: event.source.provider,
       messageId: event.source.messageId,
+      providerMessageId: event.source.providerMessageId,
       threadId: event.source.threadId,
       sender: projectContact(event.source.sender),
       subject: textual.fields.subject,

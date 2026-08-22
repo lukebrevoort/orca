@@ -185,7 +185,7 @@ function createFixture(options: {
     propagatedAgentEventSchema.parse({
       id: "event_a",
       source: {
-        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_2", threadId: "thread_a_2",
+        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_2", providerMessageId: "provider-message-a-2", threadId: "thread_a_2",
         sender: { name: "CI", email: "ci@example.dev" }, subject: "Build failed", receivedAt: "2026-08-19T15:00:00.000Z",
         sourceUrl: "https://evil.invalid/unrelated?thread=wrong&accountId=account_b&token=provider-secret",
       },
@@ -193,13 +193,13 @@ function createFixture(options: {
       eventKind: "ci_or_deploy_failure", importance: "high", relevance: "matched", destination: "timeline", reasonCodes: ["workflow_failed"],
       title: "The main build failed", summary: "CI reports a failed build.", whyThisMatters: "The release is blocked.", suggestedNextStep: "Open the source message.",
       humanClassification: { classification: "automated_or_bulk", score: 2, reasonCodes: ["auto_submitted_header"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
-      deduplicationKey: "account_a:message_a_2:ci_or_deploy_failure:m6-v0", evaluatedAt: "2026-08-19T15:00:01.000Z",
-      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T15:00:01.000Z", updatedAt: "2026-08-19T15:00:01.000Z", seenAt: null, snoozedUntil: null },
+      deduplicationKey: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", evaluatedAt: "2026-08-19T15:00:01.000Z",
+      lifecycle: { state: "new", lastTransition: "created", revision: 1, createdAt: "2026-08-19T15:00:01.000Z", updatedAt: "2026-08-19T15:00:01.000Z", lastTransitionAt: "2026-08-19T15:00:01.000Z", seenAt: null, snoozedUntil: null },
     }),
     propagatedAgentEventSchema.parse({
       id: "event_a_missing_account",
       source: {
-        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_1", threadId: "thread_a_1",
+        ownerUserId: "user_a", accountId: "account_a", provider: "gmail", messageId: "message_a_1", providerMessageId: "provider-message-a-1", threadId: "thread_a_1",
         sender: { name: "Maya", email: "maya@example.com" }, subject: "Launch review", receivedAt: "2026-08-19T16:00:00.000Z",
         sourceUrl: "https://elsewhere.invalid/no-account?thread=wrong",
       },
@@ -207,21 +207,21 @@ function createFixture(options: {
       eventKind: "release_available", importance: "medium", relevance: "matched", destination: "timeline", reasonCodes: ["release_became_available"],
       title: "Launch review", summary: "The release is ready for review.", whyThisMatters: "The team is waiting.", suggestedNextStep: "Open the source message.",
       humanClassification: { classification: "likely_human", score: 9, reasonCodes: ["direct_recipient"], classifierVersion: "m5-v1", source: "automatic_heuristic" },
-      deduplicationKey: "account_a:message_a_1:release_available:m6-v0", evaluatedAt: "2026-08-19T16:00:01.000Z",
-      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T16:00:01.000Z", updatedAt: "2026-08-19T16:00:01.000Z", seenAt: null, snoozedUntil: null },
+      deduplicationKey: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", evaluatedAt: "2026-08-19T16:00:01.000Z",
+      lifecycle: { state: "new", lastTransition: "created", revision: 1, createdAt: "2026-08-19T16:00:01.000Z", updatedAt: "2026-08-19T16:00:01.000Z", lastTransitionAt: "2026-08-19T16:00:01.000Z", seenAt: null, snoozedUntil: null },
     }),
     propagatedAgentEventSchema.parse({
       id: "event_b",
       source: {
-        ownerUserId: "user_b", accountId: "account_b", provider: "gmail", messageId: "message_b", threadId: "thread_b",
+        ownerUserId: "user_b", accountId: "account_b", provider: "gmail", messageId: "message_b", providerMessageId: "provider-message-b", threadId: "thread_b",
         sender: { name: "Private B", email: "private@example.com" }, subject: "Private B", receivedAt: "2026-08-19T17:00:00.000Z",
         sourceUrl: "https://orca.example/?thread=thread_b",
       },
       provenance: { trigger: "sync", policyVersion: "m6-v0", agentId: "orca-deterministic-propagator", agentVersion: "0.1.0", executionMode: "deterministic" },
       eventKind: "other", importance: "medium", relevance: "matched", destination: "timeline", reasonCodes: ["insufficient_evidence"],
       title: "Private B", summary: "Private B", whyThisMatters: "Private B", suggestedNextStep: null, humanClassification: null,
-      deduplicationKey: "account_b:message_b:other:m6-v0", evaluatedAt: "2026-08-19T17:00:01.000Z",
-      lifecycle: { state: "new", revision: 1, createdAt: "2026-08-19T17:00:01.000Z", updatedAt: "2026-08-19T17:00:01.000Z", seenAt: null, snoozedUntil: null },
+      deduplicationKey: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", evaluatedAt: "2026-08-19T17:00:01.000Z",
+      lifecycle: { state: "new", lastTransition: "created", revision: 1, createdAt: "2026-08-19T17:00:01.000Z", updatedAt: "2026-08-19T17:00:01.000Z", lastTransitionAt: "2026-08-19T17:00:01.000Z", seenAt: null, snoozedUntil: null },
     }),
   ];
 

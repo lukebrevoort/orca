@@ -12,6 +12,16 @@ export {
 } from "./fixtures.ts";
 
 export {
+  agentContractBulkSuppressedFixture,
+  agentContractDuplicateDeliveryFixture,
+  agentContractFalsePositiveFixture,
+  agentContractFixtureSet,
+  agentContractPropagatedAssessmentFixture,
+  agentContractRetractedFixture,
+  agentContractUpdatedFixture,
+} from "./agent-contract-fixtures.ts";
+
+export {
   redactedSchedulingReplyBriefFixture,
   schedulingReplyBriefFixture,
 } from "./reply-brief.fixture.ts";
@@ -191,8 +201,10 @@ export {
 
 export {
   agentEventKindSchema,
+  agentDeduplicationKeySchema,
   agentEventLifecycleSchema,
   agentEventLifecycleStateSchema,
+  agentEventLifecycleTransitionSchema,
   agentEventListPageSchema,
   agentEventSourceSchema,
   agentExecutionModeSchema,
@@ -201,8 +213,14 @@ export {
   agentPropagationAssessmentSchema,
   agentPropagationDestinationSchema,
   agentPropagationPolicySchema,
+  agentPropagationPolicyCategorySchema,
+  agentPropagationPolicyOverrideSchema,
+  agentPropagationMuteRuleSchema,
+  agentPropagationMuteTargetSchema,
   agentPropagationReasonCodeSchema,
   agentPropagationTriggerSchema,
+  createAgentPropagationMuteSchema,
+  deleteAgentPropagationMuteSchema,
   agentProvenanceSchema,
   agentRelevanceSchema,
   conservativeAgentPropagationPolicy,
@@ -267,8 +285,10 @@ export type {
 
 export type {
   AgentEventKind,
+  AgentDeduplicationKey,
   AgentEventLifecycle,
   AgentEventLifecycleState,
+  AgentEventLifecycleTransition,
   AgentEventListPage,
   AgentEventSource,
   AgentExecutionMode,
@@ -277,8 +297,14 @@ export type {
   AgentPropagationAssessment,
   AgentPropagationDestination,
   AgentPropagationPolicy,
+  AgentPropagationPolicyCategory,
+  AgentPropagationPolicyOverride,
+  AgentPropagationMuteRule,
+  AgentPropagationMuteTarget,
   AgentPropagationReasonCode,
   AgentPropagationTrigger,
+  CreateAgentPropagationMute,
+  DeleteAgentPropagationMute,
   AgentProvenance,
   AgentRelevance,
   OrcaAgentAction,

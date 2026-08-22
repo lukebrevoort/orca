@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const createdAtDefault = sql`(unixepoch() * 1000)`;
 
@@ -64,6 +64,7 @@ export const oauthAccounts = sqliteTable(
     providerIdentityUniqueIdx: uniqueIndex(
       "oauth_accounts_provider_identity_unique_idx",
     ).on(table.userId, table.provider, table.providerId),
+    userIdIdUniqueIdx: uniqueIndex("oauth_accounts_user_id_id_unique_idx").on(table.userId, table.id),
   }),
 );
 
@@ -155,6 +156,7 @@ export const threads = sqliteTable(
       table.accountId,
       table.latestReceivedAt,
     ),
+    accountIdIdUniqueIdx: uniqueIndex("threads_account_id_id_unique_idx").on(table.accountId, table.id),
   }),
 );
 
@@ -236,7 +238,128 @@ export const emails = sqliteTable(
       table.accountId,
       table.humanClassification,
     ),
+    accountThreadIdUniqueIdx: uniqueIndex("emails_account_thread_id_unique_idx").on(
+      table.accountId,
+      table.threadId,
+      table.id,
+    ),
     threadIdx: index("emails_thread_idx").on(table.threadId),
+  }),
+);
+
+/**
+ * A concise, local projection of an important automated message. This table
+ * intentionally has no body/header/attachment columns and never mutates mail.
+ */
+export const agentEvents = sqliteTable(
+  "agent_events",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull(),
+    accountId: text("account_id").notNull(),
+    messageId: text("message_id").notNull(),
+    providerMessageId: text("provider_message_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    provider: text("provider").notNull(),
+    senderName: text("sender_name"),
+    senderAddress: text("sender_address").notNull(),
+    sourceSubject: text("source_subject").notNull(),
+    sourceReceivedAt: integer("source_received_at", { mode: "timestamp_ms" }).notNull(),
+    sourceUrl: text("source_url").notNull(),
+    trigger: text("trigger").notNull(),
+    policyVersion: text("policy_version").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentVersion: text("agent_version").notNull(),
+    executionMode: text("execution_mode").notNull(),
+    eventKind: text("event_kind").notNull(),
+    importance: text("importance").notNull(),
+    relevance: text("relevance").notNull(),
+    destination: text("destination").notNull(),
+    reasonCodes: text("reason_codes").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    whyThisMatters: text("why_this_matters").notNull(),
+    suggestedNextStep: text("suggested_next_step"),
+    humanClassification: text("human_classification"),
+    humanSignal: integer("human_signal"),
+    humanClassificationReasons: text("human_classification_reasons"),
+    humanClassifierVersion: text("human_classifier_version"),
+    humanClassificationSource: text("human_classification_source"),
+    deduplicationKey: text("deduplication_key").notNull(),
+    assessmentFingerprint: text("assessment_fingerprint").notNull(),
+    evaluatedAt: integer("evaluated_at", { mode: "timestamp_ms" }).notNull(),
+    lifecycleState: text("lifecycle_state").notNull().default("new"),
+    lastTransition: text("last_transition").notNull().default("created"),
+    revision: integer("revision").notNull().default(1),
+    seenAt: integer("seen_at", { mode: "timestamp_ms" }),
+    snoozedUntil: integer("snoozed_until", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    ownerAccountForeignKey: foreignKey({
+      columns: [table.ownerUserId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "agent_events_owner_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "agent_events_account_thread_fk",
+    }).onDelete("cascade"),
+    sourceMessageForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId, table.messageId],
+      foreignColumns: [emails.accountId, emails.threadId, emails.id],
+      name: "agent_events_source_message_fk",
+    }).onDelete("cascade"),
+    deduplicationUniqueIdx: uniqueIndex("agent_events_owner_account_dedupe_unique_idx").on(
+      table.ownerUserId,
+      table.accountId,
+      table.deduplicationKey,
+    ),
+    accountUpdatedAtIdx: index("agent_events_account_updated_at_idx").on(table.accountId, table.updatedAt),
+    accountStateIdx: index("agent_events_account_state_idx").on(table.accountId, table.lifecycleState),
+    revisionCheck: check("agent_events_revision_check", sql`${table.revision} >= 1`),
+    destinationCheck: check("agent_events_destination_check", sql`${table.destination} <> 'none'`),
+  }),
+);
+
+/** Sparse account-scoped departures from the versioned conservative defaults. */
+export const agentPropagationPolicyOverrides = sqliteTable(
+  "agent_propagation_policy_overrides",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountCategoryUniqueIdx: uniqueIndex("agent_propagation_policy_overrides_account_category_unique_idx").on(
+      table.accountId,
+      table.category,
+    ),
+  }),
+);
+
+/** Active mute rows are deleted to reverse a mute; no provider state changes. */
+export const agentPropagationMutes = sqliteTable(
+  "agent_propagation_mutes",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    targetScope: text("target_scope").notNull(),
+    targetValue: text("target_value").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    accountTargetUniqueIdx: uniqueIndex("agent_propagation_mutes_account_target_unique_idx").on(
+      table.accountId,
+      table.targetScope,
+      table.targetValue,
+    ),
   }),
 );
 
