@@ -25,6 +25,8 @@ import { getContactIdentity, getContactSignature, type ContactSignature } from "
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { createPortal } from "react-dom";
+import { CalendarSettingsPage } from "./calendar-settings";
+import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -281,6 +283,8 @@ export function App() {
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
   const devPreview = isDevPreviewRoute();
   const onboardingPreview = isOnboardingDevPreviewRoute();
+  const calendarPreview = isCalendarSettingsDevPreviewRoute();
+  const availabilityPreview = isSchedulingAvailabilityDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -299,7 +303,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || onboardingPreview || devPreview) return;
+    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || calendarPreview || availabilityPreview || onboardingPreview || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then(async (response) => {
@@ -324,6 +328,14 @@ export function App() {
   }
   if (onboardingPreview) {
     return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
+  }
+  if (calendarPreview) {
+    const requestedState = new URLSearchParams(window.location.search).get("state");
+    const demoState = requestedState === "disconnected" || requestedState === "error" ? requestedState : "connected";
+    return <CalendarSettingsPage demoMode demoState={demoState} theme={theme} setTheme={(next) => setTheme(next)} />;
+  }
+  if (availabilityPreview) {
+    return <SchedulingAvailabilityPreviewPage theme={theme} setTheme={(next) => setTheme(next)} />;
   }
   if (devPreview) {
     return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
@@ -354,6 +366,9 @@ export function App() {
 
   if (isGmailSettingsRoute()) {
     return <GmailConnectionSettingsPage theme={theme} setTheme={setTheme} />;
+  }
+  if (isCalendarSettingsRoute()) {
+    return <CalendarSettingsPage theme={theme} setTheme={(next) => setTheme(next)} />;
   }
 
   if (isAttentionSettingsRoute()) {
@@ -535,6 +550,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           {outlookAuthorizationError ? <p className="settings-outlook-error" role="alert">{outlookAuthorizationError}</p> : null}
           <a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a>
           <a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
+          <a className="settings-row-link" href="/settings/integrations/calendar">Calendar availability & scope →</a>
         </SettingsSection>
         <SettingsSection id="agents" title="Agent connections" note="Read-only access">
           <p className="settings-section-copy">ChatGPT and Codex can connect to Orca through a scoped OAuth link. These connections never receive your provider tokens or an OpenAI API key.</p>
@@ -5383,6 +5399,18 @@ function isGmailLabelMigrationRoute() {
 
 function isGmailSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/gmail";
+}
+
+function isCalendarSettingsRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/calendar";
+}
+
+function isCalendarSettingsDevPreviewRoute() {
+  return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/calendar";
+}
+
+function isSchedulingAvailabilityDevPreviewRoute() {
+  return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/reply-availability";
 }
 
 function isAttentionSettingsRoute() {

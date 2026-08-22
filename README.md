@@ -156,6 +156,16 @@ Variables reserved for the upcoming Gmail connect flow:
 - `GMAIL_REDIRECT_URI`
 - `GMAIL_OAUTH_SCOPES`: optional space- or comma-delimited scopes. Defaults to `https://www.googleapis.com/auth/gmail.readonly` and `https://www.googleapis.com/auth/userinfo.email`.
 
+Variables for the separate Google Calendar availability connection:
+
+- `GOOGLE_CALENDAR_CLIENT_ID` and `GOOGLE_CALENDAR_CLIENT_SECRET`: dedicated Calendar OAuth client credentials (the generic Google credentials are accepted as a local fallback, but Calendar still has a separate grant and token row).
+- `GOOGLE_CALENDAR_REDIRECT_URI`: defaults to `http://localhost:3000/v1/auth/calendar/google/callback`.
+- `GOOGLE_CALENDAR_OAUTH_STATE_SECRET`: optional dedicated state-signing secret; defaults to `SESSION_SECRET`.
+
+Calendar scopes are a fixed code allowlist: `calendar.freebusy`, `calendar.calendarlist.readonly`, and `userinfo.email`. Gmail scopes cannot silently enable Calendar. Orca stores encrypted Calendar tokens separately, queries only Google Calendar's `freeBusy` endpoint, keeps only allowlisted calendar-list metadata, and exposes no event-create/update/delete endpoint.
+
+Calendar consent reuses the existing Google OAuth client from `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` unless the optional `GOOGLE_CALENDAR_*` overrides are set. Add the matching `/v1/auth/calendar/google/callback` URL (derived from `GMAIL_REDIRECT_URI`) to that OAuth client's authorized redirect URIs; the Calendar grant and encrypted tokens remain separate from Gmail.
+
 Local validation notes:
 
 - The API now validates `PORT` and `WEB_ORIGIN` at startup.
@@ -192,6 +202,8 @@ The BRE-159 M3 writing and delivery verification guide is available at
 `http://localhost:5173/docs/bre-159-validation.html`.
 The BRE-252 M5 fixture, Human Inbox, and milestone closeout guide is available at
 `http://localhost:5173/docs/bre-252-validation.html`.
+The BRE-278 read-only Calendar availability fixture and manual verification guide is available at
+`http://localhost:5173/docs/bre-278-calendar-availability-validation.html`.
 
 ## ChatGPT/Codex MCP OAuth 2.1
 

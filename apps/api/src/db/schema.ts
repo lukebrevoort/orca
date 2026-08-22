@@ -67,6 +67,66 @@ export const oauthAccounts = sqliteTable(
   }),
 );
 
+/**
+ * Calendar authorization is deliberately separate from mail authorization.
+ * A Gmail token can never satisfy this connection, even when both providers
+ * happen to be Google accounts.
+ */
+export const calendarConnections = sqliteTable(
+  "calendar_connections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    accountLabel: text("account_label").notNull(),
+    accessTokenEncrypted: text("access_token_encrypted"),
+    refreshTokenEncrypted: text("refresh_token_encrypted"),
+    tokenExpiry: integer("token_expiry", { mode: "timestamp_ms" }),
+    scope: text("scope").notNull(),
+    state: text("state").notNull().default("connected"),
+    error: text("error"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    userIdx: index("calendar_connections_user_idx").on(table.userId),
+    providerIdentityUniqueIdx: uniqueIndex("calendar_connections_provider_identity_unique_idx").on(table.userId, table.provider, table.providerAccountId),
+  }),
+);
+
+export const availabilityCalendars = sqliteTable(
+  "availability_calendars",
+  {
+    id: text("id").primaryKey(),
+    connectionId: text("connection_id").notNull().references(() => calendarConnections.id, { onDelete: "cascade" }),
+    providerCalendarId: text("provider_calendar_id").notNull(),
+    displayName: text("display_name").notNull(),
+    timeZone: text("time_zone"),
+    selected: integer("selected", { mode: "boolean" }).notNull().default(false),
+    isPrimary: integer("is_primary", { mode: "boolean" }).notNull().default(false),
+    accessRole: text("access_role").notNull(),
+    lastDiscoveredAt: integer("last_discovered_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    connectionProviderCalendarUniqueIdx: uniqueIndex("availability_calendars_connection_provider_unique_idx").on(table.connectionId, table.providerCalendarId),
+    connectionSelectedIdx: index("availability_calendars_connection_selected_idx").on(table.connectionId, table.selected),
+  }),
+);
+
+export const calendarPreferences = sqliteTable(
+  "calendar_preferences",
+  {
+    userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    timeZone: text("time_zone").notNull(),
+    workingHours: text("working_hours"),
+    staleAfterMinutes: integer("stale_after_minutes").notNull().default(15),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
 export const threads = sqliteTable(
   "threads",
   {

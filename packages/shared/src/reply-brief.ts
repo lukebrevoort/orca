@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CalendarAvailabilityResponse } from "./calendar-availability.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().refine(
@@ -105,6 +106,30 @@ export const replyBriefFreeBusySchema = z.object({
 });
 export type ReplyBriefFreeBusy = z.infer<typeof replyBriefFreeBusySchema>;
 
+export const replyBriefAvailabilityUnavailableSchema = z.object({
+  kind: z.literal("unavailable"),
+  timeZone: nonEmptyStringSchema.max(100),
+  reason: z.enum([
+    "calendar_not_connected",
+    "grant_expired",
+    "grant_revoked",
+    "provider_error",
+    "calendar_error",
+    "no_calendars_selected",
+    "ambiguous_request",
+    "stale_data",
+  ]),
+  statusDetail: nonEmptyStringSchema.max(500),
+  observedAt: isoDateTimeStringSchema,
+}).strict();
+export type ReplyBriefAvailabilityUnavailable = z.infer<typeof replyBriefAvailabilityUnavailableSchema>;
+
+export const replyBriefAvailabilitySchema = z.discriminatedUnion("kind", [
+  replyBriefFreeBusySchema,
+  replyBriefAvailabilityUnavailableSchema,
+]);
+export type ReplyBriefAvailability = z.infer<typeof replyBriefAvailabilitySchema>;
+
 /**
  * The only model-facing bundle permitted for Reply Brief generation. Provider
  * tokens, account identity, recipients, BCC, HTML, attachments, raw headers,
@@ -124,7 +149,7 @@ export const replyBriefContextBundleSchema = z.object({
     sourceRef: nonEmptyStringSchema.max(512),
   }).strict(),
   sources: z.array(replyBriefContextSourceSchema).min(1).max(26),
-  availability: replyBriefFreeBusySchema.nullable(),
+  availability: replyBriefAvailabilitySchema.nullable(),
   safety: z.object({
     contentTrust: z.literal("untrusted_external_content"),
     bodyPolicy: z.literal("selected_thread_bounded_plain_text"),
@@ -416,7 +441,7 @@ export function createDeterministicReplyBrief(input: unknown): ReplyBriefOutput 
     contentTrust: "untrusted_external_content",
   }));
 
-  if (context.availability) {
+  if (context.availability?.kind === "free_busy_only") {
     sourceRefs.push({
       id: "availability:free-busy",
       kind: "availability",
@@ -448,8 +473,10 @@ export function createDeterministicReplyBrief(input: unknown): ReplyBriefOutput 
     questions: schedulingRequest
       ? [{ text: "Which available time should the user choose?", certainty: "confirmed", sourceRefs: [selectedMessage.sourceRef] }]
       : [{ text: "The outcome the user wants from this response is unknown.", certainty: "unknown", sourceRefs: [selectedMessage.sourceRef] }],
-    considerations: context.availability
+    considerations: context.availability?.kind === "free_busy_only"
       ? [{ text: "Compare the proposed times only with the supplied free/busy intervals; no calendar event details were shared.", certainty: "confirmed", sourceRefs: [selectedMessage.sourceRef, "availability:free-busy"] }]
+      : context.availability?.kind === "unavailable"
+        ? [{ text: `Calendar availability is unavailable: ${context.availability.statusDetail} Do not treat missing calendar context as a recommendation.`, certainty: "unknown", sourceRefs: [selectedMessage.sourceRef] }]
       : [{ text: "Calendar availability was not requested or shared.", certainty: "confirmed", sourceRefs: [selectedMessage.sourceRef] }],
     sourceRefs,
     confidence: {
@@ -463,7 +490,7 @@ export function createDeterministicReplyBrief(input: unknown): ReplyBriefOutput 
       status: Date.parse(context.invocation.invokedAt) <= Date.parse(staleAfter) ? "current" : "stale",
       statusDetail: Date.parse(context.invocation.invokedAt) <= Date.parse(staleAfter) ? null : "The newest authorized source is older than the freshness window.",
     },
-    availabilityContext: context.availability
+    availabilityContext: context.availability?.kind === "free_busy_only"
       ? {
           status: "free_busy_only",
           timeZone: context.availability.timeZone,
@@ -471,6 +498,15 @@ export function createDeterministicReplyBrief(input: unknown): ReplyBriefOutput 
           windowEnd: context.availability.windowEnd,
           busy: context.availability.busy,
           sourceRefs: ["availability:free-busy"],
+        }
+      : context.availability?.kind === "unavailable"
+        ? {
+          status: "unavailable",
+          timeZone: context.availability.timeZone,
+          windowStart: null,
+          windowEnd: null,
+          busy: [],
+          sourceRefs: [],
         }
       : {
           status: "not_requested",
@@ -492,5 +528,60 @@ export function createDeterministicReplyBrief(input: unknown): ReplyBriefOutput 
       allowedTools: [],
       writeActions: [],
     },
+  });
+}
+
+/**
+ * Reduces the richer, UI-facing availability result to the only Calendar data
+ * allowed into a Reply Brief interpretation envelope. Account labels,
+ * calendar names/IDs, selection metadata, errors, and message quotes are
+ * intentionally discarded here.
+ */
+export function createReplyBriefAvailabilityContext(
+  input: CalendarAvailabilityResponse,
+  observedAt = new Date().toISOString(),
+): ReplyBriefAvailability {
+  const checkedResults = input.results.filter((result) =>
+    result.checkedAt !== null
+    && result.freshness === "fresh"
+    && (result.status === "free" || result.status === "busy"),
+  );
+  const exactWindows = input.request.requestedWindows.filter((window) =>
+    window.interpretation === "exact" && window.start !== null && window.end !== null,
+  );
+
+  if (input.checkedAt && checkedResults.length > 0 && exactWindows.length > 0) {
+    const windowStart = new Date(Math.min(...exactWindows.map((window) => Date.parse(window.start!)))).toISOString();
+    const windowEnd = new Date(Math.max(...exactWindows.map((window) => Date.parse(window.end!)))).toISOString();
+    const deduplicatedBusy = new Map<string, { start: string; end: string }>();
+    for (const result of checkedResults) {
+      for (const calendar of result.calendarResults) {
+        for (const interval of calendar.busy) {
+          const clippedStart = new Date(Math.max(Date.parse(interval.start), Date.parse(windowStart))).toISOString();
+          const clippedEnd = new Date(Math.min(Date.parse(interval.end), Date.parse(windowEnd))).toISOString();
+          if (Date.parse(clippedStart) >= Date.parse(clippedEnd)) continue;
+          deduplicatedBusy.set(`${clippedStart}/${clippedEnd}`, { start: clippedStart, end: clippedEnd });
+        }
+      }
+    }
+    return replyBriefAvailabilitySchema.parse({
+      kind: "free_busy_only",
+      timeZone: input.request.userTimeZone,
+      windowStart,
+      windowEnd,
+      busy: [...deduplicatedBusy.values()].sort((left, right) => Date.parse(left.start) - Date.parse(right.start)),
+      observedAt: input.checkedAt,
+    });
+  }
+
+  const firstUnknown = input.results.find((result) => result.status === "unknown");
+  const reason = firstUnknown?.unknownReason
+    ?? (input.connection === null ? "calendar_not_connected" : input.calendars.every((calendar) => !calendar.selected) ? "no_calendars_selected" : "provider_error");
+  return replyBriefAvailabilitySchema.parse({
+    kind: "unavailable",
+    timeZone: input.request.userTimeZone,
+    reason,
+    statusDetail: firstUnknown?.explanation ?? "Calendar availability could not be checked.",
+    observedAt: firstUnknown?.checkedAt ?? input.checkedAt ?? observedAt,
   });
 }
