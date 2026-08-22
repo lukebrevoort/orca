@@ -20,14 +20,30 @@ export type GoogleCalendarOAuthConfig = {
 
 export function loadGoogleCalendarOAuthConfig(env: Record<string, string | undefined> = process.env): GoogleCalendarOAuthConfig {
   return {
-    clientId: env.GOOGLE_CALENDAR_CLIENT_ID ?? env.GOOGLE_CLIENT_ID ?? "",
-    clientSecret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? env.GOOGLE_CLIENT_SECRET ?? "",
-    redirectUri: absoluteUrl(env.GOOGLE_CALENDAR_REDIRECT_URI ?? defaultRedirectUri, "GOOGLE_CALENDAR_REDIRECT_URI"),
+    // The OAuth client identifies Orca, not an individual grant. Reusing the
+    // existing Gmail client avoids a second Google Cloud credential while the
+    // Calendar token, consent, scopes, storage, and revocation stay separate.
+    clientId: env.GOOGLE_CALENDAR_CLIENT_ID ?? env.GMAIL_CLIENT_ID ?? env.GOOGLE_CLIENT_ID ?? "",
+    clientSecret: env.GOOGLE_CALENDAR_CLIENT_SECRET ?? env.GMAIL_CLIENT_SECRET ?? env.GOOGLE_CLIENT_SECRET ?? "",
+    redirectUri: calendarRedirectUri(env),
     tokenEncryptionKey: env.TOKEN_ENCRYPTION_KEY ?? env.OAUTH_TOKEN_ENCRYPTION_KEY ?? "",
-    stateSecret: env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET ?? env.SESSION_SECRET ?? "",
+    stateSecret: env.GOOGLE_CALENDAR_OAUTH_STATE_SECRET ?? env.GMAIL_OAUTH_STATE_SECRET ?? env.GOOGLE_OAUTH_STATE_SECRET ?? env.SESSION_SECRET ?? "",
     webOrigin: new URL(env.WEB_ORIGIN ?? defaultWebOrigin).origin,
     scopes: googleCalendarReadScopes,
   };
+}
+
+function calendarRedirectUri(env: Record<string, string | undefined>) {
+  if (env.GOOGLE_CALENDAR_REDIRECT_URI) {
+    return absoluteUrl(env.GOOGLE_CALENDAR_REDIRECT_URI, "GOOGLE_CALENDAR_REDIRECT_URI");
+  }
+  const existingGoogleRedirect = env.GMAIL_REDIRECT_URI ?? env.GOOGLE_REDIRECT_URI;
+  if (!existingGoogleRedirect) return defaultRedirectUri;
+  const redirect = new URL(absoluteUrl(existingGoogleRedirect, "GMAIL_REDIRECT_URI"));
+  redirect.pathname = "/v1/auth/calendar/google/callback";
+  redirect.search = "";
+  redirect.hash = "";
+  return redirect.toString();
 }
 
 export function validateGoogleCalendarOAuthConfig(config: GoogleCalendarOAuthConfig) {
@@ -46,4 +62,3 @@ function absoluteUrl(value: string, name: string) {
     throw new Error(`${name} must be a valid URL`);
   }
 }
-

@@ -330,7 +330,9 @@ export function App() {
     return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
   }
   if (calendarPreview) {
-    return <CalendarSettingsPage demoMode theme={theme} setTheme={(next) => setTheme(next)} />;
+    const requestedState = new URLSearchParams(window.location.search).get("state");
+    const demoState = requestedState === "disconnected" || requestedState === "error" ? requestedState : "connected";
+    return <CalendarSettingsPage demoMode demoState={demoState} theme={theme} setTheme={(next) => setTheme(next)} />;
   }
   if (availabilityPreview) {
     return <SchedulingAvailabilityPreviewPage theme={theme} setTheme={(next) => setTheme(next)} />;

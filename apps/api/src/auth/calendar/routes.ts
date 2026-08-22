@@ -41,7 +41,10 @@ export function createCalendarApp(options: Options = {}) {
 
   app.get("/v1/auth/calendar/google/connect", auth, (c) => {
     const missing = validateGoogleCalendarOAuthConfig(config);
-    if (missing.length) return c.json({ error: { code: "calendar_oauth_not_configured", message: `Missing Calendar OAuth configuration: ${missing.join(", ")}` } }, 503);
+    if (missing.length) return c.json({ error: {
+      code: "calendar_oauth_not_configured",
+      message: `Calendar consent needs server setup. Missing: ${missing.join(", ")}.`,
+    } }, 503);
     const result = oauth.getAuthorizationUrl(c.get("auth").userId, c.req.query("returnTo"));
     return c.json({ provider: "google", authUrl: result.url, redirectUri: config.redirectUri, scopes: result.scopes });
   });

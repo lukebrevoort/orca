@@ -164,6 +164,8 @@ Variables for the separate Google Calendar availability connection:
 
 Calendar scopes are a fixed code allowlist: `calendar.freebusy`, `calendar.calendarlist.readonly`, and `userinfo.email`. Gmail scopes cannot silently enable Calendar. Orca stores encrypted Calendar tokens separately, queries only Google Calendar's `freeBusy` endpoint, keeps only allowlisted calendar-list metadata, and exposes no event-create/update/delete endpoint.
 
+Calendar consent reuses the existing Google OAuth client from `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` unless the optional `GOOGLE_CALENDAR_*` overrides are set. Add the matching `/v1/auth/calendar/google/callback` URL (derived from `GMAIL_REDIRECT_URI`) to that OAuth client's authorized redirect URIs; the Calendar grant and encrypted tokens remain separate from Gmail.
+
 Local validation notes:
 
 - The API now validates `PORT` and `WEB_ORIGIN` at startup.
