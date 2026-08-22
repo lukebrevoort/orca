@@ -86,6 +86,7 @@ export function AgentEventTimeline({
             aria-controls="orca-signal-list"
             aria-pressed={showQuieted}
             className="agent-events-history-toggle"
+            disabled={mutationBusy}
             onClick={() => setShowQuieted((current) => !current)}
             type="button"
           >
@@ -170,9 +171,9 @@ export function AgentEventTimeline({
                             tabIndex={mutationBusy ? -1 : undefined}
                           >Mute…</summary>
                           <div>
-                            <button disabled={mutationBusy} onClick={() => onAction(event, { action: "mute", target: { scope: "sender_address", value: event.source.sender.email.trim().toLowerCase() } })} type="button">Mute {event.source.sender.name ?? event.source.sender.email}</button>
-                            <button disabled={mutationBusy} onClick={() => onAction(event, { action: "mute", target: { scope: "sender_domain", value: senderDomain.toLowerCase() } })} type="button">Mute {senderDomain}</button>
-                            <button disabled={mutationBusy} onClick={() => onAction(event, { action: "mute", target: { scope: "event_kind", value: event.eventKind } })} type="button">Mute {agentEventKindLabel(event.eventKind).toLowerCase()}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "sender_address", value: event.source.sender.email.trim().toLowerCase() } }); }} type="button">Mute {event.source.sender.name ?? event.source.sender.email}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "sender_domain", value: senderDomain.toLowerCase() } }); }} type="button">Mute {senderDomain}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "event_kind", value: event.eventKind } }); }} type="button">Mute {agentEventKindLabel(event.eventKind).toLowerCase()}</button>
                           </div>
                         </details>
                       ) : null}
@@ -190,6 +191,10 @@ export function AgentEventTimeline({
       ) : null}
     </section>
   );
+}
+
+function focusSignalSource(muteButton: HTMLButtonElement) {
+  muteButton.closest(".agent-event-actions")?.querySelector<HTMLButtonElement>(":scope > button")?.focus();
 }
 
 function tomorrowAtNine() {

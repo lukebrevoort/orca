@@ -110,8 +110,7 @@ describe("propagated agent event timeline", () => {
   test("disables lifecycle writes across every card while preserving source navigation", async () => {
     let actionCalls = 0;
     let sourceCalls = 0;
-    const { container } = await renderTimeline({
-      busyEventId: demoAgentEvents[0]!.id,
+    const { container, rerender } = await renderTimeline({
       onAction: () => { actionCalls += 1; },
       onOpenSource: () => { sourceCalls += 1; },
     });
@@ -119,6 +118,7 @@ describe("propagated agent event timeline", () => {
     const reviewQuieted = [...container.querySelectorAll("button")].find((button) => button.textContent?.startsWith("Review quieted"));
     expect(reviewQuieted).toBeDefined();
     await act(async () => reviewQuieted!.click());
+    await rerender({ busyEventId: demoAgentEvents[0]!.id });
     const cards = [...container.querySelectorAll("article.agent-event")];
     expect(cards).toHaveLength(demoAgentEvents.length);
 
@@ -173,6 +173,44 @@ describe("propagated agent event timeline", () => {
     expect(pointerClick.defaultPrevented).toBe(true);
     expect(enter.defaultPrevented).toBe(true);
     expect(details.hasAttribute("open")).toBe(false);
+  });
+
+  test("moves focus to source navigation before a Mute write closes its menu", async () => {
+    let actionCalls = 0;
+    const { container, rerender } = await renderTimeline({ onAction: () => { actionCalls += 1; } });
+    const details = container.querySelector("details.agent-event-mute-menu")!;
+    const summary = details.querySelector("summary")!;
+    await act(async () => summary.click());
+    const muteOption = details.querySelector("button")!;
+    muteOption.focus();
+    expect(browserWindow.document.activeElement).toBe(muteOption);
+
+    await act(async () => muteOption.click());
+    const source = details.closest(".agent-event-actions")!.querySelector("button")!;
+    expect(actionCalls).toBe(1);
+    expect(browserWindow.document.activeElement).toBe(source);
+
+    await rerender({ busyEventId: demoAgentEvents[0]!.id });
+    expect(details.hasAttribute("open")).toBe(false);
+    expect(browserWindow.document.activeElement).toBe(source);
+  });
+
+  test("keeps an in-flight quieted card and its failure announcement visible", async () => {
+    const quieted = demoAgentEvents.find((event) => event.lifecycle.state === "dismissed")!;
+    const { container, rerender } = await renderTimeline();
+    const historyToggle = [...container.querySelectorAll("button")].find((button) => button.textContent?.startsWith("Review quieted"))!;
+    await act(async () => historyToggle.click());
+    expect(container.textContent).toContain(quieted.title);
+
+    await rerender({ busyEventId: quieted.id });
+    expect(historyToggle.hasAttribute("disabled")).toBe(true);
+    await act(async () => historyToggle.click());
+    expect(container.textContent).toContain(quieted.title);
+    expect(container.textContent).toContain("Saving locally…");
+
+    await rerender({ busyEventId: null, actionErrors: { [quieted.id]: "Local save failed." } });
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("Local save failed.");
+    expect(container.textContent).toContain(quieted.title);
   });
 
   test("keeps demo lifecycle actions durable and independent of the source assessment", () => {
