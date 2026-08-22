@@ -24,7 +24,10 @@ import {
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
+import { ReplyBriefPanel } from "./reply-brief";
 import { createPortal } from "react-dom";
+import { CalendarSettingsPage } from "./calendar-settings";
+import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -281,6 +284,8 @@ export function App() {
   const [access, setAccess] = useState<"checking" | "authenticated" | "signedout">("checking");
   const devPreview = isDevPreviewRoute();
   const onboardingPreview = isOnboardingDevPreviewRoute();
+  const calendarPreview = isCalendarSettingsDevPreviewRoute();
+  const availabilityPreview = isSchedulingAvailabilityDevPreviewRoute();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -299,7 +304,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || onboardingPreview || devPreview) return;
+    if (isLoginRoute() || isReaderPreferencesRoute() || isSettingsDevPreviewRoute() || calendarPreview || availabilityPreview || onboardingPreview || devPreview) return;
     const abortController = new AbortController();
     fetch("/v1/auth/session", { credentials: "include", signal: abortController.signal })
       .then(async (response) => {
@@ -324,6 +329,14 @@ export function App() {
   }
   if (onboardingPreview) {
     return <WelcomeOrientationPage theme={theme} setTheme={setTheme} />;
+  }
+  if (calendarPreview) {
+    const requestedState = new URLSearchParams(window.location.search).get("state");
+    const demoState = requestedState === "disconnected" || requestedState === "error" ? requestedState : "connected";
+    return <CalendarSettingsPage demoMode demoState={demoState} theme={theme} setTheme={(next) => setTheme(next)} />;
+  }
+  if (availabilityPreview) {
+    return <SchedulingAvailabilityPreviewPage theme={theme} setTheme={(next) => setTheme(next)} />;
   }
   if (devPreview) {
     return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
@@ -354,6 +367,9 @@ export function App() {
 
   if (isGmailSettingsRoute()) {
     return <GmailConnectionSettingsPage theme={theme} setTheme={setTheme} />;
+  }
+  if (isCalendarSettingsRoute()) {
+    return <CalendarSettingsPage theme={theme} setTheme={(next) => setTheme(next)} />;
   }
 
   if (isAttentionSettingsRoute()) {
@@ -535,6 +551,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           {outlookAuthorizationError ? <p className="settings-outlook-error" role="alert">{outlookAuthorizationError}</p> : null}
           <a className="settings-row-link" href="/settings/integrations/gmail">Gmail connection & permissions →</a>
           <a className="settings-row-link" href="/settings/integrations/gmail/labels">Import Gmail labels →</a>
+          <a className="settings-row-link" href="/settings/integrations/calendar">Calendar availability & scope →</a>
         </SettingsSection>
         <SettingsSection id="agents" title="Agent connections" note="Read-only access">
           <p className="settings-section-copy">ChatGPT and Codex can connect to Orca through a scoped OAuth link. These connections never receive your provider tokens or an OpenAI API key.</p>
@@ -869,8 +886,8 @@ export function InboxApp({
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("thread"));
-  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("accountId"));
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
+  const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
@@ -4142,6 +4159,7 @@ export function MessageReader({
               </section>
             ))}
           </div>
+          <ReplyBriefPanel demoMode={demoMode} detail={detail} />
           <ThreadReplyComposer
             account={detail.account}
             contacts={contacts}
@@ -5008,6 +5026,26 @@ export function getSelectedThreadAccountId(
     ?? null;
 }
 
+export function readInitialThreadSelection(location: { pathname: string; search: string }) {
+  const query = new URLSearchParams(location.search);
+  const queryThreadId = query.get("thread");
+  const queryAccountId = query.get("accountId");
+  if (queryThreadId || queryAccountId) {
+    return { threadId: queryThreadId, accountId: queryAccountId };
+  }
+
+  const pathMatch = location.pathname.match(/^\/accounts\/([^/]+)\/threads\/([^/]+)$/);
+  if (!pathMatch) return { threadId: null, accountId: null };
+  try {
+    return {
+      accountId: decodeURIComponent(pathMatch[1]!),
+      threadId: decodeURIComponent(pathMatch[2]!),
+    };
+  } catch {
+    return { threadId: null, accountId: null };
+  }
+}
+
 function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {
   return {
     likely_human: counts.likely_human,
@@ -5383,6 +5421,18 @@ function isGmailLabelMigrationRoute() {
 
 function isGmailSettingsRoute() {
   return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/gmail";
+}
+
+function isCalendarSettingsRoute() {
+  return typeof window !== "undefined" && window.location.pathname === "/settings/integrations/calendar";
+}
+
+function isCalendarSettingsDevPreviewRoute() {
+  return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/calendar";
+}
+
+function isSchedulingAvailabilityDevPreviewRoute() {
+  return typeof window !== "undefined" && import.meta.env.DEV && window.location.pathname === "/dev/reply-availability";
 }
 
 function isAttentionSettingsRoute() {

@@ -8,6 +8,7 @@ export {
   m5FixtureReasonCodeCases,
   m5InboxFixture,
   m5NormalizedFixtureMessages,
+  schedulingAvailabilityFixture,
 } from "./fixtures.ts";
 
 export {
@@ -19,6 +20,56 @@ export {
   agentContractRetractedFixture,
   agentContractUpdatedFixture,
 } from "./agent-contract-fixtures.ts";
+
+export {
+  redactedSchedulingReplyBriefFixture,
+  schedulingReplyBriefFixture,
+} from "./reply-brief.fixture.ts";
+
+export {
+  createDeterministicReplyBrief,
+  createReplyBriefAvailabilityContext,
+  createReplyBriefInterpretationEnvelope,
+  humanOwnedReplyBriefPolicy,
+  m6ReplyBriefRuntimeDecision,
+  replyBriefAvailabilityContextSchema,
+  replyBriefClaimCertaintySchema,
+  replyBriefContractVersion,
+  replyBriefContextBundleSchema,
+  replyBriefContextMessageSchema,
+  replyBriefContextSourceSchema,
+  replyBriefDisclosureCopy,
+  replyBriefFreeBusySchema,
+  replyBriefAvailabilitySchema,
+  replyBriefAvailabilityUnavailableSchema,
+  replyBriefInterpretationEnvelopeSchema,
+  replyBriefItemSchema,
+  replyBriefOutputSchema,
+  replyBriefProhibitedOutputFields,
+  replyBriefSourceRefSchema,
+  replyBriefSourceUrlSchema,
+  replyBriefStatusSchema,
+  replyBriefUnavailableReasonSchema,
+  replyBriefViewStateSchema,
+} from "./reply-brief.ts";
+
+export type {
+  ReplyBriefAvailabilityContext,
+  ReplyBriefClaimCertainty,
+  ReplyBriefContextBundle,
+  ReplyBriefContextMessage,
+  ReplyBriefContextSource,
+  ReplyBriefFreeBusy,
+  ReplyBriefAvailability,
+  ReplyBriefAvailabilityUnavailable,
+  ReplyBriefInterpretationEnvelope,
+  ReplyBriefItem,
+  ReplyBriefOutput,
+  ReplyBriefSourceRef,
+  ReplyBriefStatus,
+  ReplyBriefUnavailableReason,
+  ReplyBriefViewState,
+} from "./reply-brief.ts";
 
 export {
   mcpAgentEventSchema,
@@ -181,6 +232,56 @@ export {
   propagatedAgentEventSchema,
   updateAgentEventLifecycleSchema,
 } from "./agent-contract.ts";
+
+export {
+  availabilityCalendarSchema,
+  availabilityCalendarPageSchema,
+  calendarAvailabilityFreshnessSchema,
+  calendarAvailabilityRequestSchema,
+  calendarAvailabilityResponseSchema,
+  calendarAvailabilityStatusSchema,
+  calendarAvailabilityUnknownReasonSchema,
+  calendarBusyIntervalSchema,
+  calendarConnectionSchema,
+  calendarConnectionPageSchema,
+  calendarGrantStateSchema,
+  calendarProviderSchema,
+  calendarPreferencesSchema,
+  calendarScopedResultSchema,
+  calendarWindowResultSchema,
+  calendarWindowSourceSchema,
+  calendarWorkingHoursSchema,
+  requestedAvailabilityWindowSchema,
+  schedulingAmbiguityCodeSchema,
+  schedulingAmbiguitySchema,
+  updateCalendarSelectionSchema,
+  updateCalendarPreferencesSchema,
+} from "./calendar-availability.ts";
+
+export type {
+  AvailabilityCalendar,
+  AvailabilityCalendarPage,
+  CalendarAvailabilityFreshness,
+  CalendarAvailabilityRequest,
+  CalendarAvailabilityResponse,
+  CalendarAvailabilityStatus,
+  CalendarAvailabilityUnknownReason,
+  CalendarBusyInterval,
+  CalendarConnection,
+  CalendarConnectionPage,
+  CalendarGrantState,
+  CalendarProvider,
+  CalendarPreferences,
+  CalendarScopedResult,
+  CalendarWindowResult,
+  CalendarWindowSource,
+  CalendarWorkingHours,
+  RequestedAvailabilityWindow,
+  SchedulingAmbiguity,
+  SchedulingAmbiguityCode,
+  UpdateCalendarSelection,
+  UpdateCalendarPreferences,
+} from "./calendar-availability.ts";
 
 export type {
   AgentEventKind,

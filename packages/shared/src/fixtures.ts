@@ -7,6 +7,7 @@ import {
   mailAccountSchema,
   normalizedMessageSchema,
 } from "./schemas.ts";
+import { calendarAvailabilityResponseSchema } from "./calendar-availability.ts";
 import type {
   HumanClassification,
   HumanClassificationAssessment,
@@ -34,6 +35,46 @@ export const authSessionFixture = authSessionSchema.parse({
   },
   expiresAt: null,
   onboardingCompletedAt: null,
+});
+
+/**
+ * M6 scheduling fixture: provider-neutral, source-linked, and intentionally
+ * includes all three states so surfaces cannot collapse Unknown into Free.
+ */
+export const schedulingAvailabilityFixture = calendarAvailabilityResponseSchema.parse({
+  request: {
+    connectionId: "calendar-connection-demo",
+    userTimeZone: "America/Denver",
+    workingHours: {
+      timeZone: "America/Denver",
+      days: [
+        { day: 1, startLocal: "09:00", endLocal: "17:00" },
+        { day: 2, startLocal: "09:00", endLocal: "17:00" },
+        { day: 3, startLocal: "09:00", endLocal: "17:00" },
+        { day: 4, startLocal: "09:00", endLocal: "17:00" },
+        { day: 5, startLocal: "09:00", endLocal: "17:00" },
+      ],
+    },
+    requestedWindows: [
+      { id: "window-free", messageId: "msg_schedule", sourceText: "Tuesday, November 3 from 1:00–1:30 PM Mountain", sourceUrl: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", originalTimeZone: "America/Denver", userTimeZone: "America/Denver", start: "2026-11-03T20:00:00.000Z", end: "2026-11-03T20:30:00.000Z", durationMinutes: 30, interpretation: "exact", ambiguities: [] },
+      { id: "window-busy", messageId: "msg_schedule", sourceText: "Tuesday, November 3 from 2:00–2:30 PM Mountain", sourceUrl: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", originalTimeZone: "America/Denver", userTimeZone: "America/Denver", start: "2026-11-03T21:00:00.000Z", end: "2026-11-03T21:30:00.000Z", durationMinutes: 30, interpretation: "exact", ambiguities: [] },
+      { id: "window-unknown", messageId: "msg_schedule", sourceText: "or Thursday afternoon", sourceUrl: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", originalTimeZone: null, userTimeZone: "America/Denver", start: null, end: null, durationMinutes: null, interpretation: "ambiguous", ambiguities: [{ code: "approximate_time", message: "“Afternoon” does not identify an exact start or end.", sourceText: "Thursday afternoon" }, { code: "missing_timezone", message: "The sender did not state a timezone for Thursday.", sourceText: "Thursday afternoon" }] },
+    ],
+  },
+  connection: { id: "calendar-connection-demo", provider: "google", accountLabel: "luke@example.com", state: "connected", grantedScopes: ["https://www.googleapis.com/auth/calendar.freebusy", "https://www.googleapis.com/auth/calendar.calendarlist.readonly", "https://www.googleapis.com/auth/userinfo.email"], connectedAt: "2026-11-01T18:00:00.000Z", error: null },
+  calendars: [
+    { id: "calendar-work", connectionId: "calendar-connection-demo", provider: "google", displayName: "Work", timeZone: "America/Denver", selected: true, primary: true },
+    { id: "calendar-focus", connectionId: "calendar-connection-demo", provider: "google", displayName: "Focus blocks", timeZone: "America/Denver", selected: true, primary: false },
+  ],
+  results: [
+    { windowId: "window-free", status: "free", freshness: "fresh", unknownReason: null, checkedAt: "2026-11-03T19:56:00.000Z", calendarResults: [{ calendarId: "calendar-work", status: "free", busy: [], error: null }, { calendarId: "calendar-focus", status: "free", busy: [], error: null }], sources: [{ kind: "message", messageId: "msg_schedule", url: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", sourceText: "Tuesday, November 3 from 1:00–1:30 PM Mountain" }, { kind: "calendar_freebusy", calendarId: "calendar-work", checkedAt: "2026-11-03T19:56:00.000Z" }, { kind: "calendar_freebusy", calendarId: "calendar-focus", checkedAt: "2026-11-03T19:56:00.000Z" }], explanation: "No busy time overlaps this window on the selected calendars." },
+    { windowId: "window-busy", status: "busy", freshness: "fresh", unknownReason: null, checkedAt: "2026-11-03T19:56:00.000Z", calendarResults: [{ calendarId: "calendar-work", status: "busy", busy: [{ start: "2026-11-03T21:00:00.000Z", end: "2026-11-03T22:00:00.000Z" }], error: null }, { calendarId: "calendar-focus", status: "free", busy: [], error: null }], sources: [{ kind: "message", messageId: "msg_schedule", url: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", sourceText: "Tuesday, November 3 from 2:00–2:30 PM Mountain" }, { kind: "calendar_freebusy", calendarId: "calendar-work", checkedAt: "2026-11-03T19:56:00.000Z" }, { kind: "calendar_freebusy", calendarId: "calendar-focus", checkedAt: "2026-11-03T19:56:00.000Z" }], explanation: "This window overlaps busy time on at least one selected calendar." },
+    { windowId: "window-unknown", status: "unknown", freshness: "unchecked", unknownReason: "ambiguous_request", checkedAt: null, calendarResults: [], sources: [{ kind: "message", messageId: "msg_schedule", url: "http://localhost:5173/?thread=thread_schedule&message=msg_schedule", sourceText: "or Thursday afternoon" }], explanation: "The sender's proposed window is ambiguous. A person must resolve it before availability can be asserted." },
+  ],
+  checkedAt: "2026-11-03T19:56:00.000Z",
+  staleAfterMinutes: 15,
+  limitations: ["Orca checks only free/busy ranges from the calendars shown here; it does not read event content.", "Availability does not schedule, hold, accept, decline, or send anything.", "You write the response and confirm the final time."],
+  humanConfirmationRequired: true,
 });
 
 export const inboxFixture = z.array(inboxMessageSchema).parse([

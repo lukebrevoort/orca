@@ -1,0 +1,425 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  calendarConnectionPageSchema,
+  replyBriefOutputSchema,
+  schedulingReplyBriefFixture,
+  type CalendarConnection,
+  type ReplyBriefItem,
+  type ReplyBriefOutput,
+  type ReplyBriefSourceRef,
+  type ThreadDetail,
+} from "@orca/shared";
+
+type ReplyBriefPanelState =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "choose_calendar"; connections: CalendarConnection[] }
+  | { state: "ready"; brief: ReplyBriefOutput }
+  | { state: "error"; message: string };
+
+export type ReplyBriefLoader = (input: {
+  accountId: string;
+  provider: ThreadDetail["account"]["provider"];
+  threadId: string;
+  selectedMessageId: string;
+  calendarConnectionId: string | null;
+  signal: AbortSignal;
+}) => Promise<ReplyBriefOutput>;
+
+export type CalendarConnectionLoader = (input: { signal: AbortSignal }) => Promise<CalendarConnection[]>;
+
+const DEFAULT_MINIMUM_LOADING_MS = 600;
+
+const demoCalendarConnections: CalendarConnection[] = [
+  { id: "demo-calendar-work", provider: "google", accountLabel: "Work calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
+  { id: "demo-calendar-personal", provider: "google", accountLabel: "Personal calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
+];
+
+export async function loadCalendarConnections({ signal }: { signal: AbortSignal }) {
+  const response = await fetch("/v1/calendar/connections", { credentials: "include", signal });
+  if (!response.ok) throw new Error(`Calendar connections could not be loaded (${response.status}).`);
+  return calendarConnectionPageSchema.parse(await response.json()).items.filter((connection) => connection.state === "connected");
+}
+
+export async function loadReplyBrief(input: Parameters<ReplyBriefLoader>[0]) {
+  const response = await fetch(
+    `/v1/threads/${encodeURIComponent(input.threadId)}/reply-brief?accountId=${encodeURIComponent(input.accountId)}`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      signal: input.signal,
+      body: JSON.stringify({
+        trigger: "user_invoked",
+        accountId: input.accountId,
+        provider: input.provider,
+        threadId: input.threadId,
+        selectedMessageIds: [input.selectedMessageId],
+        requestedAt: new Date().toISOString(),
+        userTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        calendarConnectionId: input.calendarConnectionId,
+        authorizedContext: ["calendar_availability"],
+      }),
+    },
+  );
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: { message?: unknown } } | null;
+    const message = typeof payload?.error?.message === "string"
+      ? payload.error.message
+      : `Reply guidance could not be loaded (${response.status}).`;
+    throw new Error(message);
+  }
+  return replyBriefOutputSchema.parse(await response.json());
+}
+
+export function ReplyBriefPanel({
+  detail,
+  demoMode = false,
+  loader = loadReplyBrief,
+  connectionLoader = loadCalendarConnections,
+  minimumLoadingMs = DEFAULT_MINIMUM_LOADING_MS,
+}: {
+  detail: ThreadDetail;
+  demoMode?: boolean;
+  loader?: ReplyBriefLoader;
+  connectionLoader?: CalendarConnectionLoader;
+  minimumLoadingMs?: number;
+}) {
+  const [panel, setPanel] = useState<ReplyBriefPanelState>({ state: "idle" });
+  const controllerRef = useRef<AbortController | null>(null);
+  const selectedMessage = detail.messages[detail.messages.length - 1];
+
+  useEffect(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setPanel({ state: "idle" });
+    return () => controllerRef.current?.abort();
+  }, [detail.account.id, detail.thread.id, selectedMessage?.id]);
+
+  if (!selectedMessage) return null;
+
+  const finishRequest = async (calendarConnectionId: string | null, controller: AbortController, startedAt = Date.now()) => {
+    setPanel({ state: "loading" });
+    try {
+      const brief = demoMode
+        ? createDemoReplyBrief(detail, selectedMessage.id)
+        : await loader({
+            accountId: detail.account.id,
+            provider: detail.account.provider,
+            threadId: detail.thread.id,
+            selectedMessageId: selectedMessage.id,
+            calendarConnectionId,
+            signal: controller.signal,
+          });
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
+      if (!controller.signal.aborted) setPanel({ state: "ready", brief });
+    } catch (error) {
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
+      if (controller.signal.aborted) return;
+      setPanel({ state: "error", message: error instanceof Error ? error.message : "Reply guidance could not be loaded." });
+    }
+  };
+
+  const request = async () => {
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const startedAt = Date.now();
+    setPanel({ state: "loading" });
+    try {
+      const connections = demoMode ? demoCalendarConnections : await connectionLoader({ signal: controller.signal });
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
+      if (controller.signal.aborted) return;
+      if (connections.length > 1) {
+        setPanel({ state: "choose_calendar", connections });
+        return;
+      }
+      await finishRequest(connections[0]?.id ?? null, controller, startedAt);
+    } catch (error) {
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
+      if (controller.signal.aborted) return;
+      setPanel({
+        state: "error",
+        message: error instanceof Error ? error.message : "Reply guidance could not be loaded.",
+      });
+    }
+  };
+
+  const dismiss = () => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    setPanel({ state: "idle" });
+  };
+
+  const chooseCalendar = (calendarConnectionId: string | null) => {
+    const controller = controllerRef.current;
+    if (controller && !controller.signal.aborted) void finishRequest(calendarConnectionId, controller);
+  };
+
+  if (panel.state === "idle") {
+    return (
+      <section className="reply-brief-invitation" aria-label="Reply guidance">
+        <div>
+          <p>On-demand guidance</p>
+          <h2>Get the gist before you reply.</h2>
+          <span>The ask, key facts, and your next decision. Nothing enters your reply.</span>
+        </div>
+        <button onClick={() => void request()} type="button">Get reply guidance</button>
+      </section>
+    );
+  }
+
+  if (panel.state === "loading") {
+    return (
+      <section aria-busy="true" aria-live="polite" className="reply-brief reply-brief-loading">
+        <ReplyBriefHeader onDismiss={dismiss} />
+        <p className="reply-brief-status-copy" role="status">Building a short brief…</p>
+        <div className="reply-brief-loading-line" />
+        <div className="reply-brief-loading-line reply-brief-loading-line-short" />
+      </section>
+    );
+  }
+
+  if (panel.state === "choose_calendar") {
+    return (
+      <section className="reply-brief reply-brief-calendar-choice" aria-label="Choose calendar for Reply Brief">
+        <ReplyBriefHeader onDismiss={dismiss} />
+        <div className="reply-brief-state-copy">
+          <p>Authorized context</p>
+          <h3>Which calendar account should this brief check?</h3>
+          <span>Orca checks only the connection you choose and sends only free/busy context into the brief.</span>
+        </div>
+        <div aria-label="Calendar connections" className="reply-brief-calendar-choices" role="group">
+          {panel.connections.map((connection) => (
+            <button key={connection.id} onClick={() => chooseCalendar(connection.id)} type="button">
+              <strong>{connection.accountLabel}</strong><span>{connection.provider} · read-only free/busy</span>
+            </button>
+          ))}
+          <button onClick={() => chooseCalendar(null)} type="button"><strong>Continue without calendar</strong><span>Availability will remain unavailable</span></button>
+        </div>
+      </section>
+    );
+  }
+
+  if (panel.state === "error") {
+    return (
+      <section className="reply-brief reply-brief-error" role="alert">
+        <ReplyBriefHeader onDismiss={dismiss} />
+        <div className="reply-brief-state-copy">
+          <p>Guidance unavailable</p>
+          <h3>Orca couldn’t check this message.</h3>
+          <span>{panel.message} Nothing was added to your composer.</span>
+        </div>
+        <button className="reply-brief-retry" onClick={() => void request()} type="button">Try again</button>
+      </section>
+    );
+  }
+
+  return <ReplyBriefResult brief={panel.brief} onDismiss={dismiss} onRefresh={() => void request()} />;
+}
+
+function ReplyBriefResult({ brief, onDismiss, onRefresh }: {
+  brief: ReplyBriefOutput;
+  onDismiss: () => void;
+  onRefresh: () => void;
+}) {
+  const sourceById = new Map(brief.sourceRefs.map((source) => [source.id, source]));
+  const unavailable = brief.status === "unavailable";
+  const empty = brief.status === "empty";
+  const keyPoints = uniqueClaims([...brief.constraints, ...brief.facts]).slice(0, 3);
+  const decision = brief.questions[0] ?? brief.considerations[0] ?? null;
+  return (
+    <section className={`reply-brief${unavailable ? " reply-brief-unavailable" : ""}${brief.freshness.status === "stale" ? " reply-brief-stale" : ""}`} aria-label="Reply Brief">
+      <ReplyBriefHeader onDismiss={onDismiss} onRefresh={onRefresh} />
+
+      {unavailable ? (
+        <div className="reply-brief-state-copy" role="status">
+          <p>Interpretation unavailable</p>
+          <h3>Source-derived facts are still here.</h3>
+          <span>{brief.statusDetail ?? "Orca could not run interpretation and will not guess."}</span>
+        </div>
+      ) : null}
+      {empty ? (
+        <div className="reply-brief-state-copy" role="status">
+          <p>Not enough to brief</p>
+          <h3>This message doesn’t contain a clear request.</h3>
+          <span>{brief.statusDetail ?? "Review the selected message directly before deciding whether to respond."}</span>
+        </div>
+      ) : null}
+
+      {brief.intent ? (
+        <section className="reply-brief-summary">
+          <p>The ask</p>
+          <h3>{brief.intent.summary}</h3>
+          <div>{brief.intent.sourceRefs.map((sourceId) => { const source = sourceById.get(sourceId); return source ? <SourceLink compact key={sourceId} source={source} /> : null; })}</div>
+        </section>
+      ) : null}
+
+      <div className="reply-brief-meta" aria-label="Guidance quality">
+        <span aria-label={`Confidence ${brief.confidence.level}. ${brief.confidence.rationale}`} data-tone={brief.confidence.level}>Confidence · {brief.confidence.level}</span>
+        <span aria-label={`Freshness ${brief.freshness.status}. ${brief.freshness.statusDetail ?? ""}`} data-tone={brief.freshness.status}>Freshness · {brief.freshness.status}</span>
+      </div>
+
+      {keyPoints.length ? (
+        <ReplyBriefSection title="Key points"><ReplyBriefClaims claims={keyPoints} sources={sourceById} /></ReplyBriefSection>
+      ) : null}
+
+      <ReplyBriefAvailability context={brief.availabilityContext} sources={sourceById} />
+
+      {decision ? (
+        <section className="reply-brief-decision">
+          <p>Your call</p>
+          <strong>{decision.text}</strong>
+          <div>{decision.sourceRefs.map((sourceId) => { const source = sourceById.get(sourceId); return source ? <SourceLink compact key={sourceId} source={source} /> : null; })}</div>
+        </section>
+      ) : null}
+
+      <details className="reply-brief-sources">
+        <summary>Context used · {brief.sourceRefs.length} {brief.sourceRefs.length === 1 ? "source" : "sources"}</summary>
+        <ul>{brief.sourceRefs.map((source) => <li key={source.id}><SourceLink source={source} /><small>{source.kind === "availability" ? "Authorized free/busy only" : "Selected conversation"} · observed {formatBriefTime(source.observedAt)}</small></li>)}</ul>
+      </details>
+
+      <footer className="reply-brief-boundary">
+        <span aria-hidden="true">✦</span>
+        <p><strong>Guidance only.</strong> Your reply stays blank and yours.</p>
+      </footer>
+    </section>
+  );
+}
+
+function ReplyBriefHeader({ onDismiss, onRefresh }: { onDismiss: () => void; onRefresh?: () => void }) {
+  return (
+    <header className="reply-brief-header">
+      <div><p>Guidance, not a draft</p><h2>Reply Brief</h2></div>
+      <div>
+        {onRefresh ? <button onClick={onRefresh} type="button">Refresh</button> : null}
+        <button aria-label="Dismiss Reply Brief" onClick={onDismiss} type="button">Dismiss</button>
+      </div>
+    </header>
+  );
+}
+
+function ReplyBriefSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="reply-brief-section"><h3>{title}</h3>{children}</section>;
+}
+
+function ReplyBriefClaims({ claims, sources }: {
+  claims: ReplyBriefItem[];
+  sources: Map<string, ReplyBriefSourceRef>;
+}) {
+  return (
+    <ul className="reply-brief-claims">
+      {claims.map((claim, index) => (
+        <li key={`${claim.text}:${index}`}>
+          <div><span aria-hidden="true">{claim.certainty === "confirmed" ? "•" : "?"}</span><p>{claim.text}</p></div>
+          <div className="reply-brief-claim-meta">{claim.certainty === "confirmed" ? null : <span>{claim.certainty}</span>}{claim.sourceRefs.map((sourceId) => {
+            const source = sources.get(sourceId);
+            return source ? <SourceLink compact key={sourceId} source={source} /> : null;
+          })}</div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ReplyBriefAvailability({ context, sources }: {
+  context: ReplyBriefOutput["availabilityContext"];
+  sources: Map<string, ReplyBriefSourceRef>;
+}) {
+  const sourceClaims = context.sourceRefs.map((sourceId) => sources.get(sourceId)).filter((source): source is ReplyBriefSourceRef => Boolean(source));
+  const copy = context.status === "free_busy_only"
+    ? context.busy.length
+      ? `${context.busy.length} busy ${context.busy.length === 1 ? "interval" : "intervals"} in the requested window.`
+      : "No busy time found in the requested window."
+    : context.status === "not_requested"
+      ? "Not needed for this brief."
+      : "Unavailable; no time was inferred.";
+  return (
+    <section className="reply-brief-availability" data-status={context.status}>
+      <span>{availabilityLabel(context.status)}</span>
+      <p><strong>Calendar</strong> · {copy}</p>
+      {sourceClaims[0] ? <SourceLink compact source={sourceClaims[0]} /> : null}
+    </section>
+  );
+}
+
+function uniqueClaims(claims: ReplyBriefItem[]) {
+  const seen = new Set<string>();
+  return claims.filter((claim) => {
+    const key = claim.text.trim().toLocaleLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function waitForMinimumLoading(startedAt: number, minimumMs: number, signal: AbortSignal) {
+  const remaining = Math.max(0, minimumMs - (Date.now() - startedAt));
+  if (remaining === 0 || signal.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const finish = () => {
+      clearTimeout(timeout);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timeout = setTimeout(finish, remaining);
+    signal.addEventListener("abort", finish, { once: true });
+  });
+}
+
+function SourceLink({ source, compact = false }: { source: ReplyBriefSourceRef; compact?: boolean }) {
+  const label = compact ? (source.kind === "availability" ? "Calendar" : source.kind === "thread" ? "Thread" : "Message") : source.label;
+  const sourceUrl = safeHttpSourceUrl(source.sourceUrl);
+  return sourceUrl
+    ? <a href={sourceUrl} rel="noreferrer">{label}<span aria-hidden="true"> ↗</span></a>
+    : <span className="reply-brief-source-label">{label}</span>;
+}
+
+function safeHttpSourceUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function availabilityLabel(status: ReplyBriefOutput["availabilityContext"]["status"]) {
+  if (status === "free_busy_only") return "Free/busy checked";
+  if (status === "not_requested") return "Not requested";
+  return "Unavailable";
+}
+
+function formatBriefTime(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "unknown";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function createDemoReplyBrief(detail: ThreadDetail, selectedMessageId: string): ReplyBriefOutput {
+  const selected = detail.messages.find((message) => message.id === selectedMessageId)!;
+  const fixtureMessageId = schedulingReplyBriefFixture.sourceRefs.find((source) => source.kind === "message")!.id;
+  const replaceSourceId = (sourceId: string) => sourceId === fixtureMessageId ? selected.id : sourceId;
+  const patchClaim = (claim: ReplyBriefItem): ReplyBriefItem => ({
+    ...claim,
+    sourceRefs: claim.sourceRefs.map(replaceSourceId),
+  });
+  const sourceUrl = `${window.location.origin}${window.location.pathname}#message-${encodeURIComponent(selected.id)}`;
+  return replyBriefOutputSchema.parse({
+    ...schedulingReplyBriefFixture,
+    freshness: { ...schedulingReplyBriefFixture.freshness, generatedAt: new Date().toISOString() },
+    sourceRefs: schedulingReplyBriefFixture.sourceRefs.map((source) => source.kind === "message" ? {
+      ...source,
+      id: selected.id,
+      label: `${selected.from.name ?? selected.from.email} · ${selected.subject || "Selected message"}`,
+      observedAt: selected.receivedAt,
+      sourceUrl,
+    } : source),
+    intent: schedulingReplyBriefFixture.intent ? { ...schedulingReplyBriefFixture.intent, sourceRefs: schedulingReplyBriefFixture.intent.sourceRefs.map(replaceSourceId) } : null,
+    facts: schedulingReplyBriefFixture.facts.map(patchClaim),
+    constraints: schedulingReplyBriefFixture.constraints.map(patchClaim),
+    questions: schedulingReplyBriefFixture.questions.map(patchClaim),
+    considerations: schedulingReplyBriefFixture.considerations.map(patchClaim),
+  });
+}

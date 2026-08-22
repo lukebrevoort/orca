@@ -53,3 +53,14 @@ describe("profile avatar controls", () => {
     expect(styles).toContain(".wave-rail-account-wrap { display: none; }");
   });
 });
+
+describe("Calendar consent controls", () => {
+  test("keeps selection, focus, disabled, and motion states theme-safe", () => {
+    expect(styles).toContain('.calendar-selection-list > label[data-selected="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border);');
+    expect(styles).toContain('.calendar-day-choices button[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border);');
+    expect(styles).toContain(".calendar-selection-list input:focus-visible + .calendar-check { outline: 2px solid var(--orca-accent);");
+    expect(styles).toContain(".calendar-primary-action:disabled, .calendar-secondary-action:disabled, .calendar-day-choices button:disabled { background: var(--orca-control); color: var(--orca-muted);");
+    expect(styles).toContain("@keyframes calendar-reveal-up");
+    expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+});
