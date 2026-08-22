@@ -3510,9 +3510,9 @@ textarea {
   border: 1px solid var(--orca-border);
   border-radius: 12px;
   display: flex;
-  gap: 24px;
+  gap: 18px;
   justify-content: space-between;
-  padding: 22px 24px;
+  padding: 16px 18px;
 }
 
 .reply-brief-invitation > div { display: grid; gap: 5px; }
@@ -3526,7 +3526,7 @@ textarea {
   margin: 0;
   text-transform: uppercase;
 }
-.reply-brief-invitation h2 { font-family: var(--orca-font-display); font-size: 22px; font-weight: 500; margin: 0; }
+.reply-brief-invitation h2 { font-family: var(--orca-font-display); font-size: 18px; font-weight: 550; margin: 0; }
 .reply-brief-invitation span { color: var(--orca-muted); font-size: 12px; line-height: 1.55; max-width: 68ch; }
 .reply-brief-invitation > button,
 .reply-brief-header button,
@@ -3564,18 +3564,18 @@ textarea {
   border-bottom: 1px solid var(--orca-border);
   display: flex;
   justify-content: space-between;
-  padding: 19px 22px;
+  padding: 14px 18px;
 }
 .reply-brief-header > div:first-child { display: grid; gap: 3px; }
 .reply-brief-header > div:last-child { display: flex; gap: 7px; }
-.reply-brief-header h2 { font-family: var(--orca-font-display); font-size: 29px; font-weight: 450; letter-spacing: -.02em; margin: 0; }
+.reply-brief-header h2 { font-family: var(--orca-font-display); font-size: 23px; font-weight: 500; letter-spacing: -.02em; margin: 0; }
 .reply-brief-header button { background: transparent; color: var(--orca-muted); min-height: 32px; }
 .reply-brief-header button:hover,
 .reply-brief-header button:focus-visible { background: var(--orca-surface-hover); }
 
-.reply-brief-status-copy { color: var(--orca-muted); font-family: var(--orca-font-display); font-size: 17px; margin: 24px 22px 18px; }
-.reply-brief-loading-line { animation: reader-pulse 1.5s ease-in-out infinite; background: var(--orca-surface-hover); border-radius: 4px; height: 10px; margin: 0 22px 12px; width: min(76%, 620px); }
-.reply-brief-loading-line-short { margin-bottom: 26px; width: min(49%, 430px); }
+.reply-brief-status-copy { color: var(--orca-muted); font-family: var(--orca-font-display); font-size: 15px; margin: 20px 18px 16px; }
+.reply-brief-loading-line { animation: reader-pulse 1.5s ease-in-out infinite; background: var(--orca-surface-hover); border-radius: 4px; height: 9px; margin: 0 18px 10px; width: min(70%, 520px); }
+.reply-brief-loading-line-short { margin-bottom: 20px; width: min(42%, 320px); }
 
 .reply-brief-state-copy { border-bottom: 1px solid var(--orca-border); display: grid; gap: 7px; padding: 20px 22px; }
 .reply-brief-state-copy h3 { font-family: var(--orca-font-display); font-size: 22px; font-weight: 500; margin: 0; }
@@ -3593,8 +3593,8 @@ textarea {
   border-bottom: 1px solid var(--orca-border);
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 9px;
-  padding: 14px 22px;
+  gap: 7px;
+  padding: 10px 18px;
 }
 .reply-brief-meta > span,
 .reply-brief-claim-meta > span {
@@ -3610,22 +3610,27 @@ textarea {
 .reply-brief-meta > span[data-tone="stale"],
 .reply-brief-meta > span[data-tone="low"],
 .reply-brief-meta > span[data-tone="unknown"] { border-style: dashed; }
-.reply-brief-meta small { color: var(--orca-muted); flex: 1 1 100%; font-size: 10px; line-height: 1.45; }
+.reply-brief-summary { border-bottom: 1px solid var(--orca-border); display: grid; gap: 7px; padding: 17px 18px; }
+.reply-brief-summary > p,
+.reply-brief-decision > p { color: var(--orca-accent); font-size: 9px; font-weight: 850; letter-spacing: .13em; margin: 0; text-transform: uppercase; }
+.reply-brief-summary h3 { font-family: var(--orca-font-display); font-size: 20px; font-weight: 550; line-height: 1.35; margin: 0; }
+.reply-brief-summary > div,
+.reply-brief-decision > div { display: flex; flex-wrap: wrap; gap: 6px; }
 
-.reply-brief-section { border-bottom: 1px solid var(--orca-border); display: grid; gap: 13px; padding: 20px 22px; }
+.reply-brief-section { border-bottom: 1px solid var(--orca-border); display: grid; gap: 9px; padding: 14px 18px; }
 .reply-brief-section > h3 { color: var(--orca-muted); font-size: 9px; font-weight: 850; letter-spacing: .13em; margin: 0; text-transform: uppercase; }
 .reply-brief-claims,
-.reply-brief-considerations,
 .reply-brief-sources ul { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
-.reply-brief-claims > li { display: grid; gap: 7px; }
+.reply-brief-claims > li { display: grid; gap: 4px; }
 .reply-brief-claims > li > div:first-child { align-items: baseline; display: grid; gap: 9px; grid-template-columns: 12px minmax(0, 1fr); }
 .reply-brief-claims > li > div:first-child > span { color: var(--orca-accent); font-size: 16px; font-weight: 900; }
-.reply-brief-claims p,
-.reply-brief-considerations p { color: var(--orca-ink); font-family: var(--orca-font-display); font-size: 16px; line-height: 1.5; margin: 0; }
+.reply-brief-claims p { color: var(--orca-ink); font-family: var(--orca-font-display); font-size: 14px; line-height: 1.4; margin: 0; }
 .reply-brief-claim-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; padding-left: 21px; }
 .reply-brief-claim-meta > span { color: var(--orca-muted); padding: 3px 6px; }
 .reply-brief-claim-meta a,
-.reply-brief-considerations a,
+.reply-brief-summary a,
+.reply-brief-decision a,
+.reply-brief-availability a,
 .reply-brief-sources a {
   color: var(--orca-accent);
   font-size: 10px;
@@ -3635,31 +3640,26 @@ textarea {
 }
 .reply-brief-claim-meta a:hover,
 .reply-brief-claim-meta a:focus-visible,
-.reply-brief-considerations a:hover,
-.reply-brief-considerations a:focus-visible,
+.reply-brief-summary a:hover,
+.reply-brief-summary a:focus-visible,
+.reply-brief-decision a:hover,
+.reply-brief-decision a:focus-visible,
+.reply-brief-availability a:hover,
+.reply-brief-availability a:focus-visible,
 .reply-brief-sources a:hover,
 .reply-brief-sources a:focus-visible { color: var(--orca-ink); text-decoration-color: currentColor; }
 
-.reply-brief-availability-state { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 9px; display: grid; gap: 11px; padding: 14px; }
-.reply-brief-availability-state > div:first-child { align-items: center; display: flex; gap: 8px; justify-content: space-between; }
-.reply-brief-availability-state > div:first-child strong { font-size: 12px; }
-.reply-brief-availability-state > div:first-child span { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 9px; font-weight: 800; padding: 4px 7px; text-transform: uppercase; }
-.reply-brief-availability-state[data-status="stale"] > div:first-child span,
-.reply-brief-availability-state[data-status="unavailable"] > div:first-child span,
-.reply-brief-availability-state[data-status="not_authorized"] > div:first-child span { border-style: dashed; }
-.reply-brief-availability-state > p,
-.reply-brief-availability-state > small { color: var(--orca-muted); font-size: 10px; line-height: 1.5; margin: 0; }
-.reply-brief-availability-state .reply-brief-claims { border-top: 1px solid var(--orca-border); padding-top: 11px; }
-.reply-brief-busy { color: var(--orca-ink); display: grid; font-size: 11px; gap: 5px; list-style: none; margin: 0; padding: 0; }
-.reply-brief-busy li::before { color: var(--orca-accent); content: "•"; margin-right: 7px; }
-.reply-brief-availability-sources { display: flex; flex-wrap: wrap; gap: 6px; }
+.reply-brief-availability { align-items: center; background: var(--orca-surface-hover); border-bottom: 1px solid var(--orca-border); display: flex; flex-wrap: wrap; gap: 7px; padding: 11px 18px; }
+.reply-brief-availability > span { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 8px; font-weight: 800; padding: 3px 6px; text-transform: uppercase; }
+.reply-brief-availability[data-status="unavailable"] > span,
+.reply-brief-availability[data-status="not_authorized"] > span { border-style: dashed; }
+.reply-brief-availability p { color: var(--orca-muted); flex: 1 1 260px; font-size: 11px; line-height: 1.4; margin: 0; }
+.reply-brief-availability strong { color: var(--orca-ink); }
 
-.reply-brief-considerations { counter-reset: reply-consideration; }
-.reply-brief-considerations li { align-items: start; display: grid; gap: 5px 12px; grid-template-columns: 24px minmax(0, 1fr); }
-.reply-brief-considerations li::before { align-items: center; border: 1px solid var(--orca-border); border-radius: 50%; color: var(--orca-accent); content: counter(reply-consideration); counter-increment: reply-consideration; display: flex; font-size: 9px; font-weight: 850; height: 22px; justify-content: center; margin-top: 1px; width: 22px; }
-.reply-brief-considerations li > div { display: flex; gap: 6px; grid-column: 2; }
+.reply-brief-decision { border-bottom: 1px solid var(--orca-border); display: grid; gap: 7px; padding: 14px 18px; }
+.reply-brief-decision strong { font-family: var(--orca-font-display); font-size: 15px; font-weight: 550; line-height: 1.4; }
 
-.reply-brief-sources { border-bottom: 1px solid var(--orca-border); padding: 0 22px; }
+.reply-brief-sources { border-bottom: 1px solid var(--orca-border); padding: 0 18px; }
 .reply-brief-sources summary { color: var(--orca-muted); cursor: pointer; font-size: 10px; font-weight: 750; list-style: none; padding: 15px 0; }
 .reply-brief-sources summary::-webkit-details-marker { display: none; }
 .reply-brief-sources summary::before { content: "+"; margin-right: 7px; }
@@ -3669,9 +3669,9 @@ textarea {
 .reply-brief-sources small { color: var(--orca-muted); font-size: 9px; }
 .reply-brief-source-label { color: var(--orca-muted); font-size: 10px; font-weight: 750; }
 
-.reply-brief-boundary { align-items: start; display: grid; gap: 10px; grid-template-columns: 18px minmax(0, 1fr); padding: 18px 22px; }
+.reply-brief-boundary { align-items: center; display: grid; gap: 8px; grid-template-columns: 14px minmax(0, 1fr); padding: 11px 18px; }
 .reply-brief-boundary > span { color: var(--orca-accent); }
-.reply-brief-boundary p { color: var(--orca-muted); font-size: 11px; line-height: 1.55; margin: 0; }
+.reply-brief-boundary p { color: var(--orca-muted); font-size: 10px; line-height: 1.4; margin: 0; }
 .reply-brief-boundary strong { color: var(--orca-ink); }
 
 @media (max-width: 760px) {

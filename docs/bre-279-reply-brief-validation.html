@@ -35,14 +35,15 @@
   <header>
     <p class="eyebrow">BRE-279 · Manual validation</p>
     <h1>Reply guidance that never becomes the reply.</h1>
-    <p class="lede">An on-demand, source-linked brief explains the ask, facts, constraints, questions, considerations, confidence, freshness, and authorized free/busy context. The human composer remains separate and blank.</p>
+    <p class="lede">An on-demand, source-linked brief reduces the conversation to one ask, up to three key points, one decision, and one calendar line. The human composer remains separate and blank.</p>
   </header>
 
   <section>
     <h2>Acceptance map</h2>
     <div class="grid">
       <article class="card"><span class="pass">Covered</span><strong>Explicit invocation</strong><p>The brief is idle until “Get reply guidance” is pressed. It can be refreshed or dismissed; in-flight work is abortable.</p></article>
-      <article class="card"><span class="pass">Covered</span><strong>Interpretation states</strong><p>Loading, ready, partial, unavailable, empty, stale, and retryable request errors are visibly distinct.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Perceivable loading</strong><p>Every request paints an accessible loading phase for at least 600 ms, including the synchronous demo preview, without delaying abort.</p></article>
+      <article class="card"><span class="pass">Covered</span><strong>Concise result</strong><p>The ask leads, followed by no more than three key points, the first decision, a single availability line, compact quality labels, and collapsed sources.</p></article>
       <article class="card"><span class="pass">Covered</span><strong>Inspectable sources</strong><p>Claims link to the selected message; free/busy is labeled as authorized read-only context with timestamps.</p></article>
       <article class="card"><span class="pass">Covered</span><strong>Calendar boundary</strong><p>When multiple connections exist, the human chooses the exact account carried by the invocation. Ambiguous, stale, expired, revoked, or missing access stays unknown.</p></article>
       <article class="card"><span class="pass">Covered</span><strong>Human authorship</strong><p>No draft text, reply body, compose action, recipients, send action, or calendar write is present in the contract or UI.</p></article>
@@ -55,8 +56,10 @@
     <ol>
       <li>Open <code>/dev/inbox?thread=thread_3&amp;accountId=acct_demo</code>.</li>
       <li>Confirm no Reply Brief exists before pressing <strong>Get reply guidance</strong>.</li>
-      <li>Press <strong>Get reply guidance</strong>. With multiple Calendar connections, choose one account and verify no brief is generated before that choice.</li>
-      <li>Generate the brief, inspect its cited claims and free/busy disclosure, then press <strong>Reply</strong>.</li>
+      <li>Press <strong>Get reply guidance</strong> and verify the “Building a short brief…” loading phase paints before the next state.</li>
+      <li>With multiple Calendar connections, choose one account and verify no brief is generated before that choice.</li>
+      <li>Generate the brief. Verify it shows one ask, at most three key points, one decision, and one availability line; expand the collapsed sources only when needed.</li>
+      <li>Press <strong>Reply</strong>.</li>
       <li>Confirm the composer opens blank: no generated prose, recipients changed by the brief, or hidden calendar action.</li>
       <li>Write an independent response in your own words. Dismiss or refresh the brief and confirm existing compose text is untouched.</li>
     </ol>
@@ -68,11 +71,12 @@
 bun run typecheck
 bun run build
 bun run lint</code></pre>
-    <p>The focused suite covers prompt injection, strict scoped invocation, mixed and unavailable availability, missing or ambiguous facts, stale context, runtime failure, composer non-mutation, and theme-safe control tokens. Final command results are recorded with the ticket handoff.</p>
+    <p>The focused suite covers minimum loading duration, abort behavior, concise output limits, prompt injection, strict scoped invocation, mixed and unavailable availability, missing or ambiguous facts, stale context, runtime failure, composer non-mutation, and theme-safe control tokens. Final command results are recorded with the ticket handoff.</p>
   </section>
 
   <section>
     <h2>Headless browser evidence</h2>
+    <figure><img src="evidence/bre-279-reply-brief-loading-light.png" alt="Reply Brief accessible loading state in Orca's light theme" /><figcaption>Perceivable loading: the synchronous demo path holds the accessible loading state before showing the next step.</figcaption></figure>
     <figure><img src="evidence/bre-279-calendar-choice-light.png" alt="Reply Brief calendar account chooser in Orca's light theme" /><figcaption>Explicit selection: multiple authorized connections are visible, and no brief has been generated before the human chooses one.</figcaption></figure>
     <figure><img src="evidence/bre-279-reply-brief-light.png" alt="Reply Brief generated in Orca's light theme" /><figcaption>Light theme: generated guidance, confidence and freshness labels, source-linked facts, and free/busy disclosure.</figcaption></figure>
     <figure><img src="evidence/bre-279-reply-brief-dark.png" alt="Reply Brief generated in Orca's dark theme" /><figcaption>Dark theme: the same flow with readable default, focused, and selected controls.</figcaption></figure>

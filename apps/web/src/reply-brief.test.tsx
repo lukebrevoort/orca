@@ -88,6 +88,7 @@ afterEach(async () => {
 async function renderPanel(
   loader: (input: Parameters<NonNullable<ComponentProps<typeof ReplyBriefPanel>["loader"]>>[0]) => Promise<ReplyBriefOutput>,
   connectionLoader: NonNullable<ComponentProps<typeof ReplyBriefPanel>["connectionLoader"]> = async () => [],
+  minimumLoadingMs = 0,
 ) {
   const container = browserWindow.document.createElement("div");
   const composer = browserWindow.document.createElement("textarea");
@@ -95,7 +96,7 @@ async function renderPanel(
   container.append(composer);
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  await act(async () => root!.render(<ReplyBriefPanel connectionLoader={connectionLoader} detail={detail} loader={loader} />));
+  await act(async () => root!.render(<ReplyBriefPanel connectionLoader={connectionLoader} detail={detail} loader={loader} minimumLoadingMs={minimumLoadingMs} />));
   return { container, composer };
 }
 
@@ -126,8 +127,7 @@ describe("ReplyBriefPanel", () => {
     expect(calls).toBe(1);
     expect(composer.value).toBe("");
     expect(browserWindow.document.body.textContent).toContain("Reply Brief");
-    expect(browserWindow.document.body.textContent).toContain("The ask");
-    expect(browserWindow.document.body.textContent).toContain("Questions for you");
+    expect(browserWindow.document.body.textContent).toContain("Your call");
     expect(browserWindow.document.body.textContent).toContain("Free/busy checked");
     expect(browserWindow.document.body.textContent).toContain("Guidance, not a draft");
     expect(browserWindow.document.body.textContent).not.toContain("Tuesday works for me");
@@ -139,6 +139,32 @@ describe("ReplyBriefPanel", () => {
     await click("Dismiss");
     expect(composer.value).toBe("");
     expect(browserWindow.document.body.textContent).toContain("Get reply guidance");
+  });
+
+  test("keeps a perceivable loading phase when loaders resolve immediately", async () => {
+    await renderPanel(async () => schedulingReplyBriefFixture, async () => [], 40);
+
+    await click("Get reply guidance");
+    expect(browserWindow.document.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(browserWindow.document.body.textContent).toContain("Building a short brief");
+    expect(browserWindow.document.querySelector('[aria-label="Reply Brief"]')).toBeNull();
+
+    await act(async () => await new Promise((resolve) => setTimeout(resolve, 55)));
+    expect(browserWindow.document.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Reply Brief"]')).not.toBeNull();
+  });
+
+  test("keeps the ready brief short and decision-led", async () => {
+    await renderPanel(async () => schedulingReplyBriefFixture);
+    await click("Get reply guidance");
+
+    expect(browserWindow.document.querySelectorAll(".reply-brief-section .reply-brief-claims > li")).toHaveLength(3);
+    expect(browserWindow.document.body.textContent).toContain("Which available time, if any, works for the recipient?");
+    expect(browserWindow.document.body.textContent).not.toContain("The preferred meeting platform is unknown");
+    expect(browserWindow.document.body.textContent).not.toContain("Acknowledge the scheduling request");
+    expect(browserWindow.document.body.textContent).not.toContain(schedulingReplyBriefFixture.confidence.rationale);
+    expect(browserWindow.document.querySelector(".reply-brief-sources")?.hasAttribute("open")).toBe(false);
+    expect(browserWindow.document.body.textContent).toContain("Your reply stays blank and yours");
   });
 
   test("requires an explicit choice when multiple calendar connections are available", async () => {
@@ -184,7 +210,7 @@ describe("ReplyBriefPanel", () => {
 
     await click("Get reply guidance");
     expect(browserWindow.document.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(browserWindow.document.body.textContent).toContain("Reading only this conversation");
+    expect(browserWindow.document.body.textContent).toContain("Building a short brief");
 
     await click("Dismiss");
     expect(captured.signal?.aborted).toBe(true);
@@ -221,7 +247,7 @@ describe("ReplyBriefPanel", () => {
     await click("Get reply guidance");
 
     expect(browserWindow.document.body.textContent).toContain("Unavailable");
-    expect(browserWindow.document.body.textContent).toContain("Orca will not guess or recommend a time");
+    expect(browserWindow.document.body.textContent).toContain("Unavailable; no time was inferred");
     expect(browserWindow.document.body.textContent).not.toContain("Choose an available window");
   });
 

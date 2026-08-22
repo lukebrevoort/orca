@@ -28,6 +28,8 @@ export type ReplyBriefLoader = (input: {
 
 export type CalendarConnectionLoader = (input: { signal: AbortSignal }) => Promise<CalendarConnection[]>;
 
+const DEFAULT_MINIMUM_LOADING_MS = 600;
+
 const demoCalendarConnections: CalendarConnection[] = [
   { id: "demo-calendar-work", provider: "google", accountLabel: "Work calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
   { id: "demo-calendar-personal", provider: "google", accountLabel: "Personal calendar", state: "connected", grantedScopes: ["calendar.freebusy"], connectedAt: "2026-08-19T16:00:00.000Z", error: null },
@@ -75,11 +77,13 @@ export function ReplyBriefPanel({
   demoMode = false,
   loader = loadReplyBrief,
   connectionLoader = loadCalendarConnections,
+  minimumLoadingMs = DEFAULT_MINIMUM_LOADING_MS,
 }: {
   detail: ThreadDetail;
   demoMode?: boolean;
   loader?: ReplyBriefLoader;
   connectionLoader?: CalendarConnectionLoader;
+  minimumLoadingMs?: number;
 }) {
   const [panel, setPanel] = useState<ReplyBriefPanelState>({ state: "idle" });
   const controllerRef = useRef<AbortController | null>(null);
@@ -94,7 +98,7 @@ export function ReplyBriefPanel({
 
   if (!selectedMessage) return null;
 
-  const finishRequest = async (calendarConnectionId: string | null, controller: AbortController) => {
+  const finishRequest = async (calendarConnectionId: string | null, controller: AbortController, startedAt = Date.now()) => {
     setPanel({ state: "loading" });
     try {
       const brief = demoMode
@@ -107,8 +111,10 @@ export function ReplyBriefPanel({
             calendarConnectionId,
             signal: controller.signal,
           });
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
       if (!controller.signal.aborted) setPanel({ state: "ready", brief });
     } catch (error) {
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
       if (controller.signal.aborted) return;
       setPanel({ state: "error", message: error instanceof Error ? error.message : "Reply guidance could not be loaded." });
     }
@@ -118,16 +124,19 @@ export function ReplyBriefPanel({
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
+    const startedAt = Date.now();
     setPanel({ state: "loading" });
     try {
       const connections = demoMode ? demoCalendarConnections : await connectionLoader({ signal: controller.signal });
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
       if (controller.signal.aborted) return;
       if (connections.length > 1) {
         setPanel({ state: "choose_calendar", connections });
         return;
       }
-      await finishRequest(connections[0]?.id ?? null, controller);
+      await finishRequest(connections[0]?.id ?? null, controller, startedAt);
     } catch (error) {
+      await waitForMinimumLoading(startedAt, minimumLoadingMs, controller.signal);
       if (controller.signal.aborted) return;
       setPanel({
         state: "error",
@@ -151,9 +160,9 @@ export function ReplyBriefPanel({
     return (
       <section className="reply-brief-invitation" aria-label="Reply guidance">
         <div>
-          <p>Human-owned guidance</p>
-          <h2>Understand the reply before you write it.</h2>
-          <span>Orca can surface the ask, constraints, open questions, and authorized read-only context. It never writes in the composer.</span>
+          <p>On-demand guidance</p>
+          <h2>Get the gist before you reply.</h2>
+          <span>The ask, key facts, and your next decision. Nothing enters your reply.</span>
         </div>
         <button onClick={() => void request()} type="button">Get reply guidance</button>
       </section>
@@ -164,7 +173,7 @@ export function ReplyBriefPanel({
     return (
       <section aria-busy="true" aria-live="polite" className="reply-brief reply-brief-loading">
         <ReplyBriefHeader onDismiss={dismiss} />
-        <p className="reply-brief-status-copy">Reading only this conversation and authorized context…</p>
+        <p className="reply-brief-status-copy" role="status">Building a short brief…</p>
         <div className="reply-brief-loading-line" />
         <div className="reply-brief-loading-line reply-brief-loading-line-short" />
       </section>
@@ -217,6 +226,8 @@ function ReplyBriefResult({ brief, onDismiss, onRefresh }: {
   const sourceById = new Map(brief.sourceRefs.map((source) => [source.id, source]));
   const unavailable = brief.status === "unavailable";
   const empty = brief.status === "empty";
+  const keyPoints = uniqueClaims([...brief.constraints, ...brief.facts]).slice(0, 3);
+  const decision = brief.questions[0] ?? brief.considerations[0] ?? null;
   return (
     <section className={`reply-brief${unavailable ? " reply-brief-unavailable" : ""}${brief.freshness.status === "stale" ? " reply-brief-stale" : ""}`} aria-label="Reply Brief">
       <ReplyBriefHeader onDismiss={onDismiss} onRefresh={onRefresh} />
@@ -236,40 +247,31 @@ function ReplyBriefResult({ brief, onDismiss, onRefresh }: {
         </div>
       ) : null}
 
+      {brief.intent ? (
+        <section className="reply-brief-summary">
+          <p>The ask</p>
+          <h3>{brief.intent.summary}</h3>
+          <div>{brief.intent.sourceRefs.map((sourceId) => { const source = sourceById.get(sourceId); return source ? <SourceLink compact key={sourceId} source={source} /> : null; })}</div>
+        </section>
+      ) : null}
+
       <div className="reply-brief-meta" aria-label="Guidance quality">
-        <span data-tone={brief.confidence.level}>Confidence · {brief.confidence.level}</span>
-        <span data-tone={brief.freshness.status}>Freshness · {brief.freshness.status}</span>
-        <small>{brief.confidence.rationale}</small>
-        {brief.freshness.statusDetail ? <small>{brief.freshness.statusDetail}</small> : null}
+        <span aria-label={`Confidence ${brief.confidence.level}. ${brief.confidence.rationale}`} data-tone={brief.confidence.level}>Confidence · {brief.confidence.level}</span>
+        <span aria-label={`Freshness ${brief.freshness.status}. ${brief.freshness.statusDetail ?? ""}`} data-tone={brief.freshness.status}>Freshness · {brief.freshness.status}</span>
       </div>
 
-      {brief.intent ? (
-        <ReplyBriefSection title="The ask">
-          <ReplyBriefClaims claims={[{ text: brief.intent.summary, certainty: brief.intent.certainty, sourceRefs: brief.intent.sourceRefs }]} sources={sourceById} />
-        </ReplyBriefSection>
-      ) : null}
-      {brief.facts.length ? (
-        <ReplyBriefSection title="Facts">
-          <ReplyBriefClaims claims={brief.facts} sources={sourceById} />
-        </ReplyBriefSection>
-      ) : null}
-      {brief.constraints.length ? (
-        <ReplyBriefSection title="Constraints">
-          <ReplyBriefClaims claims={brief.constraints} sources={sourceById} />
-        </ReplyBriefSection>
-      ) : null}
-      {brief.questions.length ? (
-        <ReplyBriefSection title="Questions for you">
-          <ReplyBriefClaims claims={brief.questions} sources={sourceById} />
-        </ReplyBriefSection>
+      {keyPoints.length ? (
+        <ReplyBriefSection title="Key points"><ReplyBriefClaims claims={keyPoints} sources={sourceById} /></ReplyBriefSection>
       ) : null}
 
       <ReplyBriefAvailability context={brief.availabilityContext} sources={sourceById} />
 
-      {brief.considerations.length ? (
-        <ReplyBriefSection title="Consider as you write">
-          <ReplyBriefConsiderations items={brief.considerations} sources={sourceById} />
-        </ReplyBriefSection>
+      {decision ? (
+        <section className="reply-brief-decision">
+          <p>Your call</p>
+          <strong>{decision.text}</strong>
+          <div>{decision.sourceRefs.map((sourceId) => { const source = sourceById.get(sourceId); return source ? <SourceLink compact key={sourceId} source={source} /> : null; })}</div>
+        </section>
       ) : null}
 
       <details className="reply-brief-sources">
@@ -279,7 +281,7 @@ function ReplyBriefResult({ brief, onDismiss, onRefresh }: {
 
       <footer className="reply-brief-boundary">
         <span aria-hidden="true">✦</span>
-        <p><strong>Your words stay yours.</strong> This guidance cannot create a draft, choose recipients, send mail, or change a calendar. Open Reply when you’re ready and write an independent response.</p>
+        <p><strong>Guidance only.</strong> Your reply stays blank and yours.</p>
       </footer>
     </section>
   );
@@ -310,7 +312,7 @@ function ReplyBriefClaims({ claims, sources }: {
       {claims.map((claim, index) => (
         <li key={`${claim.text}:${index}`}>
           <div><span aria-hidden="true">{claim.certainty === "confirmed" ? "•" : "?"}</span><p>{claim.text}</p></div>
-          <div className="reply-brief-claim-meta"><span>{claim.certainty}</span>{claim.sourceRefs.map((sourceId) => {
+          <div className="reply-brief-claim-meta">{claim.certainty === "confirmed" ? null : <span>{claim.certainty}</span>}{claim.sourceRefs.map((sourceId) => {
             const source = sources.get(sourceId);
             return source ? <SourceLink compact key={sourceId} source={source} /> : null;
           })}</div>
@@ -320,31 +322,49 @@ function ReplyBriefClaims({ claims, sources }: {
   );
 }
 
-function ReplyBriefConsiderations({ items, sources }: {
-  items: ReplyBriefItem[];
-  sources: Map<string, ReplyBriefSourceRef>;
-}) {
-  return <ul className="reply-brief-considerations">{items.map((item, index) => <li key={`${item.text}:${index}`}><p>{item.text}</p><div>{item.sourceRefs.map((sourceId) => { const source = sources.get(sourceId); return source ? <SourceLink compact key={sourceId} source={source} /> : null; })}</div></li>)}</ul>;
-}
-
 function ReplyBriefAvailability({ context, sources }: {
   context: ReplyBriefOutput["availabilityContext"];
   sources: Map<string, ReplyBriefSourceRef>;
 }) {
   const sourceClaims = context.sourceRefs.map((sourceId) => sources.get(sourceId)).filter((source): source is ReplyBriefSourceRef => Boolean(source));
+  const copy = context.status === "free_busy_only"
+    ? context.busy.length
+      ? `${context.busy.length} busy ${context.busy.length === 1 ? "interval" : "intervals"} in the requested window.`
+      : "No busy time found in the requested window."
+    : context.status === "not_requested"
+      ? "Not needed for this brief."
+      : "Unavailable; no time was inferred.";
   return (
-    <section className="reply-brief-section reply-brief-availability">
-      <h3>Availability</h3>
-      <div className="reply-brief-availability-state" data-status={context.status}>
-        <div><strong>Read-only calendar</strong><span>{availabilityLabel(context.status)}</span></div>
-        {context.status === "free_busy_only" ? <p>{context.busy.length ? `${context.busy.length} busy ${context.busy.length === 1 ? "interval" : "intervals"} overlap the interpreted window.` : "No busy intervals were returned inside the interpreted window."}</p> : <p>Availability was not available to check. Orca will not guess or recommend a time.</p>}
-        {context.windowStart && context.windowEnd ? <p>{formatBriefTime(context.windowStart)} – {formatBriefTime(context.windowEnd)} · {context.timeZone}</p> : null}
-        {context.busy.length ? <ul className="reply-brief-busy">{context.busy.map((interval) => <li key={`${interval.start}:${interval.end}`}>{formatBriefTime(interval.start)} – {formatBriefTime(interval.end)}</li>)}</ul> : null}
-        {sourceClaims.length ? <div className="reply-brief-availability-sources">{sourceClaims.map((source) => <SourceLink compact key={source.id} source={source} />)}</div> : null}
-        <small>{context.status === "free_busy_only" ? "Free/busy only · no event titles, attendees, notes, or calendar writes" : "No calendar facts were inferred"}</small>
-      </div>
+    <section className="reply-brief-availability" data-status={context.status}>
+      <span>{availabilityLabel(context.status)}</span>
+      <p><strong>Calendar</strong> · {copy}</p>
+      {sourceClaims[0] ? <SourceLink compact source={sourceClaims[0]} /> : null}
     </section>
   );
+}
+
+function uniqueClaims(claims: ReplyBriefItem[]) {
+  const seen = new Set<string>();
+  return claims.filter((claim) => {
+    const key = claim.text.trim().toLocaleLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function waitForMinimumLoading(startedAt: number, minimumMs: number, signal: AbortSignal) {
+  const remaining = Math.max(0, minimumMs - (Date.now() - startedAt));
+  if (remaining === 0 || signal.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const finish = () => {
+      clearTimeout(timeout);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timeout = setTimeout(finish, remaining);
+    signal.addEventListener("abort", finish, { once: true });
+  });
 }
 
 function SourceLink({ source, compact = false }: { source: ReplyBriefSourceRef; compact?: boolean }) {
