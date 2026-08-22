@@ -361,8 +361,9 @@ export function readComposeDraft(accountId: string, storage?: Pick<Storage, "get
   }
 }
 
-export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean): ComposeDraftController {
+export function useComposeDraft(accountId: string, scope = "new", demoMode?: boolean, demoDraft?: MessageDraft): ComposeDraftController {
   const scopeKey = `${accountId}:${scope}`;
+  const requestedDraftId = scope.startsWith("draft:") ? scope.slice("draft:".length) : null;
   const [draft, setDraft] = useState(() => readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope));
   const [saveStatus, setSaveStatus] = useState<ComposeSaveStatus>("saved");
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
@@ -425,6 +426,12 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   useEffect(() => {
     if (demoMode) {
       setHydratedScope(scopeKey);
+      if (requestedDraftId && demoDraft?.id === requestedDraftId) {
+        const restored = fromMessageDraft(demoDraft);
+        setDraft(restored);
+        setSaveMessage("Saved on this device");
+        return;
+      }
       if (hasComposeContent(draft)) {
         setSaveMessage("Saved on this device");
       }
@@ -436,7 +443,8 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       const editableDrafts = drafts.filter((item) => item.deliveryStatus === "draft");
       const local = readComposeDraft(accountId, window.localStorage, scope);
       const sameDraft = local.revision === null ? null : editableDrafts.find((item) => item.id === local.id);
-      const latest = sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
+      const requestedDraft = requestedDraftId ? editableDrafts.find((item) => item.id === requestedDraftId) : null;
+      const latest = requestedDraft ?? sameDraft ?? editableDrafts.find((item) => draftMatchesScope(item, scope)) ?? null;
       if (!hasComposeContent(local) && latest) {
         const restored = fromMessageDraft(latest);
         serverIdRef.current = latest.id;
@@ -474,7 +482,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       }
     });
     return () => { cancelled = true; };
-  }, [accountId, demoMode, scope, scopeKey]);
+  }, [accountId, demoDraft, demoMode, requestedDraftId, scope, scopeKey]);
 
   const pollProviderStatus = useCallback((draftId: string) => {
     if (pollTimerRef.current) window.clearTimeout(pollTimerRef.current);

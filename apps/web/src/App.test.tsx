@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { m5InboxFixture } from "@orca/shared";
-import { ApiRequestError, App, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
+import { ApiRequestError, App, DraftsView, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxApp, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
 import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
@@ -14,6 +14,35 @@ describe("App", () => {
     expect(html).toContain("Orca");
     expect(html).toContain("Checking your key.");
     expect(html).not.toContain("Compose");
+  });
+
+  test("surfaces saved drafts as a mailbox with a reopenable message", () => {
+    const html = renderToStaticMarkup(<InboxApp demoMode theme="light" setTheme={() => {}} />);
+    const draftHtml = renderToStaticMarkup(<DraftsView drafts={[{
+      id: "draft-test",
+      accountId: "account-test",
+      to: [{ name: "Maya Chen", email: "maya@example.com" }],
+      cc: [],
+      bcc: [],
+      subject: "A calmer launch note",
+      body: { text: "One last thought", html: null },
+      context: null,
+      attachments: [],
+      revision: 1,
+      deliveryStatus: "draft",
+      providerSyncStatus: "synced",
+      providerSyncError: null,
+      providerDraftId: "gmail-draft-test",
+      providerMessageId: "gmail-message-test",
+      providerThreadId: null,
+      createdAt: "2026-07-08T12:00:00.000Z",
+      updatedAt: "2026-07-08T12:12:00.000Z",
+    }]} onOpenDraft={() => {}} />);
+
+    expect(html).toContain('aria-label="Collections and pins"');
+    expect(html).toContain("Drafts");
+    expect(draftHtml).toContain("A calmer launch note");
+    expect(draftHtml).toContain("Saved to Gmail");
   });
 
   test("keeps provider authorization failures separate from expired Orca sessions", () => {

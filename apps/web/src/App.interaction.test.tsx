@@ -365,6 +365,44 @@ describe("Inbox row action affordances", () => {
   });
 });
 
+describe("Drafts mailbox", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("opens the saved drafts view and reopens a selected draft", async () => {
+    await renderApp();
+
+    await act(async () => {
+      (browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as HTMLButtonElement).click();
+    });
+    const draftsButton = [...browserWindow.document.querySelectorAll("button.mailbox-tab")]
+      .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
+    expect(draftsButton).toBeDefined();
+
+    await act(async () => {
+      draftsButton!.click();
+    });
+    expect(browserWindow.document.querySelector(".draft-row")?.textContent).toContain("A calmer launch note");
+
+    await act(async () => {
+      (browserWindow.document.querySelector(".draft-row") as HTMLButtonElement).click();
+    });
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    expect((browserWindow.document.querySelector('input[name="subject"]') as HTMLInputElement)?.value).toBe("A calmer launch note");
+  });
+});
+
 describe("Pin navigation and bulk sender actions", () => {
   beforeEach(() => {
     installDom();
