@@ -429,7 +429,7 @@ describe("Drafts mailbox", () => {
 
     const draftRow = browserWindow.document.querySelector(".draft-row") as unknown as HTMLButtonElement | null;
     expect(draftRow).not.toBeNull();
-    const focusCalls = trackFocus(draftRow);
+    const focusCalls = trackFocus(draftRow!);
     draftRow!.focus();
     await act(async () => {
       draftRow!.click();
@@ -529,8 +529,11 @@ describe("Drafts mailbox", () => {
     let syncSettled = false;
     let oldHumanReadPending = false;
     let tidelineReads = 0;
+    let uncertainReads = 0;
+    let resolveSecondTidelineRead!: (response: Response) => void;
     const syncPromise = new Promise<Response>((resolve) => { resolveSync = resolve; });
     const oldHumanReadPromise = new Promise<Response>((resolve) => { resolveOldHumanRead = resolve; });
+    const secondTidelineReadPromise = new Promise<Response>((resolve) => { resolveSecondTidelineRead = resolve; });
     globalThis.fetch = (async (input, init) => {
       const url = String(input);
       if (url === "/v1/me") return jsonResponse(account);
@@ -548,6 +551,11 @@ describe("Drafts mailbox", () => {
       }
       if (url.includes("classification=tideline")) {
         tidelineReads += 1;
+        if (tidelineReads === 2) return secondTidelineReadPromise;
+        return jsonResponse(emptyInbox);
+      }
+      if (url.includes("classification=uncertain")) {
+        uncertainReads += 1;
         return jsonResponse(emptyInbox);
       }
       if (url.includes("view=all")) return jsonResponse(emptyInbox);
@@ -579,6 +587,17 @@ describe("Drafts mailbox", () => {
         await new Promise<void>((resolve) => setTimeout(resolve, 30));
       });
       expect(tidelineReads).toBeGreaterThanOrEqual(2);
+      const uncertainTab = browserWindow.document.querySelector("#classification-tab-uncertain") as unknown as HTMLButtonElement | null;
+      expect(uncertainTab).not.toBeNull();
+      await act(async () => {
+        uncertainTab!.click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      });
+      resolveSecondTidelineRead(jsonResponse(emptyInbox));
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+      });
+      expect(uncertainReads).toBeGreaterThanOrEqual(2);
     } finally {
       globalThis.fetch = originalFetch;
     }

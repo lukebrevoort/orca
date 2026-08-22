@@ -1207,10 +1207,13 @@ export function InboxApp({
           return { refreshedInbox, refreshedAllInbox };
         };
         let refreshedView = classificationViewRef.current;
-        let refreshedSnapshot = await readInboxSnapshot(refreshedView);
-        if (classificationViewRef.current !== refreshedView) {
+        let refreshedSnapshot: Awaited<ReturnType<typeof readInboxSnapshot>>;
+        while (true) {
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
           refreshedView = classificationViewRef.current;
           refreshedSnapshot = await readInboxSnapshot(refreshedView);
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+          if (classificationViewRef.current === refreshedView) break;
         }
         const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
           fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
