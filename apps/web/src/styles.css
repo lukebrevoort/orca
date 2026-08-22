@@ -4672,6 +4672,13 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .feedback-kit-trigger span { display: none; }
   .wave-rail-account-wrap { display: none; }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
+  /* BRE-303: keep inbox content in a scrollport above the fixed mobile controls. */
+  .content-pane:not(.content-pane-reader) { height: calc(100vh - 144px);
+    height: calc(100dvh - 144px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }
   .pinned-people { gap: 14px; overflow-x: auto; padding: 4px; }
@@ -5359,6 +5366,11 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
   .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .classification-correction {
     left: 0;
   }
+
+  /* BRE-302: give the mute popover the card's full inline width at 320px. */
+  .agent-event-mute-menu { flex: 0 0 100%; min-width: 0; }
+  .agent-event-mute-menu summary { width: max-content; }
+  .agent-event-mute-menu > div { left: 0; min-width: 0; right: 0; width: auto; }
 }
 
 /* BRE-268: propagated signals are a local projection, visually separate from

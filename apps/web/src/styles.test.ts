@@ -75,6 +75,22 @@ describe("propagated signal controls", () => {
     expect(styles).toContain(".agent-event-actions button:disabled,");
     expect(styles).toContain(".agent-events-error {");
   });
+
+  test("keeps the 320px mute popover inside its signal card", () => {
+    expect(styles).toContain("/* BRE-302: give the mute popover the card's full inline width at 320px. */");
+    expect(styles).toContain(".agent-event-mute-menu { flex: 0 0 100%; min-width: 0; }");
+    expect(styles).toContain(".agent-event-mute-menu summary { width: max-content; }");
+    expect(styles).toContain(".agent-event-mute-menu > div { left: 0; min-width: 0; right: 0; width: auto; }");
+  });
+
+  test("reserves the fixed mobile control band from the inbox scrollport", () => {
+    expect(styles).toContain("/* BRE-303: keep inbox content in a scrollport above the fixed mobile controls. */");
+    const mobilePane = cssRuleWithDeclaration(".content-pane:not(.content-pane-reader)", "height: calc(100vh - 144px)");
+    expect(mobilePane).toContain("height: calc(100dvh - 144px)");
+    expect(mobilePane).toContain("min-height: 0");
+    expect(mobilePane).toContain("overflow-y: auto");
+    expect(mobilePane).toContain("overscroll-behavior-y: contain");
+  });
 });
 
 describe("Calendar consent controls", () => {

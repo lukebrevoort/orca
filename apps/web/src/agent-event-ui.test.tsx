@@ -1,11 +1,73 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { act, type ComponentProps } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Window } from "happy-dom";
 
 import { applyDemoAgentEventAction, readDemoAgentEvents } from "./App";
-import { demoAgentEvents, demoSuppressedAgentAssessment } from "./demo-data";
+import { demoAgentEvents, demoAgentMutes, demoSuppressedAgentAssessment } from "./demo-data";
 import { AgentEventTimeline } from "./agent-event-ui";
 
 const noop = () => {};
+const browserGlobals = ["window", "document", "navigator", "HTMLElement", "Element", "Node", "Event", "MouseEvent", "KeyboardEvent"] as const;
+const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+let browserWindow: InstanceType<typeof Window>;
+let root: Root | null;
+
+beforeEach(() => {
+  browserWindow = new Window({ url: "http://localhost:5173/" });
+  const values: Record<string, unknown> = {
+    window: browserWindow,
+    document: browserWindow.document,
+    navigator: browserWindow.navigator,
+    HTMLElement: browserWindow.HTMLElement,
+    Element: browserWindow.Element,
+    Node: browserWindow.Node,
+    Event: browserWindow.Event,
+    MouseEvent: browserWindow.MouseEvent,
+    KeyboardEvent: browserWindow.KeyboardEvent,
+  };
+  for (const [name, value] of Object.entries(values)) Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+  Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", { configurable: true, value: true });
+  root = null;
+});
+
+afterEach(async () => {
+  await act(async () => root?.unmount());
+  for (const name of browserGlobals) {
+    const descriptor = originalGlobals.get(name);
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+    else delete (globalThis as Record<string, unknown>)[name];
+  }
+  delete (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT;
+  browserWindow.close();
+});
+
+async function renderTimeline(overrides: Partial<ComponentProps<typeof AgentEventTimeline>> = {}) {
+  const props: ComponentProps<typeof AgentEventTimeline> = {
+    actionErrors: {},
+    busyEventId: null,
+    error: null,
+    events: demoAgentEvents,
+    mutes: demoAgentMutes,
+    onAction: noop,
+    onOpenSource: noop,
+    onRetry: noop,
+    status: "ready",
+    ...overrides,
+  };
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<AgentEventTimeline {...props} />));
+  return {
+    container,
+    rerender: async (next: Partial<ComponentProps<typeof AgentEventTimeline>>) => {
+      Object.assign(props, next);
+      await act(async () => root!.render(<AgentEventTimeline {...props} />));
+    },
+  };
+}
 
 describe("propagated agent event timeline", () => {
   test("explains active estimates without presenting raw automated mail as human", () => {
@@ -43,6 +105,74 @@ describe("propagated agent event timeline", () => {
     expect(failed).toContain("Saving locally…");
     expect(listError).toContain('role="alert"');
     expect(listError).toContain("Try signals again");
+  });
+
+  test("disables lifecycle writes across every card while preserving source navigation", async () => {
+    let actionCalls = 0;
+    let sourceCalls = 0;
+    const { container } = await renderTimeline({
+      busyEventId: demoAgentEvents[0]!.id,
+      onAction: () => { actionCalls += 1; },
+      onOpenSource: () => { sourceCalls += 1; },
+    });
+
+    const reviewQuieted = [...container.querySelectorAll("button")].find((button) => button.textContent?.startsWith("Review quieted"));
+    expect(reviewQuieted).toBeDefined();
+    await act(async () => reviewQuieted!.click());
+    const cards = [...container.querySelectorAll("article.agent-event")];
+    expect(cards).toHaveLength(demoAgentEvents.length);
+
+    for (const card of cards) {
+      const buttons = [...card.querySelectorAll("button")];
+      const source = buttons.find((button) => button.textContent === "Open original");
+      expect(source?.disabled).toBe(false);
+      expect(buttons.filter((button) => button !== source).every((button) => button.disabled)).toBe(true);
+    }
+
+    const otherCard = cards.find((card) => card.textContent?.includes("The production deploy failed again"));
+    const otherSource = [...(otherCard?.querySelectorAll("button") ?? [])].find((button) => button.textContent === "Open original");
+    const otherDismiss = [...(otherCard?.querySelectorAll("button") ?? [])].find((button) => button.textContent === "Dismiss");
+    expect(otherSource).toBeDefined();
+    expect(otherDismiss).toBeDefined();
+    await act(async () => {
+      otherDismiss!.click();
+      otherSource!.click();
+    });
+    expect(actionCalls).toBe(0);
+    expect(sourceCalls).toBe(1);
+  });
+
+  test("keeps a busy Mute summary closed and out of keyboard focus", async () => {
+    const { container, rerender } = await renderTimeline();
+    let details = container.querySelector("details.agent-event-mute-menu")!;
+    let summary = details.querySelector("summary")!;
+
+    expect(summary.getAttribute("aria-disabled")).toBeNull();
+    expect(summary.getAttribute("tabindex")).toBeNull();
+    await act(async () => summary.click());
+    expect(details.hasAttribute("open")).toBe(true);
+
+    await rerender({ busyEventId: demoAgentEvents[0]!.id });
+    details = container.querySelector("details.agent-event-mute-menu")!;
+    summary = details.querySelector("summary")!;
+    expect(details.hasAttribute("open")).toBe(false);
+    expect(summary.getAttribute("aria-disabled")).toBe("true");
+    expect(summary.getAttribute("tabindex")).toBe("-1");
+
+    const pointerClick = new browserWindow.MouseEvent("click", { bubbles: true, cancelable: true });
+    const enter = new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" });
+    let pointerAllowed = true;
+    let keyboardAllowed = true;
+    await act(async () => {
+      pointerAllowed = summary.dispatchEvent(pointerClick);
+      keyboardAllowed = summary.dispatchEvent(enter);
+      await Promise.resolve();
+    });
+    expect(pointerAllowed).toBe(false);
+    expect(keyboardAllowed).toBe(false);
+    expect(pointerClick.defaultPrevented).toBe(true);
+    expect(enter.defaultPrevented).toBe(true);
+    expect(details.hasAttribute("open")).toBe(false);
   });
 
   test("keeps demo lifecycle actions durable and independent of the source assessment", () => {
