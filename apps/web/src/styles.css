@@ -4184,7 +4184,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
   box-shadow: 0 16px 36px rgb(15 36 34 / 13%);
   display: flex;
   flex-direction: column;
-  height: 398px;
+  height: 448px;
   justify-content: space-between;
   left: 28px;
   padding: 12px;
@@ -4667,6 +4667,9 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .wave-rail { bottom: 12px; flex-direction: row; height: 60px; left: 50%; padding: 8px; top: auto; transform: translateX(-50%); width: min(390px, calc(100vw - 24px)); }
   .wave-rail nav { flex-direction: row; justify-content: center; padding: 0; }
   .wave-rail nav button:nth-child(3), .wave-rail nav a { display: none; }
+  .feedback-kit-bottom-right { bottom: 84px; right: 16px; }
+  .feedback-kit-trigger { justify-content: center; padding: 0; width: 42px; }
+  .feedback-kit-trigger span { display: none; }
   .wave-rail-account-wrap { display: none; }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
   .inbox-view { padding-top: 28px; }

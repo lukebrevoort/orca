@@ -42,7 +42,7 @@
     </header>
 
     <section class="note">
-      <strong>Short answer:</strong> classification switching no longer starts a Gmail sync, and a Compose close no longer refetches collections, pins, reminders, and view settings. The exact time saved depends on network and Gmail latency; the largest avoided cost is one full sync cycle per classification switch in the old flow.
+      <strong>Short answer:</strong> classification switching no longer starts a Gmail sync or refetches seven unrelated account-scoped resources, and a Compose close no longer refetches collections, pins, reminders, and view settings. The exact time saved depends on network and Gmail latency; the largest avoided cost is one full sync cycle per classification switch in the old flow.
     </section>
 
     <section>
@@ -52,6 +52,11 @@
           <span class="metric">1 fewer sync cycle</span>
           <p>After the initial load, changing Human / Tideline / Uncertain / All only reads the requested inbox view. It does not POST to <code>/v1/sync/gmail</code>.</p>
           <p class="muted">The saved time is roughly the old Gmail sync duration plus its follow-up reads. That may be hundreds of milliseconds or several seconds, depending on the account and network.</p>
+        </article>
+        <article class="card">
+          <span class="metric">7 fewer side reads</span>
+          <p>Changing Human / Tideline / Uncertain / All no longer reloads collections, pins, reminders, reminder settings, drafts, agent events, or agent mutes.</p>
+          <p class="muted">A headless request trace now records exactly the two required inbox GETs, zero Gmail sync POSTs, and zero ancillary reads for a Human → Tideline switch.</p>
         </article>
         <article class="card">
           <span class="metric">4 fewer requests</span>
@@ -70,7 +75,7 @@
         <thead><tr><th>Flow</th><th>Before</th><th>After</th><th>Impact</th></tr></thead>
         <tbody>
           <tr><td>First inbox render</td><td><code>/v1/me</code> then sync status, then inbox reads.</td><td><code>/v1/me</code> and sync status run in parallel, then inbox reads. Gmail refresh continues in the background after cached rows render.</td><td>Removes the serial account/status wait from the critical path and makes cached content visible before Gmail finishes.</td></tr>
-          <tr><td>Classification switch</td><td>Could be coupled to a refresh lifecycle and stale results could be discarded without a current-view reload.</td><td>Reads the selected view from cache/API, while an independent Gmail refresh loops inbox-only reads until the current classification is stable.</td><td>No sync POST on ordinary switching; repeated switches remain current.</td></tr>
+          <tr><td>Classification switch</td><td>Could be coupled to a refresh lifecycle and stale results could be discarded without a current-view reload.</td><td>Reads the selected view and all-mail snapshot, while an independent Gmail refresh loops inbox-only reads until the current classification is stable.</td><td>Two inbox GETs, no sync POST, and no unrelated account-scoped reads; repeated switches remain current.</td></tr>
           <tr><td>Compose close</td><td>Organization data and drafts shared one refresh boundary.</td><td>Only the draft boundary refreshes.</td><td>Four unrelated organization requests are avoided per close.</td></tr>
           <tr><td>Open saved draft</td><td>App and the long-lived composer could fetch drafts separately.</td><td>App owns the list and passes it to the composer.</td><td>One request path and one consistent snapshot.</td></tr>
         </tbody>
@@ -86,17 +91,18 @@
         <li>Preserved server attachments during text edits and merged them with newly added local files for autosave and send.</li>
         <li>Separated draft loading from collections, pins, reminders, and view settings, with loading, error, retry, and empty states.</li>
         <li>Kept Refresh disabled through the entire background sync/read lifecycle.</li>
+        <li>Stabilized account identity and keyed account-scoped data effects to the account ID so inbox view changes do not fan out into unrelated reads.</li>
         <li>Restored keyboard focus to the draft row that opened Compose.</li>
       </ul>
     </section>
 
     <section>
       <h2>Evidence</h2>
-      <p>Verification during this work included full workspace typechecking, a production build, and a full test-suite run with <strong>416 tests passed</strong>. After the final refresh-loop and type-narrowing changes, typecheck, build, and the focused App and interaction suites passed <strong>80 tests</strong>, including mounted scope transitions, deferred saves, attachment merging, repeated classification switches, and focus restoration.</p>
+      <p>Verification during this work included full workspace typechecking, a production build, and a full test-suite run with <strong>418 tests passed</strong>. The focused App, interaction, and style suites also cover mounted scope transitions, deferred saves, attachment merging, repeated classification switches, direct Drafts navigation, destination focus, provider-sync labels, theme-safe selected states, and exact request counts.</p>
       <p class="muted">For a true “X ms faster” claim, the next step would be a repeatable browser benchmark against the same seeded mailbox and network conditions, measuring time to first visible inbox rows, classification-switch completion, and Compose-close settling.</p>
     </section>
 
-    <footer>Branch: <code>codex/bre-299-bre-290-drafts-checking-key</code> · PR #130 · latest implementation commit: <code>70f8628</code></footer>
+    <footer>Branch: <code>codex/bre-299-bre-290-drafts-checking-key</code> · PR #130 · review fixes verified August 22, 2026</footer>
   </main>
 </body>
 </html>

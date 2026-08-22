@@ -413,19 +413,29 @@ describe("Drafts mailbox", () => {
   test("opens the saved drafts view and reopens a selected draft", async () => {
     await renderApp();
 
+    const directDraftsButton = browserWindow.document.querySelector('[aria-label="Primary navigation"] button[aria-label="Drafts"]') as unknown as HTMLButtonElement | null;
+    expect(directDraftsButton).not.toBeNull();
     const libraryButton = browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as unknown as HTMLButtonElement | null;
     expect(libraryButton).not.toBeNull();
     await act(async () => {
       libraryButton!.click();
     });
+    await act(async () => {
+      flushAnimationFrames();
+    });
     const draftsButton = [...browserWindow.document.querySelectorAll("button.mailbox-tab")]
       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
     expect(draftsButton).toBeDefined();
 
+    draftsButton!.focus();
     await act(async () => {
       draftsButton!.click();
     });
+    await act(async () => {
+      flushAnimationFrames();
+    });
     expect(browserWindow.document.querySelector(".draft-row")?.textContent).toContain("A calmer launch note");
+    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Drafts");
 
     const draftRow = browserWindow.document.querySelector(".draft-row") as unknown as HTMLButtonElement | null;
     expect(draftRow).not.toBeNull();
@@ -598,6 +608,49 @@ describe("Drafts mailbox", () => {
         await new Promise<void>((resolve) => setTimeout(resolve, 30));
       });
       expect(uncertainReads).toBeGreaterThanOrEqual(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("switches classification without reloading account-scoped side data", async () => {
+    const account = { id: "account-fast-switch", provider: "gmail", email: "fast@example.com", displayName: "Fast Switch", avatarUrl: null, capabilities: { read: true, draft: true, send: true } };
+    const emptyInbox = { accounts: [account], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } };
+    const syncStatus = { accounts: [{ ...account, state: "idle", lastSyncedAt: null, error: null }] };
+    const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
+    const originalFetch = globalThis.fetch;
+    const requests: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push(`${init?.method ?? "GET"} ${url}`);
+      if (url === "/v1/me") return jsonResponse(account);
+      if (url === "/v1/sync/status") return jsonResponse(syncStatus);
+      if (url === "/v1/sync/gmail") return jsonResponse({ ok: true });
+      if (url.startsWith("/v1/inbox")) return jsonResponse(emptyInbox);
+      if (url === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
+      if (url === "/v1/agent-events?limit=50") return jsonResponse({ events: [], nextCursor: null });
+      if (["/v1/collections", "/v1/pins", "/v1/reminders", "/v1/drafts", "/v1/agent-event-mutes"].includes(url)) return jsonResponse([]);
+      return jsonResponse({});
+    }) as typeof fetch;
+    try {
+      const container = browserWindow.document.createElement("div");
+      browserWindow.document.body.append(container);
+      root = createRoot(container as unknown as Element);
+      await act(async () => {
+        root!.render(<InboxApp demoMode={false} theme="light" setTheme={() => {}} />);
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+      });
+      requests.length = 0;
+      const tidelineTab = browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement | null;
+      expect(tidelineTab).not.toBeNull();
+      await act(async () => {
+        tidelineTab!.click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      });
+      expect(requests).toEqual([
+        "GET /v1/inbox?classification=tideline&limit=100",
+        "GET /v1/inbox?view=all&classification=all&limit=100",
+      ]);
     } finally {
       globalThis.fetch = originalFetch;
     }

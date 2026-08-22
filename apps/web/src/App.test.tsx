@@ -18,7 +18,7 @@ describe("App", () => {
 
   test("surfaces saved drafts as a mailbox with a reopenable message", () => {
     const html = renderToStaticMarkup(<InboxApp demoMode theme="light" setTheme={() => {}} />);
-    const draftHtml = renderToStaticMarkup(<DraftsView drafts={[{
+    const savedDraft: MessageDraft = {
       id: "draft-test",
       accountId: "account-test",
       to: [{ name: "Maya Chen", email: "maya@example.com" }],
@@ -37,12 +37,16 @@ describe("App", () => {
       providerThreadId: null,
       createdAt: "2026-07-08T12:00:00.000Z",
       updatedAt: "2026-07-08T12:12:00.000Z",
-    }]} onOpenDraft={() => {}} />);
+    };
+    const draftHtml = renderToStaticMarkup(<DraftsView drafts={[savedDraft]} onOpenDraft={() => {}} />);
+    const pendingDraftHtml = renderToStaticMarkup(<DraftsView drafts={[{ ...savedDraft, providerSyncStatus: "pending" }]} onOpenDraft={() => {}} />);
 
     expect(html).toContain('aria-label="Collections and pins"');
+    expect(html).toContain('aria-label="Drafts"');
     expect(html).toContain("Drafts");
     expect(draftHtml).toContain("A calmer launch note");
     expect(draftHtml).toContain("Saved to Gmail");
+    expect(pendingDraftHtml).toContain("Syncing to Gmail");
   });
 
   test("keeps provider authorization failures separate from expired Orca sessions", () => {

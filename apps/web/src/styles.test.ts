@@ -54,6 +54,15 @@ describe("profile avatar controls", () => {
   });
 });
 
+describe("primary mobile navigation", () => {
+  test("keeps Drafts selected states theme-safe and moves local feedback clear of the rail", () => {
+    expect(styles).toContain('.wave-rail button[aria-current="page"]');
+    expect(styles).toContain("background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);");
+    expect(styles).toContain(".feedback-kit-bottom-right { bottom: 84px; right: 16px; }");
+    expect(styles).toContain(".feedback-kit-trigger span { display: none; }");
+  });
+});
+
 describe("propagated signal controls", () => {
   test("keeps hover, focus, pressed, error, and disabled labels theme-safe", () => {
     expect(styles).toContain("/* BRE-268: propagated signals are a local projection");
