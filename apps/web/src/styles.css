@@ -1341,7 +1341,11 @@ textarea {
 .draft-row:hover,
 .draft-row:focus-visible {
   background: var(--orca-surface-hover);
-  outline: 0;
+}
+
+.draft-row:focus-visible {
+  outline: 2px solid var(--orca-accent);
+  outline-offset: 2px;
 }
 
 .draft-row-copy { display: grid; gap: 4px; min-width: 0; }

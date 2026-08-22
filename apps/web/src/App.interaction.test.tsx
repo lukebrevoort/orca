@@ -383,8 +383,10 @@ describe("Drafts mailbox", () => {
   test("opens the saved drafts view and reopens a selected draft", async () => {
     await renderApp();
 
+    const libraryButton = browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as unknown as HTMLButtonElement | null;
+    expect(libraryButton).not.toBeNull();
     await act(async () => {
-      (browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as HTMLButtonElement).click();
+      libraryButton!.click();
     });
     const draftsButton = [...browserWindow.document.querySelectorAll("button.mailbox-tab")]
       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
@@ -395,12 +397,16 @@ describe("Drafts mailbox", () => {
     });
     expect(browserWindow.document.querySelector(".draft-row")?.textContent).toContain("A calmer launch note");
 
+    const draftRow = browserWindow.document.querySelector(".draft-row") as unknown as HTMLButtonElement | null;
+    expect(draftRow).not.toBeNull();
     await act(async () => {
-      (browserWindow.document.querySelector(".draft-row") as HTMLButtonElement).click();
+      draftRow!.click();
     });
     expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
-    expect((browserWindow.document.querySelector('input[name="subject"]') as HTMLInputElement)?.value).toBe("A calmer launch note");
+    const subject = browserWindow.document.querySelector('input[name="subject"]') as unknown as HTMLInputElement | null;
+    expect(subject?.value).toBe("A calmer launch note");
   });
+
 });
 
 describe("Pin navigation and bulk sender actions", () => {

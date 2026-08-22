@@ -971,7 +971,9 @@ export function InboxApp({
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
-  const [drafts, setDrafts] = useState<MessageDraft[]>(demoMode ? demoDrafts : []);
+  const [drafts, setDrafts] = useState<MessageDraft[] | null>(demoMode ? demoDrafts : null);
+  const [draftsStatus, setDraftsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
+  const [draftsError, setDraftsError] = useState<string | null>(null);
   const [draftRefreshKey, setDraftRefreshKey] = useState(0);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
@@ -1016,11 +1018,15 @@ export function InboxApp({
   const allMailPageRequestRef = useRef(0);
   const loadedInboxRef = useRef(false);
   const lastGmailRefreshKeyRef = useRef<number | null>(null);
+  const gmailRefreshControllerRef = useRef<AbortController | null>(null);
+  const gmailRefreshGenerationRef = useRef(0);
+  const [isGmailRefreshing, setIsGmailRefreshing] = useState(false);
+  const composeReturnFocusRef = useRef<HTMLElement | null>(null);
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
-  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts.find((draft) => draft.id === composeDraftId) : undefined);
+  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts);
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("compose") === "1" && preferences.composeZenByDefault;
@@ -1118,7 +1124,10 @@ export function InboxApp({
     const abortController = new AbortController();
     const isInitialLoad = !loadedInboxRef.current;
     const shouldRefreshGmail = isInitialLoad || lastGmailRefreshKeyRef.current !== refreshKey;
-    if (shouldRefreshGmail) lastGmailRefreshKeyRef.current = refreshKey;
+    if (shouldRefreshGmail) {
+      lastGmailRefreshKeyRef.current = refreshKey;
+      setIsGmailRefreshing(true);
+    }
 
     async function loadInbox() {
       if (isInitialLoad) setStatus("loading");
@@ -1173,23 +1182,30 @@ export function InboxApp({
         setErrorMessage(getErrorMessage(error));
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
         setClassificationError(getErrorMessage(error));
+        if (shouldRefreshGmail) setIsGmailRefreshing(false);
       }
     }
 
     async function refreshGmailInBackground() {
+      if (gmailRefreshControllerRef.current) return;
+      const refreshController = new AbortController();
+      const refreshGeneration = ++gmailRefreshGenerationRef.current;
+      gmailRefreshControllerRef.current = refreshController;
+      setIsGmailRefreshing(true);
       try {
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
-        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
-        const refreshedPath = classificationView === "all"
+        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
+        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
+        const refreshedView = classificationViewRef.current;
+        const refreshedPath = refreshedView === "all"
           ? "/v1/inbox?view=all&classification=all&limit=100"
-          : `/v1/inbox?classification=${classificationView}&limit=100`;
+          : `/v1/inbox?classification=${refreshedView}&limit=100`;
         const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
         const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
-          fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
-          fetchJson(refreshedPath, inboxClassificationResponseSchema, abortController.signal),
-          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, abortController.signal),
+          fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
+          fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
+          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
         ]);
-        if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
+        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
         classificationPageRequestRef.current += 1;
         allMailPageRequestRef.current += 1;
         setIsLoadingMoreMessages(false);
@@ -1201,7 +1217,7 @@ export function InboxApp({
         setAllMailCursor(refreshedAllInbox?.nextCursor ?? refreshedInbox.nextCursor);
         setClassificationLoading(false);
       } catch (error) {
-        if (abortController.signal.aborted) return;
+        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
         if (isSessionUnauthorizedError(error)) {
           setStatus("signedout");
           return;
@@ -1210,6 +1226,11 @@ export function InboxApp({
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
         setClassificationError(getErrorMessage(error));
         setClassificationLoading(false);
+      } finally {
+        if (refreshGeneration === gmailRefreshGenerationRef.current) {
+          gmailRefreshControllerRef.current = null;
+          setIsGmailRefreshing(false);
+        }
       }
     }
 
@@ -1228,17 +1249,39 @@ export function InboxApp({
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
       fetchJson("/v1/reminders", remindersResponseSchema, controller.signal),
       fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, controller.signal),
-      fetchJson("/v1/drafts", draftsResponseSchema, controller.signal),
-    ]).then(([nextCollections, nextPins, nextReminders, viewSettings, nextDrafts]) => {
+    ]).then(([nextCollections, nextPins, nextReminders, viewSettings]) => {
       if (controller.signal.aborted) return;
       setCollections(nextCollections);
       setPins(nextPins);
       setReminders(nextReminders);
       setLaterLabel(viewSettings.displayName);
-      setDrafts(nextDrafts.filter((draft) => draft.deliveryStatus === "draft"));
     }).catch((error) => {
       if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
     });
+    return () => controller.abort();
+  }, [account, demoMode, draftRefreshKey, status]);
+
+  useEffect(() => {
+    if (demoMode) {
+      setDraftsStatus("ready");
+      return;
+    }
+    if (!account || status !== "ready") return;
+    const controller = new AbortController();
+    setDraftsStatus("loading");
+    setDraftsError(null);
+    fetchJson("/v1/drafts", draftsResponseSchema, controller.signal)
+      .then((nextDrafts) => {
+        if (controller.signal.aborted) return;
+        setDrafts(nextDrafts.filter((draft) => draft.deliveryStatus === "draft"));
+        setDraftsStatus("ready");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setDraftsError(getErrorMessage(error));
+        setDrafts([]);
+        setDraftsStatus("error");
+      });
     return () => controller.abort();
   }, [account, demoMode, draftRefreshKey, status]);
 
@@ -1442,10 +1485,10 @@ export function InboxApp({
         label: mailbox.id === "later" ? laterLabel : mailbox.label,
         count: status === "ready" ? mailbox.id === "later"
           ? new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size
-          : mailbox.id === "drafts" ? drafts.length
+          : mailbox.id === "drafts" ? drafts?.length ?? 0
           : getMessagesForMailbox(allMailMessages, mailbox.id, attentionByAddress).length : undefined,
       })),
-    [allMailMessages, attentionByAddress, drafts.length, laterLabel, reminders, status],
+    [allMailMessages, attentionByAddress, drafts?.length, laterLabel, reminders, status],
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
@@ -1499,11 +1542,20 @@ export function InboxApp({
       return;
     }
 
+    if (!panelMode) composeReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPanelClosing(false);
     setZenClosing(false);
     setComposeDraftId(draftId);
     setPanelMode("compose");
     setZen(preferences.composeZenByDefault);
+  }
+
+  function restoreComposeFocus() {
+    const target = composeReturnFocusRef.current;
+    composeReturnFocusRef.current = null;
+    window.requestAnimationFrame(() => {
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    });
   }
 
   function openLibrary() {
@@ -1715,6 +1767,7 @@ export function InboxApp({
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
+      restoreComposeFocus();
       return;
     }
 
@@ -1731,6 +1784,7 @@ export function InboxApp({
       setPanelClosing(false);
       setZenClosing(false);
       closeTimerRef.current = null;
+      restoreComposeFocus();
     }, PANEL_ANIM_MS);
   }
 
@@ -2287,7 +2341,7 @@ export function InboxApp({
 
         <section aria-label={selectedThreadId ? "Message reader" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
-            {activeMailbox === "drafts" ? <DraftsView drafts={drafts} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               agentEventActionErrors={agentEventActionErrors}
               agentEvents={agentEvents}
@@ -2339,7 +2393,7 @@ export function InboxApp({
               personFilter={personFilter}
               status={status}
               syncStatus={syncStatus}
-              isRefreshing={status === "syncing" && messages.length > 0}
+              isRefreshing={isGmailRefreshing && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onBulkAttentionChange={updateSelectedSenderAttention}
@@ -4238,7 +4292,13 @@ export function InboxSyncAlert({ errorMessage, errorStatus }: { errorMessage: st
   );
 }
 
-export function DraftsView({ drafts, onOpenDraft }: { drafts: MessageDraft[]; onOpenDraft: (draft: MessageDraft) => void }) {
+export function DraftsView({ drafts, status = "ready", error = null, onRetry = () => undefined, onOpenDraft }: { drafts: MessageDraft[] | null; status?: "loading" | "ready" | "error"; error?: string | null; onRetry?: () => void; onOpenDraft: (draft: MessageDraft) => void }) {
+  if (status === "loading" || drafts === null) {
+    return <section className="drafts-view" aria-labelledby="drafts-view-title"><header className="inbox-header drafts-view-header"><div><span className="inbox-eyebrow">Messages you are still writing</span><h1 id="drafts-view-title">Drafts</h1><p>Loading your saved drafts…</p></div></header><InboxStatusState description="Orca is checking your saved notes." eyebrow="Loading" title="Drafts are on their way" /></section>;
+  }
+  if (status === "error") {
+    return <section className="drafts-view" aria-labelledby="drafts-view-title"><header className="inbox-header drafts-view-header"><div><span className="inbox-eyebrow">Messages you are still writing</span><h1 id="drafts-view-title">Drafts</h1><p>Your saved drafts could not be loaded.</p></div></header><InboxStatusState action={<button className="empty-state-action" onClick={onRetry} type="button">Try again</button>} description={error ?? "Please try again."} eyebrow="Could not load drafts" title="Your drafts are still safe" /></section>;
+  }
   return (
     <section className="drafts-view" aria-labelledby="drafts-view-title">
       <header className="inbox-header drafts-view-header">

@@ -5,7 +5,7 @@ import { m5InboxFixture } from "@orca/shared";
 import { ApiRequestError, App, DraftsView, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxApp, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
-import { collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
+import { buildDraftContent, collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -805,6 +805,26 @@ describe("App", () => {
       }),
     };
     expect(readComposeDraft("account", storage).attachments).toEqual([]);
+  });
+
+  test("preserves server attachments while editing a reopened draft", () => {
+    const draft = createEmptyComposeDraft("account");
+    draft.subject = "Updated subject";
+    const serverAttachment = { id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, contentBase64: "c2VjcmV0" };
+    expect(buildDraftContent(draft, [serverAttachment], false)).not.toHaveProperty("attachments");
+    expect(buildDraftContent(draft, [serverAttachment], true).attachments).toEqual([serverAttachment]);
+  });
+
+  test("keeps the new-draft and saved-draft storage scopes independent", () => {
+    const newDraft = { ...createEmptyComposeDraft("account"), subject: "New note" };
+    const savedDraft = { ...createEmptyComposeDraft("account"), subject: "Saved note" };
+    const values = new Map([
+      ["orca-compose-draft:account:new", JSON.stringify(newDraft)],
+      ["orca-compose-draft:account:draft:saved", JSON.stringify(savedDraft)],
+    ]);
+    const storage = { getItem: (key: string) => values.get(key) ?? null };
+    expect(readComposeDraft("account", storage, "new").subject).toBe("New note");
+    expect(readComposeDraft("account", storage, "draft:saved").subject).toBe("Saved note");
   });
 
   test("renders attachment chips with labeled remove controls only when files are present", () => {
