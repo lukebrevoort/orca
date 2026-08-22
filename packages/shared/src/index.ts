@@ -10,6 +10,30 @@ export {
   m5NormalizedFixtureMessages,
 } from "./fixtures.ts";
 
+export { redactedSchedulingReplyBriefFixture } from "./reply-brief.fixture.ts";
+
+export {
+  createDeterministicReplyBrief,
+  m6ReplyBriefRuntimeDecision,
+  replyBriefContextBundleSchema,
+  replyBriefContextMessageSchema,
+  replyBriefContextSourceSchema,
+  replyBriefDisclosureCopy,
+  replyBriefFreeBusySchema,
+  replyBriefOutputSchema,
+  replyBriefSourceRefSchema,
+  replyBriefSourceUrlSchema,
+} from "./reply-brief.ts";
+
+export type {
+  ReplyBriefContextBundle,
+  ReplyBriefContextMessage,
+  ReplyBriefContextSource,
+  ReplyBriefFreeBusy,
+  ReplyBriefOutput,
+  ReplyBriefSourceRef,
+} from "./reply-brief.ts";
+
 export {
   mcpAgentEventSchema,
   mcpContentSafetySchema,

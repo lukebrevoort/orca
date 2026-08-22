@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BRE-276 · Reply Brief runtime and data boundary</title>
+    <style>
+      :root { color-scheme: light dark; --paper:#f2f5f1; --card:#fffef9; --ink:#17332e; --muted:#65746f; --line:#cedbd5; --sea:#08796e; --sea-soft:#dcefea; --coral:#a6473b; --coral-soft:#f7e3dc; --code:#10241f; }
+      @media (prefers-color-scheme: dark) { :root { --paper:#0d1714; --card:#16231f; --ink:#eef7f3; --muted:#a8b9b2; --line:#344a43; --sea:#74dac7; --sea-soft:#173c34; --coral:#ffad9e; --coral-soft:#462822; --code:#09110f; } }
+      * { box-sizing:border-box; }
+      body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      main { width:min(1160px,calc(100% - 32px)); margin:0 auto; padding:52px 0 84px; }
+      header { max-width:920px; margin-bottom:30px; }
+      h1,h2,h3 { letter-spacing:-.03em; line-height:1.13; }
+      h1 { margin:8px 0 15px; font-size:clamp(2.5rem,7vw,5.2rem); }
+      h2 { margin:0 0 13px; font-size:1.45rem; }
+      h3 { margin:0 0 7px; font-size:1rem; }
+      p { margin:0 0 13px; }
+      ul,ol { margin:0; padding-left:1.25rem; }
+      li + li { margin-top:7px; }
+      code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      code { color:var(--sea); font-size:.91em; }
+      pre { overflow:auto; margin:0; padding:17px; border-radius:13px; background:var(--code); color:#dcf5ed; font-size:.79rem; line-height:1.55; }
+      table { width:100%; border-collapse:collapse; font-size:.91rem; }
+      th,td { padding:11px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+      th { color:var(--muted); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; }
+      tr:last-child td { border-bottom:0; }
+      a { color:var(--sea); }
+      section { border:1px solid var(--line); border-radius:18px; background:var(--card); padding:23px; }
+      .eyebrow { color:var(--sea); font-size:.75rem; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+      .lede { color:var(--muted); font-size:1.12rem; }
+      .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      .wide { grid-column:1/-1; }
+      .decision { border-left:5px solid var(--sea); background:var(--sea-soft); }
+      .danger { border-left:5px solid var(--coral); background:var(--coral-soft); }
+      .danger h2 { color:var(--coral); }
+      .option { display:grid; grid-template-columns:28px 1fr; gap:10px; padding:13px 0; border-bottom:1px solid var(--line); }
+      .option:last-child { border-bottom:0; padding-bottom:0; }
+      .mark { display:grid; width:25px; height:25px; place-items:center; border-radius:50%; background:var(--sea-soft); color:var(--sea); font-size:.72rem; font-weight:900; }
+      .later .mark { border:1px solid var(--line); background:var(--card); color:var(--muted); }
+      .flow { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:16px; }
+      .flow article { position:relative; min-height:145px; border:1px solid var(--line); border-radius:14px; background:var(--paper); padding:15px; }
+      .flow article:not(:last-child)::after { content:"→"; position:absolute; z-index:1; top:50%; right:-18px; color:var(--sea); font-size:1.35rem; transform:translateY(-50%); }
+      .flow b { display:block; margin-bottom:7px; color:var(--sea); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; }
+      .copy { border-left:3px solid var(--sea); padding-left:15px; }
+      .copy strong { display:block; margin-bottom:5px; }
+      .muted { color:var(--muted); }
+      .pass { color:var(--sea); font-weight:800; }
+      @media (max-width:820px) { main { padding-top:36px; } .grid,.flow { grid-template-columns:1fr; } .wide { grid-column:auto; } .flow article { min-height:auto; } .flow article:not(:last-child)::after { content:"↓"; top:auto; right:auto; bottom:-22px; left:50%; transform:translateX(-50%); } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Orca M6 · BRE-276 · architecture decision</div>
+        <h1>The model stays outside. The boundary stays small.</h1>
+        <p class="lede">For M6, model-assisted Reply Briefs live in a person’s external ChatGPT or Codex client. Orca exposes one explicitly selected thread through its existing OAuth-protected, read-only MCP resource. Orca holds no ChatGPT credential and invokes no OpenAI API.</p>
+      </header>
+
+      <div class="grid">
+        <section class="decision wide">
+          <h2>Decision: external first, deterministic inside</h2>
+          <p><strong>Selected for M6:</strong> an external ChatGPT/Codex agent calls Orca’s read-only MCP resource after explicit user invocation. Model-assisted output stays outside Orca. Inside Orca, the only M6-compatible path is a bounded deterministic fallback that uses the same source-linked output contract and cannot draft, compose, send, or mutate provider state.</p>
+          <p class="muted">A future inside-Orca model runtime needs a separate decision and authorization covering API billing, credential ownership, retention, isolation, cost controls, and consent. A ChatGPT subscription is not OpenAI API credit.</p>
+        </section>
+
+        <section>
+          <h2>Three runtimes compared</h2>
+          <div class="option"><span class="mark">✓</span><div><h3>External ChatGPT/Codex + Orca MCP</h3><p><strong>M6 selection.</strong> Best fit with BRE-261. The client owns its model access; Orca owns a revocable, account-scoped, read-only data grant. No model key reaches Railway.</p></div></div>
+          <div class="option later"><span class="mark">↗</span><div><h3>User-managed local/browser runtime</h3><p><strong>Deferred adapter.</strong> Preserves local control but has uneven model availability, browser resource limits, update risk, and no dependable OpenAI-quality baseline. It may later consume the same input/output schemas.</p></div></div>
+          <div class="option later"><span class="mark">↗</span><div><h3>Separately authorized OpenAI API</h3><p><strong>Deferred product decision.</strong> Required for a model-assisted brief inside Orca. It must name the credential and billing owner, consent, provider retention mode, tenant isolation, quotas, deletion, and revocation before implementation.</p></div></div>
+        </section>
+
+        <section class="danger">
+          <h2>Never part of a Reply Brief</h2>
+          <ul>
+            <li>Gmail/Outlook tokens, Orca sessions/cookies, MCP bearer or refresh tokens, ChatGPT credentials, OpenAI API keys, passwords, or authorization headers.</li>
+            <li>BCC, HTML, remote images, attachments, raw headers/provider payloads, provider message IDs, unrelated threads, unbounded history, or a mailbox corpus.</li>
+            <li>Calendar titles, descriptions, locations, attendees, organizer details, or event contents. Availability is free/busy intervals only.</li>
+            <li><code>draftText</code>, <code>replyBody</code>, <code>suggestedCopy</code>, compose/send actions, or any provider write. Strict validation rejects unknown fields at every output level.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Explicit, one-thread data flow</h2>
+          <div class="flow" role="group" aria-label="Reply Brief data flow">
+            <article><b>1 · Person</b>Selects a message/thread and explicitly asks for guidance. No sync, push, background event, or email instruction can trigger a brief.</article>
+            <article><b>2 · External client</b>ChatGPT/Codex presents an Orca grant and calls the existing read-only MCP surface. The client owns its ChatGPT/Codex credentials and model entitlement.</article>
+            <article><b>3 · Railway / Orca</b>Validates issuer, audience, scope, active grant, user, and live account ownership. It logs outcome metadata, never bearer material, prompt text, bodies, or model output.</article>
+            <article><b>4 · Projection</b>Allowlist projection emits a bounded plain-text view of only the selected thread, marks mail untrusted, redacts secrets, and keeps model instructions outside email content.</article>
+            <article><b>5 · Guidance</b>The external client produces source-linked guidance. If unavailable, disabled, limited, or declined, Orca’s deterministic fallback emits the same closed output shape without model egress.</article>
+          </div>
+        </section>
+
+        <section class="wide">
+          <h2>Exactly what may leave Orca</h2>
+          <table>
+            <thead><tr><th>Layer</th><th>Allowlisted fields</th><th>Limits and meaning</th></tr></thead>
+            <tbody>
+              <tr><td>Transport request</td><td>OAuth resource identifier; requested read scope; pseudonymous authorized account ID; selected Orca thread ID.</td><td>Needed to authorize and locate one selected thread. The account ID is never included in the model-facing context bundle.</td></tr>
+              <tr><td>Thread</td><td><code>id</code>, <code>selectedMessageId</code>, <code>subject</code>, <code>sourceRef</code>.</td><td>One thread only; at most 25 bounded messages. Source references resolve to Orca links without secrets.</td></tr>
+              <tr><td>Message</td><td>Orca <code>id</code>; sender display name/email; subject; received time; bounded plain-text <code>bodyExcerpt</code>; source reference.</td><td>At most 20,000 characters per excerpt after redaction. No recipients, BCC, labels, HTML, attachments, raw/provider IDs, or account identity.</td></tr>
+              <tr><td>Safety</td><td>Explicit invocation time; <code>untrusted_external_content</code>; body policy; redaction/truncation indicators.</td><td>Email remains data, never model instruction or authority. System/developer instructions are assembled separately.</td></tr>
+              <tr><td>Calendar, when separately authorized</td><td>Time zone; requested window start/end; busy interval start/end; observation time.</td><td>Free/busy only. No event metadata, names, attendee data, meeting links, or calendar writes. Null when not requested.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>Retention, logs, deletion, opt-out</h2>
+          <ul>
+            <li>Orca builds the context in request memory; it does not persist model prompts, context bundles, or model responses and creates no background queue.</li>
+            <li>Railway contains Orca’s existing normalized mail and MCP grant state. Operational logs record request ID, tool, user/grant identifiers, status, latency, byte counts, and redaction/truncation counts—not tokens, body text, prompt text, output, or calendar intervals.</li>
+            <li>The external client controls downstream model retention. Orca must say this before egress and cannot promise to delete a copy already handled by that client.</li>
+            <li>Disconnecting the client revokes its grant and refresh-token family immediately; live grant checks reject later access tokens. Deleting the Orca user cascades grants. Revocation blocks future access, not already exported content.</li>
+            <li>Feature default is off until connection and consent. Users can disconnect in Settings or choose the private fallback per request; no silent reconnection or continuous ingestion.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Credentials and failure behavior</h2>
+          <table>
+            <tbody>
+              <tr><th>Provider OAuth</th><td>Encrypted at rest on Railway and used only by Orca’s existing read-only provider sync. Never forwarded to a model/client.</td></tr>
+              <tr><th>Orca MCP OAuth</th><td>Orca issues short-lived access tokens; Railway stores grant state and hashed opaque refresh tokens. Rotation/replay and user revocation follow BRE-261/BRE-267.</td></tr>
+              <tr><th>ChatGPT/Codex OAuth</th><td>Owned by the external client. Orca never receives, stores, rotates, or revokes it; Orca revokes only the Orca MCP grant.</td></tr>
+              <tr><th>OpenAI API key</th><td>Absent in M6. No <code>OPENAI_API_KEY</code>, user key upload, API proxy, subscription lookup, or Railway model call. A future route must use separately authorized credentials and explicit billing.</td></tr>
+              <tr><th>Failure</th><td>Expired/revoked/wrong-resource grants fail closed. Model outage, missing entitlement, timeout, malformed output, limit, or user opt-out produces no retry queue and no partial draft; use deterministic fallback or show unavailable.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h2>Cost and rate limits</h2>
+          <p>The external client owns model entitlement, billing, quotas, and model-side rate limits. Orca neither assumes a paid ChatGPT plan includes API usage nor pays for an M6 OpenAI API request.</p>
+          <p>Orca bounds MCP work to one selected thread and existing endpoint limits. A rate-limit response contains no message content. The client may offer a deliberate manual retry; Orca never retries in the background. The deterministic fallback has no model cost and remains bounded by the same input schema.</p>
+        </section>
+
+        <section>
+          <h2>Threat notes</h2>
+          <ul>
+            <li><strong>Prompt injection:</strong> message content is labeled untrusted; model instructions stay structurally separate; no write tool exists; message text cannot trigger another request.</li>
+            <li><strong>Cross-account exposure:</strong> bearer account claims are intersected with current ownership on every MCP call; the context omits account identity.</li>
+            <li><strong>Credential leakage:</strong> allowlist projection plus structural/lexical redaction; no sensitive logs; authorization headers never reach handlers or model input.</li>
+            <li><strong>Overcollection:</strong> explicit selection, 25-message/20,000-character bounds, no background corpus, no attachments/HTML, and free/busy-only calendar data.</li>
+            <li><strong>Output smuggling:</strong> a strict schema allows only guidance fields and rejects draft or action-shaped extras recursively.</li>
+          </ul>
+        </section>
+
+        <section class="wide">
+          <h2>Closed Reply Brief output</h2>
+          <pre>{
+  "intent": { "summary": "…", "sourceRefs": ["message:…"] },
+  "facts": [{ "text": "…", "sourceRefs": ["message:…"] }],
+  "constraints": [{ "text": "…", "sourceRefs": ["message:…"] }],
+  "questions": [{ "text": "…", "sourceRefs": ["message:…"] }],
+  "considerations": [{ "text": "…", "sourceRefs": ["message:…"] }],
+  "sourceRefs": [{ "id": "message:…", "kind": "message", "label": "…", "sourceUrl": "…", "observedAt": "…" }],
+  "confidence": { "level": "medium", "rationale": "…" },
+  "freshness": { "generatedAt": "…", "newestSourceAt": "…", "staleAfter": "…", "status": "current" },
+  "availabilityContext": { "status": "free_busy_only", "timeZone": "America/Denver", "windowStart": "…", "windowEnd": "…", "busy": [], "sourceRefs": ["availability:free-busy"] }
+}</pre>
+          <p class="muted" style="margin-top:13px">These nine top-level fields are exhaustive. There is intentionally no draft, reply copy, provider action, compose affordance, or send capability.</p>
+        </section>
+
+        <section>
+          <h2>Required product copy</h2>
+          <div class="copy"><strong>Ask ChatGPT or Codex for a Reply Brief</strong>Only the selected thread’s sender, subject, dates, source links, and bounded plain-text message excerpts are shared after you ask. Orca does not retain a model prompt or response. Your connected client handles the shared content under its own retention settings. Disconnect it in Orca Settings to revoke future access.</div>
+          <div class="copy" style="margin-top:18px"><strong>Create a private basic brief</strong>Orca can extract a source-linked brief without sending message content to a model runtime.</div>
+        </section>
+
+        <section>
+          <h2>Verification</h2>
+          <p><span class="pass">PASS</span> The synthetic redacted scheduling fixture runs through <code>createDeterministicReplyBrief</code> with free/busy-only context.</p>
+          <p><span class="pass">PASS</span> Tests reject background invocation, <code>draftText</code>, <code>replyBody</code>, <code>suggestedCopy</code>, top-level send actions, and nested compose actions.</p>
+          <p><span class="pass">PASS</span> Shared TypeScript validation confirms all source references resolve and output remains schema-constrained.</p>
+        </section>
+
+        <section class="wide">
+          <h2>Compatibility and staged follow-ups</h2>
+          <table>
+            <tbody>
+              <tr><th>BRE-261 / BRE-267</th><td>Unchanged: ChatGPT/Codex is the OAuth client; Orca is the authorization/resource boundary. No ChatGPT credential or OpenAI API key is stored on Railway.</td></tr>
+              <tr><th>BRE-265</th><td>Unchanged: selected path uses only OAuth-protected, live-account-checked, read-only MCP access. This decision adds no provider or MCP write capability.</td></tr>
+              <tr><th>BRE-277</th><td>Consumes the strict guidance-only output contract and source references. Human ownership remains explicit.</td></tr>
+              <tr><th>BRE-278</th><td>May populate only <code>free_busy_only</code> intervals after separate user authorization; the schema cannot represent event content or writes.</td></tr>
+              <tr><th>BRE-279</th><td>May surface explicit invocation, disclosures, deterministic fallback, failure state, and source links. A model-assisted inside-Orca invocation is not authorized by this ticket.</td></tr>
+              <tr><th>Later runtime issue</th><td>Before enabling an OpenAI API route: choose service/user credential ownership, billing consent, provider retention/ZDR, region and tenant isolation, encryption, quotas, rate handling, abuse response, deletion, revocation, evaluation, and operational rollback.</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
