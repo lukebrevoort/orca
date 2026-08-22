@@ -3,6 +3,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { useComposeDraft } from "./compose-workspace";
+import type { MessageDraft } from "@orca/shared";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -178,6 +180,34 @@ function flushAnimationFrames() {
   const callbacks = [...frameCallbacks.values()];
   frameCallbacks.clear();
   for (const callback of callbacks) callback(0);
+}
+
+function DraftScopeHarness({ scope, availableDrafts, selectedDraft, demoMode = true }: { scope: string; availableDrafts?: MessageDraft[]; selectedDraft?: MessageDraft; demoMode?: boolean }) {
+  const controller = useComposeDraft("scope-test", scope, demoMode, selectedDraft, availableDrafts);
+  return <div><button data-testid="edit-draft" onClick={() => controller.updateDraft({ subject: scope === "new" ? "New draft edited" : "Saved draft edited" })} type="button">Edit</button><output data-testid="draft-subject">{controller.draft.subject}</output></div>;
+}
+
+function createTestMessageDraft(id: string, subject: string): MessageDraft {
+  return {
+    id,
+    accountId: "scope-test",
+    revision: 1,
+    to: [],
+    cc: [],
+    bcc: [],
+    subject,
+    body: { text: "", html: null },
+    context: null,
+    attachments: [],
+    deliveryStatus: "draft",
+    providerSyncStatus: "not_applicable",
+    providerSyncError: null,
+    providerDraftId: null,
+    providerMessageId: null,
+    providerThreadId: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
 }
 
 async function openMessage(sender: string) {
@@ -363,6 +393,269 @@ describe("Inbox row action affordances", () => {
     expect(dialog.querySelector('input[aria-label="New collection name"]')).not.toBeNull();
     expect([...dialog.querySelectorAll("footer button")].map((button) => button.textContent)).toEqual(["Done"]);
   });
+});
+
+describe("Drafts mailbox", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("opens the saved drafts view and reopens a selected draft", async () => {
+    await renderApp();
+
+    const directDraftsButton = browserWindow.document.querySelector('[aria-label="Primary navigation"] button[aria-label="Drafts"]') as unknown as HTMLButtonElement | null;
+    expect(directDraftsButton).not.toBeNull();
+    const libraryButton = browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as unknown as HTMLButtonElement | null;
+    expect(libraryButton).not.toBeNull();
+    await act(async () => {
+      libraryButton!.click();
+    });
+    await act(async () => {
+      flushAnimationFrames();
+    });
+    const draftsButton = [...browserWindow.document.querySelectorAll("button.mailbox-tab")]
+      .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
+    expect(draftsButton).toBeDefined();
+
+    draftsButton!.focus();
+    await act(async () => {
+      draftsButton!.click();
+    });
+    await act(async () => {
+      flushAnimationFrames();
+    });
+    expect(browserWindow.document.querySelector(".draft-row")?.textContent).toContain("A calmer launch note");
+    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Drafts");
+
+    const draftRow = browserWindow.document.querySelector(".draft-row") as unknown as HTMLButtonElement | null;
+    expect(draftRow).not.toBeNull();
+    const focusCalls = trackFocus(draftRow!);
+    draftRow!.focus();
+    await act(async () => {
+      draftRow!.click();
+    });
+    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
+    const subject = browserWindow.document.querySelector('input[name="subject"]') as unknown as HTMLInputElement | null;
+    expect(subject?.value).toBe("A calmer launch note");
+    const closePanel = browserWindow.document.querySelector('button[aria-label="Close panel"]') as unknown as HTMLButtonElement | null;
+    expect(closePanel).not.toBeNull();
+    Object.defineProperty(browserWindow, "matchMedia", { configurable: true, value: () => ({ matches: true, media: "", onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent() { return false; } }) });
+    await act(async () => { closePanel!.click(); });
+    await act(async () => { flushAnimationFrames(); });
+    expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
+  });
+
+  test("keeps a new draft isolated through mounted close and reopen scope transitions", async () => {
+    const savedDraft = createTestMessageDraft("saved-draft", "Saved draft");
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => {
+      root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="new" />);
+    });
+    const edit = browserWindow.document.querySelector('[data-testid="edit-draft"]') as unknown as HTMLButtonElement | null;
+    expect(edit).not.toBeNull();
+    await act(async () => { edit!.click(); });
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 500));
+    });
+    expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("New draft edited");
+
+    await act(async () => {
+      root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="draft:saved-draft" selectedDraft={savedDraft} />);
+    });
+    expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Saved draft");
+    await act(async () => {
+      root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="new" />);
+    });
+    expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("New draft edited");
+
+    await act(async () => {
+      root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="draft:saved-draft" selectedDraft={savedDraft} />);
+    });
+    await act(async () => {
+      root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="new" />);
+    });
+    expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("New draft edited");
+  });
+
+  test("does not let a deferred old save patch the newly selected draft", async () => {
+    const draftA = createTestMessageDraft("draft-a", "Draft A");
+    const draftB = createTestMessageDraft("draft-b", "Draft B");
+    const availableDrafts = [draftA, draftB];
+    const originalFetch = globalThis.fetch;
+    const pendingRequests: Array<{ url: string; init: RequestInit | undefined; resolve: (response: Response) => void }> = [];
+    globalThis.fetch = (async (input, init) => new Promise<Response>((resolve) => {
+      pendingRequests.push({ url: String(input), init, resolve });
+    })) as typeof fetch;
+    try {
+      const container = browserWindow.document.createElement("div");
+      browserWindow.document.body.append(container);
+      root = createRoot(container as unknown as Element);
+      await act(async () => {
+        root!.render(<DraftScopeHarness availableDrafts={availableDrafts} demoMode={false} scope="draft:draft-a" />);
+      });
+      expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Draft A");
+      const edit = browserWindow.document.querySelector('[data-testid="edit-draft"]') as unknown as HTMLButtonElement | null;
+      expect(edit).not.toBeNull();
+      await act(async () => { edit!.click(); });
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 500));
+      });
+      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a"]);
+
+      await act(async () => {
+        root!.render(<DraftScopeHarness availableDrafts={availableDrafts} demoMode={false} scope="draft:draft-b" />);
+      });
+      expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Draft B");
+      const oldSave = pendingRequests[0]!;
+      oldSave.resolve(new Response(JSON.stringify({ ...draftA, subject: "Draft A edited", revision: 2 }), { status: 200, headers: { "content-type": "application/json" } }));
+      await act(async () => { await Promise.resolve(); });
+      expect(pendingRequests.map((request) => request.url)).toEqual(["/v1/drafts/draft-a"]);
+      expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Draft B");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("refetches the latest classification after a refresh read races a view switch", async () => {
+    const account = { id: "account-refresh", provider: "gmail", email: "refresh@example.com", displayName: "Refresh Test", avatarUrl: null, capabilities: { read: true, draft: true, send: true } };
+    const emptyInbox = { accounts: [account], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } };
+    const syncStatus = { accounts: [{ ...account, state: "idle", lastSyncedAt: null, error: null }] };
+    const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
+    const originalFetch = globalThis.fetch;
+    let resolveSync!: (response: Response) => void;
+    let resolveOldHumanRead!: (response: Response) => void;
+    let syncSettled = false;
+    let oldHumanReadPending = false;
+    let tidelineReads = 0;
+    let uncertainReads = 0;
+    let resolveSecondTidelineRead!: (response: Response) => void;
+    const syncPromise = new Promise<Response>((resolve) => { resolveSync = resolve; });
+    const oldHumanReadPromise = new Promise<Response>((resolve) => { resolveOldHumanRead = resolve; });
+    const secondTidelineReadPromise = new Promise<Response>((resolve) => { resolveSecondTidelineRead = resolve; });
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      if (url === "/v1/me") return jsonResponse(account);
+      if (url === "/v1/sync/status") return jsonResponse(syncStatus);
+      if (url === "/v1/sync/gmail" && init?.method === "POST") {
+        syncSettled = true;
+        return syncPromise;
+      }
+      if (url.includes("classification=human")) {
+        if (syncSettled && !oldHumanReadPending) {
+          oldHumanReadPending = true;
+          return oldHumanReadPromise;
+        }
+        return jsonResponse(emptyInbox);
+      }
+      if (url.includes("classification=tideline")) {
+        tidelineReads += 1;
+        if (tidelineReads === 2) return secondTidelineReadPromise;
+        return jsonResponse(emptyInbox);
+      }
+      if (url.includes("classification=uncertain")) {
+        uncertainReads += 1;
+        return jsonResponse(emptyInbox);
+      }
+      if (url.includes("view=all")) return jsonResponse(emptyInbox);
+      if (url === "/v1/collections" || url === "/v1/pins" || url === "/v1/reminders" || url === "/v1/drafts" || url === "/v1/agent-event-mutes") return jsonResponse([]);
+      if (url === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
+      if (url.startsWith("/v1/agent-events")) return jsonResponse({ events: [], nextCursor: null });
+      return jsonResponse({});
+    }) as typeof fetch;
+    try {
+      const container = browserWindow.document.createElement("div");
+      browserWindow.document.body.append(container);
+      root = createRoot(container as unknown as Element);
+      await act(async () => {
+        root!.render(<InboxApp demoMode={false} theme="light" setTheme={() => {}} />);
+        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+      });
+      resolveSync(jsonResponse({ ok: true }));
+      await act(async () => { await Promise.resolve(); });
+      expect(oldHumanReadPending).toBe(true);
+
+      const tidelineTab = browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement | null;
+      expect(tidelineTab).not.toBeNull();
+      await act(async () => {
+        tidelineTab!.click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      });
+      resolveOldHumanRead(jsonResponse(emptyInbox));
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+      });
+      expect(tidelineReads).toBeGreaterThanOrEqual(2);
+      const uncertainTab = browserWindow.document.querySelector("#classification-tab-uncertain") as unknown as HTMLButtonElement | null;
+      expect(uncertainTab).not.toBeNull();
+      await act(async () => {
+        uncertainTab!.click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 20));
+      });
+      resolveSecondTidelineRead(jsonResponse(emptyInbox));
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+      });
+      expect(uncertainReads).toBeGreaterThanOrEqual(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("switches classification without reloading account-scoped side data", async () => {
+    const account = { id: "account-fast-switch", provider: "gmail", email: "fast@example.com", displayName: "Fast Switch", avatarUrl: null, capabilities: { read: true, draft: true, send: true } };
+    const emptyInbox = { accounts: [account], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } };
+    const syncStatus = { accounts: [{ ...account, state: "idle", lastSyncedAt: null, error: null }] };
+    const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
+    const originalFetch = globalThis.fetch;
+    const requests: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push(`${init?.method ?? "GET"} ${url}`);
+      if (url === "/v1/me") return jsonResponse(account);
+      if (url === "/v1/sync/status") return jsonResponse(syncStatus);
+      if (url === "/v1/sync/gmail") return jsonResponse({ ok: true });
+      if (url.startsWith("/v1/inbox")) return jsonResponse(emptyInbox);
+      if (url === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
+      if (url === "/v1/agent-events?limit=50") return jsonResponse({ events: [], nextCursor: null });
+      if (["/v1/collections", "/v1/pins", "/v1/reminders", "/v1/drafts", "/v1/agent-event-mutes"].includes(url)) return jsonResponse([]);
+      return jsonResponse({});
+    }) as typeof fetch;
+    try {
+      const container = browserWindow.document.createElement("div");
+      browserWindow.document.body.append(container);
+      root = createRoot(container as unknown as Element);
+      await act(async () => {
+        root!.render(<InboxApp demoMode={false} theme="light" setTheme={() => {}} />);
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
+      });
+      requests.length = 0;
+      const tidelineTab = browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement | null;
+      expect(tidelineTab).not.toBeNull();
+      await act(async () => {
+        tidelineTab!.click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      });
+      expect(requests).toEqual([
+        "GET /v1/inbox?classification=tideline&limit=100",
+        "GET /v1/inbox?view=all&classification=all&limit=100",
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
 
 describe("Pin navigation and bulk sender actions", () => {

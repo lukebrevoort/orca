@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orca drafts and inbox performance</title>
+  <style>
+    :root { color-scheme: light; --paper:#f7f3ec; --card:#fffdf9; --ink:#26302d; --muted:#66716d; --line:#d9ded8; --accent:#26796c; --accent-soft:#e0f0eb; --warm:#fff0d5; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:980px; margin:0 auto; padding:56px 24px 80px; }
+    header { border-bottom:1px solid var(--line); margin-bottom:28px; padding-bottom:28px; }
+    h1,h2 { line-height:1.15; letter-spacing:-.03em; }
+    h1 { font-size:clamp(34px,6vw,60px); margin:8px 0 14px; max-width:760px; }
+    h2 { font-size:25px; margin:0 0 12px; }
+    p { margin:8px 0 16px; }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .lede { color:var(--muted); font-size:19px; max-width:760px; }
+    .note { background:var(--warm); border:1px solid #efd7a8; border-radius:14px; padding:16px 18px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); margin:20px 0 30px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 8px 24px rgba(38,48,45,.05); }
+    .metric { color:var(--accent); display:block; font-size:31px; font-weight:800; line-height:1.1; margin-bottom:8px; }
+    .muted { color:var(--muted); }
+    table { border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:14px; display:block; overflow:hidden; width:100%; }
+    th,td { border-bottom:1px solid var(--line); padding:13px 14px; text-align:left; vertical-align:top; }
+    tr:last-child td { border-bottom:0; }
+    th { background:var(--accent-soft); font-size:13px; }
+    code { background:#edf0ed; border-radius:5px; padding:2px 5px; }
+    .flow { align-items:center; display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+    .step { background:var(--accent-soft); border:1px solid #bcded4; border-radius:10px; padding:10px 13px; }
+    .arrow { color:var(--muted); font-weight:800; }
+    ul { padding-left:22px; }
+    footer { border-top:1px solid var(--line); color:var(--muted); font-size:13px; margin-top:34px; padding-top:18px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">Orca · BRE-299 / BRE-290</div>
+      <h1>Drafts are durable. Inbox switching is lighter.</h1>
+      <p class="lede">This page explains what changed and what “faster” means here. The implementation has strong request-path improvements, but this work did not capture a before/after stopwatch benchmark, so there is no defensible exact millisecond claim.</p>
+    </header>
+
+    <section class="note">
+      <strong>Short answer:</strong> classification switching no longer starts a Gmail sync or refetches seven unrelated account-scoped resources, and a Compose close no longer refetches collections, pins, reminders, and view settings. The exact time saved depends on network and Gmail latency; the largest avoided cost is one full sync cycle per classification switch in the old flow.
+    </section>
+
+    <section>
+      <h2>How much faster?</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="metric">1 fewer sync cycle</span>
+          <p>After the initial load, changing Human / Tideline / Uncertain / All only reads the requested inbox view. It does not POST to <code>/v1/sync/gmail</code>.</p>
+          <p class="muted">The saved time is roughly the old Gmail sync duration plus its follow-up reads. That may be hundreds of milliseconds or several seconds, depending on the account and network.</p>
+        </article>
+        <article class="card">
+          <span class="metric">7 fewer side reads</span>
+          <p>Changing Human / Tideline / Uncertain / All no longer reloads collections, pins, reminders, reminder settings, drafts, agent events, or agent mutes.</p>
+          <p class="muted">A headless request trace now records exactly the two required inbox GETs, zero Gmail sync POSTs, and zero ancillary reads for a Human → Tideline switch.</p>
+        </article>
+        <article class="card">
+          <span class="metric">4 fewer requests</span>
+          <p>Closing Compose refreshes drafts independently. It no longer re-fetches collections, pins, reminders, and reminder view settings.</p>
+          <p class="muted">This is an exact request-count reduction per close, excluding any requests made by the user’s next action.</p>
+        </article>
+        <article class="card">
+          <span class="metric">1 source of truth</span>
+          <p>The main composer receives the App-owned draft list instead of requesting <code>/v1/drafts</code> again.</p>
+          <p class="muted">That removes duplicate draft-list work and prevents the mailbox and composer from hydrating from different snapshots.</p>
+        </article>
+      </div>
+
+      <h2>Critical-path change</h2>
+      <table>
+        <thead><tr><th>Flow</th><th>Before</th><th>After</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr><td>First inbox render</td><td><code>/v1/me</code> then sync status, then inbox reads.</td><td><code>/v1/me</code> and sync status run in parallel, then inbox reads. Gmail refresh continues in the background after cached rows render.</td><td>Removes the serial account/status wait from the critical path and makes cached content visible before Gmail finishes.</td></tr>
+          <tr><td>Classification switch</td><td>Could be coupled to a refresh lifecycle and stale results could be discarded without a current-view reload.</td><td>Reads the selected view and all-mail snapshot, while an independent Gmail refresh loops inbox-only reads until the current classification is stable.</td><td>Two inbox GETs, no sync POST, and no unrelated account-scoped reads; repeated switches remain current.</td></tr>
+          <tr><td>Compose close</td><td>Organization data and drafts shared one refresh boundary.</td><td>Only the draft boundary refreshes.</td><td>Four unrelated organization requests are avoided per close.</td></tr>
+          <tr><td>Open saved draft</td><td>App and the long-lived composer could fetch drafts separately.</td><td>App owns the list and passes it to the composer.</td><td>One request path and one consistent snapshot.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>What I implemented</h2>
+      <div class="flow"><span class="step">Cached inbox renders</span><span class="arrow">→</span><span class="step">Gmail refresh runs independently</span><span class="arrow">→</span><span class="step">Latest classification is re-read until stable</span></div>
+      <ul>
+        <li>Added the Drafts mailbox and durable draft reopening.</li>
+        <li>Scoped composer hydration, autosave queues, target IDs, and revisions to the active draft scope.</li>
+        <li>Preserved server attachments during text edits and merged them with newly added local files for autosave and send.</li>
+        <li>Separated draft loading from collections, pins, reminders, and view settings, with loading, error, retry, and empty states.</li>
+        <li>Kept Refresh disabled through the entire background sync/read lifecycle.</li>
+        <li>Stabilized account identity and keyed account-scoped data effects to the account ID so inbox view changes do not fan out into unrelated reads.</li>
+        <li>Restored keyboard focus to the draft row that opened Compose.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Evidence</h2>
+      <p>Verification during this work included full workspace typechecking, a production build, and a full test-suite run with <strong>418 tests passed</strong>. The focused App, interaction, and style suites also cover mounted scope transitions, deferred saves, attachment merging, repeated classification switches, direct Drafts navigation, destination focus, provider-sync labels, theme-safe selected states, and exact request counts.</p>
+      <p class="muted">For a true “X ms faster” claim, the next step would be a repeatable browser benchmark against the same seeded mailbox and network conditions, measuring time to first visible inbox rows, classification-switch completion, and Compose-close settling.</p>
+    </section>
+
+    <footer>Branch: <code>codex/bre-299-bre-290-drafts-checking-key</code> · PR #130 · review fixes verified August 22, 2026</footer>
+  </main>
+</body>
+</html>

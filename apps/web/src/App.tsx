@@ -11,8 +11,8 @@ import {
   type Ref,
   type SetStateAction,
 } from "react";
-import type { AgentPropagationMuteRule, AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoAgentEvents,
@@ -54,7 +54,7 @@ export const defaultReaderPreferences: ReaderPreferences = {
 
 const readerDensityHint = "Calm gives each message more room. Compact fits more mail and thread history on screen.";
 
-type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later";
+type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
 
@@ -283,6 +283,7 @@ const mailboxes: MailboxItem[] = [
   { id: "quiet", label: "Quiet", description: "Available when you choose" },
   { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
   { id: "later", label: "Later", description: "Threads you chose to revisit" },
+  { id: "drafts", label: "Drafts", description: "Messages you are still writing" },
   { id: "all", label: "All mail", description: "Every message, by attention" },
 ];
 
@@ -339,9 +340,33 @@ const demoReminders: Reminder[] = [
   { id: "reminder_demo_harbor", accountId: demoAccount.id, threadId: "thread_2", scheduledFor: "2026-07-11T16:00:00.000Z", timezone: "America/Los_Angeles", notify: false, status: "scheduled", resurfacedAt: null, completedAt: null, cancelledAt: null, createdAt: "2026-07-01T00:00:00.000Z", updatedAt: "2026-07-01T00:00:00.000Z" },
 ];
 
+const demoDrafts: MessageDraft[] = [
+  {
+    id: "draft_demo_launch",
+    accountId: demoAccount.id,
+    to: [{ name: "Maya Chen", email: "maya@example.com" }],
+    cc: [],
+    bcc: [],
+    subject: "A calmer launch note",
+    body: { text: "I wanted to share one last thought before we open this up…", html: null },
+    context: null,
+    attachments: [],
+    revision: 1,
+    deliveryStatus: "draft",
+    providerSyncStatus: "synced",
+    providerSyncError: null,
+    providerDraftId: "gmail-draft-demo-launch",
+    providerMessageId: "gmail-message-demo-launch",
+    providerThreadId: null,
+    createdAt: "2026-07-08T12:00:00.000Z",
+    updatedAt: "2026-07-08T12:12:00.000Z",
+  },
+];
+
 const collectionsResponseSchema: JsonSchema<Collection[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => collectionSchema.parse(item)) : (() => { throw new Error("Collections response was not a list."); })() };
 const pinsResponseSchema: JsonSchema<Pin[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => pinSchema.parse(item)) : (() => { throw new Error("Pins response was not a list."); })() };
 const remindersResponseSchema: JsonSchema<Reminder[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => reminderSchema.parse(item)) : (() => { throw new Error("Reminders response was not a list."); })() };
+const draftsResponseSchema: JsonSchema<MessageDraft[]> = { parse: (value) => Array.isArray(value) ? value.map((item) => messageDraftSchema.parse(item)) : (() => { throw new Error("Draft response was not a list."); })() };
 
 export function App() {
   const [preferences, setPreferences] = useState<ReaderPreferences>(() => readStoredPreferences());
@@ -946,6 +971,10 @@ export function InboxApp({
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
+  const [drafts, setDrafts] = useState<MessageDraft[] | null>(demoMode ? demoDrafts : null);
+  const [draftsStatus, setDraftsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
+  const [draftsError, setDraftsError] = useState<string | null>(null);
+  const [draftRefreshKey, setDraftRefreshKey] = useState(0);
   const [laterLabel, setLaterLabel] = useState("Later");
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [agentEvents, setAgentEvents] = useState<PropagatedAgentEvent[]>(() => demoMode ? readDemoAgentEvents() : []);
@@ -971,6 +1000,7 @@ export function InboxApp({
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState("");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
+  const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
   const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
@@ -986,11 +1016,17 @@ export function InboxApp({
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
   const allMailPageRequestRef = useRef(0);
+  const loadedInboxRef = useRef(false);
+  const lastGmailRefreshKeyRef = useRef<number | null>(null);
+  const gmailRefreshControllerRef = useRef<AbortController | null>(null);
+  const gmailRefreshGenerationRef = useRef(0);
+  const [isGmailRefreshing, setIsGmailRefreshing] = useState(false);
+  const composeReturnFocusRef = useRef<HTMLElement | null>(null);
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
   const agentEventSourceRefs = useRef(new Map<string, HTMLButtonElement>());
-  const composeDraft = useComposeDraft(account?.id ?? "preview", "new", demoMode);
+  const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts);
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).get("compose") === "1" && preferences.composeZenByDefault;
@@ -1003,6 +1039,7 @@ export function InboxApp({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const libraryRef = useRef<HTMLElement>(null);
+  const contentPaneRef = useRef<HTMLElement>(null);
   const libraryReturnFocusRef = useRef<HTMLElement | null>(null);
   const pinOrderRef = useRef<Pin[]>(demoMode ? demoPins : []);
   const pinReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -1086,10 +1123,16 @@ export function InboxApp({
     }
 
     const abortController = new AbortController();
+    const isInitialLoad = !loadedInboxRef.current;
+    const shouldRefreshGmail = isInitialLoad || lastGmailRefreshKeyRef.current !== refreshKey;
+    if (shouldRefreshGmail) {
+      lastGmailRefreshKeyRef.current = refreshKey;
+      setIsGmailRefreshing(true);
+    }
 
     async function loadInbox() {
-      setStatus("loading");
-      setMessages([]);
+      if (isInitialLoad) setStatus("loading");
+      else if (shouldRefreshGmail) setStatus("syncing");
       setClassificationCursor(null);
       setAllMailCursor(null);
       setClassificationLoading(true);
@@ -1098,10 +1141,13 @@ export function InboxApp({
       setClassificationError(null);
 
       try {
-        const currentAccount = await fetchJson("/v1/me", meResponseSchema, abortController.signal);
+        const [currentAccount, nextSyncStatus] = await Promise.all([
+          account ? Promise.resolve(account) : fetchJson("/v1/me", meResponseSchema, abortController.signal),
+          shouldRefreshGmail ? fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal) : Promise.resolve(syncStatus),
+        ]);
         if (abortController.signal.aborted) return;
         setAccount(currentAccount);
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
+        if (nextSyncStatus) setSyncStatus(nextSyncStatus);
 
         const inboxPath = classificationView === "all"
           ? "/v1/inbox?view=all&classification=all&limit=100"
@@ -1112,7 +1158,8 @@ export function InboxApp({
           allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxClassificationResponseSchema, abortController.signal),
         ]);
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
-        setAccount(inbox.accounts[0] ?? currentAccount);
+        const inboxAccount = inbox.accounts[0] ?? currentAccount;
+        setAccount((current) => current && sameMailAccount(current, inboxAccount) ? current : inboxAccount);
         setMessages(inbox.messages);
         setAllMailMessages(mergeMessages(allInbox?.messages ?? [], inbox.messages));
         setClassificationCounts(toClassificationCounts(inbox.counts.classification));
@@ -1120,10 +1167,11 @@ export function InboxApp({
         setAllMailCursor(allInbox?.nextCursor ?? inbox.nextCursor);
         setClassificationLoading(false);
         setStatus("ready");
+        loadedInboxRef.current = true;
 
         // Cached SQLite mail is now visible. Refresh Gmail without putting the
         // network round trip on the inbox's first-render path.
-        void refreshGmailInBackground();
+        if (shouldRefreshGmail) void refreshGmailInBackground();
       } catch (error) {
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         setClassificationLoading(false);
@@ -1132,27 +1180,49 @@ export function InboxApp({
           setStatus("signedout");
           return;
         }
-        setStatus("error");
+        setStatus(isInitialLoad ? "error" : "ready");
         setErrorMessage(getErrorMessage(error));
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
         setClassificationError(getErrorMessage(error));
+        if (shouldRefreshGmail) setIsGmailRefreshing(false);
       }
     }
 
     async function refreshGmailInBackground() {
+      if (gmailRefreshControllerRef.current) return;
+      const refreshController = new AbortController();
+      const refreshGeneration = ++gmailRefreshGenerationRef.current;
+      gmailRefreshControllerRef.current = refreshController;
+      setIsGmailRefreshing(true);
       try {
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal));
-        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, abortController.signal, { method: "POST" });
-        const refreshedPath = classificationView === "all"
-          ? "/v1/inbox?view=all&classification=all&limit=100"
-          : `/v1/inbox?classification=${classificationView}&limit=100`;
-        const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
+        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
+        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
+        const readInboxSnapshot = async (view: ClassificationView) => {
+          const refreshedPath = view === "all"
+            ? "/v1/inbox?view=all&classification=all&limit=100"
+            : `/v1/inbox?classification=${view}&limit=100`;
+          const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
+          const [refreshedInbox, refreshedAllInbox] = await Promise.all([
+            fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
+            refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
+          ]);
+          return { refreshedInbox, refreshedAllInbox };
+        };
+        let refreshedView = classificationViewRef.current;
+        let refreshedSnapshot: Awaited<ReturnType<typeof readInboxSnapshot>>;
+        while (true) {
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+          refreshedView = classificationViewRef.current;
+          refreshedSnapshot = await readInboxSnapshot(refreshedView);
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+          if (classificationViewRef.current === refreshedView) break;
+        }
         const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
-          fetchJson("/v1/sync/status", syncStatusSchema, abortController.signal),
-          fetchJson(refreshedPath, inboxClassificationResponseSchema, abortController.signal),
-          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, abortController.signal),
+          fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
+          Promise.resolve(refreshedSnapshot.refreshedInbox),
+          Promise.resolve(refreshedSnapshot.refreshedAllInbox),
         ]);
-        if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
+        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
         classificationPageRequestRef.current += 1;
         allMailPageRequestRef.current += 1;
         setIsLoadingMoreMessages(false);
@@ -1164,7 +1234,7 @@ export function InboxApp({
         setAllMailCursor(refreshedAllInbox?.nextCursor ?? refreshedInbox.nextCursor);
         setClassificationLoading(false);
       } catch (error) {
-        if (abortController.signal.aborted) return;
+        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
         if (isSessionUnauthorizedError(error)) {
           setStatus("signedout");
           return;
@@ -1173,6 +1243,11 @@ export function InboxApp({
         setErrorStatus(error instanceof ApiRequestError ? error.status : null);
         setClassificationError(getErrorMessage(error));
         setClassificationLoading(false);
+      } finally {
+        if (refreshGeneration === gmailRefreshGenerationRef.current) {
+          gmailRefreshControllerRef.current = null;
+          setIsGmailRefreshing(false);
+        }
       }
     }
 
@@ -1201,7 +1276,31 @@ export function InboxApp({
       if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
     });
     return () => controller.abort();
-  }, [account, demoMode, status]);
+  }, [account?.id, demoMode, status]);
+
+  useEffect(() => {
+    if (demoMode) {
+      setDraftsStatus("ready");
+      return;
+    }
+    if (!account || status !== "ready") return;
+    const controller = new AbortController();
+    setDraftsStatus("loading");
+    setDraftsError(null);
+    fetchJson("/v1/drafts", draftsResponseSchema, controller.signal)
+      .then((nextDrafts) => {
+        if (controller.signal.aborted) return;
+        setDrafts(nextDrafts.filter((draft) => draft.deliveryStatus === "draft"));
+        setDraftsStatus("ready");
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setDraftsError(getErrorMessage(error));
+        setDrafts([]);
+        setDraftsStatus("error");
+      });
+    return () => controller.abort();
+  }, [account?.id, demoMode, draftRefreshKey, status]);
 
   useEffect(() => {
     if (demoMode) {
@@ -1233,7 +1332,7 @@ export function InboxApp({
         setAgentEventsError(getErrorMessage(error));
       });
     return () => controller.abort();
-  }, [account, agentEventsRefreshKey, demoMode, status]);
+  }, [account?.id, agentEventsRefreshKey, demoMode, status]);
 
   useEffect(() => {
     const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
@@ -1403,9 +1502,10 @@ export function InboxApp({
         label: mailbox.id === "later" ? laterLabel : mailbox.label,
         count: status === "ready" ? mailbox.id === "later"
           ? new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size
+          : mailbox.id === "drafts" ? drafts?.length ?? 0
           : getMessagesForMailbox(allMailMessages, mailbox.id, attentionByAddress).length : undefined,
       })),
-    [allMailMessages, attentionByAddress, laterLabel, reminders, status],
+    [allMailMessages, attentionByAddress, drafts?.length, laterLabel, reminders, status],
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
@@ -1454,15 +1554,25 @@ export function InboxApp({
     return <LoginRequiredScreen />;
   }
 
-  function openCompose() {
+  function openCompose(draftId: string | null = null) {
     if (panelClosing) {
       return;
     }
 
+    if (!panelMode) composeReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPanelClosing(false);
     setZenClosing(false);
+    setComposeDraftId(draftId);
     setPanelMode("compose");
     setZen(preferences.composeZenByDefault);
+  }
+
+  function restoreComposeFocus() {
+    const target = composeReturnFocusRef.current;
+    composeReturnFocusRef.current = null;
+    window.requestAnimationFrame(() => {
+      if (target?.isConnected) target.focus({ preventScroll: true });
+    });
   }
 
   function openLibrary() {
@@ -1669,9 +1779,12 @@ export function InboxApp({
 
     if (shouldReduceMotion()) {
       setPanelMode(null);
+      setComposeDraftId(null);
+      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
+      restoreComposeFocus();
       return;
     }
 
@@ -1682,10 +1795,13 @@ export function InboxApp({
 
     closeTimerRef.current = setTimeout(() => {
       setPanelMode(null);
+      setComposeDraftId(null);
+      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
       closeTimerRef.current = null;
+      restoreComposeFocus();
     }, PANEL_ANIM_MS);
   }
 
@@ -1737,7 +1853,8 @@ export function InboxApp({
     });
   }
 
-  function selectMailbox(mailbox: Mailbox) {
+  function selectMailbox(mailbox: Mailbox, focusDestination = false) {
+    if (focusDestination) libraryReturnFocusRef.current = null;
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
       if (mailbox === "inbox") setClassificationView("human");
@@ -1749,6 +1866,9 @@ export function InboxApp({
       setSelectedThreadAccountId(null);
       setOrganizationOpen(false);
     });
+    if (focusDestination) {
+      window.requestAnimationFrame(() => contentPaneRef.current?.focus({ preventScroll: true }));
+    }
   }
 
   function retryInbox() {
@@ -2223,7 +2343,7 @@ export function InboxApp({
                 <button
                   aria-current={mailbox.id === activeMailbox ? "page" : undefined}
                   className="mailbox-tab"
-                  onClick={() => selectMailbox(mailbox.id)}
+                  onClick={() => selectMailbox(mailbox.id, true)}
                   key={mailbox.label}
                   type="button"
                 >
@@ -2240,9 +2360,9 @@ export function InboxApp({
           </a>
         </aside>
 
-        <section aria-label={selectedThreadId ? "Message reader" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined}>
+        <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
-            <InboxView
+            {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               agentEventActionErrors={agentEventActionErrors}
               agentEvents={agentEvents}
@@ -2294,7 +2414,7 @@ export function InboxApp({
               personFilter={personFilter}
               status={status}
               syncStatus={syncStatus}
-              isRefreshing={status === "syncing" && messages.length > 0}
+              isRefreshing={isGmailRefreshing && messages.length > 0}
               onRefresh={() => setRefreshKey((key) => key + 1)}
               onAttentionChange={updateSenderAttention}
               onBulkAttentionChange={updateSelectedSenderAttention}
@@ -2309,7 +2429,7 @@ export function InboxApp({
               reminders={reminders}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
               viewMode={activeCollection ? "collection" : activeMailbox}
-            />
+            />}
           </div>
           <div style={{ display: selectedThreadId ? undefined : "none" }}>
             <MessageReader
@@ -2334,7 +2454,7 @@ export function InboxApp({
         </section>
       </main>
 
-      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || Boolean(organizerMessage) || undefined} onClick={openCompose} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
+      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || Boolean(organizerMessage) || undefined} onClick={() => openCompose()} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -3045,11 +3165,12 @@ function WaveGlyph() {
   return <svg aria-hidden="true" className="wave-glyph" viewBox="0 0 24 24"><path d="M3 8.5c2.5-2.7 4.6-2.7 7.1 0s4.6 2.7 7.1 0 3.8-2.7 3.8-2.7M3 14.5c2.5-2.7 4.6-2.7 7.1 0s4.6 2.7 7.1 0 3.8-2.7 3.8-2.7" /></svg>;
 }
 
-function RailGlyph({ name }: { name: "inbox" | "focus" | "quiet" | "later" | "library" | "settings" }) {
+function RailGlyph({ name }: { name: "inbox" | "focus" | "quiet" | "later" | "drafts" | "library" | "settings" }) {
   if (name === "inbox") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM4 14h4l1.5 2h5l1.5-2h4" /></svg>;
   if (name === "focus") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8zM18.5 15l.7 2.1 2.3.9-2.3.9-.7 2.1-.7-2.1-2.3-.9 2.3-.9z" /></svg>;
   if (name === "quiet") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19.2 15.2A8 8 0 0 1 8.8 4.8 8.5 8.5 0 1 0 19.2 15.2Z" /></svg>;
   if (name === "later") return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2" /></svg>;
+  if (name === "drafts") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h10l4 4V19.5H5zM15 4.5v4h4M8 13h8M8 16h5" /></svg>;
   if (name === "library") return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4-8 4zM4 12l8 4 8-4M4 16l8 4 8-4" /></svg>;
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>;
 }
@@ -3229,8 +3350,8 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   onOpenLibrary: () => void;
   onSelectMailbox: (mailbox: Mailbox) => void;
 }) {
-  const items: Array<{ id: "inbox" | "focus" | "quiet" | "later"; label: string }> = [
-    { id: "inbox", label: "Inbox" }, { id: "focus", label: "Focus" }, { id: "quiet", label: "Quiet" }, { id: "later", label: "Later" },
+  const items: Array<{ id: "inbox" | "focus" | "quiet" | "later" | "drafts"; label: string }> = [
+    { id: "inbox", label: "Inbox" }, { id: "focus", label: "Focus" }, { id: "quiet", label: "Quiet" }, { id: "later", label: "Later" }, { id: "drafts", label: "Drafts" },
   ];
   return <aside aria-label="Primary navigation" className="wave-rail" inert={libraryOpen || undefined}>
     <button aria-label="Inbox stream" className="wave-rail-brand" onClick={() => onSelectMailbox("inbox")} type="button"><WaveGlyph /></button>
@@ -4190,6 +4311,54 @@ export function InboxSyncAlert({ errorMessage, errorStatus }: { errorMessage: st
         Reconnect Gmail <span aria-hidden="true">→</span>
       </a>
     </div>
+  );
+}
+
+function draftProviderStatusLabel(draft: Pick<MessageDraft, "providerSyncStatus">) {
+  if (draft.providerSyncStatus === "synced") return "Saved to Gmail";
+  if (draft.providerSyncStatus === "pending") return "Syncing to Gmail…";
+  if (draft.providerSyncStatus === "failed") return "Needs attention";
+  return "Saved to Orca";
+}
+
+export function DraftsView({ drafts, status = "ready", error = null, onRetry = () => undefined, onOpenDraft }: { drafts: MessageDraft[] | null; status?: "loading" | "ready" | "error"; error?: string | null; onRetry?: () => void; onOpenDraft: (draft: MessageDraft) => void }) {
+  if (status === "loading" || drafts === null) {
+    return <section className="drafts-view" aria-labelledby="drafts-view-title"><header className="inbox-header drafts-view-header"><div><span className="inbox-eyebrow">Messages you are still writing</span><h1 id="drafts-view-title">Drafts</h1><p>Loading your saved drafts…</p></div></header><InboxStatusState description="Orca is checking your saved notes." eyebrow="Loading" title="Drafts are on their way" /></section>;
+  }
+  if (status === "error") {
+    return <section className="drafts-view" aria-labelledby="drafts-view-title"><header className="inbox-header drafts-view-header"><div><span className="inbox-eyebrow">Messages you are still writing</span><h1 id="drafts-view-title">Drafts</h1><p>Your saved drafts could not be loaded.</p></div></header><InboxStatusState action={<button className="empty-state-action" onClick={onRetry} type="button">Try again</button>} description={error ?? "Please try again."} eyebrow="Could not load drafts" title="Your drafts are still safe" /></section>;
+  }
+  return (
+    <section className="drafts-view" aria-labelledby="drafts-view-title">
+      <header className="inbox-header drafts-view-header">
+        <div>
+          <span className="inbox-eyebrow">Messages you are still writing</span>
+          <h1 id="drafts-view-title">Drafts</h1>
+          <p>{drafts.length ? `${drafts.length} saved ${drafts.length === 1 ? "draft" : "drafts"}.` : "Your unfinished notes will stay here."}</p>
+        </div>
+      </header>
+      {drafts.length ? (
+        <ol className="draft-list">
+          {drafts.map((draft) => (
+            <li key={draft.id}>
+              <button className="draft-row" onClick={() => onOpenDraft(draft)} type="button">
+                <span className="draft-row-copy">
+                  <strong>{draft.to.length ? draft.to.map((recipient) => recipient.name ?? recipient.email).join(", ") : "No recipient yet"}</strong>
+                  <span>{draft.subject.trim() || "(no subject)"}</span>
+                  <small>{draft.body.text.trim() || "Start with the human part…"}</small>
+                </span>
+                <span className="draft-row-meta">
+                  <span>{draftProviderStatusLabel(draft)}</span>
+                  <time dateTime={draft.updatedAt}>{formatReceivedAt(draft.updatedAt)}</time>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <InboxStatusState description="Open Write to start something human. Orca saves drafts here as you work." eyebrow="Nothing waiting" title="No drafts yet" />
+      )}
+    </section>
   );
 }
 
@@ -5418,6 +5587,17 @@ export function getLatestThreadRows(messages: InboxMessage[]) {
     }
   }
   return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || a.id.localeCompare(b.id));
+}
+
+function sameMailAccount(left: MailAccount, right: MailAccount) {
+  return left.id === right.id
+    && left.provider === right.provider
+    && left.email === right.email
+    && left.displayName === right.displayName
+    && left.avatarUrl === right.avatarUrl
+    && left.capabilities.read === right.capabilities.read
+    && left.capabilities.draft === right.capabilities.draft
+    && left.capabilities.send === right.capabilities.send;
 }
 
 export function mergeMessages(existing: InboxMessage[], incoming: InboxMessage[]) {
