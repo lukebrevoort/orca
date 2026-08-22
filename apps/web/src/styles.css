@@ -4672,6 +4672,13 @@ button, input, textarea { font-family: var(--orca-font-body); }
   .feedback-kit-trigger span { display: none; }
   .wave-rail-account-wrap { display: none; }
   .content-pane, .content-pane:not(.content-pane-reader) { width: min(100% - 32px, 720px); }
+  /* BRE-303: keep inbox content in a scrollport above the fixed mobile controls. */
+  .content-pane:not(.content-pane-reader) { height: calc(100vh - 144px);
+    height: calc(100dvh - 144px);
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
   .inbox-view { padding-top: 28px; }
   .stream-search { width: min(220px, 40vw); }
   .pinned-people { gap: 14px; overflow-x: auto; padding: 4px; }
@@ -5355,6 +5362,13 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
   padding-right: 16px;
 }
 
+@media (max-width: 390px) {
+  /* BRE-302: give the mute popover the card's full inline width at supported phone widths. */
+  .agent-event-mute-menu { flex: 0 0 100%; min-width: 0; }
+  .agent-event-mute-menu summary { width: max-content; }
+  .agent-event-mute-menu > div { left: 0; min-width: 0; right: 0; width: auto; }
+}
+
 @media (max-width: 360px) {
   .inbox-view:not(.inbox-view-later):not(.inbox-view-collection) .classification-correction {
     left: 0;
@@ -5414,7 +5428,7 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
   transition: background var(--orca-motion-fast), border-color var(--orca-motion-fast), opacity var(--orca-motion-fast);
 }
 
-.agent-events-history-toggle:hover,
+.agent-events-history-toggle:hover:not(:disabled),
 .agent-event-actions button:hover:not(:disabled),
 .agent-event-mute-menu summary:hover,
 .agent-events-error button:hover {
@@ -5562,6 +5576,7 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
   margin-top: 13px;
 }
 
+.agent-events-history-toggle:disabled,
 .agent-event-actions button:disabled,
 .agent-event-mute-menu summary[aria-disabled="true"] {
   cursor: not-allowed;

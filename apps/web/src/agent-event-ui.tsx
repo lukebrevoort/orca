@@ -69,6 +69,7 @@ export function AgentEventTimeline({
   const active = events.filter((event) => !quietedStates.has(event.lifecycle.state));
   const quieted = events.filter((event) => quietedStates.has(event.lifecycle.state));
   const visible = showQuieted ? [...active, ...quieted] : active;
+  const mutationBusy = busyEventId !== null;
 
   if (status === "idle" || (status === "ready" && events.length === 0)) return null;
 
@@ -85,6 +86,7 @@ export function AgentEventTimeline({
             aria-controls="orca-signal-list"
             aria-pressed={showQuieted}
             className="agent-events-history-toggle"
+            disabled={mutationBusy}
             onClick={() => setShowQuieted((current) => !current)}
             type="button"
           >
@@ -142,23 +144,41 @@ export function AgentEventTimeline({
                     {event.lifecycle.state === "false_positive" ? <p className="agent-event-disposition">Your correction only changes this local Orca projection. Human Signal and provider mail are unchanged.</p> : null}
                     {actionError ? <p className="agent-event-action-error" role="alert">{actionError}</p> : null}
                     <div className="agent-event-actions">
-                      <button disabled={busy} onClick={() => onOpenSource(event)} ref={sourceButtonRef?.(event.id)} type="button">Open original</button>
-                      {!inactive && event.lifecycle.state === "new" ? <button disabled={busy} onClick={() => onAction(event, { action: "mark_seen" })} type="button">Mark seen</button> : null}
-                      {!inactive ? <button disabled={busy} onClick={() => onAction(event, { action: "dismiss" })} type="button">Dismiss</button> : null}
-                      {!inactive ? <button disabled={busy} onClick={() => onAction(event, { action: "snooze", until: tomorrowAtNine() })} type="button">Snooze</button> : null}
-                      {!inactive ? <button disabled={busy} onClick={() => onAction(event, { action: "mark_false_positive" })} type="button">Not useful</button> : null}
+                      <button onClick={() => onOpenSource(event)} ref={sourceButtonRef?.(event.id)} type="button">Open original</button>
+                      {!inactive && event.lifecycle.state === "new" ? <button disabled={mutationBusy} onClick={() => onAction(event, { action: "mark_seen" })} type="button">Mark seen</button> : null}
+                      {!inactive ? <button disabled={mutationBusy} onClick={() => onAction(event, { action: "dismiss" })} type="button">Dismiss</button> : null}
+                      {!inactive ? <button disabled={mutationBusy} onClick={() => onAction(event, { action: "snooze", until: tomorrowAtNine() })} type="button">Snooze</button> : null}
+                      {!inactive ? <button disabled={mutationBusy} onClick={() => onAction(event, { action: "mark_false_positive" })} type="button">Not useful</button> : null}
                       {!inactive ? (
-                        <details className="agent-event-mute-menu">
-                          <summary aria-disabled={busy || undefined}>Mute…</summary>
+                        <details
+                          className="agent-event-mute-menu"
+                          onToggle={(interaction) => {
+                            if (mutationBusy && interaction.currentTarget.open) interaction.currentTarget.open = false;
+                          }}
+                          open={mutationBusy ? false : undefined}
+                        >
+                          <summary
+                            aria-disabled={mutationBusy || undefined}
+                            onClick={(interaction) => {
+                              if (mutationBusy) interaction.preventDefault();
+                            }}
+                            onKeyDown={(interaction) => {
+                              if (mutationBusy && (interaction.key === "Enter" || interaction.key === " ")) interaction.preventDefault();
+                            }}
+                            onPointerDown={(interaction) => {
+                              if (mutationBusy) interaction.preventDefault();
+                            }}
+                            tabIndex={mutationBusy ? -1 : undefined}
+                          >Mute…</summary>
                           <div>
-                            <button disabled={busy} onClick={() => onAction(event, { action: "mute", target: { scope: "sender_address", value: event.source.sender.email.trim().toLowerCase() } })} type="button">Mute {event.source.sender.name ?? event.source.sender.email}</button>
-                            <button disabled={busy} onClick={() => onAction(event, { action: "mute", target: { scope: "sender_domain", value: senderDomain.toLowerCase() } })} type="button">Mute {senderDomain}</button>
-                            <button disabled={busy} onClick={() => onAction(event, { action: "mute", target: { scope: "event_kind", value: event.eventKind } })} type="button">Mute {agentEventKindLabel(event.eventKind).toLowerCase()}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "sender_address", value: event.source.sender.email.trim().toLowerCase() } }); }} type="button">Mute {event.source.sender.name ?? event.source.sender.email}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "sender_domain", value: senderDomain.toLowerCase() } }); }} type="button">Mute {senderDomain}</button>
+                            <button disabled={mutationBusy} onClick={(interaction) => { focusSignalSource(interaction.currentTarget); onAction(event, { action: "mute", target: { scope: "event_kind", value: event.eventKind } }); }} type="button">Mute {agentEventKindLabel(event.eventKind).toLowerCase()}</button>
                           </div>
                         </details>
                       ) : null}
-                      {event.lifecycle.state === "muted" && matchingMutes.map((mute) => <button className="agent-event-restore" disabled={busy} key={mute.id} onClick={() => onUnmute?.(event, mute)} type="button">Unmute {muteTargetLabel(mute)}</button>)}
-                      {inactive && event.lifecycle.state !== "retracted" ? <button className="agent-event-restore" disabled={busy || (event.lifecycle.state === "muted" && matchingMutes.length > 0)} onClick={() => onAction(event, { action: "restore" })} type="button">{event.lifecycle.state === "muted" ? "Restore event" : "Restore"}</button> : null}
+                      {event.lifecycle.state === "muted" && matchingMutes.map((mute) => <button className="agent-event-restore" disabled={mutationBusy} key={mute.id} onClick={() => onUnmute?.(event, mute)} type="button">Unmute {muteTargetLabel(mute)}</button>)}
+                      {inactive && event.lifecycle.state !== "retracted" ? <button className="agent-event-restore" disabled={mutationBusy || (event.lifecycle.state === "muted" && matchingMutes.length > 0)} onClick={() => onAction(event, { action: "restore" })} type="button">{event.lifecycle.state === "muted" ? "Restore event" : "Restore"}</button> : null}
                       {event.lifecycle.state === "muted" && matchingMutes.length ? <span className="agent-event-saving">Unmute the local rule before restoring the event.</span> : null}
                       {busy ? <span className="agent-event-saving" role="status">Saving locally…</span> : null}
                     </div>
@@ -171,6 +191,10 @@ export function AgentEventTimeline({
       ) : null}
     </section>
   );
+}
+
+function focusSignalSource(muteButton: HTMLButtonElement) {
+  muteButton.closest(".agent-event-actions")?.querySelector<HTMLButtonElement>(":scope > button")?.focus();
 }
 
 function tomorrowAtNine() {
