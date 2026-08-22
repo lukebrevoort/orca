@@ -1,4 +1,8 @@
-import { replyBriefContextBundleSchema } from "./reply-brief.ts";
+import {
+  createDeterministicReplyBrief,
+  replyBriefContextBundleSchema,
+  replyBriefOutputSchema,
+} from "./reply-brief.ts";
 
 /** Synthetic, redacted scheduling request for boundary and fallback tests. */
 export const redactedSchedulingReplyBriefFixture = replyBriefContextBundleSchema.parse({
@@ -56,3 +60,65 @@ export const redactedSchedulingReplyBriefFixture = replyBriefContextBundleSchema
     truncatedFields: [],
   },
 });
+
+/** Ready-state output fixture for UI and contract consumers. */
+export const schedulingReplyBriefFixture = replyBriefOutputSchema.parse((() => {
+  const deterministic = createDeterministicReplyBrief(redactedSchedulingReplyBriefFixture);
+  return {
+    ...deterministic,
+    intent: {
+      summary: "The sender is asking to schedule a 30-minute proposal review.",
+      certainty: "confirmed",
+      sourceRefs: ["message:message_redacted_scheduling"],
+    },
+    facts: [
+      ...deterministic.facts,
+      {
+        text: "The proposed topic is a review of the proposal.",
+        certainty: "confirmed",
+        sourceRefs: ["message:message_redacted_scheduling"],
+      },
+    ],
+    constraints: [
+      ...deterministic.constraints,
+      {
+        text: "The sender proposed Tuesday or Wednesday between 2:00 and 4:00 PM Mountain Time.",
+        certainty: "confirmed",
+        sourceRefs: ["message:message_redacted_scheduling"],
+      },
+    ],
+    questions: [
+      {
+        text: "Which available time, if any, works for the recipient?",
+        certainty: "confirmed",
+        sourceRefs: ["message:message_redacted_scheduling", "availability:free-busy"],
+      },
+      {
+        text: "The preferred meeting platform is unknown.",
+        certainty: "unknown",
+        sourceRefs: ["message:message_redacted_scheduling"],
+      },
+    ],
+    considerations: [
+      {
+        text: "Acknowledge the scheduling request.",
+        certainty: "confirmed",
+        sourceRefs: ["message:message_redacted_scheduling"],
+      },
+      {
+        text: "Choose an available window or explain that neither works.",
+        certainty: "confirmed",
+        sourceRefs: ["message:message_redacted_scheduling", "availability:free-busy"],
+      },
+      {
+        text: "Decide whether the meeting platform needs clarification.",
+        certainty: "unknown",
+        sourceRefs: ["message:message_redacted_scheduling"],
+      },
+    ],
+    confidence: {
+      level: "high",
+      rationale: "The scheduling request, duration, and proposed window are explicit in the selected message.",
+    },
+  };
+})());

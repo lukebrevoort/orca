@@ -10,28 +10,49 @@ export {
   m5NormalizedFixtureMessages,
 } from "./fixtures.ts";
 
-export { redactedSchedulingReplyBriefFixture } from "./reply-brief.fixture.ts";
+export {
+  redactedSchedulingReplyBriefFixture,
+  schedulingReplyBriefFixture,
+} from "./reply-brief.fixture.ts";
 
 export {
   createDeterministicReplyBrief,
+  createReplyBriefInterpretationEnvelope,
+  humanOwnedReplyBriefPolicy,
   m6ReplyBriefRuntimeDecision,
+  replyBriefAvailabilityContextSchema,
+  replyBriefClaimCertaintySchema,
+  replyBriefContractVersion,
   replyBriefContextBundleSchema,
   replyBriefContextMessageSchema,
   replyBriefContextSourceSchema,
   replyBriefDisclosureCopy,
   replyBriefFreeBusySchema,
+  replyBriefInterpretationEnvelopeSchema,
+  replyBriefItemSchema,
   replyBriefOutputSchema,
+  replyBriefProhibitedOutputFields,
   replyBriefSourceRefSchema,
   replyBriefSourceUrlSchema,
+  replyBriefStatusSchema,
+  replyBriefUnavailableReasonSchema,
+  replyBriefViewStateSchema,
 } from "./reply-brief.ts";
 
 export type {
+  ReplyBriefAvailabilityContext,
+  ReplyBriefClaimCertainty,
   ReplyBriefContextBundle,
   ReplyBriefContextMessage,
   ReplyBriefContextSource,
   ReplyBriefFreeBusy,
+  ReplyBriefInterpretationEnvelope,
+  ReplyBriefItem,
   ReplyBriefOutput,
   ReplyBriefSourceRef,
+  ReplyBriefStatus,
+  ReplyBriefUnavailableReason,
+  ReplyBriefViewState,
 } from "./reply-brief.ts";
 
 export {
