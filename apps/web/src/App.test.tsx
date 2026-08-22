@@ -5,7 +5,7 @@ import { m5InboxFixture } from "@orca/shared";
 import { ApiRequestError, App, DraftsView, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxApp, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
-import { buildDraftContent, collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
+import { buildDraftContent, collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, mergeDraftAttachments, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
 
 describe("App", () => {
   test("checks for a session before rendering the inbox", () => {
@@ -811,8 +811,9 @@ describe("App", () => {
     const draft = createEmptyComposeDraft("account");
     draft.subject = "Updated subject";
     const serverAttachment = { id: "a1", filename: "notes.pdf", mimeType: "application/pdf", size: 12, contentBase64: "c2VjcmV0" };
+    const localAttachment = { id: "a2", filename: "new.txt", mimeType: "text/plain", size: 3, contentBase64: "bmV3" };
     expect(buildDraftContent(draft, [serverAttachment], false)).not.toHaveProperty("attachments");
-    expect(buildDraftContent(draft, [serverAttachment], true).attachments).toEqual([serverAttachment]);
+    expect(buildDraftContent(draft, mergeDraftAttachments([serverAttachment], [localAttachment]), true).attachments).toEqual([serverAttachment, localAttachment]);
   });
 
   test("keeps the new-draft and saved-draft storage scopes independent", () => {

@@ -1195,15 +1195,27 @@ export function InboxApp({
       try {
         setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
         await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
-        const refreshedView = classificationViewRef.current;
-        const refreshedPath = refreshedView === "all"
-          ? "/v1/inbox?view=all&classification=all&limit=100"
-          : `/v1/inbox?classification=${refreshedView}&limit=100`;
-        const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
+        const readInboxSnapshot = async (view: ClassificationView) => {
+          const refreshedPath = view === "all"
+            ? "/v1/inbox?view=all&classification=all&limit=100"
+            : `/v1/inbox?classification=${view}&limit=100`;
+          const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
+          const [refreshedInbox, refreshedAllInbox] = await Promise.all([
+            fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
+            refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
+          ]);
+          return { refreshedInbox, refreshedAllInbox };
+        };
+        let refreshedView = classificationViewRef.current;
+        let refreshedSnapshot = await readInboxSnapshot(refreshedView);
+        if (classificationViewRef.current !== refreshedView) {
+          refreshedView = classificationViewRef.current;
+          refreshedSnapshot = await readInboxSnapshot(refreshedView);
+        }
         const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
           fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
-          fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
-          refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
+          Promise.resolve(refreshedSnapshot.refreshedInbox),
+          Promise.resolve(refreshedSnapshot.refreshedAllInbox),
         ]);
         if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
         classificationPageRequestRef.current += 1;
@@ -1259,7 +1271,7 @@ export function InboxApp({
       if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
     });
     return () => controller.abort();
-  }, [account, demoMode, draftRefreshKey, status]);
+  }, [account, demoMode, status]);
 
   useEffect(() => {
     if (demoMode) {

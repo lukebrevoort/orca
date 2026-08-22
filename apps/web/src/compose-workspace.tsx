@@ -260,6 +260,12 @@ export function buildDraftContent(
   return content;
 }
 
+export function mergeDraftAttachments(existing: MessageDraft["attachments"], additions: MessageDraft["attachments"]) {
+  const merged = new Map(existing.map((attachment) => [attachment.id, attachment]));
+  for (const attachment of additions) merged.set(attachment.id, attachment);
+  return [...merged.values()];
+}
+
 type DurableDraftDeliveryOperations = {
   inspect(draftId: string): Promise<MessageDraft>;
   create(content: DurableDraftContent): Promise<MessageDraft>;
@@ -399,6 +405,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
   const saveSequenceRef = useRef<Promise<void>>(Promise.resolve());
   const saveScopeRef = useRef(scopeKey);
   const attachmentsDirtyRef = useRef(draft.attachments.length > 0);
+  const serverAttachmentsRef = useRef<MessageDraft["attachments"]>([]);
   const processedRetryTokenRef = useRef(0);
   const pollTimerRef = useRef<number | null>(null);
   const autosaveTimerRef = useRef<number | null>(null);
@@ -434,6 +441,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     saveScopeRef.current = scopeKey;
     saveSequenceRef.current = Promise.resolve();
     attachmentsDirtyRef.current = false;
+    serverAttachmentsRef.current = [];
     revokeComposeAttachments(attachmentsRef.current);
     const restored = readComposeDraft(accountId, typeof window === "undefined" ? undefined : window.localStorage, scope);
     persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
@@ -478,6 +486,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
         attachmentsDirtyRef.current = false;
+        serverAttachmentsRef.current = latest.attachments;
         lastRemoteSignatureRef.current = remoteContentSignature(restored);
         persistedDraftRef.current = JSON.stringify(persistableDraft(restored));
         window.localStorage.setItem(draftStorageKey(accountId, scope), persistedDraftRef.current);
@@ -489,6 +498,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         serverIdRef.current = latest.id;
         serverRevisionRef.current = latest.revision;
         attachmentsDirtyRef.current = false;
+        serverAttachmentsRef.current = latest.attachments;
         lastRemoteSignatureRef.current = remoteContentSignature(serverDraft);
         if (remoteContentSignature(local) !== lastRemoteSignatureRef.current && (local.revision === null || latest.revision > local.revision)) {
           setConflict({ server: latest, local });
@@ -540,7 +550,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     const attachments = snapshot.attachments.map(({ id, filename, mimeType, size }) => ({ id, filename, mimeType, size, contentBase64: null }));
     const serverId = serverIdRef.current;
     const revision = serverRevisionRef.current;
-    const content = buildDraftContent(snapshot, attachments, attachmentsDirtyRef.current || serverId === null);
+    const content = buildDraftContent(snapshot, mergeDraftAttachments(serverAttachmentsRef.current, attachments), attachmentsDirtyRef.current || serverId === null);
     try {
       const saved = serverId !== null && revision !== null
         ? await requestDraft(`/v1/drafts/${encodeURIComponent(serverId)}`, messageDraftSchema, {
@@ -556,6 +566,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       if (storageScopeRef.current !== expectedScopeKey || serverIdRef.current !== serverId || serverRevisionRef.current !== revision) return;
       serverIdRef.current = saved.id;
       serverRevisionRef.current = saved.revision;
+      serverAttachmentsRef.current = saved.attachments;
       lastRemoteSignatureRef.current = signature;
       setDraft((current) => ({ ...current, id: saved.id, revision: saved.revision, providerSyncStatus: saved.providerSyncStatus, providerSyncError: saved.providerSyncError }));
       setSaveStatus(saved.providerSyncStatus === "pending" ? "saving" : saved.providerSyncStatus === "failed" ? "failed" : "saved");
@@ -683,6 +694,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     serverRevisionRef.current = null;
     lastRemoteSignatureRef.current = null;
     attachmentsDirtyRef.current = false;
+    serverAttachmentsRef.current = [];
     setConflict(null);
     setDraft(empty);
     setSaveStatus("saved");
@@ -697,6 +709,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       serverIdRef.current = conflict.server.id;
       serverRevisionRef.current = conflict.server.revision;
       attachmentsDirtyRef.current = false;
+      serverAttachmentsRef.current = conflict.server.attachments;
       lastRemoteSignatureRef.current = remoteContentSignature(restored);
       setDraft(restored);
       setConflict(null);
@@ -709,6 +722,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     serverRevisionRef.current = null;
     lastRemoteSignatureRef.current = null;
     attachmentsDirtyRef.current = local.attachments.length > 0;
+    serverAttachmentsRef.current = [];
     setConflict(null);
     setDraft(local);
     setRetryToken((current) => current + 1);
@@ -745,13 +759,14 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         context: draft.context,
       };
       if (attachmentsDirtyRef.current || serverIdRef.current === null) {
-        content.attachments = await Promise.all(draft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
+        const localAttachments = await Promise.all(draft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
           id,
           filename,
           mimeType,
           size,
           contentBase64: await fileToBase64(file),
         })));
+        content.attachments = mergeDraftAttachments(serverAttachmentsRef.current, localAttachments);
       }
       const idempotencyKeyFor = (draftId: string) => {
         const storageKey = `orca-compose-send:${accountId}:${scope}:${draftId}`;
@@ -777,6 +792,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           });
           serverIdRef.current = saved.id;
           serverRevisionRef.current = saved.revision;
+          serverAttachmentsRef.current = saved.attachments;
           return saved;
         },
         update: async (draftId, revision, nextContent) => {
@@ -787,6 +803,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
           });
           serverIdRef.current = saved.id;
           serverRevisionRef.current = saved.revision;
+          serverAttachmentsRef.current = saved.attachments;
           return saved;
         },
         send: (draftId, revision, idempotencyKey) => requestDraft(`/v1/drafts/${encodeURIComponent(draftId)}/send`, deliveryResultSchema, {
@@ -797,6 +814,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
       });
       serverIdRef.current = delivery.draft.id;
       serverRevisionRef.current = delivery.draft.revision;
+      serverAttachmentsRef.current = delivery.draft.attachments;
       const idempotencyStorageKey = `orca-compose-send:${accountId}:${scope}:${delivery.draft.id}`;
       const result = delivery.result;
       if (result.status === "sent") {
@@ -819,6 +837,7 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     serverRevisionRef.current = null;
     lastRemoteSignatureRef.current = null;
     attachmentsDirtyRef.current = false;
+    serverAttachmentsRef.current = [];
     sendIdempotencyKeyRef.current = null;
     setConflict(null);
     setDraft(empty);
