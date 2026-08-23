@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-306 · G0 Authority Foundation</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f4f1e9; --panel:#fffdf7; --ink:#1d2523; --muted:#68736f; --line:#c7d0ca; --accent:#167f78; --danger:#a33d3d; --ok:#28734f; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#111716; --panel:#19211f; --ink:#edf4f0; --muted:#aab9b3; --line:#34423e; --accent:#73d2c7; --danger:#ff9a96; --ok:#82d5a7; } }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,sans-serif} main{max-width:1180px;margin:auto;padding:48px 24px 80px} h1{font:700 clamp(32px,5vw,60px)/1.03 ui-serif,Georgia,serif;margin:8px 0 14px;max-width:850px} h2{margin:46px 0 16px;font-size:22px} h3{font-size:16px;margin:0 0 8px} p{max-width:78ch}.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.13em;text-transform:uppercase}.lede{font-size:19px;color:var(--muted)} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.step{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--panel);position:relative}.step:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:38%;z-index:2;color:var(--accent);font-weight:900}.tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}.deny{color:var(--danger)}.allow{color:var(--ok)} table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line)}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.code{font-family:ui-monospace,SFMono-Regular,monospace;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto}.small{font-size:13px;color:var(--muted)}@media(max-width:760px){.flow{grid-template-columns:1fr}.step:not(:last-child)::after{content:"↓";right:50%;top:auto;bottom:-18px}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">BRE-306 · G0 Security Gate</div>
+  <h1>Persistent organization authority starts fail-closed.</h1>
+  <p class="lede">One deep Organization module owns authority for humans, agents, and system processes. REST, MCP, provider sync, and background work are adapters; none may recreate policy.</p>
+
+  <h2>Five-operation seam</h2>
+  <div class="flow">
+    <div class="step"><h3>describe</h3><span class="tag">read</span><p>Workspace Schema and supported capabilities.</p></div>
+    <div class="step"><h3>query</h3><span class="tag">read</span><p>Thread organization and exact Trace projections.</p></div>
+    <div class="step"><h3>simulate</h3><span class="tag">no mutation</span><p>Production semantics over historical snapshots.</p></div>
+    <div class="step"><h3>apply</h3><span class="tag">revision</span><span class="tag">idempotency</span><p>Authorized atomic organizational changes.</p></div>
+    <div class="step"><h3>revert</h3><span class="tag">compensating</span><p>A new Change Set; history is never erased.</p></div>
+  </div>
+
+  <h2>Actor eligibility (never an implicit grant)</h2>
+  <table><thead><tr><th>Actor</th><th>describe</th><th>query</th><th>simulate</th><th>apply</th><th>revert</th></tr></thead><tbody>
+    <tr><td>Human</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td></tr>
+    <tr><td>Agent</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td></tr>
+    <tr><td>System</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="allow">eligible</td><td class="deny">denied</td></tr>
+  </tbody></table>
+  <p class="small">Eligibility only permits evaluation. The immutable Capability Snapshot must still grant the operation, Workspace, Accounts, resource families, and action families.</p>
+
+  <h2>Authority decision</h2>
+  <div class="grid">
+    <div class="card"><h3>1 · Identity</h3><p>Actor ID and type must match an exact current, non-revoked Capability Snapshot.</p></div>
+    <div class="card"><h3>2 · Runtime boundary</h3><p>Malformed requests or live authority inputs deny with stable validation codes instead of throwing or trusting erased types.</p></div>
+    <div class="card"><h3>3 · Live scope</h3><p>Requested Workspace and every Account must exist in both live ownership and the grant. No silent narrowing.</p></div>
+    <div class="card"><h3>4 · Derived authority</h3><p>The exact typed command—including create/update lifecycle and changed values—determines resources, actions, target IDs, and risk.</p></div>
+    <div class="card"><h3>5 · Hard exclusion</h3><p class="deny">Mail send, provider deletion, and destructive risk are impossible under M8 Organization authority.</p></div>
+    <div class="card"><h3>6 · Write safety</h3><p>Updates require equal live/expected revisions; creates require nonexistence. Previously reserved idempotency keys deny.</p></div>
+    <div class="card"><h3>7 · Bound execution</h3><p>An allow returns a SHA-256 command digest and preconditions that the mutation transaction must recheck and reserve atomically.</p></div>
+    <div class="card"><h3>8 · Complete Trace</h3><p>Allow and deny preserve the digest, requested families and IDs, Actor, grant, scope, revisions, derived risk, winner, and reason.</p></div>
+  </div>
+
+  <h2>Threats and controls</h2>
+  <table><thead><tr><th>Threat</th><th>G0 control</th><th>Executable evidence</th></tr></thead><tbody>
+    <tr><td>Human with stale or cross-Account state</td><td>Human eligibility still requires the current non-revoked Capability revision and live ownership</td><td>stale, revoked, and cross-Account cases deny</td></tr>
+    <tr><td>Over-scoped or malicious agent</td><td>Full Actor identity, operation, Workspace, Accounts, derived resources, and actions bind to the live grant</td><td>same-ID type swaps and escalation cases deny</td></tr>
+    <tr><td>System worker with ambient authority</td><td>System is operation-limited, Capability-gated, and cannot revert</td><td>system <code>revert</code> denies before capability evaluation</td></tr>
+    <tr><td>Cross-Account exposure / guessed IDs</td><td>Requested Accounts must be a subset of live ownership ∩ granted Accounts</td><td><code>authority.test.ts</code> guessed, stale, ungranted cases</td></tr>
+    <tr><td>Cross-Workspace replay</td><td>Request, grant, and live Workspace IDs must match exactly</td><td>matching Account IDs under a different Workspace deny</td></tr>
+    <tr><td>Malformed boundary input</td><td>The single exported seam parses request and live authority input and fails closed</td><td>invalid or empty input returns stable validation denials without throwing</td></tr>
+    <tr><td>Confused deputy / payload misclassification</td><td>The module derives families and risk from typed mutation contents and binds their canonical digest into the decision</td><td>a write presented as read-only denies; changing a value changes the digest</td></tr>
+    <tr><td>Replay / lost update</td><td>Updates compare live Workspace/resource revisions; creates prove nonexistence; reserved keys deny</td><td>stale, missing, duplicate, and create-over-existing cases deny</td></tr>
+    <tr><td>Malicious Rule source</td><td>G0 denies undeclared resource/action families; compiler limits and pure evaluation remain blocking at G1</td><td>G1 activation remains out of scope until BRE-316 passes</td></tr>
+    <tr><td>Authority creep into outbound mail</td><td>Send, delete, and destructive risk are hard-denied before capability evaluation</td><td>even a forged grant containing them denies</td></tr>
+  </tbody></table>
+
+  <h2>Denial behavior by operation</h2>
+  <table><thead><tr><th>Operation</th><th>On denial</th><th>Data / mutation guarantee</th></tr></thead><tbody>
+    <tr><td><code>describe</code></td><td>Return a stable denial code and, for validated input, a Trace.</td><td>No Workspace Schema or Account projection is returned.</td></tr>
+    <tr><td><code>query</code></td><td>Return a stable denial code and Trace.</td><td>No partial Account intersection and no Thread data are returned.</td></tr>
+    <tr><td><code>simulate</code></td><td>Return a stable denial code and Trace.</td><td>No historical result is disclosed; Workspace state is unchanged.</td></tr>
+    <tr><td><code>apply</code></td><td>Return a stable denial code and Trace before the transaction.</td><td>Nothing commits; stale revisions or duplicate keys deny, and the transaction atomically reserves the allowed key.</td></tr>
+    <tr><td><code>revert</code></td><td>Return a stable denial code and Trace before compensation.</td><td>No history is rewritten; compensation uses the same bound execution preconditions.</td></tr>
+  </tbody></table>
+
+  <h2>Verify</h2>
+  <div class="code">bun test apps/api/src/organization/authority.test.ts<br>bun run typecheck<br>bun run test</div>
+  <p class="small">Focused authority suite: 13 tests · Contract: <code>packages/shared/src/organization-contract.ts</code> · Gate: <code>apps/api/src/organization/authority.ts</code> · ADR: <code>docs/adr/0001-deep-organization-authority-seam.md</code></p>
+</main></body></html>

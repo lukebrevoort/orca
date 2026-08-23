@@ -86,6 +86,10 @@ _Avoid_: Log, summary
 
 ## Change and Authority
 
+**Organization Operation**:
+One of the five semantic requests at the Organization seam: describe, query, simulate, apply, or revert.
+_Avoid_: CRUD endpoint, tool action
+
 **Change Set**:
 An atomic, revision-checked set of authorized organizational changes with its Trace and risk classification.
 _Avoid_: Batch request, migration
@@ -101,6 +105,10 @@ _Avoid_: User when the caller may be an agent or system
 **Capability**:
 A scoped permission for an Actor to inspect or change specified Workspace resources and action families.
 _Avoid_: Role, access level
+
+**Capability Snapshot**:
+The immutable Capability revision evaluated for one Organization Operation and preserved in its Trace.
+_Avoid_: Current role, permission lookup
 
 **Manual Override**:
 A user-selected Thread outcome that takes precedence over Rules and Lane Policy.
