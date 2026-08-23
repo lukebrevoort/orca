@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.4",
+    "axe-core": "^4.10.3",
     "typescript": "^5.8.3"
   }
 }

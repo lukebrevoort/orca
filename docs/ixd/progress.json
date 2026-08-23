@@ -1,7 +1,8 @@
 {
   "product": "Orca Organization System",
-  "platform": "web",
+  "platform": "both",
   "language": "en",
+  "scope": "BRE-307: P07 Organization Studio only; no inbox, reader, composer, Zen Mode, or broader M8 page redesign",
   "phases": {
     "1": {
       "status": "done",
@@ -19,28 +20,28 @@
       "summary": "3 flows: agent-created organization, inbound rule evaluation, and explainable user correction with simulation and rollback"
     },
     "4": {
-      "status": "pending",
-      "file": null,
-      "summary": null,
-      "pagesCompleted": [],
-      "pagesTotal": 12
+      "status": "done",
+      "file": "phase4-page-specs/page-P07.md",
+      "summary": "BRE-307 scoped spec complete for P07 Organization Studio; Glass Box default, Tide Table deep edit, full trust lifecycle",
+      "pagesCompleted": ["P07"],
+      "pagesTotal": 1
     },
-    "5": { "status": "pending", "file": null, "summary": null },
-    "6": { "status": "pending", "file": null, "summary": null },
+    "5": { "status": "done", "file": "phase5-components.md", "summary": "P07 tokens and 9 business components specified; all control states are theme-safe and labeled" },
+    "6": { "status": "done", "file": "phase6-visual.md", "summary": "Quiet instrument-panel direction reuses Orca variables; full light/dark mapping and Workspace annotation complete" },
     "7": {
-      "status": "pending",
-      "file": null,
-      "summary": null,
-      "pagesCompleted": [],
-      "pagesTotal": 12
+      "status": "done",
+      "file": "phase7-prototype-mobile.html + phase7-prototype-desktop.html",
+      "summary": "P07 mobile and desktop HTML prototypes complete; 18 contract/axe tests pass and 47/47 heuristic checks pass",
+      "pagesCompleted": ["P07"],
+      "pagesTotal": 1
     },
     "8": {
       "status": "pending",
-      "file": null,
-      "summary": null,
-      "reviewRounds": 0,
+      "file": "phase8-document.md",
+      "summary": "Developer handoff written; Dispatch review 42 remediated and awaiting persona verification",
+      "reviewRounds": 1,
       "reviewResult": null
     }
   },
-  "lastUpdated": "2026-08-23T00:00:00-06:00"
+  "lastUpdated": "2026-08-23T14:45:00-06:00"
 }

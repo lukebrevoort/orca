@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orca Organization — Mobile prototype</title>
+  <style>
+    :root {
+      --orca-ink: #0a0a0b;
+      --orca-paper: #f7f7f5;
+      --orca-muted: #73736f;
+      --orca-border: rgba(31,31,29,.09);
+      --orca-surface: rgba(31,31,29,.035);
+      --orca-surface-hover: rgba(31,31,29,.065);
+      --orca-accent: #536b62;
+      --orca-accent-soft: rgba(83,107,98,.11);
+      --orca-danger: #b44c42;
+      --orca-warning: #8a672e;
+      --orca-control: #ecece8;
+      --orca-control-hover: #e4e4df;
+      --orca-shadow: 0 24px 80px rgba(10,10,11,.12);
+      --font-display: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      --font-body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, monospace;
+      --motion-fast: 140ms;
+      --ease-enter: cubic-bezier(.2,.75,.25,1);
+    }
+    body[data-theme="dark"] {
+      --orca-ink: #e8e8e5;
+      --orca-paper: #191918;
+      --orca-muted: #999994;
+      --orca-border: rgba(235,235,231,.09);
+      --orca-surface: rgba(235,235,231,.035);
+      --orca-surface-hover: rgba(235,235,231,.07);
+      --orca-accent: #94aaa1;
+      --orca-accent-soft: rgba(148,170,161,.12);
+      --orca-danger: #ef8c7f;
+      --orca-warning: #d8bb83;
+      --orca-control: #2a2a28;
+      --orca-control-hover: #333330;
+      --orca-shadow: 0 28px 90px rgba(0,0,0,.45);
+    }
+    * { box-sizing: border-box; }
+    body { align-items: center; background: #dfe1dc; color: var(--orca-ink); display: flex; flex-direction: column; font-family: var(--font-body); gap: 12px; margin: 0; min-height: 930px; padding: 16px; }
+    body[data-theme="dark"] { background: #0f1110; }
+    button, select, input, textarea { min-height: 44px; font: inherit; }
+    button, select, textarea { transition: background-color var(--motion-fast) var(--ease-enter), border-color var(--motion-fast) var(--ease-enter), color var(--motion-fast) var(--ease-enter), box-shadow var(--motion-fast) var(--ease-enter), transform var(--motion-fast) var(--ease-enter); }
+    button:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { background: var(--orca-control); border-color: var(--orca-border); color: var(--orca-muted); cursor: not-allowed; opacity: 1; }
+    .prototype-bar { color: #242722; display: flex; flex-direction: column; gap: 7px; width: 390px; }
+    body[data-theme="dark"] .prototype-bar { color: #d8ddd8; }
+    .prototype-bar strong { font-size: 11px; }
+    .prototype-controls { display: flex; gap: 7px; }
+    .prototype-bar label { align-items: center; display: flex; flex: 1; font-size: 10px; gap: 6px; }
+    .prototype-bar select, .prototype-bar button { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); padding: 0 10px; }
+    .prototype-bar select { flex: 1; min-width: 0; }
+    .phone-frame { background: #080908; border: 1px solid rgba(255,255,255,.12); border-radius: 52px; box-shadow: var(--orca-shadow); height: 844px; overflow: hidden; padding: 7px; position: relative; width: 390px; }
+    .phone-screen { background: var(--orca-paper); border-radius: 45px; display: flex; flex-direction: column; height: 830px; overflow: hidden; }
+    .dynamic-island { background: #080908; border-radius: 999px; height: 24px; left: 137px; position: absolute; top: 13px; width: 116px; z-index: 5; }
+    .status-bar { align-items: center; display: flex; flex: 0 0 44px; font-size: 10px; font-weight: 750; justify-content: space-between; padding: 0 24px; }
+    .mobile-page { display: flex; flex: 1; flex-direction: column; min-height: 0; position: relative; }
+    .page-header { flex: 0 0 auto; padding: 8px 16px 10px; }
+    .header-row { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
+    .eyebrow { color: var(--orca-muted); font-size: 10px; font-weight: 800; letter-spacing: .9px; margin: 0 0 4px; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -1.2px; line-height: 32px; margin-bottom: 0; }
+    .icon-button { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; display: flex; height: 44px; justify-content: center; width: 44px; }
+    .mode-row { align-items: center; display: flex; gap: 8px; margin-top: 12px; }
+    .mode-tabs { display: flex; flex: 1; gap: 6px; }
+    .mode-tabs button { background: transparent; border: 1px solid transparent; border-radius: 999px; color: var(--orca-muted); cursor: pointer; flex: 1; font-size: 11px; font-weight: 750; padding: 0 9px; }
+    .mode-tabs button:hover { background: var(--orca-surface-hover); color: var(--orca-ink); }
+    .mode-tabs button[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .content-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 16px; scrollbar-width: none; }
+    .content-scroll::-webkit-scrollbar { display: none; }
+    .rule-discovery { border-bottom: 1px solid var(--orca-border); border-top: 1px solid var(--orca-border); padding: 12px 0; }
+    .rule-discovery label { color: var(--orca-muted); display: block; font-size: 10px; font-weight: 800; letter-spacing: .8px; margin-bottom: 6px; text-transform: uppercase; }
+    .rule-picker { align-self: stretch; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 12px; color: var(--orca-ink); height: 44px; padding: 0 11px; width: 344px; }
+    .rule-title { padding: 16px 0 12px; }
+    .rule-title h2 { font-family: var(--font-display); font-size: 24px; font-weight: 500; letter-spacing: -.7px; line-height: 27px; margin-bottom: 6px; }
+    .rule-title p { color: var(--orca-muted); font-size: 11px; line-height: 16px; margin-bottom: 0; }
+    .glass-stack { display: flex; flex-direction: column; gap: 7px; }
+    .glass-row { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 13px; color: var(--orca-ink); cursor: pointer; display: block; padding: 11px 12px; text-align: left; width: 100%; }
+    .glass-row:hover { background: var(--orca-surface-hover); }
+    .glass-key { color: var(--orca-accent); display: block; font-size: 10px; font-weight: 850; letter-spacing: .8px; margin-bottom: 5px; text-transform: uppercase; }
+    .glass-row strong { display: block; font-size: 12px; line-height: 17px; }
+    .glass-row small { color: var(--orca-muted); display: block; font-size: 11px; line-height: 16px; margin-top: 3px; }
+    .connector { background: var(--orca-border); height: 7px; margin-left: 20px; width: 1px; }
+    .simulation { border: 1px solid var(--orca-border); border-radius: 13px; margin-top: 14px; overflow: hidden; }
+    .simulation header { align-items: center; background: var(--orca-surface); display: flex; justify-content: space-between; padding: 10px 11px; }
+    .simulation h3 { font-size: 10px; margin-bottom: 0; }
+    .sim-badge { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 8px; font-weight: 800; padding: 5px 7px; }
+    .sim-body { padding: 11px; }
+    .metrics { display: flex; gap: 20px; }
+    .metric strong { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 500; line-height: 24px; }
+    .metric span { color: var(--orca-muted); font-size: 8px; }
+    .sample { border-top: 1px solid var(--orca-border); color: var(--orca-muted); font-size: 9px; line-height: 14px; margin-top: 10px; padding-top: 9px; }
+    .conflict-box, .error-box { border: 1px solid var(--orca-border); border-left: 3px solid var(--orca-warning); border-radius: 10px; color: var(--orca-ink); font-size: 9px; line-height: 14px; margin-top: 9px; padding: 9px; }
+    .error-box { border-left-color: var(--orca-danger); color: var(--orca-danger); }
+    .tide-panel[hidden], .glass-panel[hidden], .subpanel[hidden] { display: none; }
+    .code-shell { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 13px; margin-top: 12px; overflow: hidden; }
+    .code-toolbar { border-bottom: 1px solid var(--orca-border); color: var(--orca-muted); font-size: 8px; padding: 9px 10px; }
+    textarea { align-self: stretch; background: transparent; border: 0; color: var(--orca-ink); font-family: var(--font-mono); font-size: 10px; line-height: 18px; min-height: 270px; outline: 0; padding: 12px; resize: none; width: 342px; }
+    .detail-tabs { border-top: 1px solid var(--orca-border); display: flex; gap: 5px; margin-top: 16px; padding-top: 12px; }
+    .detail-tabs button { background: transparent; border: 1px solid transparent; border-radius: 999px; color: var(--orca-muted); cursor: pointer; flex: 1; font-size: 11px; font-weight: 750; }
+    .detail-tabs button[aria-selected="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .subpanel { padding: 13px 1px 4px; }
+    .subpanel h3 { font-family: var(--font-display); font-size: 19px; font-weight: 500; margin-bottom: 4px; }
+    .subpanel > p { color: var(--orca-muted); font-size: 9px; line-height: 14px; }
+    .trace-step { border-left: 1px solid var(--orca-border); margin-left: 6px; padding: 0 0 12px 15px; position: relative; }
+    .trace-step::before { background: var(--orca-paper); border: 1px solid var(--orca-accent); border-radius: 999px; content: ""; height: 8px; left: -5px; position: absolute; top: 2px; width: 8px; }
+    .trace-step strong, .audit-item strong { display: block; font-size: 10px; }
+    .trace-step span, .audit-item span { color: var(--orca-muted); display: block; font-size: 9px; line-height: 14px; margin-top: 2px; }
+    .audit-item { border-bottom: 1px solid var(--orca-border); padding: 9px 0; }
+    .quiet-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font-size: 11px; font-weight: 750; padding: 0 12px; }
+    .quiet-button:hover:not(:disabled) { background: var(--orca-control-hover); border-color: var(--orca-accent); }
+    .action-bar { align-items: center; border-top: 1px solid var(--orca-border); display: flex; flex: 0 0 56px; gap: 8px; padding: 9px 16px; }
+    .action-bar button { flex: 1; }
+    .bottom-nav { align-items: center; border-top: 1px solid var(--orca-border); display: flex; flex: 0 0 60px; gap: 4px; justify-content: space-around; padding: 5px 10px; }
+    .bottom-nav a { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 11px; color: var(--orca-muted); cursor: pointer; display: flex; flex-direction: column; font-size: 14px; gap: 2px; height: 46px; justify-content: center; text-decoration: none; width: 54px; }
+    .bottom-nav small { font-size: 9px; font-weight: 750; }
+    .bottom-nav a[aria-current="page"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .action-status { color: var(--orca-ink); font-size: 11px; line-height: 16px; margin: 12px 0 0; }
+    .scenario-block { display: none; }
+    .operational-state { background: var(--orca-surface); border: 1px solid var(--orca-border); border-left: 3px solid var(--orca-accent); border-radius: 12px; color: var(--orca-ink); font-size: 11px; line-height: 16px; margin: 12px 0; padding: 11px; }
+    .operational-state strong { display: block; margin-bottom: 2px; }
+    .operational-state[data-kind="warning"] { border-left-color: var(--orca-warning); }
+    .operational-state[data-kind="error"] { border-left-color: var(--orca-danger); }
+    body[data-scenario="default"] [data-visible~="default"], body[data-scenario="loading"] [data-visible~="loading"], body[data-scenario="empty"] [data-visible~="empty"], body[data-scenario="no-access"] [data-visible~="no-access"], body[data-scenario="partial-load"] [data-visible~="partial-load"], body[data-scenario="stale"] [data-visible~="stale"], body[data-scenario="offline"] [data-visible~="offline"], body[data-scenario="simulated"] [data-visible~="simulated"], body[data-scenario="active"] [data-visible~="active"], body[data-scenario="conflict"] [data-visible~="conflict"], body[data-scenario="error"] [data-visible~="error"] { display: block; }
+    dialog { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: var(--orca-shadow); color: var(--orca-ink); padding: 18px; width: 326px; }
+    dialog::backdrop { background: rgba(10,10,11,.48); }
+    dialog h2 { font-family: var(--font-display); font-size: 23px; font-weight: 500; margin-bottom: 8px; }
+    dialog p { color: var(--orca-muted); font-size: 10px; line-height: 16px; }
+    .dialog-actions { display: flex; gap: 7px; justify-content: flex-end; margin-top: 14px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body data-theme="light" data-scenario="default">
+  <div class="prototype-bar" aria-label="Prototype controls">
+    <strong>BRE-307 · Organization direction · Mobile</strong>
+    <div class="prototype-controls"><label>Scenario<select data-scenario-select aria-label="Prototype scenario"><option value="default">Default draft</option><option value="loading">Loading rules</option><option value="empty">Empty workspace</option><option value="no-access">No access</option><option value="partial-load">Partial load</option><option value="stale">Edited · stale</option><option value="offline">Offline</option><option value="simulated">Simulated</option><option value="active">Active</option><option value="conflict">Conflict</option><option value="error">Error</option></select></label><button data-theme-toggle type="button" aria-label="Switch to dark theme">Dark</button></div>
+  </div>
+
+  <main class="phone-frame" data-testid="phone-frame">
+    <span class="dynamic-island" aria-hidden="true"></span>
+    <div class="phone-screen">
+      <header class="status-bar"><span>9:41</span><span aria-label="Cell signal, Wi-Fi, full battery">▥ ◒ ▰</span></header>
+      <section class="mobile-page" aria-labelledby="organization-title">
+        <header class="page-header"><div class="header-row"><div><p class="eyebrow">Your workspace · 8 active</p><h1 id="organization-title">Organization</h1></div><button class="icon-button" data-action="new-rule" aria-label="Create a new rule" type="button">＋</button></div><div class="mode-row"><div class="mode-tabs" role="group" aria-label="Authoring mode"><button data-mode="glass" aria-pressed="true" type="button">Glass Box</button><button data-mode="tide" aria-pressed="false" type="button">Tide Table</button></div></div></header>
+
+        <div class="content-scroll">
+          <section class="rule-discovery" aria-label="Rule discovery"><label for="rule-picker">Rule discovery</label><select class="rule-picker" id="rule-picker" data-rule-picker><option value="production">Production failures · draft</option><option value="purchases">Purchase confirmations · draft</option><option value="pulls">Pull request mentions · active</option><option value="applications">Application updates · active</option></select></section>
+
+          <div class="rule-title"><p class="eyebrow" data-rule-meta>Rule · revision 7 · draft</p><h2 data-rule-title>Keep production failures in focus</h2><p>Readable by people, identical in meaning to the compiled Orca revision.</p><span class="sim-badge" data-revision-chip>rev 7 · draft</span></div>
+
+          <div class="glass-panel" data-panel="glass">
+            <div class="glass-stack">
+              <button class="glass-row" data-edit-field="when" type="button"><span class="glass-key">When</span><strong data-draft-field="when">A thread receives a new message</strong><small>Event · thread.message_received · tap to edit</small></button><div class="connector" aria-hidden="true"></div>
+              <button class="glass-row" data-edit-field="if" type="button"><span class="glass-key">If</span><strong data-draft-field="if">Sender is Vercel and subject contains “failed”</strong><small>All conditions must match · tap to edit</small></button><div class="connector" aria-hidden="true"></div>
+              <button class="glass-row" data-edit-field="then" type="button"><span class="glass-key">Then</span><strong data-draft-field="then">Move to Focus and notify immediately</strong><small>Lane: Focus · Attention: notify · tap to edit</small></button><div class="connector" aria-hidden="true"></div>
+              <button class="glass-row" data-edit-field="because" type="button"><span class="glass-key">Because</span><strong data-draft-field="because">A failed deploy blocks work</strong><small>This reason appears in every Trace · tap to edit</small></button>
+            </div>
+            <section class="simulation scenario-block" data-visible="simulated active conflict" aria-labelledby="simulation-title"><header><h3 id="simulation-title">Historical simulation</h3><span class="sim-badge">2,418 threads</span></header><div class="sim-body"><div class="metrics"><div class="metric"><strong>14</strong><span>would move</span></div><div class="metric"><strong>3</strong><span>would notify</span></div><div class="metric"><strong>0</strong><span>hidden</span></div></div><div class="sample">Sample: “The production deploy failed again” · Vercel</div><div class="conflict-box scenario-block" data-visible="conflict"><strong>Conflict:</strong> “Quiet build notices” also matches 6 threads. Review precedence before activation.</div></div></section>
+            <div class="error-box scenario-block" data-visible="error" role="alert"><strong>Simulation unavailable.</strong> Draft preserved. Retry before activation.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="loading"><strong>Loading rules…</strong>Rule summaries and the current revision are arriving together.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="empty"><strong>No rules yet.</strong>Create a rule to begin; Orca keeps it harmless until simulation.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="no-access" data-kind="error"><strong>Organization is read-only.</strong>Ask a workspace owner for authoring access.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="partial-load" data-kind="warning"><strong>Trace loaded; audit is delayed.</strong>Activation waits for the complete revision record.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="stale" data-kind="warning"><strong>Simulation is stale.</strong>This structured edit changed the draft. Run it again before activation.</div>
+            <div class="operational-state scenario-block" data-operational-state data-visible="offline" data-kind="error"><strong>Offline.</strong>Draft stored locally; simulation resumes after reconnection.</div>
+          </div>
+
+          <div class="tide-panel" data-panel="tide" hidden><div class="code-shell"><div class="code-toolbar">Tide Table · minute language-level editing</div><textarea aria-label="Orca rule source" spellcheck="false">rule production_failures on thread.message_received
+when sender.domain == "vercel.com"
+  and subject contains "failed"
+then lane = Focus
+  attention = notify
+because "A failed deploy blocks work"</textarea></div><div class="error-box scenario-block" data-visible="error" role="alert">Line 3: expected a typed text predicate.</div></div>
+
+          <div class="detail-tabs" role="tablist" aria-label="Rule details"><button id="trace-tab" role="tab" aria-selected="true" aria-controls="trace-panel" data-detail="trace" type="button">Trace</button><button id="audit-tab" role="tab" aria-selected="false" aria-controls="audit-panel" data-detail="audit" type="button">Audit history</button></div>
+          <section class="subpanel" id="trace-panel" role="tabpanel" aria-labelledby="trace-tab" data-subpanel="trace"><h3>Trace</h3><p>The same precedence law powers simulation and live mail.</p><div class="trace-step"><strong>Safety lock</strong><span>No destructive capability requested.</span></div><div class="trace-step"><strong>Manual override</strong><span>No thread-level override found.</span></div><div class="trace-step"><strong>Winning rule</strong><span>Production failures · priority 20 · revision 7</span></div><div class="trace-step"><strong>Lane policy</strong><span>Focus preserves visibility and notification.</span></div><div class="trace-step"><strong>Workspace / fallback</strong><span>Workspace fallback keeps unmatched mail in Inbox.</span></div></section>
+          <section class="subpanel" id="audit-panel" role="tabpanel" aria-labelledby="audit-tab" data-subpanel="audit" hidden><h3>Audit history</h3><p>History is append-only; revert creates a compensating change.</p><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" type="button" disabled>↶ Revert to revision 6</button></section>
+          <p class="action-status" data-action-status aria-live="polite">Simulate before activation.</p>
+        </div>
+
+        <footer class="action-bar"><button class="quiet-button" data-action="simulate" type="button">◇ Simulate</button><button class="quiet-button" data-action="activate" type="button" disabled>Activate</button></footer>
+      </section>
+      <nav class="bottom-nav" aria-label="Orca primary navigation"><a href="#inbox" aria-label="Inbox"><span aria-hidden="true">≋</span><small>Inbox</small></a><a href="#focus" aria-label="Focus"><span aria-hidden="true">▣</span><small>Focus</small></a><a href="#signals" aria-label="Signals"><span aria-hidden="true">✦</span><small>Signals</small></a><a href="#later" aria-label="Later"><span aria-hidden="true">◷</span><small>Later</small></a><a href="#drafts" aria-label="Drafts"><span aria-hidden="true">▤</span><small>Drafts</small></a><a href="#organization" aria-label="Organization" aria-current="page"><span aria-hidden="true">⌘</span><small>Org</small></a></nav>
+    </div>
+  </main>
+
+  <dialog data-revert-dialog><h2>Revert this rule?</h2><p>Orca will create a compensating change set and keep revision 7 in audit history.</p><div class="dialog-actions"><button class="quiet-button" data-dialog-cancel type="button">Cancel</button><button class="quiet-button" data-dialog-confirm type="button">Revert safely</button></div></dialog>
+
+  <script>
+    const body = document.body;
+    const scenarioSelect = document.querySelector('[data-scenario-select]');
+    const activateButton = document.querySelector('[data-action="activate"]');
+    const simulateButton = document.querySelector('[data-action="simulate"]');
+    const revertButton = document.querySelector('[data-action="revert"]');
+    const actionStatus = document.querySelector('[data-action-status]');
+    const themeButton = document.querySelector('[data-theme-toggle]');
+    const revertDialog = document.querySelector('[data-revert-dialog]');
+    const ruleCatalog = {
+      production: { id: 'production', title: 'Keep production failures in focus', revision: 7, status: 'draft', when: 'A thread receives a new message', if: 'Sender is Vercel and subject contains “failed”', then: 'Move to Focus and notify immediately', because: 'A failed deploy blocks work' },
+      purchases: { id: 'purchases', title: 'Quiet purchase confirmations', revision: 3, status: 'draft', when: 'A thread receives a new message', if: 'Message is a receipt or purchase confirmation', then: 'Move to Quiet and add Orders context', because: 'Receipts should stay findable without asking for attention' },
+      pulls: { id: 'pulls', title: 'Focus requested pull-request reviews', revision: 12, status: 'active', when: 'A thread receives a new message', if: 'A pull request requests my review', then: 'Move to Focus', because: 'Review requests need a deliberate response' },
+      applications: { id: 'applications', title: 'Collect application updates', revision: 5, status: 'active', when: 'A thread receives a new message', if: 'Message contains a candidate-status update', then: 'Move to Applications', because: 'Candidate updates belong in one durable context' }
+    };
+    const draftModel = { ...ruleCatalog.production };
+    const scenarioModel = {
+      default: { status: 'draft', gate: 'Simulate before activation.', simulate: true, activate: false, revert: false },
+      loading: { status: 'loading', gate: 'Loading the complete rule revision…', simulate: false, activate: false, revert: false },
+      empty: { status: 'empty', gate: 'Create a rule before simulation.', simulate: false, activate: false, revert: false },
+      'no-access': { status: 'read-only', gate: 'Authoring access is required.', simulate: false, activate: false, revert: false },
+      'partial-load': { status: 'partial', gate: 'Activation waits for complete audit history.', simulate: true, activate: false, revert: false },
+      stale: { status: 'draft · simulation stale', gate: 'Draft changed. Simulate this revision again.', simulate: true, activate: false, revert: false },
+      offline: { status: 'offline draft', gate: 'Draft saved locally; reconnect to simulate.', simulate: false, activate: false, revert: false },
+      simulated: { status: 'draft · simulated', gate: 'Simulation current. Activation is atomic.', simulate: true, activate: true, revert: false },
+      active: { status: 'active', gate: 'Revision active. Revert creates a compensating change.', simulate: false, activate: false, revert: true },
+      conflict: { status: 'draft · conflict', gate: 'Resolve precedence, then simulate again.', simulate: true, activate: false, revert: false },
+      error: { status: 'draft · error', gate: 'Draft preserved. Retry the simulation.', simulate: true, activate: false, revert: false }
+    };
+    function renderDraft() {
+      document.querySelector('[data-rule-title]').textContent = draftModel.title;
+      document.querySelector('[data-rule-meta]').textContent = `Rule · revision ${draftModel.revision} · ${draftModel.status}`;
+      document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${draftModel.status}`;
+      document.querySelector('[data-audit-event]').textContent = `Revision ${draftModel.revision} ${draftModel.status === 'active' ? 'activated' : 'drafted'}`;
+      document.querySelectorAll('[data-draft-field]').forEach(node => { node.textContent = draftModel[node.dataset.draftField]; });
+      document.querySelector('[data-rule-picker]').value = draftModel.id in ruleCatalog ? draftModel.id : 'production';
+    }
+    function markSimulationStale(field) {
+      draftModel.status = 'draft';
+      renderDraft();
+      applyScenario('stale');
+      actionStatus.textContent = `${field} changed. Simulation is stale.`;
+    }
+    function applyScenario(next) {
+      const state = scenarioModel[next];
+      body.dataset.scenario = next;
+      scenarioSelect.value = next;
+      draftModel.status = state.status === 'active' ? 'active' : 'draft';
+      activateButton.disabled = !state.activate;
+      simulateButton.disabled = !state.simulate;
+      revertButton.disabled = !state.revert;
+      actionStatus.textContent = state.gate;
+      document.querySelector('[data-rule-meta]').textContent = `Rule · revision ${draftModel.revision} · ${state.status}`;
+      document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${state.status}`;
+      document.querySelector('[data-audit-event]').textContent = `Revision ${draftModel.revision} ${next === 'active' ? 'activated' : next === 'simulated' ? 'simulated' : 'drafted'}`;
+    }
+    scenarioSelect.addEventListener('change', event => applyScenario(event.target.value));
+    themeButton.addEventListener('click', () => { const dark = body.dataset.theme === 'dark'; body.dataset.theme = dark ? 'light' : 'dark'; themeButton.textContent = dark ? 'Dark' : 'Light'; themeButton.setAttribute('aria-label', dark ? 'Switch to dark theme' : 'Switch to light theme'); });
+    document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); document.querySelectorAll('[data-panel]').forEach(panel => panel.hidden = panel.dataset.panel !== button.dataset.mode); }));
+    document.querySelectorAll('[data-detail]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-detail]').forEach(item => { const selected = item === button; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; }); document.querySelectorAll('[data-subpanel]').forEach(panel => panel.hidden = panel.dataset.subpanel !== button.dataset.detail); }));
+    document.querySelector('[data-rule-picker]').addEventListener('change', event => { Object.assign(draftModel, ruleCatalog[event.target.value]); renderDraft(); applyScenario(draftModel.status === 'active' ? 'active' : 'default'); });
+    document.querySelector('[data-action="new-rule"]').addEventListener('click', () => { Object.assign(draftModel, { id: 'new', title: 'Untitled organization rule', revision: 1, status: 'draft', when: 'A thread receives a new message', if: 'Choose evidence to inspect', then: 'Choose an organization action', because: 'Explain why this deserves attention' }); renderDraft(); markSimulationStale('New rule'); });
+    document.querySelectorAll('[data-edit-field]').forEach(button => button.addEventListener('click', () => { const field = button.dataset.editField; draftModel[field] = `${draftModel[field].replace(/ · refined$/, '')} · refined`; renderDraft(); markSimulationStale(field[0].toUpperCase() + field.slice(1)); }));
+    simulateButton.addEventListener('click', () => applyScenario('simulated'));
+    activateButton.addEventListener('click', () => applyScenario('active'));
+    revertButton.addEventListener('click', () => revertDialog.showModal());
+    document.querySelector('[data-dialog-cancel]').addEventListener('click', () => revertDialog.close());
+    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => { revertDialog.close(); applyScenario('simulated'); });
+    document.querySelector('textarea').addEventListener('input', () => markSimulationStale('Tide Table source'));
+    window.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); applyScenario('simulated'); } if (event.key === 'Escape' && revertDialog.open) revertDialog.close(); });
+    renderDraft();
+    applyScenario('default');
+  </script>
+</body>
+</html>
