@@ -6,29 +6,30 @@
 
 ### Color tokens
 
-Values below are copied exactly from `apps/web/src/styles.css`; production remains the source of truth. Organization proposes only one centralized addition, `--orca-warning`, because the production sheet has no semantic warning token yet.
+Values below are copied from the effective final Tidal cascade in `apps/web/src/styles.css` (the August 2026 definitions near the end of the file override earlier compatibility values). Production remains the source of truth. Organization proposes only one centralized addition, `--orca-warning`, because the production sheet has no semantic warning token yet.
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `--orca-ink` | `#0a0a0b` | `#e8e8e5` | Primary text and control labels |
-| `--orca-paper` | `#f7f7f5` | `#191918` | Page and panel background |
-| `--orca-muted` | `#73736f` | `#999994` | Secondary text and disabled labels |
-| `--orca-border` | `rgba(31,31,29,.09)` | `rgba(235,235,231,.09)` | Dividers and control boundaries |
-| `--orca-surface` | `rgba(31,31,29,.035)` | `rgba(235,235,231,.035)` | Resting grouped surface |
-| `--orca-surface-hover` | `rgba(31,31,29,.065)` | `rgba(235,235,231,.07)` | Hover and selected surface |
-| `--orca-accent` | `#536b62` | `#94aaa1` | Focus ring, trace node, active evidence |
-| `--orca-accent-soft` | `rgba(83,107,98,.11)` | `rgba(148,170,161,.12)` | Selected inset ring |
-| `--orca-danger` | `#b44c42` | `#ef8c7f` | Error and failed operation |
+| `--orca-ink` | `#0f2422` | `#edf3f1` | Primary text and control labels |
+| `--orca-paper` | `#f7faf8` | `#111a22` | Page and panel background |
+| `--orca-muted` | `#5f7470` | `#9cafb1` | Secondary text and disabled labels |
+| `--orca-border` | `#e2ece8` | `#304149` | Dividers and control boundaries |
+| `--orca-surface` | `#ffffff` | `#1a2730` | Resting grouped surface |
+| `--orca-surface-hover` | `#edf5f2` | `#24353e` | Hover and selected surface |
+| `--orca-accent` | `#0e9f8a` | `#8fb7ad` | Focus ring, trace node, active evidence |
+| `--orca-accent-soft` | `rgb(14 159 138 / 10%)` | `rgb(143 183 173 / 14%)` | Selected inset ring |
+| `--orca-danger` | `#b44c42` | `#e7a197` | Error and failed operation |
 | `--orca-warning` *(proposed)* | `#8a672e` | `#d8bb83` | Conflict and stale simulation; add once at `:root`/dark root before implementation |
-| `--orca-control` | `#ecece8` | `#2a2a28` | Disabled/resting control fill |
-| `--orca-control-hover` | `#e4e4df` | `#333330` | Hover fill for quiet buttons |
+| `--orca-control` | `#f3f7f5` | `#1b2930` | Disabled/resting control fill |
+| `--orca-control-hover` | `#e8f2ef` | `#283b43` | Hover fill for quiet buttons |
 
 ### Typography
 
 | Token | Value | Usage |
 |---|---|---|
-| `--orca-font-display` | `Iowan Old Style, Palatino Linotype, Georgia, serif` | Page and section titles |
-| `--orca-font-body` | `Avenir Next, Segoe UI, system-ui, sans-serif` | Navigation, controls, body copy |
+| `--orca-font-display` | `Sora, ui-sans-serif, system-ui, sans-serif` | Page and section titles |
+| `--orca-font-body` | `Sora, ui-sans-serif, system-ui, sans-serif` | Navigation, controls, body copy |
+| `--orca-font-reader` | `Newsreader, Georgia, serif` | Reader-only content; not used for Organization chrome |
 | `--orca-font-mono` | `SFMono-Regular, Consolas, monospace` | Tide Table source and located diagnostics |
 | Display | 32px / 36px / 500 | Desktop page title |
 | H1 mobile | 30px / 32px / 500 | Mobile page title |
@@ -74,7 +75,7 @@ All labeled interactive controls use the following state mapping.
 
 Selected and disabled states never use `--orca-ink` as a fill with an assumed inverse label token.
 
-Contrast checks use the exact production paper/surface composites. Essential selected labels and compact status metadata use `--orca-ink` (14.33:1 or better); `--orca-muted` is reserved for supporting copy and never carries the only state meaning. Warning and danger copy are paired with explicit words/icons and are not placed on same-hue fills.
+Contrast checks use the effective Tidal paper/surface composites. Essential selected labels and compact status metadata use `--orca-ink`; `--orca-muted` is reserved for supporting copy and never carries the only state meaning. Warning and danger copy are paired with explicit words/icons and are not placed on same-hue fills.
 
 ## 3. Component specifications
 

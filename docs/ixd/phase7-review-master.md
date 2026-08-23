@@ -11,8 +11,8 @@
 
 `bun test docs/ixd/phase7-prototype.test.ts docs/ixd/phase7-accessibility.test.ts`
 
-- 18 passed, 0 failed
-- 125 expectations
+- 25 passed, 0 failed
+- 183 expectations
 - Confirms both artifacts contain Glass Box, Tide Table, one shared draft/scenario model, complete operational states, simulation, activation, five-step Trace, audit, revert, theme/state contracts, valid semantics, and self-contained CSS/JavaScript.
 - axe-core reports no critical or serious violations in either prototype.
 
@@ -63,7 +63,7 @@ Desktop drag/drop and multi-window questions are resolved as intentionally not a
 
 ### Verdict
 
-CANDIDATE PASS — the seven findings from Dispatch review 42 are remediated and documented in [Phase 8 review round 1](phase8-review-round-1.md). Final acceptance awaits persona verification.
+CANDIDATE PASS — review 42 remediation is documented in [round 1](phase8-review-round-1.md); the replacement review 44 remediation is documented in [round 2](phase8-review-round-2.md). Final acceptance awaits persona verification.
 
 ## Final scoped completeness check
 

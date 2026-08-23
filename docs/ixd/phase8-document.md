@@ -243,6 +243,7 @@ Navigation → rule discovery → mode switch → authoring blocks/editor → si
 - [Prototype contract test](phase7-prototype.test.ts)
 - [Visual review report](phase7-review-master.md)
 - [Dispatch review round 1](phase8-review-round-1.md)
+- [Dispatch review round 2](phase8-review-round-2.md)
 
 Prototype scenario controls demonstrate default, simulated, active, conflict, and error. Hover, focus, selected, and disabled states are native interactive CSS states.
 

@@ -31,15 +31,15 @@
     "7": {
       "status": "done",
       "file": "phase7-prototype-mobile.html + phase7-prototype-desktop.html",
-      "summary": "P07 mobile and desktop HTML prototypes complete; 18 contract/axe tests pass and 47/47 heuristic checks pass",
+      "summary": "P07 mobile and desktop HTML prototypes complete; 25 contract/axe tests pass and 47/47 heuristic checks pass",
       "pagesCompleted": ["P07"],
       "pagesTotal": 1
     },
     "8": {
       "status": "pending",
       "file": "phase8-document.md",
-      "summary": "Developer handoff written; Dispatch review 42 remediated and awaiting persona verification",
-      "reviewRounds": 1,
+      "summary": "Developer handoff written; Dispatch reviews 42 and 44 remediated and awaiting persona verification",
+      "reviewRounds": 2,
       "reviewResult": null
     }
   },

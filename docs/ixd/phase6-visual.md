@@ -4,15 +4,15 @@
 
 ## 1. Color system
 
-The existing `--orca-*` variables in `apps/web/src/styles.css` remain the source of truth. BRE-307 introduces no new brand palette.
+The effective final Tidal `--orca-*` variables in `apps/web/src/styles.css` remain the source of truth. The August 2026 cascade near the end of the production stylesheet overrides earlier compatibility definitions. BRE-307 introduces no new brand palette.
 
 | Role | Light | Dark | Usage |
 |---|---|---|---|
-| Ink | `#0a0a0b` | `#e8e8e5` | Primary text, selected labels |
-| Paper | `#f7f7f5` | `#191918` | Main page and panels |
-| Muted | `#73736f` | `#999994` | Metadata and disabled labels |
-| Accent | `#536b62` | `#94aaa1` | Focus, active evidence, Trace nodes |
-| Danger | `#b44c42` | `#ef8c7f` | Error only |
+| Ink | `#0f2422` | `#edf3f1` | Primary text, selected labels |
+| Paper | `#f7faf8` | `#111a22` | Main page and panels |
+| Muted | `#5f7470` | `#9cafb1` | Metadata and disabled labels |
+| Accent | `#0e9f8a` | `#8fb7ad` | Focus, active evidence, Trace nodes; not compact text |
+| Danger | `#b44c42` | `#e7a197` | Error only |
 | Warning | `#8a672e` | `#d8bb83` | Conflict/stale only |
 
 No gradients are used. Color occupies less than 10 percent of the page and always carries behavior.
@@ -21,19 +21,19 @@ No gradients are used. Color occupies less than 10 percent of the page and alway
 
 | Combination | Approx. contrast | WCAG AA |
 |---|---:|---|
-| Light ink on paper | 18.2:1 | Pass |
-| Light muted on paper | 5.3:1 | Pass |
-| Light accent on paper | 5.6:1 | Pass |
-| Dark ink on paper | 14.1:1 | Pass |
-| Dark muted on paper | 7.1:1 | Pass |
+| Light ink on paper | 15.42:1 | Pass |
+| Light muted on paper | 4.74:1 | Pass |
+| Light accent on paper | 3.15:1 | Pass for focus rings/nodes; do not use as normal-size text |
+| Dark ink on paper | 15.65:1 | Pass |
+| Dark muted on paper | 7.68:1 | Pass |
 | Dark accent on paper | 7.5:1 | Pass |
 
 Selected controls do not place white text on the accent. They preserve ink on a surface-hover background.
 
 ## 2. Typography
 
-- Display: existing Iowan Old Style / Palatino / Georgia chain. It appears only in page, rule, Trace, and audit headings.
-- Body: existing Avenir Next / Segoe UI / system UI chain.
+- Display and body chrome: effective Tidal `Sora` / ui-sans-serif / system UI chain.
+- Reader prose: existing `Newsreader` / Georgia chain; Organization does not use reader typography for tool chrome.
 - Code: SFMono-Regular / Consolas / monospace for Tide Table only.
 - Numerals in simulation and audit use tabular figures.
 - Desktop body baseline is 12px–13px; mobile primary control copy is 10px–12px. Long explanatory copy uses at least 15px line height.
@@ -111,7 +111,7 @@ All other P07 states follow Orca’s standard variables and workspace annotation
 
 - Full adaptation; prototypes begin in light mode and expose an explicit theme toggle.
 - Production follows the existing Orca system/in-app preference and listens for system changes.
-- Dark mode uses `#191918`, not pure black, and `#e8e8e5`, not pure white.
+- Dark mode uses Tidal foam `#111a22`, not pure black, and current `#edf3f1`, not pure white.
 - Borders strengthen from .12 light alpha to .14 dark alpha; selected surface alpha increases to .09.
 - Labels stay ink-colored in selected states. Disabled controls retain readable muted labels at full opacity.
 - Windows high-contrast mode should replace subtle alpha surfaces with system canvas, border, highlight, and highlight-text tokens.

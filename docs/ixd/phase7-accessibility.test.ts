@@ -12,26 +12,29 @@ afterEach(() => {
 });
 
 describe("BRE-307 prototype accessibility", () => {
-  for (const file of prototypes) {
-    test(`${file} has no axe critical or serious violations`, async () => {
+  test("desktop and mobile have no axe critical or serious violations with dialogs closed or open", async () => {
+    for (const file of prototypes) {
       const window = new Window({ url: "http://localhost/organization" });
       window.document.write(readFileSync(join(ixdRoot, file), "utf8"));
       (globalThis as { window?: unknown }).window = window;
       (globalThis as { document?: unknown }).document = window.document;
       const axe = (await import("axe-core")).default;
-      const result = await axe.run(window.document, {
+      const runAxe = () => axe.run(window.document, {
         resultTypes: ["violations"],
         rules: {
           "color-contrast": { enabled: false },
           "landmark-one-main": { enabled: false },
         },
       });
-      const blocking = result.violations.filter((violation) =>
+      const closed = await runAxe();
+      window.document.querySelector("dialog")?.setAttribute("open", "");
+      const opened = await runAxe();
+      const blocking = [...closed.violations, ...opened.violations].filter((violation) =>
         violation.impact === "critical" || violation.impact === "serious",
       );
 
       expect(blocking).toEqual([]);
       await window.close();
-    });
-  }
+    }
+  }, 30_000);
 });
