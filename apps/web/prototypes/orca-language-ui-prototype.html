@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orca Language — UI Prototype</title>
+  <!--
+    THROWAWAY PROTOTYPE — not production code.
+    Three structural variants of Orca's Rule authoring experience, switchable with
+    ?variant=A, ?variant=B, or ?variant=C. The question: what should programmable,
+    agent-authored organization feel like inside a calm human-first email client?
+  -->
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f6f5f0;
+      --paper-2: #eeede6;
+      --surface: rgba(255, 255, 252, .76);
+      --surface-strong: #fffef9;
+      --ink: #171817;
+      --muted: #73766f;
+      --faint: #a8aaa3;
+      --line: rgba(23, 24, 23, .11);
+      --line-strong: rgba(23, 24, 23, .22);
+      --moss: #536b62;
+      --moss-2: #2d473e;
+      --moss-soft: #dbe4df;
+      --tide: #567a80;
+      --tide-soft: #d8e7e8;
+      --sand: #b98a52;
+      --sand-soft: #f1e2cc;
+      --coral: #b9594d;
+      --coral-soft: #f3d9d4;
+      --shadow: 0 22px 70px rgba(37, 38, 34, .11);
+      --serif: "Iowan Old Style", "Baskerville", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+      --mono: "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+      --ease: cubic-bezier(.2, .78, .25, 1);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #171917;
+      --paper-2: #20231f;
+      --surface: rgba(36, 39, 35, .78);
+      --surface-strong: #222520;
+      --ink: #ecece5;
+      --muted: #a2a59d;
+      --faint: #777b73;
+      --line: rgba(239, 239, 231, .10);
+      --line-strong: rgba(239, 239, 231, .22);
+      --moss: #9bb3aa;
+      --moss-2: #c0d4cd;
+      --moss-soft: #293a34;
+      --tide: #96bcc0;
+      --tide-soft: #263a3d;
+      --sand: #d2aa73;
+      --sand-soft: #423525;
+      --coral: #ef968a;
+      --coral-soft: #452e2b;
+      --shadow: 0 30px 90px rgba(0, 0, 0, .42);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 18% 8%, color-mix(in srgb, var(--moss) 9%, transparent), transparent 29rem),
+        radial-gradient(circle at 88% 76%, color-mix(in srgb, var(--tide) 8%, transparent), transparent 30rem),
+        var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+    button, textarea, input { color: inherit; font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, [contenteditable]:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--moss);
+      outline-offset: 3px;
+    }
+    button:disabled { cursor: not-allowed; opacity: 1; }
+    .prototype { display: none; min-height: 100vh; }
+    .prototype.active { animation: page-in .5s var(--ease) both; display: block; }
+    @keyframes page-in { from { opacity: 0; transform: translateY(7px); } }
+    @keyframes drift { 50% { transform: translateY(-4px); } }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--moss) 12%, transparent); } }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 760;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .wordmark {
+      align-items: center;
+      display: inline-flex;
+      font-family: var(--serif);
+      font-size: 23px;
+      gap: 10px;
+      letter-spacing: -.04em;
+    }
+    .wordmark::before {
+      border: 1px solid currentColor;
+      border-radius: 50% 47% 52% 44%;
+      content: "";
+      height: 19px;
+      transform: rotate(-17deg);
+      width: 25px;
+    }
+    .pill, .button {
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      display: inline-flex;
+      font-size: 11px;
+      font-weight: 700;
+      gap: 8px;
+      justify-content: center;
+      min-height: 36px;
+      padding: 8px 13px;
+      transition: transform .16s var(--ease), background .16s var(--ease), border-color .16s var(--ease), box-shadow .16s var(--ease);
+    }
+    .button:hover:not(:disabled), .pill:hover { background: var(--surface-strong); border-color: var(--line-strong); transform: translateY(-1px); }
+    .button.primary { background: var(--moss-2); border-color: var(--moss-2); color: var(--paper); }
+    :root[data-theme="dark"] .button.primary { color: #17221e; }
+    .button.primary:hover:not(:disabled) { box-shadow: 0 8px 24px color-mix(in srgb, var(--moss) 24%, transparent); }
+    .button.primary:disabled,
+    :root[data-theme="dark"] .button.primary:disabled { background: var(--paper-2); border-color: var(--line); color: var(--muted); }
+    .button.quiet { background: transparent; }
+    .button.danger { color: var(--coral); }
+    .status-dot { background: var(--sand); border-radius: 50%; height: 7px; width: 7px; }
+    .state-active .status-dot { animation: pulse 2.2s infinite; background: var(--moss); }
+
+    /* Variant A — Tide Table */
+    .a-shell { display: grid; gap: 14px; grid-template-columns: 214px minmax(590px, 1fr) 340px; min-height: 100vh; padding: 14px 14px 86px; }
+    .a-nav, .a-inspector, .a-workbench {
+      background: color-mix(in srgb, var(--surface) 90%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      min-width: 0;
+    }
+    .a-nav { display: flex; flex-direction: column; padding: 21px 14px 16px; }
+    .a-nav .wordmark { margin: 0 9px 28px; }
+    .nav-label { color: var(--faint); font-size: 9px; font-weight: 800; letter-spacing: .14em; margin: 17px 10px 7px; text-transform: uppercase; }
+    .nav-item {
+      align-items: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--muted);
+      display: flex;
+      font-size: 12px;
+      gap: 10px;
+      justify-content: space-between;
+      margin: 1px 0;
+      padding: 9px 10px;
+      text-align: left;
+      width: 100%;
+    }
+    .nav-item:hover { color: var(--ink); }
+    .nav-item[aria-current="page"] { background: var(--paper-2); border-color: var(--line); color: var(--ink); }
+    .nav-count { color: var(--faint); font-family: var(--mono); font-size: 9px; }
+    .a-account { border-top: 1px solid var(--line); margin-top: auto; padding: 16px 9px 2px; }
+    .a-account strong { display: block; font-size: 11px; }
+    .a-account span { color: var(--muted); font-size: 9px; }
+    .a-workbench { overflow: hidden; }
+    .a-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 16px 20px; }
+    .a-title { align-items: baseline; display: flex; gap: 11px; }
+    .a-title h1 { font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -.04em; margin: 0; }
+    .a-status { align-items: center; color: var(--muted); display: flex; font-size: 10px; gap: 7px; }
+    .a-actions { display: flex; gap: 7px; }
+    .a-body { display: grid; grid-template-rows: minmax(390px, 1fr) 290px; min-height: calc(100vh - 112px); }
+    .rule-editor { display: grid; grid-template-columns: 48px minmax(0, 1fr); overflow: hidden; }
+    .line-numbers {
+      border-right: 1px solid var(--line);
+      color: var(--faint);
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 2.05;
+      padding: 26px 13px;
+      text-align: right;
+      user-select: none;
+    }
+    .orca-code {
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 2.05;
+      margin: 0;
+      min-height: 100%;
+      outline: none;
+      overflow: auto;
+      padding: 26px 30px;
+      white-space: pre-wrap;
+    }
+    .kw { color: var(--tide); font-weight: 740; }
+    .name { color: var(--moss); }
+    .str { color: var(--sand); }
+    .comment { color: var(--faint); font-style: italic; }
+    .a-simulation { border-top: 1px solid var(--line); display: grid; grid-template-columns: 1.15fr .85fr; }
+    .sim-summary { padding: 20px 22px; }
+    .sim-head { align-items: start; display: flex; justify-content: space-between; }
+    .sim-head h2 { font-family: var(--serif); font-size: 21px; font-weight: 500; letter-spacing: -.025em; margin: 4px 0 0; }
+    .metric-row { display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); margin-top: 19px; }
+    .metric { background: var(--paper-2); border: 1px solid var(--line); border-radius: 11px; padding: 11px; }
+    .metric strong { display: block; font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -.04em; }
+    .metric span { color: var(--muted); font-size: 9px; }
+    .sample-thread { align-items: center; border-top: 1px solid var(--line); display: grid; gap: 10px; grid-template-columns: 31px minmax(0, 1fr) auto; margin-top: 16px; padding-top: 13px; }
+    .sender-mark { align-items: center; border: 1px solid var(--line-strong); border-radius: 50%; display: flex; font-family: var(--serif); height: 31px; justify-content: center; width: 31px; }
+    .sample-thread strong { display: block; font-size: 11px; }
+    .sample-thread small { color: var(--muted); display: block; font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sample-thread > span { color: var(--moss); font-size: 9px; font-weight: 800; }
+    .trace-mini { border-left: 1px solid var(--line); padding: 19px 20px; }
+    .trace-step { display: grid; gap: 2px; grid-template-columns: 16px 1fr; padding: 7px 0; position: relative; }
+    .trace-step:not(:last-child)::before { background: var(--line-strong); content: ""; height: 20px; left: 7px; position: absolute; top: 24px; width: 1px; }
+    .trace-step i { align-items: center; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 50%; display: flex; font-size: 8px; font-style: normal; height: 15px; justify-content: center; width: 15px; }
+    .trace-step strong { font-size: 10px; }
+    .trace-step small { color: var(--muted); font-size: 9px; }
+    .a-inspector { padding: 22px 20px; }
+    .a-inspector h2 { font-family: var(--serif); font-size: 29px; font-weight: 500; letter-spacing: -.045em; line-height: 1.03; margin: 16px 0 12px; }
+    .a-inspector > p { color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .policy-card { border-top: 1px solid var(--line); margin-top: 23px; padding-top: 17px; }
+    .policy-card h3 { font-size: 10px; letter-spacing: .08em; margin: 0 0 9px; text-transform: uppercase; }
+    .policy-row { align-items: start; display: grid; gap: 8px; grid-template-columns: 7px 1fr; margin: 11px 0; }
+    .policy-row::before { background: var(--moss); border-radius: 50%; content: ""; height: 6px; margin-top: 5px; width: 6px; }
+    .policy-row strong { display: block; font-size: 10px; }
+    .policy-row small { color: var(--muted); display: block; font-size: 9px; line-height: 1.45; }
+    .safety-note { background: var(--coral-soft); border: 1px solid color-mix(in srgb, var(--coral) 25%, var(--line)); border-radius: 13px; margin-top: 22px; padding: 13px; }
+    .safety-note strong { color: var(--coral); display: block; font-size: 10px; }
+    .safety-note p { font-size: 9px; line-height: 1.5; margin: 5px 0 0; }
+
+    /* Variant B — Field Notes */
+    .b-shell { min-height: 100vh; padding: 0 0 100px 74px; }
+    .b-rail { align-items: center; background: color-mix(in srgb, var(--paper-2) 86%, transparent); border-right: 1px solid var(--line); display: flex; flex-direction: column; inset: 0 auto 0 0; padding: 22px 0 90px; position: fixed; width: 74px; }
+    .b-mark { border: 1px solid var(--ink); border-radius: 50% 43% 53% 47%; height: 24px; transform: rotate(-14deg); width: 31px; }
+    .rail-step { align-items: center; background: transparent; border: 0; color: var(--faint); display: flex; flex-direction: column; font-size: 8px; gap: 6px; margin-top: 24px; }
+    .rail-step i { align-items: center; border: 1px solid var(--line-strong); border-radius: 50%; display: flex; font-style: normal; height: 25px; justify-content: center; width: 25px; }
+    .rail-step[aria-current="step"] { color: var(--ink); }
+    .rail-step[aria-current="step"] i { background: var(--moss-soft); border-color: var(--moss); }
+    .b-main { margin: 0 auto; max-width: 1260px; padding: 28px 48px; }
+    .b-top { align-items: center; display: flex; justify-content: space-between; }
+    .b-top-right { align-items: center; display: flex; gap: 8px; }
+    .b-intro { display: grid; gap: 38px; grid-template-columns: minmax(0, 1.3fr) minmax(260px, .7fr); padding: 74px 0 54px; }
+    .b-intro h1 { font-family: var(--serif); font-size: clamp(48px, 5.7vw, 80px); font-weight: 400; letter-spacing: -.062em; line-height: .91; margin: 11px 0 0; max-width: 760px; }
+    .b-intro h1 em { color: var(--moss); font-weight: 400; }
+    .b-intro aside { align-self: end; border-left: 1px solid var(--line-strong); color: var(--muted); font-family: var(--serif); font-size: 17px; line-height: 1.55; padding: 3px 0 3px 24px; }
+    .sentence-card { border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: grid; gap: 25px; grid-template-columns: 132px minmax(0, 1fr) auto; padding: 27px 0; }
+    .sentence-card + .sentence-card { border-top: 0; }
+    .sentence-no { color: var(--faint); font-family: var(--mono); font-size: 10px; padding-top: 9px; }
+    .sentence { font-family: var(--serif); font-size: clamp(22px, 2.2vw, 31px); line-height: 1.55; }
+    .token {
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid currentColor;
+      border-radius: 0;
+      color: var(--moss-2);
+      font-family: inherit;
+      font-size: inherit;
+      padding: 0 2px 2px;
+    }
+    .token.event { color: var(--tide); }
+    .token.action { color: var(--sand); }
+    .sentence-side { align-items: end; display: flex; flex-direction: column; gap: 11px; min-width: 130px; padding-top: 7px; }
+    .sentence-side small { color: var(--muted); font-size: 9px; text-align: right; }
+    .b-predicate { align-items: center; display: flex; gap: 12px; margin-top: 13px; }
+    .b-predicate span { background: var(--moss-soft); border: 1px solid color-mix(in srgb, var(--moss) 25%, var(--line)); border-radius: 999px; color: var(--moss-2); font-size: 10px; font-weight: 730; padding: 7px 10px; }
+    .b-sim-sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); display: grid; gap: 0; grid-template-columns: minmax(250px, .8fr) minmax(460px, 1.2fr); margin-top: 52px; overflow: hidden; }
+    .b-sim-copy { padding: 27px 30px; }
+    .b-sim-copy h2 { font-family: var(--serif); font-size: 32px; font-weight: 400; letter-spacing: -.045em; margin: 8px 0 12px; }
+    .b-sim-copy p { color: var(--muted); font-size: 11px; line-height: 1.6; max-width: 320px; }
+    .b-sim-actions { display: flex; gap: 7px; margin-top: 21px; }
+    .b-impact { background: var(--paper-2); border-left: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr); }
+    .b-impact-cell { border-right: 1px solid var(--line); padding: 29px 22px; }
+    .b-impact-cell:last-child { border: 0; }
+    .b-impact-cell strong { display: block; font-family: var(--serif); font-size: 40px; font-weight: 400; letter-spacing: -.05em; }
+    .b-impact-cell span { color: var(--muted); font-size: 9px; }
+    .b-impact-cell p { color: var(--muted); font-size: 9px; line-height: 1.45; margin: 23px 0 0; }
+
+    /* Variant C — Glass Box */
+    .c-shell { min-height: 100vh; padding: 18px 22px 100px; }
+    .c-top { align-items: center; display: grid; grid-template-columns: 1fr auto 1fr; }
+    .c-top .wordmark { justify-self: start; }
+    .c-mode { border: 1px solid var(--line); border-radius: 999px; display: flex; gap: 3px; padding: 3px; }
+    .c-mode button { background: transparent; border: 0; border-radius: 999px; color: var(--muted); font-size: 9px; font-weight: 750; padding: 7px 12px; }
+    .c-mode button[aria-pressed="true"] { background: var(--paper-2); color: var(--ink); }
+    .c-top-actions { display: flex; gap: 7px; justify-self: end; }
+    .c-heading { align-items: end; display: flex; justify-content: space-between; margin: 60px 0 24px; }
+    .c-heading h1 { font-family: var(--serif); font-size: clamp(42px, 5vw, 70px); font-weight: 400; letter-spacing: -.065em; line-height: .9; margin: 8px 0 0; }
+    .c-heading p { color: var(--muted); font-family: var(--serif); font-size: 16px; line-height: 1.5; margin: 0; max-width: 350px; }
+    .c-grid { display: grid; gap: 14px; grid-template-columns: minmax(700px, 1fr) 355px; }
+    .causal-canvas { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; min-height: 590px; overflow: hidden; padding: 25px; position: relative; }
+    .causal-canvas::before { background-image: radial-gradient(var(--line-strong) .7px, transparent .7px); background-size: 18px 18px; content: ""; inset: 0; opacity: .35; pointer-events: none; position: absolute; }
+    .canvas-bar { align-items: center; display: flex; justify-content: space-between; position: relative; z-index: 1; }
+    .canvas-bar h2 { font-family: var(--serif); font-size: 20px; font-weight: 500; margin: 0; }
+    .canvas-bar span { color: var(--muted); font-family: var(--mono); font-size: 9px; }
+    .causal-flow { display: grid; gap: 23px; grid-template-columns: 1fr; margin: 45px auto 0; max-width: 880px; position: relative; z-index: 1; }
+    .flow-row { align-items: stretch; display: flex; gap: 42px; justify-content: center; position: relative; }
+    .flow-row:not(:last-child)::after { background: var(--line-strong); bottom: -24px; content: ""; height: 24px; left: 50%; position: absolute; width: 1px; }
+    .flow-node { background: var(--surface-strong); border: 1px solid var(--line-strong); border-radius: 14px; min-width: 190px; padding: 13px 15px; position: relative; text-align: left; }
+    button.flow-node { transition: transform .18s var(--ease), box-shadow .18s var(--ease), border .18s var(--ease); }
+    button.flow-node:hover { border-color: var(--moss); box-shadow: 0 9px 24px color-mix(in srgb, var(--ink) 8%, transparent); transform: translateY(-2px); }
+    .flow-node.event { background: var(--tide-soft); border-color: color-mix(in srgb, var(--tide) 45%, var(--line)); }
+    .flow-node.predicate { background: var(--moss-soft); border-color: color-mix(in srgb, var(--moss) 45%, var(--line)); }
+    .flow-node.action { background: var(--sand-soft); border-color: color-mix(in srgb, var(--sand) 50%, var(--line)); }
+    .flow-node.change { min-width: 410px; }
+    .flow-node .eyebrow { display: block; margin-bottom: 5px; }
+    .flow-node strong { display: block; font-family: var(--serif); font-size: 17px; font-weight: 500; }
+    .flow-node small { color: var(--muted); display: block; font-size: 9px; margin-top: 4px; }
+    .branch-line { background: var(--line-strong); height: 1px; left: 25%; position: absolute; right: 25%; top: -12px; }
+    .branch-line::before, .branch-line::after { background: var(--line-strong); content: ""; height: 12px; position: absolute; top: 0; width: 1px; }
+    .branch-line::before { left: 0; } .branch-line::after { right: 0; }
+    .gate-ribbon { align-items: center; background: var(--coral-soft); border: 1px solid color-mix(in srgb, var(--coral) 35%, var(--line)); border-radius: 10px; color: var(--coral); display: flex; font-size: 9px; font-weight: 760; gap: 8px; justify-content: center; margin: 0 auto; padding: 8px 11px; width: max-content; }
+    .trace-ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+    .ledger-head { border-bottom: 1px solid var(--line); padding: 22px; }
+    .ledger-head h2 { font-family: var(--serif); font-size: 27px; font-weight: 400; letter-spacing: -.04em; margin: 6px 0 4px; }
+    .ledger-head p { color: var(--muted); font-size: 10px; margin: 0; }
+    .ledger-entry { border-bottom: 1px solid var(--line); display: grid; gap: 11px; grid-template-columns: 23px 1fr; padding: 15px 19px; }
+    .ledger-entry > i { align-items: center; border: 1px solid var(--line-strong); border-radius: 50%; display: flex; font-size: 8px; font-style: normal; height: 23px; justify-content: center; }
+    .ledger-entry strong { display: block; font-size: 10px; }
+    .ledger-entry small { color: var(--muted); display: block; font-size: 9px; line-height: 1.45; margin-top: 3px; }
+    .ledger-entry.winner { background: var(--moss-soft); }
+    .ledger-entry.loser { opacity: .65; }
+    .ledger-entry.loser strong { text-decoration: line-through; }
+    .ledger-actions { display: grid; gap: 7px; padding: 18px; }
+    .ledger-actions .button { width: 100%; }
+
+    /* Shared prototype controls */
+    .proto-switcher {
+      align-items: center;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--ink) 91%, transparent);
+      border: 1px solid color-mix(in srgb, var(--paper) 18%, transparent);
+      border-radius: 16px;
+      bottom: 15px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, .24);
+      color: var(--paper);
+      display: grid;
+      gap: 11px;
+      grid-template-columns: 34px minmax(210px, auto) 34px auto;
+      left: 50%;
+      padding: 7px;
+      position: fixed;
+      transform: translateX(-50%);
+      z-index: 50;
+    }
+    .proto-switcher > button { background: transparent; border: 0; border-radius: 10px; color: inherit; height: 34px; }
+    .proto-switcher > button:hover { background: rgba(255,255,255,.12); }
+    .variant-label strong { display: block; font-size: 10px; }
+    .variant-label small { color: color-mix(in srgb, var(--paper) 64%, transparent); display: block; font-size: 8px; }
+    .state-peek { border-left: 1px solid rgba(255,255,255,.16); color: color-mix(in srgb, var(--paper) 72%, transparent); font-family: var(--mono); font-size: 8px; line-height: 1.35; padding: 2px 11px; white-space: nowrap; }
+    .theme-button { background: var(--surface); border: 1px solid var(--line); border-radius: 50%; color: var(--ink); height: 36px; width: 36px; }
+    .theme-button:hover { background: var(--surface-strong); }
+    .toast { background: var(--ink); border-radius: 12px; bottom: 88px; color: var(--paper); font-size: 10px; left: 50%; opacity: 0; padding: 10px 15px; pointer-events: none; position: fixed; transform: translate(-50%, 8px); transition: .25s var(--ease); z-index: 60; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    dialog { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); color: var(--ink); max-width: 570px; padding: 0; width: calc(100% - 32px); }
+    dialog::backdrop { backdrop-filter: blur(6px); background: rgba(13, 15, 13, .46); }
+    .dialog-head { align-items: start; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 22px 24px; }
+    .dialog-head h2 { font-family: var(--serif); font-size: 29px; font-weight: 400; letter-spacing: -.04em; margin: 5px 0 0; }
+    .close-button { background: var(--paper-2); border: 1px solid var(--line); border-radius: 50%; height: 32px; width: 32px; }
+    .dialog-body { padding: 18px 24px 25px; }
+    .trace-table { border: 1px solid var(--line); border-radius: 13px; overflow: hidden; }
+    .trace-row { border-bottom: 1px solid var(--line); display: grid; font-size: 10px; gap: 16px; grid-template-columns: 115px 1fr; padding: 11px 13px; }
+    .trace-row:last-child { border: 0; }
+    .trace-row span { color: var(--muted); }
+    .trace-row strong { font-weight: 650; }
+
+    @media (max-width: 1120px) {
+      .a-shell { grid-template-columns: 190px minmax(560px, 1fr); }
+      .a-inspector { display: none; }
+      .c-grid { grid-template-columns: 1fr; }
+      .trace-ledger { display: grid; grid-template-columns: 280px 1fr; }
+      .ledger-entry { border-left: 1px solid var(--line); }
+    }
+    @media (max-width: 820px) {
+      .a-shell { display: block; padding: 8px 8px 90px; }
+      .a-nav { display: none; }
+      .a-header { align-items: start; gap: 12px; }
+      .a-actions { flex-wrap: wrap; justify-content: end; }
+      .a-body { grid-template-rows: auto auto; }
+      .a-simulation { grid-template-columns: 1fr; }
+      .trace-mini { border-left: 0; border-top: 1px solid var(--line); }
+      .b-shell { padding-left: 0; }
+      .b-rail { display: none; }
+      .b-main { padding: 20px 20px; }
+      .b-intro { grid-template-columns: 1fr; padding: 50px 0 35px; }
+      .sentence-card { grid-template-columns: 48px 1fr; }
+      .sentence-side { align-items: start; grid-column: 2; }
+      .sentence-side small { text-align: left; }
+      .b-sim-sheet { grid-template-columns: 1fr; }
+      .b-impact { border-left: 0; border-top: 1px solid var(--line); }
+      .c-shell { padding: 14px 12px 100px; }
+      .c-top { grid-template-columns: 1fr auto; }
+      .c-mode { display: none; }
+      .c-heading { align-items: start; flex-direction: column; gap: 18px; }
+      .causal-canvas { overflow-x: auto; }
+      .causal-flow { min-width: 680px; }
+      .trace-ledger { display: block; }
+      .proto-switcher { grid-template-columns: 32px 1fr 32px; max-width: calc(100% - 20px); width: 470px; }
+      .state-peek { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body data-variant="A">
+  <section class="prototype" data-prototype="A" aria-label="Tide Table variant">
+    <div class="a-shell">
+      <nav class="a-nav" aria-label="Orca navigation">
+        <div class="wordmark">Orca</div>
+        <div class="nav-label">Attention</div>
+        <button class="nav-item"><span>Today</span><span class="nav-count">12</span></button>
+        <button class="nav-item"><span>Weekly review</span><span class="nav-count">31</span></button>
+        <div class="nav-label">Lanes</div>
+        <button class="nav-item"><span>Production</span><span class="nav-count">8</span></button>
+        <button class="nav-item"><span>Decisions</span><span class="nav-count">4</span></button>
+        <button class="nav-item"><span>Receipts</span><span class="nav-count">23</span></button>
+        <div class="nav-label">Organize</div>
+        <button class="nav-item"><span>Views</span><span class="nav-count">7</span></button>
+        <button class="nav-item" aria-current="page"><span>Rules</span><span class="nav-count">14</span></button>
+        <button class="nav-item"><span>Schema</span><span class="nav-count">24</span></button>
+        <div class="a-account"><strong>Luke's workspace</strong><span>2 accounts · organization access</span></div>
+      </nav>
+
+      <main class="a-workbench">
+        <header class="a-header">
+          <div class="a-title">
+            <h1>Production failures</h1>
+            <div class="a-status"><span class="status-dot"></span><span class="state-status">Draft</span></div>
+          </div>
+          <div class="a-actions">
+            <button class="button quiet open-trace">View trace</button>
+            <button class="button simulate">Simulate</button>
+            <button class="button primary activate" disabled>Activate</button>
+          </div>
+        </header>
+        <div class="a-body">
+          <div class="rule-editor">
+            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11</div>
+            <pre class="orca-code" contenteditable="true" spellcheck="false" aria-label="Illustrative Orca Rule source"><span class="comment"># Illustrative syntax — grammar comes next</span>
+<span class="kw">predicate</span> <span class="name">is_production_failure</span>:
+  message.subject contains <span class="str">"failed"</span>
+  or message.body contains <span class="str">"production error"</span>
+
+<span class="kw">rule</span> <span class="str">"Production failures"</span>:
+  <span class="kw">on</span> message.received
+  <span class="kw">when</span> is_production_failure
+  <span class="kw">route</span> lane <span class="str">"Production"</span>
+  <span class="kw">set</span> urgency = critical
+  <span class="kw">notify</span> immediately</pre>
+          </div>
+          <section class="a-simulation">
+            <div class="sim-summary">
+              <div class="sim-head">
+                <div><div class="eyebrow">Historical simulation</div><h2 class="simulation-title">Ready to test 90 days of mail</h2></div>
+                <span class="pill">same engine as live</span>
+              </div>
+              <div class="metric-row">
+                <div class="metric"><strong class="state-match">—</strong><span>Threads matched</span></div>
+                <div class="metric"><strong class="state-move">—</strong><span>Lane changes</span></div>
+                <div class="metric"><strong class="state-conflict">—</strong><span>Conflicts</span></div>
+              </div>
+              <div class="sample-thread">
+                <div class="sender-mark">N</div>
+                <div><strong>Production checkout failure</strong><small>Nadia · Alert from an actual incident thread, not a monitoring bot</small></div>
+                <span>Production</span>
+              </div>
+            </div>
+            <div class="trace-mini">
+              <div class="eyebrow">Winning path</div>
+              <div class="trace-step"><i>1</i><div><strong>Message received</strong><small>Account: work@orca.email</small></div></div>
+              <div class="trace-step"><i>2</i><div><strong>Predicate matched</strong><small>Body contains “production error”</small></div></div>
+              <div class="trace-step"><i>3</i><div><strong>Rule wins</strong><small>Position 03 · above Lane Policy</small></div></div>
+              <div class="trace-step"><i>4</i><div><strong>Change proposed</strong><small>Route + Facet + Attention</small></div></div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="a-inspector">
+        <div class="eyebrow">What this means</div>
+        <h2>One clear cause. Several safe outcomes.</h2>
+        <p>This Rule evaluates every matching <strong>message.received</strong> Event. It can test many Predicates and propose several Actions, but it has only one Event kind.</p>
+        <div class="policy-card">
+          <h3>Proposed changes</h3>
+          <div class="policy-row"><div><strong>Primary Lane</strong><small>Route the Thread to Production.</small></div></div>
+          <div class="policy-row"><div><strong>Urgency Facet</strong><small>Set the typed value to critical.</small></div></div>
+          <div class="policy-row"><div><strong>Attention override</strong><small>Notify now instead of the Lane default.</small></div></div>
+        </div>
+        <div class="safety-note"><strong>No provider mutation</strong><p>This Change Set can organize Orca. It cannot send or delete provider mail.</p></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="prototype" data-prototype="B" aria-label="Field Notes variant">
+    <aside class="b-rail" aria-label="Authoring steps">
+      <div class="b-mark"></div>
+      <button class="rail-step"><i>1</i><span>Intent</span></button>
+      <button class="rail-step" aria-current="step"><i>2</i><span>Rule</span></button>
+      <button class="rail-step"><i>3</i><span>Test</span></button>
+      <button class="rail-step"><i>4</i><span>Live</span></button>
+    </aside>
+    <main class="b-main">
+      <header class="b-top">
+        <div class="wordmark">Orca</div>
+        <div class="b-top-right"><span class="pill"><span class="status-dot"></span><span class="state-status">Draft</span></span><button class="theme-button toggle-theme" aria-label="Toggle color theme">◐</button></div>
+      </header>
+      <section class="b-intro">
+        <div><div class="eyebrow">A Rule, in your language</div><h1>Teach Orca what deserves your <em>attention.</em></h1></div>
+        <aside>The structure stays exact underneath. The surface reads like a decision you could explain to another person.</aside>
+      </section>
+
+      <section aria-label="Rule sentences">
+        <article class="sentence-card">
+          <div class="sentence-no">01 · EVENT</div>
+          <div class="sentence">Whenever <button class="token event">a new message arrives</button> in <button class="token">my work account</button>…</div>
+          <div class="sentence-side"><span class="pill">message.received</span><small>One Event kind.<br>Every matching occurrence.</small></div>
+        </article>
+        <article class="sentence-card">
+          <div class="sentence-no">02 · WHEN</div>
+          <div>
+            <div class="sentence">…check whether it <button class="token">looks like a production failure</button>.</div>
+            <div class="b-predicate"><span>subject contains “failed”</span><span>OR</span><span>body contains “production error”</span></div>
+          </div>
+          <div class="sentence-side"><span class="pill">named Predicate</span><small>Reusable and pure.<br>No hidden data.</small></div>
+        </article>
+        <article class="sentence-card">
+          <div class="sentence-no">03 · THEN</div>
+          <div class="sentence">Put its Thread in <button class="token action">Production</button>, mark urgency as <button class="token action">critical</button>, and <button class="token action">notify me now</button>.</div>
+          <div class="sentence-side"><span class="pill">3 Actions</span><small>Proposed together.<br>Applied atomically.</small></div>
+        </article>
+      </section>
+
+      <section class="b-sim-sheet">
+        <div class="b-sim-copy">
+          <div class="eyebrow">Before this becomes real</div>
+          <h2>Rehearse it on your history.</h2>
+          <p>Orca evaluates this exact Rule against 90 days of Thread snapshots. Nothing changes until you approve the resulting Change Set.</p>
+          <div class="b-sim-actions"><button class="button simulate">Run simulation</button><button class="button primary activate" disabled>Activate Rule</button></div>
+        </div>
+        <div class="b-impact">
+          <div class="b-impact-cell"><strong class="state-match">—</strong><span>Threads matched</span><p>Includes 14 Threads already in Production.</p></div>
+          <div class="b-impact-cell"><strong class="state-move">—</strong><span>Lane changes</span><p>Every changed Thread remains reversible.</p></div>
+          <div class="b-impact-cell"><strong class="state-conflict">—</strong><span>Conflicts</span><p><button class="token open-trace">See why each Rule won</button></p></div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <section class="prototype" data-prototype="C" aria-label="Glass Box variant">
+    <main class="c-shell">
+      <header class="c-top">
+        <div class="wordmark">Orca</div>
+        <div class="c-mode"><button aria-pressed="false">Schema</button><button aria-pressed="true">Rules</button><button aria-pressed="false">History</button></div>
+        <div class="c-top-actions"><button class="button simulate">Simulate history</button><button class="button primary activate" disabled>Activate</button><button class="theme-button toggle-theme" aria-label="Toggle color theme">◐</button></div>
+      </header>
+      <section class="c-heading">
+        <div><div class="eyebrow">Rule 03 · <span class="state-status">Draft</span></div><h1>The glass box</h1></div>
+        <p>Every decision is a visible path from an immutable Event to an authorized Change Set.</p>
+      </section>
+      <div class="c-grid">
+        <section class="causal-canvas" aria-label="Rule causal graph">
+          <header class="canvas-bar"><h2>Production failures</h2><span>workspace revision 42 · rule revision 7</span></header>
+          <div class="causal-flow">
+            <div class="flow-row"><button class="flow-node event open-trace"><span class="eyebrow">Event</span><strong>Message received</strong><small>Every matching occurrence · work account</small></button></div>
+            <div class="flow-row"><button class="flow-node predicate open-trace"><span class="eyebrow">Predicate</span><strong>is_production_failure</strong><small>Matched · 2 of 2 bounded checks</small></button></div>
+            <div class="flow-row">
+              <span class="branch-line"></span>
+              <button class="flow-node action open-trace"><span class="eyebrow">Action 01</span><strong>Route to Production</strong><small>Exclusive Lane slot</small></button>
+              <button class="flow-node action open-trace"><span class="eyebrow">Action 02</span><strong>Urgency → critical</strong><small>Single-value Facet</small></button>
+              <button class="flow-node action open-trace"><span class="eyebrow">Action 03</span><strong>Notify immediately</strong><small>Overrides Lane Policy</small></button>
+            </div>
+            <div class="gate-ribbon">AUTHORITY GATE · organization.write · expected revision 42</div>
+            <div class="flow-row"><button class="flow-node change open-trace"><span class="eyebrow">Proposed Change Set</span><strong>3 changes · atomic · reversible</strong><small>No sending · no deletion · complete Trace attached</small></button></div>
+          </div>
+        </section>
+        <aside class="trace-ledger">
+          <header class="ledger-head"><div class="eyebrow">Precedence ledger</div><h2>Why it wins</h2><p>Every candidate remains visible, including losing Rules.</p></header>
+          <div>
+            <div class="ledger-entry"><i>1</i><div><strong>Safety Lock</strong><small>No lock present on this Thread.</small></div></div>
+            <div class="ledger-entry"><i>2</i><div><strong>Manual Override</strong><small>No manual Lane choice is active.</small></div></div>
+            <div class="ledger-entry winner"><i>3</i><div><strong>Production failures · winner</strong><small>Rule position 03 proposed Production.</small></div></div>
+            <div class="ledger-entry loser"><i>4</i><div><strong>Escalated conversations</strong><small>Rule position 08 also proposed Decisions.</small></div></div>
+            <div class="ledger-entry loser"><i>5</i><div><strong>Fallback Lane</strong><small>Lower precedence than matching Rules.</small></div></div>
+          </div>
+          <div class="ledger-actions"><button class="button open-trace">Open complete Trace</button><button class="button quiet reset-state">Reset prototype state</button></div>
+        </aside>
+      </div>
+    </main>
+  </section>
+
+  <div class="proto-switcher" aria-label="Prototype variant switcher">
+    <button id="previous-variant" aria-label="Previous variant">←</button>
+    <div class="variant-label"><strong id="variant-name">A · Tide Table</strong><small>Use ← → to compare layouts</small></div>
+    <button id="next-variant" aria-label="Next variant">→</button>
+    <div class="state-peek" id="state-peek">simulation=idle<br>activation=draft · matches=0</div>
+  </div>
+
+  <div class="toast" role="status" aria-live="polite">Rule activated. A reversible Change Set was recorded.</div>
+
+  <dialog id="trace-dialog">
+    <div class="dialog-head"><div><div class="eyebrow">Complete Trace</div><h2>Why Production won</h2></div><button class="close-button" aria-label="Close trace">×</button></div>
+    <div class="dialog-body">
+      <div class="trace-table">
+        <div class="trace-row"><span>Event</span><strong>message.received · evt_01J8</strong></div>
+        <div class="trace-row"><span>Observed value</span><strong>body contains “production error”</strong></div>
+        <div class="trace-row"><span>Winning Rule</span><strong>Production failures · revision 7 · position 03</strong></div>
+        <div class="trace-row"><span>Losing Rule</span><strong>Escalated conversations · revision 4 · position 08</strong></div>
+        <div class="trace-row"><span>Precedence</span><strong>Higher ordered Rule position; no Manual Override or Safety Lock</strong></div>
+        <div class="trace-row"><span>Actor</span><strong>Luke's agent · organization.write</strong></div>
+        <div class="trace-row"><span>Outcome</span><strong>Production Lane · urgency critical · notify immediately</strong></div>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    (() => {
+      const initialParams = new URLSearchParams(location.search);
+      const initialState = initialParams.get('state');
+      const variants = [
+        { key: 'A', name: 'Tide Table' },
+        { key: 'B', name: 'Field Notes' },
+        { key: 'C', name: 'Glass Box' }
+      ];
+      const state = {
+        variant: initialParams.get('variant')?.toUpperCase() || 'A',
+        simulation: ['simulated', 'active'].includes(initialState) ? 'complete' : 'idle',
+        activation: initialState === 'active' ? 'active' : 'draft',
+        matches: ['simulated', 'active'].includes(initialState) ? 186 : 0,
+        laneChanges: ['simulated', 'active'].includes(initialState) ? 172 : 0,
+        conflicts: ['simulated', 'active'].includes(initialState) ? 3 : 0,
+        workspaceRevision: initialState === 'active' ? 43 : 42
+      };
+      if (!variants.some(v => v.key === state.variant)) state.variant = 'A';
+      if (initialParams.get('theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+
+      const all = (selector) => [...document.querySelectorAll(selector)];
+      const dialog = document.querySelector('#trace-dialog');
+      const toast = document.querySelector('.toast');
+
+      function render() {
+        document.body.dataset.variant = state.variant;
+        all('.prototype').forEach(node => node.classList.toggle('active', node.dataset.prototype === state.variant));
+        const variant = variants.find(v => v.key === state.variant);
+        document.querySelector('#variant-name').textContent = `${variant.key} · ${variant.name}`;
+        all('.state-status').forEach(node => node.textContent = state.activation === 'active' ? 'Active' : state.simulation === 'running' ? 'Simulating…' : 'Draft');
+        all('.state-match').forEach(node => node.textContent = state.simulation === 'complete' ? '186' : '—');
+        all('.state-move').forEach(node => node.textContent = state.simulation === 'complete' ? '172' : '—');
+        all('.state-conflict').forEach(node => node.textContent = state.simulation === 'complete' ? '3' : '—');
+        all('.activate').forEach(node => node.disabled = state.simulation !== 'complete' || state.activation === 'active');
+        all('.simulate').forEach(node => {
+          if (!node.dataset.originalText) node.dataset.originalText = node.textContent;
+          node.disabled = state.simulation === 'running';
+          node.textContent = state.simulation === 'running' ? 'Simulating…' : state.simulation === 'complete' ? 'Re-run simulation' : node.dataset.originalText || node.textContent;
+        });
+        all('.simulation-title').forEach(node => node.textContent = state.simulation === 'complete' ? '186 matches across 90 days' : state.simulation === 'running' ? 'Evaluating historical snapshots…' : 'Ready to test 90 days of mail');
+        document.body.classList.toggle('state-active', state.activation === 'active');
+        document.querySelector('#state-peek').innerHTML = `simulation=${state.simulation}<br>activation=${state.activation} · matches=${state.matches}`;
+      }
+
+      function setVariant(key) {
+        state.variant = key;
+        const params = new URLSearchParams(location.search);
+        params.set('variant', key);
+        history.replaceState({}, '', `${location.pathname}?${params}`);
+        render();
+      }
+
+      function cycle(direction) {
+        const index = variants.findIndex(v => v.key === state.variant);
+        setVariant(variants[(index + direction + variants.length) % variants.length].key);
+      }
+
+      function simulate() {
+        state.simulation = 'running';
+        state.activation = 'draft';
+        state.matches = 0;
+        render();
+        setTimeout(() => {
+          state.simulation = 'complete';
+          state.matches = 186;
+          state.laneChanges = 172;
+          state.conflicts = 3;
+          render();
+        }, 650);
+      }
+
+      function activate() {
+        if (state.simulation !== 'complete') return;
+        state.activation = 'active';
+        state.workspaceRevision = 43;
+        render();
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      }
+
+      function reset() {
+        Object.assign(state, { simulation: 'idle', activation: 'draft', matches: 0, laneChanges: 0, conflicts: 0, workspaceRevision: 42 });
+        render();
+      }
+
+      document.querySelector('#previous-variant').addEventListener('click', () => cycle(-1));
+      document.querySelector('#next-variant').addEventListener('click', () => cycle(1));
+      all('.simulate').forEach(node => node.addEventListener('click', simulate));
+      all('.activate').forEach(node => node.addEventListener('click', activate));
+      all('.reset-state').forEach(node => node.addEventListener('click', reset));
+      all('.open-trace').forEach(node => node.addEventListener('click', () => dialog.showModal()));
+      document.querySelector('.close-button').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+      all('.toggle-theme').forEach(node => node.addEventListener('click', () => {
+        document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        const params = new URLSearchParams(location.search);
+        params.set('theme', document.documentElement.dataset.theme || 'light');
+        history.replaceState({}, '', `${location.pathname}?${params}`);
+      }));
+      document.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        if (event.target.matches('input, textarea, [contenteditable="true"]')) return;
+        cycle(event.key === 'ArrowRight' ? 1 : -1);
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>

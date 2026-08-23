@@ -1,0 +1,46 @@
+{
+  "product": "Orca Organization System",
+  "platform": "web",
+  "language": "en",
+  "phases": {
+    "1": {
+      "status": "done",
+      "file": "phase1-context.md",
+      "summary": "Email-first programmable attention workspace; technical users first; calm, explainable, reversible organization; MVP target 2026-09-22"
+    },
+    "2": {
+      "status": "done",
+      "file": "phase2-architecture.md",
+      "summary": "12-page Web IA; responsive sidebar; Organization Studio, Change Preview, Explanation/Audit, and Agent Permissions extend the inbox"
+    },
+    "3": {
+      "status": "done",
+      "file": "phase3-userflows.md",
+      "summary": "3 flows: agent-created organization, inbound rule evaluation, and explainable user correction with simulation and rollback"
+    },
+    "4": {
+      "status": "pending",
+      "file": null,
+      "summary": null,
+      "pagesCompleted": [],
+      "pagesTotal": 12
+    },
+    "5": { "status": "pending", "file": null, "summary": null },
+    "6": { "status": "pending", "file": null, "summary": null },
+    "7": {
+      "status": "pending",
+      "file": null,
+      "summary": null,
+      "pagesCompleted": [],
+      "pagesTotal": 12
+    },
+    "8": {
+      "status": "pending",
+      "file": null,
+      "summary": null,
+      "reviewRounds": 0,
+      "reviewResult": null
+    }
+  },
+  "lastUpdated": "2026-08-23T00:00:00-06:00"
+}
