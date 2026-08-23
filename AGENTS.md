@@ -128,3 +128,17 @@ for a review.
 ### Linear
 
 Whenever working with linear, you have to, in either the branch name or the PR name, add the ticket, UUID to it so that the linear is linked. That is absolutely essential for us to be able to keep track of work.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in Linear (team BRE), managed through the Linear MCP tools. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: root `CONTEXT-MAP.md` pointing at per-context `CONTEXT.md` files. See `docs/agents/domain.md`.
