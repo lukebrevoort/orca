@@ -3,7 +3,7 @@
 **Dispatch review**: 44  
 **Persona**: `orca-web-review`  
 **Initial result**: 1 prior item independently verified; 6 findings open  
-**Remediation status**: Complete; awaiting persona verification
+**Remediation status**: Accepted; 6/6 findings resolved as fixed at `5f6e251`
 
 ## Finding disposition
 
@@ -26,4 +26,4 @@
 
 ## Acceptance gate
 
-The implementation gate remains closed until the `orca-web-review` persona re-inspects these fixes and resolves review 44.
+Open. The `orca-web-review` persona re-inspected commit `5f6e251` and resolved review 44 with all six findings fixed.

@@ -1,17 +1,18 @@
 # Orca Organization Page — Interaction Design and Developer Handoff
 
 **Ticket**: BRE-307  
-**Version**: 1.0  
+**Version**: 1.1
 **Date**: 2026-08-23  
-**Status**: Under review  
+**Status**: Accepted
 **Target platforms**: Responsive web, desktop and mobile  
-**Implementation gate**: User-facing M8 implementation must not begin until the review decision in this document is Accepted.
+**Implementation gate**: Open for the later user-facing M8 implementation; Dispatch review 44 accepted all six findings as fixed.
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1.0 | 2026-08-23 | Codex | Focused BRE-307 direction, interaction spec, dual prototype, and handoff |
+| 1.1 | 2026-08-23 | Codex | Accepted after Dispatch review 44 resolved 6/6 findings at commit `5f6e251` |
 
 ## 1. Design overview
 
@@ -279,5 +280,5 @@ Exact route shapes remain an implementation decision, but REST, MCP, provider sy
 
 ## Appendix D. Review decision
 
-**Decision**: Pending Dispatch persona review.  
-**Implementation status**: Blocked until this decision changes to Accepted.
+**Decision**: Accepted. Dispatch `orca-web-review` review 44 resolved all 6 findings as fixed at commit `5f6e251`.
+**Implementation status**: Direction locked and ready for the later M8 implementation ticket; this BRE-307 artifact PR intentionally changes no production inbox, reader, composer, or Zen Mode UI.

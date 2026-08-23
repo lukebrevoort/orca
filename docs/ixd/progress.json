@@ -36,11 +36,11 @@
       "pagesTotal": 1
     },
     "8": {
-      "status": "pending",
+      "status": "done",
       "file": "phase8-document.md",
-      "summary": "Developer handoff written; Dispatch reviews 42 and 44 remediated and awaiting persona verification",
+      "summary": "Developer handoff accepted; Dispatch review 44 resolved all 6 findings as fixed at commit 5f6e251",
       "reviewRounds": 2,
-      "reviewResult": null
+      "reviewResult": "accepted"
     }
   },
   "lastUpdated": "2026-08-23T14:45:00-06:00"

@@ -63,7 +63,7 @@ Desktop drag/drop and multi-window questions are resolved as intentionally not a
 
 ### Verdict
 
-CANDIDATE PASS — review 42 remediation is documented in [round 1](phase8-review-round-1.md); the replacement review 44 remediation is documented in [round 2](phase8-review-round-2.md). Final acceptance awaits persona verification.
+PASS — review 42 remediation is documented in [round 1](phase8-review-round-1.md); replacement review 44 re-inspected the complete direction and resolved all 6 findings as fixed at `5f6e251`, documented in [round 2](phase8-review-round-2.md).
 
 ## Final scoped completeness check
 
