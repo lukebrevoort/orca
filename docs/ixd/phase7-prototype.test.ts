@@ -128,7 +128,7 @@ describe("BRE-307 Organization prototypes", () => {
 
     expect(mobile).toContain("button, select, input, textarea { min-height: 44px;");
     expect(mobile).not.toMatch(/min-height:\s*(?:3[0-9]|[0-2][0-9])px/);
-    expect(mobile).not.toMatch(/font-size:\s*(?:8|9)px/);
+    expect(mobile).not.toMatch(/font-size:\s*(?:8|9|10)px/);
   });
 
   test("prototypes use Orca's effective Tidal token cascade", () => {
@@ -141,6 +141,10 @@ describe("BRE-307 Organization prototypes", () => {
       expect(html).toContain("--color-foam: #111a22");
       expect(html).not.toContain("--orca-paper: #f7f7f5");
     }
+    const handoff = readPrototype("phase5-components.md");
+    expect(handoff).toContain("0 18px 54px rgb(15 36 34 / 12%)");
+    expect(handoff).toContain("0 22px 64px rgb(0 0 0 / 34%)");
+    expect(handoff).not.toContain("0 24px 80px rgba(10,10,11,.16)");
   });
 
   for (const file of ["phase7-prototype-desktop.html", "phase7-prototype-mobile.html"]) {
@@ -232,9 +236,36 @@ describe("BRE-307 Organization prototypes", () => {
       window.document.querySelector<HTMLButtonElement>('[data-action="new-rule"]')?.click();
       window.document.querySelector<HTMLButtonElement>('[data-edit-field="if"]')?.click();
       if (source) { source.value = "mutated source"; source.dispatchEvent(new window.Event("input", { bubbles: true })); }
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true }));
+      window.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", metaKey: true, shiftKey: true, bubbles: true }));
       expect(window.document.body.dataset.scenario).toBe("no-access");
       expect(window.document.querySelector("[data-rule-title]")?.textContent).toBe(beforeTitle);
       expect(source?.value).toBe(beforeSource);
+      expect(window.document.querySelector<HTMLButtonElement>('[data-action="activate"]')?.disabled).toBe(true);
+      expect(window.document.querySelector<HTMLButtonElement>('[data-action="simulate"]')?.disabled).toBe(true);
+      await window.close();
+    });
+  }
+
+  for (const file of ["phase7-prototype-desktop.html", "phase7-prototype-mobile.html"]) {
+    test(`${file} confirms revert from the selected rule model without mixed revisions`, async () => {
+      const window = await mountPrototype(file);
+      if (file.includes("desktop")) {
+        window.document.querySelector<HTMLButtonElement>('[data-rule-id="pulls"]')?.click();
+      } else {
+        const picker = window.document.querySelector<HTMLSelectElement>("[data-rule-picker]");
+        if (picker) { picker.value = "pulls"; picker.dispatchEvent(new window.Event("change", { bubbles: true })); }
+      }
+      window.document.querySelector<HTMLButtonElement>('[data-action="revert"]')?.click();
+      window.document.querySelector<HTMLButtonElement>("[data-dialog-confirm]")?.click();
+
+      expect(window.document.querySelector("[data-revision-chip]")?.textContent).toContain("rev 11 · draft · simulated");
+      expect(window.document.querySelector("[data-audit-event]")?.textContent).toBe("Revision 11 simulated");
+      expect(window.document.querySelector("[data-audit-simulated]")?.textContent).toBe("Revision 11 simulated");
+      expect(window.document.querySelector("[data-audit-activated]")?.textContent).toBe("Revision 11 activated");
+      expect(window.document.querySelector("[data-revert-label]")?.textContent).toContain("revision 10");
+      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("Reverted revision 12");
+      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("Revision 11 is ready to inspect");
       await window.close();
     });
   }

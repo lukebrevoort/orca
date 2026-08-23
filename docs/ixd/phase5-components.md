@@ -52,7 +52,7 @@ Values below are copied from the effective final Tidal cascade in `apps/web/src/
 | `--radius-card` | 13px | Rule and simulation cards |
 | `--radius-panel` | 18px | Device/window shell and dialogs |
 | `--radius-pill` | 999px | Mode, status, and action pills |
-| `--orca-shadow` | `0 24px 80px rgba(10,10,11,.16)` | Desktop prototype window |
+| `--orca-shadow` | light `0 18px 54px rgb(15 36 34 / 12%)`; dark `0 22px 64px rgb(0 0 0 / 34%)` | Effective final Tidal window/dialog elevation |
 | `--orca-motion-fast` | 140ms | Hover, focus, pressed |
 | `--orca-motion-medium` | 180ms | Mode and local content change |
 | `--orca-motion-slow` | 320ms | Page and overlay entry |

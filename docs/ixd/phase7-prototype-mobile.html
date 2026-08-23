@@ -66,13 +66,13 @@
     body[data-theme="dark"] .prototype-bar { color: #d8ddd8; }
     .prototype-bar strong { font-size: 11px; }
     .prototype-controls { display: flex; gap: 7px; }
-    .prototype-bar label { align-items: center; display: flex; flex: 1; font-size: 10px; gap: 6px; }
+    .prototype-bar label { align-items: center; display: flex; flex: 1; font-size: 11px; gap: 6px; }
     .prototype-bar select, .prototype-bar button { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); padding: 0 10px; }
     .prototype-bar select { flex: 1; min-width: 0; }
     .phone-frame { background: #080908; border: 1px solid rgba(255,255,255,.12); border-radius: 52px; box-shadow: var(--orca-shadow); height: 844px; overflow: hidden; padding: 7px; position: relative; width: 390px; }
     .phone-screen { background: var(--orca-paper); border-radius: 45px; display: flex; flex-direction: column; height: 830px; overflow: hidden; }
     .dynamic-island { background: #080908; border-radius: 999px; height: 24px; left: 137px; position: absolute; top: 13px; width: 116px; z-index: 5; }
-    .status-bar { align-items: center; display: flex; flex: 0 0 44px; font-size: 10px; font-weight: 750; justify-content: space-between; padding: 0 24px; }
+    .status-bar { align-items: center; display: flex; flex: 0 0 44px; font-size: 11px; font-weight: 750; justify-content: space-between; padding: 0 24px; }
     .mobile-page { display: flex; flex: 1; flex-direction: column; min-height: 0; position: relative; }
     .page-header { flex: 0 0 auto; padding: 8px 16px 10px; }
     .header-row { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
@@ -102,7 +102,7 @@
     .connector { background: var(--orca-border); height: 7px; margin-left: 20px; width: 1px; }
     .simulation { border: 1px solid var(--orca-border); border-radius: 13px; margin-top: 14px; overflow: hidden; }
     .simulation header { align-items: center; background: var(--orca-surface); display: flex; justify-content: space-between; padding: 10px 11px; }
-    .simulation h3 { font-size: 10px; margin-bottom: 0; }
+    .simulation h3 { font-size: 11px; margin-bottom: 0; }
     .sim-badge { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 11px; font-weight: 800; padding: 5px 7px; }
     .sim-body { padding: 11px; }
     .metrics { display: flex; gap: 20px; }
@@ -193,7 +193,7 @@ because "A failed deploy blocks work"</textarea></div><div class="error-box scen
 
           <div class="detail-tabs" role="tablist" aria-label="Rule details"><button id="trace-tab" role="tab" tabindex="0" aria-selected="true" aria-controls="trace-panel" data-detail="trace" type="button">Trace</button><button id="audit-tab" role="tab" tabindex="-1" aria-selected="false" aria-controls="audit-panel" data-detail="audit" type="button">Audit history</button></div>
           <section class="subpanel" id="trace-panel" role="tabpanel" aria-labelledby="trace-tab" data-subpanel="trace"><h3>Trace</h3><p>The same precedence law powers simulation and live mail.</p><div class="trace-step"><strong>Safety lock</strong><span>No destructive capability requested.</span></div><div class="trace-step"><strong>Manual override</strong><span>No thread-level override found.</span></div><div class="trace-step"><strong>Winning rule</strong><span data-trace-rule>Production failures · priority 20 · revision 7</span></div><div class="trace-step"><strong>Lane policy</strong><span>Focus preserves visibility and notification.</span></div><div class="trace-step"><strong>Workspace / fallback</strong><span>Workspace fallback keeps unmatched mail in Inbox.</span></div></section>
-          <section class="subpanel" id="audit-panel" role="tabpanel" aria-labelledby="audit-tab" data-subpanel="audit" hidden><h3>Audit history</h3><p>History is append-only; revert creates a compensating change.</p><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" data-revert-label type="button" disabled>↶ Revert to revision 6</button></section>
+          <section class="subpanel" id="audit-panel" role="tabpanel" aria-labelledby="audit-tab" data-subpanel="audit" hidden><h3>Audit history</h3><p>History is append-only; revert creates a compensating change.</p><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong data-audit-simulated>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong data-audit-activated>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" data-revert-label type="button" disabled>↶ Revert to revision 6</button></section>
           <p class="action-status" data-action-status aria-live="polite">Simulate before activation.</p>
         </div>
 
@@ -242,6 +242,8 @@ because "A failed deploy blocks work"</textarea></div><div class="error-box scen
       document.querySelector('[data-rule-meta]').textContent = `Rule · revision ${draftModel.revision} · ${draftModel.status}`;
       document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${draftModel.status}`;
       document.querySelector('[data-audit-event]').textContent = `Revision ${draftModel.revision} ${draftModel.status === 'active' ? 'activated' : 'drafted'}`;
+      document.querySelector('[data-audit-simulated]').textContent = `Revision ${draftModel.revision} simulated`;
+      document.querySelector('[data-audit-activated]').textContent = `Revision ${draftModel.revision} activated`;
       document.querySelectorAll('[data-draft-field]').forEach(node => { node.textContent = draftModel[node.dataset.draftField]; });
       document.querySelector('[data-rule-source]').value = draftModel.source;
       document.querySelector('[data-trace-rule]').textContent = `${draftModel.name} · priority ${draftModel.priority} · revision ${draftModel.revision}`;
@@ -264,7 +266,8 @@ because "A failed deploy blocks work"</textarea></div><div class="error-box scen
       const state = scenarioModel[next];
       body.dataset.scenario = next;
       scenarioSelect.value = next;
-      draftModel.status = state.status === 'active' ? 'active' : 'draft';
+      if (next === 'active') draftModel.status = 'active';
+      else if (['default', 'stale', 'simulated', 'conflict', 'error'].includes(next)) draftModel.status = 'draft';
       activateButton.disabled = !state.activate;
       simulateButton.disabled = !state.simulate;
       revertButton.disabled = !state.revert;
@@ -301,9 +304,20 @@ because "A failed deploy blocks work"</textarea></div><div class="error-box scen
     activateButton.addEventListener('click', () => applyScenario('active'));
     revertButton.addEventListener('click', () => revertDialog.showModal());
     document.querySelector('[data-dialog-cancel]').addEventListener('click', () => revertDialog.close());
-    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => { revertDialog.close(); applyScenario('simulated'); });
+    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      const revertedFrom = draftModel.revision;
+      const revertTarget = Math.max(1, revertedFrom - 1);
+      draftModel.revision = revertTarget;
+      draftModel.status = 'draft';
+      persistDraft();
+      renderDraft();
+      revertDialog.close();
+      applyScenario('simulated');
+      actionStatus.textContent = `Reverted revision ${revertedFrom} with change set cs_205. Revision ${revertTarget} is ready to inspect.`;
+    });
     document.querySelector('[data-rule-source]').addEventListener('input', event => { if (body.dataset.scenario === 'no-access') { event.target.value = draftModel.source; return; } draftModel.source = event.target.value; persistDraft(); markSimulationStale('Tide Table source'); });
-    window.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); applyScenario('simulated'); } if (event.key === 'Escape' && revertDialog.open) revertDialog.close(); });
+    window.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); if (body.dataset.scenario === 'no-access') return; applyScenario('simulated'); } if (event.key === 'Escape' && revertDialog.open) revertDialog.close(); });
     renderDraft();
     applyScenario('default');
   </script>

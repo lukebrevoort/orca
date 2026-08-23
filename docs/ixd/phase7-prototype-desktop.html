@@ -289,7 +289,7 @@ because "A failed deploy blocks work"</textarea></div>
             <div class="trace-step"><strong>Winning rule</strong><span data-trace-rule>Production failures · priority 20 · revision 7</span></div>
             <div class="trace-step"><strong>Lane policy</strong><span>Focus preserves visibility and allows notification.</span></div>
             <div class="trace-step"><strong>Workspace / fallback</strong><span>Workspace fallback keeps unmatched mail in Inbox.</span></div>
-            <section class="audit" aria-labelledby="audit-title"><div class="section-head"><h2 id="audit-title">Audit history</h2><button class="text-button" type="button">View all</button></div><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago · changed sender scope</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" data-revert-label type="button" disabled>↶ Revert to revision 6</button></section>
+            <section class="audit" aria-labelledby="audit-title"><div class="section-head"><h2 id="audit-title">Audit history</h2><button class="text-button" type="button">View all</button></div><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago · changed sender scope</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong data-audit-simulated>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong data-audit-activated>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" data-revert-label type="button" disabled>↶ Revert to revision 6</button></section>
           </aside>
         </div>
       </section>
@@ -337,6 +337,8 @@ because "A failed deploy blocks work"</textarea></div>
       document.querySelector('[data-rule-meta]').textContent = `Rule · workspace-wide · ${draftModel.status}`;
       document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${draftModel.status}`;
       document.querySelector('[data-audit-event]').textContent = `Revision ${draftModel.revision} ${draftModel.status === 'active' ? 'activated' : 'drafted'}`;
+      document.querySelector('[data-audit-simulated]').textContent = `Revision ${draftModel.revision} simulated`;
+      document.querySelector('[data-audit-activated]').textContent = `Revision ${draftModel.revision} activated`;
       document.querySelectorAll('[data-draft-field]').forEach(node => { node.textContent = draftModel[node.dataset.draftField]; });
       document.querySelector('[data-rule-source]').value = draftModel.source;
       document.querySelector('[data-trace-rule]').textContent = `${draftModel.name} · priority ${draftModel.priority} · revision ${draftModel.revision}`;
@@ -361,7 +363,8 @@ because "A failed deploy blocks work"</textarea></div>
       const state = scenarioModel[next];
       body.dataset.scenario = next;
       scenarioSelect.value = next;
-      draftModel.status = state.status === 'active' ? 'active' : 'draft';
+      if (next === 'active') draftModel.status = 'active';
+      else if (['default', 'stale', 'simulated', 'conflict', 'error'].includes(next)) draftModel.status = 'draft';
       activateButton.disabled = !state.activate;
       simulateButton.disabled = !state.simulate;
       revertButton.disabled = !state.revert;
@@ -417,10 +420,25 @@ because "A failed deploy blocks work"</textarea></div>
       markSimulationStale(field[0].toUpperCase() + field.slice(1));
     }));
     document.querySelector('[data-dialog-cancel]').addEventListener('click', () => revertDialog.close());
-    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => { revertDialog.close(); applyScenario('simulated'); actionStatus.textContent = 'Reverted with change set cs_205. Revision 6 is ready to inspect.'; });
+    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      const revertedFrom = draftModel.revision;
+      const revertTarget = Math.max(1, revertedFrom - 1);
+      draftModel.revision = revertTarget;
+      draftModel.status = 'draft';
+      persistDraft();
+      renderDraft();
+      revertDialog.close();
+      applyScenario('simulated');
+      actionStatus.textContent = `Reverted revision ${revertedFrom} with change set cs_205. Revision ${revertTarget} is ready to inspect.`;
+    });
     document.querySelector('[data-rule-source]').addEventListener('input', event => { if (body.dataset.scenario === 'no-access') { event.target.value = draftModel.source; return; } draftModel.source = event.target.value; persistDraft(); markSimulationStale('Tide Table source'); });
     window.addEventListener('keydown', event => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); applyScenario(event.shiftKey && !activateButton.disabled ? 'active' : 'simulated'); }
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        if (body.dataset.scenario === 'no-access') return;
+        applyScenario(event.shiftKey && !activateButton.disabled ? 'active' : 'simulated');
+      }
       if (event.key === 'Escape' && revertDialog.open) revertDialog.close();
     });
     renderDraft();

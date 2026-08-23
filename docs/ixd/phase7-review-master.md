@@ -11,8 +11,8 @@
 
 `bun test docs/ixd/phase7-prototype.test.ts docs/ixd/phase7-accessibility.test.ts`
 
-- 25 passed, 0 failed
-- 183 expectations
+- 27 passed, 0 failed
+- 204 expectations
 - Confirms both artifacts contain Glass Box, Tide Table, one shared draft/scenario model, complete operational states, simulation, activation, five-step Trace, audit, revert, theme/state contracts, valid semantics, and self-contained CSS/JavaScript.
 - axe-core reports no critical or serious violations in either prototype.
 

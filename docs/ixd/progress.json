@@ -31,7 +31,7 @@
     "7": {
       "status": "done",
       "file": "phase7-prototype-mobile.html + phase7-prototype-desktop.html",
-      "summary": "P07 mobile and desktop HTML prototypes complete; 25 contract/axe tests pass and 47/47 heuristic checks pass",
+      "summary": "P07 mobile and desktop HTML prototypes complete; 27 contract/axe tests pass and 47/47 heuristic checks pass",
       "pagesCompleted": ["P07"],
       "pagesTotal": 1
     },
