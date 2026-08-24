@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 
 import { createDatabaseClient } from "../../db/client.ts";
+import { refreshThreadAggregates } from "../../organization/thread-aggregate.ts";
 import type { DeterministicPropagationRuntimeOptions } from "../../agents/propagation/runtime.ts";
 import { emailAttachments, emailLabels, emails, oauthAccounts, threads } from "../../db/schema.ts";
 import {
@@ -15,7 +16,6 @@ import {
   GmailSyncError,
   getGmailProviderTokens,
   persistGmailMessages,
-  refreshThreads,
   syncGmailAccountPage,
 } from "./sync.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./push-config.ts";
@@ -475,10 +475,11 @@ function deleteGmailMessages(db: DatabaseClient, accountId: string, providerMess
     tx.delete(emailLabels).where(inArray(emailLabels.emailId, existing.map((row) => row.id))).run();
     tx.delete(emails).where(inArray(emails.id, existing.map((row) => row.id))).run();
     const threadIds = [...new Set(existing.map((row) => row.threadId))];
-    refreshThreads(tx, threadIds, now);
+    refreshThreadAggregates(tx, { accountId, threadIds, now });
     for (const threadId of threadIds) {
-      const remaining = tx.select({ id: emails.id }).from(emails).where(eq(emails.threadId, threadId)).get();
-      if (!remaining) tx.delete(threads).where(eq(threads.id, threadId)).run();
+      const remaining = tx.select({ id: emails.id }).from(emails)
+        .where(and(eq(emails.accountId, accountId), eq(emails.threadId, threadId))).get();
+      if (!remaining) tx.delete(threads).where(and(eq(threads.accountId, accountId), eq(threads.id, threadId))).run();
     }
   });
 

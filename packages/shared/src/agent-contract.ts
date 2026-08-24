@@ -298,6 +298,8 @@ export const orcaMcpScopeSchema = z.enum([
 export type OrcaMcpScope = z.infer<typeof orcaMcpScopeSchema>;
 
 export const orcaAgentActionSchema = z.enum([
+  "organization.describe",
+  "organization.query",
   "mail.list",
   "mail.read",
   "agent_events.list",
@@ -306,6 +308,8 @@ export const orcaAgentActionSchema = z.enum([
 export type OrcaAgentAction = z.infer<typeof orcaAgentActionSchema>;
 
 export const orcaAgentExposureSchema = z.enum([
+  "organization_schema",
+  "thread_organization",
   "mail_metadata",
   "mail_content",
   "agent_event",
@@ -314,6 +318,8 @@ export const orcaAgentExposureSchema = z.enum([
 export type OrcaAgentExposure = z.infer<typeof orcaAgentExposureSchema>;
 
 export const orcaMcpToolNameSchema = z.enum([
+  "describe_organization",
+  "query_organization",
   "search_mail",
   "get_thread",
   "list_agent_events",
@@ -322,6 +328,20 @@ export const orcaMcpToolNameSchema = z.enum([
 export type OrcaMcpToolName = z.infer<typeof orcaMcpToolNameSchema>;
 
 export const orcaMcpReadOnlyTools = Object.freeze([
+  {
+    name: "describe_organization",
+    action: "organization.describe",
+    exposure: "organization_schema",
+    requiredScope: "orca:mail.metadata:read",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "query_organization",
+    action: "organization.query",
+    exposure: "thread_organization",
+    requiredScope: "orca:mail.metadata:read",
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
   {
     name: "search_mail",
     action: "mail.list",

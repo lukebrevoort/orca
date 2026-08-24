@@ -115,6 +115,13 @@ import { createCalendarApp } from "./auth/calendar/routes.ts";
 import type { GoogleCalendarOAuthConfig } from "./auth/calendar/config.ts";
 import type { CalendarFetch } from "./calendar/google-client.ts";
 import { createCalendarAvailabilityResolver } from "./calendar/resolver.ts";
+import {
+  OrganizationAccessError,
+  OrganizationOperationDisabledError,
+  OrganizationQueryError,
+  createOrganization,
+} from "./organization/module.ts";
+import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -212,13 +219,54 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         sqlite.close();
       }
     },
+    describeOrganization({ userId, allowedAccountIds }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const repository = createSqliteOrganizationRepository(db);
+        return createOrganization(repository).describe({
+          scope: { actor: { id: userId, type: "agent" }, workspaceId: userId, accountIds: [...allowedAccountIds] },
+        });
+      } catch (error) {
+        if (error instanceof OrganizationAccessError) throw new McpReadError("account_denied", error.message);
+        throw error;
+      } finally {
+        sqlite.close();
+      }
+    },
+    queryOrganization({ userId, allowedAccountIds, query }) {
+      const { db, sqlite } = dbFactory();
+      try {
+        const repository = createSqliteOrganizationRepository(db);
+        return createOrganization(repository).query({
+          scope: { actor: { id: userId, type: "agent" }, workspaceId: userId, accountIds: [...allowedAccountIds] },
+          query: {
+            ...(query.accountId ? { accountIds: [query.accountId] } : {}),
+            ...(query.threadId ? { threadId: query.threadId } : {}),
+            ...(query.attention ? { attention: query.attention } : {}),
+            ...(query.classification ? { classification: query.classification } : {}),
+            ...(query.text ? { text: query.text } : {}),
+            ...(query.sender ? { sender: query.sender } : {}),
+            ...(query.receivedAfter ? { receivedAfter: query.receivedAfter } : {}),
+            ...(query.receivedBefore ? { receivedBefore: query.receivedBefore } : {}),
+            ...(query.limit ? { limit: query.limit } : {}),
+            ...(query.cursor ? { cursor: query.cursor } : {}),
+          },
+        });
+      } catch (error) {
+        if (error instanceof OrganizationAccessError) throw new McpReadError("account_denied", error.message);
+        if (error instanceof OrganizationQueryError) throw new McpReadError("invalid_cursor", error.message);
+        throw error;
+      } finally {
+        sqlite.close();
+      }
+    },
     searchMail({ userId, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
         const allowed = new Set(allowedAccountIds);
         const accounts = getUnifiedInboxAccounts(db, userId).filter((account) => allowed.has(account.id));
         if (accounts.length === 0) throw new McpReadError("account_denied", "No authorized mail account is connected");
-        return readUnifiedInbox(db, accounts, accounts.map(serializeMailAccount), {
+        return readUnifiedInbox(db, userId, accounts, accounts.map(serializeMailAccount), {
           cursor: query.cursor,
           limit: query.limit ?? 25,
           view: query.attention,
@@ -239,6 +287,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account || !allowedAccountIds.includes(account.id)) {
           throw new McpReadError("not_found", "Thread not found");
         }
+        const organized = createOrganization(createSqliteOrganizationRepository(db)).query({
+          scope: { actor: { id: userId, type: "agent" }, workspaceId: userId, accountIds: [...allowedAccountIds] },
+          query: { accountIds: [query.accountId], threadId: query.threadId, attention: "all", classification: "all", limit: 1 },
+        });
+        if (organized.threads.length === 0) throw new McpReadError("not_found", "Thread not found");
         return readThreadDetail(db, account, serializeMailAccount(account), query.threadId);
       } finally {
         sqlite.close();
@@ -329,6 +382,88 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       service: "orca-api",
     }),
   );
+
+  function organizationFor(db: Database, workspaceId: string) {
+    const repository = createSqliteOrganizationRepository(db);
+    const accountIds = repository.listAccountIds(workspaceId);
+    return {
+      organization: createOrganization(repository),
+      scope: {
+        actor: { id: workspaceId, type: "human" as const },
+        workspaceId,
+        accountIds,
+      },
+    };
+  }
+
+  app.get("/v1/organization/describe", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const { organization, scope } = organizationFor(db, c.get("auth").userId);
+      return c.json(organization.describe({ scope }));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  app.get("/v1/organization/query", requireAuth({ dbFactory }), (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const { organization, scope } = organizationFor(db, c.get("auth").userId);
+      const accountId = c.req.query("accountId");
+      const limit = c.req.query("limit");
+      try {
+        return c.json(organization.query({
+          scope,
+          query: {
+            ...(accountId ? { accountIds: [accountId] } : {}),
+            ...(c.req.query("threadId") ? { threadId: c.req.query("threadId") } : {}),
+            ...(c.req.query("attention") ? { attention: c.req.query("attention") } : {}),
+            ...(c.req.query("classification") ? { classification: c.req.query("classification") } : {}),
+            ...(c.req.query("text") ? { text: c.req.query("text") } : {}),
+            ...(c.req.query("sender") ? { sender: c.req.query("sender") } : {}),
+            ...(c.req.query("receivedAfter") ? { receivedAfter: c.req.query("receivedAfter") } : {}),
+            ...(c.req.query("receivedBefore") ? { receivedBefore: c.req.query("receivedBefore") } : {}),
+            ...(limit ? { limit: Number(limit) } : {}),
+            ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
+          },
+        }));
+      } catch (error) {
+        if (error instanceof OrganizationAccessError) {
+          return c.json({ error: { code: error.code, message: "The requested Account scope is not authorized" } }, 403);
+        }
+        if (error instanceof OrganizationQueryError) {
+          return c.json({ error: { code: error.code, message: error.message } }, 400);
+        }
+        if (error instanceof Error && error.name === "ZodError") {
+          return c.json({ error: { code: "validation_error", message: "Invalid Organization query parameters" } }, 400);
+        }
+        throw error;
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  for (const operation of ["simulate", "apply", "revert"] as const) {
+    app.post(`/v1/organization/${operation}`, requireAuth({ dbFactory }), (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const { organization, scope } = organizationFor(db, c.get("auth").userId);
+        try {
+          organization[operation]({ scope });
+        } catch (error) {
+          if (error instanceof OrganizationOperationDisabledError) {
+            return c.json({ error: { code: error.code, message: error.message } }, 405);
+          }
+          throw error;
+        }
+        throw new Error(`Organization ${operation} unexpectedly returned while disabled`);
+      } finally {
+        sqlite.close();
+      }
+    });
+  }
 
   const handleGmailPush = async (c: Context<{ Variables: AuthVariables }>) => {
     if (!gmailPushConfig.verificationToken) {
@@ -1543,7 +1678,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
         }
         try {
-          const result = readUnifiedInbox(db, accounts, accounts.map(serializeMailAccount), {
+          const result = readUnifiedInbox(db, c.get("auth").userId, accounts, accounts.map(serializeMailAccount), {
             cursor,
             limit,
             view,
@@ -1579,6 +1714,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountById(db, c.get("auth").userId, c.req.valid("query").accountId);
         if (!account) return c.json({ error: { code: "not_found", message: "Thread not found" } }, 404);
         try {
+          const organized = createOrganization(createSqliteOrganizationRepository(db)).query({
+            scope: {
+              actor: { id: c.get("auth").userId, type: "human" },
+              workspaceId: c.get("auth").userId,
+              accountIds: [account.id],
+            },
+            query: { accountIds: [account.id], threadId: c.req.param("threadId"), attention: "all", classification: "all", limit: 1 },
+          });
+          if (organized.threads.length === 0) throw new McpReadError("not_found", "Thread not found");
           return jsonWithSchema(c, threadDetailSchema, readThreadDetail(
             db,
             account,
@@ -2441,6 +2585,7 @@ function decodeInboxCursor(value: string | undefined): InboxCursor | null {
 
 function readUnifiedInbox(
   db: Database,
+  workspaceId: string,
   accounts: ConnectedAccount[],
   serializedAccounts: MailAccount[],
   input: UnifiedInboxReadQuery,
@@ -2448,83 +2593,51 @@ function readUnifiedInbox(
   const { cursor, limit, view, classification } = input;
   const classificationFilter = classification ?? "all";
   const accountIds = accounts.map((account) => account.id).sort();
-  const resolved: ResolvedInboxMessage[] = [];
+  const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const organization = createOrganization(createSqliteOrganizationRepository(db));
+  const scope = { actor: { id: workspaceId, type: "system" as const }, workspaceId, accountIds };
+  const organizationThreads = [] as ReturnType<typeof organization.query>["threads"];
+  let organizationCursor: string | undefined;
+  do {
+    const page = organization.query({
+      scope,
+      query: {
+        attention: "all",
+        classification: "all",
+        ...(input.query ? { text: input.query } : {}),
+        ...(input.sender ? { sender: input.sender } : {}),
+        ...(input.receivedAfter ? { receivedAfter: input.receivedAfter } : {}),
+        ...(input.receivedBefore ? { receivedBefore: input.receivedBefore } : {}),
+        limit: 100,
+        ...(organizationCursor ? { cursor: organizationCursor } : {}),
+      },
+    });
+    organizationThreads.push(...page.threads);
+    organizationCursor = page.nextCursor ?? undefined;
+  } while (organizationCursor);
 
-  for (const account of accounts) {
-    const rows = db.select({
-      id: emails.id,
-      accountId: emails.accountId,
-      providerMessageId: emails.providerMessageId,
-      threadId: emails.threadId,
-      fromAddress: emails.fromAddress,
-      fromName: emails.fromName,
-      subject: emails.subject,
-      snippet: emails.snippet,
-      receivedAt: emails.receivedAt,
-      isRead: emails.isRead,
-      humanSignal: emails.humanSignal,
-      humanClassification: emails.humanClassification,
-      humanClassificationReasons: emails.humanClassificationReasons,
-      humanClassifierVersion: emails.humanClassifierVersion,
-      labelName: labels.name,
-    }).from(emails)
-      .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
-      .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-      .where(eq(emails.accountId, account.id))
-      .orderBy(desc(emails.receivedAt), asc(emails.id), asc(labels.name))
-      .all();
-    const byId = new Map<string, InboxDatabaseMessage>();
-    for (const row of rows) {
-      const message = byId.get(row.id) ?? {
-        id: row.id,
-        accountId: row.accountId,
-        providerMessageId: row.providerMessageId,
-        threadId: row.threadId,
-        fromAddress: row.fromAddress,
-        fromName: row.fromName,
-        subject: row.subject,
-        snippet: row.snippet,
-        receivedAt: row.receivedAt,
-        isRead: row.isRead,
-        humanSignal: row.humanSignal,
-        humanClassification: row.humanClassification,
-        humanClassificationReasons: row.humanClassificationReasons,
-        humanClassifierVersion: row.humanClassifierVersion,
-        labels: [],
-      };
-      if (row.labelName && !message.labels.includes(row.labelName)) message.labels.push(row.labelName);
-      byId.set(row.id, message);
-    }
-
-    const rules = listSenderRules(db, account.id);
-    const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
-    for (const message of byId.values()) {
-      const humanClassification = resolveHumanClassification(message, resolveClassification);
-      resolved.push({
-        ...message,
-        provider: account.provider,
-        attentionBehavior: resolveAttentionBehavior(message.fromAddress, rules),
-        humanSignal: humanClassification.effective.score,
-        humanClassification,
-      });
-    }
-  }
-
-  const textQuery = input.query?.trim().toLocaleLowerCase() ?? "";
-  const senderQuery = input.sender?.trim().toLocaleLowerCase() ?? "";
-  const receivedAfter = input.receivedAfter ? Date.parse(input.receivedAfter) : null;
-  const receivedBefore = input.receivedBefore ? Date.parse(input.receivedBefore) : null;
-  const scoped = resolved.filter((message) => {
-    const receivedAt = message.receivedAt?.getTime() ?? 0;
-    if (receivedAfter !== null && receivedAt < receivedAfter) return false;
-    if (receivedBefore !== null && receivedAt > receivedBefore) return false;
-    const sender = `${message.fromName ?? ""}\n${message.fromAddress ?? ""}`.toLocaleLowerCase();
-    if (senderQuery && !sender.includes(senderQuery)) return false;
-    if (textQuery) {
-      const haystack = `${sender}\n${message.subject ?? ""}\n${message.snippet ?? ""}`.toLocaleLowerCase();
-      if (!haystack.includes(textQuery)) return false;
-    }
-    return true;
+  const scoped: ResolvedInboxMessage[] = organizationThreads.flatMap((thread) => {
+    const account = accountById.get(thread.accountId);
+    if (!account) throw new OrganizationAccessError();
+    return thread.messages.map((message) => ({
+      id: message.id,
+      accountId: thread.accountId,
+      providerMessageId: message.sourceId,
+      threadId: thread.id,
+      fromAddress: message.from.email,
+      fromName: message.from.name,
+      subject: message.subject,
+      snippet: message.snippet,
+      receivedAt: new Date(message.receivedAt),
+      isRead: !message.unread,
+      humanSignal: message.humanSignal,
+      humanClassification: humanClassificationResultSchema.parse(message.humanClassification),
+      humanClassificationReasons: null,
+      humanClassifierVersion: null,
+      labels: message.labels,
+      provider: account.provider,
+      attentionBehavior: thread.organization.attentionBehavior,
+    }));
   });
   const counts = {
     attention: {

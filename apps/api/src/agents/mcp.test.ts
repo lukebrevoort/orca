@@ -387,7 +387,7 @@ describe("Orca read-only MCP server", () => {
     }
   });
 
-  test("initializes with stable metadata and lists only the four annotated read tools", async () => {
+  test("initializes with stable metadata and lists only the six annotated read tools", async () => {
     const { app, sqlite } = createFixture();
     try {
       const token = await signToken();
@@ -405,7 +405,7 @@ describe("Orca read-only MCP server", () => {
       const body = await rpcBody(tools);
       assert.ok(body.result, JSON.stringify(body));
       assert.deepEqual(body.result.tools.map((tool: { name: string }) => tool.name), [
-        "search_mail", "get_thread", "list_agent_events", "get_connection_status",
+        "describe_organization", "query_organization", "search_mail", "get_thread", "list_agent_events", "get_connection_status",
       ]);
       for (const tool of body.result.tools) {
         assert.deepEqual(tool.annotations, { readOnlyHint: true, destructiveHint: false, openWorldHint: false });
@@ -421,6 +421,41 @@ describe("Orca read-only MCP server", () => {
     const { app, sqlite } = createFixture();
     try {
       const token = await signToken({ accountIds: ["account_a", "account_b"] });
+
+      const describe = await callMcp(app, token, "tools/call", {
+        name: "describe_organization",
+        arguments: { accountId: "account_a" },
+      });
+      const describeBody = await rpcBody(describe);
+      assert.deepEqual(describeBody.result.structuredContent.accountIds, ["account_a"]);
+      assert.equal(describeBody.result.structuredContent.workspaceSchema.aggregate, "thread");
+      assert.equal(describeBody.result.structuredContent.capabilities.operations.apply, false);
+      assert.doesNotMatch(JSON.stringify(describeBody), /account_b|gmail|outlook|provider-access|provider-refresh/);
+
+      const deniedDescribe = await callMcp(app, token, "tools/call", {
+        name: "describe_organization",
+        arguments: { accountId: "account_b" },
+      });
+      const deniedDescribeBody = await rpcBody(deniedDescribe);
+      assert.equal(deniedDescribeBody.result.isError, true);
+      assert.equal(JSON.parse(deniedDescribeBody.result.content[0].text).error.code, "account_denied");
+
+      const organizationQuery = await callMcp(app, token, "tools/call", {
+        name: "query_organization",
+        arguments: { accountId: "account_a", attention: "all", limit: 25 },
+      });
+      const organizationBody = await rpcBody(organizationQuery);
+      assert.deepEqual(organizationBody.result.structuredContent.accountIds, ["account_a"]);
+      assert.deepEqual(organizationBody.result.structuredContent.threads.map((thread: { id: string }) => thread.id), ["thread_a_1", "thread_a_2"]);
+      assert.doesNotMatch(JSON.stringify(organizationBody), /account_b|Private B|provider-access|provider-refresh/);
+
+      const deniedOrganization = await callMcp(app, token, "tools/call", {
+        name: "query_organization",
+        arguments: { accountId: "account_b", attention: "all" },
+      });
+      const deniedOrganizationBody = await rpcBody(deniedOrganization);
+      assert.equal(deniedOrganizationBody.result.isError, true);
+      assert.equal(JSON.parse(deniedOrganizationBody.result.content[0].text).error.code, "account_denied");
 
       const search = await callMcp(app, token, "tools/call", {
         name: "search_mail",

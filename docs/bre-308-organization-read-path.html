@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-308 · Organization read path and M8 reset</title>
+  <style>
+    :root{color-scheme:light dark;--paper:#f4f7f5;--surface:#fff;--ink:#13221e;--muted:#60716c;--line:#d7e2de;--accent:#087f6f;--soft:#e4f2ee;--code:#101817}@media(prefers-color-scheme:dark){:root{--paper:#090d0c;--surface:#111817;--ink:#edf4f1;--muted:#9baaa5;--line:#27332f;--accent:#68c8b6;--soft:#182824;--code:#050807}}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 ui-sans-serif,system-ui,sans-serif}main{max-width:1080px;margin:auto;padding:64px 24px 120px}h1{max-width:820px;margin:.2em 0;font:600 clamp(42px,7vw,78px)/.94 ui-serif,Georgia,serif;letter-spacing:-.045em}h2{margin:2.5em 0 .6em;font:600 30px/1.1 ui-serif,Georgia,serif}.eyebrow{color:var(--accent);font:700 12px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.lead{max-width:780px;color:var(--muted);font-size:18px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{padding:22px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}.card h3{margin:0 0 7px;font-size:15px}.card p,.card li{color:var(--muted)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.flow div{display:grid;place-items:center;min-height:92px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:center;font-size:12px}.flow b{display:block;color:var(--accent);font:700 10px ui-monospace,monospace;text-transform:uppercase}table{width:100%;border-collapse:collapse;background:var(--surface)}th,td{padding:12px;border:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase}code,pre{font-family:ui-monospace,SFMono-Regular,monospace}code{color:var(--accent)}pre{overflow:auto;padding:18px;border-radius:12px;background:var(--code);color:#d8e7e2;font-size:12px}.callout{padding:18px;border-left:4px solid var(--accent);border-radius:8px;background:var(--soft)}@media(max-width:760px){.grid,.flow{grid-template-columns:1fr}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">BRE-308 · reviewer guide · schema revision 1</div>
+  <h1>One Organization seam. Thread truth. Explicit Account scope.</h1>
+  <p class="lead">This slice replaces message-policy calls from REST and MCP with a provider-neutral Organization module. It exposes the complete five-operation interface, enables only <code>describe</code> and <code>query</code>, and keeps the existing inbox wire contract as a compatibility adapter.</p>
+
+  <h2>Read path</h2>
+  <div class="flow">
+    <div><span><b>Adapters</b>REST · MCP · Gmail sync</span></div>
+    <div><span><b>Scope</b>Actor · Workspace · Accounts</span></div>
+    <div><span><b>Organization</b>describe · query</span></div>
+    <div><span><b>Aggregate</b>Thread organization</span></div>
+    <div><span><b>Storage</b>SQLite adapter</span></div>
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <article class="card"><h3>Account fails closed</h3><p>The module compares every claimed Account with live Workspace ownership, then verifies every query filter is a subset of that authorized scope. The SQLite adapter predicates all reads by Account.</p></article>
+    <article class="card"><h3>Provider concepts stop at adapters</h3><p>The Organization interface exposes Account, Thread, sender evidence, source IDs, and organization results. Gmail/Outlook names, OAuth scopes, tokens, and provider capabilities never enter its contract.</p></article>
+    <article class="card"><h3>Thread owns meaning</h3><p>Attention behavior and aggregate Human Signal are resolved once per Thread. Nested messages remain evidence and let the legacy inbox/search adapters preserve their current response shape.</p></article>
+    <article class="card"><h3>Mutation stays off</h3><p><code>simulate</code>, <code>apply</code>, and <code>revert</code> exist at the seam but return <code>operation_disabled</code>. Send and provider deletion authority are explicitly false.</p></article>
+  </div>
+
+  <h2>Adapter entry points</h2>
+  <table><thead><tr><th>Adapter</th><th>Entry point</th><th>Result</th></tr></thead><tbody>
+    <tr><td>REST</td><td><code>GET /v1/organization/describe</code></td><td>Workspace Schema revision, authorized Account IDs, capabilities</td></tr>
+    <tr><td>REST</td><td><code>GET /v1/organization/query</code></td><td>Account-filtered Workspace Threads and nested provider-neutral evidence</td></tr>
+    <tr><td>MCP</td><td><code>describe_organization</code></td><td>Same description, intersected with the live OAuth Account grant</td></tr>
+    <tr><td>MCP</td><td><code>query_organization</code></td><td>Same Thread query with external text redaction and read-only annotations</td></tr>
+    <tr><td>Compatibility</td><td><code>/v1/inbox</code>, <code>search_mail</code>, <code>get_thread</code></td><td>Existing wire shapes projected from Organization query results</td></tr>
+    <tr><td>Sync</td><td><code>refreshThreadAggregates</code></td><td>Account-scoped Thread aggregate refresh used by sync and push</td></tr>
+  </tbody></table>
+
+  <h2>Single-user M8 reset strategy</h2>
+  <div class="callout"><strong>BRE-308 requires no data reset.</strong> It adds no database table or migration. Existing Accounts, messages, labels, and Thread IDs remain intact; normal sync/push refreshes Thread aggregate facts through the new Organization-owned adapter.</div>
+  <ol>
+    <li><strong>Defer the clean reset to the first mutating M8 schema.</strong> Lanes, Facets, Workflow State, Collections, Views, and Rules are intentionally absent here, so clearing speculative structures now would destroy working inbox customization without creating replacement truth.</li>
+    <li><strong>Use one versioned migration, once.</strong> In the pre-MVP single-user environment, that future migration may clear only organizational structures, seed the Fallback Lane and Workspace Schema revision, and rebuild every Thread organization projection.</li>
+    <li><strong>Preserve source mail.</strong> The reset must not delete <code>users</code>, <code>oauth_accounts</code>, <code>threads</code>, <code>emails</code>, provider tokens, labels, attachments, contacts, drafts, or delivery state.</li>
+    <li><strong>Keep it atomic and recoverable.</strong> Take the normal local SQLite backup, run the migration in one transaction, rebuild per Account, verify counts/isolation, then commit. Failure rolls back the reset.</li>
+    <li><strong>Do not dual-read.</strong> After that migration, all Organization callers use the new schema; rollback restores the pre-migration SQLite backup rather than maintaining two competing policy models.</li>
+  </ol>
+
+  <h2>Verification</h2>
+  <pre>CI=true bun test apps/api/src/organization
+CI=true bun test apps/api/src/agents/mcp.test.ts
+CI=true bun test apps/api/src/providers/gmail/sync.test.ts apps/api/src/providers/gmail/push.test.ts
+bun run typecheck
+bun run test
+bun run build
+bun run lint</pre>
+</main></body></html>

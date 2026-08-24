@@ -92,6 +92,28 @@ export {
   organizationTraceWinnerSchema,
 } from "./organization-contract.ts";
 
+export {
+  organizationCapabilitiesSchema,
+  organizationDescribeResponseSchema,
+  organizationQueryResponseSchema,
+  organizationQuerySchema,
+  organizationReadScopeSchema,
+  workspaceSchemaSchema,
+  workspaceThreadMessageSchema,
+  workspaceThreadSchema,
+} from "./organization-workspace.ts";
+
+export type {
+  OrganizationCapabilities,
+  OrganizationDescribeResponse,
+  OrganizationQuery,
+  OrganizationQueryResponse,
+  OrganizationReadScope,
+  WorkspaceSchema,
+  WorkspaceThread,
+  WorkspaceThreadMessage,
+} from "./organization-workspace.ts";
+
 export type {
   OrganizationActionFamily,
   OrganizationActor,
@@ -115,6 +137,8 @@ export type {
 } from "./organization-contract.ts";
 
 export {
+  mcpDescribeOrganizationInputSchema,
+  mcpDescribeOrganizationOutputSchema,
   mcpAgentEventSchema,
   mcpContentSafetySchema,
   mcpGetConnectionStatusInputSchema,
@@ -126,6 +150,8 @@ export {
   mcpListAgentEventsInputSchema,
   mcpListAgentEventsOutputSchema,
   mcpMailMessageSchema,
+  mcpQueryOrganizationInputSchema,
+  mcpQueryOrganizationOutputSchema,
   mcpSearchMailInputSchema,
   mcpSearchMailOutputSchema,
   mcpThreadMessageSchema,
@@ -134,6 +160,8 @@ export {
 } from "./mcp-contract.ts";
 
 export type {
+  McpDescribeOrganizationInput,
+  McpDescribeOrganizationOutput,
   McpGetConnectionStatusInput,
   McpGetConnectionStatusOutput,
   McpGetThreadInput,
@@ -141,6 +169,8 @@ export type {
   McpListAgentEventsInput,
   McpListAgentEventsOutput,
   McpMailMessage,
+  McpQueryOrganizationInput,
+  McpQueryOrganizationOutput,
   McpSearchMailInput,
   McpSearchMailOutput,
   McpToolError,
