@@ -8,6 +8,14 @@ import {
   mailContactSchema,
   threadReadStateSchema,
 } from "./schemas.ts";
+import {
+  facetDefinitionSchema,
+  facetFilterSchema,
+  organizationFacetSupportSchema,
+  threadFacetValueSchema,
+  threadWorkflowStateSchema,
+  workflowStateDefinitionSchema,
+} from "./organization-facets.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const uniqueStringsSchema = z.array(nonEmptyStringSchema).superRefine((values, context) => {
@@ -40,9 +48,9 @@ export const organizationReadScopeSchema = z.object({
 export type OrganizationReadScope = z.infer<typeof organizationReadScopeSchema>;
 
 export const workspaceSchemaSchema = z.object({
-  revision: z.literal(1),
+  revision: z.literal(2),
   aggregate: z.literal("thread"),
-  resources: z.tuple([z.literal("account"), z.literal("thread")]),
+  resources: z.tuple([z.literal("account"), z.literal("thread"), z.literal("facet"), z.literal("workflow_state")]),
   filters: z.tuple([
     z.literal("account"),
     z.literal("thread"),
@@ -51,6 +59,8 @@ export const workspaceSchemaSchema = z.object({
     z.literal("sender"),
     z.literal("text"),
     z.literal("received_at"),
+    z.literal("facet"),
+    z.literal("workflow_state"),
   ]),
 }).strict();
 export type WorkspaceSchema = z.infer<typeof workspaceSchemaSchema>;
@@ -60,7 +70,7 @@ export const organizationCapabilitiesSchema = z.object({
     describe: z.literal(true),
     query: z.literal(true),
     simulate: z.literal(false),
-    apply: z.literal(false),
+    apply: z.boolean(),
     revert: z.literal(false),
   }).strict(),
   authority: z.object({
@@ -75,6 +85,10 @@ export const organizationDescribeResponseSchema = z.object({
   accountIds: uniqueStringsSchema,
   workspaceSchema: workspaceSchemaSchema,
   capabilities: organizationCapabilitiesSchema,
+  workspaceRevision: z.number().int().positive().optional(),
+  facetDefinitions: z.array(facetDefinitionSchema).optional(),
+  workflowStates: z.array(workflowStateDefinitionSchema).optional(),
+  facetSupport: organizationFacetSupportSchema.optional(),
 }).strict();
 export type OrganizationDescribeResponse = z.infer<typeof organizationDescribeResponseSchema>;
 
@@ -87,6 +101,8 @@ export const organizationQuerySchema = z.object({
   sender: z.string().trim().max(320).optional(),
   receivedAfter: z.string().datetime({ offset: false }).optional(),
   receivedBefore: z.string().datetime({ offset: false }).optional(),
+  facetFilters: z.array(facetFilterSchema).max(20).optional(),
+  workflowStateIds: z.array(nonEmptyStringSchema).min(1).max(50).optional(),
   limit: z.number().int().min(1).max(100).default(25),
   cursor: z.string().trim().min(1).max(2_048).optional(),
 }).strict().superRefine((value, context) => {
@@ -135,6 +151,9 @@ export const workspaceThreadSchema = z.object({
       }).strict(),
       userOverride: organizationClassificationOverrideSchema.nullable(),
     }).strict().nullable(),
+    facetValues: z.array(threadFacetValueSchema).optional(),
+    workflowState: threadWorkflowStateSchema.nullable().optional(),
+    revision: z.number().int().positive().nullable().optional(),
   }).strict(),
   messages: z.array(workspaceThreadMessageSchema),
 }).strict();
@@ -149,5 +168,7 @@ export const organizationQueryResponseSchema = z.object({
     messages: z.number().int().nonnegative(),
   }).strict(),
   nextCursor: z.string().max(2_048).nullable(),
+  facetDefinitions: z.array(facetDefinitionSchema).optional(),
+  workflowStates: z.array(workflowStateDefinitionSchema).optional(),
 }).strict();
 export type OrganizationQueryResponse = z.infer<typeof organizationQueryResponseSchema>;

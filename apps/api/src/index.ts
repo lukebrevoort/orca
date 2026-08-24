@@ -117,11 +117,14 @@ import type { CalendarFetch } from "./calendar/google-client.ts";
 import { createCalendarAvailabilityResolver } from "./calendar/resolver.ts";
 import {
   OrganizationAccessError,
+  OrganizationAuthorityError,
   OrganizationOperationDisabledError,
   OrganizationQueryError,
+  OrganizationRevisionConflictError,
   createOrganization,
 } from "./organization/module.ts";
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
+import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -412,7 +415,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const { organization, scope } = organizationFor(db, c.get("auth").userId);
       const accountId = c.req.query("accountId");
       const limit = c.req.query("limit");
+      const facetId = c.req.query("facetId");
+      const facetOperator = c.req.query("facetOperator");
+      const facetValueJson = c.req.query("facetValueJson");
       try {
+        let parsedFacetValue: unknown;
+        if (facetValueJson !== undefined) {
+          try {
+            parsedFacetValue = JSON.parse(facetValueJson) as unknown;
+          } catch {
+            return c.json({ error: { code: "validation_error", message: "facetValueJson must be a valid JSON scalar" } }, 400);
+          }
+        }
         return c.json(organization.query({
           scope,
           query: {
@@ -424,6 +438,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             ...(c.req.query("sender") ? { sender: c.req.query("sender") } : {}),
             ...(c.req.query("receivedAfter") ? { receivedAfter: c.req.query("receivedAfter") } : {}),
             ...(c.req.query("receivedBefore") ? { receivedBefore: c.req.query("receivedBefore") } : {}),
+            ...(facetId && facetOperator ? {
+              facetFilters: [{
+                facetId,
+                operator: facetOperator,
+                ...((facetOperator === "equals" || facetOperator === "contains") ? { value: parsedFacetValue } : {}),
+              }],
+            } : {}),
+            ...(c.req.query("workflowStateId") ? { workflowStateIds: [c.req.query("workflowStateId")] } : {}),
             ...(limit ? { limit: Number(limit) } : {}),
             ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
           },
@@ -435,6 +457,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (error instanceof OrganizationQueryError) {
           return c.json({ error: { code: error.code, message: error.message } }, 400);
         }
+        if (error instanceof FacetWorkflowValidationError) {
+          return c.json({ error: { code: error.code, message: error.message, issues: error.issues } }, 400);
+        }
         if (error instanceof Error && error.name === "ZodError") {
           return c.json({ error: { code: "validation_error", message: "Invalid Organization query parameters" } }, 400);
         }
@@ -445,7 +470,44 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
-  for (const operation of ["simulate", "apply", "revert"] as const) {
+  app.post("/v1/organization/apply", requireAuth({ dbFactory }), async (c) => {
+    const { db, sqlite } = dbFactory();
+    try {
+      const { organization, scope } = organizationFor(db, c.get("auth").userId);
+      let command: unknown;
+      try {
+        command = await c.req.json();
+      } catch {
+        return c.json({ error: { code: "validation_error", message: "Organization apply requires a valid JSON command", issues: [] } }, 400);
+      }
+      try {
+        return c.json(organization.apply({ scope, command }));
+      } catch (error) {
+        if (error instanceof FacetWorkflowValidationError) {
+          const denied = error.issues.some((issue) => issue.code === "account_denied");
+          return c.json({ error: { code: denied ? "account_denied" : error.code, message: error.message, issues: error.issues } }, denied ? 403 : 400);
+        }
+        if (error instanceof OrganizationRevisionConflictError) {
+          return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, 409);
+        }
+        if (error instanceof OrganizationAuthorityError) {
+          const status = error.code === "revision_conflict" || error.code === "duplicate_idempotency_key" ? 409
+            : error.code === "invalid_request" || error.code === "idempotency_key_required" || error.code === "expected_revision_required" ? 400
+              : 403;
+          return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
+        if (error instanceof Error && error.name === "ZodError") {
+          const issues = "issues" in error ? error.issues : [];
+          return c.json({ error: { code: "validation_error", message: "Invalid Organization apply command", issues } }, 400);
+        }
+        throw error;
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  for (const operation of ["simulate", "revert"] as const) {
     app.post(`/v1/organization/${operation}`, requireAuth({ dbFactory }), (c) => {
       const { db, sqlite } = dbFactory();
       try {

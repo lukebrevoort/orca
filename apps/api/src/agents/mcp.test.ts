@@ -131,13 +131,13 @@ const organizationDescribeFixture: OrganizationDescribeResponse = {
   workspaceId: "user_a",
   accountIds: ["account_a"],
   workspaceSchema: {
-    revision: 1,
+    revision: 2,
     aggregate: "thread",
-    resources: ["account", "thread"],
-    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at"],
+    resources: ["account", "thread", "facet", "workflow_state"],
+    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state"],
   },
   capabilities: {
-    operations: { describe: true, query: true, simulate: false, apply: false, revert: false },
+    operations: { describe: true, query: true, simulate: false, apply: true, revert: false },
     authority: { sendMail: false, deleteProviderMail: false },
   },
 };
@@ -580,7 +580,7 @@ describe("Orca read-only MCP server", () => {
       const describeBody = await rpcBody(describe);
       assert.deepEqual(describeBody.result.structuredContent.accountIds, ["account_a"]);
       assert.equal(describeBody.result.structuredContent.workspaceSchema.aggregate, "thread");
-      assert.equal(describeBody.result.structuredContent.capabilities.operations.apply, false);
+      assert.equal(describeBody.result.structuredContent.capabilities.operations.apply, true);
       assert.doesNotMatch(JSON.stringify(describeBody), /account_b|gmail|outlook|provider-access|provider-refresh/);
 
       const deniedDescribe = await callMcp(app, token, "tools/call", {

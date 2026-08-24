@@ -115,6 +115,11 @@ function bindCommand(command: OrganizationCommand): DerivedCommand {
   };
 }
 
+/** Recomputes the canonical digest that binds an authorized execution payload. */
+export function digestOrganizationCommand(command: OrganizationCommand): string {
+  return bindCommand(command).command.digest;
+}
+
 function traceFor(
   request: OrganizationOperationRequest,
   derived: DerivedCommand,
@@ -249,6 +254,12 @@ export function authorizeOrganizationOperation(
 
   const isWrite = request.operation === "apply" || request.operation === "revert";
   if (isWrite) {
+    if (!request.idempotencyKey) {
+      return deny(request, derived, "idempotency_key_required", `${request.operation} requires an idempotency key`);
+    }
+    if (live.reservedIdempotencyKeys.includes(request.idempotencyKey)) {
+      return deny(request, derived, "duplicate_idempotency_key", "The idempotency key is already reserved");
+    }
     if (request.expectedRevisions.workspace === null) {
       return deny(request, derived, "expected_revision_required", `${request.operation} requires an expected Workspace revision`);
     }
@@ -269,13 +280,6 @@ export function authorizeOrganizationOperation(
       if (mutation === "create" && (liveRevision !== undefined || expectedRevision !== undefined)) {
         return deny(request, derived, "revision_conflict", `Create target ${resourceId} must not already exist or carry an expected revision`);
       }
-    }
-
-    if (!request.idempotencyKey) {
-      return deny(request, derived, "idempotency_key_required", `${request.operation} requires an idempotency key`);
-    }
-    if (live.reservedIdempotencyKeys.includes(request.idempotencyKey)) {
-      return deny(request, derived, "duplicate_idempotency_key", "The idempotency key is already reserved");
     }
   }
 

@@ -162,6 +162,13 @@
       "when": 1787241600000,
       "tag": "0022_agent_propagation_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1787551200000,
+      "tag": "0023_typed_facets_workflow",
+      "breakpoints": true
     }
   ]
 }

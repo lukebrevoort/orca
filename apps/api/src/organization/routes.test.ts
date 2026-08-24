@@ -57,6 +57,8 @@ describe("Organization REST read adapter", () => {
       assert.deepEqual(description.accountIds, ["account_a", "account_b"]);
       assert.equal(description.workspaceSchema.aggregate, "thread");
       assert.equal(description.capabilities.operations.simulate, false);
+      assert.deepEqual(description.facetSupport.valueTypes, ["text", "number", "boolean", "datetime", "duration", "email", "domain", "enum"]);
+      assert.deepEqual(description.facetSupport.workflowStateIndependentOf, ["lane", "subject_matter"]);
       assert.equal(JSON.stringify(description).includes("gmail"), false);
 
       const workspaceResponse = await app.request("/v1/organization/query?attention=all", { headers });
@@ -77,7 +79,7 @@ describe("Organization REST read adapter", () => {
     }
   });
 
-  test("requires authentication and keeps mutation routes disabled", async () => {
+  test("requires authentication and keeps simulate/revert routes disabled", async () => {
     assert.equal((await createApp().request("/v1/organization/describe")).status, 401);
 
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
@@ -92,7 +94,7 @@ describe("Organization REST read adapter", () => {
       const session = await createSession(db, "workspace_owner");
       const headers = { cookie: `orca_session=${session.token}` };
       const app = createApp({ dbFactory: () => createDatabaseClient(databasePath) });
-      for (const operation of ["simulate", "apply", "revert"]) {
+      for (const operation of ["simulate", "revert"]) {
         const response = await app.request(`/v1/organization/${operation}`, { method: "POST", headers });
         assert.equal(response.status, 405);
         assert.deepEqual(await response.json(), { error: { code: "operation_disabled", message: `Organization ${operation} is disabled in this read-only slice` } });

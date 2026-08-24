@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-310 · Typed Facets and Workflow State evidence</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { color-scheme: light dark; --serif: Newsreader, Iowan Old Style, Georgia, serif; --sans: Sora, Avenir Next, sans-serif; --mono: SFMono-Regular, Consolas, monospace; }
+    body { margin: 0; background: #dfe8e4; color: #102522; font-family: var(--sans); }
+    header { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; padding: 50px 6vw 34px; }
+    .eyebrow { color: #0b806e; font: 800 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    h1 { max-width: 820px; margin: 12px 0 0; font: 500 clamp(42px, 6vw, 78px)/.92 var(--serif); letter-spacing: -.045em; }
+    header p { max-width: 390px; margin: 0; color: #5d706c; font-size: 12px; line-height: 1.6; }
+    main { display: grid; gap: 18px; padding: 0 3vw 48px; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .shell { --paper: #f6faf7; --surface: #fff; --hover: #edf4f1; --ink: #102522; --muted: #667a76; --line: #dce8e3; --accent: #0b9b84; --accent-soft: #e4f4ef; display: grid; grid-template-columns: 170px 1fr; min-height: 555px; overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--paper); color: var(--ink); box-shadow: 0 20px 60px rgba(16,37,34,.08); }
+    .shell.dark { --paper: #050505; --surface: #0d0d0d; --hover: #171717; --ink: #f4f3ef; --muted: #92928e; --line: #292929; --accent: #6aa9f5; --accent-soft: #142235; box-shadow: 0 20px 60px rgba(0,0,0,.28); }
+    aside { display: flex; flex-direction: column; gap: 22px; padding: 22px 15px; border-right: 1px solid var(--line); background: var(--surface); }
+    .brand { display: flex; justify-content: space-between; align-items: center; font: 500 26px/1 var(--serif); }
+    .brand i { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--line); border-radius: 8px; color: var(--accent); font: 700 12px/1 var(--mono); }
+    nav { display: grid; gap: 5px; }
+    nav span { padding: 8px 10px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); font-size: 10px; }
+    nav .selected { border-color: var(--line); background: var(--hover); color: var(--ink); font-weight: 750; }
+    .scope { margin-top: auto; color: var(--muted); font: 700 8px/1.6 var(--mono); text-transform: uppercase; }
+    .workspace { min-width: 0; padding: 22px; }
+    .workspace-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    h2 { margin: 0; font: 500 27px/1 var(--serif); }
+    .revision { color: var(--muted); font: 700 8px/1 var(--mono); text-transform: uppercase; }
+    .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    button { min-height: 28px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: 700 8px/1 var(--sans); cursor: pointer; }
+    button:hover, button:focus-visible, button.hover, button.focus { background: var(--hover); }
+    button:focus-visible, button.focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button[aria-pressed="true"] { border-color: var(--line); background: var(--hover); color: var(--ink); box-shadow: inset 3px 0 var(--accent); }
+    button:disabled { color: var(--muted); cursor: not-allowed; opacity: .62; }
+    .thread-list { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .thread { display: grid; grid-template-columns: 56px minmax(90px,.6fr) minmax(130px,1fr) 74px; gap: 9px; align-items: center; padding: 13px 12px; border-top: 1px solid var(--line); }
+    .thread:first-child { border-top: 0; }
+    .thread[hidden] { display: none; }
+    .state { color: var(--accent); font: 800 8px/1 var(--mono); text-transform: uppercase; }
+    .sender { overflow: hidden; font-size: 10px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+    .subject { min-width: 0; }
+    .subject strong { display: block; overflow: hidden; font: 500 14px/1.1 var(--serif); text-overflow: ellipsis; white-space: nowrap; }
+    .subject small { display: block; overflow: hidden; margin-top: 4px; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+    .facet { display: inline-flex; margin-right: 4px; color: var(--muted); }
+    .facet b { margin-right: 3px; color: var(--ink); }
+    time { color: var(--muted); font: 700 8px/1 var(--mono); text-align: right; }
+    .detail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .detail div { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .detail span { display: block; margin-bottom: 5px; color: var(--muted); font: 700 7px/1 var(--mono); text-transform: uppercase; }
+    .detail strong { font: 500 12px/1.2 var(--serif); }
+    .states { --paper:#fff; --surface:#fff; --hover:#edf4f1; --ink:#102522; --muted:#667a76; --line:#dce8e3; --accent:#0b9b84; padding: 22px; border: 1px solid #cfddd7; border-radius: 18px; background: white; }
+    .states h2 { margin-bottom: 14px; }
+    .state-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .state-grid div { display: grid; gap: 7px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; }
+    .state-grid label { color: var(--muted); font: 800 7px/1 var(--mono); text-transform: uppercase; }
+    .loading { position: relative; overflow: hidden; color: var(--muted); }
+    .loading::after { position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(11,155,132,.14),transparent); content:""; animation: tide 1.4s infinite; }
+    @keyframes tide { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) { .loading::after { display: none; } }
+    @media (max-width: 1050px) { .comparison { grid-template-columns: 1fr; } header { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><div class="eyebrow">BRE-310 · reviewer evidence · Workspace revision 2</div><h1>Typed knowledge, calm mail.</h1></div>
+    <p>Production integration stays behind BRE-326’s shared renderer. This isolated evidence view exercises the stable-ID row/detail models, Account + Facet filters, Workflow State, and the complete theme-safe control grammar.</p>
+  </header>
+  <main>
+    <section class="comparison" aria-label="Light and dark theme comparison">
+      <article class="shell" data-theme="light"><aside><div class="brand">orca <i>≈</i></div><nav><span>Inbox</span><span class="selected">Customer work</span><span>Later</span><span>Organization</span></nav><div class="scope">Light · 2 accounts<br>Workspace-wide</div></aside><div class="workspace">
+        <div class="workspace-top"><h2>Customer work</h2><span class="revision">Account · all</span></div>
+        <div class="filters"><button aria-pressed="true" data-filter="all">All</button><button aria-pressed="false" data-filter="waiting">Waiting</button><button aria-pressed="false" data-filter="acme">Customer · Acme</button><button disabled>Missing score</button></div>
+        <div class="thread-list"><div class="thread" data-customer="acme" data-state="waiting"><span class="state">Waiting</span><span class="sender">Ada Lovelace</span><span class="subject"><strong>Launch approval</strong><small><span class="facet"><b>Customer</b> acme.example</span><span class="facet"><b>Priority</b> High</span></small></span><time>9:42 AM</time></div><div class="thread" data-customer="globex" data-state="open"><span class="state">Open</span><span class="sender">Bea Chen</span><span class="subject"><strong>Contract notes</strong><small><span class="facet"><b>Customer</b> globex.example</span><span class="facet"><b>Contacts</b> 2</span></small></span><time>8:16 AM</time></div></div>
+        <div class="detail"><div><span>Workflow state</span><strong>Waiting</strong></div><div><span>Customer</span><strong>acme.example</strong></div><div><span>Priority</span><strong>High</strong></div></div>
+      </div></article>
+      <article class="shell dark" data-theme="dark"><aside><div class="brand">orca <i>o</i></div><nav><span>Inbox</span><span class="selected">Customer work</span><span>Later</span><span>Organization</span></nav><div class="scope">Orca Black · 2 accounts<br>Workspace-wide</div></aside><div class="workspace">
+        <div class="workspace-top"><h2>Customer work</h2><span class="revision">Account · all</span></div>
+        <div class="filters"><button aria-pressed="true" data-filter="all">All</button><button aria-pressed="false" data-filter="waiting">Waiting</button><button aria-pressed="false" data-filter="acme">Customer · Acme</button><button disabled>Missing score</button></div>
+        <div class="thread-list"><div class="thread" data-customer="acme" data-state="waiting"><span class="state">Waiting</span><span class="sender">Ada Lovelace</span><span class="subject"><strong>Launch approval</strong><small><span class="facet"><b>Customer</b> acme.example</span><span class="facet"><b>Priority</b> High</span></small></span><time>9:42 AM</time></div><div class="thread" data-customer="globex" data-state="open"><span class="state">Open</span><span class="sender">Bea Chen</span><span class="subject"><strong>Contract notes</strong><small><span class="facet"><b>Customer</b> globex.example</span><span class="facet"><b>Contacts</b> 2</span></small></span><time>8:16 AM</time></div></div>
+        <div class="detail"><div><span>Workflow state</span><strong>Waiting</strong></div><div><span>Customer</span><strong>acme.example</strong></div><div><span>Priority</span><strong>High</strong></div></div>
+      </div></article>
+    </section>
+    <section class="states"><h2>Control-state release gate</h2><div class="state-grid"><div><label>Default</label><button>Customer</button></div><div><label>Hover</label><button class="hover">Priority</button></div><div><label>Focus</label><button class="focus">Waiting</button></div><div><label>Selected</label><button aria-pressed="true">Account · all</button></div><div><label>Disabled</label><button disabled>Required value</button></div><div><label>Loading</label><button aria-busy="true" class="loading">Applying…</button></div></div></section>
+  </main>
+  <script>
+    for (const shell of document.querySelectorAll('.shell')) {
+      const buttons = shell.querySelectorAll('[data-filter]');
+      const rows = shell.querySelectorAll('.thread');
+      for (const button of buttons) button.addEventListener('click', () => {
+        for (const item of buttons) item.setAttribute('aria-pressed', String(item === button));
+        const filter = button.dataset.filter;
+        for (const row of rows) row.hidden = filter === 'waiting' ? row.dataset.state !== 'waiting' : filter === 'acme' ? row.dataset.customer !== 'acme' : false;
+      });
+    }
+  </script>
+</body>
+</html>

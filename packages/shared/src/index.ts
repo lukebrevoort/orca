@@ -103,6 +103,45 @@ export {
   workspaceThreadSchema,
 } from "./organization-workspace.ts";
 
+export {
+  facetCardinalitySchema,
+  facetDefinitionSchema,
+  facetFilterSchema,
+  facetScalarValueSchema,
+  facetValueTypeSchema,
+  facetValueUpdateSchema,
+  organizationFacetWorkflowActionSchema,
+  organizationFacetWorkflowApplyResponseSchema,
+  organizationFacetWorkflowApplySchema,
+  organizationFacetSupportSchema,
+  threadFacetValueSchema,
+  threadWorkflowStateSchema,
+  workflowStateDefinitionSchema,
+} from "./organization-facets.ts";
+
+export {
+  organizationFacetDefinitionsFixture,
+  organizationFacetWorkflowApplyFixture,
+  organizationWorkflowStatesFixture,
+} from "./organization-facets.fixture.ts";
+
+export type {
+  FacetCardinality,
+  FacetDefinition,
+  FacetEnumOption,
+  FacetFilter,
+  FacetScalarValue,
+  FacetValueType,
+  FacetValueUpdate,
+  OrganizationFacetWorkflowAction,
+  OrganizationFacetWorkflowApply,
+  OrganizationFacetWorkflowApplyResponse,
+  OrganizationFacetSupport,
+  ThreadFacetValue,
+  ThreadWorkflowState,
+  WorkflowStateDefinition,
+} from "./organization-facets.ts";
+
 export type {
   OrganizationCapabilities,
   OrganizationDescribeResponse,

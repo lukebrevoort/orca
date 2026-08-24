@@ -141,16 +141,16 @@ const ownerScope = {
 };
 
 describe("Organization module contract", () => {
-  test("describes one provider-neutral Thread workspace with only read operations enabled", () => {
+  test("describes the revision-2 schema without advertising an uninstalled apply adapter", () => {
     const organization = createOrganization(repository);
 
     const result = organization.describe({ scope: ownerScope });
 
     assert.deepEqual(result.workspaceSchema, {
-      revision: 1,
+      revision: 2,
       aggregate: "thread",
-      resources: ["account", "thread"],
-      filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at"],
+      resources: ["account", "thread", "facet", "workflow_state"],
+      filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state"],
     });
     assert.deepEqual(result.capabilities.operations, {
       describe: true,
@@ -182,6 +182,51 @@ describe("Organization module contract", () => {
     });
     assert.deepEqual(account.accountIds, ["account_b"]);
     assert.deepEqual(account.threads.map((thread) => thread.id), ["thread_b"]);
+  });
+
+  test("reads definitions and Thread projections from one coherent repository snapshot", () => {
+    let legacyReadCount = 0;
+    const coherentRepository: OrganizationRepository = {
+      listAccountIds: () => ["account_a"],
+      listThreads: () => {
+        legacyReadCount += 1;
+        throw new Error("split Thread read must not run");
+      },
+      getFacetWorkflowSnapshot: () => {
+        legacyReadCount += 1;
+        throw new Error("split definition read must not run");
+      },
+      readOrganizationSnapshot: () => ({
+        facetWorkflow: {
+          workspaceRevision: 7,
+          facetDefinitions: [{
+            id: "facet_generation",
+            name: "Generation seven",
+            position: 0,
+            valueType: { kind: "text", maxLength: 40 },
+            cardinality: { kind: "single" },
+            isOptional: true,
+            defaultValue: null,
+            retiredAt: null,
+            revision: 7,
+          }],
+          workflowStates: [],
+          threads: [],
+        },
+        threads: [{
+          ...threadRecord("thread_generation"),
+          facetValues: [{ facetId: "facet_generation", value: "seven", updatedAt: "2026-08-24T06:00:00.000Z" }],
+          organizationRevision: 7,
+        }],
+      }),
+    };
+    const result = createOrganization(coherentRepository).query({
+      scope: { ...ownerScope, accountIds: ["account_a"] },
+      query: { facetFilters: [{ facetId: "facet_generation", operator: "equals", value: "seven" }] },
+    });
+    assert.equal(legacyReadCount, 0);
+    assert.equal(result.facetDefinitions?.[0]?.revision, 7);
+    assert.equal(result.threads[0]?.organization.revision, 7);
   });
 
   test("fails closed when either authorization scope or filter names an unowned Account", () => {
@@ -271,10 +316,10 @@ describe("Organization module contract", () => {
     assert.equal(listCalls, 1);
   });
 
-  test("exposes mutation operations as explicitly disabled", () => {
+  test("keeps unimplemented simulate and revert operations explicitly disabled", () => {
     const organization = createOrganization(repository);
 
-    for (const operation of ["simulate", "apply", "revert"] as const) {
+    for (const operation of ["simulate", "revert"] as const) {
       assert.throws(
         () => organization[operation]({ scope: ownerScope }),
         (error) => error instanceof OrganizationOperationDisabledError && error.operation === operation,

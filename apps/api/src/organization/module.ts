@@ -2,17 +2,29 @@ import { createHash } from "node:crypto";
 
 import {
   organizationDescribeResponseSchema,
+  organizationFacetWorkflowApplyResponseSchema,
+  organizationFacetWorkflowApplySchema,
   organizationQueryResponseSchema,
   organizationQuerySchema,
   organizationReadScopeSchema,
   type AttentionBehavior,
   type HumanClassificationResult,
   type OrganizationDescribeResponse,
+  type OrganizationActor,
+  type OrganizationAuthorityDenialCode,
+  type OrganizationAuthorityTrace,
+  type OrganizationCapabilitySnapshot,
+  type OrganizationCommand,
+  type OrganizationExecutionContext,
+  type OrganizationFacetWorkflowAction,
+  type OrganizationFacetWorkflowApplyResponse,
   type OrganizationQueryResponse,
   type OrganizationReadScope,
   type WorkspaceThread,
   type WorkspaceThreadMessage,
 } from "@orca/shared";
+import { authorizeOrganizationOperation } from "./authority.ts";
+import { validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -29,13 +41,54 @@ export type OrganizationThreadRecord = {
   readState: "read" | "unread";
   messages: WorkspaceThreadMessage[];
   attentionRules: OrganizationAttentionRule[];
+  facetValues?: WorkspaceThread["organization"]["facetValues"];
+  workflowState?: WorkspaceThread["organization"]["workflowState"];
+  organizationRevision?: number | null;
+};
+
+export type OrganizationReadSnapshot = {
+  facetWorkflow: FacetWorkflowSnapshot;
+  threads: OrganizationThreadRecord[];
 };
 
 /** Storage seam used by the provider-neutral Organization module. */
 export type OrganizationRepository = {
   listAccountIds(workspaceId: string): string[];
   listThreads(accountIds: readonly string[], filter?: { threadId?: string }): OrganizationThreadRecord[];
+  getFacetWorkflowSnapshot?(workspaceId: string): FacetWorkflowSnapshot;
+  readOrganizationSnapshot?(
+    workspaceId: string,
+    accountIds: readonly string[],
+    filter?: { threadId?: string },
+  ): OrganizationReadSnapshot;
+  getFacetWorkflowAuthorityState?(workspaceId: string): {
+    workspaceRevision: number;
+    resourceRevisions: Record<string, number>;
+    reservedIdempotencyKeys: string[];
+  };
+  applyFacetWorkflow?(input: {
+    executionContext: OrganizationExecutionContext;
+    authorityTrace: OrganizationAuthorityTrace;
+    command: OrganizationCommand;
+    actions: readonly OrganizationFacetWorkflowAction[];
+  }): FacetWorkflowSnapshot;
 };
+
+export class OrganizationAuthorityError extends Error {
+  constructor(readonly code: OrganizationAuthorityDenialCode, message: string) {
+    super(message);
+    this.name = "OrganizationAuthorityError";
+  }
+}
+
+export class OrganizationRevisionConflictError extends Error {
+  readonly code = "revision_conflict" as const;
+
+  constructor(readonly expectedRevision: number, readonly actualRevision: number) {
+    super(`Expected Workspace revision ${expectedRevision}, but current revision is ${actualRevision}`);
+    this.name = "OrganizationRevisionConflictError";
+  }
+}
 
 export class OrganizationAccessError extends Error {
   readonly code = "account_denied" as const;
@@ -65,25 +118,91 @@ export class OrganizationOperationDisabledError extends Error {
 }
 
 const workspaceSchema = Object.freeze({
-  revision: 1 as const,
+  revision: 2 as const,
   aggregate: "thread" as const,
-  resources: ["account", "thread"] as const,
-  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at"] as const,
+  resources: ["account", "thread", "facet", "workflow_state"] as const,
+  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state"] as const,
 });
 
-const capabilities = Object.freeze({
-  operations: {
-    describe: true as const,
-    query: true as const,
-    simulate: false as const,
-    apply: false as const,
-    revert: false as const,
-  },
-  authority: {
-    sendMail: false as const,
-    deleteProviderMail: false as const,
-  },
+const facetSupport = Object.freeze({
+  valueTypes: ["text", "number", "boolean", "datetime", "duration", "email", "domain", "enum"] as const,
+  cardinalities: ["single", "multi"] as const,
+  missingValue: "absent_assignment" as const,
+  clearRequest: null,
+  maximumListItems: 50 as const,
+  workflowStateIndependentOf: ["lane", "subject_matter"] as const,
+  requiredValueLifecycle: "typed_default_for_all_threads" as const,
 });
+
+function capabilitiesFor(repository: OrganizationRepository) {
+  return {
+    operations: {
+      describe: true as const,
+      query: true as const,
+      simulate: false as const,
+      apply: Boolean(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState),
+      revert: false as const,
+    },
+    authority: { sendMail: false as const, deleteProviderMail: false as const },
+  };
+}
+
+function firstPartyCapability(actor: OrganizationActor, workspaceId: string, accountIds: string[]): OrganizationCapabilitySnapshot {
+  return {
+    id: `first_party:${actor.type}:${actor.id}`,
+    revision: 1,
+    actor,
+    scope: { workspaceId, accountIds },
+    operations: ["describe", "query", "apply"],
+    resourceFamilies: ["workspace_schema", "mail", "thread", "facet", "workflow_state", "trace", "change_set"],
+    actionFamilies: ["organization_read", "organization_structure", "organization_thread"],
+  };
+}
+
+function facetResourceId(id: string): string { return `facet:${id}`; }
+function workflowResourceId(id: string): string { return `workflow_state:${id}`; }
+function threadResourceId(accountId: string, threadId: string): string { return `thread:${accountId}:${threadId}`; }
+
+function bindFacetWorkflowCommand(command: ReturnType<typeof organizationFacetWorkflowApplySchema.parse>): {
+  command: OrganizationCommand;
+  expectedResources: Record<string, number>;
+} {
+  const intents: OrganizationCommand["intents"] = [];
+  const expectedResources: Record<string, number> = {};
+  const threadActions = new Map<string, { accountId: string; threadId: string; expected: number | null; count: number }>();
+  for (const action of command.actions) {
+    if (action.kind === "define_facet") {
+      intents.push({ kind: "mutate_facet", resourceId: facetResourceId(action.id), mutation: "create", changes: { name: action.name } });
+    } else if (action.kind === "update_facet") {
+      const resourceId = facetResourceId(action.facetId);
+      intents.push({ kind: "mutate_facet", resourceId, mutation: "update", changes: { revision: action.expectedRevision } });
+      expectedResources[resourceId] = action.expectedRevision;
+    } else if (action.kind === "define_workflow_state") {
+      intents.push({ kind: "mutate_workflow_state", resourceId: workflowResourceId(action.id), mutation: "create", changes: { name: action.name } });
+    } else if (action.kind === "update_workflow_state") {
+      const resourceId = workflowResourceId(action.stateId);
+      intents.push({ kind: "mutate_workflow_state", resourceId, mutation: "update", changes: { revision: action.expectedRevision } });
+      expectedResources[resourceId] = action.expectedRevision;
+    } else {
+      const resourceId = threadResourceId(action.accountId, action.threadId);
+      const current = threadActions.get(resourceId);
+      if (current && current.expected !== action.expectedThreadRevision) {
+        throw new OrganizationAuthorityError("invalid_request", `Thread ${action.threadId} actions must agree on one expected Organization revision`);
+      }
+      threadActions.set(resourceId, {
+        accountId: action.accountId,
+        threadId: action.threadId,
+        expected: action.expectedThreadRevision,
+        count: (current?.count ?? 0) + 1,
+      });
+    }
+  }
+  for (const [resourceId, target] of threadActions) {
+    intents.push({ kind: "organize_thread", resourceId, mutation: target.expected === null ? "create" : "update", changes: { actionCount: target.count } });
+    if (target.expected !== null) expectedResources[resourceId] = target.expected;
+  }
+  return { command: { id: command.id, intents }, expectedResources };
+}
 
 function authorizedAccounts(repository: OrganizationRepository, untrustedScope: unknown): {
   scope: OrganizationReadScope;
@@ -143,6 +262,8 @@ function cursorFingerprint(accountIds: readonly string[], query: ReturnType<type
     sender: query.sender?.trim().toLocaleLowerCase() ?? null,
     receivedAfter: query.receivedAfter ?? null,
     receivedBefore: query.receivedBefore ?? null,
+    facetFilters: query.facetFilters ?? null,
+    workflowStateIds: query.workflowStateIds ?? null,
   }));
 }
 
@@ -179,16 +300,29 @@ export function createOrganization(repository: OrganizationRepository) {
     threads: WorkspaceThread[];
     counts: { threads: number; messages: number };
     cursorIndexes: Map<string, number>;
+    facetDefinitions: FacetWorkflowSnapshot["facetDefinitions"];
+    workflowStates: FacetWorkflowSnapshot["workflowStates"];
   }>();
+  const facetWorkflowSnapshot = (workspaceId: string): FacetWorkflowSnapshot => repository.getFacetWorkflowSnapshot?.(workspaceId) ?? {
+    workspaceRevision: 1,
+    facetDefinitions: [],
+    workflowStates: [],
+    threads: [],
+  };
 
   return {
     describe(input: { scope: unknown }): OrganizationDescribeResponse {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
+      const facetWorkflow = facetWorkflowSnapshot(scope.workspaceId);
       return organizationDescribeResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds,
         workspaceSchema,
-        capabilities,
+        capabilities: capabilitiesFor(repository),
+        workspaceRevision: facetWorkflow.workspaceRevision,
+        facetDefinitions: facetWorkflow.facetDefinitions,
+        workflowStates: facetWorkflow.workflowStates,
+        facetSupport,
       });
     },
 
@@ -201,17 +335,33 @@ export function createOrganization(repository: OrganizationRepository) {
       const fingerprint = cursorFingerprint(requestedAccountIds, query);
       let snapshot = rankedSnapshots.get(fingerprint);
       if (!snapshot) {
+        const threadFilter = query.threadId ? { threadId: query.threadId } : undefined;
+        const readSnapshot = repository.readOrganizationSnapshot?.(scope.workspaceId, requestedAccountIds, threadFilter) ?? {
+          facetWorkflow: facetWorkflowSnapshot(scope.workspaceId),
+          threads: repository.listThreads(requestedAccountIds, threadFilter),
+        };
+        validateFacetFilters(readSnapshot.facetWorkflow.facetDefinitions, query.facetFilters ?? []);
         const requested = new Set(requestedAccountIds);
         const text = query.text?.trim().toLocaleLowerCase() ?? "";
         const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
         const after = query.receivedAfter ? Date.parse(query.receivedAfter) : null;
         const before = query.receivedBefore ? Date.parse(query.receivedBefore) : null;
-        const ranked = repository.listThreads(
-          requestedAccountIds,
-          query.threadId ? { threadId: query.threadId } : undefined,
-        ).flatMap((record): WorkspaceThread[] => {
+        const ranked = readSnapshot.threads.flatMap((record): WorkspaceThread[] => {
           if (!requested.has(record.accountId)) throw new OrganizationAccessError();
           if (query.threadId && record.id !== query.threadId) return [];
+          if (query.workflowStateIds && !query.workflowStateIds.includes(record.workflowState?.stateId ?? "")) return [];
+          if (query.facetFilters?.some((filter) => {
+            const assigned = record.facetValues?.find((value) => value.facetId === filter.facetId);
+            if (filter.operator === "missing") return assigned !== undefined;
+            if (filter.operator === "present") return assigned === undefined;
+            if (!("value" in filter)) return true;
+            if (!assigned) return true;
+            const values = Array.isArray(assigned.value) ? assigned.value : [assigned.value];
+            if (filter.operator === "equals") return !values.some((value) => value === filter.value);
+            return !values.some((value) => typeof value === "string" && typeof filter.value === "string"
+              ? value.toLocaleLowerCase().includes(filter.value.toLocaleLowerCase())
+              : value === filter.value);
+          })) return [];
           const latest = record.messages[0];
           const attentionBehavior = resolveAttention(latest?.from.email ?? "", record.attentionRules);
           if (!matchesAttention(attentionBehavior, query.attention)) return [];
@@ -239,7 +389,14 @@ export function createOrganization(repository: OrganizationRepository) {
             latestReceivedAt: record.latestReceivedAt,
             messageCount: record.messageCount,
             readState: record.readState,
-            organization: { attentionBehavior, humanSignal, humanClassification },
+            organization: {
+              attentionBehavior,
+              humanSignal,
+              humanClassification,
+              facetValues: record.facetValues ?? [],
+              workflowState: record.workflowState ?? null,
+              revision: record.organizationRevision ?? null,
+            },
             messages: matchingMessages.length > 0 ? matchingMessages : record.messages,
           }];
         });
@@ -254,6 +411,8 @@ export function createOrganization(repository: OrganizationRepository) {
             messages: ranked.reduce((total, thread) => total + thread.messages.length, 0),
           },
           cursorIndexes: new Map(ranked.map((thread, index) => [threadCursorKey(thread), index])),
+          facetDefinitions: readSnapshot.facetWorkflow.facetDefinitions,
+          workflowStates: readSnapshot.facetWorkflow.workflowStates,
         };
         rankedSnapshots.set(fingerprint, snapshot);
       }
@@ -270,14 +429,50 @@ export function createOrganization(repository: OrganizationRepository) {
         threads,
         counts: snapshot.counts,
         nextCursor: last && start + threads.length < snapshot.threads.length ? encodeCursor(last, fingerprint) : null,
+        facetDefinitions: snapshot.facetDefinitions,
+        workflowStates: snapshot.workflowStates,
       });
     },
 
     simulate(_input: { scope: unknown }): never {
       throw new OrganizationOperationDisabledError("simulate");
     },
-    apply(_input: { scope: unknown }): never {
-      throw new OrganizationOperationDisabledError("apply");
+    apply(input: { scope: unknown; command: unknown }): OrganizationFacetWorkflowApplyResponse {
+      const { scope, accountIds } = authorizedAccounts(repository, input.scope);
+      const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
+      if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
+      const bound = bindFacetWorkflowCommand(applyCommand);
+      const capabilitySnapshot = firstPartyCapability(scope.actor, scope.workspaceId, accountIds);
+      const live = repository.getFacetWorkflowAuthorityState(scope.workspaceId);
+      const decision = authorizeOrganizationOperation({
+        actor: scope.actor,
+        capabilitySnapshot,
+        operation: "apply",
+        scope: { workspaceId: scope.workspaceId, accountIds },
+        command: bound.command,
+        expectedRevisions: { workspace: applyCommand.expectedWorkspaceRevision, resources: bound.expectedResources },
+        idempotencyKey: applyCommand.idempotencyKey,
+      }, {
+        scope: { workspaceId: scope.workspaceId, accountIds },
+        capability: { snapshot: capabilitySnapshot, revokedAt: null },
+        workspaceRevision: live.workspaceRevision,
+        resourceRevisions: live.resourceRevisions,
+        reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+      });
+      if (!decision.allowed) throw new OrganizationAuthorityError(decision.code, decision.reason);
+      const next = repository.applyFacetWorkflow({
+        executionContext: decision.executionContext,
+        authorityTrace: decision.trace,
+        command: bound.command,
+        actions: applyCommand.actions,
+      });
+      return organizationFacetWorkflowApplyResponseSchema.parse({
+        workspaceId: scope.workspaceId,
+        workspaceRevision: next.workspaceRevision,
+        appliedActions: applyCommand.actions.length,
+        facetDefinitions: next.facetDefinitions,
+        workflowStates: next.workflowStates,
+      });
     },
     revert(_input: { scope: unknown }): never {
       throw new OrganizationOperationDisabledError("revert");
