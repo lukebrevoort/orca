@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, threads, users } from "../../db/schema.ts";
+import { authorizeOrganizationOperation, digestOrganizationAuthorizationEnvelope } from "../authority.ts";
 import { createOrganization } from "../module.ts";
 import { OrganizationAuthorityError } from "../module.ts";
 import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
@@ -14,6 +15,7 @@ import {
   OrganizationContextsAccessError,
   OrganizationContextsConflictError,
   OrganizationContextsValidationError,
+  organizationContextsCapability,
   queryOrganizationContextSnapshot,
 } from "./module.ts";
 
@@ -352,17 +354,22 @@ describe("Context Organization module", () => {
         contexts: {
           ...baseContexts,
           apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            const trace = {
+              ...input.authorization.trace,
+              risk: "destructive" as const,
+              decision: "denied" as const,
+              denialCode: "account_denied" as const,
+              reason: "forged trace",
+            };
             return baseContexts.apply({
               ...input,
               authorization: {
                 ...input.authorization,
-                trace: {
-                  ...input.authorization.trace,
-                  risk: "destructive" as const,
-                  decision: "denied" as const,
-                  denialCode: "account_denied" as const,
-                  reason: "forged trace",
-                },
+                trace,
+                authorizationEnvelopeDigest: digestOrganizationAuthorizationEnvelope({
+                  executionContext: input.authorization.executionContext,
+                  trace,
+                }),
               },
             });
           },
@@ -392,6 +399,10 @@ describe("Context Organization module", () => {
       const mutate = (authorization: Authorization, change: (copy: Authorization) => void): Authorization => {
         const copy = structuredClone(authorization);
         change(copy);
+        copy.authorizationEnvelopeDigest = digestOrganizationAuthorizationEnvelope({
+          executionContext: copy.executionContext,
+          trace: copy.trace,
+        });
         return copy;
       };
       const cases: Array<[string, (authorization: Authorization) => Authorization]> = [
@@ -415,7 +426,6 @@ describe("Context Organization module", () => {
         ["idempotency", (authorization) => mutate(authorization, (copy) => { copy.executionContext.idempotencyKey = "forged_key"; })],
         ["resource-revisions", (authorization) => mutate(authorization, (copy) => { copy.executionContext.expectedRevisions.resources = { "context_type:forged": 1 }; })],
         ["command-digest", (authorization) => mutate(authorization, (copy) => { copy.executionContext.command.digest = `sha256:${"0".repeat(64)}`; copy.trace.command.digest = `sha256:${"0".repeat(64)}`; })],
-        ["envelope-digest", (authorization) => mutate(authorization, (copy) => { copy.authorizationEnvelopeDigest = `sha256:${"0".repeat(64)}`; })],
       ];
 
       for (const [name, mutateAuthorization] of cases) {
@@ -454,27 +464,39 @@ describe("Context Organization module", () => {
       } });
       const baseContexts = baseRepository.contexts!;
       const tamperers = [
-        (input: Parameters<typeof baseContexts.revert>[0]) => ({
-          ...input,
-          authorization: {
-            ...input.authorization,
-            trace: {
-              ...input.authorization.trace,
-              risk: "destructive" as const,
-              decision: "denied" as const,
-              denialCode: "account_denied" as const,
-              reason: "forged trace",
+        (input: Parameters<typeof baseContexts.revert>[0]) => {
+          const trace = {
+            ...input.authorization.trace,
+            risk: "destructive" as const,
+            decision: "denied" as const,
+            denialCode: "account_denied" as const,
+            reason: "forged trace",
+          };
+          return {
+            ...input,
+            authorization: {
+              ...input.authorization,
+              trace,
+              authorizationEnvelopeDigest: digestOrganizationAuthorizationEnvelope({
+                executionContext: input.authorization.executionContext,
+                trace,
+              }),
             },
-          },
-        }),
-        (input: Parameters<typeof baseContexts.revert>[0]) => ({
-          ...input,
-          authorization: {
-            ...input.authorization,
-            executionContext: { ...input.authorization.executionContext, operation: "apply" as const },
-            trace: { ...input.authorization.trace, operation: "apply" as const },
-          },
-        }),
+          };
+        },
+        (input: Parameters<typeof baseContexts.revert>[0]) => {
+          const executionContext = { ...input.authorization.executionContext, operation: "apply" as const };
+          const trace = { ...input.authorization.trace, operation: "apply" as const };
+          return {
+            ...input,
+            authorization: {
+              ...input.authorization,
+              executionContext,
+              trace,
+              authorizationEnvelopeDigest: digestOrganizationAuthorizationEnvelope({ executionContext, trace }),
+            },
+          };
+        },
       ];
 
       for (const [index, tamper] of tamperers.entries()) {
@@ -493,6 +515,62 @@ describe("Context Organization module", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 1);
       assert.equal(contexts.audit({ scope }).length, 1);
       assert.equal(contexts.query({ scope, query: { includeRetired: true } }).contextTypes[0]?.name, "Project");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects a fully rebound authorization envelope for an Account not owned by the live Workspace", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const baseContexts = baseRepository.contexts!;
+      const tamperingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            const forgedScope = { ...input.scope, accountIds: ["account_private"] };
+            const capability = organizationContextsCapability(forgedScope);
+            const decision = authorizeOrganizationOperation({
+              actor: forgedScope.actor,
+              capabilitySnapshot: capability,
+              operation: "apply",
+              scope: capability.scope,
+              command: input.authorization.command,
+              expectedRevisions: input.authorization.executionContext.expectedRevisions,
+              idempotencyKey: input.request.idempotencyKey,
+            }, {
+              scope: capability.scope,
+              capability: { snapshot: capability, revokedAt: null },
+              workspaceRevision: 1,
+              resourceRevisions: {},
+              reservedIdempotencyKeys: [],
+            });
+            assert.equal(decision.allowed, true);
+            if (!decision.allowed) throw new Error("Expected forged preflight authority to allow the probe");
+            return baseContexts.apply({
+              ...input,
+              scope: forgedScope,
+              authorization: {
+                ...input.authorization,
+                executionContext: decision.executionContext,
+                trace: decision.trace,
+                authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+              },
+            });
+          },
+        },
+      };
+
+      assert.throws(() => createOrganization(tamperingRepository).contexts!.apply({ scope, request: {
+        idempotencyKey: "fully-rebound-private-account", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "account_denied");
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
     } finally {
       sqlite.close();
     }

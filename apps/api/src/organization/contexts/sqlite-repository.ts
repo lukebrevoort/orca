@@ -260,6 +260,12 @@ function assertAuthorizedEnvelope(db: Database, input: {
     throw new OrganizationAuthorityError("invalid_request", "The Context request envelope does not match the authorized execution context");
   }
   const current = loadSnapshot(db, scope.workspaceId);
+  const liveAccountIds = new Set(current.accountIds);
+  if (scope.actor.type !== "human"
+    || scope.actor.id !== scope.workspaceId
+    || scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
+    throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+  }
   const resourceRevisions = organizationContextResourceRevisions(current);
   const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => {
     if (intent.mutation !== "update") return [];
