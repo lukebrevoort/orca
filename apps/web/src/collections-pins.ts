@@ -43,8 +43,6 @@ function querySummary(query: OrganizationSavedQuery | undefined) {
     filters.sender ? `Sender: ${filters.sender}` : null,
     filters.attention ? `Attention: ${filters.attention}` : null,
     filters.classification ? `Classification: ${filters.classification}` : null,
-    filters.collectionId ? `Collection: ${filters.collectionId}` : null,
-    filters.threadId ? `Thread: ${filters.threadId}` : null,
   ].filter((value): value is string => value !== null);
   return pieces.join(" · ") || query.name;
 }
