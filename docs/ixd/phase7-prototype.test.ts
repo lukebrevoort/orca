@@ -393,6 +393,29 @@ describe("BRE-307 Organization prototypes", () => {
     });
   }
 
+  test("desktop consecutive reverts append revisions without losing history", async () => {
+    const window = await mountPrototype("phase7-prototype-desktop.html");
+    window.document.querySelector<HTMLButtonElement>('[data-rule-id="pulls"]')?.click();
+    for (let index = 0; index < 2; index += 1) {
+      window.document.querySelector<HTMLButtonElement>('[data-action="revert"]')?.click();
+      window.document.querySelector<HTMLButtonElement>("[data-dialog-confirm]")?.click();
+    }
+
+    expect(window.document.querySelector("[data-revision-chip]")?.textContent).toContain("rev 14 · active");
+    expect([...window.document.querySelectorAll("[data-audit-reverted]")].map(node => node.textContent)).toEqual([
+      "Revision 14 activated · restores revision 12",
+      "Revision 13 activated · restores revision 11",
+    ]);
+    expect([...window.document.querySelectorAll("[data-audit-revert-meta]")].map(node => node.textContent)).toEqual([
+      "Compensating change set cs_206 · revision 13 retained",
+      "Compensating change set cs_205 · revision 12 retained",
+    ]);
+    expect(window.document.querySelector("[data-audit-event]")?.textContent).toBe("Revision 12 activated");
+    expect(window.document.querySelector("[data-audit-simulated]")?.textContent).toBe("Revision 12 simulated");
+    expect(window.document.querySelector("[data-audit-activated]")?.textContent).toBe("Revision 12 activated");
+    await window.close();
+  });
+
   for (const file of ["phase7-prototype-desktop.html", "phase7-prototype-mobile.html"]) {
     test(`${file} round-trips Tide source through rule selection`, async () => {
       const window = await mountPrototype(file);
