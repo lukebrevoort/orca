@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import {
   OrganizationAccessError,
+  OrganizationAuthorityError,
   OrganizationOperationDisabledError,
   createOrganization,
   type OrganizationRepository,
@@ -227,6 +228,38 @@ describe("Organization module contract", () => {
     assert.equal(legacyReadCount, 0);
     assert.equal(result.facetDefinitions?.[0]?.revision, 7);
     assert.equal(result.threads[0]?.organization.revision, 7);
+  });
+
+  test("limits first-party apply to humans and binds every typed action field into authority", () => {
+    const actionDigests: string[] = [];
+    const writeRepository: OrganizationRepository = {
+      listAccountIds: () => ["account_a"],
+      listThreads: () => [],
+      getFacetWorkflowAuthorityState: () => ({ workspaceRevision: 1, resourceRevisions: {}, reservedIdempotencyKeys: [] }),
+      applyFacetWorkflow(input) {
+        actionDigests.push(String(input.command.intents[0]?.changes?.typedActionsDigest));
+        return { workspaceRevision: 2, facetDefinitions: [], workflowStates: [], threads: [] };
+      },
+    };
+    const organization = createOrganization(writeRepository);
+    const command = (name: string, idempotencyKey: string) => ({
+      id: "changeset_bound",
+      idempotencyKey,
+      expectedWorkspaceRevision: 1,
+      actions: [{ kind: "define_workflow_state" as const, id: "workflow_bound", name, position: 0 }],
+    });
+    assert.throws(
+      () => organization.apply({
+        scope: { actor: { id: "agent_a", type: "agent" }, workspaceId: "workspace_owner", accountIds: ["account_a"] },
+        command: command("Honest", "agent-attempt"),
+      }),
+      (error) => error instanceof OrganizationAuthorityError && error.code === "actor_operation_denied",
+    );
+    organization.apply({ scope: { ...ownerScope, accountIds: ["account_a"] }, command: command("First label", "bound-1") });
+    organization.apply({ scope: { ...ownerScope, accountIds: ["account_a"] }, command: command("Different label", "bound-2") });
+    assert.equal(actionDigests.length, 2);
+    assert.match(actionDigests[0] ?? "", /^sha256:[0-9a-f]{64}$/);
+    assert.notEqual(actionDigests[0], actionDigests[1]);
   });
 
   test("fails closed when either authorization scope or filter names an unowned Account", () => {

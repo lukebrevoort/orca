@@ -25,7 +25,7 @@ import {
   threads,
 } from "../db/schema.ts";
 import { digestOrganizationCommand } from "./authority.ts";
-import { applyFacetWorkflowActions, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
+import { applyFacetWorkflowActions, digestFacetWorkflowActions, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "./module.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -142,6 +142,10 @@ export function createSqliteFacetWorkflowRepository(db: Database) {
         }
         if (input.executionContext.command.digest !== digestOrganizationCommand(input.command)) {
           throw new OrganizationAuthorityError("invalid_request", "The authorized command digest does not match the execution payload");
+        }
+        const typedActionsDigest = digestFacetWorkflowActions(input.actions);
+        if (input.command.intents.some((intent) => intent.changes?.typedActionsDigest !== typedActionsDigest)) {
+          throw new OrganizationAuthorityError("invalid_request", "The authorized command does not match the exact typed Facet and Workflow actions");
         }
         const liveResources = resourceRevisions(current);
         for (const intent of input.command.intents) {

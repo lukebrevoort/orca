@@ -24,7 +24,7 @@ import {
   type WorkspaceThreadMessage,
 } from "@orca/shared";
 import { authorizeOrganizationOperation } from "./authority.ts";
-import { validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
+import { digestFacetWorkflowActions, validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -147,7 +147,7 @@ function capabilitiesFor(repository: OrganizationRepository) {
   };
 }
 
-function firstPartyCapability(actor: OrganizationActor, workspaceId: string, accountIds: string[]): OrganizationCapabilitySnapshot {
+function firstPartyHumanCapability(actor: OrganizationActor & { type: "human" }, workspaceId: string, accountIds: string[]): OrganizationCapabilitySnapshot {
   return {
     id: `first_party:${actor.type}:${actor.id}`,
     revision: 1,
@@ -169,19 +169,20 @@ function bindFacetWorkflowCommand(command: ReturnType<typeof organizationFacetWo
 } {
   const intents: OrganizationCommand["intents"] = [];
   const expectedResources: Record<string, number> = {};
+  const typedActionsDigest = digestFacetWorkflowActions(command.actions);
   const threadActions = new Map<string, { accountId: string; threadId: string; expected: number | null; count: number }>();
   for (const action of command.actions) {
     if (action.kind === "define_facet") {
-      intents.push({ kind: "mutate_facet", resourceId: facetResourceId(action.id), mutation: "create", changes: { name: action.name } });
+      intents.push({ kind: "mutate_facet", resourceId: facetResourceId(action.id), mutation: "create", changes: { name: action.name, typedActionsDigest } });
     } else if (action.kind === "update_facet") {
       const resourceId = facetResourceId(action.facetId);
-      intents.push({ kind: "mutate_facet", resourceId, mutation: "update", changes: { revision: action.expectedRevision } });
+      intents.push({ kind: "mutate_facet", resourceId, mutation: "update", changes: { revision: action.expectedRevision, typedActionsDigest } });
       expectedResources[resourceId] = action.expectedRevision;
     } else if (action.kind === "define_workflow_state") {
-      intents.push({ kind: "mutate_workflow_state", resourceId: workflowResourceId(action.id), mutation: "create", changes: { name: action.name } });
+      intents.push({ kind: "mutate_workflow_state", resourceId: workflowResourceId(action.id), mutation: "create", changes: { name: action.name, typedActionsDigest } });
     } else if (action.kind === "update_workflow_state") {
       const resourceId = workflowResourceId(action.stateId);
-      intents.push({ kind: "mutate_workflow_state", resourceId, mutation: "update", changes: { revision: action.expectedRevision } });
+      intents.push({ kind: "mutate_workflow_state", resourceId, mutation: "update", changes: { revision: action.expectedRevision, typedActionsDigest } });
       expectedResources[resourceId] = action.expectedRevision;
     } else {
       const resourceId = threadResourceId(action.accountId, action.threadId);
@@ -198,7 +199,7 @@ function bindFacetWorkflowCommand(command: ReturnType<typeof organizationFacetWo
     }
   }
   for (const [resourceId, target] of threadActions) {
-    intents.push({ kind: "organize_thread", resourceId, mutation: target.expected === null ? "create" : "update", changes: { actionCount: target.count } });
+    intents.push({ kind: "organize_thread", resourceId, mutation: target.expected === null ? "create" : "update", changes: { actionCount: target.count, typedActionsDigest } });
     if (target.expected !== null) expectedResources[resourceId] = target.expected;
   }
   return { command: { id: command.id, intents }, expectedResources };
@@ -441,8 +442,12 @@ export function createOrganization(repository: OrganizationRepository) {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
       const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
       if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
+      if (scope.actor.type !== "human") {
+        throw new OrganizationAuthorityError("actor_operation_denied", "This first-party Organization apply path requires an authenticated human session");
+      }
+      const humanActor: OrganizationActor & { type: "human" } = { id: scope.actor.id, type: "human" };
       const bound = bindFacetWorkflowCommand(applyCommand);
-      const capabilitySnapshot = firstPartyCapability(scope.actor, scope.workspaceId, accountIds);
+      const capabilitySnapshot = firstPartyHumanCapability(humanActor, scope.workspaceId, accountIds);
       const live = repository.getFacetWorkflowAuthorityState(scope.workspaceId);
       const decision = authorizeOrganizationOperation({
         actor: scope.actor,

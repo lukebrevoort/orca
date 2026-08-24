@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { z } from "zod";
 
 import type {
@@ -52,6 +54,23 @@ export class FacetWorkflowValidationError extends Error {
     super(issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "));
     this.name = "FacetWorkflowValidationError";
   }
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    return `{${Object.entries(value)
+      .filter(([, nested]) => nested !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => `${JSON.stringify(key)}:${canonicalJson(nested)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
+/** Binds every typed semantic field and action order into the authority command. */
+export function digestFacetWorkflowActions(actions: readonly OrganizationFacetWorkflowAction[]): string {
+  return `sha256:${createHash("sha256").update(canonicalJson(actions)).digest("hex")}`;
 }
 
 function cloneSnapshot(snapshot: FacetWorkflowSnapshot): FacetWorkflowSnapshot {

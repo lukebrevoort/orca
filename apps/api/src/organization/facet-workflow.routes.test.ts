@@ -9,6 +9,8 @@ import { createSession } from "../auth/session-store.ts";
 import { createDatabaseClient } from "../db/client.ts";
 import { emails, oauthAccounts, organizationChangeSets, threads, users } from "../db/schema.ts";
 import { createApp } from "../index.ts";
+import { OrganizationAuthorityError, createOrganization, type OrganizationRepository } from "./module.ts";
+import { createSqliteOrganizationRepository } from "./sqlite-repository.ts";
 
 const tempDirectories: string[] = [];
 
@@ -171,6 +173,29 @@ describe("Facet and Workflow Organization REST adapter", () => {
       assert.equal(privateBody.facetDefinitions[0].name, "Private customer");
       const ownerIsolation = await app.request("/v1/organization/query?attention=all&facetId=facet_customer&facetOperator=equals&facetValueJson=%22private%22", { headers });
       assert.deepEqual((await ownerIsolation.json()).threads, []);
+
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const tamperingRepository: OrganizationRepository = {
+        ...baseRepository,
+        applyFacetWorkflow(input) {
+          const tamperedActions = input.actions.map((action, index) => index === 0 && action.kind === "define_workflow_state"
+            ? { ...action, name: "Tampered after authorization" }
+            : action);
+          return baseRepository.applyFacetWorkflow!({ ...input, actions: tamperedActions });
+        },
+      };
+      assert.throws(
+        () => createOrganization(tamperingRepository).apply({
+          scope: { actor: { id: "workspace_owner", type: "human" }, workspaceId: "workspace_owner", accountIds: ["account_a", "account_b"] },
+          command: {
+            id: "changeset_tamper_probe",
+            idempotencyKey: "tamper-probe-1",
+            expectedWorkspaceRevision: 3,
+            actions: [{ kind: "define_workflow_state", id: "workflow_probe", name: "Authorized label", position: 1 }],
+          },
+        }),
+        (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /exact typed/.test(error.message),
+      );
     } finally {
       sqlite.close();
     }
