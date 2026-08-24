@@ -33,13 +33,11 @@ export type OrganizationPinTarget = z.infer<typeof organizationPinTargetSchema>;
 export const organizationSavedQueryDefinitionSchema = z.object({
   revision: z.literal(1),
   filters: z.object({
-    threadId: nonEmptyStringSchema.optional(),
     mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]).optional(),
     attention: z.enum(["all", "notify", "focus", "normal"]).optional(),
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
-    text: z.string().trim().max(200).optional(),
-    sender: z.string().trim().max(320).optional(),
-    collectionId: nonEmptyStringSchema.optional(),
+    text: z.string().trim().min(1).max(200).optional(),
+    sender: z.string().trim().min(1).max(320).optional(),
   }).strict().superRefine((filters, context) => {
     if ((filters.mailbox === undefined) !== (filters.attention === undefined)) {
       context.addIssue({ code: "custom", message: "Mailbox and attention must be provided together" });

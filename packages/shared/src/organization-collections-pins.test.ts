@@ -81,12 +81,13 @@ describe("Organization Collections/Pins contract", () => {
   test("round-trips every compatibility-representable saved-query selection", () => {
     const mailboxes = ["inbox", "focus", "quiet", "hidden", "all"] as const;
     const attentions = ["all", "notify", "focus", "normal"] as const;
+    const classifications = ["human", "tideline", "uncertain", "all"] as const;
     const definitions = [
       organizationSavedQueryDefinitionSchema.parse({ revision: 1, filters: { text: "launch" } }),
-      ...mailboxes.flatMap((mailbox) => attentions.map((attention) => organizationSavedQueryDefinitionSchema.parse({
+      ...mailboxes.flatMap((mailbox) => attentions.flatMap((attention) => classifications.map((classification) => organizationSavedQueryDefinitionSchema.parse({
         revision: 1,
-        filters: { mailbox, attention, classification: "human", sender: "maya@example.com", text: "launch" },
-      }))),
+        filters: { mailbox, attention, classification, sender: "maya@example.com", text: "launch" },
+      })))),
     ];
     for (const definition of definitions) {
       assert.deepEqual(
@@ -97,6 +98,10 @@ describe("Organization Collections/Pins contract", () => {
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { mailbox: "inbox" } }).success, false);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { attention: "focus" } }).success, false);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { mailbox: "inbox", attention: "quiet" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { threadId: "thread_1" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { collectionId: "collection_1" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { text: "" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { sender: "" } }).success, false);
   });
 
   test("expresses auditable membership and shortcut changes without mail authority", () => {
