@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
+  legacyPinFilterFromOrganizationSavedQueryDefinition,
   organizationCollectionPinApplyRequestSchema,
   organizationCollectionPinQueryResponseSchema,
   organizationCollectionPinRevertRequestSchema,
   organizationPinTargetSchema,
+  organizationSavedQueryDefinitionFromLegacyPinFilter,
+  organizationSavedQueryDefinitionSchema,
 } from "./organization-collections-pins.ts";
 import { organizationCollectionPinDemoFixture } from "./organization-collections-pins-fixtures.ts";
 
@@ -73,6 +76,27 @@ describe("Organization Collections/Pins contract", () => {
       type: "resource",
       resource: { family: "view", id: "{\"mailbox\":\"focus\"}" },
     }).success, false);
+  });
+
+  test("round-trips every compatibility-representable saved-query selection", () => {
+    const mailboxes = ["inbox", "focus", "quiet", "hidden", "all"] as const;
+    const attentions = ["all", "notify", "focus", "normal"] as const;
+    const definitions = [
+      organizationSavedQueryDefinitionSchema.parse({ revision: 1, filters: { text: "launch" } }),
+      ...mailboxes.flatMap((mailbox) => attentions.map((attention) => organizationSavedQueryDefinitionSchema.parse({
+        revision: 1,
+        filters: { mailbox, attention, classification: "human", sender: "maya@example.com", text: "launch" },
+      }))),
+    ];
+    for (const definition of definitions) {
+      assert.deepEqual(
+        organizationSavedQueryDefinitionFromLegacyPinFilter(legacyPinFilterFromOrganizationSavedQueryDefinition(definition)),
+        definition,
+      );
+    }
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { mailbox: "inbox" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { attention: "focus" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { mailbox: "inbox", attention: "quiet" } }).success, false);
   });
 
   test("expresses auditable membership and shortcut changes without mail authority", () => {

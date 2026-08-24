@@ -35,44 +35,51 @@ export const organizationSavedQueryDefinitionSchema = z.object({
   filters: z.object({
     threadId: nonEmptyStringSchema.optional(),
     mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]).optional(),
-    attention: z.enum(["notify", "focus", "normal", "quiet", "hidden", "all"]).optional(),
+    attention: z.enum(["all", "notify", "focus", "normal"]).optional(),
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     text: z.string().trim().max(200).optional(),
     sender: z.string().trim().max(320).optional(),
     collectionId: nonEmptyStringSchema.optional(),
-  }).strict(),
+  }).strict().superRefine((filters, context) => {
+    if ((filters.mailbox === undefined) !== (filters.attention === undefined)) {
+      context.addIssue({ code: "custom", message: "Mailbox and attention must be provided together" });
+    }
+  }).transform((filters) => {
+    if (filters.mailbox !== "inbox" || filters.attention !== "all") return filters;
+    const canonical = { ...filters };
+    delete canonical.mailbox;
+    delete canonical.attention;
+    return canonical;
+  }),
 }).strict();
 export type OrganizationSavedQueryDefinition = z.infer<typeof organizationSavedQueryDefinitionSchema>;
 
 export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unknown): OrganizationSavedQueryDefinition {
   const legacy = pinFilterSchema.parse(input);
-  return {
+  const isDefaultSelection = legacy.mailbox === "inbox" && legacy.attention === "all";
+  return organizationSavedQueryDefinitionSchema.parse({
     revision: 1,
     filters: {
-      mailbox: legacy.mailbox,
-      attention: legacy.attention,
+      ...(!isDefaultSelection ? { mailbox: legacy.mailbox, attention: legacy.attention } : {}),
       ...(legacy.classification ? { classification: legacy.classification } : {}),
       ...(legacy.person ? { sender: legacy.person } : {}),
       ...(legacy.query ? { text: legacy.query } : {}),
     },
-  };
+  });
 }
 
 export function legacyPinFilterFromOrganizationSavedQueryDefinition(
   definition: OrganizationSavedQueryDefinition,
 ): PinFilter {
-  const mailbox = definition.filters.mailbox;
-  const attention = definition.filters.attention;
+  const parsed = organizationSavedQueryDefinitionSchema.parse(definition);
+  const mailbox = parsed.filters.mailbox;
+  const attention = parsed.filters.attention;
   return pinFilterSchema.parse({
-    mailbox: mailbox ?? (attention === "focus" || attention === "quiet" || attention === "hidden" || attention === "all"
-      ? attention
-      : "inbox"),
-    attention: mailbox
-      ? attention === "notify" || attention === "focus" || attention === "normal" || attention === "all" ? attention : "all"
-      : attention === "normal" ? "normal" : "all",
-    ...(definition.filters.classification ? { classification: definition.filters.classification } : {}),
-    person: definition.filters.sender ?? null,
-    query: definition.filters.text ?? "",
+    mailbox: mailbox ?? "inbox",
+    attention: attention ?? "all",
+    ...(parsed.filters.classification ? { classification: parsed.filters.classification } : {}),
+    person: parsed.filters.sender ?? null,
+    query: parsed.filters.text ?? "",
   });
 }
 
