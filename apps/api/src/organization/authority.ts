@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 
 import {
+  organizationAuthorizationEnvelopeSchema,
   organizationLiveAuthorityStateSchema,
   organizationOperationRequestSchema,
   type OrganizationActionFamily,
+  type OrganizationAuthorizationEnvelope,
   type OrganizationActorType,
   type OrganizationAuthorityDenialCode,
   type OrganizationAuthorityTrace,
@@ -63,6 +65,7 @@ export type OrganizationAuthorityDecision =
       allowed: true;
       executionContext: OrganizationExecutionContext;
       trace: OrganizationAuthorityTrace;
+      authorizationEnvelopeDigest: string;
     }
   | {
       allowed: false;
@@ -120,6 +123,12 @@ function bindCommand(command: OrganizationCommand): DerivedCommand {
 /** Recomputes the canonical digest that binds an authorized execution payload. */
 export function digestOrganizationCommand(command: OrganizationCommand): string {
   return bindCommand(command).command.digest;
+}
+
+/** Runtime-validates and canonically binds every field in an authority result. */
+export function digestOrganizationAuthorizationEnvelope(envelope: OrganizationAuthorizationEnvelope): string {
+  const parsed = organizationAuthorizationEnvelopeSchema.parse(envelope);
+  return `sha256:${createHash("sha256").update(canonicalOrganizationJson(parsed)).digest("hex")}`;
 }
 
 function traceFor(
@@ -285,20 +294,23 @@ export function authorizeOrganizationOperation(
     }
   }
 
+  const executionContext: OrganizationExecutionContext = {
+    actor: request.actor,
+    command: derived.command,
+    operation: request.operation,
+    workspaceId: request.scope.workspaceId,
+    accountIds: requestedAccountIds,
+    capabilityId: request.capabilitySnapshot.id,
+    capabilityRevision: request.capabilitySnapshot.revision,
+    expectedRevisions: request.expectedRevisions,
+    idempotencyKey: request.idempotencyKey,
+    requiresAtomicIdempotencyReservation: isWrite,
+  };
+  const trace = traceFor(request, derived, "allowed", "Live scope, live Capability, and bound command authorize this execution precondition", null);
   return {
     allowed: true,
-    executionContext: {
-      actor: request.actor,
-      command: derived.command,
-      operation: request.operation,
-      workspaceId: request.scope.workspaceId,
-      accountIds: requestedAccountIds,
-      capabilityId: request.capabilitySnapshot.id,
-      capabilityRevision: request.capabilitySnapshot.revision,
-      expectedRevisions: request.expectedRevisions,
-      idempotencyKey: request.idempotencyKey,
-      requiresAtomicIdempotencyReservation: isWrite,
-    },
-    trace: traceFor(request, derived, "allowed", "Live scope, live Capability, and bound command authorize this execution precondition", null),
+    executionContext,
+    trace,
+    authorizationEnvelopeDigest: digestOrganizationAuthorizationEnvelope({ executionContext, trace }),
   };
 }

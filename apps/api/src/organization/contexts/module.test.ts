@@ -341,4 +341,160 @@ describe("Context Organization module", () => {
       sqlite.close();
     }
   });
+
+  test("rejects a forged authority Trace before any Context transaction write", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const baseContexts = baseRepository.contexts!;
+      const forgedTraceRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            return baseContexts.apply({
+              ...input,
+              authorization: {
+                ...input.authorization,
+                trace: {
+                  ...input.authorization.trace,
+                  risk: "destructive" as const,
+                  decision: "denied" as const,
+                  denialCode: "account_denied" as const,
+                  reason: "forged trace",
+                },
+              },
+            });
+          },
+        },
+      };
+
+      assert.throws(() => createOrganization(forgedTraceRepository).contexts!.apply({ scope, request: {
+        idempotencyKey: "forged-trace-apply-1", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request");
+
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects every mutated authorization-envelope family without partial writes", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const baseContexts = baseRepository.contexts!;
+      type Authorization = Parameters<typeof baseContexts.apply>[0]["authorization"];
+      const mutate = (authorization: Authorization, change: (copy: Authorization) => void): Authorization => {
+        const copy = structuredClone(authorization);
+        change(copy);
+        return copy;
+      };
+      const cases: Array<[string, (authorization: Authorization) => Authorization]> = [
+        ["actor", (authorization) => mutate(authorization, (copy) => { copy.executionContext.actor.id = "forged_actor"; copy.trace.actor.id = "forged_actor"; })],
+        ["scope", (authorization) => mutate(authorization, (copy) => { copy.executionContext.accountIds = ["account_a"]; copy.trace.scope.accountIds = ["account_a"]; })],
+        ["allowed-to-denied", (authorization) => mutate(authorization, (copy) => { copy.trace.decision = "denied"; copy.trace.denialCode = "account_denied"; })],
+        ["destructive-risk", (authorization) => mutate(authorization, (copy) => { copy.trace.risk = "destructive"; })],
+        ["denial-code", (authorization) => mutate(authorization, (copy) => { copy.trace.denialCode = "account_denied"; })],
+        ["reason", (authorization) => mutate(authorization, (copy) => { copy.trace.reason = "forged trace"; })],
+        ["winner", (authorization) => mutate(authorization, (copy) => { copy.trace.winner = { source: "manual_override", sourceId: "forged" }; })],
+        ["capability-snapshot", (authorization) => mutate(authorization, (copy) => { copy.trace.capabilitySnapshot.resourceFamilies = ["mail"]; })],
+        ["capability-id", (authorization) => mutate(authorization, (copy) => { copy.executionContext.capabilityId = "forged_capability"; })],
+        ["capability-revision", (authorization) => mutate(authorization, (copy) => { copy.executionContext.capabilityRevision += 1; })],
+        ["execution-expected-revisions", (authorization) => mutate(authorization, (copy) => { copy.executionContext.expectedRevisions.workspace = 2; })],
+        ["trace-expected-revisions", (authorization) => mutate(authorization, (copy) => { copy.trace.expectedRevisions.workspace = 2; })],
+        ["resource-families", (authorization) => mutate(authorization, (copy) => { copy.trace.requestedResourceFamilies = ["mail"]; })],
+        ["action-families", (authorization) => mutate(authorization, (copy) => { copy.trace.requestedActionFamilies = ["provider_delete"]; })],
+        ["resource-ids", (authorization) => mutate(authorization, (copy) => { copy.trace.requestedResourceIds = ["context_type:forged"]; })],
+        ["operation", (authorization) => mutate(authorization, (copy) => { copy.executionContext.operation = "revert"; copy.trace.operation = "revert"; })],
+        ["atomic-reservation", (authorization) => mutate(authorization, (copy) => { copy.executionContext.requiresAtomicIdempotencyReservation = false; })],
+        ["idempotency", (authorization) => mutate(authorization, (copy) => { copy.executionContext.idempotencyKey = "forged_key"; })],
+        ["resource-revisions", (authorization) => mutate(authorization, (copy) => { copy.executionContext.expectedRevisions.resources = { "context_type:forged": 1 }; })],
+        ["command-digest", (authorization) => mutate(authorization, (copy) => { copy.executionContext.command.digest = `sha256:${"0".repeat(64)}`; copy.trace.command.digest = `sha256:${"0".repeat(64)}`; })],
+        ["envelope-digest", (authorization) => mutate(authorization, (copy) => { copy.authorizationEnvelopeDigest = `sha256:${"0".repeat(64)}`; })],
+      ];
+
+      for (const [name, mutateAuthorization] of cases) {
+        const tamperingRepository = {
+          ...baseRepository,
+          contexts: {
+            ...baseContexts,
+            apply(input: Parameters<typeof baseContexts.apply>[0]) {
+              return baseContexts.apply({ ...input, authorization: mutateAuthorization(input.authorization) });
+            },
+          },
+        };
+        assert.throws(() => createOrganization(tamperingRepository).contexts!.apply({ scope, request: {
+          idempotencyKey: `authorization-matrix-${name}`, expectedWorkspaceRevision: 1,
+          actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+        } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request", name);
+        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0, name);
+        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0, name);
+        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0, name);
+        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0, name);
+        assert.deepEqual(createOrganization(baseRepository).contexts!.audit({ scope }), [], name);
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects forged revert authorization before audit or state changes", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const contexts = createOrganization(baseRepository).contexts!;
+      const applied = contexts.apply({ scope, request: {
+        idempotencyKey: "revert-forge-source", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } });
+      const baseContexts = baseRepository.contexts!;
+      const tamperers = [
+        (input: Parameters<typeof baseContexts.revert>[0]) => ({
+          ...input,
+          authorization: {
+            ...input.authorization,
+            trace: {
+              ...input.authorization.trace,
+              risk: "destructive" as const,
+              decision: "denied" as const,
+              denialCode: "account_denied" as const,
+              reason: "forged trace",
+            },
+          },
+        }),
+        (input: Parameters<typeof baseContexts.revert>[0]) => ({
+          ...input,
+          authorization: {
+            ...input.authorization,
+            executionContext: { ...input.authorization.executionContext, operation: "apply" as const },
+            trace: { ...input.authorization.trace, operation: "apply" as const },
+          },
+        }),
+      ];
+
+      for (const [index, tamper] of tamperers.entries()) {
+        const tamperingRepository = {
+          ...baseRepository,
+          contexts: { ...baseContexts, revert(input: Parameters<typeof baseContexts.revert>[0]) { return baseContexts.revert(tamper(input)); } },
+        };
+        assert.throws(() => createOrganization(tamperingRepository).contexts!.revert({ scope, request: {
+          idempotencyKey: `revert-forge-${index}`, changeId: applied.change.id, expectedWorkspaceRevision: 2,
+        } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request");
+      }
+
+      assert.equal((sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace_owner'").get() as { revision: number }).revision, 2);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 1);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 1);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 1);
+      assert.equal(contexts.audit({ scope }).length, 1);
+      assert.equal(contexts.query({ scope, query: { includeRetired: true } }).contextTypes[0]?.name, "Project");
+    } finally {
+      sqlite.close();
+    }
+  });
 });

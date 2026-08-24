@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import {
+  organizationAuthorizationEnvelopeSchema,
   organizationAuthorityTraceSchema,
   organizationExecutionContextSchema,
   type OrganizationCapabilitySnapshot,
@@ -13,6 +14,7 @@ import {
 
 import {
   authorizeOrganizationOperation,
+  digestOrganizationAuthorizationEnvelope,
   organizationActorOperationMatrix,
 } from "./authority.ts";
 
@@ -200,6 +202,13 @@ describe("G0 command binding and bounded authority", () => {
     assert.equal(decision.executionContext.workspaceId, candidate.scope.workspaceId);
     assert.equal(decision.executionContext.requiresAtomicIdempotencyReservation, true);
     assert.equal(organizationExecutionContextSchema.safeParse(decision.executionContext).success, true);
+    const envelope = { executionContext: decision.executionContext, trace: decision.trace };
+    assert.equal(organizationAuthorizationEnvelopeSchema.safeParse(envelope).success, true);
+    assert.equal(digestOrganizationAuthorizationEnvelope(envelope), decision.authorizationEnvelopeDigest);
+    assert.notEqual(digestOrganizationAuthorizationEnvelope({
+      ...envelope,
+      trace: { ...envelope.trace, reason: "different evidence" },
+    }), decision.authorizationEnvelopeDigest);
 
     const changed = authorize(request({ operation: "apply", command: { id: "command_apply", intents: [{ kind: "mutate_lane", resourceId: "lane_1", mutation: "update", changes: { name: "Escalations" } }] } }));
     assert.equal(changed.allowed, true);

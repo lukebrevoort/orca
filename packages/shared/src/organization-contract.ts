@@ -259,3 +259,10 @@ export const organizationExecutionContextSchema = z.object({
   requiresAtomicIdempotencyReservation: z.boolean(),
 }).strict();
 export type OrganizationExecutionContext = z.infer<typeof organizationExecutionContextSchema>;
+
+/** Canonical complete authority evidence passed across a transactional adapter seam. */
+export const organizationAuthorizationEnvelopeSchema = z.object({
+  executionContext: organizationExecutionContextSchema,
+  trace: organizationAuthorityTraceSchema,
+}).strict();
+export type OrganizationAuthorizationEnvelope = z.infer<typeof organizationAuthorizationEnvelopeSchema>;

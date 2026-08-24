@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
+  organizationAuthorizationEnvelopeSchema,
+  organizationAuthorityTraceSchema,
+  organizationCommandSchema,
+  organizationContextApplyRequestSchema,
   organizationContextChangeSummarySchema,
   organizationContextBounds,
   organizationContextSchema,
   organizationContextQueryResponseSchema,
   organizationContextRelationshipTypeSchema,
+  organizationContextRevertRequestSchema,
+  organizationContextScopeSchema,
   organizationContextThreadRevisionSchema,
   organizationContextTypeSchema,
   organizationThreadContextRelationshipSchema,
@@ -31,7 +37,12 @@ import {
   organizationWorkspaceStates,
   threads,
 } from "../../db/schema.ts";
-import { digestOrganizationCommand, canonicalOrganizationJson } from "../authority.ts";
+import {
+  authorizeOrganizationOperation,
+  canonicalOrganizationJson,
+  digestOrganizationAuthorizationEnvelope,
+  digestOrganizationCommand,
+} from "../authority.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
 import {
   OrganizationContextsAccessError,
@@ -39,6 +50,7 @@ import {
   OrganizationContextsNotFoundError,
   applyOrganizationContextActions,
   digestOrganizationContextActions,
+  organizationContextsCapability,
   organizationContextResourceRevisions,
   type OrganizationContextAllocatedIds,
   type OrganizationContextSnapshot,
@@ -145,7 +157,7 @@ function evidenceResourceId(kind: EvidenceKind, value: EvidenceValue): string {
 }
 
 function parseTrace(value: string): OrganizationAuthorityTrace {
-  return JSON.parse(value) as OrganizationAuthorityTrace;
+  return organizationAuthorityTraceSchema.parse(JSON.parse(value));
 }
 
 function parseCommandJson(value: string): { request?: OrganizationContextApplyRequest; allocatedIds?: OrganizationContextAllocatedIds; revert?: OrganizationContextRevertRequest } {
@@ -199,7 +211,7 @@ function canonicalDigest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`;
 }
 
-function assertAuthorizedEnvelope(input: {
+function assertAuthorizedEnvelope(db: Database, input: {
   request: OrganizationContextApplyRequest | OrganizationContextRevertRequest;
   scope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"];
   executionContext: OrganizationExecutionContext;
@@ -207,37 +219,107 @@ function assertAuthorizedEnvelope(input: {
   command: OrganizationCommand;
   changeId: string;
   operation: "apply" | "revert";
-}): { workspaceId: string; expectedWorkspaceRevision: number; idempotencyKey: string } {
-  const expectedWorkspaceRevision = input.executionContext.expectedRevisions.workspace;
-  const idempotencyKey = input.executionContext.idempotencyKey;
-  if (expectedWorkspaceRevision === null
-    || idempotencyKey === null
-    || input.scope.workspaceId !== input.executionContext.workspaceId
-    || canonicalOrganizationJson(input.scope.actor) !== canonicalOrganizationJson(input.executionContext.actor)
-    || canonicalOrganizationJson([...input.scope.accountIds].sort()) !== canonicalOrganizationJson([...input.executionContext.accountIds].sort())
-    || canonicalOrganizationJson(input.authorityTrace.actor) !== canonicalOrganizationJson(input.executionContext.actor)
-    || input.authorityTrace.operation !== input.executionContext.operation
-    || input.authorityTrace.scope.workspaceId !== input.executionContext.workspaceId
-    || canonicalOrganizationJson([...input.authorityTrace.scope.accountIds].sort()) !== canonicalOrganizationJson([...input.executionContext.accountIds].sort())
-    || canonicalOrganizationJson(input.authorityTrace.command) !== canonicalOrganizationJson(input.executionContext.command)
-    || input.changeId !== input.command.id
-    || input.request.expectedWorkspaceRevision !== expectedWorkspaceRevision
-    || input.request.idempotencyKey !== idempotencyKey) {
+  authorizationEnvelopeDigest: string;
+}): {
+  workspaceId: string;
+  expectedWorkspaceRevision: number;
+  idempotencyKey: string;
+  request: OrganizationContextApplyRequest | OrganizationContextRevertRequest;
+  executionContext: OrganizationExecutionContext;
+  authorityTrace: OrganizationAuthorityTrace;
+  command: OrganizationCommand;
+  current: OrganizationContextSnapshot;
+} {
+  const scopeResult = organizationContextScopeSchema.safeParse(input.scope);
+  const requestResult = input.operation === "apply"
+    ? organizationContextApplyRequestSchema.safeParse(input.request)
+    : organizationContextRevertRequestSchema.safeParse(input.request);
+  const commandResult = organizationCommandSchema.safeParse(input.command);
+  const envelopeResult = organizationAuthorizationEnvelopeSchema.safeParse({
+    executionContext: input.executionContext,
+    trace: input.authorityTrace,
+  });
+  if (!scopeResult.success || !requestResult.success || !commandResult.success || !envelopeResult.success) {
+    throw new OrganizationAuthorityError("invalid_request", "The Context authorization envelope failed runtime validation");
+  }
+
+  const scope = scopeResult.data;
+  const request = requestResult.data;
+  const command = commandResult.data;
+  const suppliedEnvelope = envelopeResult.data;
+  const suppliedDigest = digestOrganizationAuthorizationEnvelope(suppliedEnvelope);
+  if (suppliedDigest !== input.authorizationEnvelopeDigest
+    || suppliedEnvelope.executionContext.operation !== input.operation
+    || suppliedEnvelope.trace.operation !== input.operation
+    || request.expectedWorkspaceRevision !== suppliedEnvelope.executionContext.expectedRevisions.workspace
+    || request.idempotencyKey !== suppliedEnvelope.executionContext.idempotencyKey
+    || canonicalOrganizationJson(scope.actor) !== canonicalOrganizationJson(suppliedEnvelope.executionContext.actor)
+    || scope.workspaceId !== suppliedEnvelope.executionContext.workspaceId
+    || canonicalOrganizationJson([...scope.accountIds].sort()) !== canonicalOrganizationJson([...suppliedEnvelope.executionContext.accountIds].sort())
+    || input.changeId !== command.id) {
+    throw new OrganizationAuthorityError("invalid_request", "The Context request envelope does not match the authorized execution context");
+  }
+  const current = loadSnapshot(db, scope.workspaceId);
+  const resourceRevisions = organizationContextResourceRevisions(current);
+  const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => {
+    if (intent.mutation !== "update") return [];
+    const revision = resourceRevisions[intent.resourceId];
+    return revision === undefined ? [] : [[intent.resourceId, revision]];
+  }));
+  const capability = organizationContextsCapability(scope);
+  const reservedIdempotencyKeys = db.select({ key: organizationChangeSets.idempotencyKey })
+    .from(organizationChangeSets)
+    .where(eq(organizationChangeSets.workspaceId, scope.workspaceId))
+    .all()
+    .map((row) => row.key);
+  const decision = authorizeOrganizationOperation({
+    actor: scope.actor,
+    capabilitySnapshot: capability,
+    operation: input.operation,
+    scope: capability.scope,
+    command,
+    expectedRevisions: { workspace: request.expectedWorkspaceRevision, resources: expectedResources },
+    idempotencyKey: request.idempotencyKey,
+  }, {
+    scope: capability.scope,
+    capability: { snapshot: capability, revokedAt: null },
+    workspaceRevision: current.workspaceRevision,
+    resourceRevisions,
+    reservedIdempotencyKeys,
+  });
+  if (!decision.allowed) throw new OrganizationAuthorityError(decision.code, decision.reason);
+
+  if (input.authorizationEnvelopeDigest !== decision.authorizationEnvelopeDigest
+    || suppliedDigest !== decision.authorizationEnvelopeDigest) {
     throw new OrganizationAuthorityError("invalid_request", "The Context request envelope does not match the authorized execution context");
   }
   if (input.operation === "revert") {
-    const request = input.request as OrganizationContextRevertRequest;
-    const intent = input.command.intents[0];
-    if (input.command.intents.length !== 1
+    const revertRequest = request as OrganizationContextRevertRequest;
+    const intent = command.intents[0];
+    if (command.intents.length !== 1
       || intent?.kind !== "mutate_context"
-      || intent.resourceId !== `context_change:${request.changeId}`
+      || intent.resourceId !== `context_change:${revertRequest.changeId}`
       || intent.mutation !== "create"
       || intent.changes?.action !== "revert"
-      || intent.changes?.requestDigest !== canonicalDigest(request)) {
+      || intent.changes?.requestDigest !== canonicalDigest(revertRequest)) {
       throw new OrganizationAuthorityError("invalid_request", "The Context revert request does not match the authorized command");
     }
   }
-  return { workspaceId: input.executionContext.workspaceId, expectedWorkspaceRevision, idempotencyKey };
+  const expectedWorkspaceRevision = decision.executionContext.expectedRevisions.workspace;
+  const idempotencyKey = decision.executionContext.idempotencyKey;
+  if (expectedWorkspaceRevision === null || idempotencyKey === null) {
+    throw new OrganizationAuthorityError("invalid_request", "Context writes require a bound revision and idempotency reservation");
+  }
+  return {
+    workspaceId: decision.executionContext.workspaceId,
+    expectedWorkspaceRevision,
+    idempotencyKey,
+    request,
+    executionContext: decision.executionContext,
+    authorityTrace: decision.trace,
+    command,
+    current,
+  };
 }
 
 function assertLiveResources(current: OrganizationContextSnapshot, executionContext: OrganizationExecutionContext, command: OrganizationCommand) {
@@ -444,16 +526,17 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
     apply(input) {
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const { workspaceId, expectedWorkspaceRevision, idempotencyKey } = assertAuthorizedEnvelope({ request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
-        transaction.insert(organizationWorkspaceStates).values({ workspaceId }).onConflictDoNothing().run();
-        assertBoundCommand({ command: input.authorization.command, executionContext: input.authorization.executionContext, actions: input.request.actions, allocatedIds: input.allocatedIds });
-        const current = loadSnapshot(executor, workspaceId);
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
+        const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
+        const request = organizationContextApplyRequestSchema.parse(authorized.request);
+        assertBoundCommand({ command, executionContext, actions: request.actions, allocatedIds: input.allocatedIds });
         if (current.workspaceRevision !== expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(expectedWorkspaceRevision, current.workspaceRevision);
-        assertLiveResources(current, input.authorization.executionContext, input.authorization.command);
+        assertLiveResources(current, executionContext, command);
         if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
-        const next = applyOrganizationContextActions({ snapshot: current, actions: input.request.actions, allocatedIds: input.allocatedIds, authorizedAccountIds: input.authorization.executionContext.accountIds, now: input.now.toISOString() });
+        const next = applyOrganizationContextActions({ snapshot: current, actions: request.actions, allocatedIds: input.allocatedIds, authorizedAccountIds: executionContext.accountIds, now: input.now.toISOString() });
+        transaction.insert(organizationWorkspaceStates).values({ workspaceId }).onConflictDoNothing().run();
         writeSnapshot(executor, workspaceId, current, next, input.now);
-        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "apply", commandJson: { request: input.request, allocatedIds: input.allocatedIds }, revertsChangeId: null, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
+        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: executionContext.command.digest, authorityTrace, operation: "apply", commandJson: { request, allocatedIds: input.allocatedIds }, revertsChangeId: null, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.workspaceRevision, current.workspaceRevision + 1);
         return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };
@@ -462,9 +545,11 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
     revert(input) {
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const { workspaceId, expectedWorkspaceRevision, idempotencyKey } = assertAuthorizedEnvelope({ request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
-        assertBoundCommand({ command: input.authorization.command, executionContext: input.authorization.executionContext });
-        const original = transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.request.changeId), eq(organizationChangeSets.resourceFamily, "context"))).get();
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
+        const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
+        const request = organizationContextRevertRequestSchema.parse(authorized.request);
+        assertBoundCommand({ command, executionContext });
+        const original = transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, request.changeId), eq(organizationChangeSets.resourceFamily, "context"))).get();
         if (!original) throw new OrganizationContextsNotFoundError("Context change was not found in this Workspace");
         if (original.operation !== "apply") throw new OrganizationContextsConflictError("Only an applied Context change can be reverted");
         if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.revertsChangeId, original.id))).get()) throw new OrganizationContextsConflictError("Context change was already reverted");
@@ -480,14 +565,13 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
           return { actionKind, resourceFamily, resourceId: row.resourceId, before, after };
         });
         if (evidence.length === 0) throw new OrganizationContextsConflictError("Context change does not contain compensating evidence");
-        const current = loadSnapshot(executor, workspaceId);
         if (current.workspaceRevision !== expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(expectedWorkspaceRevision, current.workspaceRevision);
         const originalScope = parseTrace(original.authorityTrace).scope.accountIds;
-        if (originalScope.some((accountId) => !input.authorization.executionContext.accountIds.includes(accountId))) throw new OrganizationContextsAccessError();
+        if (originalScope.some((accountId) => !executionContext.accountIds.includes(accountId))) throw new OrganizationContextsAccessError();
         if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
         const next = causalCompensation(current, evidence, input.now.toISOString());
         writeSnapshot(executor, workspaceId, current, next, input.now);
-        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "revert", commandJson: { revert: input.request }, revertsChangeId: original.id, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
+        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: executionContext.command.digest, authorityTrace, operation: "revert", commandJson: { revert: request }, revertsChangeId: original.id, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.workspaceRevision, current.workspaceRevision + 1);
         return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };

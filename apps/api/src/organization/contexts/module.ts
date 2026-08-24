@@ -11,6 +11,7 @@ import {
   organizationContextRevertRequestSchema,
   organizationContextScopeSchema,
   type OrganizationAuthorityTrace,
+  type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrganizationContextAction,
   type OrganizationContextActionKind,
@@ -48,14 +49,14 @@ export type OrganizationContextsRepository = {
     request: OrganizationContextApplyRequest;
     allocatedIds: OrganizationContextAllocatedIds;
     changeId: string;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; command: OrganizationCommand };
     now: Date;
   }): { snapshot: OrganizationContextSnapshot; change: OrganizationContextChangeSummary };
   revert(input: {
     scope: OrganizationContextScope;
     request: OrganizationContextRevertRequest;
     changeId: string;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; command: OrganizationCommand };
     now: Date;
   }): { snapshot: OrganizationContextSnapshot; change: OrganizationContextChangeSummary };
   audit(workspaceId: string): OrganizationContextChangeSummary[];
@@ -362,6 +363,19 @@ function buildCommand(snapshot: OrganizationContextSnapshot, request: Organizati
   };
 }
 
+/** Trusted first-party capability used by both preflight and transaction-side authorization. */
+export function organizationContextsCapability(scope: OrganizationContextScope): OrganizationCapabilitySnapshot {
+  return {
+    id: `first_party:human:${scope.actor.id}`,
+    revision: 1,
+    actor: scope.actor,
+    scope: { workspaceId: scope.workspaceId, accountIds: scope.accountIds },
+    operations: ["describe", "query", "apply", "revert"],
+    resourceFamilies: ["context", "thread", "audit", "change_set"],
+    actionFamilies: ["organization_read", "organization_structure", "organization_thread"],
+  };
+}
+
 export function createOrganizationContexts(repository: OrganizationContextsRepository, dependencies: { now?: () => Date; newId?: () => string } = {}) {
   const now = dependencies.now ?? (() => new Date());
   const newId = dependencies.newId ?? (() => crypto.randomUUID());
@@ -377,21 +391,13 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
     if (scope.actor.type !== "human") throw new OrganizationContextsAccessError("Context writes require an authenticated human session");
     const live = repository.getAuthorityState(scope.workspaceId);
     const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => intent.mutation === "update" && live.resourceRevisions[intent.resourceId] !== undefined ? [[intent.resourceId, live.resourceRevisions[intent.resourceId]!]] : []));
-    const capability = {
-      id: `first_party:human:${scope.actor.id}`,
-      revision: 1,
-      actor: scope.actor,
-      scope: { workspaceId: scope.workspaceId, accountIds: scope.accountIds },
-      operations: ["describe", "query", "apply", "revert"] as const,
-      resourceFamilies: ["context", "thread", "audit", "change_set"] as const,
-      actionFamilies: ["organization_read", "organization_structure", "organization_thread"] as const,
-    };
+    const capability = organizationContextsCapability(scope);
     const decision = authorizeOrganizationOperation({ actor: scope.actor, capabilitySnapshot: capability, operation, scope: capability.scope, command, expectedRevisions: { workspace: expectedWorkspaceRevision, resources: expectedResources }, idempotencyKey }, { scope: capability.scope, capability: { snapshot: capability, revokedAt: null }, workspaceRevision: live.workspaceRevision, resourceRevisions: live.resourceRevisions, reservedIdempotencyKeys: live.reservedIdempotencyKeys });
     if (!decision.allowed) {
       if (decision.code === "revision_conflict" || decision.code === "duplicate_idempotency_key") throw new OrganizationContextsConflictError(decision.reason);
       throw new OrganizationContextsAccessError(decision.reason);
     }
-    return { executionContext: decision.executionContext, trace: decision.trace, command };
+    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command };
   }
 
   return {
