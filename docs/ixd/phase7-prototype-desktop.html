@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orca Organization — Desktop prototype</title>
+  <style>
+    :root {
+      --color-foam: #f7faf8;
+      --color-white: #ffffff;
+      --color-tideline: #e2ece8;
+      --color-kelp: #5f7470;
+      --color-current: #0f2422;
+      --color-lagoon: #0e9f8a;
+      --color-lagoon-soft: rgb(14 159 138 / 10%);
+      --orca-ink: var(--color-current);
+      --orca-paper: var(--color-foam);
+      --orca-muted: var(--color-kelp);
+      --orca-border: var(--color-tideline);
+      --orca-surface: var(--color-white);
+      --orca-surface-hover: #edf5f2;
+      --orca-accent: var(--color-lagoon);
+      --orca-accent-soft: var(--color-lagoon-soft);
+      --orca-danger: #b44c42;
+      --orca-warning: #8a672e;
+      --orca-control: #f3f7f5;
+      --orca-control-hover: #e8f2ef;
+      --orca-shadow: 0 18px 54px rgb(15 36 34 / 12%);
+      --block-when: #dfeaff;
+      --block-when-border: #5479ad;
+      --block-if: #fff0b8;
+      --block-if-border: #a36e13;
+      --block-then: #d6f4e6;
+      --block-then-border: #168064;
+      --block-because: #eee2fb;
+      --block-because-border: #77549e;
+      --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
+      --font-body: "Sora", ui-sans-serif, system-ui, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, monospace;
+      --motion-fast: 140ms;
+      --motion-medium: 180ms;
+      --ease-enter: cubic-bezier(.2,.75,.25,1);
+    }
+    body[data-theme="dark"] {
+      --color-foam: #111a22;
+      --color-white: #1a2730;
+      --color-tideline: #304149;
+      --color-kelp: #9cafb1;
+      --color-current: #edf3f1;
+      --color-lagoon: #8fb7ad;
+      --color-lagoon-soft: rgb(143 183 173 / 14%);
+      --orca-ink: var(--color-current);
+      --orca-paper: var(--color-foam);
+      --orca-muted: var(--color-kelp);
+      --orca-border: var(--color-tideline);
+      --orca-surface: var(--color-white);
+      --orca-surface-hover: #24353e;
+      --orca-accent: var(--color-lagoon);
+      --orca-accent-soft: var(--color-lagoon-soft);
+      --orca-danger: #e7a197;
+      --orca-warning: #d8bb83;
+      --orca-control: #1b2930;
+      --orca-control-hover: #283b43;
+      --orca-shadow: 0 22px 64px rgb(0 0 0 / 34%);
+      --block-when: #243b5c;
+      --block-when-border: #8db4ed;
+      --block-if: #4c3d1c;
+      --block-if-border: #e0bd61;
+      --block-then: #183f35;
+      --block-then-border: #75c7a8;
+      --block-because: #3b2d4c;
+      --block-because-border: #c09ddd;
+    }
+    * { box-sizing: border-box; }
+    body { align-items: center; background: #dfe1dc; color: var(--orca-ink); display: flex; flex-direction: column; font-family: var(--font-body); gap: 14px; margin: 0; min-height: 920px; padding: 18px; }
+    body[data-theme="dark"] { background: #0f1110; }
+    button, input, select, textarea { font: inherit; }
+    button, .rule-row, input, select, textarea { transition: background-color var(--motion-fast) var(--ease-enter), border-color var(--motion-fast) var(--ease-enter), color var(--motion-fast) var(--ease-enter), box-shadow var(--motion-fast) var(--ease-enter), transform var(--motion-fast) var(--ease-enter); }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 2px; }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { background: var(--orca-control); border-color: var(--orca-border); color: var(--orca-muted); cursor: not-allowed; opacity: 1; }
+    .sr-only { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+    .prototype-bar { align-items: center; color: #242722; display: flex; font-size: 12px; justify-content: space-between; width: 1280px; }
+    body[data-theme="dark"] .prototype-bar { color: #d8ddd8; }
+    .prototype-controls { align-items: center; display: flex; gap: 8px; }
+    .prototype-bar label { align-items: center; display: flex; gap: 7px; }
+    .prototype-bar select, .prototype-bar button { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); min-height: 34px; padding: 0 12px; }
+    .prototype-bar button:hover { background: var(--orca-surface-hover); }
+    .window-frame { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 18px; box-shadow: var(--orca-shadow); height: 800px; overflow: hidden; width: 1280px; }
+    .title-bar { align-items: center; border-bottom: 1px solid var(--orca-border); display: flex; height: 40px; justify-content: center; position: relative; }
+    .traffic { display: flex; gap: 7px; left: 14px; position: absolute; }
+    .traffic i { border: 1px solid var(--orca-border); border-radius: 999px; display: block; height: 11px; width: 11px; }
+    .traffic i:nth-child(1) { background: #c8756a; }
+    .traffic i:nth-child(2) { background: #c8a65f; }
+    .traffic i:nth-child(3) { background: #79a877; }
+    .title-bar strong { font-size: 11px; font-weight: 650; }
+    .app { display: flex; height: 760px; }
+    .rail { align-items: center; border-right: 1px solid var(--orca-border); display: flex; flex: 0 0 68px; flex-direction: column; gap: 6px; padding: 12px 8px; }
+    .rail-cluster { align-items: center; display: flex; flex-direction: column; gap: 6px; width: 100%; }
+    .rail-cluster[data-user-space-list] { border-bottom: 1px solid var(--orca-border); border-top: 1px solid var(--orca-border); margin: 3px 0; padding: 7px 0; }
+    .rail a { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--orca-muted); cursor: pointer; display: flex; flex-direction: column; font-size: 17px; gap: 2px; height: 50px; justify-content: center; text-decoration: none; width: 50px; }
+    .rail a small { font-size: 8px; font-weight: 750; letter-spacing: .3px; }
+    .rail a:hover { background: var(--orca-surface-hover); color: var(--orca-ink); }
+    .rail a[aria-current="page"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .rail a[draggable="true"] { cursor: grab; position: relative; }
+    .rail a[draggable="true"]::after { color: var(--orca-muted); content: "⠿"; font-size: 7px; opacity: 0; position: absolute; right: 2px; top: 2px; }
+    .rail a[draggable="true"]:hover::after, .rail a[draggable="true"]:focus-visible::after { opacity: 1; }
+    .rail a[data-dragging="true"] { opacity: .45; }
+    .rail .rail-spacer { flex: 1; }
+    .main-shell { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+    .page-header { align-items: center; border-bottom: 1px solid var(--orca-border); display: flex; flex: 0 0 92px; justify-content: space-between; padding: 16px 22px; }
+    .eyebrow { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: 1.1px; margin: 0 0 5px; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-family: var(--font-display); font-size: 32px; font-weight: 500; letter-spacing: -1.3px; line-height: 36px; margin-bottom: 0; }
+    h1 span { color: var(--orca-muted); font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0; }
+    .header-actions { align-items: center; display: flex; gap: 8px; }
+    .search { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); height: 38px; padding: 0 14px; width: 224px; }
+    .quiet-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font-size: 11px; font-weight: 750; min-height: 38px; padding: 0 14px; }
+    .quiet-button:hover:not(:disabled) { background: var(--orca-control-hover); border-color: var(--orca-accent); }
+    .workspace { display: flex; flex: 1; min-height: 0; position: relative; }
+    .library { border-right: 1px solid var(--orca-border); display: flex; flex: 0 0 236px; flex-direction: column; min-width: 0; padding: 16px 14px; }
+    .section-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .section-head h2 { font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -.4px; margin-bottom: 0; }
+    .text-button { background: transparent; border: 0; color: var(--orca-muted); cursor: pointer; font-size: 11px; padding: 6px; }
+    .text-button:hover { color: var(--orca-ink); }
+    .rule-list { display: flex; flex: 1; flex-direction: column; gap: 6px; overflow-y: auto; }
+    .rule-group { color: var(--orca-muted); font-size: 9px; font-weight: 800; letter-spacing: .9px; margin: 10px 8px 2px; text-transform: uppercase; }
+    .rule-row { background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--orca-ink); cursor: pointer; padding: 10px; text-align: left; }
+    .rule-row:hover { background: var(--orca-surface-hover); border-color: var(--orca-border); }
+    .rule-row[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .rule-row[aria-pressed="true"] > span { color: var(--orca-ink); }
+    .rule-row strong { display: block; font-size: 12px; line-height: 16px; }
+    .rule-row span { color: var(--orca-muted); display: block; font-size: 11px; line-height: 15px; margin-top: 3px; }
+    .rule-meta { align-items: center; color: var(--orca-ink) !important; display: flex; gap: 6px; margin-top: 7px; }
+    .status-dot { background: var(--orca-muted); border-radius: 999px; display: inline-block; height: 6px; width: 6px; }
+    .status-dot.active { background: var(--orca-accent); }
+    .status-dot.draft { background: var(--orca-warning); }
+    .workbench { display: flex; flex: 1; flex-direction: column; min-width: 520px; overflow: hidden; transition: margin-right var(--motion-medium) var(--ease-enter); }
+    .mode-bar { align-items: center; border-bottom: 1px solid var(--orca-border); display: flex; flex: 0 0 54px; justify-content: space-between; padding: 8px 16px; }
+    .mode-tabs { display: flex; gap: 6px; }
+    .mode-tabs button { background: transparent; border: 1px solid transparent; border-radius: 999px; color: var(--orca-muted); cursor: pointer; font-size: 11px; font-weight: 750; min-height: 34px; padding: 0 12px; }
+    .mode-tabs button:hover { background: var(--orca-surface-hover); color: var(--orca-ink); }
+    .mode-tabs button[aria-pressed="true"] { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: inset 0 0 0 1px var(--orca-accent-soft); color: var(--orca-ink); }
+    .workbench-tools { align-items: center; display: flex; gap: 5px; }
+    .workbench-tools .text-button { border: 1px solid transparent; border-radius: 999px; padding: 7px 9px; }
+    .workbench-tools .text-button:hover { background: var(--orca-surface-hover); border-color: var(--orca-border); }
+    .save-state { color: var(--orca-ink); font-size: 10px; }
+    .editor-scroll { flex: 1; overflow-y: auto; padding: 18px; }
+    .rule-title { align-items: start; display: flex; gap: 16px; justify-content: space-between; }
+    .rule-title h2 { font-family: var(--font-display); font-size: 27px; font-weight: 500; letter-spacing: -.9px; line-height: 30px; margin-bottom: 7px; }
+    .rule-title p { color: var(--orca-muted); font-size: 11px; line-height: 17px; margin-bottom: 0; }
+    .revision-chip { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); flex: 0 0 auto; font-size: 9px; font-weight: 750; padding: 7px 9px; }
+    .glass-stack { align-items: stretch; background-color: color-mix(in srgb, var(--orca-paper), var(--orca-surface) 56%); background-image: radial-gradient(circle, color-mix(in srgb, var(--orca-muted), transparent 70%) 1px, transparent 1.3px); background-size: 18px 18px; border: 1px solid var(--orca-border); border-radius: 18px; display: grid; gap: 0; grid-template-columns: minmax(140px, 1fr) 30px minmax(158px, 1.12fr) 30px minmax(158px, 1.08fr); grid-template-rows: minmax(154px, auto) 28px minmax(96px, auto); margin-top: 20px; overflow: hidden; padding: 38px 28px 24px; position: relative; }
+    .glass-stack::before { color: var(--orca-muted); content: "Rule canvas · pieces compile as one revision"; font-size: 9px; font-weight: 800; left: 16px; letter-spacing: .7px; position: absolute; text-transform: uppercase; top: 12px; }
+    .glass-row { align-items: flex-start; border: 2px solid; box-shadow: 0 5px 0 rgb(15 36 34 / 8%); display: flex; flex-direction: column; gap: 9px; min-height: 154px; padding: 14px 14px 44px; position: relative; transition: box-shadow var(--motion-fast) var(--ease-enter), transform var(--motion-fast) var(--ease-enter); }
+    .glass-row:hover { box-shadow: 0 8px 0 rgb(15 36 34 / 11%); transform: translateY(-2px); }
+    .glass-row[data-stage="when"] { background: var(--block-when); border-color: var(--block-when-border); border-radius: 42px 42px 14px 14px; grid-column: 1; grid-row: 1; }
+    .glass-row[data-stage="if"] { background: var(--block-if); border-color: var(--block-if-border); clip-path: polygon(9% 0, 91% 0, 100% 16%, 100% 84%, 91% 100%, 9% 100%, 0 84%, 0 16%); grid-column: 3; grid-row: 1; padding-left: 20px; padding-right: 20px; }
+    .glass-row[data-stage="then"] { background: var(--block-then); border-color: var(--block-then-border); border-radius: 14px 34px 34px 14px; grid-column: 5; grid-row: 1; }
+    .glass-row[data-stage="then"]::before { background: color-mix(in srgb, var(--orca-paper), var(--orca-surface) 56%); border: 2px solid var(--block-then-border); border-left: 0; border-radius: 0 999px 999px 0; content: ""; height: 24px; left: -2px; position: absolute; top: 52px; width: 11px; }
+    .glass-row[data-stage="because"] { background: var(--block-because); border-color: var(--block-because-border); border-radius: 7px 16px 16px 16px; grid-column: 5; grid-row: 3; min-height: 96px; padding-bottom: 14px; transform: rotate(-1deg); }
+    .glass-row[data-stage="because"]::after { border-left: 19px solid transparent; border-top: 19px solid color-mix(in srgb, var(--block-because), white 24%); content: ""; position: absolute; right: -2px; top: -2px; }
+    .glass-key { align-items: center; background: rgb(255 255 255 / 46%); border: 1px solid currentColor; border-radius: 999px; color: var(--orca-ink); display: inline-flex; font-size: 9px; font-weight: 850; height: 27px; justify-content: center; letter-spacing: .9px; min-width: 58px; padding: 0 9px; text-transform: uppercase; }
+    .glass-row[data-stage="if"] .glass-key { border-radius: 4px; transform: rotate(-3deg); }
+    .glass-row[data-stage="then"] .glass-key { border-radius: 7px 18px 18px 7px; }
+    .glass-copy { flex: 1; min-width: 0; }
+    .glass-copy strong { display: block; font-size: 12px; line-height: 17px; }
+    .glass-copy span { color: color-mix(in srgb, var(--orca-ink), transparent 30%); display: block; font-size: 10px; line-height: 14px; margin-top: 6px; }
+    .glass-edit { background: rgb(255 255 255 / 38%); border: 1px solid rgb(15 36 34 / 18%); border-radius: 8px; bottom: 8px; color: var(--orca-ink); cursor: pointer; height: 30px; position: absolute; right: 8px; width: 34px; }
+    .glass-edit:hover { background: rgb(255 255 255 / 72%); border-color: currentColor; }
+    .piece-add { background: rgb(255 255 255 / 42%); border: 1px dashed currentColor; border-radius: 999px; bottom: 8px; color: var(--orca-ink); cursor: pointer; font-size: 9px; font-weight: 750; left: 12px; min-height: 30px; padding: 0 10px; position: absolute; }
+    .piece-add:hover { background: rgb(255 255 255 / 72%); }
+    .connector { align-self: center; background: var(--orca-muted); height: 2px; position: relative; width: 100%; }
+    .connector::before { background: var(--orca-paper); border: 2px solid var(--orca-muted); border-radius: 999px; content: ""; height: 8px; left: -2px; position: absolute; top: -5px; width: 8px; }
+    .connector::after { border-bottom: 5px solid transparent; border-left: 8px solid var(--orca-muted); border-top: 5px solid transparent; content: ""; position: absolute; right: -1px; top: -4px; }
+    .connector:nth-child(2) { grid-column: 2; grid-row: 1; }
+    .connector:nth-child(4) { grid-column: 4; grid-row: 1; }
+    .connector:nth-child(6) { align-self: stretch; background: repeating-linear-gradient(to bottom, var(--block-because-border) 0 4px, transparent 4px 8px); grid-column: 5; grid-row: 2; height: 100%; justify-self: center; width: 2px; }
+    .connector:nth-child(6)::before { display: none; }
+    .connector:nth-child(6)::after { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 8px solid var(--block-because-border); bottom: -1px; left: -4px; right: auto; top: auto; }
+    .simulation { border: 1px solid var(--orca-border); border-radius: 14px; display: block; margin-top: 22px; overflow: hidden; }
+    .simulation > header { align-items: center; background: var(--orca-surface); display: flex; justify-content: space-between; padding: 11px 13px; }
+    .simulation h3 { font-size: 11px; margin-bottom: 0; }
+    .sim-badge { border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); font-size: 9px; font-weight: 800; padding: 5px 8px; }
+    .sim-header-actions { align-items: center; display: flex; gap: 6px; }
+    .simulation-prompt { align-items: center; color: var(--orca-muted); display: flex; font-size: 10px; justify-content: space-between; line-height: 15px; }
+    .simulation-prompt strong { color: var(--orca-ink); margin-left: 20px; white-space: nowrap; }
+    .simulation-details[hidden] { display: none; }
+    .evidence-grid { border-top: 1px solid var(--orca-border); display: grid; gap: 0; margin-top: 12px; }
+    .evidence-row { display: grid; font-size: 10px; grid-template-columns: 86px 1fr; line-height: 15px; padding: 8px 0; }
+    .evidence-row + .evidence-row { border-top: 1px solid var(--orca-border); }
+    .evidence-row strong { color: var(--orca-ink); }
+    .evidence-row span { color: var(--orca-muted); }
+    .sim-body { padding: 12px 13px; }
+    .metrics { display: flex; gap: 18px; }
+    .metric strong { display: block; font-family: var(--font-display); font-size: 24px; font-weight: 500; line-height: 26px; }
+    .metric span { color: var(--orca-muted); font-size: 9px; }
+    .sample { border-top: 1px solid var(--orca-border); color: var(--orca-muted); font-size: 10px; line-height: 15px; margin-top: 11px; padding-top: 10px; }
+    .conflict-box, .error-box { border: 1px solid var(--orca-border); border-left: 3px solid var(--orca-warning); border-radius: 10px; color: var(--orca-ink); font-size: 10px; line-height: 15px; margin-top: 10px; padding: 9px 10px; }
+    .error-box { border-left-color: var(--orca-danger); color: var(--orca-danger); }
+    .tide-panel[hidden], .glass-panel[hidden] { display: none; }
+    .code-shell { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 14px; margin-top: 16px; overflow: hidden; }
+    .code-toolbar { align-items: center; border-bottom: 1px solid var(--orca-border); display: flex; justify-content: space-between; padding: 9px 11px; }
+    .code-toolbar span { color: var(--orca-muted); font-size: 9px; }
+    textarea { align-self: stretch; background: transparent; border: 0; color: var(--orca-ink); font-family: var(--font-mono); font-size: 11px; line-height: 19px; min-height: 250px; outline: 0; padding: 14px; resize: none; }
+    .action-bar { align-items: center; border-top: 1px solid var(--orca-border); display: flex; flex: 0 0 58px; gap: 8px; justify-content: flex-end; padding: 9px 16px; }
+    .action-bar .status-copy { color: var(--orca-ink); font-size: 10px; margin-right: auto; }
+    .inspector { background: var(--orca-paper); border-left: 1px solid var(--orca-border); box-shadow: -18px 0 44px rgb(15 36 34 / 10%); display: flex; flex-direction: column; height: 100%; min-width: 0; opacity: 0; overflow-y: auto; padding: 16px; pointer-events: none; position: absolute; right: 0; top: 0; transform: translateX(100%); transition: opacity var(--motion-medium) var(--ease-enter), transform var(--motion-medium) var(--ease-enter); width: 320px; z-index: 4; }
+    .inspector[data-open="true"] { opacity: 1; pointer-events: auto; transform: translateX(0); }
+    .workspace[data-inspector-pinned="true"] .inspector { box-shadow: none; flex: 0 0 320px; height: auto; opacity: 1; pointer-events: auto; position: relative; transform: none; width: 320px; }
+    .inspector-head { align-items: flex-start; display: flex; justify-content: space-between; }
+    .inspector-controls { display: flex; gap: 4px; }
+    .inspector-controls button { background: transparent; border: 1px solid var(--orca-border); border-radius: 8px; color: var(--orca-muted); cursor: pointer; height: 30px; width: 32px; }
+    .inspector-controls button[aria-pressed="true"] { background: var(--orca-accent-soft); border-color: var(--orca-accent); color: var(--orca-ink); }
+    .inspector-controls button:disabled { opacity: .55; }
+    .inspector h2 { font-family: var(--font-display); font-size: 19px; font-weight: 500; margin-bottom: 4px; }
+    .inspector > p { color: var(--orca-muted); font-size: 10px; line-height: 15px; }
+    .trace-step { border-left: 1px solid var(--orca-border); margin-left: 7px; padding: 0 0 13px 16px; position: relative; }
+    .trace-step::before { background: var(--orca-paper); border: 1px solid var(--orca-accent); border-radius: 999px; content: ""; height: 8px; left: -5px; position: absolute; top: 2px; width: 8px; }
+    .trace-step strong { display: block; font-size: 10px; }
+    .trace-step span { color: var(--orca-muted); display: block; font-size: 9px; line-height: 14px; margin-top: 3px; }
+    .audit { border-top: 1px solid var(--orca-border); margin-top: 4px; padding-top: 14px; }
+    .audit-item { border-bottom: 1px solid var(--orca-border); padding: 9px 0; }
+    .audit-item strong { display: block; font-size: 10px; }
+    .audit-item span { color: var(--orca-muted); display: block; font-size: 9px; line-height: 14px; margin-top: 2px; }
+    .audit .quiet-button { margin-top: 12px; }
+    .scenario-block { display: none; }
+    .operational-state { background: var(--orca-surface); border: 1px solid var(--orca-border); border-left: 3px solid var(--orca-accent); border-radius: 12px; color: var(--orca-ink); font-size: 11px; line-height: 17px; margin: 14px 0; padding: 12px; }
+    .operational-state strong { display: block; margin-bottom: 2px; }
+    .operational-state[data-kind="warning"] { border-left-color: var(--orca-warning); }
+    .operational-state[data-kind="error"] { border-left-color: var(--orca-danger); }
+    body[data-scenario="default"] [data-visible~="default"], body[data-scenario="loading"] [data-visible~="loading"], body[data-scenario="empty"] [data-visible~="empty"], body[data-scenario="no-access"] [data-visible~="no-access"], body[data-scenario="partial-load"] [data-visible~="partial-load"], body[data-scenario="stale"] [data-visible~="stale"], body[data-scenario="offline"] [data-visible~="offline"], body[data-scenario="simulated"] [data-visible~="simulated"], body[data-scenario="active"] [data-visible~="active"], body[data-scenario="conflict"] [data-visible~="conflict"], body[data-scenario="error"] [data-visible~="error"] { display: block; }
+    dialog { background: var(--orca-paper); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: var(--orca-shadow); color: var(--orca-ink); padding: 20px; width: 360px; }
+    dialog::backdrop { background: rgba(10,10,11,.45); }
+    dialog h2 { font-family: var(--font-display); font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+    dialog p { color: var(--orca-muted); font-size: 11px; line-height: 17px; }
+    .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body data-theme="light" data-scenario="default">
+  <div class="prototype-bar" role="group" aria-label="Prototype controls">
+    <strong>BRE-307 · Organization desktop direction · user approved</strong>
+    <div class="prototype-controls">
+      <label>Scenario
+        <select data-scenario-select aria-label="Prototype scenario">
+          <option value="default">Default draft</option>
+          <option value="loading">Loading rules</option>
+          <option value="empty">Empty workspace</option>
+          <option value="no-access">No access</option>
+          <option value="partial-load">Partial load</option>
+          <option value="stale">Edited · simulation stale</option>
+          <option value="offline">Offline</option>
+          <option value="simulated">Simulated</option>
+          <option value="active">Active</option>
+          <option value="conflict">Conflict</option>
+          <option value="error">Error</option>
+        </select>
+      </label>
+      <button data-theme-toggle type="button" aria-label="Switch to dark theme">Dark theme</button>
+    </div>
+  </div>
+
+  <main class="window-frame" data-testid="window-frame">
+    <header class="title-bar"><span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span><strong>Orca — Organization</strong></header>
+    <div class="app">
+      <nav class="rail" aria-label="Orca primary navigation">
+        <div class="rail-cluster" role="group" aria-label="Stable Orca destinations">
+          <a href="#inbox" aria-label="Inbox"><span aria-hidden="true">≋</span><small>Inbox</small></a>
+        </div>
+        <div class="rail-cluster" role="group" data-user-space-list aria-label="User-owned workflow spaces">
+          <a href="#focus" aria-label="Focus, user-owned space; drag or press Alt plus Arrow Up or Down to reorder" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" draggable="true" data-user-space="focus"><span aria-hidden="true">▣</span><small>Focus</small></a>
+          <a href="#signals" aria-label="Signals, user-owned space; drag or press Alt plus Arrow Up or Down to reorder" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" draggable="true" data-user-space="signals"><span aria-hidden="true">✦</span><small>Signals</small></a>
+          <a href="#quiet" aria-label="Quiet, user-owned space; drag or press Alt plus Arrow Up or Down to reorder" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" draggable="true" data-user-space="quiet"><span aria-hidden="true">◔</span><small>Quiet</small></a>
+          <a href="#later" aria-label="Later, user-owned space; drag or press Alt plus Arrow Up or Down to reorder" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" draggable="true" data-user-space="later"><span aria-hidden="true">◷</span><small>Later</small></a>
+        </div>
+        <div class="rail-cluster" role="group" aria-label="Stable Orca destinations">
+          <a href="#drafts" aria-label="Drafts"><span aria-hidden="true">▤</span><small>Drafts</small></a>
+          <a href="#organization" aria-label="Organization" aria-current="page"><span aria-hidden="true">⌘</span><small>Org</small></a>
+        </div>
+        <span class="rail-spacer"></span>
+        <a href="#settings" aria-label="Settings"><span aria-hidden="true">≛</span><small>Setup</small></a>
+      </nav>
+
+      <section class="main-shell" aria-labelledby="organization-title">
+        <header class="page-header">
+          <div><p class="eyebrow">Your workspace · rules explain themselves</p><h1 id="organization-title">Organization <span>8 active · 2 drafts</span></h1></div>
+          <div class="header-actions"><input class="search" data-rule-search type="search" placeholder="Search rules…" aria-label="Search rules"><button class="quiet-button" data-authoring-control data-action="new-rule" type="button">＋ New rule</button></div>
+        </header>
+
+        <div class="workspace">
+          <aside class="library" aria-label="Rule discovery">
+            <div class="section-head"><h2>Rules</h2><button class="text-button" type="button">Filter</button></div>
+            <div class="rule-list">
+              <p class="rule-group">Drafts</p>
+              <button class="rule-row" aria-pressed="true" data-rule-picker data-rule-id="production" data-rule-name="Production failures" type="button"><strong>Production failures</strong><span>Vercel and deploy alerts → Focus</span><span class="rule-meta"><i class="status-dot draft"></i> Draft · edited 4m ago</span></button>
+              <button class="rule-row" aria-pressed="false" data-rule-picker data-rule-id="purchases" data-rule-name="Purchase confirmations" type="button"><strong>Purchase confirmations</strong><span>Receipts → Quiet · Orders context</span><span class="rule-meta"><i class="status-dot draft"></i> Needs simulation</span></button>
+              <p class="rule-group">Active</p>
+              <button class="rule-row" aria-pressed="false" data-rule-picker data-rule-id="pulls" data-rule-name="Pull request mentions" type="button"><strong>Pull request mentions</strong><span>Requested review → Focus</span><span class="rule-meta"><i class="status-dot active"></i> 124 matches</span></button>
+              <button class="rule-row" aria-pressed="false" data-rule-picker data-rule-id="applications" data-rule-name="Application updates" type="button"><strong>Application updates</strong><span>Candidate status → Applications</span><span class="rule-meta"><i class="status-dot active"></i> 38 matches</span></button>
+              <button class="rule-row" aria-pressed="false" data-rule-picker data-rule-id="bank" data-rule-name="Bank movement" type="button"><strong>Bank movement</strong><span>Transaction alerts → Money</span><span class="rule-meta"><i class="status-dot active"></i> 91 matches</span></button>
+            </div>
+          </aside>
+
+          <section class="workbench" aria-label="Rule authoring workspace">
+            <div class="mode-bar">
+              <div class="mode-tabs" role="group" aria-label="Authoring mode"><button data-mode="glass" aria-pressed="true" type="button">Glass Box</button><button data-mode="tide" aria-pressed="false" type="button">Tide Table</button></div>
+              <div class="workbench-tools"><span class="save-state" data-save-state>Saved locally · revision 7</span><button class="text-button" data-inspector-open="trace" type="button">◎ Explain outcome</button><button class="text-button" data-inspector-open="audit" type="button">◷ History</button><span class="sr-only" data-inspector-status aria-live="polite"></span></div>
+            </div>
+
+            <div class="editor-scroll">
+              <div class="rule-title"><div><p class="eyebrow" data-rule-meta>Rule · workspace-wide · draft</p><h2 data-rule-title>Keep production failures in focus</h2><p>Readable by people, identical in meaning to the compiled Orca revision.</p></div><span class="revision-chip" data-revision-chip>rev 7 · draft</span></div>
+
+              <div class="glass-panel" data-panel="glass">
+                <div class="glass-stack" role="group" aria-label="Connected rule causality diagram">
+                  <div class="glass-row" data-stage="when"><span class="glass-key">When</span><div class="glass-copy"><strong data-draft-field="when">A thread receives a new message</strong><span>Trigger · thread.message_received</span></div><button class="glass-edit" data-authoring-control data-edit-field="when" aria-label="Edit event" type="button">✎</button></div>
+                  <div class="connector" aria-hidden="true"></div>
+                  <div class="glass-row" data-stage="if"><span class="glass-key">If</span><div class="glass-copy"><strong data-draft-field="if">Sender is Vercel and subject contains “failed”</strong><span>Gate · all evidence must match</span></div><button class="piece-add" data-authoring-control data-add-piece="if" type="button">＋ condition</button><button class="glass-edit" data-authoring-control data-edit-field="if" aria-label="Edit conditions" type="button">✎</button></div>
+                  <div class="connector" aria-hidden="true"></div>
+                  <div class="glass-row" data-stage="then"><span class="glass-key">Then</span><div class="glass-copy"><strong data-draft-field="then">Move to Focus and notify immediately</strong><span>Outcome · Focus + immediate attention</span></div><button class="piece-add" data-authoring-control data-add-piece="then" type="button">＋ action</button><button class="glass-edit" data-authoring-control data-edit-field="then" aria-label="Edit actions" type="button">✎</button></div>
+                  <div class="connector" aria-hidden="true"></div>
+                  <div class="glass-row" data-stage="because"><span class="glass-key">Because</span><div class="glass-copy"><strong data-draft-field="because">A failed deploy blocks work and needs a human response</strong><span>Human reason · carried into Trace</span></div><button class="glass-edit" data-authoring-control data-edit-field="because" aria-label="Edit explanation" type="button">✎</button></div>
+                </div>
+
+                <section class="simulation" aria-labelledby="simulation-title">
+                  <header><h3 id="simulation-title">Historical simulation</h3><div class="sim-header-actions"><span class="sim-badge" data-sim-label>Not run · last 90 days</span><button class="text-button scenario-block" data-visible="simulated active conflict" data-simulation-toggle aria-expanded="false" type="button">View evidence</button></div></header>
+                  <div class="sim-body simulation-prompt scenario-block" data-visible="default loading empty no-access partial-load stale offline error"><span data-simulation-prompt>Evaluate this revision against 2,418 historical threads. Nothing will be changed.</span><strong>90-day scope</strong></div>
+                  <div class="sim-body scenario-block" data-visible="simulated active conflict"><div class="metrics"><div class="metric"><strong>14</strong><span>would move</span></div><div class="metric"><strong>3</strong><span>would notify</span></div><div class="metric"><strong>0</strong><span>hidden</span></div></div><div class="simulation-details" data-simulation-details hidden><div class="evidence-grid" role="group" aria-label="Expanded simulation evidence"><div class="evidence-row"><strong>Example</strong><span>“The production deploy failed again” · Vercel · Aug 22</span></div><div class="evidence-row"><strong>Conflicts</strong><span class="scenario-block" data-visible="simulated active">None · this rule is the sole winner</span><span class="scenario-block" data-visible="conflict">6 overlaps · “Quiet build notices” currently loses on priority</span></div><div class="evidence-row"><strong>Risk</strong><span>Low · moves and notifications only; no destructive action</span></div><div class="evidence-row"><strong>Authority</strong><span>Allowed · Organization editor capability covers this workspace</span></div></div><div class="conflict-box scenario-block" data-visible="conflict"><strong>Conflict:</strong> Review precedence before activation.</div></div></div>
+                </section>
+                <div class="error-box scenario-block" data-visible="error" role="alert"><strong>Simulation unavailable.</strong> The historical snapshot could not be loaded. Your draft is preserved; retry before activation.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="loading"><strong>Loading rules…</strong>Rule summaries and the current revision are arriving together.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="empty"><strong>No rules yet.</strong>Create a rule to begin; Orca will keep it harmless until simulation.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="no-access" data-kind="error"><strong>Organization is read-only.</strong>Ask a workspace owner for rule-authoring access.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="partial-load" data-kind="warning"><strong>Trace loaded; audit is delayed.</strong>Authoring remains local, but activation waits for the complete revision record.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="stale" data-kind="warning"><strong>Simulation is stale.</strong>The structured draft changed after the last simulation. Run it again before activation.</div>
+                <div class="operational-state scenario-block" data-operational-state data-visible="offline" data-kind="error"><strong>Offline.</strong>Your draft is stored locally. Simulation and activation resume after reconnection.</div>
+              </div>
+
+              <div class="tide-panel" data-panel="tide" hidden>
+                <div class="code-shell"><div class="code-toolbar"><strong>Tide Table · Orca source</strong><span>⌘ Enter to simulate</span></div><textarea data-authoring-control data-rule-source aria-label="Orca rule source" spellcheck="false">rule production_failures on thread.message_received
+when sender.domain == "vercel.com"
+  and subject contains "failed"
+then lane = Focus
+  attention = notify
+because "A failed deploy blocks work"</textarea></div>
+                <div class="error-box scenario-block" data-visible="error" role="alert">Line 3: expected a typed text predicate after “contains”.</div>
+              </div>
+            </div>
+
+            <footer class="action-bar"><span class="status-copy" data-action-status aria-live="polite">Unsaved power is harmless. Simulate before activation.</span><button class="quiet-button" data-action="simulate" type="button">◇ Simulate</button><button class="quiet-button" data-action="activate" type="button" disabled>Activate revision</button></footer>
+          </section>
+
+          <aside class="inspector" data-inspector data-open="false" aria-hidden="true" inert aria-label="Trace and audit history">
+            <div class="inspector-head"><div><p class="eyebrow">Evidence drawer</p><h2 data-inspector-title tabindex="-1">Trace</h2></div><div class="inspector-controls"><button data-inspector-pin type="button" aria-label="Pin evidence drawer" aria-pressed="false">⌑</button><button data-inspector-close type="button" aria-label="Close evidence drawer">×</button></div></div><p>The same precedence law powers simulation and live mail.</p>
+            <div class="trace-step"><strong>Safety lock</strong><span>No destructive capability requested.</span></div>
+            <div class="trace-step"><strong>Manual override</strong><span>No thread-level override found.</span></div>
+            <div class="trace-step"><strong>Winning rule</strong><span data-trace-rule>Production failures · priority 20 · revision 7</span></div>
+            <div class="trace-step"><strong>Lane policy</strong><span>Focus preserves visibility and allows notification.</span></div>
+            <div class="trace-step"><strong>Workspace / fallback</strong><span>Workspace fallback keeps unmatched mail in Inbox.</span></div>
+            <section class="audit" data-audit-section aria-labelledby="audit-title"><div class="section-head"><h2 id="audit-title">Audit history</h2><button class="text-button" type="button">View all</button></div><div data-audit-reverts hidden></div><div class="audit-item"><strong data-audit-event>Revision 7 drafted</strong><span>Luke · 4 minutes ago · changed sender scope</span></div><div class="audit-item scenario-block" data-visible="simulated active conflict"><strong data-audit-simulated>Revision 7 simulated</strong><span>2,418 historical threads · no mutation</span></div><div class="audit-item scenario-block" data-visible="active"><strong data-audit-activated>Revision 7 activated</strong><span>Atomic change set cs_204 · just now</span></div><button class="quiet-button" data-action="revert" data-revert-label type="button" disabled>↶ Revert to revision 6</button></section>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <p class="sr-only" data-space-status aria-live="polite"></p>
+
+  <dialog data-revert-dialog aria-labelledby="desktop-revert-title" aria-describedby="desktop-revert-description"><h2 id="desktop-revert-title" data-revert-title>Revert this rule?</h2><p id="desktop-revert-description" data-revert-description>Orca will create a compensating change set and keep revision 7 in audit history. Existing mail will be re-evaluated against revision 6.</p><div class="dialog-actions"><button class="quiet-button" data-dialog-cancel type="button">Cancel</button><button class="quiet-button" data-dialog-confirm type="button">Revert safely</button></div></dialog>
+
+  <script>
+    const body = document.body;
+    const scenarioSelect = document.querySelector('[data-scenario-select]');
+    const activateButton = document.querySelector('[data-action="activate"]');
+    const simulateButton = document.querySelector('[data-action="simulate"]');
+    const revertButton = document.querySelector('[data-action="revert"]');
+    const actionStatus = document.querySelector('[data-action-status]');
+    const themeButton = document.querySelector('[data-theme-toggle]');
+    const revertDialog = document.querySelector('[data-revert-dialog]');
+    const workspace = document.querySelector('.workspace');
+    const inspector = document.querySelector('[data-inspector]');
+    const inspectorPin = document.querySelector('[data-inspector-pin]');
+    const inspectorClose = document.querySelector('[data-inspector-close]');
+    const inspectorStatus = document.querySelector('[data-inspector-status]');
+    const simulationToggle = document.querySelector('[data-simulation-toggle]');
+    const spaceStatus = document.querySelector('[data-space-status]');
+    const pinBreakpoint = 1280;
+    let inspectorInvoker = null;
+    let prefersPinnedInspector = false;
+    const ruleCatalog = {
+      production: { id: 'production', name: 'Production failures', title: 'Keep production failures in focus', priority: 20, revision: 7, status: 'draft', when: 'A thread receives a new message', if: 'Sender is Vercel and subject contains “failed”', then: 'Move to Focus and notify immediately', because: 'A failed deploy blocks work and needs a human response' },
+      purchases: { id: 'purchases', name: 'Purchase confirmations', title: 'Quiet purchase confirmations', priority: 14, revision: 3, status: 'draft', when: 'A thread receives a new message', if: 'Message is a receipt or purchase confirmation', then: 'Move to Quiet and add Orders context', because: 'Receipts should stay findable without asking for attention' },
+      pulls: { id: 'pulls', name: 'Pull request mentions', title: 'Focus requested pull-request reviews', priority: 24, revision: 12, status: 'active', when: 'A thread receives a new message', if: 'A pull request requests my review', then: 'Move to Focus', because: 'Review requests need a deliberate response' },
+      applications: { id: 'applications', name: 'Application updates', title: 'Collect application updates', priority: 12, revision: 5, status: 'active', when: 'A thread receives a new message', if: 'Message contains a candidate-status update', then: 'Move to Applications', because: 'Candidate updates belong in one durable context' },
+      bank: { id: 'bank', name: 'Bank movement', title: 'Collect bank movement', priority: 16, revision: 9, status: 'active', when: 'A transaction alert arrives', if: 'Sender is a connected bank', then: 'Move to Money', because: 'Financial movement should remain auditable' }
+    };
+    function serializeDraft(rule) { return `rule ${rule.id} on ${JSON.stringify(rule.when)}\nwhen ${rule.if}\nthen ${rule.then}\nbecause "${rule.because}"`; }
+    Object.values(ruleCatalog).forEach(rule => { rule.source = serializeDraft(rule); });
+    const draftModel = { ...ruleCatalog.production };
+    function persistDraft() { ruleCatalog[draftModel.id] = { ...draftModel }; }
+    const scenarioModel = {
+      default: { status: 'draft', gate: 'Simulate before activation.', simulate: true, activate: false, revert: false },
+      loading: { status: 'loading', gate: 'Loading the complete rule revision…', simulate: false, activate: false, revert: false },
+      empty: { status: 'empty', gate: 'Create a rule before simulation.', simulate: false, activate: false, revert: false },
+      'no-access': { status: 'read-only', gate: 'Authoring access is required.', simulate: false, activate: false, revert: false },
+      'partial-load': { status: 'partial', gate: 'Activation waits for audit history to finish loading.', simulate: true, activate: false, revert: false },
+      stale: { status: 'draft · simulation stale', gate: 'Draft changed. Simulate this revision again.', simulate: true, activate: false, revert: false },
+      offline: { status: 'offline draft', gate: 'Draft saved locally; reconnect to simulate.', simulate: false, activate: false, revert: false },
+      simulated: { status: 'draft · simulated', gate: 'Simulation is current. Activation creates one atomic change set.', simulate: true, activate: true, revert: false },
+      active: { status: 'active', gate: 'Revision is active. Revert creates a compensating change set.', simulate: false, activate: false, revert: true },
+      conflict: { status: 'draft · conflict', gate: 'Resolve precedence, then simulate again.', simulate: true, activate: false, revert: false },
+      error: { status: 'draft · error', gate: 'Draft preserved. Retry when the snapshot is available.', simulate: true, activate: false, revert: false }
+    };
+
+    function renderAuditHistory(scenario = body.dataset.scenario || 'default') {
+      const compensations = draftModel.auditCompensations || [];
+      const priorRevision = compensations[0]?.compensatesRevision || draftModel.revision;
+      const priorStatus = compensations.length ? 'activated' : scenario === 'active' ? 'activated' : scenario === 'simulated' ? 'simulated' : 'drafted';
+      document.querySelector('[data-audit-event]').textContent = `Revision ${priorRevision} ${priorStatus}`;
+      document.querySelector('[data-audit-simulated]').textContent = `Revision ${priorRevision} simulated`;
+      document.querySelector('[data-audit-activated]').textContent = `Revision ${priorRevision} activated`;
+      const compensationList = document.querySelector('[data-audit-reverts]');
+      compensationList.hidden = compensations.length === 0;
+      compensationList.replaceChildren(...compensations.slice().reverse().map(entry => {
+        const row = document.createElement('div');
+        row.className = 'audit-item';
+        const title = document.createElement('strong');
+        title.dataset.auditReverted = String(entry.revision);
+        title.textContent = `Revision ${entry.revision} activated · restores revision ${entry.restoresRevision}`;
+        const meta = document.createElement('span');
+        meta.dataset.auditRevertMeta = String(entry.revision);
+        meta.textContent = `Compensating change set ${entry.changeSetId} · revision ${entry.compensatesRevision} retained`;
+        row.append(title, meta);
+        return row;
+      }));
+    }
+
+    function renderDraft() {
+      document.querySelector('[data-rule-title]').textContent = draftModel.title;
+      document.querySelector('[data-rule-meta]').textContent = `Rule · workspace-wide · ${draftModel.status}`;
+      document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${draftModel.status}`;
+      renderAuditHistory();
+      document.querySelectorAll('[data-draft-field]').forEach(node => { node.textContent = draftModel[node.dataset.draftField]; });
+      document.querySelector('[data-rule-source]').value = draftModel.source;
+      document.querySelector('[data-trace-rule]').textContent = `${draftModel.name} · priority ${draftModel.priority} · revision ${draftModel.revision}`;
+      document.querySelector('[data-revert-label]').textContent = draftModel.auditCompensations?.length ? `↶ Revert revision ${draftModel.revision} · restore revision ${Math.max(1, draftModel.revision - 1)}` : `↶ Revert to revision ${Math.max(1, draftModel.revision - 1)}`;
+      document.querySelector('[data-revert-title]').textContent = `Revert ${draftModel.name}?`;
+      document.querySelector('[data-revert-description]').textContent = draftModel.auditCompensations?.length ? `Orca will create revision ${draftModel.revision + 1}, compensate revision ${draftModel.revision}, restore revision ${Math.max(1, draftModel.revision - 1)}, and retain the complete audit history.` : `Orca will create a compensating change set, keep revision ${draftModel.revision} in audit history, and restore revision ${Math.max(1, draftModel.revision - 1)}.`;
+      document.querySelectorAll('[data-rule-picker]').forEach(row => row.setAttribute('aria-pressed', String(row.dataset.ruleId === draftModel.id)));
+      const selected = document.querySelector(`[data-rule-id="${draftModel.id}"] .rule-meta`);
+      if (selected) selected.innerHTML = `<i class="status-dot ${draftModel.status === 'active' ? 'active' : 'draft'}"></i> ${draftModel.status === 'active' ? 'Active revision' : 'Draft · simulation required'}`;
+    }
+
+    function markSimulationStale(field) {
+      if (body.dataset.scenario === 'no-access') return;
+      draftModel.status = 'draft';
+      persistDraft();
+      document.querySelector('[data-save-state]').textContent = `${field} changed · simulation stale`;
+      renderDraft();
+      applyScenario('stale');
+    }
+
+    function canPinInspector() { return window.innerWidth >= pinBreakpoint; }
+
+    function applyInspectorPinned(pinned) {
+      workspace.dataset.inspectorPinned = String(pinned);
+      inspectorPin.setAttribute('aria-pressed', String(pinned));
+      inspectorPin.setAttribute('aria-label', pinned ? 'Unpin evidence drawer' : 'Pin evidence drawer');
+      inspectorStatus.textContent = pinned ? 'Evidence drawer pinned beside the workbench.' : 'Evidence drawer opened over the workbench.';
+    }
+
+    function setInspectorOpen(open, section = 'trace', invoker = null, moveFocus = true) {
+      if (open && invoker) inspectorInvoker = invoker;
+      inspector.dataset.open = String(open);
+      inspector.setAttribute('aria-hidden', String(!open));
+      inspector.inert = !open;
+      document.querySelector('[data-inspector-title]').textContent = section === 'audit' ? 'History' : 'Trace';
+      if (open) {
+        applyInspectorPinned(prefersPinnedInspector && canPinInspector());
+        if (section === 'audit') document.querySelector('[data-audit-section]')?.scrollIntoView?.({ block: 'start' });
+        if (moveFocus) inspectorClose.focus();
+      } else {
+        inspectorStatus.textContent = 'Evidence drawer closed.';
+        const focusTarget = inspectorInvoker?.isConnected ? inspectorInvoker : document.querySelector('[data-inspector-open="trace"]');
+        if (moveFocus) focusTarget?.focus();
+        inspectorInvoker = null;
+      }
+    }
+
+    function setInspectorPinned(requested, remember = true) {
+      prefersPinnedInspector = requested;
+      if (remember) {
+        try { window.localStorage.setItem('orca.organization.inspectorPinned', String(requested)); } catch {}
+      }
+      const pinned = requested && canPinInspector();
+      applyInspectorPinned(pinned);
+      if (pinned && inspector.dataset.open !== 'true') setInspectorOpen(true, 'trace', null, false);
+    }
+
+    function syncInspectorBreakpoint() {
+      const wide = canPinInspector();
+      inspectorPin.disabled = !wide;
+      inspectorPin.title = wide ? 'Keep this drawer beside the workbench' : 'Pinning is available at 1280px and wider';
+      if (!wide && workspace.dataset.inspectorPinned === 'true') applyInspectorPinned(false);
+      else if (wide && inspector.dataset.open === 'true' && prefersPinnedInspector) applyInspectorPinned(true);
+    }
+
+    function applyScenario(next) {
+      const state = scenarioModel[next];
+      body.dataset.scenario = next;
+      scenarioSelect.value = next;
+      if (next === 'active') draftModel.status = 'active';
+      else if (['default', 'stale', 'simulated', 'conflict', 'error'].includes(next)) draftModel.status = 'draft';
+      activateButton.disabled = !state.activate;
+      simulateButton.disabled = !state.simulate;
+      revertButton.disabled = !state.revert;
+      actionStatus.textContent = state.gate;
+      document.querySelector('[data-rule-meta]').textContent = `Rule · workspace-wide · ${state.status}`;
+      document.querySelector('[data-revision-chip]').textContent = `rev ${draftModel.revision} · ${state.status}`;
+      renderAuditHistory(next);
+      const simulationLabels = {
+        simulated: 'Simulated · 2,418 threads',
+        active: 'Current · 2,418 threads',
+        conflict: 'Conflict · 2,418 threads',
+        stale: 'Stale · run again',
+        offline: 'Unavailable offline'
+      };
+      document.querySelector('[data-sim-label]').textContent = simulationLabels[next] || 'Not run · last 90 days';
+      if (!['simulated', 'active', 'conflict'].includes(next)) {
+        document.querySelector('[data-simulation-details]').hidden = true;
+        simulationToggle.setAttribute('aria-expanded', 'false');
+        simulationToggle.textContent = 'View evidence';
+      }
+      const readOnly = next === 'no-access';
+      document.querySelectorAll('[data-authoring-control]').forEach(control => {
+        if (control.matches('textarea')) { control.readOnly = readOnly; control.setAttribute('aria-readonly', String(readOnly)); }
+        else control.disabled = readOnly;
+      });
+    }
+
+    scenarioSelect.addEventListener('change', event => applyScenario(event.target.value));
+    themeButton.addEventListener('click', () => {
+      const dark = body.dataset.theme === 'dark';
+      body.dataset.theme = dark ? 'light' : 'dark';
+      themeButton.textContent = dark ? 'Dark theme' : 'Light theme';
+      themeButton.setAttribute('aria-label', dark ? 'Switch to dark theme' : 'Switch to light theme');
+    });
+    document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      document.querySelectorAll('[data-panel]').forEach(panel => panel.hidden = panel.dataset.panel !== button.dataset.mode);
+    }));
+    document.querySelectorAll('[data-inspector-open]').forEach(button => button.addEventListener('click', () => setInspectorOpen(true, button.dataset.inspectorOpen, button)));
+    inspectorClose.addEventListener('click', () => { setInspectorPinned(false); setInspectorOpen(false); });
+    inspectorPin.addEventListener('click', () => setInspectorPinned(inspectorPin.getAttribute('aria-pressed') !== 'true'));
+    simulationToggle.addEventListener('click', () => {
+      const details = document.querySelector('[data-simulation-details]');
+      details.hidden = !details.hidden;
+      simulationToggle.setAttribute('aria-expanded', String(!details.hidden));
+      simulationToggle.textContent = details.hidden ? 'View evidence' : 'Hide evidence';
+    });
+    const userSpaceList = document.querySelector('[data-user-space-list]');
+    function currentSpaceOrder() { return [...document.querySelectorAll('[data-user-space]')].map(space => space.dataset.userSpace); }
+    function persistSpaceOrder() { try { window.localStorage.setItem('orca.navigation.userSpaceOrder', JSON.stringify(currentSpaceOrder())); } catch {} }
+    function announceSpaceMove(space) {
+      const order = currentSpaceOrder();
+      const label = space.querySelector('small').textContent;
+      spaceStatus.textContent = `${label} moved to position ${order.indexOf(space.dataset.userSpace) + 1} of ${order.length}.`;
+    }
+    function moveSpace(space, direction) {
+      const sibling = direction < 0 ? space.previousElementSibling : space.nextElementSibling;
+      if (!sibling) return;
+      if (direction < 0) userSpaceList.insertBefore(space, sibling);
+      else userSpaceList.insertBefore(sibling, space);
+      persistSpaceOrder();
+      announceSpaceMove(space);
+      space.focus();
+    }
+    try {
+      const savedOrder = JSON.parse(window.localStorage.getItem('orca.navigation.userSpaceOrder') || '[]');
+      if (Array.isArray(savedOrder)) savedOrder.forEach(id => { const space = document.querySelector(`[data-user-space="${id}"]`); if (space) userSpaceList.appendChild(space); });
+    } catch {}
+    let draggedSpace = null;
+    document.querySelectorAll('[data-user-space]').forEach(space => {
+      space.addEventListener('dragstart', event => { draggedSpace = space; space.dataset.dragging = 'true'; event.dataTransfer?.setData('text/plain', space.dataset.userSpace); });
+      space.addEventListener('dragend', () => { space.dataset.dragging = 'false'; draggedSpace = null; });
+      space.addEventListener('dragover', event => event.preventDefault());
+      space.addEventListener('drop', event => { event.preventDefault(); if (draggedSpace && draggedSpace !== space) { space.parentElement.insertBefore(draggedSpace, space); persistSpaceOrder(); announceSpaceMove(draggedSpace); } });
+      space.addEventListener('keydown', event => {
+        if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        moveSpace(space, event.key === 'ArrowUp' ? -1 : 1);
+      });
+    });
+    document.querySelectorAll('[data-rule-picker]').forEach(row => row.addEventListener('click', () => {
+      Object.assign(draftModel, ruleCatalog[row.dataset.ruleId]);
+      renderDraft();
+      applyScenario(body.dataset.scenario === 'no-access' ? 'no-access' : draftModel.status === 'active' ? 'active' : 'default');
+    }));
+    document.querySelector('[data-rule-search]').addEventListener('input', event => {
+      const term = event.target.value.toLowerCase();
+      document.querySelectorAll('[data-rule-name]').forEach(row => row.hidden = !row.dataset.ruleName.toLowerCase().includes(term));
+    });
+    simulateButton.addEventListener('click', () => applyScenario('simulated'));
+    activateButton.addEventListener('click', () => applyScenario('active'));
+    revertButton.addEventListener('click', () => revertDialog.showModal());
+    document.querySelector('[data-action="new-rule"]').addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      Object.assign(draftModel, { id: 'new', name: 'Untitled rule', title: 'Untitled organization rule', priority: 10, revision: 1, status: 'draft', when: 'A thread receives a new message', if: 'Choose evidence to inspect', then: 'Choose an organization action', because: 'Explain why this deserves attention' });
+      draftModel.source = serializeDraft(draftModel);
+      persistDraft();
+      renderDraft();
+      markSimulationStale('New rule');
+    });
+    document.querySelectorAll('[data-edit-field]').forEach(button => button.addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      const field = button.dataset.editField;
+      draftModel[field] = `${draftModel[field].replace(/ · refined$/, '')} · refined`;
+      draftModel.source = serializeDraft(draftModel);
+      persistDraft();
+      renderDraft();
+      markSimulationStale(field[0].toUpperCase() + field.slice(1));
+    }));
+    document.querySelectorAll('[data-add-piece]').forEach(button => button.addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      const field = button.dataset.addPiece;
+      const addition = field === 'if' ? ' and the thread is unresolved' : ' and add Deployments context';
+      if (!draftModel[field].includes(addition)) draftModel[field] += addition;
+      draftModel.source = serializeDraft(draftModel);
+      persistDraft();
+      renderDraft();
+      markSimulationStale(field === 'if' ? 'Condition piece' : 'Action piece');
+    }));
+    document.querySelector('[data-dialog-cancel]').addEventListener('click', () => revertDialog.close());
+    document.querySelector('[data-dialog-confirm]').addEventListener('click', () => {
+      if (body.dataset.scenario === 'no-access') return;
+      const revertedFrom = draftModel.revision;
+      const restoreTarget = Math.max(1, revertedFrom - 1);
+      draftModel.revision = revertedFrom + 1;
+      draftModel.status = 'active';
+      draftModel.auditCompensations = [...(draftModel.auditCompensations || []), { revision: draftModel.revision, compensatesRevision: revertedFrom, restoresRevision: restoreTarget, changeSetId: `cs_${205 + (draftModel.auditCompensations || []).length}` }];
+      persistDraft();
+      renderDraft();
+      revertDialog.close();
+      applyScenario('active');
+      actionStatus.textContent = `Revision ${draftModel.revision} is active via change set cs_205, restoring revision ${restoreTarget} semantics. Revision ${revertedFrom} remains inspectable.`;
+    });
+    document.querySelector('[data-rule-source]').addEventListener('input', event => { if (body.dataset.scenario === 'no-access') { event.target.value = draftModel.source; return; } draftModel.source = event.target.value; persistDraft(); markSimulationStale('Tide Table source'); });
+    window.addEventListener('keydown', event => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        if (body.dataset.scenario === 'no-access') return;
+        applyScenario(event.shiftKey && !activateButton.disabled ? 'active' : 'simulated');
+      }
+      if (event.key === 'Escape' && revertDialog.open) revertDialog.close();
+      else if (event.key === 'Escape' && inspector.dataset.open === 'true') { setInspectorPinned(false); setInspectorOpen(false); }
+    });
+    renderDraft();
+    applyScenario('default');
+    try { prefersPinnedInspector = window.localStorage.getItem('orca.organization.inspectorPinned') === 'true'; } catch {}
+    syncInspectorBreakpoint();
+    if (prefersPinnedInspector && canPinInspector()) setInspectorOpen(true, 'trace', null, false);
+    window.addEventListener('resize', syncInspectorBreakpoint);
+  </script>
+</body>
+</html>
