@@ -148,6 +148,6 @@ export const organizationQueryResponseSchema = z.object({
     threads: z.number().int().nonnegative(),
     messages: z.number().int().nonnegative(),
   }).strict(),
-  nextCursor: z.string().nullable(),
+  nextCursor: z.string().max(2_048).nullable(),
 }).strict();
 export type OrganizationQueryResponse = z.infer<typeof organizationQueryResponseSchema>;

@@ -8,6 +8,44 @@ import {
   type OrganizationRepository,
 } from "./module.ts";
 
+function classification(value: "likely_human" | "automated_or_bulk") {
+  const assessment = {
+    classification: value,
+    score: value === "likely_human" ? 8 : 2,
+    reasonCodes: [value === "likely_human" ? "direct_recipient" as const : "provider_bulk_signal" as const],
+    classifierVersion: "test-v1",
+  };
+  return {
+    automatic: assessment,
+    effective: { ...assessment, source: "automatic_heuristic" as const, userOverride: null },
+    userOverride: null,
+  };
+}
+
+function threadRecord(id: string, accountId = "account_a", receivedAt = "2026-08-23T12:00:00.000Z") {
+  return {
+    id,
+    accountId,
+    subject: id,
+    latestReceivedAt: receivedAt,
+    messageCount: 1,
+    readState: "unread" as const,
+    messages: [{
+      id: `message_${id}`,
+      sourceId: `source_${id}`,
+      from: { name: "Ada", email: "ada@example.com" },
+      subject: id,
+      snippet: id,
+      receivedAt,
+      unread: true,
+      labels: [],
+      humanSignal: 8,
+      humanClassification: classification("likely_human"),
+    }],
+    attentionRules: [],
+  };
+}
+
 const repository: OrganizationRepository = {
   listAccountIds(workspaceId) {
     return workspaceId === "workspace_owner" ? ["account_a", "account_b"] : ["account_private"];
@@ -169,6 +207,68 @@ describe("Organization module contract", () => {
       }),
       (error) => error instanceof OrganizationAccessError && error.code === "account_denied",
     );
+  });
+
+  test("applies classification to the returned Thread aggregate, not older message evidence", () => {
+    const mixed = threadRecord("thread_mixed");
+    mixed.messages = [
+      { ...mixed.messages[0]!, id: "latest", receivedAt: "2026-08-23T12:00:00.000Z", humanClassification: classification("automated_or_bulk") },
+      { ...mixed.messages[0]!, id: "older", receivedAt: "2026-08-23T11:00:00.000Z", humanClassification: classification("likely_human") },
+    ];
+    mixed.messageCount = 2;
+    const organization = createOrganization({
+      listAccountIds: () => ["account_a"],
+      listThreads: () => [mixed],
+    });
+    const scope = { ...ownerScope, accountIds: ["account_a"] };
+
+    assert.deepEqual(organization.query({ scope, query: { classification: "human" } }).threads, []);
+    const tideline = organization.query({ scope, query: { classification: "tideline" } });
+    assert.equal(tideline.threads[0]?.organization.humanClassification?.effective.classification, "automated_or_bulk");
+    assert.deepEqual(tideline.threads[0]?.messages.map((message) => message.id), ["latest", "older"]);
+  });
+
+  test("round-trips a bounded cursor for a many-Account scope", () => {
+    const accountIds = Array.from({ length: 40 }, (_, index) => `account_${index.toString().padStart(28, "0")}`);
+    const records = [threadRecord("thread_1", accountIds[0]), threadRecord("thread_2", accountIds[1], "2026-08-23T11:00:00.000Z")];
+    const organization = createOrganization({
+      listAccountIds: () => accountIds,
+      listThreads: () => records,
+    });
+    const scope = { ...ownerScope, accountIds };
+
+    const first = organization.query({ scope, query: { limit: 1 } });
+    assert.ok(first.nextCursor);
+    assert.ok(first.nextCursor.length <= 2_048);
+    const second = organization.query({ scope, query: { limit: 1, cursor: first.nextCursor } });
+    assert.deepEqual(second.threads.map((thread) => thread.id), ["thread_2"]);
+  });
+
+  test("reuses one ranked snapshot while a mailbox-sized result is paged", () => {
+    let listCalls = 0;
+    const records = Array.from({ length: 250 }, (_, index) => threadRecord(
+      `thread_${index.toString().padStart(3, "0")}`,
+      "account_a",
+      new Date(Date.UTC(2026, 7, 23, 12, 0, 0) - index * 1_000).toISOString(),
+    ));
+    const organization = createOrganization({
+      listAccountIds: () => ["account_a"],
+      listThreads: () => {
+        listCalls += 1;
+        return records;
+      },
+    });
+    const scope = { ...ownerScope, accountIds: ["account_a"] };
+    let cursor: string | undefined;
+    let seen = 0;
+    do {
+      const page = organization.query({ scope, query: { limit: 100, ...(cursor ? { cursor } : {}) } });
+      seen += page.threads.length;
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+
+    assert.equal(seen, 250);
+    assert.equal(listCalls, 1);
   });
 
   test("exposes mutation operations as explicitly disabled", () => {

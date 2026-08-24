@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   organizationDescribeResponseSchema,
   organizationQueryResponseSchema,
@@ -8,6 +10,7 @@ import {
   type OrganizationDescribeResponse,
   type OrganizationQueryResponse,
   type OrganizationReadScope,
+  type WorkspaceThread,
   type WorkspaceThreadMessage,
 } from "@orca/shared";
 
@@ -126,8 +129,12 @@ const attentionRank: Record<AttentionBehavior, number> = {
   hidden: 4,
 };
 
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("base64url");
+}
+
 function cursorFingerprint(accountIds: readonly string[], query: ReturnType<typeof organizationQuerySchema.parse>): string {
-  return JSON.stringify({
+  return sha256(JSON.stringify({
     accountIds,
     threadId: query.threadId ?? null,
     attention: query.attention ?? null,
@@ -136,7 +143,11 @@ function cursorFingerprint(accountIds: readonly string[], query: ReturnType<type
     sender: query.sender?.trim().toLocaleLowerCase() ?? null,
     receivedAfter: query.receivedAfter ?? null,
     receivedBefore: query.receivedBefore ?? null,
-  });
+  }));
+}
+
+function threadCursorKey(thread: Pick<WorkspaceThread, "accountId" | "id">): string {
+  return sha256(JSON.stringify([thread.accountId, thread.id]));
 }
 
 function decodeCursor(cursor: string | undefined, fingerprint: string): string | null {
@@ -145,15 +156,16 @@ function decodeCursor(cursor: string | undefined, fingerprint: string): string |
     const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as unknown;
     if (
       parsed && typeof parsed === "object"
-      && "threadId" in parsed && typeof parsed.threadId === "string"
+      && "version" in parsed && parsed.version === 1
+      && "row" in parsed && typeof parsed.row === "string"
       && "fingerprint" in parsed && parsed.fingerprint === fingerprint
-    ) return parsed.threadId;
+    ) return parsed.row;
   } catch { /* The caller receives one stable error below. */ }
   throw new OrganizationQueryError("The Organization cursor does not match this Account scope or filter");
 }
 
-function encodeCursor(threadId: string, fingerprint: string): string {
-  return Buffer.from(JSON.stringify({ threadId, fingerprint }), "utf8").toString("base64url");
+function encodeCursor(thread: Pick<WorkspaceThread, "accountId" | "id">, fingerprint: string): string {
+  return Buffer.from(JSON.stringify({ version: 1, row: threadCursorKey(thread), fingerprint }), "utf8").toString("base64url");
 }
 
 /**
@@ -161,6 +173,14 @@ function encodeCursor(threadId: string, fingerprint: string): string {
  * React are adapters; organizational meaning and Account enforcement live here.
  */
 export function createOrganization(repository: OrganizationRepository) {
+  // One Organization instance represents one stable read transaction. Adapters
+  // may page it without reloading and re-sorting the complete mailbox each time.
+  const rankedSnapshots = new Map<string, {
+    threads: WorkspaceThread[];
+    counts: { threads: number; messages: number };
+    cursorIndexes: Map<string, number>;
+  }>();
+
   return {
     describe(input: { scope: unknown }): OrganizationDescribeResponse {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
@@ -178,69 +198,75 @@ export function createOrganization(repository: OrganizationRepository) {
       const requestedAccountIds = query.accountIds ? [...query.accountIds].sort() : authorizedAccountIds;
       const authorized = new Set(authorizedAccountIds);
       if (requestedAccountIds.some((accountId) => !authorized.has(accountId))) throw new OrganizationAccessError();
-
-      const text = query.text?.trim().toLocaleLowerCase() ?? "";
-      const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
-      const after = query.receivedAfter ? Date.parse(query.receivedAfter) : null;
-      const before = query.receivedBefore ? Date.parse(query.receivedBefore) : null;
-      const ranked = repository.listThreads(requestedAccountIds).flatMap((record) => {
-        if (!requestedAccountIds.includes(record.accountId)) throw new OrganizationAccessError();
-        if (query.threadId && record.id !== query.threadId) return [];
-        const latest = record.messages[0];
-        const attentionBehavior = resolveAttention(latest?.from.email ?? "", record.attentionRules);
-        if (!matchesAttention(attentionBehavior, query.attention)) return [];
-        const matchingMessages = record.messages.filter((message) => {
-          const receivedAt = Date.parse(message.receivedAt);
-          if (after !== null && receivedAt < after) return false;
-          if (before !== null && receivedAt > before) return false;
-          const senderText = `${message.from.name ?? ""}\n${message.from.email}`.toLocaleLowerCase();
-          if (sender && !senderText.includes(sender)) return false;
-          if (text && !`${senderText}\n${message.subject}\n${message.snippet}`.toLocaleLowerCase().includes(text)) return false;
-          return matchesClassification(message.humanClassification, query.classification);
-        });
-        const requiresMessageMatch = Boolean(text || sender || after !== null || before !== null || (query.classification && query.classification !== "all"));
-        if (matchingMessages.length === 0 && requiresMessageMatch) return [];
-        const humanSignal = record.messages.reduce<number | null>((highest, message) => {
-          if (message.humanSignal === null) return highest;
-          return highest === null ? message.humanSignal : Math.max(highest, message.humanSignal);
-        }, null);
-        return [{
-          id: record.id,
-          accountId: record.accountId,
-          subject: record.subject,
-          latestReceivedAt: record.latestReceivedAt,
-          messageCount: record.messageCount,
-          readState: record.readState,
-          organization: {
-            attentionBehavior,
-            humanSignal,
-            humanClassification: latest?.humanClassification ?? null,
-          },
-          messages: matchingMessages.length > 0 ? matchingMessages : record.messages,
-        }];
-      });
-      ranked.sort((left, right) => attentionRank[left.organization.attentionBehavior] - attentionRank[right.organization.attentionBehavior]
-        || Date.parse(right.latestReceivedAt) - Date.parse(left.latestReceivedAt)
-        || left.accountId.localeCompare(right.accountId)
-        || left.id.localeCompare(right.id));
-
-      const counts = {
-        threads: ranked.length,
-        messages: ranked.reduce((total, thread) => total + thread.messages.length, 0),
-      };
       const fingerprint = cursorFingerprint(requestedAccountIds, query);
-      const cursorThreadId = decodeCursor(query.cursor, fingerprint);
-      const cursorIndex = cursorThreadId ? ranked.findIndex((thread) => thread.id === cursorThreadId) : -1;
-      if (cursorThreadId && cursorIndex < 0) throw new OrganizationQueryError("The Organization cursor is not part of this result");
+      let snapshot = rankedSnapshots.get(fingerprint);
+      if (!snapshot) {
+        const requested = new Set(requestedAccountIds);
+        const text = query.text?.trim().toLocaleLowerCase() ?? "";
+        const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
+        const after = query.receivedAfter ? Date.parse(query.receivedAfter) : null;
+        const before = query.receivedBefore ? Date.parse(query.receivedBefore) : null;
+        const ranked = repository.listThreads(requestedAccountIds).flatMap((record): WorkspaceThread[] => {
+          if (!requested.has(record.accountId)) throw new OrganizationAccessError();
+          if (query.threadId && record.id !== query.threadId) return [];
+          const latest = record.messages[0];
+          const attentionBehavior = resolveAttention(latest?.from.email ?? "", record.attentionRules);
+          if (!matchesAttention(attentionBehavior, query.attention)) return [];
+          const humanClassification = latest?.humanClassification ?? null;
+          if (!matchesClassification(humanClassification, query.classification)) return [];
+          const matchingMessages = record.messages.filter((message) => {
+            const receivedAt = Date.parse(message.receivedAt);
+            if (after !== null && receivedAt < after) return false;
+            if (before !== null && receivedAt > before) return false;
+            const senderText = `${message.from.name ?? ""}\n${message.from.email}`.toLocaleLowerCase();
+            if (sender && !senderText.includes(sender)) return false;
+            if (text && !`${senderText}\n${message.subject}\n${message.snippet}`.toLocaleLowerCase().includes(text)) return false;
+            return true;
+          });
+          const requiresMessageMatch = Boolean(text || sender || after !== null || before !== null);
+          if (matchingMessages.length === 0 && requiresMessageMatch) return [];
+          const humanSignal = record.messages.reduce<number | null>((highest, message) => {
+            if (message.humanSignal === null) return highest;
+            return highest === null ? message.humanSignal : Math.max(highest, message.humanSignal);
+          }, null);
+          return [{
+            id: record.id,
+            accountId: record.accountId,
+            subject: record.subject,
+            latestReceivedAt: record.latestReceivedAt,
+            messageCount: record.messageCount,
+            readState: record.readState,
+            organization: { attentionBehavior, humanSignal, humanClassification },
+            messages: matchingMessages.length > 0 ? matchingMessages : record.messages,
+          }];
+        });
+        ranked.sort((left, right) => attentionRank[left.organization.attentionBehavior] - attentionRank[right.organization.attentionBehavior]
+          || Date.parse(right.latestReceivedAt) - Date.parse(left.latestReceivedAt)
+          || left.accountId.localeCompare(right.accountId)
+          || left.id.localeCompare(right.id));
+        snapshot = {
+          threads: ranked,
+          counts: {
+            threads: ranked.length,
+            messages: ranked.reduce((total, thread) => total + thread.messages.length, 0),
+          },
+          cursorIndexes: new Map(ranked.map((thread, index) => [threadCursorKey(thread), index])),
+        };
+        rankedSnapshots.set(fingerprint, snapshot);
+      }
+
+      const cursorRow = decodeCursor(query.cursor, fingerprint);
+      const cursorIndex = cursorRow ? (snapshot.cursorIndexes.get(cursorRow) ?? -1) : -1;
+      if (cursorRow && cursorIndex < 0) throw new OrganizationQueryError("The Organization cursor is not part of this result");
       const start = cursorIndex + 1;
-      const threads = ranked.slice(start, start + query.limit);
+      const threads = snapshot.threads.slice(start, start + query.limit);
       const last = threads.at(-1);
       return organizationQueryResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds: requestedAccountIds,
         threads,
-        counts,
-        nextCursor: last && start + threads.length < ranked.length ? encodeCursor(last.id, fingerprint) : null,
+        counts: snapshot.counts,
+        nextCursor: last && start + threads.length < snapshot.threads.length ? encodeCursor(last, fingerprint) : null,
       });
     },
 

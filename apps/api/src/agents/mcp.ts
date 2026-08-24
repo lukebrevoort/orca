@@ -156,6 +156,31 @@ function mapReadError(error: unknown) {
   return errorResult("internal_error", "Orca could not complete this read-only request");
 }
 
+function assertOrganizationAttribution(
+  output: OrganizationDescribeResponse | OrganizationQueryResponse,
+  workspaceId: string,
+  allowedAccountIds: readonly string[],
+): void {
+  const allowed = new Set(allowedAccountIds);
+  if (output.workspaceId !== workspaceId || output.accountIds.some((accountId) => !allowed.has(accountId))) {
+    throw new McpReadError("account_denied", "Organization data fell outside the authorized Workspace or Account scope");
+  }
+  if (!("threads" in output)) return;
+  const responseAccounts = new Set(output.accountIds);
+  for (const thread of output.threads) {
+    if (!allowed.has(thread.accountId) || !responseAccounts.has(thread.accountId)) {
+      throw new McpReadError("account_denied", "Organization data fell outside the authorized Workspace or Account scope");
+    }
+    const classifications = [thread.organization.humanClassification, ...thread.messages.map((message) => message.humanClassification)];
+    for (const result of classifications) {
+      const overrides = result ? [result.userOverride, result.effective.userOverride] : [];
+      if (overrides.some((override) => override !== null && override.accountId !== thread.accountId)) {
+        throw new McpReadError("account_denied", "Organization data contained an override from another Account");
+      }
+    }
+  }
+}
+
 function toSourceUrl(dataSource: OrcaMcpDataSource, accountId: string, threadId: string): string {
   return dataSource.sourceUrl(accountId, threadId);
 }
@@ -221,11 +246,13 @@ function createServer(
       const decision = await authorize("describe_organization", query.accountId);
       if (!("allowedAccountIds" in decision)) return decision;
       try {
+        const userId = getOrcaAuthorization(authInfo).authorization.userId;
         const output = mcpDescribeOrganizationOutputSchema.parse(await dataSource.describeOrganization({
-          userId: getOrcaAuthorization(authInfo).authorization.userId,
+          userId,
           allowedAccountIds: decision.allowedAccountIds,
           query,
         }));
+        assertOrganizationAttribution(output, userId, decision.allowedAccountIds);
         return {
           content: [{ type: "text", text: `Orca organization is available across ${output.accountIds.length} authorized Accounts.` }],
           structuredContent: output,
@@ -249,14 +276,17 @@ function createServer(
       const decision = await authorize("query_organization", query.accountId);
       if (!("allowedAccountIds" in decision)) return decision;
       try {
+        const userId = getOrcaAuthorization(authInfo).authorization.userId;
         const raw = await dataSource.queryOrganization({
-          userId: getOrcaAuthorization(authInfo).authorization.userId,
+          userId,
           allowedAccountIds: decision.allowedAccountIds,
           query,
         });
+        const parsed = mcpQueryOrganizationOutputSchema.parse(raw);
+        assertOrganizationAttribution(parsed, userId, decision.allowedAccountIds);
         const output = mcpQueryOrganizationOutputSchema.parse({
-          ...raw,
-          threads: raw.threads.map((thread) => ({
+          ...parsed,
+          threads: parsed.threads.map((thread) => ({
             ...thread,
             subject: redactAgentText(thread.subject, 998),
             messages: thread.messages.map((message) => ({

@@ -11,6 +11,8 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   propagatedAgentEventSchema,
   type AgentEventListPage,
+  type OrganizationDescribeResponse,
+  type OrganizationQueryResponse,
   type OrcaMcpScope,
   type PropagatedAgentEvent,
 } from "@orca/shared";
@@ -19,7 +21,7 @@ import { createDatabaseClient } from "../db/client.ts";
 import { emails, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createApp } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
-import { createOrcaMcpHttpHandler } from "./mcp.ts";
+import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
 import { getOAuthScopeForResourceScope, mapOAuthScopesToResourceScopes, type OrcaMcpTokenVerifier } from "./access-token.ts";
 
 const issuer = "https://identity.orca.test";
@@ -123,6 +125,89 @@ async function rpcBody(response: Response) {
   const data = text.split(/\r?\n/).find((line) => line.startsWith("data: "))?.slice(6);
   if (!data) throw new Error(`MCP response did not contain a JSON or SSE result: ${text.slice(0, 120)}`);
   return JSON.parse(data);
+}
+
+const organizationDescribeFixture: OrganizationDescribeResponse = {
+  workspaceId: "user_a",
+  accountIds: ["account_a"],
+  workspaceSchema: {
+    revision: 1,
+    aggregate: "thread",
+    resources: ["account", "thread"],
+    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at"],
+  },
+  capabilities: {
+    operations: { describe: true, query: true, simulate: false, apply: false, revert: false },
+    authority: { sendMail: false, deleteProviderMail: false },
+  },
+};
+
+const organizationQueryFixture: OrganizationQueryResponse = {
+  workspaceId: "user_a",
+  accountIds: ["account_a"],
+  threads: [{
+    id: "thread_a",
+    accountId: "account_a",
+    subject: "Safe",
+    latestReceivedAt: "2026-08-19T16:00:00.000Z",
+    messageCount: 1,
+    readState: "unread",
+    organization: { attentionBehavior: "normal", humanSignal: 8, humanClassification: null },
+    messages: [{
+      id: "message_a",
+      sourceId: "source_a",
+      from: { name: "Ada", email: "ada@example.com" },
+      subject: "Safe",
+      snippet: "Safe",
+      receivedAt: "2026-08-19T16:00:00.000Z",
+      unread: true,
+      labels: [],
+      humanSignal: 8,
+      humanClassification: null,
+    }],
+  }],
+  counts: { threads: 1, messages: 1 },
+  nextCursor: null,
+};
+
+function createProjectionTestHandler(
+  describeOutput: OrganizationDescribeResponse,
+  queryOutput: OrganizationQueryResponse,
+) {
+  const unavailable = () => { throw new Error("not used by this projection test"); };
+  const dataSource: OrcaMcpDataSource = {
+    getCurrentAccountIds: () => ["account_a"],
+    describeOrganization: () => describeOutput,
+    queryOrganization: () => queryOutput,
+    searchMail: unavailable,
+    getThread: unavailable,
+    listAgentEvents: unavailable,
+    getConnectionStatus: unavailable,
+    sourceUrl: () => "https://orca.test/",
+  };
+  return createOrcaMcpHttpHandler({
+    dataSource,
+    policy: { enabled: true, issuer, resource },
+    verifier: createTestTokenVerifier({ issuer, resource }),
+    env: { ORCA_M6_MCP_ALLOWED_ORIGINS: "https://chatgpt.com" },
+  });
+}
+
+async function callProjectionHandler(
+  handler: ReturnType<typeof createProjectionTestHandler>,
+  token: string,
+  name: "describe_organization" | "query_organization",
+) {
+  return handler.fetch(new Request(resource, {
+    method: "POST",
+    headers: {
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+      host: new URL(resource).host,
+    },
+    body: rpc("tools/call", { name, arguments: {} }),
+  }));
 }
 
 function createFixture(options: {
@@ -414,6 +499,72 @@ describe("Orca read-only MCP server", () => {
       }
     } finally {
       sqlite.close();
+    }
+  });
+
+  test("fails closed when an Organization data source returns cross-scope attribution", async () => {
+    const token = await signToken({ accountIds: ["account_a"] });
+    const maliciousDescribe = {
+      ...organizationDescribeFixture,
+      workspaceId: "user_b",
+      accountIds: ["account_b"],
+    };
+    const describe = await callProjectionHandler(
+      createProjectionTestHandler(maliciousDescribe, organizationQueryFixture),
+      token,
+      "describe_organization",
+    );
+    const describeBody = await rpcBody(describe);
+    assert.ok(describeBody.result, JSON.stringify(describeBody));
+    assert.equal(describeBody.result.isError, true);
+    assert.equal(JSON.parse(describeBody.result.content[0].text).error.code, "account_denied");
+    assert.equal(describeBody.result.structuredContent, undefined);
+
+    const crossAccountOverride = {
+      id: "override_b",
+      accountId: "account_b",
+      target: { scope: "message" as const, messageId: "message_a" },
+      classification: "likely_human" as const,
+      source: "user_choice" as const,
+      createdAt: "2026-08-19T16:00:00.000Z",
+      updatedAt: "2026-08-19T16:00:00.000Z",
+    };
+    const classification = {
+      automatic: null,
+      effective: {
+        classification: "likely_human" as const,
+        score: 8,
+        reasonCodes: ["user_message_override" as const],
+        classifierVersion: "user-v1",
+        source: "user_override" as const,
+        userOverride: crossAccountOverride,
+      },
+      userOverride: crossAccountOverride,
+    };
+    const cases: OrganizationQueryResponse[] = [
+      { ...organizationQueryFixture, workspaceId: "user_b" },
+      { ...organizationQueryFixture, accountIds: ["account_b"] },
+      { ...organizationQueryFixture, threads: [{ ...organizationQueryFixture.threads[0]!, accountId: "account_b" }] },
+      {
+        ...organizationQueryFixture,
+        threads: [{
+          ...organizationQueryFixture.threads[0]!,
+          organization: { ...organizationQueryFixture.threads[0]!.organization, humanClassification: classification },
+          messages: [{ ...organizationQueryFixture.threads[0]!.messages[0]!, humanClassification: classification }],
+        }],
+      },
+    ];
+    for (const maliciousQuery of cases) {
+      const response = await callProjectionHandler(
+        createProjectionTestHandler(organizationDescribeFixture, maliciousQuery),
+        token,
+        "query_organization",
+      );
+      const body = await rpcBody(response);
+      assert.ok(body.result, JSON.stringify(body));
+      assert.equal(body.result.isError, true);
+      assert.equal(JSON.parse(body.result.content[0].text).error.code, "account_denied");
+      assert.equal(body.result.structuredContent, undefined);
     }
   });
 
