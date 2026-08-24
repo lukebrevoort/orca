@@ -41,8 +41,9 @@ describe("App", () => {
     const draftHtml = renderToStaticMarkup(<DraftsView drafts={[savedDraft]} onOpenDraft={() => {}} />);
     const pendingDraftHtml = renderToStaticMarkup(<DraftsView drafts={[{ ...savedDraft, providerSyncStatus: "pending" }]} onOpenDraft={() => {}} />);
 
-    expect(html).toContain('aria-label="Collections and pins"');
-    expect(html).toContain('aria-label="Drafts"');
+    expect(html).toContain('aria-label="Primary"');
+    expect(html).not.toContain('aria-label="Collections and pins"');
+    expect(html).toContain('<span>Drafts</span>');
     expect(html).toContain("Drafts");
     expect(draftHtml).toContain("A calmer launch note");
     expect(draftHtml).toContain("Saved to Gmail");
@@ -228,7 +229,7 @@ describe("App", () => {
     expect(html).toContain("Revoke all agent connections");
     expect(html).toContain("Mail read · Agent events read");
     expect(html).toContain("Save account choices");
-    expect(darkHtml).toContain('aria-label="Switch to light mode"');
+    expect(darkHtml).toContain('aria-label="Switch to Light"');
     expect(darkHtml).toContain("Appearance &amp; reading");
     expect(darkHtml).toContain('value="dark"');
     expect(darkHtml.match(/preference-option-selected/g)).toHaveLength(6);

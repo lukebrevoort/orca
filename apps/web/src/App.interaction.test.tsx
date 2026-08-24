@@ -22,6 +22,7 @@ const globalNames = [
   "KeyboardEvent",
   "MouseEvent",
   "PointerEvent",
+  "DragEvent",
   "MutationObserver",
   "CustomEvent",
   "Text",
@@ -114,6 +115,7 @@ function installDom() {
     KeyboardEvent: browserWindow.KeyboardEvent,
     MouseEvent: browserWindow.MouseEvent,
     PointerEvent: browserWindow.PointerEvent,
+    DragEvent: browserWindow.DragEvent,
     MutationObserver: browserWindow.MutationObserver,
     CustomEvent: browserWindow.CustomEvent,
     Text: browserWindow.Text,
@@ -232,7 +234,7 @@ async function goBackToInbox() {
 }
 
 async function openZen() {
-  const compose = browserWindow.document.querySelector("button.tidal-compose-fab") as unknown as HTMLButtonElement | null;
+  const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
   if (!compose) throw new Error("Could not find compose button");
   await act(async () => {
     compose.click();
@@ -270,16 +272,11 @@ describe("Write shortcut", () => {
     restoreDom();
   });
 
-  test("opens writing with Cmd/Ctrl+Shift+M and keeps other keys available", async () => {
+  test("opens writing with C and keeps modified keys available", async () => {
     await renderApp();
-    const compose = browserWindow.document.querySelector("button.tidal-compose-fab") as unknown as HTMLButtonElement | null;
-    expect(compose?.getAttribute("aria-keyshortcuts")).toBe("Meta+Shift+M Control+Shift+M");
-    expect(compose?.querySelector("kbd")?.textContent).toBe("⌘⇧M");
-
-    await act(async () => {
-      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
-    });
-    expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
+    const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
+    expect(compose?.getAttribute("aria-keyshortcuts")).toBe("c");
+    expect(compose?.querySelector("kbd")?.textContent).toBe("C");
 
     await act(async () => {
       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, bubbles: true, cancelable: true }));
@@ -287,7 +284,7 @@ describe("Write shortcut", () => {
     expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).toBeNull();
 
     await act(async () => {
-      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
     });
     expect(browserWindow.document.querySelector('aside[aria-label="Compose message"]')).not.toBeNull();
     expect(browserWindow.document.querySelector(".zen-canvas")).toBeNull();
@@ -370,8 +367,7 @@ describe("Inbox row action affordances", () => {
     if (!dialog) throw new Error("Could not find the thread organizer dialog");
     expect(dialog.getAttribute("aria-describedby")).toBe("organizer-description");
     expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("dialog");
-    expect(browserWindow.document.querySelector("main.app-shell")?.hasAttribute("inert")).toBe(true);
-    expect(browserWindow.document.querySelector(".app-theme-toggle")?.hasAttribute("inert")).toBe(true);
+    expect(browserWindow.document.querySelector("main.desktop-shell")?.hasAttribute("inert")).toBe(true);
     expect(dialog.querySelector(".organizer-pin-section h3")?.textContent).toBe("Quick access");
     expect(dialog.querySelector(".organizer-collections h3")?.textContent).toBe("Collections");
 
@@ -395,6 +391,103 @@ describe("Inbox row action affordances", () => {
   });
 });
 
+describe("Desktop evidence and navigation", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("keeps evidence modal, closes the top layer with Escape, and restores trigger focus", async () => {
+    await renderApp();
+    const rowEvidence = browserWindow.document.querySelector("button.message-evidence-button") as unknown as HTMLButtonElement;
+    rowEvidence.setAttribute("data-focus-origin", "list-evidence");
+    rowEvidence.focus();
+    await act(async () => { rowEvidence.click(); });
+    const listDialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Why here?"]') as unknown as HTMLElement | null;
+    expect(listDialog).not.toBeNull();
+    expect(listDialog?.textContent).toContain("authoritative placement trace");
+    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Close evidence");
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
+    await act(async () => { flushAnimationFrames(); });
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Why here?"]')).toBeNull();
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("list-evidence");
+
+    const row = messageRow("Mom");
+    await act(async () => { row.click(); });
+    const readerTrigger = browserWindow.document.querySelector("button.reader-why-here") as unknown as HTMLButtonElement;
+    readerTrigger.setAttribute("data-focus-origin", "reader-evidence");
+    readerTrigger.focus();
+    await act(async () => { readerTrigger.click(); });
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).not.toBeNull();
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
+    await act(async () => { flushAnimationFrames(); });
+    expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).toBeNull();
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("reader-evidence");
+  });
+
+  test("writes stable destinations and follows browser history", async () => {
+    await renderApp();
+    const navButtons = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")] as unknown as HTMLButtonElement[];
+    const focus = navButtons.find((button) => button.textContent?.includes("Focus"))!;
+    const custom = navButtons.find((button) => button.textContent?.includes("Orca launch"))!;
+    await act(async () => { focus.click(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("focus");
+    await act(async () => { custom.click(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toStartWith("space:");
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(focus.getAttribute("aria-current")).toBe("page");
+  });
+
+  test("persists hidden workspace visibility across a reload", async () => {
+    await renderApp();
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    await act(async () => { manage.click(); });
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Signals"))!;
+    const hide = [...signalsRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
+    await act(async () => { hide.click(); });
+    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+
+    await act(async () => { root!.unmount(); });
+    root = null;
+    await renderApp();
+    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+  });
+
+  test("persists one absolute order when a drag crosses multiple rows", async () => {
+    await renderApp();
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    await act(async () => { manage.click(); });
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]')!;
+    const rows = [...dialog.querySelectorAll(".desktop-space-list article")];
+    const focus = rows.find((row) => row.textContent?.includes("Focus"))!;
+    const later = rows.find((row) => row.textContent?.includes("Later"))!;
+    await act(async () => {
+      focus.dispatchEvent(new browserWindow.DragEvent("dragstart", { bubbles: true, cancelable: true }));
+    });
+    await act(async () => {
+      later.dispatchEvent(new browserWindow.DragEvent("dragover", { bubbles: true, cancelable: true }));
+      later.dispatchEvent(new browserWindow.DragEvent("drop", { bubbles: true, cancelable: true }));
+      await Promise.resolve();
+    });
+    const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
+    expect(labels.slice(0, 4)).toEqual(["Signals", "Quiet", "Later", "Focus"]);
+  });
+});
+
 describe("Drafts mailbox", () => {
   beforeEach(() => {
     installDom();
@@ -413,17 +506,7 @@ describe("Drafts mailbox", () => {
   test("opens the saved drafts view and reopens a selected draft", async () => {
     await renderApp();
 
-    const directDraftsButton = browserWindow.document.querySelector('[aria-label="Primary navigation"] button[aria-label="Drafts"]') as unknown as HTMLButtonElement | null;
-    expect(directDraftsButton).not.toBeNull();
-    const libraryButton = browserWindow.document.querySelector('button[aria-label="Open collections and pins menu"]') as unknown as HTMLButtonElement | null;
-    expect(libraryButton).not.toBeNull();
-    await act(async () => {
-      libraryButton!.click();
-    });
-    await act(async () => {
-      flushAnimationFrames();
-    });
-    const draftsButton = [...browserWindow.document.querySelectorAll("button.mailbox-tab")]
+    const draftsButton = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
     expect(draftsButton).toBeDefined();
 
@@ -435,7 +518,7 @@ describe("Drafts mailbox", () => {
       flushAnimationFrames();
     });
     expect(browserWindow.document.querySelector(".draft-row")?.textContent).toContain("A calmer launch note");
-    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Drafts");
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent).toContain("Drafts");
 
     const draftRow = browserWindow.document.querySelector(".draft-row") as unknown as HTMLButtonElement | null;
     expect(draftRow).not.toBeNull();
@@ -528,132 +611,25 @@ describe("Drafts mailbox", () => {
     }
   });
 
-  test("refetches the latest classification after a refresh read races a view switch", async () => {
-    const account = { id: "account-refresh", provider: "gmail", email: "refresh@example.com", displayName: "Refresh Test", avatarUrl: null, capabilities: { read: true, draft: true, send: true } };
-    const emptyInbox = { accounts: [account], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } };
-    const syncStatus = { accounts: [{ ...account, state: "idle", lastSyncedAt: null, error: null }] };
-    const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
-    const originalFetch = globalThis.fetch;
-    let resolveSync!: (response: Response) => void;
-    let resolveOldHumanRead!: (response: Response) => void;
-    let syncSettled = false;
-    let oldHumanReadPending = false;
-    let tidelineReads = 0;
-    let uncertainReads = 0;
-    let resolveSecondTidelineRead!: (response: Response) => void;
-    const syncPromise = new Promise<Response>((resolve) => { resolveSync = resolve; });
-    const oldHumanReadPromise = new Promise<Response>((resolve) => { resolveOldHumanRead = resolve; });
-    const secondTidelineReadPromise = new Promise<Response>((resolve) => { resolveSecondTidelineRead = resolve; });
-    globalThis.fetch = (async (input, init) => {
-      const url = String(input);
-      if (url === "/v1/me") return jsonResponse(account);
-      if (url === "/v1/sync/status") return jsonResponse(syncStatus);
-      if (url === "/v1/sync/gmail" && init?.method === "POST") {
-        syncSettled = true;
-        return syncPromise;
-      }
-      if (url.includes("classification=human")) {
-        if (syncSettled && !oldHumanReadPending) {
-          oldHumanReadPending = true;
-          return oldHumanReadPromise;
-        }
-        return jsonResponse(emptyInbox);
-      }
-      if (url.includes("classification=tideline")) {
-        tidelineReads += 1;
-        if (tidelineReads === 2) return secondTidelineReadPromise;
-        return jsonResponse(emptyInbox);
-      }
-      if (url.includes("classification=uncertain")) {
-        uncertainReads += 1;
-        return jsonResponse(emptyInbox);
-      }
-      if (url.includes("view=all")) return jsonResponse(emptyInbox);
-      if (url === "/v1/collections" || url === "/v1/pins" || url === "/v1/reminders" || url === "/v1/drafts" || url === "/v1/agent-event-mutes") return jsonResponse([]);
-      if (url === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
-      if (url.startsWith("/v1/agent-events")) return jsonResponse({ events: [], nextCursor: null });
-      return jsonResponse({});
-    }) as typeof fetch;
-    try {
-      const container = browserWindow.document.createElement("div");
-      browserWindow.document.body.append(container);
-      root = createRoot(container as unknown as Element);
-      await act(async () => {
-        root!.render(<InboxApp demoMode={false} theme="light" setTheme={() => {}} />);
-        await new Promise<void>((resolve) => setTimeout(resolve, 30));
-      });
-      resolveSync(jsonResponse({ ok: true }));
-      await act(async () => { await Promise.resolve(); });
-      expect(oldHumanReadPending).toBe(true);
+  test("moves between user-owned workflow spaces without reviving classification tabs", async () => {
+    await renderApp();
+    const primary = browserWindow.document.querySelector('aside[aria-label="Primary"]');
+    expect(primary).not.toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Inbox classification views"]')).toBeNull();
 
-      const tidelineTab = browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement | null;
-      expect(tidelineTab).not.toBeNull();
-      await act(async () => {
-        tidelineTab!.click();
-        await new Promise<void>((resolve) => setTimeout(resolve, 20));
-      });
-      resolveOldHumanRead(jsonResponse(emptyInbox));
-      await act(async () => {
-        await new Promise<void>((resolve) => setTimeout(resolve, 30));
-      });
-      expect(tidelineReads).toBeGreaterThanOrEqual(2);
-      const uncertainTab = browserWindow.document.querySelector("#classification-tab-uncertain") as unknown as HTMLButtonElement | null;
-      expect(uncertainTab).not.toBeNull();
-      await act(async () => {
-        uncertainTab!.click();
-        await new Promise<void>((resolve) => setTimeout(resolve, 20));
-      });
-      resolveSecondTidelineRead(jsonResponse(emptyInbox));
-      await act(async () => {
-        await new Promise<void>((resolve) => setTimeout(resolve, 30));
-      });
-      expect(uncertainReads).toBeGreaterThanOrEqual(2);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
+    const signals = [...(primary?.querySelectorAll("button.desktop-sidebar-item") ?? [])]
+      .find((button) => button.textContent?.includes("Signals")) as HTMLButtonElement | undefined;
+    const quiet = [...(primary?.querySelectorAll("button.desktop-sidebar-item") ?? [])]
+      .find((button) => button.textContent?.includes("Quiet")) as HTMLButtonElement | undefined;
+    expect(signals).toBeDefined();
+    expect(quiet).toBeDefined();
 
-  test("switches classification without reloading account-scoped side data", async () => {
-    const account = { id: "account-fast-switch", provider: "gmail", email: "fast@example.com", displayName: "Fast Switch", avatarUrl: null, capabilities: { read: true, draft: true, send: true } };
-    const emptyInbox = { accounts: [account], messages: [], nextCursor: null, counts: { attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 } } };
-    const syncStatus = { accounts: [{ ...account, state: "idle", lastSyncedAt: null, error: null }] };
-    const jsonResponse = (value: unknown) => new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
-    const originalFetch = globalThis.fetch;
-    const requests: string[] = [];
-    globalThis.fetch = (async (input, init) => {
-      const url = String(input);
-      requests.push(`${init?.method ?? "GET"} ${url}`);
-      if (url === "/v1/me") return jsonResponse(account);
-      if (url === "/v1/sync/status") return jsonResponse(syncStatus);
-      if (url === "/v1/sync/gmail") return jsonResponse({ ok: true });
-      if (url.startsWith("/v1/inbox")) return jsonResponse(emptyInbox);
-      if (url === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
-      if (url === "/v1/agent-events?limit=50") return jsonResponse({ events: [], nextCursor: null });
-      if (["/v1/collections", "/v1/pins", "/v1/reminders", "/v1/drafts", "/v1/agent-event-mutes"].includes(url)) return jsonResponse([]);
-      return jsonResponse({});
-    }) as typeof fetch;
-    try {
-      const container = browserWindow.document.createElement("div");
-      browserWindow.document.body.append(container);
-      root = createRoot(container as unknown as Element);
-      await act(async () => {
-        root!.render(<InboxApp demoMode={false} theme="light" setTheme={() => {}} />);
-        await new Promise<void>((resolve) => setTimeout(resolve, 80));
-      });
-      requests.length = 0;
-      const tidelineTab = browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement | null;
-      expect(tidelineTab).not.toBeNull();
-      await act(async () => {
-        tidelineTab!.click();
-        await new Promise<void>((resolve) => setTimeout(resolve, 50));
-      });
-      expect(requests).toEqual([
-        "GET /v1/inbox?classification=tideline&limit=100",
-        "GET /v1/inbox?view=all&classification=all&limit=100",
-      ]);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    await act(async () => { signals!.click(); });
+    expect(signals!.getAttribute("aria-current")).toBe("page");
+    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Signals");
+    await act(async () => { quiet!.click(); });
+    expect(quiet!.getAttribute("aria-current")).toBe("page");
+    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Quiet");
   });
 
 });
@@ -679,7 +655,7 @@ describe("Pin navigation and bulk sender actions", () => {
     return button;
   }
 
-  test("keeps a person pin active while moving between signal views", async () => {
+  test("lets a user-owned workflow space replace a temporary person filter", async () => {
     await renderApp();
 
     await act(async () => {
@@ -688,19 +664,20 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
     expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
 
-    await act(async () => {
-      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
-    });
+    const signals = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement;
+    await act(async () => { signals.click(); });
 
-    expect(browserWindow.document.querySelector("#classification-tab-tideline")?.getAttribute("aria-selected")).toBe("true");
-    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
-    expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
+    expect(signals.getAttribute("aria-current")).toBe("page");
+    expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Signals");
+    expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("false");
   });
 
   test("opens a pinned thread from outside its current signal view", async () => {
     await renderApp();
     await act(async () => {
-      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     await act(async () => {
       buttonByName("Open Dinner on Sunday? pin").click();
@@ -721,29 +698,16 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector('button[aria-label="Open Dinner on Sunday? pin"]')).toBeNull();
   });
 
-  test("saves and restores the signal view with a filter pin", async () => {
+  test("starts a saved search from the global no-results state", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?q=moonbase%20ledger");
     await renderApp();
-    await act(async () => {
-      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
-    });
-    await act(async () => {
-      (browserWindow.document.querySelector("button.pinned-person-add") as unknown as HTMLButtonElement).click();
-    });
-
-    const signal = browserWindow.document.querySelectorAll(".pin-builder-fields select")[1] as unknown as HTMLSelectElement;
-    expect(signal.value).toBe("tideline");
-    await act(async () => {
-      (browserWindow.document.querySelector("button.pin-builder-save") as unknown as HTMLButtonElement).click();
-    });
-    await act(async () => {
-      (browserWindow.document.querySelector("#classification-tab-human") as unknown as HTMLButtonElement).click();
-    });
-    await act(async () => {
-      buttonByName("Open Tideline pin").click();
-    });
-
-    expect(browserWindow.document.querySelector("#classification-tab-tideline")?.getAttribute("aria-selected")).toBe("true");
-    expect(buttonByName("Open Tideline pin").getAttribute("aria-pressed")).toBe("true");
+    const search = browserWindow.document.querySelector('input[aria-label="Search mail, people, or rules"]') as unknown as HTMLInputElement;
+    expect(search.value).toBe("moonbase ledger");
+    const save = [...browserWindow.document.querySelectorAll("button")]
+      .find((button) => button.textContent?.includes("Save this search")) as HTMLButtonElement | undefined;
+    expect(save).toBeDefined();
+    await act(async () => { save!.click(); });
+    expect((browserWindow.document.querySelector(".pin-builder-search input") as unknown as HTMLInputElement).value).toBe("moonbase ledger");
   });
 
   test("moves multiple selected senders to Quiet in one action", async () => {
@@ -832,6 +796,10 @@ describe("Inbox reader viewport restoration", () => {
 
   test("opens a propagated event source and returns to the same signal position", async () => {
     await renderApp();
+    await act(async () => {
+      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+    });
     const pane = inboxPane();
     const card = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Orca 2.4 is ready in TestFlight"));
     const origin = card?.querySelector("button") as unknown as HTMLButtonElement | null;
@@ -864,6 +832,10 @@ describe("Inbox reader viewport restoration", () => {
 
   test("reveals and restores a quieted local signal without changing its source mail", async () => {
     await renderApp();
+    await act(async () => {
+      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+    });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
     await act(async () => review.click());
     const quieted = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Figma renews September 3"));
@@ -875,13 +847,18 @@ describe("Inbox reader viewport restoration", () => {
     });
     expect(quieted?.textContent).toContain("Seen");
     await act(async () => {
-      (browserWindow.document.querySelector("#classification-tab-tideline") as unknown as HTMLButtonElement).click();
+      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("All Mail")) as unknown as HTMLButtonElement).click();
     });
     expect(messageRow("Figma Billing")).not.toBeNull();
   });
 
   test("keeps broad mutes explicitly reversible before restoring the event", async () => {
     await renderApp();
+    await act(async () => {
+      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+    });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
     await act(async () => review.click());
     const muted = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Routine Cloud sign-in notice"));
@@ -924,7 +901,7 @@ describe("Inbox reader viewport restoration", () => {
 
   test("refreshes the rail avatar when a changed photo returns from settings", async () => {
     await renderApp();
-    const avatar = browserWindow.document.querySelector(".wave-rail-account img");
+    const avatar = browserWindow.document.querySelector(".desktop-account-avatar img");
     expect(avatar?.getAttribute("src")).toBe(PROFILE_PHOTO_FALLBACK_SRC);
 
     const changedPhoto = "data:image/png;base64,ZmFrZS1wcm9maWxl";
