@@ -662,6 +662,13 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
     getAuthorityState(workspaceId) {
       return loadAuthorityState(db, workspaceId);
     },
+    getIdempotentChange(workspaceId, idempotencyKey) {
+      const record = db.select().from(organizationCollectionPinAudits).where(and(
+        eq(organizationCollectionPinAudits.workspaceId, workspaceId),
+        eq(organizationCollectionPinAudits.idempotencyKey, idempotencyKey),
+      )).get();
+      return record ? { change: mapAudit(record), command: parseJson(record.commandJson) } : null;
+    },
     getRevertAuthorityTargets(workspaceId, changeId) {
       const audit = db.select().from(organizationCollectionPinAudits).where(and(
         eq(organizationCollectionPinAudits.workspaceId, workspaceId),

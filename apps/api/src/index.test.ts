@@ -14,7 +14,7 @@ import {
 
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
+import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, organizationChangeSets, organizationCollectionPinAudits, organizationWorkspaceStates, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
 import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
 import { GmailSyncError, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { gmailProvider } from "./providers/gmail/provider.ts";
@@ -1345,6 +1345,8 @@ describe("Orca API", () => {
       assert.equal((await testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_inbox"] }) })).status, 400);
 
       const importRequest = () => testApp.request("/v1/gmail-label-migration/import", { method: "POST", headers: headersFor(sessions.import.token), body: JSON.stringify({ labelIds: ["label_work", "label_travel"] }) });
+      const auditCountBeforeImport = db.select().from(organizationCollectionPinAudits).where(eq(organizationCollectionPinAudits.workspaceId, "user_import")).all().length;
+      const revisionBeforeImport = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "user_import")).get()?.revision ?? 1;
       const imported = await (await importRequest()).json();
       assert.equal(imported.status, "completed");
       assert.deepEqual(imported.labels.map((label: { imported: boolean }) => label.imported), [true, true]);
@@ -1352,6 +1354,12 @@ describe("Orca API", () => {
       assert.equal(db.select().from(collections).where(eq(collections.accountId, "acct_import")).all().length, 2);
       assert.equal(db.select().from(collectionThreads).all().length, 2);
       assert.equal(db.select().from(gmailLabelCollectionImports).all().length, 3);
+      const importAudits = db.select().from(organizationCollectionPinAudits).where(eq(organizationCollectionPinAudits.workspaceId, "user_import")).all();
+      assert.equal(importAudits.length - auditCountBeforeImport, 4);
+      assert.deepEqual(new Set(importAudits.slice(auditCountBeforeImport).map((entry) => entry.changeKind)), new Set(["collection", "collection_membership"]));
+      assert.equal(importAudits.slice(auditCountBeforeImport).some((entry) => entry.commandJson.includes("gmail")), false);
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, "user_import")).all().length, importAudits.length);
+      assert.equal(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "user_import")).get()?.revision, revisionBeforeImport + 4);
 
       const skipped = await (await testApp.request("/v1/gmail-label-migration/skip", { method: "POST", headers: headersFor(sessions.skip.token) })).json();
       assert.equal(skipped.status, "skipped");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Database } from "bun:sqlite";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
@@ -84,12 +84,48 @@ describe("BRE-309 clean M8 migration", () => {
       assert.deepEqual(journal.entries.at(-1), {
         idx: 24,
         version: "6",
-        when: 1787544000000,
+        when: 1787551200001,
         tag: "0024_organization_collections_pins",
         breakpoints: true,
       });
     } finally {
       sqlite.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("upgrades a database already at 0023 through the complete journal", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-bre-309-from-0023-"));
+    const partialMigrations = join(directory, "migrations");
+    const fullMigrations = resolve(import.meta.dir, "../../../drizzle");
+    mkdirSync(join(partialMigrations, "meta"), { recursive: true });
+    try {
+      const journal = JSON.parse(readFileSync(join(fullMigrations, "meta/_journal.json"), "utf8")) as {
+        entries: Array<{ idx: number; tag: string; when: number }>;
+      };
+      for (const entry of journal.entries.filter((item) => item.idx <= 23)) {
+        writeFileSync(join(partialMigrations, `${entry.tag}.sql`), readFileSync(join(fullMigrations, `${entry.tag}.sql`)));
+      }
+      writeFileSync(join(partialMigrations, "meta/_journal.json"), JSON.stringify({
+        ...journal,
+        entries: journal.entries.filter((entry) => entry.idx <= 23),
+      }));
+
+      const { createDatabaseClient } = await import("../../db/client.ts");
+      const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
+      const client = createDatabaseClient(join(directory, "from-0023.sqlite"));
+      try {
+        migrate(client.db, { migrationsFolder: partialMigrations });
+        migrate(client.db, { migrationsFolder: fullMigrations });
+        const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>;
+        assert.equal(tables.some((table) => table.name === "organization_saved_queries"), true);
+        assert.equal(tables.some((table) => table.name === "organization_collection_pin_audits"), true);
+        const pinColumns = client.sqlite.query("PRAGMA table_info('pins')").all() as Array<{ name: string }>;
+        assert.equal(pinColumns.some((column) => column.name === "saved_query_id"), true);
+      } finally {
+        client.sqlite.close();
+      }
+    } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });

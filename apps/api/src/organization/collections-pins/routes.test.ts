@@ -155,7 +155,7 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       assert.equal(renamedCollection.status, 200);
 
       const legacyFilter = JSON.stringify({
-        mailbox: "focus", attention: "all", classification: "human", person: null, query: "launch",
+        mailbox: "inbox", attention: "focus", classification: "human", person: null, query: "launch",
       });
       const legacyPinResponse = await app.request("/v1/pins", {
         method: "POST",
@@ -175,6 +175,7 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       assert.deepEqual(coexistenceState.collections.find((item: { id: string }) => item.id === legacyCollection.id)?.threadIds, ["thread_a"]);
       const stablePin = coexistenceState.pins.find((item: { id: string }) => item.id === legacyPin.id);
       assert.equal(stablePin.target.type, "query");
+      assert.equal(coexistenceState.queries.find((item: { id: string }) => item.id === stablePin.target.queryId)?.definition.filters.mailbox, "inbox");
       assert.equal(coexistenceState.queries.find((item: { id: string }) => item.id === stablePin.target.queryId)?.definition.filters.attention, "focus");
       const compatibilityPins = await app.request("/v1/pins", { headers });
       const compatibilityPin = (await compatibilityPins.json()).find((item: { id: string }) => item.id === legacyPin.id);
@@ -197,6 +198,32 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       assert.equal(requestedFamilies.includes("saved_query"), true);
       assert.equal(requestedFamilies.includes("mail"), false);
       assert.equal(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace_owner")).get()?.revision, 1 + coexistenceChanges.filter((item: { workspaceId: string }) => item.workspaceId === "workspace_owner").length);
+
+      const organizationReplayBody = JSON.stringify({
+        idempotencyKey: "route-replay",
+        change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: "Replay", color: "#70867d" } },
+      });
+      const [firstOrganizationReplay, concurrentOrganizationReplay] = await Promise.all([
+        app.request("/v1/organization/collections-pins/apply", { method: "POST", headers, body: organizationReplayBody }),
+        app.request("/v1/organization/collections-pins/apply", { method: "POST", headers, body: organizationReplayBody }),
+      ]);
+      assert.equal(firstOrganizationReplay.status, 200);
+      assert.equal(concurrentOrganizationReplay.status, 200);
+      assert.equal((await firstOrganizationReplay.json()).change.id, (await concurrentOrganizationReplay.json()).change.id);
+      const sequentialOrganizationReplay = await app.request("/v1/organization/collections-pins/apply", { method: "POST", headers, body: organizationReplayBody });
+      assert.equal(sequentialOrganizationReplay.status, 200);
+
+      const replayHeaders = { ...headers, "Idempotency-Key": "legacy-route-replay" };
+      const legacyReplayBody = JSON.stringify({ name: "Legacy replay", color: "#83728d" });
+      const [firstLegacyReplay, concurrentLegacyReplay] = await Promise.all([
+        app.request("/v1/collections", { method: "POST", headers: replayHeaders, body: legacyReplayBody }),
+        app.request("/v1/collections", { method: "POST", headers: replayHeaders, body: legacyReplayBody }),
+      ]);
+      assert.equal(firstLegacyReplay.status, 201);
+      assert.equal(concurrentLegacyReplay.status, 201);
+      assert.equal((await firstLegacyReplay.json()).id, (await concurrentLegacyReplay.json()).id);
+      const sequentialLegacyReplay = await app.request("/v1/collections", { method: "POST", headers: replayHeaders, body: legacyReplayBody });
+      assert.equal(sequentialLegacyReplay.status, 201);
     } finally {
       sqlite.close();
     }

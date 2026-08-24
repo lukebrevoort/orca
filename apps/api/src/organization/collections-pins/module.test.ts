@@ -144,13 +144,14 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
       assert.equal(applied.change.changeKind, "collection_membership");
       assert.deepEqual(applied.state.collections.find((item) => item.id === "collection_b")?.threadIds, ["thread_b"]);
 
-      assert.throws(() => organization.apply({
+      const replayed = organization.apply({
         scope,
         request: {
           idempotencyKey: "membership-add-b",
           change: { kind: "collection_membership", action: "add", accountId: "account_b", collectionId: "collection_b", threadId: "thread_b" },
         },
-      }), (error) => error instanceof OrganizationCollectionsPinsConflictError);
+      });
+      assert.equal(replayed.change.id, applied.change.id);
 
       const reverted = organization.revert({
         scope,
@@ -159,6 +160,11 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
       assert.equal(reverted.change.operation, "revert");
       assert.equal(reverted.change.revertsChangeId, applied.change.id);
       assert.deepEqual(reverted.state.collections.find((item) => item.id === "collection_b")?.threadIds, []);
+      const replayedRevert = organization.revert({
+        scope,
+        request: { idempotencyKey: "membership-revert-b", changeId: applied.change.id },
+      });
+      assert.equal(replayedRevert.change.id, reverted.change.id);
       const audit = organization.audit({ scope });
       assert.equal(audit.length, 2);
       assert.equal(audit[0]?.revertedByChangeId, reverted.change.id);
@@ -278,13 +284,13 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
     const { organization, scope, db, sqlite } = fixture();
     try {
       const cases = [
-        { id: "focus-mailbox", mailbox: "focus", attention: "all", expected: "focus" },
-        { id: "focus-attention", mailbox: "inbox", attention: "focus", expected: "focus" },
-        { id: "notify-attention", mailbox: "inbox", attention: "notify", expected: "focus" },
-        { id: "normal-attention", mailbox: "inbox", attention: "normal", expected: "normal" },
-        { id: "quiet-mailbox", mailbox: "quiet", attention: "all", expected: "quiet" },
-        { id: "hidden-mailbox", mailbox: "hidden", attention: "all", expected: "hidden" },
-        { id: "all-mailbox", mailbox: "all", attention: "all", expected: "all" },
+        { id: "focus-mailbox", mailbox: "focus", attention: "all" },
+        { id: "focus-attention", mailbox: "inbox", attention: "focus" },
+        { id: "notify-attention", mailbox: "inbox", attention: "notify" },
+        { id: "normal-attention", mailbox: "inbox", attention: "normal" },
+        { id: "quiet-mailbox", mailbox: "quiet", attention: "all" },
+        { id: "hidden-mailbox", mailbox: "hidden", attention: "all" },
+        { id: "all-mailbox", mailbox: "all", attention: "all" },
       ] as const;
       cases.forEach((item, position) => {
         const queryId = `query:${item.id}`;
@@ -310,8 +316,37 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
 
       const result = organization.query({ scope, query: { accountIds: ["account_a"] } });
       for (const item of cases) {
-        assert.equal(result.queries.find((query) => query.id === `query:${item.id}`)?.definition.filters.attention, item.expected);
+        const filters = result.queries.find((query) => query.id === `query:${item.id}`)?.definition.filters;
+        assert.equal(filters?.mailbox, item.mailbox);
+        assert.equal(filters?.attention, item.attention);
       }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("returns exact sequential idempotent replays and rejects key reuse for another command", () => {
+    const { organization, scope, sqlite } = fixture();
+    try {
+      const request = {
+        idempotencyKey: "exact-replay",
+        change: { kind: "collection" as const, action: "create" as const, accountId: "account_a", collection: { name: "Replay", color: "#70867d" } },
+      };
+      const first = organization.apply({ scope, request });
+      const replay = organization.apply({ scope, request });
+      assert.equal(replay.change.id, first.change.id);
+      assert.equal(replay.change.resourceId, first.change.resourceId);
+      assert.equal(replay.state.collections.filter((collection) => collection.name === "Replay").length, 1);
+      assert.throws(
+        () => organization.apply({
+          scope,
+          request: {
+            idempotencyKey: "exact-replay",
+            change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: "Different", color: "#70867d" } },
+          },
+        }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
     } finally {
       sqlite.close();
     }

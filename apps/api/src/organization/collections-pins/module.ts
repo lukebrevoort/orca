@@ -54,6 +54,10 @@ export type OrganizationCollectionsPinsRepository = {
     resourceRevisions: Record<string, number>;
     reservedIdempotencyKeys: string[];
   };
+  getIdempotentChange(workspaceId: string, idempotencyKey: string): {
+    change: OrganizationCollectionPinAuditEntry;
+    command: unknown;
+  } | null;
   getRevertAuthorityTargets(workspaceId: string, changeId: string): Array<{
     changeKind: OrganizationCollectionPinAuditEntry["changeKind"];
     resourceId: string;
@@ -184,6 +188,21 @@ export function createOrganizationCollectionsPins(
     }));
   }
 
+  function idempotentReplay(
+    scope: OrganizationCollectionPinScope,
+    idempotencyKey: string,
+    operation: "apply" | "revert",
+    command: unknown,
+  ) {
+    const existing = repository.getIdempotentChange(scope.workspaceId, idempotencyKey);
+    if (!existing) return null;
+    if (!scope.accountIds.includes(existing.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
+    if (existing.change.operation !== operation || canonicalJson(existing.command) !== canonicalJson(command)) {
+      throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+    }
+    return existing.change;
+  }
+
   return {
     describe(input: { scope: unknown }) {
       const { scope, accountIds } = authorize(repository, input.scope);
@@ -203,6 +222,8 @@ export function createOrganizationCollectionsPins(
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinApplyRequestSchema.parse(input.request);
       if (!scope.accountIds.includes(request.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
+      const replay = idempotentReplay(scope, request.idempotencyKey, "apply", request.change);
+      if (replay) return { change: replay, state: queryAuthorized(scope, {}) };
       const trustedResourceIds = request.change.action === "create" && (
         request.change.kind === "collection" || request.change.kind === "pin" || request.change.kind === "saved_query"
       ) ? {
@@ -246,6 +267,8 @@ export function createOrganizationCollectionsPins(
     revert(input: { scope: unknown; request: unknown }): OrganizationCollectionPinMutationResponse {
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinRevertRequestSchema.parse(input.request);
+      const replay = idempotentReplay(scope, request.idempotencyKey, "revert", { revert: request.changeId });
+      if (replay) return { change: replay, state: queryAuthorized(scope, {}) };
       const targets = repository.getRevertAuthorityTargets(scope.workspaceId, request.changeId);
       if (!targets) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
       const changeId = newChangeId();

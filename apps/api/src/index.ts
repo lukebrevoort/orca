@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -1211,20 +1213,37 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
         const timestamp = now();
         const existingNames = new Set(db.select({ name: collections.name }).from(collections).where(eq(collections.accountId, account.id)).all().map((item) => item.name));
-        let position = listCollectionRecords(db, account.id).length;
         db.transaction((tx) => {
+          const executor = tx as unknown as Database;
+          const { organization, scope } = collectionsPinsFor(executor, c.get("auth").userId);
           selectedLabels.forEach((label, index) => {
             if (!label) return;
             const name = uniqueImportedCollectionName(label.name, existingNames);
-            const collectionId = `collection:${crypto.randomUUID()}`;
-            tx.insert(collections).values({ id: collectionId, accountId: account.id, name, color: collectionColors[index % collectionColors.length], position }).run();
-            position += 1;
+            const created = organization.apply({
+              scope,
+              request: {
+                idempotencyKey: collectionImportIdempotencyKey(account.id, label.id),
+                change: {
+                  kind: "collection",
+                  action: "create",
+                  accountId: account.id,
+                  collection: { name, color: collectionColors[index % collectionColors.length] },
+                },
+              },
+            });
+            const collectionId = created.change.resourceId;
             existingNames.add(name);
             tx.insert(gmailLabelCollectionImports).values({ labelId: label.id, collectionId }).onConflictDoNothing().run();
             const memberships = tx.select({ threadId: emails.threadId }).from(emailLabels)
               .innerJoin(emails, eq(emails.id, emailLabels.emailId)).where(eq(emailLabels.labelId, label.id)).all();
-            for (const threadId of new Set(memberships.map((membership) => membership.threadId))) {
-              tx.insert(collectionThreads).values({ id: `collection-thread:${crypto.randomUUID()}`, collectionId, threadId }).onConflictDoNothing().run();
+            for (const threadId of [...new Set(memberships.map((membership) => membership.threadId))].sort()) {
+              organization.apply({
+                scope,
+                request: {
+                  idempotencyKey: collectionImportIdempotencyKey(account.id, label.id, threadId),
+                  change: { kind: "collection_membership", action: "add", accountId: account.id, collectionId, threadId },
+                },
+              });
             }
           });
           tx.insert(gmailLabelMigrations).values({ accountId: account.id, status: "completed", completedAt: timestamp, updatedAt: timestamp })
@@ -3086,6 +3105,11 @@ function uniqueImportedCollectionName(labelName: string, existingNames: Set<stri
     sequence += 1;
   }
   throw new Error("Could not create a unique Collection name for the Gmail label");
+}
+
+function collectionImportIdempotencyKey(accountId: string, sourceId: string, threadId?: string) {
+  const digest = createHash("sha256").update(JSON.stringify([accountId, sourceId, threadId ?? null])).digest("hex");
+  return `collection-import:${digest}`;
 }
 
 function listCollections(db: Database, accountId: string) {

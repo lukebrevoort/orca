@@ -34,7 +34,8 @@ export const organizationSavedQueryDefinitionSchema = z.object({
   revision: z.literal(1),
   filters: z.object({
     threadId: nonEmptyStringSchema.optional(),
-    attention: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+    mailbox: z.enum(["inbox", "focus", "quiet", "hidden", "all"]).optional(),
+    attention: z.enum(["notify", "focus", "normal", "quiet", "hidden", "all"]).optional(),
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     text: z.string().trim().max(200).optional(),
     sender: z.string().trim().max(320).optional(),
@@ -45,19 +46,11 @@ export type OrganizationSavedQueryDefinition = z.infer<typeof organizationSavedQ
 
 export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unknown): OrganizationSavedQueryDefinition {
   const legacy = pinFilterSchema.parse(input);
-  const attention = legacy.attention === "notify" || legacy.attention === "focus"
-    ? "focus" as const
-    : legacy.attention === "normal"
-      ? "normal" as const
-      : legacy.mailbox === "focus"
-        ? "focus" as const
-        : legacy.mailbox === "quiet" || legacy.mailbox === "hidden" || legacy.mailbox === "all"
-          ? legacy.mailbox
-          : undefined;
   return {
     revision: 1,
     filters: {
-      ...(attention ? { attention } : {}),
+      mailbox: legacy.mailbox,
+      attention: legacy.attention,
       ...(legacy.classification ? { classification: legacy.classification } : {}),
       ...(legacy.person ? { sender: legacy.person } : {}),
       ...(legacy.query ? { text: legacy.query } : {}),
@@ -68,12 +61,15 @@ export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unkno
 export function legacyPinFilterFromOrganizationSavedQueryDefinition(
   definition: OrganizationSavedQueryDefinition,
 ): PinFilter {
+  const mailbox = definition.filters.mailbox;
   const attention = definition.filters.attention;
   return pinFilterSchema.parse({
-    mailbox: attention === "focus" || attention === "quiet" || attention === "hidden" || attention === "all"
+    mailbox: mailbox ?? (attention === "focus" || attention === "quiet" || attention === "hidden" || attention === "all"
       ? attention
-      : "inbox",
-    attention: attention === "normal" ? "normal" : "all",
+      : "inbox"),
+    attention: mailbox
+      ? attention === "notify" || attention === "focus" || attention === "normal" || attention === "all" ? attention : "all"
+      : attention === "normal" ? "normal" : "all",
     ...(definition.filters.classification ? { classification: definition.filters.classification } : {}),
     person: definition.filters.sender ?? null,
     query: definition.filters.text ?? "",
