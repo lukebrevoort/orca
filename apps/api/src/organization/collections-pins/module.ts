@@ -48,6 +48,7 @@ export type OrganizationCollectionsPinsRepository = {
     scope: OrganizationCollectionPinScope;
     request: OrganizationCollectionPinApplyRequest;
     changeId: string;
+    trustedResourceId: string | null;
     now: Date;
   }): OrganizationCollectionPinAuditEntry;
   revert(input: {
@@ -75,10 +76,16 @@ function authorizeQueryAccounts(scopeAccountIds: readonly string[], query: Organ
 
 export function createOrganizationCollectionsPins(
   repository: OrganizationCollectionsPinsRepository,
-  dependencies: { now?: () => Date; newChangeId?: () => string } = {},
+  dependencies: {
+    now?: () => Date;
+    newChangeId?: () => string;
+    newResourceId?: (kind: "collection" | "pin" | "saved_query") => string;
+  } = {},
 ) {
   const now = dependencies.now ?? (() => new Date());
   const newChangeId = dependencies.newChangeId ?? (() => `organization-change:${crypto.randomUUID()}`);
+  const newResourceId = dependencies.newResourceId
+    ?? ((kind: "collection" | "pin" | "saved_query") => `${kind === "saved_query" ? "query" : kind}:${crypto.randomUUID()}`);
 
   function queryAuthorized(scope: OrganizationCollectionPinScope, query: OrganizationCollectionPinQuery) {
     const accountIds = authorizeQueryAccounts(scope.accountIds, query);
@@ -108,7 +115,10 @@ export function createOrganizationCollectionsPins(
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinApplyRequestSchema.parse(input.request);
       if (!scope.accountIds.includes(request.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
-      const change = repository.apply({ scope, request, changeId: newChangeId(), now: now() });
+      const trustedResourceId = request.change.action === "create" && (
+        request.change.kind === "collection" || request.change.kind === "pin" || request.change.kind === "saved_query"
+      ) ? newResourceId(request.change.kind) : null;
+      const change = repository.apply({ scope, request, changeId: newChangeId(), trustedResourceId, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
     },
     revert(input: { scope: unknown; request: unknown }): OrganizationCollectionPinMutationResponse {

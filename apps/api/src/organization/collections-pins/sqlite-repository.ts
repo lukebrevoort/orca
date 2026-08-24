@@ -3,6 +3,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   organizationCollectionPinAuditEntrySchema,
   organizationCollectionPinChangeSchema,
+  organizationPinTargetSchema,
   organizationSavedQueryDefinitionSchema,
   pinFilterSchema,
   type OrganizationCollection,
@@ -66,7 +67,9 @@ function legacyQueryDefinition(raw: unknown): OrganizationSavedQueryDefinition {
     ? "focus" as const
     : legacy.data.attention === "normal"
       ? "normal" as const
-      : legacy.data.mailbox === "quiet" || legacy.data.mailbox === "hidden" || legacy.data.mailbox === "all"
+      : legacy.data.mailbox === "focus"
+        ? "focus" as const
+        : legacy.data.mailbox === "quiet" || legacy.data.mailbox === "hidden" || legacy.data.mailbox === "all"
         ? legacy.data.mailbox
         : undefined;
   return {
@@ -91,7 +94,7 @@ function mapQuery(record: QueryRecord) {
 }
 
 function mapPin(record: PinRecord): OrganizationPin {
-  const target = record.targetType === "query" || record.savedQueryId
+  const target = organizationPinTargetSchema.parse(record.targetType === "query" || record.savedQueryId
     ? { type: "query" as const, queryId: record.savedQueryId ?? record.targetId }
     : {
       type: "resource" as const,
@@ -99,7 +102,7 @@ function mapPin(record: PinRecord): OrganizationPin {
         family: (record.resourceFamily ?? record.kind) as "thread" | "view" | "collection" | "sender",
         id: record.targetId,
       },
-    };
+    });
   return {
     id: record.id,
     accountId: record.accountId,
@@ -199,12 +202,20 @@ function validatePinTarget(executor: Database, accountId: string, target: Organi
   }
   if (target.resource.family === "thread") requireThread(executor, accountId, target.resource.id);
   if (target.resource.family === "collection") requireCollection(executor, accountId, target.resource.id);
+  if (target.resource.family === "view" && !["inbox", "focus", "quiet", "hidden", "all"].includes(target.resource.id)) {
+    throw new OrganizationCollectionsPinsNotFoundError("View shortcuts require a stable Orca view identity");
+  }
   if (target.resource.family === "sender" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target.resource.id)) {
     throw new OrganizationCollectionsPinsNotFoundError("Sender shortcuts require a stable email identity");
   }
 }
 
-function applyChange(executor: Database, change: OrganizationCollectionPinChange, now: Date) {
+function requireTrustedResourceId(value: string | null): string {
+  if (!value) throw new Error("Trusted resource identity is required for create operations");
+  return value;
+}
+
+function applyChange(executor: Database, change: OrganizationCollectionPinChange, trustedResourceId: string | null, now: Date) {
   if (change.kind === "collection_membership") {
     const collection = requireCollection(executor, change.accountId, change.collectionId);
     requireThread(executor, change.accountId, change.threadId);
@@ -212,20 +223,26 @@ function applyChange(executor: Database, change: OrganizationCollectionPinChange
       eq(collectionThreads.collectionId, change.collectionId),
       eq(collectionThreads.threadId, change.threadId),
     )).get();
-    const before = { member: Boolean(current) };
+    const before = { member: Boolean(current), collectionRevision: collection.revision };
     if (change.action === "add" && !current) {
       executor.insert(collectionThreads).values({ id: `collection-thread:${crypto.randomUUID()}`, collectionId: change.collectionId, threadId: change.threadId, createdAt: now }).run();
     }
     if (change.action === "remove" && current) executor.delete(collectionThreads).where(eq(collectionThreads.id, current.id)).run();
     executor.update(collections).set({ revision: collection.revision + 1, updatedAt: now }).where(eq(collections.id, collection.id)).run();
-    return { resourceId: `${change.collectionId}:${change.threadId}`, before, after: { member: change.action === "add" }, reason: `${change.action === "add" ? "Added" : "Removed"} explicit Thread membership` };
+    return {
+      resourceId: `${change.collectionId}:${change.threadId}`,
+      before,
+      after: { member: change.action === "add", collectionRevision: collection.revision + 1 },
+      reason: `${change.action === "add" ? "Added" : "Removed"} explicit Thread membership`,
+    };
   }
 
   if (change.kind === "collection") {
     if (change.action === "create") {
       const position = executor.select().from(collections).where(eq(collections.accountId, change.accountId)).all().length;
-      executor.insert(collections).values({ ...change.collection, accountId: change.accountId, position, revision: 1, createdAt: now, updatedAt: now }).run();
-      const created = requireCollection(executor, change.accountId, change.collection.id);
+      const id = requireTrustedResourceId(trustedResourceId);
+      executor.insert(collections).values({ id, ...change.collection, accountId: change.accountId, position, revision: 1, createdAt: now, updatedAt: now }).run();
+      const created = requireCollection(executor, change.accountId, id);
       return { resourceId: created.id, before: null, after: collectionSnapshot(executor, created), reason: "Created curated Collection" };
     }
     const current = requireCollection(executor, change.accountId, change.collectionId);
@@ -238,7 +255,7 @@ function applyChange(executor: Database, change: OrganizationCollectionPinChange
   if (change.kind === "saved_query") {
     if (change.action === "create") {
       executor.insert(organizationSavedQueries).values({
-        id: change.query.id,
+        id: requireTrustedResourceId(trustedResourceId),
         accountId: change.accountId,
         name: change.query.name,
         definitionJson: JSON.stringify(change.query.definition),
@@ -246,7 +263,7 @@ function applyChange(executor: Database, change: OrganizationCollectionPinChange
         createdAt: now,
         updatedAt: now,
       }).run();
-      const created = requireQuery(executor, change.accountId, change.query.id);
+      const created = requireQuery(executor, change.accountId, requireTrustedResourceId(trustedResourceId));
       return { resourceId: created.id, before: null, after: mapQuery(created), reason: "Created versioned saved query identity" };
     }
     const current = requireQuery(executor, change.accountId, change.queryId);
@@ -263,7 +280,7 @@ function applyChange(executor: Database, change: OrganizationCollectionPinChange
     const targetId = change.pin.target.type === "query" ? change.pin.target.queryId : change.pin.target.resource.id;
     const kind = change.pin.target.type === "query" ? "filter" : change.pin.target.resource.family;
     executor.insert(pins).values({
-      id: change.pin.id,
+      id: requireTrustedResourceId(trustedResourceId),
       accountId: change.accountId,
       kind,
       targetId,
@@ -278,7 +295,7 @@ function applyChange(executor: Database, change: OrganizationCollectionPinChange
       createdAt: now,
       updatedAt: now,
     }).run();
-    const created = requirePin(executor, change.accountId, change.pin.id);
+    const created = requirePin(executor, change.accountId, requireTrustedResourceId(trustedResourceId));
     return { resourceId: created.id, before: null, after: pinSnapshot(created), reason: "Created stable shortcut" };
   }
   const current = requirePin(executor, change.accountId, change.pinId);
@@ -322,7 +339,52 @@ function restorePin(executor: Database, snapshot: OrganizationPin, now: Date) {
   }).run();
 }
 
+function sameSnapshot(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function assertStillAtPostImage(executor: Database, original: AuditRecord) {
+  const command = organizationCollectionPinChangeSchema.parse(JSON.parse(original.commandJson));
+  const after = parseJson(original.afterJson) as Record<string, unknown> | null;
+  let current: unknown = null;
+
+  if (command.kind === "collection_membership") {
+    const collection = executor.select().from(collections).where(and(
+      eq(collections.accountId, command.accountId),
+      eq(collections.id, command.collectionId),
+    )).get();
+    const membership = executor.select().from(collectionThreads).where(and(
+      eq(collectionThreads.collectionId, command.collectionId),
+      eq(collectionThreads.threadId, command.threadId),
+    )).get();
+    current = collection ? { member: Boolean(membership), collectionRevision: collection.revision } : null;
+  } else if (command.kind === "collection") {
+    const record = executor.select().from(collections).where(and(
+      eq(collections.accountId, command.accountId),
+      eq(collections.id, original.resourceId),
+    )).get();
+    current = record ? collectionSnapshot(executor, record) : null;
+  } else if (command.kind === "saved_query") {
+    const record = executor.select().from(organizationSavedQueries).where(and(
+      eq(organizationSavedQueries.accountId, command.accountId),
+      eq(organizationSavedQueries.id, original.resourceId),
+    )).get();
+    current = record ? mapQuery(record) : null;
+  } else {
+    const record = executor.select().from(pins).where(and(
+      eq(pins.accountId, command.accountId),
+      eq(pins.id, original.resourceId),
+    )).get();
+    current = record ? mapPin(record) : null;
+  }
+
+  if (!sameSnapshot(current, after)) {
+    throw new OrganizationCollectionsPinsConflictError("Current state has diverged from the Organization change");
+  }
+}
+
 function compensate(executor: Database, original: AuditRecord, now: Date) {
+  assertStillAtPostImage(executor, original);
   const command = organizationCollectionPinChangeSchema.parse(JSON.parse(original.commandJson));
   const before = parseJson(original.beforeJson) as Record<string, unknown> | null;
   if (command.kind === "collection_membership") {
@@ -337,7 +399,7 @@ function compensate(executor: Database, original: AuditRecord, now: Date) {
   }
   if (command.kind === "collection") {
     if (command.action === "create") {
-      const current = requireCollection(executor, command.accountId, command.collection.id);
+      const current = requireCollection(executor, command.accountId, original.resourceId);
       executor.delete(collections).where(eq(collections.id, current.id)).run();
       compactPositions(executor, collections, command.accountId, current.position);
     } else {
@@ -347,7 +409,7 @@ function compensate(executor: Database, original: AuditRecord, now: Date) {
   }
   if (command.kind === "saved_query") {
     if (command.action === "create") {
-      const current = requireQuery(executor, command.accountId, command.query.id);
+      const current = requireQuery(executor, command.accountId, original.resourceId);
       if (executor.select().from(pins).where(eq(pins.savedQueryId, current.id)).get()) throw new OrganizationCollectionsPinsConflictError("Cannot revert a saved query while a Pin references it");
       executor.delete(organizationSavedQueries).where(eq(organizationSavedQueries.id, current.id)).run();
     } else {
@@ -357,7 +419,7 @@ function compensate(executor: Database, original: AuditRecord, now: Date) {
     return;
   }
   if (command.action === "create") {
-    const current = requirePin(executor, command.accountId, command.pin.id);
+    const current = requirePin(executor, command.accountId, original.resourceId);
     executor.delete(pins).where(eq(pins.id, current.id)).run();
     compactPositions(executor, pins, command.accountId, current.position);
   } else {
@@ -401,6 +463,14 @@ function insertAudit(executor: Database, input: {
   return mapAudit(executor.select().from(organizationCollectionPinAudits).where(eq(organizationCollectionPinAudits.id, input.id)).get()!);
 }
 
+function translateExpectedConstraint(error: unknown): never {
+  if (error instanceof OrganizationCollectionsPinsConflictError) throw error;
+  if (error instanceof Error && /UNIQUE constraint failed/.test(error.message)) {
+    throw new OrganizationCollectionsPinsConflictError("Organization Collections/Pins state conflicts with an existing Account resource");
+  }
+  throw error;
+}
+
 export function createSqliteOrganizationCollectionsPinsRepository(db: Database): OrganizationCollectionsPinsRepository {
   return {
     listAccountIds(workspaceId) {
@@ -425,77 +495,84 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
         queries: queryRecords.map(mapQuery),
       };
     },
-    apply({ scope, request, changeId, now }) {
-      return db.transaction((transaction) => {
-        const executor = transaction as unknown as Database;
-        const commandJson = JSON.stringify(request.change);
-        const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
-          eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
-          eq(organizationCollectionPinAudits.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) {
-          if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
-          return mapAudit(duplicate);
-        }
-        const outcome = applyChange(executor, request.change, now);
-        return insertAudit(executor, {
-          id: changeId,
-          workspaceId: scope.workspaceId,
-          accountId: request.change.accountId,
-          actor: scope.actor,
-          operation: "apply",
-          changeKind: request.change.kind,
-          resourceId: outcome.resourceId,
-          before: outcome.before,
-          after: outcome.after,
-          command: request.change,
-          reason: outcome.reason,
-          revertsChangeId: null,
-          idempotencyKey: request.idempotencyKey,
-          now,
+    apply({ scope, request, changeId, trustedResourceId, now }) {
+      try {
+        return db.transaction((transaction) => {
+          const executor = transaction as unknown as Database;
+          const commandJson = JSON.stringify(request.change);
+          const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
+            eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
+            eq(organizationCollectionPinAudits.idempotencyKey, request.idempotencyKey),
+          )).get();
+          if (duplicate) {
+            if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+            return mapAudit(duplicate);
+          }
+          const outcome = applyChange(executor, request.change, trustedResourceId, now);
+          return insertAudit(executor, {
+            id: changeId,
+            workspaceId: scope.workspaceId,
+            accountId: request.change.accountId,
+            actor: scope.actor,
+            operation: "apply",
+            changeKind: request.change.kind,
+            resourceId: outcome.resourceId,
+            before: outcome.before,
+            after: outcome.after,
+            command: request.change,
+            reason: outcome.reason,
+            revertsChangeId: null,
+            idempotencyKey: request.idempotencyKey,
+            now,
+          });
         });
-      });
+      } catch (error) {
+        return translateExpectedConstraint(error);
+      }
     },
     revert({ scope, request, changeId, now }) {
-      return db.transaction((transaction) => {
-        const executor = transaction as unknown as Database;
-        const commandJson = JSON.stringify({ revert: request.changeId });
-        const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
-          eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
-          eq(organizationCollectionPinAudits.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) {
-          if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
-          return mapAudit(duplicate);
-        }
-        const original = executor.select().from(organizationCollectionPinAudits).where(and(
-          eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
-          eq(organizationCollectionPinAudits.id, request.changeId),
-        )).get();
-        if (!original || !scope.accountIds.includes(original.accountId)) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
-        if (original.operation !== "apply") throw new OrganizationCollectionsPinsConflictError("Only applied Organization changes can be reverted");
-        if (executor.select().from(organizationCollectionPinAudits).where(eq(organizationCollectionPinAudits.revertsChangeId, original.id)).get()) {
-          throw new OrganizationCollectionsPinsConflictError("Organization change was already reverted");
-        }
-        compensate(executor, original, now);
-        const reverted = insertAudit(executor, {
-          id: changeId,
-          workspaceId: scope.workspaceId,
-          accountId: original.accountId,
-          actor: scope.actor,
-          operation: "revert",
-          changeKind: original.changeKind as OrganizationCollectionPinChange["kind"],
-          resourceId: original.resourceId,
-          before: parseJson(original.afterJson),
-          after: parseJson(original.beforeJson),
-          command: { revert: original.id },
-          reason: `Compensated ${original.reason.toLocaleLowerCase()}`,
-          revertsChangeId: original.id,
-          idempotencyKey: request.idempotencyKey,
-          now,
+      try {
+        return db.transaction((transaction) => {
+          const executor = transaction as unknown as Database;
+          const commandJson = JSON.stringify({ revert: request.changeId });
+          const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
+            eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
+            eq(organizationCollectionPinAudits.idempotencyKey, request.idempotencyKey),
+          )).get();
+          if (duplicate) {
+            if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+            return mapAudit(duplicate);
+          }
+          const original = executor.select().from(organizationCollectionPinAudits).where(and(
+            eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
+            eq(organizationCollectionPinAudits.id, request.changeId),
+          )).get();
+          if (!original || !scope.accountIds.includes(original.accountId)) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
+          if (original.operation !== "apply") throw new OrganizationCollectionsPinsConflictError("Only applied Organization changes can be reverted");
+          if (executor.select().from(organizationCollectionPinAudits).where(eq(organizationCollectionPinAudits.revertsChangeId, original.id)).get()) {
+            throw new OrganizationCollectionsPinsConflictError("Organization change was already reverted");
+          }
+          compensate(executor, original, now);
+          return insertAudit(executor, {
+            id: changeId,
+            workspaceId: scope.workspaceId,
+            accountId: original.accountId,
+            actor: scope.actor,
+            operation: "revert",
+            changeKind: original.changeKind as OrganizationCollectionPinChange["kind"],
+            resourceId: original.resourceId,
+            before: parseJson(original.afterJson),
+            after: parseJson(original.beforeJson),
+            command: { revert: original.id },
+            reason: `Compensated ${original.reason.toLocaleLowerCase()}`,
+            revertsChangeId: original.id,
+            idempotencyKey: request.idempotencyKey,
+            now,
+          });
         });
-        return reverted;
-      });
+      } catch (error) {
+        return translateExpectedConstraint(error);
+      }
     },
     audit({ workspaceId, accountIds }) {
       if (accountIds.length === 0) return [];

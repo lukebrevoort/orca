@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { createDatabaseClient } from "../../db/client.ts";
-import { collectionThreads, collections, oauthAccounts, threads, users } from "../../db/schema.ts";
+import { collectionThreads, collections, oauthAccounts, organizationSavedQueries, pins, threads, users } from "../../db/schema.ts";
 import {
   OrganizationCollectionsPinsAccessError,
+  OrganizationCollectionsPinsConflictError,
   createOrganizationCollectionsPins,
 } from "./module.ts";
 import { createSqliteOrganizationCollectionsPinsRepository } from "./sqlite-repository.ts";
@@ -46,11 +48,13 @@ function fixture() {
   client.db.insert(collectionThreads).values({ id: "membership_a", collectionId: "collection_a", threadId: "thread_a" }).run();
 
   let sequence = 0;
+  let resourceSequence = 0;
   const organization = createOrganizationCollectionsPins(
     createSqliteOrganizationCollectionsPinsRepository(client.db),
     {
       now: () => new Date("2026-08-23T12:00:00.000Z"),
       newChangeId: () => `change_${++sequence}`,
+      newResourceId: (kind) => `${kind}_${++resourceSequence}`,
     },
   );
   const scope = {
@@ -167,7 +171,7 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
   test("creates a query Pin by stable identity and can compensate its removal", () => {
     const { organization, scope, sqlite } = fixture();
     try {
-      organization.apply({
+      const savedQuery = organization.apply({
         scope,
         request: {
           idempotencyKey: "query-create",
@@ -175,7 +179,7 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
             kind: "saved_query",
             action: "create",
             accountId: "account_a",
-            query: { id: "query_launch", name: "Launch", definition: { revision: 1, filters: { text: "launch" } } },
+            query: { name: "Launch", definition: { revision: 1, filters: { text: "launch" } } },
           },
         },
       });
@@ -188,27 +192,222 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
             action: "create",
             accountId: "account_a",
             pin: {
-              id: "pin_launch",
               label: "Launch",
               icon: "search",
               color: "#70867d",
-              target: { type: "query", queryId: "query_launch" },
+              target: { type: "query", queryId: savedQuery.change.resourceId },
             },
           },
         },
       });
-      assert.deepEqual(created.state.pins[0]?.target, { type: "query", queryId: "query_launch" });
+      assert.deepEqual(created.state.pins[0]?.target, { type: "query", queryId: savedQuery.change.resourceId });
       assert.deepEqual(created.state.queries[0]?.definition, { revision: 1, filters: { text: "launch" } });
 
       const removed = organization.apply({
         scope,
-        request: { idempotencyKey: "pin-remove", change: { kind: "pin", action: "remove", accountId: "account_a", pinId: "pin_launch" } },
+        request: { idempotencyKey: "pin-remove", change: { kind: "pin", action: "remove", accountId: "account_a", pinId: created.change.resourceId } },
       });
       assert.deepEqual(removed.state.pins, []);
       const restored = organization.revert({ scope, request: { idempotencyKey: "pin-restore", changeId: removed.change.id } });
-      assert.equal(restored.state.pins[0]?.id, "pin_launch");
+      assert.equal(restored.state.pins[0]?.id, created.change.resourceId);
     } finally {
       sqlite.close();
+    }
+  });
+
+  test("preserves every legacy mailbox and attention shortcut meaning", () => {
+    const { organization, scope, db, sqlite } = fixture();
+    try {
+      const cases = [
+        { id: "focus-mailbox", mailbox: "focus", attention: "all", expected: "focus" },
+        { id: "focus-attention", mailbox: "inbox", attention: "focus", expected: "focus" },
+        { id: "notify-attention", mailbox: "inbox", attention: "notify", expected: "focus" },
+        { id: "normal-attention", mailbox: "inbox", attention: "normal", expected: "normal" },
+        { id: "quiet-mailbox", mailbox: "quiet", attention: "all", expected: "quiet" },
+        { id: "hidden-mailbox", mailbox: "hidden", attention: "all", expected: "hidden" },
+        { id: "all-mailbox", mailbox: "all", attention: "all", expected: "all" },
+      ] as const;
+      cases.forEach((item, position) => {
+        const queryId = `query:${item.id}`;
+        db.insert(organizationSavedQueries).values({
+          id: queryId,
+          accountId: "account_a",
+          name: item.id,
+          definitionJson: JSON.stringify({ mailbox: item.mailbox, attention: item.attention, query: "", person: null }),
+        }).run();
+        db.insert(pins).values({
+          id: `pin:${item.id}`,
+          accountId: "account_a",
+          kind: "filter",
+          targetId: JSON.stringify({ mailbox: item.mailbox, attention: item.attention, query: "", person: null }),
+          targetType: "query",
+          savedQueryId: queryId,
+          label: item.id,
+          icon: "search",
+          color: "#70867d",
+          position,
+        }).run();
+      });
+
+      const result = organization.query({ scope, query: { accountIds: ["account_a"] } });
+      for (const item of cases) {
+        assert.equal(result.queries.find((query) => query.id === `query:${item.id}`)?.definition.filters.attention, item.expected);
+      }
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("refuses to revert Collection changes after same-ID recreation", () => {
+    const createdFixture = fixture();
+    try {
+      const created = createdFixture.organization.apply({
+        scope: createdFixture.scope,
+        request: {
+          idempotencyKey: "collection-create-stale",
+          change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: "First", color: "#70867d" } },
+        },
+      });
+      createdFixture.db.delete(collections).where(eq(collections.id, created.change.resourceId)).run();
+      createdFixture.db.insert(collections).values({
+        id: created.change.resourceId, accountId: "account_a", name: "Later", color: "#83728d", position: 1,
+      }).run();
+      assert.throws(
+        () => createdFixture.organization.revert({ scope: createdFixture.scope, request: { idempotencyKey: "revert-stale-create", changeId: created.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      createdFixture.sqlite.close();
+    }
+
+    const removedFixture = fixture();
+    try {
+      const removed = removedFixture.organization.apply({
+        scope: removedFixture.scope,
+        request: { idempotencyKey: "collection-remove-stale", change: { kind: "collection", action: "remove", accountId: "account_b", collectionId: "collection_b" } },
+      });
+      removedFixture.db.insert(collections).values({
+        id: "collection_b", accountId: "account_b", name: "Later", color: "#83728d", position: 0,
+      }).run();
+      assert.throws(
+        () => removedFixture.organization.revert({ scope: removedFixture.scope, request: { idempotencyKey: "revert-stale-remove", changeId: removed.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      removedFixture.sqlite.close();
+    }
+  });
+
+  test("refuses to revert membership after remove and re-add", () => {
+    const { organization, scope, sqlite } = fixture();
+    try {
+      const first = organization.apply({
+        scope,
+        request: { idempotencyKey: "membership-first", change: { kind: "collection_membership", action: "add", accountId: "account_b", collectionId: "collection_b", threadId: "thread_b" } },
+      });
+      organization.apply({
+        scope,
+        request: { idempotencyKey: "membership-remove-later", change: { kind: "collection_membership", action: "remove", accountId: "account_b", collectionId: "collection_b", threadId: "thread_b" } },
+      });
+      organization.apply({
+        scope,
+        request: { idempotencyKey: "membership-add-later", change: { kind: "collection_membership", action: "add", accountId: "account_b", collectionId: "collection_b", threadId: "thread_b" } },
+      });
+      assert.throws(
+        () => organization.revert({ scope, request: { idempotencyKey: "revert-stale-membership", changeId: first.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("refuses to revert saved-query changes after same-ID recreation", () => {
+    const createdFixture = fixture();
+    try {
+      const created = createdFixture.organization.apply({
+        scope: createdFixture.scope,
+        request: {
+          idempotencyKey: "query-create-stale",
+          change: { kind: "saved_query", action: "create", accountId: "account_a", query: { name: "First", definition: { revision: 1, filters: { text: "first" } } } },
+        },
+      });
+      createdFixture.db.delete(organizationSavedQueries).where(eq(organizationSavedQueries.id, created.change.resourceId)).run();
+      createdFixture.db.insert(organizationSavedQueries).values({
+        id: created.change.resourceId, accountId: "account_a", name: "Later", definitionJson: JSON.stringify({ revision: 1, filters: { text: "later" } }),
+      }).run();
+      assert.throws(
+        () => createdFixture.organization.revert({ scope: createdFixture.scope, request: { idempotencyKey: "revert-stale-query-create", changeId: created.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      createdFixture.sqlite.close();
+    }
+
+    const removedFixture = fixture();
+    try {
+      removedFixture.db.insert(organizationSavedQueries).values({
+        id: "query_seed", accountId: "account_a", name: "Seed", definitionJson: JSON.stringify({ revision: 1, filters: { text: "seed" } }),
+      }).run();
+      const removed = removedFixture.organization.apply({
+        scope: removedFixture.scope,
+        request: { idempotencyKey: "query-remove-stale", change: { kind: "saved_query", action: "remove", accountId: "account_a", queryId: "query_seed" } },
+      });
+      removedFixture.db.insert(organizationSavedQueries).values({
+        id: "query_seed", accountId: "account_a", name: "Later", definitionJson: JSON.stringify({ revision: 1, filters: { text: "later" } }),
+      }).run();
+      assert.throws(
+        () => removedFixture.organization.revert({ scope: removedFixture.scope, request: { idempotencyKey: "revert-stale-query-remove", changeId: removed.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      removedFixture.sqlite.close();
+    }
+  });
+
+  test("refuses to revert Pin changes after same-ID recreation", () => {
+    const createdFixture = fixture();
+    try {
+      const created = createdFixture.organization.apply({
+        scope: createdFixture.scope,
+        request: {
+          idempotencyKey: "pin-create-stale",
+          change: { kind: "pin", action: "create", accountId: "account_a", pin: { label: "First", icon: "thread", color: "#70867d", target: { type: "resource", resource: { family: "thread", id: "thread_a" } } } },
+        },
+      });
+      createdFixture.db.delete(pins).where(eq(pins.id, created.change.resourceId)).run();
+      createdFixture.db.insert(pins).values({
+        id: created.change.resourceId, accountId: "account_a", kind: "thread", targetId: "thread_a", targetType: "resource", resourceFamily: "thread",
+        label: "Later", icon: "thread", color: "#83728d", position: 0,
+      }).run();
+      assert.throws(
+        () => createdFixture.organization.revert({ scope: createdFixture.scope, request: { idempotencyKey: "revert-stale-pin-create", changeId: created.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      createdFixture.sqlite.close();
+    }
+
+    const removedFixture = fixture();
+    try {
+      removedFixture.db.insert(pins).values({
+        id: "pin_seed", accountId: "account_a", kind: "thread", targetId: "thread_a", targetType: "resource", resourceFamily: "thread",
+        label: "Seed", icon: "thread", color: "#70867d", position: 0,
+      }).run();
+      const removed = removedFixture.organization.apply({
+        scope: removedFixture.scope,
+        request: { idempotencyKey: "pin-remove-stale", change: { kind: "pin", action: "remove", accountId: "account_a", pinId: "pin_seed" } },
+      });
+      removedFixture.db.insert(pins).values({
+        id: "pin_seed", accountId: "account_a", kind: "thread", targetId: "thread_a", targetType: "resource", resourceFamily: "thread",
+        label: "Later", icon: "thread", color: "#83728d", position: 0,
+      }).run();
+      assert.throws(
+        () => removedFixture.organization.revert({ scope: removedFixture.scope, request: { idempotencyKey: "revert-stale-pin-remove", changeId: removed.change.id } }),
+        (error) => error instanceof OrganizationCollectionsPinsConflictError,
+      );
+    } finally {
+      removedFixture.sqlite.close();
     }
   });
 

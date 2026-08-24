@@ -78,6 +78,16 @@ describe("BRE-309 clean M8 migration", () => {
       const sameNameQueries = sqlite.query("SELECT COUNT(*) AS count FROM organization_saved_queries WHERE name = 'Launch'").get() as { count: number };
       assert.equal(sameNameQueries.count, 2);
       assert.equal(sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'organization_collection_pin_audits'").get() !== null, true);
+      const journal = JSON.parse(readFileSync(resolve(import.meta.dir, "../../../drizzle/meta/_journal.json"), "utf8")) as {
+        entries: Array<{ idx: number; tag: string }>;
+      };
+      assert.deepEqual(journal.entries.at(-1), {
+        idx: 24,
+        version: "6",
+        when: 1787544000000,
+        tag: "0024_organization_collections_pins",
+        breakpoints: true,
+      });
     } finally {
       sqlite.close();
       rmSync(directory, { recursive: true, force: true });

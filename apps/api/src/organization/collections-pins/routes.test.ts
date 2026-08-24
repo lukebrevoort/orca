@@ -48,6 +48,7 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
         { id: "collection_private", accountId: "account_private", name: "Private", color: "#70867d", position: 0 },
       ]).run();
       const session = await createSession(db, "workspace_owner");
+      const privateSession = await createSession(db, "workspace_private");
       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
       const app = createApp({ dbFactory: () => createDatabaseClient(databasePath) });
 
@@ -87,6 +88,35 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       });
       assert.equal(reverted.status, 200);
       assert.deepEqual((await reverted.json()).state.collections.find((item: { id: string }) => item.id === "collection_b").threadIds, []);
+
+      const collectionBody = (idempotencyKey: string, accountId: string, extra: Record<string, unknown> = {}) => JSON.stringify({
+        idempotencyKey,
+        change: { kind: "collection", action: "create", accountId, collection: { name: "Shared label", color: "#70867d", ...extra } },
+      });
+      const ownerCreate = await app.request("/v1/organization/collections-pins/apply", {
+        method: "POST", headers, body: collectionBody("owner-create", "account_a"),
+      });
+      assert.equal(ownerCreate.status, 200);
+      const ownerId = (await ownerCreate.json()).change.resourceId;
+      const privateHeaders = { ...headers, cookie: `orca_session=${privateSession.token}` };
+      const privateCreate = await app.request("/v1/organization/collections-pins/apply", {
+        method: "POST", headers: privateHeaders, body: collectionBody("private-create", "account_private"),
+      });
+      assert.equal(privateCreate.status, 200);
+      assert.notEqual((await privateCreate.json()).change.resourceId, ownerId);
+
+      const callerId = await app.request("/v1/organization/collections-pins/apply", {
+        method: "POST", headers, body: collectionBody("caller-id", "account_a", { id: "collection_private" }),
+      });
+      assert.equal(callerId.status, 400);
+
+      const duplicateName = await app.request("/v1/organization/collections-pins/apply", {
+        method: "POST", headers, body: collectionBody("duplicate-name", "account_a"),
+      });
+      assert.equal(duplicateName.status, 409);
+      const publicError = JSON.stringify(await duplicateName.json());
+      assert.equal(publicError.includes("UNIQUE"), false);
+      assert.equal(publicError.includes("organization_saved_queries"), false);
     } finally {
       sqlite.close();
     }

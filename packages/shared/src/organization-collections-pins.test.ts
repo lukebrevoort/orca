@@ -65,6 +65,14 @@ describe("Organization Collections/Pins contract", () => {
       type: "query",
       serializedUiState: "{\"mailbox\":\"inbox\"}",
     }).success, false);
+    assert.deepEqual(organizationPinTargetSchema.parse({
+      type: "resource",
+      resource: { family: "view", id: "focus" },
+    }), { type: "resource", resource: { family: "view", id: "focus" } });
+    assert.equal(organizationPinTargetSchema.safeParse({
+      type: "resource",
+      resource: { family: "view", id: "{\"mailbox\":\"focus\"}" },
+    }).success, false);
   });
 
   test("expresses auditable membership and shortcut changes without mail authority", () => {
@@ -85,7 +93,6 @@ describe("Organization Collections/Pins contract", () => {
         action: "create",
         accountId: "account_a",
         pin: {
-          id: "pin_1",
           label: "Launch",
           icon: "thread",
           color: "#70867d",
@@ -96,6 +103,21 @@ describe("Organization Collections/Pins contract", () => {
 
     assert.equal(membership.change.kind, "collection_membership");
     assert.equal(shortcut.change.kind, "pin");
+    assert.equal(organizationCollectionPinApplyRequestSchema.safeParse({
+      idempotencyKey: "caller-selected-id",
+      change: {
+        kind: "pin",
+        action: "create",
+        accountId: "account_a",
+        pin: {
+          id: "pin_in_another_workspace",
+          label: "Launch",
+          icon: "thread",
+          color: "#70867d",
+          target: { type: "resource", resource: { family: "thread", id: "thread_1" } },
+        },
+      },
+    }).success, false);
     assert.equal(organizationCollectionPinApplyRequestSchema.safeParse({
       idempotencyKey: "delete-mail",
       change: { kind: "provider_delete", accountId: "account_a", messageId: "message_1" },

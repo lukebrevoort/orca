@@ -14,10 +14,16 @@ export const organizationCollectionPinScopeSchema = z.object({
 export type OrganizationCollectionPinScope = z.infer<typeof organizationCollectionPinScopeSchema>;
 
 export const organizationPinResourceFamilySchema = z.enum(["thread", "view", "collection", "sender"]);
+const organizationPinResourceIdentitySchema = z.discriminatedUnion("family", [
+  z.object({ family: z.literal("thread"), id: nonEmptyStringSchema }).strict(),
+  z.object({ family: z.literal("view"), id: z.enum(["inbox", "focus", "quiet", "hidden", "all"]) }).strict(),
+  z.object({ family: z.literal("collection"), id: nonEmptyStringSchema }).strict(),
+  z.object({ family: z.literal("sender"), id: z.string().trim().email().max(320) }).strict(),
+]);
 export const organizationPinTargetSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("resource"),
-    resource: z.object({ family: organizationPinResourceFamilySchema, id: nonEmptyStringSchema }).strict(),
+    resource: organizationPinResourceIdentitySchema,
   }).strict(),
   z.object({ type: z.literal("query"), queryId: nonEmptyStringSchema }).strict(),
 ]);
@@ -98,7 +104,7 @@ const collectionMembershipChangeSchema = z.object({
 const collectionChangeSchema = z.discriminatedUnion("action", [
   z.object({
     kind: z.literal("collection"), action: z.literal("create"), accountId: nonEmptyStringSchema,
-    collection: z.object({ id: nonEmptyStringSchema, name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
+    collection: z.object({ name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
   }).strict(),
   z.object({ kind: z.literal("collection"), action: z.literal("remove"), accountId: nonEmptyStringSchema, collectionId: nonEmptyStringSchema }).strict(),
 ]);
@@ -106,7 +112,6 @@ const pinChangeSchema = z.discriminatedUnion("action", [
   z.object({
     kind: z.literal("pin"), action: z.literal("create"), accountId: nonEmptyStringSchema,
     pin: z.object({
-      id: nonEmptyStringSchema,
       label: z.string().trim().min(1).max(120),
       icon: z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]),
       color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
@@ -118,7 +123,7 @@ const pinChangeSchema = z.discriminatedUnion("action", [
 const savedQueryChangeSchema = z.discriminatedUnion("action", [
   z.object({
     kind: z.literal("saved_query"), action: z.literal("create"), accountId: nonEmptyStringSchema,
-    query: z.object({ id: nonEmptyStringSchema, name: z.string().trim().min(1).max(120), definition: organizationSavedQueryDefinitionSchema }).strict(),
+    query: z.object({ name: z.string().trim().min(1).max(120), definition: organizationSavedQueryDefinitionSchema }).strict(),
   }).strict(),
   z.object({ kind: z.literal("saved_query"), action: z.literal("remove"), accountId: nonEmptyStringSchema, queryId: nonEmptyStringSchema }).strict(),
 ]);

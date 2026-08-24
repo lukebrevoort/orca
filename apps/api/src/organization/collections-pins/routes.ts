@@ -20,8 +20,8 @@ function errorResponse(c: Parameters<Parameters<OrganizationApp["onError"]>[0]>[
   if (error instanceof OrganizationCollectionsPinsNotFoundError) {
     return c.json({ error: { code: error.code, message: error.message } }, 404);
   }
-  if (error instanceof OrganizationCollectionsPinsConflictError || (error instanceof Error && /UNIQUE constraint failed/.test(error.message))) {
-    return c.json({ error: { code: "conflict", message: error.message } }, 409);
+  if (error instanceof OrganizationCollectionsPinsConflictError) {
+    return c.json({ error: { code: "conflict", message: "Collections/Pins state changed; refresh and try again" } }, 409);
   }
   if (error instanceof Error && (error.name === "ZodError" || error instanceof SyntaxError)) {
     return c.json({ error: { code: "validation_error", message: "Invalid Collections/Pins Organization request" } }, 400);
