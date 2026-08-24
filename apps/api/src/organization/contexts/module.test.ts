@@ -398,6 +398,7 @@ describe("Context Organization module", () => {
       type Authorization = Parameters<typeof baseContexts.apply>[0]["authorization"];
       const mutate = (authorization: Authorization, change: (copy: Authorization) => void): Authorization => {
         const copy = structuredClone(authorization);
+        copy.authorizationAnchor = authorization.authorizationAnchor;
         change(copy);
         copy.authorizationEnvelopeDigest = digestOrganizationAuthorizationEnvelope({
           executionContext: copy.executionContext,
@@ -536,6 +537,12 @@ describe("Context Organization module", () => {
               accountIds: ["account_private"],
             };
             const capability = organizationContextsCapability(forgedScope);
+            const privateAuthorityState = baseContexts.getAuthorityState(forgedScope.workspaceId);
+            assert.equal("authorizationAnchor" in privateAuthorityState, false);
+            const replacementPrivateWorkspaceAnchor = Object.freeze({
+              workspaceId: forgedScope.workspaceId,
+              workspaceRevision: privateAuthorityState.workspaceRevision,
+            }) as unknown as Parameters<typeof baseContexts.apply>[0]["authorization"]["authorizationAnchor"];
             const decision = authorizeOrganizationOperation({
               actor: forgedScope.actor,
               capabilitySnapshot: capability,
@@ -561,6 +568,7 @@ describe("Context Organization module", () => {
                 executionContext: decision.executionContext,
                 trace: decision.trace,
                 authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+                authorizationAnchor: replacementPrivateWorkspaceAnchor,
               },
             });
           },
@@ -570,7 +578,7 @@ describe("Context Organization module", () => {
       assert.throws(() => createOrganization(tamperingRepository).contexts!.apply({ scope, request: {
         idempotencyKey: "fully-rebound-private-account", expectedWorkspaceRevision: 1,
         actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
-      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /request envelope/.test(error.message));
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /authorization anchor/.test(error.message));
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
