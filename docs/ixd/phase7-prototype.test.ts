@@ -9,7 +9,7 @@ function readPrototype(name: string) {
   return readFileSync(join(ixdRoot, name), "utf8");
 }
 
-async function mountPrototype(name: string) {
+async function mountPrototype(name: string, setup?: (window: Window) => void) {
   const html = readPrototype(name);
   const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? "";
   const window = new Window({
@@ -17,26 +17,28 @@ async function mountPrototype(name: string) {
     settings: { disableJavaScriptEvaluation: false },
   });
   window.document.write(html.replace(/<script>[\s\S]*?<\/script>/, ""));
+  setup?.(window);
   Function("window", "document", inlineScript)(window, window.document);
   await window.happyDOM.waitUntilComplete();
   return window;
 }
 
 describe("BRE-307 Organization prototypes", () => {
-  for (const file of ["phase7-prototype-desktop.html", "phase7-prototype-mobile.html"]) {
-    test(`${file} preserves the accepted Organization direction`, () => {
-      const html = readPrototype(file);
+  test("desktop prototype preserves the approved Organization direction", () => {
+    const html = readPrototype("phase7-prototype-desktop.html");
+    for (const term of ["Glass Box", "Tide Table", "Simulate", "Activate", "Trace", "Audit history", "Revert"]) expect(html).toContain(term);
+    expect(html).toContain("user approved");
+    expect(html).toContain('data-theme="light"');
+    expect(html).toContain('data-scenario="default"');
+  });
 
-      expect(html).toContain("Glass Box");
-      expect(html).toContain("Tide Table");
-      expect(html).toContain("Simulate");
-      expect(html).toContain("Activate");
-      expect(html).toContain("Trace");
-      expect(html).toContain("Audit history");
-      expect(html).toContain("Revert");
-      expect(html).toContain('data-theme="light"');
-      expect(html).toContain('data-scenario="default"');
-    });
+  test("mobile prototype is historical compatibility evidence, not approved direction", () => {
+    const html = readPrototype("phase7-prototype-mobile.html");
+    expect(html).toContain("Historical mobile compatibility · deferred");
+    expect(html).not.toContain("user approved");
+  });
+
+  for (const file of ["phase7-prototype-desktop.html", "phase7-prototype-mobile.html"]) {
 
     test(`${file} exposes required state contracts`, () => {
       const html = readPrototype(file);
@@ -123,6 +125,104 @@ describe("BRE-307 Organization prototypes", () => {
     expect(mobile).toContain('aria-current="page"');
   });
 
+  test("desktop prototype encodes the user-approved direction decisions", () => {
+    const desktop = readPrototype("phase7-prototype-desktop.html");
+    const handoff = readPrototype("phase8-document.md");
+    const components = readPrototype("phase5-components.md");
+    const approval = readPrototype("user-direction-review.html");
+
+    for (const stage of ["when", "if", "then", "because"]) {
+      expect(desktop).toContain(`data-stage="${stage}"`);
+    }
+    expect(desktop).toContain('data-inspector data-open="false"');
+    expect(desktop).toContain("data-inspector-pin");
+    expect(desktop).toContain("data-simulation-details");
+    expect(desktop).toContain('data-user-space="focus"');
+    expect(desktop).toContain('draggable="true"');
+    expect(handoff).toContain("mobile is deferred to a separate rebranding milestone");
+    expect(handoff).toContain("Hidden-by-default desktop evidence drawer");
+    expect(handoff).toContain("BRE-321");
+    expect(components).toContain("Evidence drawer and Trace chain");
+    expect(components).toContain("1280px and wider");
+    expect(components).toContain("mobile receives a separate rebranding milestone");
+    expect(components).not.toContain("Persistent library, workbench, and inspector");
+    expect(approval).toContain("Desktop direction explicitly approved");
+    expect(approval).toContain("Approved August 23, 2026");
+    expect(handoff).toContain("Implementation gate**: Open");
+  });
+
+  test("desktop evidence drawer opens contextually, pins, and keeps simulation evidence expandable", async () => {
+    const window = await mountPrototype("phase7-prototype-desktop.html", window => {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+    });
+    const inspector = window.document.querySelector<HTMLElement>("[data-inspector]");
+    const workspace = window.document.querySelector<HTMLElement>(".workspace");
+    const pin = window.document.querySelector<HTMLButtonElement>("[data-inspector-pin]");
+    const details = window.document.querySelector<HTMLElement>("[data-simulation-details]");
+    const evidence = window.document.querySelector<HTMLButtonElement>("[data-simulation-toggle]");
+
+    expect(inspector?.dataset.open).toBe("false");
+    expect(inspector?.getAttribute("aria-hidden")).toBe("true");
+    const invoker = window.document.querySelector<HTMLButtonElement>('[data-inspector-open="trace"]');
+    invoker?.focus();
+    invoker?.click();
+    expect(inspector?.dataset.open).toBe("true");
+    expect(inspector?.getAttribute("aria-hidden")).toBe("false");
+    expect(window.document.activeElement).toBe(window.document.querySelector("[data-inspector-close]"));
+    pin?.click();
+    expect(workspace?.dataset.inspectorPinned).toBe("true");
+    expect(pin?.getAttribute("aria-pressed")).toBe("true");
+
+    window.document.querySelector<HTMLButtonElement>('[data-action="simulate"]')?.click();
+    expect(window.document.querySelector("[data-sim-label]")?.textContent).toContain("2,418 threads");
+    expect(details?.hidden).toBe(true);
+    evidence?.click();
+    expect(details?.hidden).toBe(false);
+    expect(evidence?.getAttribute("aria-expanded")).toBe("true");
+    expect(details?.textContent).toContain("Conflicts");
+    expect(details?.textContent).toContain("Risk");
+    expect(details?.textContent).toContain("Authority");
+    window.document.querySelector<HTMLButtonElement>("[data-inspector-close]")?.click();
+    expect(window.document.activeElement).toBe(invoker);
+    await window.close();
+  });
+
+  test("desktop drawer refuses narrow pinning and restores a saved wide-screen preference", async () => {
+    const narrow = await mountPrototype("phase7-prototype-desktop.html", window => {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1100, writable: true });
+      window.localStorage.setItem("orca.organization.inspectorPinned", "true");
+    });
+    narrow.document.querySelector<HTMLButtonElement>('[data-inspector-open="trace"]')?.click();
+    expect(narrow.document.querySelector<HTMLButtonElement>("[data-inspector-pin]")?.disabled).toBe(true);
+    expect(narrow.document.querySelector<HTMLElement>(".workspace")?.dataset.inspectorPinned).toBe("false");
+    await narrow.close();
+
+    const wide = await mountPrototype("phase7-prototype-desktop.html", window => {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: 1440, writable: true });
+      window.localStorage.setItem("orca.organization.inspectorPinned", "true");
+    });
+    expect(wide.document.querySelector<HTMLElement>("[data-inspector]")?.dataset.open).toBe("true");
+    expect(wide.document.querySelector<HTMLElement>(".workspace")?.dataset.inspectorPinned).toBe("true");
+    expect(wide.document.querySelector<HTMLButtonElement>("[data-inspector-pin]")?.disabled).toBe(false);
+    wide.document.querySelector<HTMLButtonElement>("[data-inspector-close]")?.click();
+    expect(wide.document.activeElement).toBe(wide.document.querySelector('[data-inspector-open="trace"]'));
+    await wide.close();
+  });
+
+  test("user-owned spaces support keyboard reordering and persist the new order", async () => {
+    const window = await mountPrototype("phase7-prototype-desktop.html");
+    const signals = window.document.querySelector<HTMLElement>('[data-user-space="signals"]');
+    signals?.focus();
+    signals?.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowUp", altKey: true, bubbles: true }));
+    const order = [...window.document.querySelectorAll<HTMLElement>("[data-user-space]")].map(space => space.dataset.userSpace);
+
+    expect(order).toEqual(["signals", "focus", "quiet", "later"]);
+    expect(window.document.querySelector("[data-space-status]")?.textContent).toContain("Signals moved to position 1 of 4");
+    expect(window.localStorage.getItem("orca.navigation.userSpaceOrder")).toBe(JSON.stringify(order));
+    expect(window.document.activeElement).toBe(signals);
+    await window.close();
+  });
+
   test("mobile prototype declares 44px minimum targets", () => {
     const mobile = readPrototype("phase7-prototype-mobile.html");
 
@@ -175,6 +275,28 @@ describe("BRE-307 Organization prototypes", () => {
     window.document.querySelector<HTMLButtonElement>('[data-action="new-rule"]')?.click();
     expect(window.document.querySelector("[data-rule-title]")?.textContent).toBe("Untitled organization rule");
     expect(window.document.querySelector<HTMLTextAreaElement>("[data-rule-source]")?.value).toContain("rule new");
+    expect(window.document.body.dataset.scenario).toBe("stale");
+    await window.close();
+  });
+
+  test("desktop whiteboard pieces add rule structure and stale the simulation", async () => {
+    const window = await mountPrototype("phase7-prototype-desktop.html");
+    window.document.querySelector<HTMLButtonElement>('[data-add-piece="if"]')?.click();
+
+    expect(window.document.querySelector('[data-draft-field="if"]')?.textContent).toContain("thread is unresolved");
+    expect(window.document.querySelector<HTMLTextAreaElement>("[data-rule-source]")?.value).toContain("thread is unresolved");
+    expect(window.document.body.dataset.scenario).toBe("stale");
+    expect(window.document.querySelector("[data-save-state]")?.textContent).toContain("Condition piece changed");
+    await window.close();
+  });
+
+  test("desktop When edits round-trip into Tide source", async () => {
+    const window = await mountPrototype("phase7-prototype-desktop.html");
+    const source = window.document.querySelector<HTMLTextAreaElement>("[data-rule-source]");
+    const before = source?.value;
+    window.document.querySelector<HTMLButtonElement>('[data-edit-field="when"]')?.click();
+    expect(source?.value).not.toBe(before);
+    expect(source?.value).toContain("A thread receives a new message · refined");
     expect(window.document.body.dataset.scenario).toBe("stale");
     await window.close();
   });
@@ -259,13 +381,14 @@ describe("BRE-307 Organization prototypes", () => {
       window.document.querySelector<HTMLButtonElement>('[data-action="revert"]')?.click();
       window.document.querySelector<HTMLButtonElement>("[data-dialog-confirm]")?.click();
 
-      expect(window.document.querySelector("[data-revision-chip]")?.textContent).toContain("rev 11 · draft · simulated");
-      expect(window.document.querySelector("[data-audit-event]")?.textContent).toBe("Revision 11 simulated");
-      expect(window.document.querySelector("[data-audit-simulated]")?.textContent).toBe("Revision 11 simulated");
-      expect(window.document.querySelector("[data-audit-activated]")?.textContent).toBe("Revision 11 activated");
-      expect(window.document.querySelector("[data-revert-label]")?.textContent).toContain("revision 10");
-      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("Reverted revision 12");
-      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("Revision 11 is ready to inspect");
+      expect(window.document.querySelector("[data-revision-chip]")?.textContent).toContain("rev 13 · active");
+      expect(window.document.querySelector("[data-audit-reverted]")?.textContent).toBe("Revision 13 activated · restores revision 11");
+      expect(window.document.querySelector("[data-audit-revert-meta]")?.textContent).toContain("revision 12 retained");
+      expect(window.document.querySelector("[data-audit-simulated]")?.textContent).toBe("Revision 12 simulated");
+      expect(window.document.querySelector("[data-audit-activated]")?.textContent).toBe("Revision 12 activated");
+      expect(window.document.querySelector("[data-revert-label]")?.textContent).toContain("Revert revision 13");
+      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("restoring revision 11 semantics");
+      expect(window.document.querySelector("[data-action-status]")?.textContent).toContain("Revision 12 remains inspectable");
       await window.close();
     });
   }

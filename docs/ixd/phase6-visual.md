@@ -1,6 +1,8 @@
 # Orca Organization — Visual Direction
 
-**Direction**: Quiet instrument panel. The Organization page borrows Orca’s reading-first calm and makes causality visible through fine structure rather than decorative color.
+**Status**: Colorful whiteboard/Scratch-like Glass Box and the complete desktop visual direction are explicitly approved. Mobile remains deferred.
+
+**Direction**: Quiet causal canvas. The Organization page borrows Orca’s reading-first calm and makes causality visible through meaningful diagram shapes, connection, and hierarchy rather than decorative color.
 
 ## 1. Color system
 
@@ -15,7 +17,7 @@ The effective final Tidal `--orca-*` variables in `apps/web/src/styles.css` rema
 | Danger | `#b44c42` | `#e7a197` | Error only |
 | Warning | `#8a672e` | `#d8bb83` | Conflict/stale only |
 
-No gradients are used. Color occupies less than 10 percent of the page and always carries behavior.
+Semantic color is concentrated inside the Glass Box construction pieces and always carries meaning. A subtle repeated-dot canvas supports the whiteboard metaphor; the surrounding shell remains quiet and neutral.
 
 ### Accessibility checks
 
@@ -36,20 +38,20 @@ Selected controls do not place white text on the accent. They preserve ink on a 
 - Reader prose: existing `Newsreader` / Georgia chain; Organization does not use reader typography for tool chrome.
 - Code: SFMono-Regular / Consolas / monospace for Tide Table only.
 - Numerals in simulation and audit use tabular figures.
-- Desktop body baseline is 12px–13px; mobile primary control copy is 10px–12px. Long explanatory copy uses at least 15px line height.
-- Rule names truncate after two lines on mobile and one line in the desktop library. Tide Table never visually truncates source.
+- Desktop body baseline is 12px–13px. Long explanatory copy uses at least 15px line height.
+- Rule summaries use one line in the desktop library. Tide Table never visually truncates source.
 
 ## 3. Iconography
 
 - Use Orca’s existing restrained outline character: 1.5px stroke on a 20px or 24px grid.
-- Navigation target: 50px desktop rail and 46px mobile bottom navigation.
-- Glass Box edit icon: 16px in a 32px desktop target or a 44px mobile target.
+- Navigation target: 50px desktop rail.
+- Glass Box edit icon: 16px in a 32px desktop target.
 - Icons supplement visible labels for Organization, Simulate, Activate, Trace, Audit history, and Revert.
 - No new icon library dependency is required for the prototype; production should reuse the existing Orca glyph system.
 
 ## 4. Illustration system
 
-Organization uses diagrams rather than illustrations. Empty and error states use a small rule-chain glyph built from borders and dots, paired with direct copy. There are no characters, mascots, decorative 3D art, or full-page marketing imagery.
+Organization uses diagrams rather than illustrations. The primary Glass Box is a true causal diagram: When is the trigger, If is the gate, Then is the emphasized outcome, and Because is the human explanation. Empty and error states use a small rule-chain glyph built from borders and dots, paired with direct copy. There are no characters, mascots, decorative 3D art, or full-page marketing imagery.
 
 | State | Asset direction | Copy direction |
 |---|---|---|
@@ -61,16 +63,16 @@ Organization uses diagrams rather than illustrations. Empty and error states use
 
 ## 5. Elevation
 
-- Level 0: page, library, workbench, inspector; boundaries are 1px borders.
+- Level 0: page, library, and workbench; boundaries are 1px borders.
 - Level 1: Glass Box blocks and simulation surfaces; no shadow.
-- Level 2: menus and local popovers; existing Orca subtle shadow.
+- Level 2: menus, local popovers, and the unpinned evidence drawer; existing Orca subtle shadow.
 - Level 3: revert dialog and prototype device frame; `--orca-shadow`.
 - Dark mode uses border and surface separation before stronger shadow.
 
 ## 6. Radius
 
 - 8px: icon and compact text controls.
-- 12px–13px: rule rows, Glass Box blocks, simulation and source surfaces.
+- 12px–16px plus stage-specific silhouettes: rule rows, Glass Box causal nodes, simulation and source surfaces.
 - 18px: dialog and prototype window shell.
 - 999px: mode switch, statuses, and action buttons.
 - Radius communicates hierarchy; the page does not apply one uniform rounded-card treatment.
@@ -78,8 +80,7 @@ Organization uses diagrams rather than illustrations. Empty and error states use
 ## 7. Spacing and grid
 
 - 4px base rhythm with 8px, 12px, 16px, and 24px steps.
-- Mobile: one content column with 16px page inset.
-- Desktop prototype: 1280px × 800px window; 68px Orca rail; 236px rule library; flexible workbench with a minimum 420px width; 292px inspector.
+- Desktop prototype: 1280px × 800px window; 68px Orca rail; 236px rule library; wide flexible workbench with a 520px minimum; 320px evidence drawer hidden by default.
 - Production browser grid: 12 columns at 1280px and above. The authoring workbench receives the remaining flexible width.
 - Tool content is allowed to fill the available viewport; there is no centered marketing maximum width.
 
@@ -92,10 +93,10 @@ Organization uses diagrams rather than illustrations. Empty and error states use
 **Chrome**: Existing Orca navigation and title hierarchy. Organization receives a readable, theme-safe selected state.  
 **Cards**: Borders and subtle surface shifts, not floating dashboard cards.  
 **Primary action**: Simulate precedes Activate spatially and logically. Activate never becomes a high-contrast filled hole.  
-**Brand element**: The Glass Box rule chain is the memorable visual—When, If, Then, Because connected as one causality path.
+**Brand element**: The Glass Box rule chain is the memorable visual—four semantically distinct shapes connected as one causality path from When through Because.
 
-**Desktop differences**: persistent rule library and Trace/audit inspector; hover, focus, keyboard shortcuts, and a revision-aware action bar.  
-**Mobile differences**: rule picker, local Trace/Audit tabs, stacked semantic blocks, and a flex action region above existing bottom navigation.
+**Desktop behavior**: persistent rule library; hidden-by-default Trace/audit drawer that can be pinned; hover, focus, keyboard shortcuts, and a revision-aware action bar.
+**Mobile**: explicitly deferred to a separate full-rebranding milestone. No mobile visual direction is approved by this document.
 
 ### Visual exception table
 

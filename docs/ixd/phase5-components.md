@@ -1,6 +1,6 @@
 # Orca Organization — Component and Token Handoff
 
-**Scope**: P07 Organization Studio for BRE-307. Existing Orca components and variables remain authoritative.
+**Scope**: Desktop P07 Organization Studio for BRE-307. Existing Orca components and variables remain authoritative. The colorful, whiteboard-like Glass Box and the other desktop component contracts are explicitly approved. Mobile is deferred.
 
 ## 1. Design tokens
 
@@ -32,7 +32,6 @@ Values below are copied from the effective final Tidal cascade in `apps/web/src/
 | `--orca-font-reader` | `Newsreader, Georgia, serif` | Reader-only content; not used for Organization chrome |
 | `--orca-font-mono` | `SFMono-Regular, Consolas, monospace` | Tide Table source and located diagnostics |
 | Display | 32px / 36px / 500 | Desktop page title |
-| H1 mobile | 30px / 32px / 500 | Mobile page title |
 | H2 | 24px / 28px / 500 | Rule title |
 | Section | 19px / 24px / 500 | Library, Trace, audit headings |
 | Body | 12px / 18px / 500 | Primary compact tool copy |
@@ -83,11 +82,20 @@ Contrast checks use the effective Tidal paper/surface composites. Essential sele
 
 **Purpose**: Discover and select one stable rule identity.
 
-- Minimum desktop target: 44px; mobile picker target: 44px.
+- Minimum desktop target: 44px.
 - Props: `ruleId`, `name`, `summary`, `status`, `revision`, `matchCount`, `selected`, `disabled`.
 - Keyboard: Up/Down moves; Enter selects; search filtering preserves selection.
 - Status uses text plus a dot. Dot color is supporting evidence, not the only signal.
-- Long names use two lines before truncation; summaries use two lines on mobile and one line on desktop.
+- Long names use two lines before truncation; summaries use one line in the desktop library.
+
+### Application shell navigation
+
+**Purpose**: Separate stable product entry points from user-owned workflow spaces.
+
+- Stable anchors: Inbox, Drafts, Organization, and Settings. These do not participate in user ordering.
+- User-owned spaces: Focus, Signals, Quiet, Later, and future custom spaces.
+- User-owned spaces support pointer drag plus keyboard Move up/Move down commands, announce the resulting position, and persist order.
+- The wider redesign tracked by BRE-321 adds rename, hide, restore, and create management across every remaining desktop screen.
 
 ### Authoring mode switch
 
@@ -98,14 +106,15 @@ Contrast checks use the effective Tidal paper/surface composites. Essential sele
 - Selected treatment follows the theme-safe state contract.
 - Switching to Glass Box is blocked only by unparseable Tide Table source; source remains intact and the located error receives focus.
 
-### Glass Box block
+### Glass Box causal diagram
 
 **Purpose**: Explain and edit one semantic rule part.
 
-- Variants: Event, Predicate, Action, Reason.
+- Ordered node variants: Trigger (`When`), Gate (`If`), Outcome (`Then`), Human reason (`Because`).
+- Each variant has a distinct silhouette and is connected by a directional path; shape and connection communicate causality before color.
 - Content: fixed semantic label, human-readable value, typed projection, edit affordance.
 - States: default, hover, focus, editing, validation error, disabled by authority.
-- The full block is focusable; desktop edit affordance has a 32px target, while mobile editing uses a 44px sheet trigger.
+- The full node is focusable; the desktop edit affordance has a 32px minimum target.
 
 ### Tide Table editor
 
@@ -121,6 +130,7 @@ Contrast checks use the effective Tidal paper/surface composites. Essential sele
 **Purpose**: Prove impact before power.
 
 - Required fields: snapshot revision, evaluated count, affected count, notification count, hidden count, representative samples, conflicts, risk, authority.
+- Collapsed state keeps freshness/scope and the primary impact counts attached to the rule. Expanded evidence shows labeled Example, Conflicts, Risk, and Authority rows, including explicit none/allowed outcomes.
 - States: loading, simulated, stale, conflict, error, no access.
 - Conflict uses warning token plus the word “Conflict”; error uses danger token plus an alert role.
 - Counts use tabular numerals. No decorative count-up motion.
@@ -129,19 +139,22 @@ Contrast checks use the effective Tidal paper/surface composites. Essential sele
 
 **Purpose**: Keep Simulate and Activate reachable without obscuring content.
 
-- Desktop height: 58px. Mobile height: 56px.
+- Desktop height: 58px.
 - Uses flex layout; never fixed positioning inside the prototype frame.
-- A persistent sentence explains the activation gate on desktop. Mobile exposes the same explanation adjacent to the simulation status.
+- A persistent sentence explains the activation gate on desktop.
 - Activate is disabled for unsimulated, stale, conflicting, invalid, unauthorized, or offline revisions.
 
-### Trace chain
+### Evidence drawer and Trace chain
 
 **Purpose**: Explain the complete precedence decision.
 
+- The drawer is closed and inert by default. “Explain outcome” opens at Trace; “History” opens at Audit history.
+- Opening moves focus to Close (or the drawer heading), announces the new context, and closing/Escape restores the invoking control.
+- From 1024px–1279px the drawer is overlay-only and Pin is unavailable. At 1280px and wider, Pin places it beside the workbench and stores the preference.
+- If the viewport shrinks below 1280px, a pinned drawer falls back to an overlay without losing its open section; a stored preference is only restored when the breakpoint permits it.
 - Ordered steps: Safety Lock, Manual Override, winning Rule, Lane Policy, Workspace/Fallback.
 - Each step exposes outcome, actor or rule identity where relevant, and reason.
 - Missing Trace is an error, never an empty success state.
-- Mobile displays Trace as a local tab; desktop keeps it adjacent to authoring.
 
 ### Audit history and revert dialog
 
@@ -149,29 +162,27 @@ Contrast checks use the effective Tidal paper/surface composites. Essential sele
 
 - Audit rows expose revision/change-set identity, actor, timestamp, event, and scope.
 - Revert remains labeled in default, hover, focus, disabled, and loading states.
-- Dialog width: 360px desktop and 326px mobile. It traps focus, names scope, and explains compensating behavior.
+- Dialog width: 360px desktop. It traps focus, names scope, and explains compensating behavior.
 - Confirming revert requires the expected active revision and an idempotency key.
 
 ## 4. Responsive mapping
 
 | Breakpoint | Width | Pattern |
 |---|---:|---|
-| Mobile compact | under 375px | One column; abbreviated supporting copy; full labels retained |
-| Mobile baseline | 375px–759px | One column; rule picker; Trace/Audit tabs |
-| Tablet | 760px–1023px | Workbench with library drawer and inline inspector |
-| Desktop small | 1024px–1279px | Library + workbench; collapsible inspector |
-| Desktop baseline | 1280px and above | Persistent library, workbench, and inspector |
+| Deferred | under 760px | No BRE-307 implementation contract; mobile receives a separate rebranding milestone |
+| Narrow desktop | 760px–1023px | Workbench with library drawer; evidence drawer overlays |
+| Desktop small | 1024px–1279px | Library + workbench; evidence drawer overlays and cannot pin |
+| Desktop baseline | 1280px and above | Persistent library + wide workbench; evidence drawer overlays by default and may be pinned |
 
-- Prototype baselines are 390px × 844px and 1280px × 800px.
+- Approved prototype baseline is 1280px × 800px. The earlier 390px artifact is historical and non-authoritative.
 - Desktop side regions collapse before the authoring workbench loses its minimum readable width.
-- Mobile and desktop share semantic tokens, rule data, state machine, and gate logic; only navigation and spatial arrangement differ.
 
 ## 5. Verification
 
 - Structural tokens: complete.
 - Color and font values: back-filled from Phase 6; no TBD placeholders.
-- P07 components: 8 business components documented.
+- P07 desktop components: application shell navigation, rule library, authoring switch, Glass Box diagram, Tide Table, simulation result, action bar, evidence drawer/Trace, and audit/revert documented.
 - Theme-safe states: default, hover, pressed, focus, selected, disabled, loading complete.
-- Touch/click targets: 44px mobile and 32px minimum desktop.
+- Click targets: 32px minimum desktop; primary discovery rows are at least 44px.
 - Dark mode mapping: complete.
 - Status: PASS.

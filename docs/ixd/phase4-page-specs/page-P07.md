@@ -1,8 +1,8 @@
 # P07 Organization Studio — Interaction Specification
 
 **Ticket**: BRE-307  
-**Scope**: Organization page only. Inbox, reader, composer, and Zen Mode remain unchanged.  
-**Status**: Accepted direction for developer handoff after prototype review.
+**Scope**: Desktop Organization page only. Inbox, reader, composer, Zen Mode, and mobile remain unchanged.
+**Status**: Desktop direction explicitly approved. Mobile remains deferred to a separate rebranding milestone.
 
 ## 1. Page overview
 
@@ -14,11 +14,15 @@
 
 ### Direction lock
 
-- **Glass Box is the default** authoring and explanation mode. It exposes the event, predicates, actions, and reason as legible blocks.
+- **Glass Box is the default** authoring and explanation mode. It exposes When, If, Then, and Because as distinct shapes in one connected causal diagram.
 - **Tide Table is the deep-edit mode** for minute Orca-language work. Switching modes changes representation, not rule identity or semantics.
 - The information hierarchy is: rule discovery → authoring → simulation → activation → Trace → audit history → revert.
 - Simulation and live execution use the same semantics. A rule cannot activate from an unsimulated, stale, conflicting, invalid, or unauthorized revision.
 - Revert creates a compensating change set. History is never rewritten.
+- Trace and Audit are hidden by default in a contextual right drawer. Wide-screen users may pin it and Orca remembers that preference.
+- Historical simulation remains attached to authoring as a compact summary with expandable evidence; edits mark the result stale immediately.
+- Stable shell anchors remain fixed. Focus, Signals, Quiet, Later, and future workflow spaces are user-owned and malleable.
+- Mobile is explicitly deferred to its own complete rebranding milestone; the earlier mobile prototype is exploratory and non-authoritative.
 
 ## 2. Layout structure
 
@@ -30,21 +34,21 @@
 ├──────┬─────────────────────────────────────────────────────────────┤
 │      │ Page header: Organization · rule count · search · New rule  │
 │ Orca ├──────────────┬──────────────────────────┬───────────────────┤
-│ rail │ Rule library │ Authoring workbench      │ Trace + audit     │
-│      │ Search       │ Glass Box / Tide Table  │ Precedence        │
-│ Org  │ Drafts       │ Rule revision           │ Actor + reason    │
-│ sel. │ Active       │ Simulation results      │ Revert            │
-│      │ Archived     │ Fixed action bar        │                   │
+│ rail │ Rule library │ Wide authoring workbench                     │
+│      │ Search       │ Diagrammatic Glass Box / Tide Table         │
+│ Org  │ Drafts       │ Rule revision + compact simulation          │
+│ sel. │ Active       │ Fixed action bar       [Evidence drawer →]  │
+│      │ Archived     │                                             │
 └──────┴──────────────┴──────────────────────────┴───────────────────┘
 ```
 
-- The existing Orca rail remains the global navigation source of truth. The selected Organization control keeps a readable label and uses the theme-safe selected treatment.
+- The Orca rail establishes the new shell direction. Inbox, Drafts, Organization, and Settings are stable anchors; workflow spaces are reorderable, renameable, hideable, restorable, and eventually user-created.
 - The rule library is independently scrollable and preserves the selected rule when filtering.
 - The authoring workbench is the focal region. Its mode switch and action bar stay visible while content scrolls.
-- Trace and audit remain adjacent to authoring so a user can inspect causality without leaving the edit context.
-- At narrow desktop widths, the library collapses first; Trace becomes an inline right drawer. No production content escapes its window container.
+- Trace and audit remain adjacent to authoring in a hidden-by-default evidence drawer opened by “Explain outcome” or “History.” On wide screens it can be pinned and the preference is remembered.
+- At narrow desktop widths, the library collapses first and the evidence drawer remains an overlay. No production content escapes its window container.
 
-### Mobile
+### Mobile — deferred, not approved
 
 ```text
 ┌──────────────────────────────────────┐
@@ -65,9 +69,7 @@
 └──────────────────────────────────────┘
 ```
 
-- Mobile uses one scrollable column. Rule discovery becomes a picker; Trace and audit become local tabs below the authoring surface.
-- The action bar and existing bottom navigation are separate flex regions. Neither overlays scrollable content.
-- Organization is visibly selected and labeled in the existing bottom navigation.
+This earlier layout sketch is retained only as historical exploration. It is not an implementation contract. The next mobile milestone must begin with a complete rebranding and information-architecture pass rather than adapting this desktop canvas mechanically.
 
 ## 3. Component inventory
 
@@ -78,13 +80,13 @@
 | C03 | Rule row | Rule discovery | Selects a rule without navigation | default, hover, focus, selected, active, draft |
 | C04 | New rule | Header | Creates a local draft and focuses title | default, hover, focus |
 | C05 | Mode switch | Workbench | Swaps Glass Box and Tide Table representations | default, hover, focus, selected |
-| C06 | Glass Box block | Workbench | Opens the appropriate structured editor | default, hover, focus, validation error |
+| C06 | Glass Box causal node | Workbench | Opens the appropriate structured editor inside a connected When → If → Then → Because diagram | default, hover, focus, validation error |
 | C07 | Tide Table editor | Workbench | Edits Orca source with located diagnostics | default, focus, dirty, error |
-| C08 | Simulation panel | Workbench | Shows counts, representative matches, conflicts, risk, authority | loading, simulated, conflict, error |
+| C08 | Compact simulation panel | Workbench | Keeps core impact visible and expands representative matches, conflicts, risk, and authority on demand | loading, simulated, stale, conflict, error |
 | C09 | Simulate action | Action bar | Validates and runs against historical mail | default, hover, focus, loading, disabled |
 | C10 | Activate action | Action bar | Applies the current simulated revision atomically | disabled, enabled, loading, active, conflict |
-| C11 | Trace | Inspector / inline tab | Shows the complete precedence chain and winner | default, partial, error |
-| C12 | Audit history | Inspector / inline tab | Lists append-only actor/revision/change-set events | default, loading, empty, partial, error |
+| C11 | Trace | Contextual evidence drawer | Shows the complete precedence chain and winner; drawer is closed by default and pinnable on wide screens | default, partial, error |
+| C12 | Audit history | Contextual evidence drawer | Lists append-only actor/revision/change-set events | default, loading, empty, partial, error |
 | C13 | Revert action | Audit | Opens confirmation and creates compensating change | default, hover, focus, disabled, loading |
 | C14 | Revert dialog | Inline overlay | Confirms or cancels revert | open, focus-trapped, submitting, error |
 | C15 | Scenario control | Prototype shell only | Demonstrates required states | default, simulated, active, conflict, error |
@@ -95,12 +97,13 @@
 
 - Typing in search filters by rule name, event, action, and status without changing the selected rule.
 - Empty search shows “No rules match” plus Clear search. A workspace with no rules shows “Describe what deserves your attention” plus Create first rule.
-- Desktop arrow keys move between visible rows; Enter selects. Mobile picker selection updates the workbench in place.
+- Desktop arrow keys move between visible rule rows; Enter selects.
 - A selected row uses `--orca-surface-hover`, `--orca-border`, and `--orca-ink`; selected text never relies on inverse color assumptions.
 
 ### Glass Box authoring
 
-- Glass Box loads by default and preserves this order: When → If → Then → Because.
+- Glass Box loads by default and preserves this order as one left-to-right causal diagram: When → If → Then → Because.
+- Each stage has a distinct semantic silhouette: trigger, gate, outcome, and human reason. Connection and shape carry meaning before decorative color.
 - Selecting a block opens only that block’s structured fields. Edits create a dirty draft; the last successful simulation becomes stale immediately.
 - Each block exposes human copy and its typed semantic projection. Decorative connector lines are not interactive.
 - “Because” is required for activated rules because it becomes the human-readable Trace reason.
@@ -115,7 +118,7 @@
 ### Simulation
 
 - Simulate validates syntax, types, authority, expected revision, and resource limits before evaluating historical mail.
-- Results show total threads evaluated, affected count, notification count, hidden count, representative examples, conflicts, risk, and required authority.
+- The collapsed result keeps evaluated scope, affected count, notification count, hidden count, and freshness visible. Users expand representative examples, conflicts, risk, and required authority on demand.
 - Simulation never mutates mail or organization state.
 - Any edit after simulation marks results stale and disables Activate.
 
@@ -128,6 +131,8 @@
 
 ### Trace, audit, and revert
 
+- “Explain outcome” and “History” open the right evidence drawer at the relevant section. The drawer is not visible on first use.
+- At wide desktop widths, Pin makes the drawer persistent and stores the preference. Close removes the pin and restores the wide workbench.
 - Trace always lists the precedence strata in order: Safety Lock → Manual Override → winning Rule → Lane Policy → Workspace/Fallback.
 - Every winner names rule identity, revision, priority, actor, reason, and evaluated snapshot.
 - Audit entries are append-only and ordered newest first. Selecting an entry may compare immutable revisions but never rewrites them.
@@ -193,13 +198,13 @@ stateDiagram-v2
 
 | Width | Layout |
 |---|---|
-| under 760px | Mobile single column; picker; local Trace/Audit tabs; fixed flex action region |
-| 760px–1023px | Rule library drawer; workbench full width; Trace inline drawer |
-| 1024px–1279px | Library + workbench; Trace collapsible |
-| 1280px and above | Library + workbench + persistent Trace/audit inspector |
+| under 760px | Deferred to the mobile rebranding milestone; no BRE-307 contract |
+| 760px–1023px | Rule library drawer; workbench full width; evidence drawer overlays |
+| 1024px–1279px | Library + workbench; evidence drawer overlays |
+| 1280px and above | Library + wide workbench; evidence drawer overlays by default and may be pinned |
 
 - Desktop minimum review viewport: 1024px × 680px. Prototype baseline: 1280px × 800px.
-- Mobile prototype baseline: 390px × 844px; critical actions meet a 44px target.
+- The 390px prototype remains historical review evidence only and is not approved mobile direction.
 - This is a responsive web surface, not a separate desktop-client window. Multi-window behavior is not introduced by BRE-307.
 
 ### Themes
@@ -211,10 +216,10 @@ stateDiagram-v2
 
 ### Accessibility
 
-- DOM order follows visual order: navigation → discovery → authoring → simulation → Trace → audit → actions.
-- Desktop supports complete Tab/Shift+Tab navigation; dialogs trap focus and restore it on close.
+- With the drawer closed, DOM order is navigation → discovery → mode/evidence triggers → authoring → simulation → actions. Opening Trace or History moves focus directly to the drawer Close control; Close/Escape restores the invoking trigger.
+- Desktop supports complete Tab/Shift+Tab navigation; dialogs trap focus and restore it on close. The evidence drawer is inert while closed.
 - Mode and detail switches expose `aria-pressed` or `aria-selected`; status updates use a polite live region, errors use alerts.
-- Touch targets are at least 44px; desktop controls are at least 32px.
+- Desktop controls are at least 32px; primary discovery rows are at least 44px.
 - Contrast target is WCAG AA. Reduced motion follows the existing Orca preference and system media query.
 
 ## 9. Interaction walkthrough
@@ -228,10 +233,10 @@ stateDiagram-v2
 | Data loading | 4 / 4 | Pass | Cursor, freshness key, caching, and local failure boundaries specified |
 | Content display | 4 / 4 | Pass | Long copy, empty, unloaded, and sample fallbacks specified |
 | Visual and brand | 5 / 5 | Pass | Orca hierarchy, themes, contrast, and restrained color retained |
-| Touch and click | 3 / 3 | Pass | Target size and spacing specified |
-| Desktop-exclusive | 10 / 10 | Pass | Keyboard, hover, focus, context, resize, drag non-applicability, and tooltips resolved |
-| Cross-platform consistency | 4 / 4 | Pass | Equivalent operations with platform-native layouts |
-| **Overall** | **47 / 47** | **Pass** | No P0 or P1 interaction-spec gaps |
+| Pointer and keyboard | 3 / 3 | Pass | Target size, spacing, drawer focus return, and keyboard alternatives specified |
+| Desktop-exclusive | 10 / 10 | Pass | Keyboard, hover, focus, context, resize, pointer drag, Alt+Arrow reorder, persistence, and tooltips resolved |
+| Mobile / cross-platform | N/A | Deferred | Mobile is intentionally excluded pending its separate rebranding milestone |
+| **Approved desktop total** | **43 / 43** | **Pass** | No P0 or P1 desktop interaction-spec gaps |
 
 ## 10. Micro-interaction specifications
 
@@ -240,7 +245,7 @@ stateDiagram-v2
 1. Trigger: historical simulation completes.
 2. Visual change: result region appears; status moves from “Simulating” to “Simulated”; Activate becomes enabled only when conflict-free.
 3. Motion: `--orca-motion-medium` and `--orca-ease-enter`; no count-up animation.
-4. Feedback: light haptic on mobile only when user initiated; no desktop sound.
+4. Feedback: polite desktop status announcement; no sound.
 5. Reversal: any edit immediately marks the result stale and disables Activate.
 
 ### Activation
@@ -256,5 +261,5 @@ stateDiagram-v2
 1. Trigger: user selects Revert and confirms scope.
 2. Visual change: modal closes after confirmation; active revision and audit update atomically.
 3. Motion: dialog uses existing Orca overlay entry/exit tokens.
-4. Feedback: light mobile haptic after success; no destructive sound.
+4. Feedback: polite desktop success announcement; no destructive sound.
 5. Reversal: the compensating change is itself revertible through a later audited action.

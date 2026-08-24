@@ -1,18 +1,20 @@
 # Orca Organization Page — Interaction Design and Developer Handoff
 
 **Ticket**: BRE-307  
-**Version**: 1.1
+**Version**: 1.3
 **Date**: 2026-08-23  
-**Status**: Accepted
-**Target platforms**: Responsive web, desktop and mobile  
-**Implementation gate**: Open for the later user-facing M8 implementation; Dispatch review 44 accepted all six findings as fixed.
+**Status**: Desktop product direction explicitly approved
+**Target platforms**: Desktop web; mobile is deferred to a separate rebranding milestone
+**Implementation gate**: Open. The user explicitly approved the contextual evidence drawer, colorful whiteboard-like Glass Box, compact simulation, mobile deferral, and malleable shell split. Dispatch reviews remain the technical and accessibility evidence baseline, not the source of product approval.
 
 ## Revision history
 
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1.0 | 2026-08-23 | Codex | Focused BRE-307 direction, interaction spec, dual prototype, and handoff |
-| 1.1 | 2026-08-23 | Codex | Accepted after Dispatch review 44 resolved 6/6 findings at commit `5f6e251` |
+| 1.1 | 2026-08-23 | Codex | Technical/accessibility review 44 resolved 6/6 findings at commit `5f6e251`; product direction remained pending |
+| 1.2 | 2026-08-23 | Luke + Codex | User-led direction review: contextual evidence drawer, diagrammatic Glass Box, compact simulation, mobile deferral, and malleable application-shell follow-up |
+| 1.3 | 2026-08-23 | Luke + Codex | Explicitly approved the colorful whiteboard/Scratch-like Glass Box and opened the desktop implementation gate |
 
 ## 1. Design overview
 
@@ -33,23 +35,24 @@ Orca is moving from Human-versus-Automated navigation toward a programmable atte
 - Glass Box first; Tide Table on demand.
 - Preview before power.
 - Same engine for historical simulation and live execution.
-- Show the complete winning trace.
+- Keep the complete winning trace available contextually without making it permanent page chrome.
 - Revert with a compensating change; never rewrite history.
 - Existing Orca navigation, typography, motion, and theme variables are authoritative.
 
 ### 1.4 Scope and boundaries
 
-BRE-307 covers P07 Organization Studio only. It does not redesign the inbox, reader, composer, Zen Mode, lanes, Views, Collections, or thread presentation. It creates no production route or backend behavior; it locks the interaction direction for later M8 implementation.
+BRE-307 covers the desktop P07 Organization Studio and demonstrates the approved application-shell direction only. It does not redesign the inbox, reader, composer, Zen Mode, lanes, Views, Collections, or thread presentation. Redesigning those remaining screens is tracked as a dedicated child issue. It creates no production route or backend behavior; it locks the interaction direction for later M8 implementation.
 
 ### 1.5 Platform strategy
 
-- Desktop is the spatial baseline because authoring benefits from persistent rule discovery and Trace/audit context.
-- Mobile preserves the same operation order in one column with a rule picker and local Trace/Audit tabs.
-- Both platforms share rule semantics, state transitions, gate logic, mock data, design variables, and wording.
-- Platform differences are spatial and input-specific, not semantic.
+- Desktop is the approved spatial baseline because authoring benefits from persistent rule discovery and a wide causal canvas.
+- Trace and audit are hidden by default, open in a contextual right drawer, and may be pinned on wide screens with the preference remembered.
+- The existing mobile artifact is exploratory only and is not part of this direction approval. Mobile will receive a complete rebranding pass in its next milestone.
+- Mobile parity must not be inferred from this desktop handoff.
 
 ### 1.6 References
 
+- [User direction review](user-direction-review.html) — the explicit product-approval record for the five desktop decisions.
 - Orca’s current inbox and settings surfaces for typography, rail/bottom-navigation character, motion, and theme variables.
 - Linear for structured, fast workspace interaction.
 - Notion for user-defined structures without hiding the underlying model.
@@ -76,23 +79,26 @@ flowchart LR
   ORG --> DISC[Rule discovery]
   ORG --> AUTH[Glass Box authoring]
   AUTH <--> TIDE[Tide Table deep edit]
-  AUTH --> SIM[Simulation]
+  AUTH --> SIM[Compact simulation summary]
   SIM --> ACT[Activation]
-  ACT --> TRACE[Trace]
+  ACT --> DRAWER[Contextual evidence drawer]
+  DRAWER --> TRACE[Trace]
   TRACE --> AUDIT[Audit history]
   AUDIT --> REVERT[Revert]
 ```
 
 ### 2.2 Navigation mapping
 
-| Operation | Desktop | Mobile |
-|---|---|---|
-| Enter Organization | Existing rail item | Existing bottom-navigation item |
-| Discover rules | Persistent library + search | Labeled rule picker |
-| Switch authoring mode | Pill group above workbench | Pill group below page title |
-| Inspect Trace | Persistent inspector | Local Trace tab |
-| Inspect audit | Persistent inspector section | Local Audit history tab |
-| Simulate / Activate | Workbench action bar | Flex action region above navigation |
+| Operation | Approved desktop behavior |
+|---|---|
+| Enter Organization | Stable Organization anchor in the Orca rail |
+| Discover rules | Persistent library + search |
+| Switch authoring mode | Pill group above workbench |
+| Inspect Trace | “Explain outcome” opens the contextual evidence drawer |
+| Inspect audit | “History” opens the same drawer at audit history |
+| Keep evidence visible | Pin the drawer on wide screens; preference is remembered |
+| Simulate / Activate | Workbench action bar with compact inline simulation evidence |
+| Arrange workflow spaces | Focus, Signals, Quiet, and Later are user-owned and reorderable; fixed anchors remain stable |
 
 ### 2.3 Exhaustiveness statement
 
@@ -138,10 +144,10 @@ The complete ten-section implementation specification is [page-P07.md](phase4-pa
 
 Key locked decisions:
 
-- Glass Box is the initial and default view.
+- Glass Box is the initial and default view, rendered as a connected causal diagram with distinct When, If, Then, and Because shapes.
 - Tide Table edits the same revision and never becomes a second navigation destination.
-- Simulation results live inline with authoring.
-- Trace and audit remain in the same page context.
+- Simulation results live inline with authoring as a compact summary; deeper evidence expands on demand and edits mark it stale.
+- Trace and audit remain in the same page context but are hidden by default in a right drawer that can be pinned on wide screens.
 - Activate is gated by a current successful simulation and authority.
 - Revert is an audited compensating action.
 - Selected and disabled control labels remain readable in light and dark themes.
@@ -205,7 +211,8 @@ The complete visual direction is [phase6-visual.md](phase6-visual.md).
 - Keep the workbench as the focal region.
 - Use surface, border, and ink for selected states.
 - Use danger/warning only for explicit error/conflict evidence.
-- Keep Glass Box borders quiet and structural; avoid dashboard-style elevated cards.
+- Make Glass Box memorable through connected semantic shapes, not decorative color or dashboard elevation.
+- Preserve a wide, calm workbench by keeping the evidence drawer closed until requested.
 - Use the existing display face for hierarchy and monospace only inside Tide Table.
 
 ## 7. Global interaction standards
@@ -222,7 +229,7 @@ The complete visual direction is [phase6-visual.md](phase6-visual.md).
 
 ### 7.2 Focus order
 
-Navigation → rule discovery → mode switch → authoring blocks/editor → simulation → Trace → audit → Simulate → Activate. Dialogs trap focus and restore it to Revert on dismissal.
+With the evidence drawer closed: navigation → rule discovery → mode switch and evidence triggers → authoring diagram/editor → simulation → Simulate → Activate. Opening “Explain outcome” or “History” moves focus into the drawer; Close/Escape restores the invoking trigger. Dialogs trap focus and restore it to Revert on dismissal.
 
 ### 7.3 Feedback
 
@@ -240,7 +247,7 @@ Navigation → rule discovery → mode switch → authoring blocks/editor → si
 ## Appendix A. Interactive prototypes
 
 - [Desktop prototype](phase7-prototype-desktop.html)
-- [Mobile prototype](phase7-prototype-mobile.html)
+- [Historical mobile exploration](phase7-prototype-mobile.html) — retained as prior review evidence only; non-authoritative and excluded from approval
 - [Prototype contract test](phase7-prototype.test.ts)
 - [Visual review report](phase7-review-master.md)
 - [Dispatch review round 1](phase8-review-round-1.md)
@@ -270,15 +277,15 @@ Exact route shapes remain an implementation decision, but REST, MCP, provider sy
 |---|---|
 | Rule discovery and authoring | Rule library/picker + Glass Box/Tide Table |
 | Simulation and activation | Inline impact panel + gated atomic action |
-| Trace, audit, revert | Persistent desktop inspector and mobile local tabs/dialog |
+| Trace, audit, revert | Hidden-by-default desktop evidence drawer, wide-screen pinning, and revert dialog |
 | Default Glass Box / deep Tide Table | Mode switch behavior and copy |
 | Existing Orca visual system | Current variables, typography, navigation character, motion |
-| Desktop/mobile | Two standalone prototypes |
+| Approved platform | Desktop standalone prototype; mobile explicitly deferred |
 | Required states | Scenario control plus interactive CSS states |
 | Light/dark | Theme toggle and visual evidence |
 | No inbox/reader/composer/Zen redesign | Explicit scope boundary and no production UI changes |
 
 ## Appendix D. Review decision
 
-**Decision**: Accepted. Dispatch `orca-web-review` review 44 resolved all 6 findings as fixed at commit `5f6e251`.
-**Implementation status**: Direction locked and ready for the later M8 implementation ticket; this BRE-307 artifact PR intentionally changes no production inbox, reader, composer, or Zen Mode UI.
+**Decision**: The user explicitly approved all five desktop decisions, including the revised colorful, whiteboard-like Glass Box. The current product-direction authority is [user-direction-review.html](user-direction-review.html). Dispatch reviews remain technical/accessibility evidence and are not the product-approval authority.
+**Implementation status**: Open for desktop implementation and further flow sketching. Child issue [BRE-321](https://linear.app/brevoort/issue/BRE-321/redesign-every-remaining-orca-desktop-screen-around-the-new) owns redesigning every other desktop screen around the approved shell direction. Mobile remains excluded for its separate rebranding milestone.
