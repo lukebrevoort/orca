@@ -7,9 +7,9 @@ import {
   OrganizationCollectionsPinsAccessError,
   OrganizationCollectionsPinsConflictError,
   OrganizationCollectionsPinsNotFoundError,
-  createOrganizationCollectionsPins,
 } from "./module.ts";
-import { createSqliteOrganizationCollectionsPinsRepository } from "./sqlite-repository.ts";
+import { createOrganization } from "../module.ts";
+import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
 
@@ -37,10 +37,12 @@ export function registerOrganizationCollectionsPinsRoutes(
 
   function open(workspaceId: string) {
     const client = dbFactory();
-    const repository = createSqliteOrganizationCollectionsPinsRepository(client.db);
+    const repository = createSqliteOrganizationRepository(client.db);
+    const organization = createOrganization(repository);
+    if (!organization.collectionsPins) throw new Error("Collections/Pins Organization composition is unavailable");
     return {
       ...client,
-      organization: createOrganizationCollectionsPins(repository),
+      organization: organization.collectionsPins,
       scope: {
         actor: { id: workspaceId, type: "human" as const },
         workspaceId,

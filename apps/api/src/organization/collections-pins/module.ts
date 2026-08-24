@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   organizationCollectionPinApplyRequestSchema,
   organizationCollectionPinDescribeResponseSchema,
@@ -12,7 +14,11 @@ import {
   type OrganizationCollectionPinQueryResponse,
   type OrganizationCollectionPinRevertRequest,
   type OrganizationCollectionPinScope,
+  type OrganizationAuthorityTrace,
+  type OrganizationCommand,
+  type OrganizationExecutionContext,
 } from "@orca/shared";
+import { authorizeOrganizationOperation } from "../authority.ts";
 
 export class OrganizationCollectionsPinsAccessError extends Error {
   readonly code = "account_denied" as const;
@@ -43,22 +49,56 @@ export class OrganizationCollectionsPinsConflictError extends Error {
 
 export type OrganizationCollectionsPinsRepository = {
   listAccountIds(workspaceId: string): string[];
+  getAuthorityState(workspaceId: string): {
+    workspaceRevision: number;
+    resourceRevisions: Record<string, number>;
+    reservedIdempotencyKeys: string[];
+  };
+  getRevertAuthorityTargets(workspaceId: string, changeId: string): Array<{
+    changeKind: OrganizationCollectionPinAuditEntry["changeKind"];
+    resourceId: string;
+    mutation: "create" | "update";
+  }> | null;
   query(input: { workspaceId: string; accountIds: string[]; query: OrganizationCollectionPinQuery }): OrganizationCollectionPinQueryResponse;
   apply(input: {
     scope: OrganizationCollectionPinScope;
     request: OrganizationCollectionPinApplyRequest;
     changeId: string;
-    trustedResourceId: string | null;
+    trustedResourceIds: { primary: string; savedQuery: string | null } | null;
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
     now: Date;
   }): OrganizationCollectionPinAuditEntry;
   revert(input: {
     scope: OrganizationCollectionPinScope;
     request: OrganizationCollectionPinRevertRequest;
     changeId: string;
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
     now: Date;
   }): OrganizationCollectionPinAuditEntry;
   audit(input: { workspaceId: string; accountIds: string[] }): OrganizationCollectionPinAuditEntry[];
 };
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function changeDigest(value: unknown): string {
+  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
+}
+
+function authorityResourceId(kind: "collection" | "pin" | "saved_query", id: string) {
+  return `${kind}:${id}`;
+}
+
+function intentKind(kind: OrganizationCollectionPinAuditEntry["changeKind"]) {
+  if (kind === "pin") return "mutate_shortcut" as const;
+  if (kind === "saved_query") return "mutate_saved_query" as const;
+  return "mutate_collection" as const;
+}
 
 function authorize(repository: OrganizationCollectionsPinsRepository, untrustedScope: unknown) {
   const scope = organizationCollectionPinScopeSchema.parse(untrustedScope);
@@ -86,6 +126,54 @@ export function createOrganizationCollectionsPins(
   const newChangeId = dependencies.newChangeId ?? (() => `organization-change:${crypto.randomUUID()}`);
   const newResourceId = dependencies.newResourceId
     ?? ((kind: "collection" | "pin" | "saved_query") => `${kind === "saved_query" ? "query" : kind}:${crypto.randomUUID()}`);
+
+  function authorizeBound(input: {
+    scope: OrganizationCollectionPinScope;
+    operation: "apply" | "revert";
+    idempotencyKey: string;
+    command: OrganizationCommand;
+  }) {
+    if (input.scope.actor.type !== "human") {
+      throw new OrganizationCollectionsPinsAccessError("Collections/Pins writes require an authenticated human session");
+    }
+    const live = repository.getAuthorityState(input.scope.workspaceId);
+    const expectedResources = Object.fromEntries(input.command.intents.flatMap((intent) => {
+      if (intent.mutation !== "update") return [];
+      const revision = live.resourceRevisions[intent.resourceId];
+      return revision === undefined ? [] : [[intent.resourceId, revision]];
+    }));
+    const capability = {
+      id: `first_party:human:${input.scope.actor.id}`,
+      revision: 1,
+      actor: input.scope.actor,
+      scope: { workspaceId: input.scope.workspaceId, accountIds: input.scope.accountIds },
+      operations: ["describe", "query", "apply", "revert"] as const,
+      resourceFamilies: ["collection", "shortcut", "saved_query", "thread", "audit", "change_set"] as const,
+      actionFamilies: ["organization_read", "organization_structure", "organization_thread"] as const,
+    };
+    const decision = authorizeOrganizationOperation({
+      actor: input.scope.actor,
+      capabilitySnapshot: capability,
+      operation: input.operation,
+      scope: capability.scope,
+      command: input.command,
+      expectedRevisions: { workspace: live.workspaceRevision, resources: expectedResources },
+      idempotencyKey: input.idempotencyKey,
+    }, {
+      scope: capability.scope,
+      capability: { snapshot: capability, revokedAt: null },
+      workspaceRevision: live.workspaceRevision,
+      resourceRevisions: live.resourceRevisions,
+      reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+    });
+    if (!decision.allowed) {
+      if (decision.code === "revision_conflict" || decision.code === "duplicate_idempotency_key") {
+        throw new OrganizationCollectionsPinsConflictError(decision.reason);
+      }
+      throw new OrganizationCollectionsPinsAccessError(decision.reason);
+    }
+    return { executionContext: decision.executionContext, trace: decision.trace, command: input.command };
+  }
 
   function queryAuthorized(scope: OrganizationCollectionPinScope, query: OrganizationCollectionPinQuery) {
     const accountIds = authorizeQueryAccounts(scope.accountIds, query);
@@ -115,16 +203,63 @@ export function createOrganizationCollectionsPins(
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinApplyRequestSchema.parse(input.request);
       if (!scope.accountIds.includes(request.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
-      const trustedResourceId = request.change.action === "create" && (
+      const trustedResourceIds = request.change.action === "create" && (
         request.change.kind === "collection" || request.change.kind === "pin" || request.change.kind === "saved_query"
-      ) ? newResourceId(request.change.kind) : null;
-      const change = repository.apply({ scope, request, changeId: newChangeId(), trustedResourceId, now: now() });
+      ) ? {
+          primary: newResourceId(request.change.kind),
+          savedQuery: request.change.kind === "pin" && request.change.pin.target.type === "new_query"
+            ? newResourceId("saved_query")
+            : null,
+        } : null;
+      const changeId = newChangeId();
+      const digest = changeDigest(request.change);
+      const primaryId = request.change.kind === "collection_membership"
+        ? request.change.collectionId
+        : request.change.action === "create"
+          ? trustedResourceIds!.primary
+          : request.change.kind === "collection"
+            ? request.change.collectionId
+            : request.change.kind === "pin"
+              ? request.change.pinId
+              : request.change.queryId;
+      const primaryKind = request.change.kind === "collection_membership" ? "collection" : request.change.kind;
+      const command: OrganizationCommand = {
+        id: changeId,
+        intents: [{
+          kind: intentKind(request.change.kind),
+          resourceId: authorityResourceId(primaryKind, primaryId),
+          mutation: request.change.action === "create" ? "create" : "update",
+          changes: { action: request.change.action, typedChangeDigest: digest },
+        }, ...(request.change.kind === "pin" && request.change.action === "create" && request.change.pin.target.type === "new_query"
+          ? [{
+              kind: "mutate_saved_query" as const,
+              resourceId: authorityResourceId("saved_query", trustedResourceIds!.savedQuery!),
+              mutation: "create" as const,
+              changes: { action: "create", typedChangeDigest: digest },
+            }]
+          : [])],
+      };
+      const authorization = authorizeBound({ scope, operation: "apply", idempotencyKey: request.idempotencyKey, command });
+      const change = repository.apply({ scope, request, changeId, trustedResourceIds, authorization, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
     },
     revert(input: { scope: unknown; request: unknown }): OrganizationCollectionPinMutationResponse {
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinRevertRequestSchema.parse(input.request);
-      const change = repository.revert({ scope, request, changeId: newChangeId(), now: now() });
+      const targets = repository.getRevertAuthorityTargets(scope.workspaceId, request.changeId);
+      if (!targets) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
+      const changeId = newChangeId();
+      const command: OrganizationCommand = {
+        id: changeId,
+        intents: targets.map((target) => ({
+          kind: intentKind(target.changeKind),
+          resourceId: target.resourceId,
+          mutation: target.mutation,
+          changes: { action: "revert", typedChangeDigest: changeDigest(request) },
+        })),
+      };
+      const authorization = authorizeBound({ scope, operation: "revert", idempotencyKey: request.idempotencyKey, command });
+      const change = repository.revert({ scope, request, changeId, authorization, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
     },
     audit(input: { scope: unknown }) {

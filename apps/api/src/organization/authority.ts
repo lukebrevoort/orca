@@ -38,6 +38,8 @@ const commandRequirements = {
   mutate_lane: { resourceFamily: "lane", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_view: { resourceFamily: "view", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_collection: { resourceFamily: "collection", actionFamily: "organization_structure", risk: "medium", mutates: true },
+  mutate_shortcut: { resourceFamily: "shortcut", actionFamily: "organization_structure", risk: "medium", mutates: true },
+  mutate_saved_query: { resourceFamily: "saved_query", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_facet: { resourceFamily: "facet", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_context: { resourceFamily: "context", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_workflow_state: { resourceFamily: "workflow_state", actionFamily: "organization_structure", risk: "medium", mutates: true },

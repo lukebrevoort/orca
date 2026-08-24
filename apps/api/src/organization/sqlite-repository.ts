@@ -24,6 +24,7 @@ import {
 } from "../db/schema.ts";
 import type { OrganizationRepository, OrganizationThreadRecord } from "./module.ts";
 import { createSqliteFacetWorkflowRepository } from "./facet-workflow-sqlite.ts";
+import { createSqliteOrganizationCollectionsPinsRepository } from "./collections-pins/sqlite-repository.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type OverrideRecord = typeof humanClassificationOverrides.$inferSelect;
@@ -143,6 +144,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
   const threadCache = new Map<string, OrganizationThreadRecord[]>();
   const facetWorkflow = createSqliteFacetWorkflowRepository(db);
   return {
+    collectionsPins: createSqliteOrganizationCollectionsPinsRepository(db),
     getFacetWorkflowSnapshot: facetWorkflow.getFacetWorkflowSnapshot,
     getFacetWorkflowAuthorityState: facetWorkflow.getFacetWorkflowAuthorityState,
     readOrganizationSnapshot(workspaceId, accountIds, filter) {

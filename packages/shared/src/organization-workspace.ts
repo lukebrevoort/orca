@@ -16,6 +16,7 @@ import {
   threadWorkflowStateSchema,
   workflowStateDefinitionSchema,
 } from "./organization-facets.ts";
+import { organizationCollectionPinDescribeResponseSchema } from "./organization-collections-pins.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const uniqueStringsSchema = z.array(nonEmptyStringSchema).superRefine((values, context) => {
@@ -89,6 +90,7 @@ export const organizationDescribeResponseSchema = z.object({
   facetDefinitions: z.array(facetDefinitionSchema).optional(),
   workflowStates: z.array(workflowStateDefinitionSchema).optional(),
   facetSupport: organizationFacetSupportSchema.optional(),
+  collectionsPins: organizationCollectionPinDescribeResponseSchema.optional(),
 }).strict();
 export type OrganizationDescribeResponse = z.infer<typeof organizationDescribeResponseSchema>;
 

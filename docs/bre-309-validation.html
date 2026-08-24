@@ -48,7 +48,7 @@
       <div class="flow" aria-label="Implementation flow">
         <span>REST session adapter</span><span>Organization scope gate</span><span>Collections/Pins module</span><span>SQLite transaction + audit</span><span>Pure web view models</span>
       </div>
-      <p>The existing BRE-308 Organization Workspace/module/repository files remain untouched. BRE-309 adds a sibling module with narrow contracts so BRE-310 can evolve Facets and Workflow independently.</p>
+      <p>BRE-309 is stacked on BRE-310 and composes its sibling module through the existing <code>createOrganization</code> repository and authority seam. Retained legacy writers are compatibility adapters over that same service; Facet/Workflow policy remains unchanged.</p>
     </section>
 
     <section>
@@ -59,9 +59,9 @@
           <tr><td>Collection ≠ View</td><td><code>membership.type = explicit_threads</code>; wire contract carries Thread IDs, never a query.</td><td class="pass">PASS</td></tr>
           <tr><td>Pin stability</td><td>Discriminated target is <code>queryId</code> or <code>{ family, id }</code>; serialized UI state is rejected.</td><td class="pass">PASS</td></tr>
           <tr><td>Existing data</td><td><code>0024_organization_collections_pins.sql</code> backfills legacy filter Pins to saved-query IDs while retaining their definition.</td><td class="pass">PASS</td></tr>
-          <tr><td>Audit + undo</td><td>Apply and revert are atomic; audit facts are append-only; revert creates a compensating entry.</td><td class="pass">PASS</td></tr>
+          <tr><td>Audit + undo</td><td>Apply and revert atomically reserve the shared idempotency key, persist BRE-310 authority trace, advance Workspace revision, append audit facts, and reject stale compensation.</td><td class="pass">PASS</td></tr>
           <tr><td>Account isolation</td><td>Scope and query Account IDs are intersected with Workspace ownership; cross-Account membership fails closed.</td><td class="pass">PASS</td></tr>
-          <tr><td>Authority</td><td>Describe reports <code>sendMail:false</code> and <code>deleteProviderMail:false</code>; contracts contain no provider names.</td><td class="pass">PASS</td></tr>
+          <tr><td>Authority</td><td>Primary Organization Describe projects the nested seam; canonical commands bind Collection, shortcut, and saved-query identities while <code>sendMail:false</code> and <code>deleteProviderMail:false</code> remain fixed.</td><td class="pass">PASS</td></tr>
         </tbody>
       </table>
     </section>
@@ -79,7 +79,7 @@
     <section>
       <h2>Existing Orca visual direction</h2>
       <figure><img src="./evidence/bre-309-collections-light.png" alt="Orca light theme with Collections drawer and Saved Pins visible"><figcaption>Headless 1440×900 light-theme evidence. Collections and Saved Pins remain inside the existing Orca system; hover and focus interactions were exercised.</figcaption></figure>
-      <div class="warn"><strong>Cross-ticket visual finding:</strong> the baseline Orca Black drawer rendered Collection titles with insufficient contrast. BRE-326 owns the desktop UI switch, fixed the shared selectors with <code>var(--orca-ink)</code>, and reported zero axe WCAG A/AA violations on its dark organizer. BRE-309 retains the baseline screenshot as evidence and intentionally does not duplicate BRE-326's shared UI changes.</div>
+      <div class="warn"><strong>UI wiring baseline:</strong> BRE-326 PR #136 at <code>bbe05e9911bc881876f0937e21c8255c65f25a16</code> owns the desktop shell and fixed the inherited dark Collection-title contrast with <code>var(--orca-ink)</code>, reporting zero axe WCAG A/AA violations. BRE-309 has zero shell/CSS overlap and exports only a pure view-model adapter for that baseline.</div>
     </section>
 
     <section>
@@ -98,6 +98,6 @@ bun test packages/shared/src/organization-collections-pins.test.ts \
   apps/web/src/collections-pins.test.ts</pre>
     </section>
   </main>
-  <footer>BRE-309 · stacked on <code>luke/bre-308-organization-seam</code> · provider-neutral Organization contracts</footer>
+  <footer>BRE-309 · stacked on <code>luke/bre-310-typed-facets-workflow</code> · provider-neutral Organization contracts</footer>
 </body>
 </html>

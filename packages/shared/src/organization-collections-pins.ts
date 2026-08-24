@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pinFilterSchema, type PinFilter } from "./schemas.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeSchema = z.string().datetime({ offset: false });
@@ -41,6 +42,43 @@ export const organizationSavedQueryDefinitionSchema = z.object({
   }).strict(),
 }).strict();
 export type OrganizationSavedQueryDefinition = z.infer<typeof organizationSavedQueryDefinitionSchema>;
+
+export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unknown): OrganizationSavedQueryDefinition {
+  const legacy = pinFilterSchema.parse(input);
+  const attention = legacy.attention === "notify" || legacy.attention === "focus"
+    ? "focus" as const
+    : legacy.attention === "normal"
+      ? "normal" as const
+      : legacy.mailbox === "focus"
+        ? "focus" as const
+        : legacy.mailbox === "quiet" || legacy.mailbox === "hidden" || legacy.mailbox === "all"
+          ? legacy.mailbox
+          : undefined;
+  return {
+    revision: 1,
+    filters: {
+      ...(attention ? { attention } : {}),
+      ...(legacy.classification ? { classification: legacy.classification } : {}),
+      ...(legacy.person ? { sender: legacy.person } : {}),
+      ...(legacy.query ? { text: legacy.query } : {}),
+    },
+  };
+}
+
+export function legacyPinFilterFromOrganizationSavedQueryDefinition(
+  definition: OrganizationSavedQueryDefinition,
+): PinFilter {
+  const attention = definition.filters.attention;
+  return pinFilterSchema.parse({
+    mailbox: attention === "focus" || attention === "quiet" || attention === "hidden" || attention === "all"
+      ? attention
+      : "inbox",
+    attention: attention === "normal" ? "normal" : "all",
+    ...(definition.filters.classification ? { classification: definition.filters.classification } : {}),
+    person: definition.filters.sender ?? null,
+    query: definition.filters.text ?? "",
+  });
+}
 
 export const organizationSavedQuerySchema = z.object({
   id: nonEmptyStringSchema,
@@ -106,7 +144,23 @@ const collectionChangeSchema = z.discriminatedUnion("action", [
     kind: z.literal("collection"), action: z.literal("create"), accountId: nonEmptyStringSchema,
     collection: z.object({ name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
   }).strict(),
+  z.object({
+    kind: z.literal("collection"), action: z.literal("update"), accountId: nonEmptyStringSchema, collectionId: nonEmptyStringSchema,
+    patch: z.object({
+      name: z.string().trim().min(1).max(80).optional(),
+      color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      position: z.number().int().nonnegative().optional(),
+    }).strict().refine((value) => Object.keys(value).length > 0, "Expected at least one Collection field"),
+  }).strict(),
   z.object({ kind: z.literal("collection"), action: z.literal("remove"), accountId: nonEmptyStringSchema, collectionId: nonEmptyStringSchema }).strict(),
+]);
+const organizationPinCreateTargetSchema = z.union([
+  organizationPinTargetSchema,
+  z.object({
+    type: z.literal("new_query"),
+    name: z.string().trim().min(1).max(120),
+    definition: organizationSavedQueryDefinitionSchema,
+  }).strict(),
 ]);
 const pinChangeSchema = z.discriminatedUnion("action", [
   z.object({
@@ -115,8 +169,17 @@ const pinChangeSchema = z.discriminatedUnion("action", [
       label: z.string().trim().min(1).max(120),
       icon: z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]),
       color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
-      target: organizationPinTargetSchema,
+      target: organizationPinCreateTargetSchema,
     }).strict(),
+  }).strict(),
+  z.object({
+    kind: z.literal("pin"), action: z.literal("update"), accountId: nonEmptyStringSchema, pinId: nonEmptyStringSchema,
+    patch: z.object({
+      label: z.string().trim().min(1).max(120).optional(),
+      icon: z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]).optional(),
+      color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+      position: z.number().int().nonnegative().optional(),
+    }).strict().refine((value) => Object.keys(value).length > 0, "Expected at least one Pin field"),
   }).strict(),
   z.object({ kind: z.literal("pin"), action: z.literal("remove"), accountId: nonEmptyStringSchema, pinId: nonEmptyStringSchema }).strict(),
 ]);

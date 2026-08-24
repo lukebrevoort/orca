@@ -48,6 +48,9 @@ import {
   mailAccountPageSchema,
   mailAccountSchema,
   messageDraftSchema,
+  legacyPinFilterFromOrganizationSavedQueryDefinition,
+  organizationSavedQueryDefinitionFromLegacyPinFilter,
+  organizationSavedQueryDefinitionSchema,
   pinFilterSchema,
   listHumanClassificationOverridesSchema,
   resolveHumanClassificationSchema,
@@ -80,7 +83,7 @@ import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
+import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, organizationSavedQueries, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
@@ -126,6 +129,11 @@ import {
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
+import {
+  OrganizationCollectionsPinsAccessError,
+  OrganizationCollectionsPinsConflictError,
+  OrganizationCollectionsPinsNotFoundError,
+} from "./organization/collections-pins/module.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -205,14 +213,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   const app = new Hono<{ Variables: AuthVariables }>();
 
-  registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
-
   app.use(
     "*",
     cors({
       origin: [serverConfig.webOrigin],
     }),
   );
+
+  registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
 
   const mcpPolicy = options.mcpBoundaryPolicy ?? getOrcaAgentBoundaryPolicy(options.mcpEnv);
   const mcpOAuthConfig = options.mcpOAuthConfig ?? getMcpOAuthConfig(options.mcpEnv ?? process.env);
@@ -400,6 +408,32 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         accountIds,
       },
     };
+  }
+
+  function collectionsPinsFor(db: Database, workspaceId: string) {
+    const { organization, scope } = organizationFor(db, workspaceId);
+    if (!organization.collectionsPins) throw new Error("Collections/Pins Organization composition is unavailable");
+    return { organization: organization.collectionsPins, scope };
+  }
+
+  function legacyOrganizationIdempotencyKey(c: Context) {
+    return c.req.header("Idempotency-Key")?.trim() || `legacy-collections-pins:${crypto.randomUUID()}`;
+  }
+
+  function legacyOrganizationError(c: Context, error: unknown, conflictMessage: string) {
+    if (error instanceof OrganizationCollectionsPinsAccessError) {
+      return c.json({ error: { code: error.code, message: "The requested Account scope is not authorized" } }, 403);
+    }
+    if (error instanceof OrganizationCollectionsPinsNotFoundError) {
+      return c.json({ error: { code: error.code, message: error.message } }, 404);
+    }
+    if (error instanceof OrganizationCollectionsPinsConflictError) {
+      return c.json({ error: { code: error.code, message: conflictMessage } }, 409);
+    }
+    if (error instanceof Error && error.name === "ZodError") {
+      return c.json({ error: { code: "validation_error", message: "Invalid Collections/Pins change" } }, 400);
+    }
+    throw error;
   }
 
   app.get("/v1/organization/describe", requireAuth({ dbFactory }), (c) => {
@@ -1213,12 +1247,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
-        const name = input.name.trim();
-        const id = `collection:${crypto.randomUUID()}`;
-        db.insert(collections).values({ id, accountId: account.id, name, color: input.color ?? "#70867d", position: listCollectionRecords(db, account.id).length }).run();
+        const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+        const result = organization.apply({
+          scope,
+          request: {
+            idempotencyKey: legacyOrganizationIdempotencyKey(c),
+            change: {
+              kind: "collection",
+              action: "create",
+              accountId: account.id,
+              collection: { name: input.name.trim(), color: input.color ?? "#70867d" },
+            },
+          },
+        });
+        const id = result.change.resourceId;
         return c.json(collectionSchema.parse(listCollections(db, account.id).find((item) => item.id === id)!), 201);
       } catch (error) {
-        return organizationConflict(c, error, "A collection with that name already exists");
+        return legacyOrganizationError(c, error, "A collection with that name already exists");
       } finally {
         sqlite.close();
       }
@@ -1236,10 +1281,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return noConnectedAccount(c);
         const current = getCollection(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
-        updateCollectionRecord(db, account.id, current, c.req.valid("json"));
+        const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+        organization.apply({
+          scope,
+          request: {
+            idempotencyKey: legacyOrganizationIdempotencyKey(c),
+            change: {
+              kind: "collection",
+              action: "update",
+              accountId: account.id,
+              collectionId: current.id,
+              patch: c.req.valid("json"),
+            },
+          },
+        });
         return jsonWithSchema(c, collectionSchema, listCollections(db, account.id).find((item) => item.id === current.id)!);
       } catch (error) {
-        return organizationConflict(c, error, "A collection with that name already exists");
+        return legacyOrganizationError(c, error, "A collection with that name already exists");
       } finally {
         sqlite.close();
       }
@@ -1253,13 +1311,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const current = getCollection(db, account.id, c.req.param("id"));
       if (!current) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
-      db.transaction((tx) => {
-        tx.delete(collections).where(eq(collections.id, current.id)).run();
-        for (const item of tx.select().from(collections).where(eq(collections.accountId, account.id)).orderBy(asc(collections.position)).all()) {
-          if (item.position > current.position) tx.update(collections).set({ position: item.position - 1 }).where(eq(collections.id, item.id)).run();
-        }
+      const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+      organization.apply({
+        scope,
+        request: {
+          idempotencyKey: legacyOrganizationIdempotencyKey(c),
+          change: { kind: "collection", action: "remove", accountId: account.id, collectionId: current.id },
+        },
       });
       return c.body(null, 204);
+    } catch (error) {
+      return legacyOrganizationError(c, error, "Collection state changed; refresh and try again");
     } finally {
       sqlite.close();
     }
@@ -1273,8 +1335,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const collection = getCollection(db, account.id, c.req.param("id"));
       const thread = db.select().from(threads).where(and(eq(threads.accountId, account.id), eq(threads.id, c.req.param("threadId")))).get();
       if (!collection || !thread) return c.json({ error: { code: "not_found", message: "Collection or thread not found" } }, 404);
-      db.insert(collectionThreads).values({ id: `collection-thread:${crypto.randomUUID()}`, collectionId: collection.id, threadId: thread.id }).onConflictDoNothing().run();
+      const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+      organization.apply({
+        scope,
+        request: {
+          idempotencyKey: legacyOrganizationIdempotencyKey(c),
+          change: { kind: "collection_membership", action: "add", accountId: account.id, collectionId: collection.id, threadId: thread.id },
+        },
+      });
       return jsonWithSchema(c, collectionSchema, listCollections(db, account.id).find((item) => item.id === collection.id)!);
+    } catch (error) {
+      return legacyOrganizationError(c, error, "Collection membership changed; refresh and try again");
     } finally {
       sqlite.close();
     }
@@ -1287,8 +1358,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const collection = getCollection(db, account.id, c.req.param("id"));
       if (!collection) return c.json({ error: { code: "not_found", message: "Collection not found" } }, 404);
-      db.delete(collectionThreads).where(and(eq(collectionThreads.collectionId, collection.id), eq(collectionThreads.threadId, c.req.param("threadId")))).run();
+      const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+      organization.apply({
+        scope,
+        request: {
+          idempotencyKey: legacyOrganizationIdempotencyKey(c),
+          change: {
+            kind: "collection_membership",
+            action: "remove",
+            accountId: account.id,
+            collectionId: collection.id,
+            threadId: c.req.param("threadId"),
+          },
+        },
+      });
       return c.body(null, 204);
+    } catch (error) {
+      return legacyOrganizationError(c, error, "Collection membership changed; refresh and try again");
     } finally {
       sqlite.close();
     }
@@ -1299,7 +1385,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
       if (!account) return noConnectedAccount(c);
-      return c.json(listPins(db, account.id).map(toPin));
+      return c.json(listPins(db, account.id).map((pin) => toPin(db, pin)));
     } finally {
       sqlite.close();
     }
@@ -1315,22 +1401,39 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
-        validatePinTarget(db, account.id, input.kind, input.targetId);
-        const id = `pin:${crypto.randomUUID()}`;
-        db.insert(pins).values({
-          id,
-          accountId: account.id,
-          kind: input.kind,
-          targetId: input.targetId.trim(),
-          label: input.label.trim(),
-          icon: input.icon ?? defaultPinIcon(input.kind),
-          color: input.color ?? "#70867d",
-          position: listPins(db, account.id).length,
-        }).run();
-        return c.json(pinSchema.parse(toPin(db.select().from(pins).where(eq(pins.id, id)).get()!)), 201);
+        const target = input.kind === "filter"
+          ? {
+              type: "new_query" as const,
+              name: input.label.trim(),
+              definition: organizationSavedQueryDefinitionFromLegacyPinFilter(JSON.parse(input.targetId)),
+            }
+          : {
+              type: "resource" as const,
+              resource: { family: input.kind, id: input.targetId.trim() },
+            };
+        const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+        const result = organization.apply({
+          scope,
+          request: {
+            idempotencyKey: legacyOrganizationIdempotencyKey(c),
+            change: {
+              kind: "pin",
+              action: "create",
+              accountId: account.id,
+              pin: {
+                label: input.label.trim(),
+                icon: input.icon ?? defaultPinIcon(input.kind),
+                color: input.color ?? "#70867d",
+                target,
+              },
+            },
+          },
+        });
+        const created = db.select().from(pins).where(eq(pins.id, result.change.resourceId)).get()!;
+        return c.json(pinSchema.parse(toPin(db, created)), 201);
       } catch (error) {
-        if (error instanceof OrganizationTargetError) return c.json({ error: { code: "validation_error", message: error.message } }, 400);
-        return organizationConflict(c, error, "That item is already pinned");
+        if (error instanceof SyntaxError) return c.json({ error: { code: "validation_error", message: "Filter pins must contain a valid filter definition" } }, 400);
+        return legacyOrganizationError(c, error, "That item is already pinned");
       } finally {
         sqlite.close();
       }
@@ -1348,14 +1451,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return noConnectedAccount(c);
         const current = getPin(db, account.id, c.req.param("id"));
         if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-        if (!updatePinRecord(db, account.id, current, c.req.valid("json"))) {
-          return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-        }
+        const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+        organization.apply({
+          scope,
+          request: {
+            idempotencyKey: legacyOrganizationIdempotencyKey(c),
+            change: { kind: "pin", action: "update", accountId: account.id, pinId: current.id, patch: c.req.valid("json") },
+          },
+        });
         const updatedPin = getPin(db, account.id, current.id);
         if (!updatedPin) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-        return jsonWithSchema(c, pinSchema, toPin(updatedPin));
+        return jsonWithSchema(c, pinSchema, toPin(db, updatedPin));
       } catch (error) {
-        return organizationConflict(c, error, "That pin order changed. Try moving it again.");
+        return legacyOrganizationError(c, error, "That pin order changed. Try moving it again.");
       } finally {
         sqlite.close();
       }
@@ -1369,13 +1477,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!account) return noConnectedAccount(c);
       const current = getPin(db, account.id, c.req.param("id"));
       if (!current) return c.json({ error: { code: "not_found", message: "Pin not found" } }, 404);
-      db.transaction((tx) => {
-        tx.delete(pins).where(eq(pins.id, current.id)).run();
-        for (const item of tx.select().from(pins).where(eq(pins.accountId, account.id)).orderBy(asc(pins.position)).all()) {
-          if (item.position > current.position) tx.update(pins).set({ position: item.position - 1 }).where(eq(pins.id, item.id)).run();
-        }
+      const { organization, scope } = collectionsPinsFor(db, c.get("auth").userId);
+      organization.apply({
+        scope,
+        request: {
+          idempotencyKey: legacyOrganizationIdempotencyKey(c),
+          change: { kind: "pin", action: "remove", accountId: account.id, pinId: current.id },
+        },
       });
       return c.body(null, 204);
+    } catch (error) {
+      return legacyOrganizationError(c, error, "Pin state changed; refresh and try again");
     } finally {
       sqlite.close();
     }
@@ -3029,9 +3141,20 @@ function getPin(db: Database, accountId: string, id: string) {
   return db.select().from(pins).where(and(eq(pins.accountId, accountId), eq(pins.id, id))).get();
 }
 
-function toPin(pin: PinRecord) {
+function toPin(db: Database, pin: PinRecord) {
+  let targetId = pin.targetId;
+  if ((pin.targetType === "query" || pin.savedQueryId) && pin.savedQueryId) {
+    const savedQuery = db.select().from(organizationSavedQueries).where(and(
+      eq(organizationSavedQueries.accountId, pin.accountId),
+      eq(organizationSavedQueries.id, pin.savedQueryId),
+    )).get();
+    if (savedQuery) {
+      const definition = organizationSavedQueryDefinitionSchema.parse(JSON.parse(savedQuery.definitionJson));
+      targetId = JSON.stringify(legacyPinFilterFromOrganizationSavedQueryDefinition(definition));
+    }
+  }
   return pinSchema.parse({
-    id: pin.id, accountId: pin.accountId, kind: pin.kind, targetId: pin.targetId, label: pin.label,
+    id: pin.id, accountId: pin.accountId, kind: pin.kind, targetId, label: pin.label,
     icon: pin.icon, color: pin.color,
     position: pin.position, createdAt: pin.createdAt.toISOString(), updatedAt: pin.updatedAt.toISOString(),
   });

@@ -4,10 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { collections, oauthAccounts, threads, users } from "../../db/schema.ts";
+import { collections, oauthAccounts, organizationChangeSets, organizationWorkspaceStates, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 
 const tempDirectories: string[] = [];
@@ -51,6 +52,26 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       const privateSession = await createSession(db, "workspace_private");
       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
       const app = createApp({ dbFactory: () => createDatabaseClient(databasePath) });
+
+      const corsQuery = await app.request("/v1/organization/collections-pins/query", {
+        headers: { ...headers, origin: "http://localhost:5173" },
+      });
+      assert.equal(corsQuery.headers.get("access-control-allow-origin"), "http://localhost:5173");
+      const preflight = await app.request("/v1/organization/collections-pins/apply", {
+        method: "OPTIONS",
+        headers: { origin: "http://localhost:5173", "access-control-request-method": "POST" },
+      });
+      assert.equal(preflight.status, 204);
+      assert.equal(preflight.headers.get("access-control-allow-origin"), "http://localhost:5173");
+
+      const primaryDescribe = await app.request("/v1/organization/describe", { headers });
+      assert.equal(primaryDescribe.status, 200);
+      const primaryDescription = await primaryDescribe.json();
+      assert.equal(primaryDescription.workspaceSchema.revision, 2);
+      assert.deepEqual(primaryDescription.collectionsPins?.semantics, {
+        collections: "explicit_thread_membership",
+        pins: "stable_shortcut_identity",
+      });
 
       const describe = await app.request("/v1/organization/collections-pins/describe", { headers });
       assert.equal(describe.status, 200);
@@ -117,6 +138,65 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       const publicError = JSON.stringify(await duplicateName.json());
       assert.equal(publicError.includes("UNIQUE"), false);
       assert.equal(publicError.includes("organization_saved_queries"), false);
+      const auditBeforeLegacy = await app.request("/v1/organization/collections-pins/audit", { headers });
+      const auditBeforeLegacyCount = (await auditBeforeLegacy.json()).changes.length;
+
+      const legacyCollectionResponse = await app.request("/v1/collections", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ name: "Legacy bridge", color: "#70867d" }),
+      });
+      assert.equal(legacyCollectionResponse.status, 201);
+      const legacyCollection = await legacyCollectionResponse.json();
+      assert.equal((await app.request(`/v1/collections/${legacyCollection.id}/threads/thread_a`, { method: "PUT", headers })).status, 200);
+      const renamedCollection = await app.request(`/v1/collections/${legacyCollection.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ name: "Legacy bridge renamed" }),
+      });
+      assert.equal(renamedCollection.status, 200);
+
+      const legacyFilter = JSON.stringify({
+        mailbox: "focus", attention: "all", classification: "human", person: null, query: "launch",
+      });
+      const legacyPinResponse = await app.request("/v1/pins", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ kind: "filter", targetId: legacyFilter, label: "Legacy focus", icon: "search", color: "#70867d" }),
+      });
+      assert.equal(legacyPinResponse.status, 201);
+      const legacyPin = await legacyPinResponse.json();
+      const renamedPin = await app.request(`/v1/pins/${legacyPin.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ label: "Legacy focus renamed" }),
+      });
+      assert.equal(renamedPin.status, 200);
+
+      const coexistence = await app.request("/v1/organization/collections-pins/query?accountId=account_a", { headers });
+      assert.equal(coexistence.status, 200);
+      const coexistenceState = await coexistence.json();
+      assert.deepEqual(coexistenceState.collections.find((item: { id: string }) => item.id === legacyCollection.id)?.threadIds, ["thread_a"]);
+      const stablePin = coexistenceState.pins.find((item: { id: string }) => item.id === legacyPin.id);
+      assert.equal(stablePin.target.type, "query");
+      assert.equal(coexistenceState.queries.find((item: { id: string }) => item.id === stablePin.target.queryId)?.definition.filters.attention, "focus");
+      const compatibilityPins = await app.request("/v1/pins", { headers });
+      const compatibilityPin = (await compatibilityPins.json()).find((item: { id: string }) => item.id === legacyPin.id);
+      assert.deepEqual(JSON.parse(compatibilityPin.targetId), JSON.parse(legacyFilter));
+
+      assert.equal((await app.request(`/v1/collections/${legacyCollection.id}/threads/thread_a`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await app.request(`/v1/pins/${legacyPin.id}`, { method: "DELETE", headers })).status, 204);
+      assert.equal((await app.request(`/v1/collections/${legacyCollection.id}`, { method: "DELETE", headers })).status, 204);
+      const coexistenceAudit = await app.request("/v1/organization/collections-pins/audit", { headers });
+      const coexistenceChanges = (await coexistenceAudit.json()).changes;
+      assert.equal(coexistenceChanges.length - auditBeforeLegacyCount, 8);
+      const authorityRecords = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, "workspace_owner")).all();
+      assert.equal(authorityRecords.length, coexistenceChanges.length);
+      const requestedFamilies = authorityRecords.flatMap((record) => {
+        const trace = JSON.parse(record.authorityTrace) as { requestedResourceFamilies: string[] };
+        return trace.requestedResourceFamilies;
+      });
+      assert.equal(requestedFamilies.includes("collection"), true);
+      assert.equal(requestedFamilies.includes("shortcut"), true);
+      assert.equal(requestedFamilies.includes("saved_query"), true);
+      assert.equal(requestedFamilies.includes("mail"), false);
+      assert.equal(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace_owner")).get()?.revision, 1 + coexistenceChanges.filter((item: { workspaceId: string }) => item.workspaceId === "workspace_owner").length);
     } finally {
       sqlite.close();
     }

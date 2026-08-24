@@ -144,14 +144,13 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
       assert.equal(applied.change.changeKind, "collection_membership");
       assert.deepEqual(applied.state.collections.find((item) => item.id === "collection_b")?.threadIds, ["thread_b"]);
 
-      const duplicate = organization.apply({
+      assert.throws(() => organization.apply({
         scope,
         request: {
           idempotencyKey: "membership-add-b",
           change: { kind: "collection_membership", action: "add", accountId: "account_b", collectionId: "collection_b", threadId: "thread_b" },
         },
-      });
-      assert.equal(duplicate.change.id, applied.change.id);
+      }), (error) => error instanceof OrganizationCollectionsPinsConflictError);
 
       const reverted = organization.revert({
         scope,
@@ -210,6 +209,66 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
       assert.deepEqual(removed.state.pins, []);
       const restored = organization.revert({ scope, request: { idempotencyKey: "pin-restore", changeId: removed.change.id } });
       assert.equal(restored.state.pins[0]?.id, created.change.resourceId);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("atomically creates and reverts a stable query identity with its shortcut", () => {
+    const { organization, scope, sqlite } = fixture();
+    try {
+      const created = organization.apply({
+        scope,
+        request: {
+          idempotencyKey: "atomic-query-pin",
+          change: {
+            kind: "pin",
+            action: "create",
+            accountId: "account_a",
+            pin: {
+              label: "Launch",
+              icon: "search",
+              color: "#70867d",
+              target: { type: "new_query", name: "Launch", definition: { revision: 1, filters: { text: "launch" } } },
+            },
+          },
+        },
+      });
+      assert.equal(created.state.pins[0]?.target.type, "query");
+      assert.equal(created.state.queries.length, 1);
+      const reverted = organization.revert({ scope, request: { idempotencyKey: "atomic-query-pin-revert", changeId: created.change.id } });
+      assert.deepEqual(reverted.state.pins, []);
+      assert.deepEqual(reverted.state.queries, []);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("audits and reverts Collection and Pin metadata updates", () => {
+    const { organization, scope, db, sqlite } = fixture();
+    try {
+      const collectionUpdate = organization.apply({
+        scope,
+        request: {
+          idempotencyKey: "collection-update",
+          change: { kind: "collection", action: "update", accountId: "account_a", collectionId: "collection_a", patch: { name: "Updated" } },
+        },
+      });
+      assert.equal(collectionUpdate.state.collections.find((item) => item.id === "collection_a")?.name, "Updated");
+      const collectionRevert = organization.revert({ scope, request: { idempotencyKey: "collection-update-revert", changeId: collectionUpdate.change.id } });
+      assert.equal(collectionRevert.state.collections.find((item) => item.id === "collection_a")?.name, "Account A");
+
+      db.insert(pins).values({
+        id: "pin_update", accountId: "account_a", kind: "thread", targetId: "thread_a", targetType: "resource", resourceFamily: "thread",
+        label: "Before", icon: "thread", color: "#70867d", position: 0,
+      }).run();
+      const pinUpdate = organization.apply({
+        scope,
+        request: { idempotencyKey: "pin-update", change: { kind: "pin", action: "update", accountId: "account_a", pinId: "pin_update", patch: { label: "After" } } },
+      });
+      assert.equal(pinUpdate.state.pins[0]?.label, "After");
+      const pinRevert = organization.revert({ scope, request: { idempotencyKey: "pin-update-revert", changeId: pinUpdate.change.id } });
+      assert.equal(pinRevert.state.pins[0]?.label, "Before");
     } finally {
       sqlite.close();
     }

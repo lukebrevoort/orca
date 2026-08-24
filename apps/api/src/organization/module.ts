@@ -25,6 +25,10 @@ import {
 } from "@orca/shared";
 import { authorizeOrganizationOperation } from "./authority.ts";
 import { digestFacetWorkflowActions, validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
+import {
+  createOrganizationCollectionsPins,
+  type OrganizationCollectionsPinsRepository,
+} from "./collections-pins/module.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -72,6 +76,7 @@ export type OrganizationRepository = {
     command: OrganizationCommand;
     actions: readonly OrganizationFacetWorkflowAction[];
   }): FacetWorkflowSnapshot;
+  collectionsPins?: OrganizationCollectionsPinsRepository;
 };
 
 export class OrganizationAuthorityError extends Error {
@@ -310,6 +315,7 @@ export function createOrganization(repository: OrganizationRepository) {
     workflowStates: [],
     threads: [],
   };
+  const collectionsPins = repository.collectionsPins ? createOrganizationCollectionsPins(repository.collectionsPins) : null;
 
   return {
     describe(input: { scope: unknown }): OrganizationDescribeResponse {
@@ -324,6 +330,7 @@ export function createOrganization(repository: OrganizationRepository) {
         facetDefinitions: facetWorkflow.facetDefinitions,
         workflowStates: facetWorkflow.workflowStates,
         facetSupport,
+        ...(collectionsPins ? { collectionsPins: collectionsPins.describe({ scope }) } : {}),
       });
     },
 
@@ -482,5 +489,6 @@ export function createOrganization(repository: OrganizationRepository) {
     revert(_input: { scope: unknown }): never {
       throw new OrganizationOperationDisabledError("revert");
     },
+    collectionsPins,
   };
 }
