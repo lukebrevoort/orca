@@ -520,7 +520,7 @@ describe("Context Organization module", () => {
     }
   });
 
-  test("rejects a fully rebound authorization envelope for an Account not owned by the live Workspace", () => {
+  test("rejects a fully rebound authorization envelope for another authenticated Workspace", () => {
     const { scope, db, sqlite } = setup();
     try {
       const baseRepository = createSqliteOrganizationRepository(db);
@@ -530,7 +530,11 @@ describe("Context Organization module", () => {
         contexts: {
           ...baseContexts,
           apply(input: Parameters<typeof baseContexts.apply>[0]) {
-            const forgedScope = { ...input.scope, accountIds: ["account_private"] };
+            const forgedScope = {
+              actor: { id: "workspace_private", type: "human" as const },
+              workspaceId: "workspace_private",
+              accountIds: ["account_private"],
+            };
             const capability = organizationContextsCapability(forgedScope);
             const decision = authorizeOrganizationOperation({
               actor: forgedScope.actor,
@@ -566,7 +570,7 @@ describe("Context Organization module", () => {
       assert.throws(() => createOrganization(tamperingRepository).contexts!.apply({ scope, request: {
         idempotencyKey: "fully-rebound-private-account", expectedWorkspaceRevision: 1,
         actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
-      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "account_denied");
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /request envelope/.test(error.message));
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);

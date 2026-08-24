@@ -35,10 +35,11 @@ export type OrganizationContextAllocatedIds = Array<string | null>;
 export type OrganizationContextsRepository = {
   listAccountIds(workspaceId: string): string[];
   getSnapshot(workspaceId: string): OrganizationContextSnapshot;
-  getAuthorityState(workspaceId: string): {
+  getAuthorityState(scope: OrganizationContextScope): {
     workspaceRevision: number;
     resourceRevisions: Record<string, number>;
     reservedIdempotencyKeys: string[];
+    authorizationAnchor: string;
   };
   getIdempotentChange(workspaceId: string, idempotencyKey: string): {
     request: OrganizationContextApplyRequest | { revert: OrganizationContextRevertRequest };
@@ -49,14 +50,14 @@ export type OrganizationContextsRepository = {
     request: OrganizationContextApplyRequest;
     allocatedIds: OrganizationContextAllocatedIds;
     changeId: string;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; authorizationAnchor: string; command: OrganizationCommand };
     now: Date;
   }): { snapshot: OrganizationContextSnapshot; change: OrganizationContextChangeSummary };
   revert(input: {
     scope: OrganizationContextScope;
     request: OrganizationContextRevertRequest;
     changeId: string;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; authorizationEnvelopeDigest: string; authorizationAnchor: string; command: OrganizationCommand };
     now: Date;
   }): { snapshot: OrganizationContextSnapshot; change: OrganizationContextChangeSummary };
   audit(workspaceId: string): OrganizationContextChangeSummary[];
@@ -389,7 +390,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
 
   function authorizeBound(scope: OrganizationContextScope, operation: "apply" | "revert", idempotencyKey: string, command: OrganizationCommand, expectedWorkspaceRevision: number) {
     if (scope.actor.type !== "human") throw new OrganizationContextsAccessError("Context writes require an authenticated human session");
-    const live = repository.getAuthorityState(scope.workspaceId);
+    const live = repository.getAuthorityState(scope);
     const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => intent.mutation === "update" && live.resourceRevisions[intent.resourceId] !== undefined ? [[intent.resourceId, live.resourceRevisions[intent.resourceId]!]] : []));
     const capability = organizationContextsCapability(scope);
     const decision = authorizeOrganizationOperation({ actor: scope.actor, capabilitySnapshot: capability, operation, scope: capability.scope, command, expectedRevisions: { workspace: expectedWorkspaceRevision, resources: expectedResources }, idempotencyKey }, { scope: capability.scope, capability: { snapshot: capability, revokedAt: null }, workspaceRevision: live.workspaceRevision, resourceRevisions: live.resourceRevisions, reservedIdempotencyKeys: live.reservedIdempotencyKeys });
@@ -397,7 +398,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
       if (decision.code === "revision_conflict" || decision.code === "duplicate_idempotency_key") throw new OrganizationContextsConflictError(decision.reason);
       throw new OrganizationContextsAccessError(decision.reason);
     }
-    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command };
+    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, authorizationAnchor: live.authorizationAnchor, command };
   }
 
   return {

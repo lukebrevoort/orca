@@ -220,6 +220,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
   changeId: string;
   operation: "apply" | "revert";
   authorizationEnvelopeDigest: string;
+  anchoredScope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"];
 }): {
   workspaceId: string;
   expectedWorkspaceRevision: number;
@@ -249,6 +250,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
   const suppliedEnvelope = envelopeResult.data;
   const suppliedDigest = digestOrganizationAuthorizationEnvelope(suppliedEnvelope);
   if (suppliedDigest !== input.authorizationEnvelopeDigest
+    || canonicalOrganizationJson(scope) !== canonicalOrganizationJson(input.anchoredScope)
     || suppliedEnvelope.executionContext.operation !== input.operation
     || suppliedEnvelope.trace.operation !== input.operation
     || request.expectedWorkspaceRevision !== suppliedEnvelope.executionContext.expectedRevisions.workspace
@@ -513,14 +515,48 @@ function causalCompensation(current: OrganizationContextSnapshot, evidence: read
 }
 
 export function createSqliteOrganizationContextsRepository(db: Database): OrganizationContextsRepository {
+  const authorizationAnchors = new Map<string, {
+    scope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"];
+    expiresAt: number;
+  }>();
+
+  function issueAuthorizationAnchor(scope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"]): string {
+    const now = Date.now();
+    for (const [token, anchor] of authorizationAnchors) if (anchor.expiresAt <= now) authorizationAnchors.delete(token);
+    const token = crypto.randomUUID();
+    authorizationAnchors.set(token, { scope: structuredClone(scope), expiresAt: now + 60_000 });
+    return token;
+  }
+
+  function consumeAuthorizationAnchor(token: string): Parameters<OrganizationContextsRepository["apply"]>[0]["scope"] {
+    const anchor = authorizationAnchors.get(token);
+    authorizationAnchors.delete(token);
+    if (!anchor || anchor.expiresAt <= Date.now()) {
+      throw new OrganizationAuthorityError("invalid_request", "The authenticated Context authorization anchor is missing or expired");
+    }
+    return anchor.scope;
+  }
+
   return {
     listAccountIds(workspaceId) {
       return db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, workspaceId)).orderBy(asc(oauthAccounts.createdAt), asc(oauthAccounts.id)).all().map((row) => row.id);
     },
     getSnapshot(workspaceId) { return loadSnapshot(db, workspaceId); },
-    getAuthorityState(workspaceId) {
-      const snapshot = loadSnapshot(db, workspaceId);
-      return { workspaceRevision: snapshot.workspaceRevision, resourceRevisions: organizationContextResourceRevisions(snapshot), reservedIdempotencyKeys: db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, workspaceId)).all().map((row) => row.key) };
+    getAuthorityState(untrustedScope) {
+      const scope = organizationContextScopeSchema.parse(untrustedScope);
+      const snapshot = loadSnapshot(db, scope.workspaceId);
+      const liveAccountIds = new Set(snapshot.accountIds);
+      if (scope.actor.type !== "human"
+        || scope.actor.id !== scope.workspaceId
+        || scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
+        throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+      }
+      return {
+        workspaceRevision: snapshot.workspaceRevision,
+        resourceRevisions: organizationContextResourceRevisions(snapshot),
+        reservedIdempotencyKeys: db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, scope.workspaceId)).all().map((row) => row.key),
+        authorizationAnchor: issueAuthorizationAnchor(scope),
+      };
     },
     getIdempotentChange(workspaceId, idempotencyKey) {
       const row = db.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get();
@@ -530,9 +566,10 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
       return request ? { request, change: summary(db, row) } : null;
     },
     apply(input) {
+      const anchoredScope = consumeAuthorizationAnchor(input.authorization.authorizationAnchor);
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredScope, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
         const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
         const request = organizationContextApplyRequestSchema.parse(authorized.request);
         assertBoundCommand({ command, executionContext, actions: request.actions, allocatedIds: input.allocatedIds });
@@ -549,9 +586,10 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
       });
     },
     revert(input) {
+      const anchoredScope = consumeAuthorizationAnchor(input.authorization.authorizationAnchor);
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredScope, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
         const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
         const request = organizationContextRevertRequestSchema.parse(authorized.request);
         assertBoundCommand({ command, executionContext });
