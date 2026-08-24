@@ -142,3 +142,7 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Multi-context: root `CONTEXT-MAP.md` pointing at per-context `CONTEXT.md` files. See `docs/agents/domain.md`.
+
+### Desktop UI switch
+
+When implementing or reviewing BRE-321 desktop navigation, themes, workflow spaces, mail surfaces, Organization integration, Settings, operational states, or migration coverage, read `docs/ixd/bre-321-ui-switch-spec.html` before changing the UI.

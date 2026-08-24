@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-321 desktop redesign handoff</title>
+  <style>
+    :root { color-scheme: light; font-family: Sora, ui-sans-serif, system-ui, sans-serif; background: #f7faf8; color: #0f2422; }
+    body { margin: 0; padding: 48px; }
+    main { max-width: 980px; margin: 0 auto; }
+    h1 { font-size: 36px; letter-spacing: -.03em; margin: 10px 0 12px; }
+    h2 { font-size: 18px; margin: 32px 0 12px; }
+    p, li { color: #5f7470; line-height: 1.65; }
+    a { color: #0e9f8a; }
+    .eyebrow { color: #0e9f8a; font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+    .status { border: 1px solid #e2ece8; border-left: 4px solid #0e9f8a; border-radius: 12px; background: #fff; padding: 18px 20px; }
+    .primary { display: inline-block; margin-top: 10px; padding: 11px 14px; border-radius: 10px; background: #0e9f8a; color: #fff; font-weight: 700; text-decoration: none; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    section { border-top: 1px solid #e2ece8; }
+    code { color: #0f2422; }
+    @media (max-width: 720px) { body { padding: 24px; } .columns { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">BRE-321 · PAPER REDESIGN · 2026-08-23</div>
+    <h1>Programmable attention desktop</h1>
+    <div class="status">
+      <strong>Static HTML atlas completed.</strong>
+      <p>The Paper direction is now carried through every remaining desktop surface in a single reviewable artifact. It is intentionally static: the work here is screen hierarchy, alignment, themes, and recovery states.</p>
+      <a class="primary" href="./bre-321-desktop-screen-atlas.html">Open the complete desktop atlas</a>
+    </div>
+
+    <section>
+      <h2>Completed across Paper and HTML</h2>
+      <ul>
+        <li>Principles, state legend, accessibility floor, and current production surface inventory.</li>
+        <li>Application shell in light and dark themes, plus 1024px spaces-management overlay behavior.</li>
+        <li>Stable anchors versus reorderable, renameable, hideable, restorable, user-created workflow spaces.</li>
+        <li>Custom workflow-space loaded state with live-query explanation and manual-placement rules.</li>
+        <li>Search and All Mail results, filtering, saved context, no-results recovery, and safe return.</li>
+        <li>Reader, preserved list position, inline reply, contextual evidence, and Human Signal demoted to evidence.</li>
+        <li>Composer, send failure, retry, discard protection, and return-to-list success.</li>
+        <li>Draft list, cross-device conflict comparison, version preservation, and deletion language.</li>
+        <li>Approved Organization Glass Box, Tide Table, simulation, Trace/Audit, and compensating revert.</li>
+        <li>Settings, account repair, onboarding, provider labels, and permission recovery.</li>
+        <li>Zen writing, interruption recovery, offline continuity, shared state matrix, and six connected journeys.</li>
+      </ul>
+    </section>
+
+    <section class="columns">
+      <div>
+        <h2>Review order</h2>
+        <ol>
+          <li>Start with P00 and the three P01 shell frames.</li>
+          <li>Check repeated message-row alignment in P02–P07.</li>
+          <li>Confirm P08 preserves the approved BRE-307 Organization model.</li>
+          <li>Walk P09–P11 for permission, offline, conflict, and send recovery.</li>
+          <li>Use P12 to test continuity across the six core journeys.</li>
+        </ol>
+      </div>
+      <div>
+        <h2>Authority</h2>
+        <p><a href="https://linear.app/brevoort/issue/BRE-321/redesign-every-remaining-orca-desktop-screen-around-the-new">BRE-321</a></p>
+        <p><a href="https://app.paper.design/file/01KZD8K8HMZMZ9VM936X4P06C4/2-0">Paper canvas: BRE-321 Desktop Redesign</a></p>
+        <p><a href="./bre-321-ui-switch-spec.html">Comprehensive implementation specification</a></p>
+        <p>Organization remains governed by the approved BRE-307 Glass Box and evidence-drawer direction.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
