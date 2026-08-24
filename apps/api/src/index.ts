@@ -266,6 +266,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             ...(query.sender ? { sender: query.sender } : {}),
             ...(query.receivedAfter ? { receivedAfter: query.receivedAfter } : {}),
             ...(query.receivedBefore ? { receivedBefore: query.receivedBefore } : {}),
+            ...(query.contextFilters ? { contextFilters: query.contextFilters } : {}),
             ...(query.limit ? { limit: query.limit } : {}),
             ...(query.cursor ? { cursor: query.cursor } : {}),
           },

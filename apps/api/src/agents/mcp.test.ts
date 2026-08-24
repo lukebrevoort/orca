@@ -11,6 +11,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   propagatedAgentEventSchema,
   type AgentEventListPage,
+  type McpQueryOrganizationInput,
   type OrganizationDescribeResponse,
   type OrganizationQueryResponse,
   type OrcaMcpScope,
@@ -173,12 +174,16 @@ const organizationQueryFixture: OrganizationQueryResponse = {
 function createProjectionTestHandler(
   describeOutput: OrganizationDescribeResponse,
   queryOutput: OrganizationQueryResponse,
+  onQuery?: (query: McpQueryOrganizationInput) => void,
 ) {
   const unavailable = () => { throw new Error("not used by this projection test"); };
   const dataSource: OrcaMcpDataSource = {
     getCurrentAccountIds: () => ["account_a"],
     describeOrganization: () => describeOutput,
-    queryOrganization: () => queryOutput,
+    queryOrganization: ({ query }) => {
+      onQuery?.(query);
+      return queryOutput;
+    },
     searchMail: unavailable,
     getThread: unavailable,
     listAgentEvents: unavailable,
@@ -197,6 +202,7 @@ async function callProjectionHandler(
   handler: ReturnType<typeof createProjectionTestHandler>,
   token: string,
   name: "describe_organization" | "query_organization",
+  args: Record<string, unknown> = {},
 ) {
   return handler.fetch(new Request(resource, {
     method: "POST",
@@ -206,7 +212,7 @@ async function callProjectionHandler(
       authorization: `Bearer ${token}`,
       host: new URL(resource).host,
     },
-    body: rpc("tools/call", { name, arguments: {} }),
+    body: rpc("tools/call", { name, arguments: args }),
   }));
 }
 
@@ -500,6 +506,25 @@ describe("Orca read-only MCP server", () => {
     } finally {
       sqlite.close();
     }
+  });
+
+  test("accepts and forwards stable typed Context filters through query_organization", async () => {
+    const token = await signToken({ accountIds: ["account_a"] });
+    let captured: McpQueryOrganizationInput | undefined;
+    const contextFilters = [{
+      context: { contextTypeId: "type_project", contextId: "context_orca" },
+      relationshipTypeId: "relationship_concerns",
+      direction: "thread_to_context" as const,
+    }];
+    const response = await callProjectionHandler(
+      createProjectionTestHandler(organizationDescribeFixture, organizationQueryFixture, (query) => { captured = query; }),
+      token,
+      "query_organization",
+      { accountId: "account_a", contextFilters },
+    );
+    const body = await rpcBody(response);
+    assert.ok(body.result?.structuredContent, JSON.stringify(body));
+    assert.deepEqual(captured?.contextFilters, contextFilters);
   });
 
   test("fails closed when an Organization data source returns cross-scope attribution", async () => {

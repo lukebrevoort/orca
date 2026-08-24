@@ -25,6 +25,7 @@ import {
   organizationDescribeResponseSchema,
   organizationQueryResponseSchema,
 } from "./organization-workspace.ts";
+import { organizationContextFilterSchema } from "./organization-contexts.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().datetime({ offset: false });
@@ -46,6 +47,7 @@ export const mcpQueryOrganizationInputSchema = z.object({
   sender: z.string().trim().max(320).optional(),
   receivedAfter: isoDateTimeStringSchema.optional(),
   receivedBefore: isoDateTimeStringSchema.optional(),
+  contextFilters: z.array(organizationContextFilterSchema).min(1).max(20).optional(),
   limit: z.number().int().min(1).max(100).optional(),
   cursor: z.string().trim().min(1).max(2_048).optional(),
 }).strict().superRefine((value, context) => {

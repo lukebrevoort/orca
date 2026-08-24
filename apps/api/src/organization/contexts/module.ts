@@ -302,7 +302,7 @@ function allocateActionIds(actions: readonly OrganizationContextAction[], newRes
   return actions.map((action) => action.kind === "create_context_type" || action.kind === "create_relationship_type" || action.kind === "create_context" || action.kind === "link_thread_context" ? newResourceId() : null);
 }
 
-function querySnapshot(snapshot: OrganizationContextSnapshot, accountIds: readonly string[], query: OrganizationContextQuery): OrganizationContextQueryResponse {
+export function queryOrganizationContextSnapshot(snapshot: OrganizationContextSnapshot, accountIds: readonly string[], query: OrganizationContextQuery): OrganizationContextQueryResponse {
   const scoped = new Set(accountIds);
   let relationships = snapshot.relationships.filter((relationship) => scoped.has(relationship.accountId));
   if (query.threadId) relationships = relationships.filter((relationship) => relationship.threadId === query.threadId);
@@ -310,19 +310,27 @@ function querySnapshot(snapshot: OrganizationContextSnapshot, accountIds: readon
   if (query.contextTypeId) relationships = relationships.filter((relationship) => relationship.contextTypeId === query.contextTypeId);
   if (query.contextRef) relationships = relationships.filter((relationship) => relationship.contextId === query.contextRef!.contextId && relationship.contextTypeId === query.contextRef!.contextTypeId);
   relationships = relationships.slice(0, query.limit);
-  const referencedContextIds = new Set(relationships.map((relationship) => relationship.contextId));
+  const referencedContextKeys = new Set(relationships.map((relationship) => `${relationship.contextTypeId}\0${relationship.contextId}`));
   const referencedRelationshipTypeIds = new Set(relationships.map((relationship) => relationship.relationshipTypeId));
-  let contexts = snapshot.contexts.filter((context) => query.includeRetired || context.retiredAt === null || referencedContextIds.has(context.id));
-  if (query.contextTypeId) contexts = contexts.filter((context) => context.contextTypeId === query.contextTypeId);
-  if (query.contextRef) contexts = contexts.filter((context) => context.id === query.contextRef!.contextId && context.contextTypeId === query.contextRef!.contextTypeId);
-  if (query.threadId || query.relationshipTypeId) contexts = contexts.filter((context) => referencedContextIds.has(context.id));
-  contexts = contexts.slice(0, query.limit);
+  const referencedContexts = relationships.map((relationship) => snapshot.contexts.find((context) => context.id === relationship.contextId && context.contextTypeId === relationship.contextTypeId));
+  if (referencedContexts.some((context) => context === undefined)) throw new OrganizationContextsConflictError("Stored Context relationship references are incomplete");
+  let catalogContexts = snapshot.contexts.filter((context) => query.includeRetired || context.retiredAt === null || referencedContextKeys.has(`${context.contextTypeId}\0${context.id}`));
+  if (query.contextTypeId) catalogContexts = catalogContexts.filter((context) => context.contextTypeId === query.contextTypeId);
+  if (query.contextRef) catalogContexts = catalogContexts.filter((context) => context.id === query.contextRef!.contextId && context.contextTypeId === query.contextRef!.contextTypeId);
+  if (query.threadId || query.relationshipTypeId) catalogContexts = catalogContexts.filter((context) => referencedContextKeys.has(`${context.contextTypeId}\0${context.id}`));
+  const contexts = [...new Map([...referencedContexts.filter((context) => context !== undefined), ...catalogContexts].map((context) => [context.id, context])).values()].slice(0, query.limit);
   const contextTypeIds = new Set(contexts.map((context) => context.contextTypeId));
-  const contextTypes = snapshot.contextTypes.filter((type) => (query.includeRetired || type.retiredAt === null || contextTypeIds.has(type.id)) && (!query.contextTypeId || type.id === query.contextTypeId)).slice(0, query.limit);
-  const relationshipTypes = snapshot.relationshipTypes.filter((type) => (query.includeRetired || type.retiredAt === null || referencedRelationshipTypeIds.has(type.id)) && (!query.relationshipTypeId || type.id === query.relationshipTypeId) && (!query.contextTypeId || type.contextTypeId === query.contextTypeId)).slice(0, query.limit);
+  const catalogContextTypes = snapshot.contextTypes.filter((type) => (query.includeRetired || type.retiredAt === null || contextTypeIds.has(type.id)) && (!query.contextTypeId || type.id === query.contextTypeId));
+  const referencedContextTypes = [...contextTypeIds].map((id) => snapshot.contextTypes.find((type) => type.id === id));
+  if (referencedContextTypes.some((type) => type === undefined)) throw new OrganizationContextsConflictError("Stored Context Type references are incomplete");
+  const contextTypes = [...new Map([...referencedContextTypes.filter((type) => type !== undefined), ...catalogContextTypes].map((type) => [type.id, type])).values()].slice(0, query.limit);
+  const catalogRelationshipTypes = snapshot.relationshipTypes.filter((type) => (query.includeRetired || type.retiredAt === null || referencedRelationshipTypeIds.has(type.id)) && (!query.relationshipTypeId || type.id === query.relationshipTypeId) && (!query.contextTypeId || type.contextTypeId === query.contextTypeId));
+  const referencedRelationshipTypes = [...referencedRelationshipTypeIds].map((id) => snapshot.relationshipTypes.find((type) => type.id === id));
+  if (referencedRelationshipTypes.some((type) => type === undefined)) throw new OrganizationContextsConflictError("Stored Relationship Type references are incomplete");
+  const relationshipTypes = [...new Map([...referencedRelationshipTypes.filter((type) => type !== undefined), ...catalogRelationshipTypes].map((type) => [type.id, type])).values()].slice(0, query.limit);
   const visibleThreadKeys = new Set(relationships.map((relationship) => `${relationship.accountId}\0${relationship.threadId}`));
   const filtersRelationships = Boolean(query.threadId || query.relationshipTypeId || query.contextTypeId || query.contextRef);
-  const threadRevisions = snapshot.threadRevisions.filter((thread) => scoped.has(thread.accountId) && (!query.threadId || thread.threadId === query.threadId) && (!filtersRelationships || visibleThreadKeys.has(`${thread.accountId}\0${thread.threadId}`)));
+  const threadRevisions = snapshot.threadRevisions.filter((thread) => scoped.has(thread.accountId) && (!query.threadId || thread.threadId === query.threadId) && (!filtersRelationships || visibleThreadKeys.has(`${thread.accountId}\0${thread.threadId}`))).slice(0, query.limit);
   return organizationContextQueryResponseSchema.parse({ workspaceId: snapshot.workspaceId, accountIds: [...accountIds], workspaceRevision: snapshot.workspaceRevision, contextTypes, relationshipTypes, contexts, relationships, threadRevisions });
 }
 
@@ -362,7 +370,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
     const requested = query.accountIds ? [...query.accountIds].sort() : [...scope.accountIds].sort();
     const scoped = new Set(scope.accountIds);
     if (requested.some((accountId) => !scoped.has(accountId))) throw new OrganizationContextsAccessError();
-    return querySnapshot(repository.getSnapshot(scope.workspaceId), requested, query);
+    return queryOrganizationContextSnapshot(repository.getSnapshot(scope.workspaceId), requested, query);
   }
 
   function authorizeBound(scope: OrganizationContextScope, operation: "apply" | "revert", idempotencyKey: string, command: OrganizationCommand, expectedWorkspaceRevision: number) {

@@ -154,6 +154,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         const repository = createSqliteOrganizationRepository(transaction as unknown as Database);
         return {
           facetWorkflow: repository.getFacetWorkflowSnapshot!(workspaceId),
+          contexts: repository.contexts?.getSnapshot(workspaceId) ?? null,
           threads: repository.listThreads(accountIds, filter),
         };
       });

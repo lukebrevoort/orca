@@ -189,6 +189,12 @@ describe("Organization module contract", () => {
     let legacyReadCount = 0;
     let snapshotFilter: { threadId?: string } | undefined;
     const coherentRepository: OrganizationRepository = {
+      contexts: {
+        getSnapshot: () => {
+          legacyReadCount += 1;
+          throw new Error("split Context read must not run");
+        },
+      } as unknown as NonNullable<OrganizationRepository["contexts"]>,
       listAccountIds: () => ["account_a"],
       listThreads: () => {
         legacyReadCount += 1;
@@ -222,6 +228,17 @@ describe("Organization module contract", () => {
             facetValues: [{ facetId: "facet_generation", value: "seven", updatedAt: "2026-08-24T06:00:00.000Z" }],
             organizationRevision: 7,
           }],
+          contexts: {
+            workspaceId: "workspace_owner",
+            accountIds: ["account_a"],
+            workspaceRevision: 7,
+            contextTypes: [{ id: "type_generation", name: "Generation", position: 0, retiredAt: null, revision: 7, createdAt: "2026-08-24T06:00:00.000Z", updatedAt: "2026-08-24T06:00:00.000Z" }],
+            relationshipTypes: [{ id: "relationship_type_generation", contextTypeId: "type_generation", name: "concerns", inverseName: "has thread", direction: "thread_to_context", position: 0, maximumPerThread: 1, retiredAt: null, revision: 7, createdAt: "2026-08-24T06:00:00.000Z", updatedAt: "2026-08-24T06:00:00.000Z" }],
+            contexts: [{ id: "context_generation", contextTypeId: "type_generation", name: "Generation seven", retiredAt: null, revision: 7, createdAt: "2026-08-24T06:00:00.000Z", updatedAt: "2026-08-24T06:00:00.000Z" }],
+            relationships: [{ id: "relationship_generation", accountId: "account_a", threadId: "thread_generation", contextTypeId: "type_generation", contextId: "context_generation", relationshipTypeId: "relationship_type_generation", direction: "thread_to_context", revision: 7, createdAt: "2026-08-24T06:00:00.000Z", updatedAt: "2026-08-24T06:00:00.000Z" }],
+            threadRevisions: [{ accountId: "account_a", threadId: "thread_generation", revision: 7 }],
+            threads: [{ accountId: "account_a", threadId: "thread_generation" }],
+          },
         };
       },
     };
@@ -236,6 +253,64 @@ describe("Organization module contract", () => {
     assert.deepEqual(snapshotFilter, { threadId: "thread_generation" });
     assert.equal(result.facetDefinitions?.[0]?.revision, 7);
     assert.equal(result.threads[0]?.organization.revision, 7);
+    assert.equal(result.threads[0]?.organization.contextRelationships?.[0]?.relationshipId, "relationship_generation");
+    assert.equal(result.contexts?.[0]?.revision, 7);
+  });
+
+  test("bounds mailbox Context projection to the requested Thread page", () => {
+    const at = "2026-08-24T06:00:00.000Z";
+    const records = Array.from({ length: 120 }, (_, index) => ({
+      ...threadRecord(`thread_${String(index).padStart(3, "0")}`),
+      organizationRevision: 7,
+    }));
+    const contexts = records.flatMap((record) => Array.from({ length: 20 }, (_, index) => ({
+      id: `context_${record.id}_${index}`,
+      contextTypeId: "type_project",
+      name: `Project ${record.id} ${index}`,
+      retiredAt: null,
+      revision: 1,
+      createdAt: at,
+      updatedAt: at,
+    })));
+    const relationships = records.flatMap((record) => Array.from({ length: 20 }, (_, index) => ({
+      id: `edge_${record.id}_${index}`,
+      accountId: "account_a",
+      threadId: record.id,
+      contextTypeId: "type_project",
+      contextId: `context_${record.id}_${index}`,
+      relationshipTypeId: "rel_project",
+      direction: "thread_to_context" as const,
+      revision: 1,
+      createdAt: at,
+      updatedAt: at,
+    })));
+    const mailboxRepository: OrganizationRepository = {
+      listAccountIds: () => ["account_a"],
+      listThreads: () => { throw new Error("coherent snapshot required"); },
+      readOrganizationSnapshot: () => ({
+        facetWorkflow: { workspaceRevision: 7, facetDefinitions: [], workflowStates: [], threads: [] },
+        contexts: {
+          workspaceId: "workspace_owner", accountIds: ["account_a"], workspaceRevision: 7,
+          contextTypes: [{ id: "type_project", name: "Project", position: 0, retiredAt: null, revision: 1, createdAt: at, updatedAt: at }],
+          relationshipTypes: [{ id: "rel_project", contextTypeId: "type_project", name: "concerns", inverseName: "has thread", direction: "thread_to_context", position: 0, maximumPerThread: 20, retiredAt: null, revision: 1, createdAt: at, updatedAt: at }],
+          contexts,
+          relationships,
+          threadRevisions: records.map((record) => ({ accountId: "account_a", threadId: record.id, revision: 7 })),
+          threads: records.map((record) => ({ accountId: "account_a", threadId: record.id })),
+        },
+        threads: records,
+      }),
+    };
+    const result = createOrganization(mailboxRepository).query({
+      scope: { ...ownerScope, accountIds: ["account_a"] },
+      query: { attention: "all", limit: 1 },
+    });
+    assert.equal(result.threads.length, 1);
+    assert.equal(result.threads[0]?.organization.contextRelationships?.length, 20);
+    assert.equal(result.contexts?.length, 20);
+    assert.equal(result.contextTypes?.length, 1);
+    assert.equal(result.contextRelationshipTypes?.length, 1);
+    assert.equal(result.contexts?.length, new Set(result.threads[0]?.organization.contextRelationships?.map((item) => item.context.contextId)).size);
   });
 
   test("limits first-party apply to humans and binds every typed action field into authority", () => {

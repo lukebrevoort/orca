@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   organizationDescribeResponseSchema,
+  organizationContextBounds,
   organizationFacetWorkflowApplyResponseSchema,
   organizationFacetWorkflowApplySchema,
   organizationQueryResponseSchema,
@@ -29,7 +30,11 @@ import {
   createOrganizationCollectionsPins,
   type OrganizationCollectionsPinsRepository,
 } from "./collections-pins/module.ts";
-import { createOrganizationContexts, type OrganizationContextsRepository } from "./contexts/module.ts";
+import {
+  createOrganizationContexts,
+  type OrganizationContextSnapshot,
+  type OrganizationContextsRepository,
+} from "./contexts/module.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -53,6 +58,7 @@ export type OrganizationThreadRecord = {
 
 export type OrganizationReadSnapshot = {
   facetWorkflow: FacetWorkflowSnapshot;
+  contexts: OrganizationContextSnapshot | null;
   threads: OrganizationThreadRecord[];
 };
 
@@ -354,10 +360,11 @@ export function createOrganization(repository: OrganizationRepository) {
         const threadFilter = query.threadId ? { threadId: query.threadId } : undefined;
         const readSnapshot = repository.readOrganizationSnapshot?.(scope.workspaceId, requestedAccountIds, threadFilter) ?? {
           facetWorkflow: facetWorkflowSnapshot(scope.workspaceId),
+          contexts: repository.contexts?.getSnapshot(scope.workspaceId) ?? null,
           threads: repository.listThreads(requestedAccountIds, threadFilter),
         };
         validateFacetFilters(readSnapshot.facetWorkflow.facetDefinitions, query.facetFilters ?? []);
-        const contextSnapshot = repository.contexts?.getSnapshot(scope.workspaceId) ?? null;
+        const contextSnapshot = readSnapshot.contexts;
         for (const [index, filter] of (query.contextFilters ?? []).entries()) {
           const context = contextSnapshot?.contexts.find((item) => item.id === filter.context.contextId && item.contextTypeId === filter.context.contextTypeId);
           const relationshipType = contextSnapshot?.relationshipTypes.find((item) => item.id === filter.relationshipTypeId);
@@ -370,11 +377,21 @@ export function createOrganization(repository: OrganizationRepository) {
         const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
         const after = query.receivedAfter ? Date.parse(query.receivedAfter) : null;
         const before = query.receivedBefore ? Date.parse(query.receivedBefore) : null;
+        const relationshipsByThread = new Map<string, NonNullable<typeof contextSnapshot>["relationships"]>();
+        for (const relationship of contextSnapshot?.relationships ?? []) {
+          const key = `${relationship.accountId}\0${relationship.threadId}`;
+          const relationships = relationshipsByThread.get(key) ?? [];
+          if (relationships.length >= organizationContextBounds.maximumRelationshipsPerThread) {
+            throw new OrganizationQueryError("Thread Context relationship fan-out exceeds the supported bound");
+          }
+          relationships.push(relationship);
+          relationshipsByThread.set(key, relationships);
+        }
         const ranked = readSnapshot.threads.flatMap((record): WorkspaceThread[] => {
           if (!requested.has(record.accountId)) throw new OrganizationAccessError();
           if (query.threadId && record.id !== query.threadId) return [];
           if (query.workflowStateIds && !query.workflowStateIds.includes(record.workflowState?.stateId ?? "")) return [];
-          const contextRelationships = contextSnapshot?.relationships.filter((relationship) => relationship.accountId === record.accountId && relationship.threadId === record.id) ?? [];
+          const contextRelationships = relationshipsByThread.get(`${record.accountId}\0${record.id}`) ?? [];
           if (query.contextFilters?.some((filter) => !contextRelationships.some((relationship) => relationship.contextId === filter.context.contextId && relationship.contextTypeId === filter.context.contextTypeId && relationship.relationshipTypeId === filter.relationshipTypeId && (filter.direction === undefined || relationship.direction === filter.direction)))) return [];
           if (query.facetFilters?.some((filter) => {
             const assigned = record.facetValues?.find((value) => value.facetId === filter.facetId);
@@ -453,6 +470,15 @@ export function createOrganization(repository: OrganizationRepository) {
       const start = cursorIndex + 1;
       const threads = snapshot.threads.slice(start, start + query.limit);
       const last = threads.at(-1);
+      const contextRefs = new Set(threads.flatMap((thread) => (thread.organization.contextRelationships ?? []).map((relationship) => `${relationship.context.contextTypeId}\0${relationship.context.contextId}`)));
+      const relationshipTypeIds = new Set(threads.flatMap((thread) => (thread.organization.contextRelationships ?? []).map((relationship) => relationship.relationshipTypeId)));
+      const pageContexts = snapshot.contexts.filter((context) => contextRefs.has(`${context.contextTypeId}\0${context.id}`));
+      const contextTypeIds = new Set(pageContexts.map((context) => context.contextTypeId));
+      const pageContextTypes = snapshot.contextTypes.filter((contextType) => contextTypeIds.has(contextType.id));
+      const pageRelationshipTypes = snapshot.contextRelationshipTypes.filter((relationshipType) => relationshipTypeIds.has(relationshipType.id));
+      if (pageContexts.length !== contextRefs.size || pageContextTypes.length !== contextTypeIds.size || pageRelationshipTypes.length !== relationshipTypeIds.size) {
+        throw new OrganizationQueryError("Stored Thread Context relationship references are incomplete");
+      }
       return organizationQueryResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds: requestedAccountIds,
@@ -461,9 +487,9 @@ export function createOrganization(repository: OrganizationRepository) {
         nextCursor: last && start + threads.length < snapshot.threads.length ? encodeCursor(last, fingerprint) : null,
         facetDefinitions: snapshot.facetDefinitions,
         workflowStates: snapshot.workflowStates,
-        contextTypes: snapshot.contextTypes,
-        contextRelationshipTypes: snapshot.contextRelationshipTypes,
-        contexts: snapshot.contexts,
+        contextTypes: pageContextTypes,
+        contextRelationshipTypes: pageRelationshipTypes,
+        contexts: pageContexts,
       });
     },
 

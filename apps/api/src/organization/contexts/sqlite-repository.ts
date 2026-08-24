@@ -2,7 +2,13 @@ import { createHash } from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   organizationContextChangeSummarySchema,
+  organizationContextBounds,
+  organizationContextSchema,
   organizationContextQueryResponseSchema,
+  organizationContextRelationshipTypeSchema,
+  organizationContextThreadRevisionSchema,
+  organizationContextTypeSchema,
+  organizationThreadContextRelationshipSchema,
   type OrganizationAuthorityTrace,
   type OrganizationCommand,
   type OrganizationContextActionKind,
@@ -77,18 +83,65 @@ function loadSnapshot(db: Database, workspaceId: string): OrganizationContextSna
   return { ...parsed, threads: threadInventory };
 }
 
-function snapshotState(snapshot: OrganizationContextSnapshot) {
-  return {
-    contextTypes: snapshot.contextTypes,
-    relationshipTypes: snapshot.relationshipTypes,
-    contexts: snapshot.contexts,
-    relationships: snapshot.relationships,
-    threadRevisions: snapshot.threadRevisions,
+type EvidenceKind = "context_type" | "relationship_type" | "context" | "relationship" | "thread";
+type EvidenceValue =
+  | OrganizationContextSnapshot["contextTypes"][number]
+  | OrganizationContextSnapshot["relationshipTypes"][number]
+  | OrganizationContextSnapshot["contexts"][number]
+  | OrganizationContextSnapshot["relationships"][number]
+  | OrganizationContextSnapshot["threadRevisions"][number];
+type ResourceEvidence = {
+  actionKind: EvidenceKind;
+  resourceFamily: "context" | "thread";
+  resourceId: string;
+  before: EvidenceValue | null;
+  after: EvidenceValue | null;
+};
+
+function collectEvidence(current: OrganizationContextSnapshot, next: OrganizationContextSnapshot): ResourceEvidence[] {
+  const evidence: ResourceEvidence[] = [];
+  const collect = <T extends EvidenceValue>(
+    actionKind: EvidenceKind,
+    resourceFamily: "context" | "thread",
+    beforeItems: readonly T[],
+    afterItems: readonly T[],
+    key: (item: T) => string,
+    resourceId: (item: T) => string,
+  ) => {
+    const beforeByKey = new Map(beforeItems.map((item) => [key(item), item]));
+    const afterByKey = new Map(afterItems.map((item) => [key(item), item]));
+    for (const itemKey of [...new Set([...beforeByKey.keys(), ...afterByKey.keys()])].sort()) {
+      const before = beforeByKey.get(itemKey) ?? null;
+      const after = afterByKey.get(itemKey) ?? null;
+      if (canonicalOrganizationJson(before) === canonicalOrganizationJson(after)) continue;
+      evidence.push({ actionKind, resourceFamily, resourceId: resourceId((after ?? before)!), before, after });
+    }
   };
+  collect("context_type", "context", current.contextTypes, next.contextTypes, (item) => item.id, (item) => `context_type:${item.id}`);
+  collect("relationship_type", "context", current.relationshipTypes, next.relationshipTypes, (item) => item.id, (item) => `context_relationship_type:${item.id}`);
+  collect("context", "context", current.contexts, next.contexts, (item) => item.id, (item) => `context:${item.id}`);
+  collect("relationship", "context", current.relationships, next.relationships, (item) => item.id, (item) => `context_relationship:${item.id}`);
+  collect("thread", "thread", current.threadRevisions, next.threadRevisions, (item) => `${item.accountId}\0${item.threadId}`, (item) => `thread:${item.accountId}:${item.threadId}`);
+  return evidence;
 }
 
-function snapshotStateDigest(snapshot: OrganizationContextSnapshot) {
-  return canonicalOrganizationJson(snapshotState(snapshot));
+function parseEvidenceValue(kind: EvidenceKind, value: string | null): EvidenceValue | null {
+  if (value === null) return null;
+  const parsed: unknown = JSON.parse(value);
+  if (kind === "context_type") return organizationContextTypeSchema.parse(parsed);
+  if (kind === "relationship_type") return organizationContextRelationshipTypeSchema.parse(parsed);
+  if (kind === "context") return organizationContextSchema.parse(parsed);
+  if (kind === "relationship") return organizationThreadContextRelationshipSchema.parse(parsed);
+  return organizationContextThreadRevisionSchema.parse(parsed);
+}
+
+function evidenceResourceId(kind: EvidenceKind, value: EvidenceValue): string {
+  if (kind === "context_type") return `context_type:${(value as OrganizationContextSnapshot["contextTypes"][number]).id}`;
+  if (kind === "relationship_type") return `context_relationship_type:${(value as OrganizationContextSnapshot["relationshipTypes"][number]).id}`;
+  if (kind === "context") return `context:${(value as OrganizationContextSnapshot["contexts"][number]).id}`;
+  if (kind === "relationship") return `context_relationship:${(value as OrganizationContextSnapshot["relationships"][number]).id}`;
+  const thread = value as OrganizationContextSnapshot["threadRevisions"][number];
+  return `thread:${thread.accountId}:${thread.threadId}`;
 }
 
 function parseTrace(value: string): OrganizationAuthorityTrace {
@@ -142,6 +195,51 @@ function assertBoundCommand(input: {
   }
 }
 
+function canonicalDigest(value: unknown): string {
+  return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`;
+}
+
+function assertAuthorizedEnvelope(input: {
+  request: OrganizationContextApplyRequest | OrganizationContextRevertRequest;
+  scope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"];
+  executionContext: OrganizationExecutionContext;
+  authorityTrace: OrganizationAuthorityTrace;
+  command: OrganizationCommand;
+  changeId: string;
+  operation: "apply" | "revert";
+}): { workspaceId: string; expectedWorkspaceRevision: number; idempotencyKey: string } {
+  const expectedWorkspaceRevision = input.executionContext.expectedRevisions.workspace;
+  const idempotencyKey = input.executionContext.idempotencyKey;
+  if (expectedWorkspaceRevision === null
+    || idempotencyKey === null
+    || input.scope.workspaceId !== input.executionContext.workspaceId
+    || canonicalOrganizationJson(input.scope.actor) !== canonicalOrganizationJson(input.executionContext.actor)
+    || canonicalOrganizationJson([...input.scope.accountIds].sort()) !== canonicalOrganizationJson([...input.executionContext.accountIds].sort())
+    || canonicalOrganizationJson(input.authorityTrace.actor) !== canonicalOrganizationJson(input.executionContext.actor)
+    || input.authorityTrace.operation !== input.executionContext.operation
+    || input.authorityTrace.scope.workspaceId !== input.executionContext.workspaceId
+    || canonicalOrganizationJson([...input.authorityTrace.scope.accountIds].sort()) !== canonicalOrganizationJson([...input.executionContext.accountIds].sort())
+    || canonicalOrganizationJson(input.authorityTrace.command) !== canonicalOrganizationJson(input.executionContext.command)
+    || input.changeId !== input.command.id
+    || input.request.expectedWorkspaceRevision !== expectedWorkspaceRevision
+    || input.request.idempotencyKey !== idempotencyKey) {
+    throw new OrganizationAuthorityError("invalid_request", "The Context request envelope does not match the authorized execution context");
+  }
+  if (input.operation === "revert") {
+    const request = input.request as OrganizationContextRevertRequest;
+    const intent = input.command.intents[0];
+    if (input.command.intents.length !== 1
+      || intent?.kind !== "mutate_context"
+      || intent.resourceId !== `context_change:${request.changeId}`
+      || intent.mutation !== "create"
+      || intent.changes?.action !== "revert"
+      || intent.changes?.requestDigest !== canonicalDigest(request)) {
+      throw new OrganizationAuthorityError("invalid_request", "The Context revert request does not match the authorized command");
+    }
+  }
+  return { workspaceId: input.executionContext.workspaceId, expectedWorkspaceRevision, idempotencyKey };
+}
+
 function assertLiveResources(current: OrganizationContextSnapshot, executionContext: OrganizationExecutionContext, command: OrganizationCommand) {
   const live = organizationContextResourceRevisions(current);
   for (const intent of command.intents) {
@@ -161,10 +259,8 @@ function reserveChange(db: Database, input: {
   revertsChangeId: string | null;
   workspaceRevisionBefore: number;
   workspaceRevisionAfter: number;
-  before: OrganizationContextSnapshot;
-  after: OrganizationContextSnapshot;
+  evidence: readonly ResourceEvidence[];
   now: Date;
-  actionKind: string;
 }) {
   db.insert(organizationChangeSets).values({
     workspaceId: input.workspaceId, id: input.changeId, idempotencyKey: input.idempotencyKey,
@@ -172,11 +268,18 @@ function reserveChange(db: Database, input: {
     operation: input.operation, commandJson: JSON.stringify(input.commandJson), revertsChangeId: input.revertsChangeId,
     workspaceRevisionBefore: input.workspaceRevisionBefore, workspaceRevisionAfter: input.workspaceRevisionAfter, createdAt: input.now,
   }).run();
-  db.insert(organizationChangeActions).values({
-    workspaceId: input.workspaceId, changeId: input.changeId, position: 0, actionKind: input.actionKind,
-    resourceFamily: "context", resourceId: `context_snapshot:${input.workspaceId}`,
-    beforeJson: JSON.stringify(input.before), afterJson: JSON.stringify(input.after),
-  }).run();
+  for (const [position, evidence] of input.evidence.entries()) {
+    db.insert(organizationChangeActions).values({
+      workspaceId: input.workspaceId,
+      changeId: input.changeId,
+      position,
+      actionKind: evidence.actionKind,
+      resourceFamily: evidence.resourceFamily,
+      resourceId: evidence.resourceId,
+      beforeJson: evidence.before === null ? null : JSON.stringify(evidence.before),
+      afterJson: evidence.after === null ? null : JSON.stringify(evidence.after),
+    }).run();
+  }
 }
 
 function writeSnapshot(db: Database, workspaceId: string, current: OrganizationContextSnapshot, next: OrganizationContextSnapshot, now: Date) {
@@ -216,26 +319,108 @@ function writeSnapshot(db: Database, workspaceId: string, current: OrganizationC
   for (const item of current.threadRevisions) if (!nextThreadKeys.has(`${item.accountId}\0${item.threadId}`)) db.delete(organizationThreadStates).where(and(eq(organizationThreadStates.workspaceId, workspaceId), eq(organizationThreadStates.accountId, item.accountId), eq(organizationThreadStates.threadId, item.threadId))).run();
 }
 
-function compensation(before: OrganizationContextSnapshot, current: OrganizationContextSnapshot, now: string): OrganizationContextSnapshot {
-  const next = structuredClone(before);
+function evidenceResource(snapshot: OrganizationContextSnapshot, evidence: ResourceEvidence): EvidenceValue | null {
+  const identity = evidence.after ?? evidence.before;
+  if (!identity) throw new OrganizationContextsConflictError("Context change evidence has no resource identity");
+  if (evidence.actionKind === "context_type") return snapshot.contextTypes.find((item) => item.id === (identity as OrganizationContextSnapshot["contextTypes"][number]).id) ?? null;
+  if (evidence.actionKind === "relationship_type") return snapshot.relationshipTypes.find((item) => item.id === (identity as OrganizationContextSnapshot["relationshipTypes"][number]).id) ?? null;
+  if (evidence.actionKind === "context") return snapshot.contexts.find((item) => item.id === (identity as OrganizationContextSnapshot["contexts"][number]).id) ?? null;
+  if (evidence.actionKind === "relationship") return snapshot.relationships.find((item) => item.id === (identity as OrganizationContextSnapshot["relationships"][number]).id) ?? null;
+  const thread = identity as OrganizationContextSnapshot["threadRevisions"][number];
+  return snapshot.threadRevisions.find((item) => item.accountId === thread.accountId && item.threadId === thread.threadId) ?? null;
+}
+
+function replaceEvidenceResource(snapshot: OrganizationContextSnapshot, evidence: ResourceEvidence, current: EvidenceValue | null, now: string) {
+  const before = evidence.before;
+  if (evidence.actionKind === "context_type") {
+    const identity = (evidence.after ?? before) as OrganizationContextSnapshot["contextTypes"][number];
+    snapshot.contextTypes = snapshot.contextTypes.filter((item) => item.id !== identity.id);
+    if (before) snapshot.contextTypes.push({ ...(before as OrganizationContextSnapshot["contextTypes"][number]), revision: (current?.revision ?? before.revision) + 1, updatedAt: now });
+    return;
+  }
+  if (evidence.actionKind === "relationship_type") {
+    const identity = (evidence.after ?? before) as OrganizationContextSnapshot["relationshipTypes"][number];
+    snapshot.relationshipTypes = snapshot.relationshipTypes.filter((item) => item.id !== identity.id);
+    if (before) snapshot.relationshipTypes.push({ ...(before as OrganizationContextSnapshot["relationshipTypes"][number]), revision: (current?.revision ?? before.revision) + 1, updatedAt: now });
+    return;
+  }
+  if (evidence.actionKind === "context") {
+    const identity = (evidence.after ?? before) as OrganizationContextSnapshot["contexts"][number];
+    snapshot.contexts = snapshot.contexts.filter((item) => item.id !== identity.id);
+    if (before) snapshot.contexts.push({ ...(before as OrganizationContextSnapshot["contexts"][number]), revision: (current?.revision ?? before.revision) + 1, updatedAt: now });
+    return;
+  }
+  if (evidence.actionKind === "relationship") {
+    const identity = (evidence.after ?? before) as OrganizationContextSnapshot["relationships"][number];
+    snapshot.relationships = snapshot.relationships.filter((item) => item.id !== identity.id);
+    if (before) snapshot.relationships.push({ ...(before as OrganizationContextSnapshot["relationships"][number]), revision: (current?.revision ?? before.revision) + 1, updatedAt: now });
+    return;
+  }
+  const identity = (evidence.after ?? before) as OrganizationContextSnapshot["threadRevisions"][number];
+  snapshot.threadRevisions = snapshot.threadRevisions.filter((item) => item.accountId !== identity.accountId || item.threadId !== identity.threadId);
+  const prior = before as OrganizationContextSnapshot["threadRevisions"][number] | null;
+  const live = current as OrganizationContextSnapshot["threadRevisions"][number] | null;
+  snapshot.threadRevisions.push({ accountId: identity.accountId, threadId: identity.threadId, revision: (live?.revision ?? prior?.revision ?? 0) + 1 });
+}
+
+function assertCompensatedSnapshot(snapshot: OrganizationContextSnapshot) {
+  const contextTypeIds = new Set(snapshot.contextTypes.map((item) => item.id));
+  const relationshipTypes = new Map(snapshot.relationshipTypes.map((item) => [item.id, item]));
+  const contexts = new Map(snapshot.contexts.map((item) => [item.id, item]));
+  const threadInventory = new Set(snapshot.threads.map((item) => `${item.accountId}\0${item.threadId}`));
+  const unique = (values: readonly string[], label: string) => {
+    if (new Set(values).size !== values.length) throw new OrganizationContextsConflictError(`A later Context change now conflicts with the prior ${label}`);
+  };
+  unique(snapshot.contextTypes.map((item) => item.name.trim().toLocaleLowerCase()), "Context Type name");
+  unique(snapshot.contextTypes.map((item) => String(item.position)), "Context Type position");
+  for (const contextType of snapshot.contextTypes) {
+    const typedRelationships = snapshot.relationshipTypes.filter((item) => item.contextTypeId === contextType.id);
+    const typedContexts = snapshot.contexts.filter((item) => item.contextTypeId === contextType.id);
+    unique(typedRelationships.map((item) => item.name.trim().toLocaleLowerCase()), "Relationship Type name");
+    unique(typedRelationships.map((item) => String(item.position)), "Relationship Type position");
+    unique(typedContexts.map((item) => item.name.trim().toLocaleLowerCase()), "Context name");
+  }
+  if (snapshot.relationshipTypes.some((item) => !contextTypeIds.has(item.contextTypeId)) || snapshot.contexts.some((item) => !contextTypeIds.has(item.contextTypeId))) {
+    throw new OrganizationContextsConflictError("A later Context dependency prevents this causal revert");
+  }
+  const threadCounts = new Map<string, number>();
+  const typedThreadCounts = new Map<string, number>();
+  const contextCounts = new Map<string, number>();
+  const edgeKeys = new Set<string>();
+  for (const relationship of snapshot.relationships) {
+    const context = contexts.get(relationship.contextId);
+    const relationshipType = relationshipTypes.get(relationship.relationshipTypeId);
+    if (!context || !relationshipType || context.contextTypeId !== relationship.contextTypeId || relationshipType.contextTypeId !== relationship.contextTypeId || relationshipType.direction !== relationship.direction || !threadInventory.has(`${relationship.accountId}\0${relationship.threadId}`)) {
+      throw new OrganizationContextsConflictError("A later Context relationship dependency prevents this causal revert");
+    }
+    const edgeKey = `${relationship.accountId}\0${relationship.threadId}\0${relationship.contextId}\0${relationship.relationshipTypeId}`;
+    if (edgeKeys.has(edgeKey)) throw new OrganizationContextsConflictError("A later duplicate Context relationship prevents this causal revert");
+    edgeKeys.add(edgeKey);
+    const threadKey = `${relationship.accountId}\0${relationship.threadId}`;
+    const typedThreadKey = `${threadKey}\0${relationship.relationshipTypeId}`;
+    threadCounts.set(threadKey, (threadCounts.get(threadKey) ?? 0) + 1);
+    typedThreadCounts.set(typedThreadKey, (typedThreadCounts.get(typedThreadKey) ?? 0) + 1);
+    contextCounts.set(relationship.contextId, (contextCounts.get(relationship.contextId) ?? 0) + 1);
+    if (threadCounts.get(threadKey)! > organizationContextBounds.maximumRelationshipsPerThread
+      || typedThreadCounts.get(typedThreadKey)! > relationshipType.maximumPerThread
+      || contextCounts.get(relationship.contextId)! > organizationContextBounds.maximumRelationshipsPerContext) {
+      throw new OrganizationContextsConflictError("A later Context fan-out change prevents this causal revert");
+    }
+  }
+}
+
+function causalCompensation(current: OrganizationContextSnapshot, evidence: readonly ResourceEvidence[], now: string): OrganizationContextSnapshot {
+  const next = structuredClone(current);
+  for (const item of evidence) {
+    const live = evidenceResource(current, item);
+    if (canonicalOrganizationJson(live) !== canonicalOrganizationJson(item.after)) {
+      throw new OrganizationContextsConflictError(`Context resource ${item.resourceId} changed after the requested change`);
+    }
+    replaceEvidenceResource(next, item, live, now);
+  }
   next.workspaceRevision = current.workspaceRevision + 1;
   next.threads = current.threads;
-  const advance = <T extends { id: string; revision: number; updatedAt: string }>(items: T[], liveItems: readonly T[]) => {
-    for (const item of items) {
-      const live = liveItems.find((candidate) => candidate.id === item.id);
-      item.revision = (live?.revision ?? item.revision) + 1;
-      item.updatedAt = now;
-    }
-  };
-  advance(next.contextTypes, current.contextTypes);
-  advance(next.relationshipTypes, current.relationshipTypes);
-  advance(next.contexts, current.contexts);
-  advance(next.relationships, current.relationships);
-  for (const thread of next.threadRevisions) {
-    const live = current.threadRevisions.find((candidate) => candidate.accountId === thread.accountId && candidate.threadId === thread.threadId);
-    thread.revision = (live?.revision ?? thread.revision) + 1;
-  }
-  for (const live of current.threadRevisions) if (!next.threadRevisions.some((thread) => thread.accountId === live.accountId && thread.threadId === live.threadId)) next.threadRevisions.push({ ...live, revision: live.revision + 1 });
+  assertCompensatedSnapshot(next);
   return next;
 }
 
@@ -259,43 +444,53 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
     apply(input) {
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        transaction.insert(organizationWorkspaceStates).values({ workspaceId: input.scope.workspaceId }).onConflictDoNothing().run();
-        const current = loadSnapshot(executor, input.scope.workspaceId);
-        if (current.workspaceRevision !== input.request.expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(input.request.expectedWorkspaceRevision, current.workspaceRevision);
+        const { workspaceId, expectedWorkspaceRevision, idempotencyKey } = assertAuthorizedEnvelope({ request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
+        transaction.insert(organizationWorkspaceStates).values({ workspaceId }).onConflictDoNothing().run();
         assertBoundCommand({ command: input.authorization.command, executionContext: input.authorization.executionContext, actions: input.request.actions, allocatedIds: input.allocatedIds });
+        const current = loadSnapshot(executor, workspaceId);
+        if (current.workspaceRevision !== expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(expectedWorkspaceRevision, current.workspaceRevision);
         assertLiveResources(current, input.authorization.executionContext, input.authorization.command);
-        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
+        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
         const next = applyOrganizationContextActions({ snapshot: current, actions: input.request.actions, allocatedIds: input.allocatedIds, authorizedAccountIds: input.authorization.executionContext.accountIds, now: input.now.toISOString() });
-        writeSnapshot(executor, input.scope.workspaceId, current, next, input.now);
-        reserveChange(executor, { workspaceId: input.scope.workspaceId, changeId: input.changeId, idempotencyKey: input.request.idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "apply", commandJson: { request: input.request, allocatedIds: input.allocatedIds }, revertsChangeId: null, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, before: current, after: next, now: input.now, actionKind: "context_change_set" });
-        const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, input.scope.workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
+        writeSnapshot(executor, workspaceId, current, next, input.now);
+        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "apply", commandJson: { request: input.request, allocatedIds: input.allocatedIds }, revertsChangeId: null, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
+        const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.workspaceRevision, current.workspaceRevision + 1);
-        return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };
+        return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };
       });
     },
     revert(input) {
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const original = transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.id, input.request.changeId), eq(organizationChangeSets.resourceFamily, "context"))).get();
+        const { workspaceId, expectedWorkspaceRevision, idempotencyKey } = assertAuthorizedEnvelope({ request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
+        assertBoundCommand({ command: input.authorization.command, executionContext: input.authorization.executionContext });
+        const original = transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.request.changeId), eq(organizationChangeSets.resourceFamily, "context"))).get();
         if (!original) throw new OrganizationContextsNotFoundError("Context change was not found in this Workspace");
-        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.revertsChangeId, original.id))).get()) throw new OrganizationContextsConflictError("Context change was already reverted");
-        const evidence = transaction.select().from(organizationChangeActions).where(and(eq(organizationChangeActions.workspaceId, input.scope.workspaceId), eq(organizationChangeActions.changeId, original.id), eq(organizationChangeActions.position, 0))).get();
-        if (!evidence?.beforeJson || !evidence.afterJson) throw new OrganizationContextsConflictError("Context change does not contain compensating evidence");
-        const current = loadSnapshot(executor, input.scope.workspaceId);
-        if (current.workspaceRevision !== input.request.expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(input.request.expectedWorkspaceRevision, current.workspaceRevision);
-        const after = JSON.parse(evidence.afterJson) as OrganizationContextSnapshot;
-        if (snapshotStateDigest(current) !== snapshotStateDigest(after)) throw new OrganizationContextsConflictError("Context state changed after the requested change; refresh before reverting");
+        if (original.operation !== "apply") throw new OrganizationContextsConflictError("Only an applied Context change can be reverted");
+        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.revertsChangeId, original.id))).get()) throw new OrganizationContextsConflictError("Context change was already reverted");
+        const evidenceRows = transaction.select().from(organizationChangeActions).where(and(eq(organizationChangeActions.workspaceId, workspaceId), eq(organizationChangeActions.changeId, original.id))).orderBy(asc(organizationChangeActions.position)).all();
+        const evidence = evidenceRows.map((row): ResourceEvidence => {
+          if (!["context_type", "relationship_type", "context", "relationship", "thread"].includes(row.actionKind)) throw new OrganizationContextsConflictError("Context change contains unsupported compensating evidence");
+          const actionKind = row.actionKind as EvidenceKind;
+          const resourceFamily = actionKind === "thread" ? "thread" : "context";
+          const before = parseEvidenceValue(actionKind, row.beforeJson);
+          const after = parseEvidenceValue(actionKind, row.afterJson);
+          const identity = after ?? before;
+          if (!identity || row.resourceFamily !== resourceFamily || row.resourceId !== evidenceResourceId(actionKind, identity)) throw new OrganizationContextsConflictError("Context change contains mismatched compensating evidence");
+          return { actionKind, resourceFamily, resourceId: row.resourceId, before, after };
+        });
+        if (evidence.length === 0) throw new OrganizationContextsConflictError("Context change does not contain compensating evidence");
+        const current = loadSnapshot(executor, workspaceId);
+        if (current.workspaceRevision !== expectedWorkspaceRevision) throw new OrganizationRevisionConflictError(expectedWorkspaceRevision, current.workspaceRevision);
         const originalScope = parseTrace(original.authorityTrace).scope.accountIds;
         if (originalScope.some((accountId) => !input.authorization.executionContext.accountIds.includes(accountId))) throw new OrganizationContextsAccessError();
-        assertBoundCommand({ command: input.authorization.command, executionContext: input.authorization.executionContext });
-        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
-        const before = JSON.parse(evidence.beforeJson) as OrganizationContextSnapshot;
-        const next = compensation(before, current, input.now.toISOString());
-        writeSnapshot(executor, input.scope.workspaceId, current, next, input.now);
-        reserveChange(executor, { workspaceId: input.scope.workspaceId, changeId: input.changeId, idempotencyKey: input.request.idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "revert", commandJson: { revert: input.request }, revertsChangeId: original.id, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, before: current, after: next, now: input.now, actionKind: "context_revert" });
-        const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, input.scope.workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
+        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get()) throw new OrganizationContextsConflictError("The idempotency key is already reserved");
+        const next = causalCompensation(current, evidence, input.now.toISOString());
+        writeSnapshot(executor, workspaceId, current, next, input.now);
+        reserveChange(executor, { workspaceId, changeId: input.changeId, idempotencyKey, commandDigest: input.authorization.executionContext.command.digest, authorityTrace: input.authorization.trace, operation: "revert", commandJson: { revert: input.request }, revertsChangeId: original.id, workspaceRevisionBefore: current.workspaceRevision, workspaceRevisionAfter: next.workspaceRevision, evidence: collectEvidence(current, next), now: input.now });
+        const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.workspaceRevision, updatedAt: input.now }).where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.workspaceRevision, current.workspaceRevision + 1);
-        return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };
+        return { snapshot: next, change: summary(executor, transaction.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.changeId))).get()!) };
       });
     },
     audit(workspaceId) {

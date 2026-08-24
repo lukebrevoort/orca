@@ -14,6 +14,7 @@ import {
   OrganizationContextsAccessError,
   OrganizationContextsConflictError,
   OrganizationContextsValidationError,
+  queryOrganizationContextSnapshot,
 } from "./module.ts";
 
 const tempDirectories: string[] = [];
@@ -53,6 +54,26 @@ function setup() {
 }
 
 describe("Context Organization module", () => {
+  test("pages relationships first and returns their complete stable-identity closure", () => {
+    const at = "2026-08-24T12:00:00.000Z";
+    const result = queryOrganizationContextSnapshot({
+      workspaceId: "workspace_owner", accountIds: ["account_a"], workspaceRevision: 1,
+      contextTypes: [{ id: "type_project", name: "Project", position: 0, retiredAt: null, revision: 1, createdAt: at, updatedAt: at }],
+      relationshipTypes: [{ id: "rel_project", contextTypeId: "type_project", name: "concerns", inverseName: "has incident", direction: "thread_to_context", position: 0, maximumPerThread: 2, retiredAt: null, revision: 1, createdAt: at, updatedAt: at }],
+      contexts: [
+        { id: "context_alpha", contextTypeId: "type_project", name: "Alpha", retiredAt: null, revision: 1, createdAt: at, updatedAt: at },
+        { id: "context_zulu", contextTypeId: "type_project", name: "Zulu", retiredAt: null, revision: 1, createdAt: at, updatedAt: at },
+      ],
+      relationships: [{ id: "edge_zulu", accountId: "account_a", threadId: "thread_incident", contextTypeId: "type_project", contextId: "context_zulu", relationshipTypeId: "rel_project", direction: "thread_to_context", revision: 1, createdAt: at, updatedAt: at }],
+      threadRevisions: [{ accountId: "account_a", threadId: "thread_incident", revision: 1 }],
+      threads: [{ accountId: "account_a", threadId: "thread_incident" }],
+    }, ["account_a"], { includeRetired: false, limit: 1 });
+    assert.equal(result.relationships[0]?.contextId, "context_zulu");
+    assert.equal(result.contexts[0]?.id, "context_zulu");
+    assert.equal(result.contextTypes[0]?.id, "type_project");
+    assert.equal(result.relationshipTypes[0]?.id, "rel_project");
+  });
+
   test("relates one production-incident Thread to a project and customer without duplicating the Thread", () => {
     const { contexts, scope, db, sqlite } = setup();
     try {
@@ -103,7 +124,7 @@ describe("Context Organization module", () => {
       assert.equal(new Set(linked.state.relationships.map((relationship) => relationship.threadId)).size, 1);
       assert.equal(linked.state.threadRevisions.find((thread) => thread.threadId === "thread_incident")?.revision, 1);
       const queried = contexts.query({ scope, query: { threadId: "thread_incident" } });
-      assert.deepEqual(queried.contexts.map((context) => context.name), ["Acme", "Orca"]);
+      assert.deepEqual(queried.contexts.map((context) => context.name).sort(), ["Acme", "Orca"]);
       assert.deepEqual(queried.relationships.map((relationship) => relationship.contextId).sort(), [customer.id, project.id].sort());
       const accountBOnly = { ...scope, accountIds: ["account_b"] };
       const deniedByScope = contexts.query({ scope: accountBOnly, query: {
@@ -225,10 +246,19 @@ describe("Context Organization module", () => {
         actions: [{ kind: "update_context_type", contextTypeId: contextType.id, patch: { name: "Initiative" }, expectedRevision: 1 }],
       } });
       assert.equal(renamed.state.contextTypes[0]?.name, "Initiative");
-      const reverted = contexts.revert({ scope, request: {
-        idempotencyKey: "revert-rename-1", changeId: renamed.change.id, expectedWorkspaceRevision: 3,
+      const evidence = sqlite.query("SELECT action_kind, resource_id, before_json, after_json FROM organization_change_actions WHERE change_id = ? ORDER BY position").all(renamed.change.id) as Array<Record<string, unknown>>;
+      assert.equal(evidence.length, 1);
+      assert.equal(evidence[0]?.action_kind, "context_type");
+      assert.equal(evidence[0]?.resource_id, `context_type:${contextType.id}`);
+      assert.doesNotMatch(String(evidence[0]?.before_json), /\"threads\"|\"contexts\"/);
+      contexts.apply({ scope, request: {
+        idempotencyKey: "unrelated-type-1", expectedWorkspaceRevision: 3,
+        actions: [{ kind: "create_context_type", name: "Customer", position: 1 }],
       } });
-      assert.equal(reverted.state.contextTypes[0]?.name, "Project");
+      const reverted = contexts.revert({ scope, request: {
+        idempotencyKey: "revert-rename-1", changeId: renamed.change.id, expectedWorkspaceRevision: 4,
+      } });
+      assert.deepEqual(reverted.state.contextTypes.map((item) => item.name), ["Project", "Customer"]);
       assert.equal(reverted.change.revertsChangeId, renamed.change.id);
       assert.equal(contexts.audit({ scope })[1]?.revertedByChangeId, reverted.change.id);
     } finally {
@@ -257,11 +287,56 @@ describe("Context Organization module", () => {
         actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
       } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /exact ordered typed Context actions/.test(error.message));
 
+      const idempotencyTamperingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            return baseContexts.apply({ ...input, request: { ...input.request, idempotencyKey: `${input.request.idempotencyKey}-changed` } });
+          },
+        },
+      };
+      assert.throws(() => createOrganization(idempotencyTamperingRepository).contexts!.apply({ scope, request: {
+        idempotencyKey: "tamper-envelope-key-1", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /request envelope/.test(error.message));
+
+      const revisionTamperingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            return baseContexts.apply({ ...input, request: { ...input.request, expectedWorkspaceRevision: input.request.expectedWorkspaceRevision + 1 } });
+          },
+        },
+      };
+      assert.throws(() => createOrganization(revisionTamperingRepository).contexts!.apply({ scope, request: {
+        idempotencyKey: "tamper-envelope-revision-1", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /request envelope/.test(error.message));
+
       const applied = createOrganization(baseRepository).contexts!.apply({ scope, request: {
         idempotencyKey: "tamper-context-1", expectedWorkspaceRevision: 1,
         actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
       } });
       assert.equal(applied.state.contextTypes[0]?.name, "Project");
+
+      const revertTamperingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          revert(input: Parameters<typeof baseContexts.revert>[0]) {
+            return baseContexts.revert({ ...input, request: { ...input.request, changeId: "another-change" } });
+          },
+        },
+      };
+      assert.throws(() => createOrganization(revertTamperingRepository).contexts!.revert({ scope, request: {
+        idempotencyKey: "tamper-revert-change-1", changeId: applied.change.id, expectedWorkspaceRevision: 2,
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request" && /revert request/.test(error.message));
+      const reverted = createOrganization(baseRepository).contexts!.revert({ scope, request: {
+        idempotencyKey: "tamper-revert-change-1", changeId: applied.change.id, expectedWorkspaceRevision: 2,
+      } });
+      assert.deepEqual(reverted.state.contextTypes, []);
     } finally {
       sqlite.close();
     }
