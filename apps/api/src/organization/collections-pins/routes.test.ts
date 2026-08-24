@@ -67,7 +67,7 @@ describe("Collections/Pins Organization REST adapter", { timeout: 20_000 }, () =
       const primaryDescribe = await app.request("/v1/organization/describe", { headers });
       assert.equal(primaryDescribe.status, 200);
       const primaryDescription = await primaryDescribe.json();
-      assert.equal(primaryDescription.workspaceSchema.revision, 2);
+      assert.equal(primaryDescription.workspaceSchema.revision, 3);
       assert.deepEqual(primaryDescription.collectionsPins?.semantics, {
         collections: "explicit_thread_membership",
         pins: "stable_shortcut_identity",

@@ -29,6 +29,7 @@ import {
   createOrganizationCollectionsPins,
   type OrganizationCollectionsPinsRepository,
 } from "./collections-pins/module.ts";
+import { createOrganizationContexts, type OrganizationContextsRepository } from "./contexts/module.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -77,6 +78,7 @@ export type OrganizationRepository = {
     actions: readonly OrganizationFacetWorkflowAction[];
   }): FacetWorkflowSnapshot;
   collectionsPins?: OrganizationCollectionsPinsRepository;
+  contexts?: OrganizationContextsRepository;
 };
 
 export class OrganizationAuthorityError extends Error {
@@ -123,10 +125,10 @@ export class OrganizationOperationDisabledError extends Error {
 }
 
 const workspaceSchema = Object.freeze({
-  revision: 2 as const,
+  revision: 3 as const,
   aggregate: "thread" as const,
-  resources: ["account", "thread", "facet", "workflow_state"] as const,
-  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state"] as const,
+  resources: ["account", "thread", "facet", "workflow_state", "context", "context_relationship"] as const,
+  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship"] as const,
 });
 
 const facetSupport = Object.freeze({
@@ -159,7 +161,7 @@ function firstPartyHumanCapability(actor: OrganizationActor & { type: "human" },
     actor,
     scope: { workspaceId, accountIds },
     operations: ["describe", "query", "apply"],
-    resourceFamilies: ["workspace_schema", "mail", "thread", "facet", "workflow_state", "trace", "change_set"],
+    resourceFamilies: ["workspace_schema", "mail", "thread", "facet", "context", "workflow_state", "trace", "change_set"],
     actionFamilies: ["organization_read", "organization_structure", "organization_thread"],
   };
 }
@@ -270,6 +272,7 @@ function cursorFingerprint(accountIds: readonly string[], query: ReturnType<type
     receivedBefore: query.receivedBefore ?? null,
     facetFilters: query.facetFilters ?? null,
     workflowStateIds: query.workflowStateIds ?? null,
+    contextFilters: query.contextFilters ?? null,
   }));
 }
 
@@ -308,6 +311,9 @@ export function createOrganization(repository: OrganizationRepository) {
     cursorIndexes: Map<string, number>;
     facetDefinitions: FacetWorkflowSnapshot["facetDefinitions"];
     workflowStates: FacetWorkflowSnapshot["workflowStates"];
+    contextTypes: ReturnType<OrganizationContextsRepository["getSnapshot"]>["contextTypes"];
+    contextRelationshipTypes: ReturnType<OrganizationContextsRepository["getSnapshot"]>["relationshipTypes"];
+    contexts: ReturnType<OrganizationContextsRepository["getSnapshot"]>["contexts"];
   }>();
   const facetWorkflowSnapshot = (workspaceId: string): FacetWorkflowSnapshot => repository.getFacetWorkflowSnapshot?.(workspaceId) ?? {
     workspaceRevision: 1,
@@ -316,6 +322,7 @@ export function createOrganization(repository: OrganizationRepository) {
     threads: [],
   };
   const collectionsPins = repository.collectionsPins ? createOrganizationCollectionsPins(repository.collectionsPins) : null;
+  const contexts = repository.contexts ? createOrganizationContexts(repository.contexts) : null;
 
   return {
     describe(input: { scope: unknown }): OrganizationDescribeResponse {
@@ -331,6 +338,7 @@ export function createOrganization(repository: OrganizationRepository) {
         workflowStates: facetWorkflow.workflowStates,
         facetSupport,
         ...(collectionsPins ? { collectionsPins: collectionsPins.describe({ scope }) } : {}),
+        ...(contexts ? { contexts: contexts.describe({ scope }) } : {}),
       });
     },
 
@@ -349,6 +357,14 @@ export function createOrganization(repository: OrganizationRepository) {
           threads: repository.listThreads(requestedAccountIds, threadFilter),
         };
         validateFacetFilters(readSnapshot.facetWorkflow.facetDefinitions, query.facetFilters ?? []);
+        const contextSnapshot = repository.contexts?.getSnapshot(scope.workspaceId) ?? null;
+        for (const [index, filter] of (query.contextFilters ?? []).entries()) {
+          const context = contextSnapshot?.contexts.find((item) => item.id === filter.context.contextId && item.contextTypeId === filter.context.contextTypeId);
+          const relationshipType = contextSnapshot?.relationshipTypes.find((item) => item.id === filter.relationshipTypeId);
+          if (!context || !relationshipType || relationshipType.contextTypeId !== context.contextTypeId) {
+            throw new OrganizationQueryError(`Context filter ${index + 1} does not resolve to a matching stable Context and Relationship Type`);
+          }
+        }
         const requested = new Set(requestedAccountIds);
         const text = query.text?.trim().toLocaleLowerCase() ?? "";
         const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
@@ -358,6 +374,8 @@ export function createOrganization(repository: OrganizationRepository) {
           if (!requested.has(record.accountId)) throw new OrganizationAccessError();
           if (query.threadId && record.id !== query.threadId) return [];
           if (query.workflowStateIds && !query.workflowStateIds.includes(record.workflowState?.stateId ?? "")) return [];
+          const contextRelationships = contextSnapshot?.relationships.filter((relationship) => relationship.accountId === record.accountId && relationship.threadId === record.id) ?? [];
+          if (query.contextFilters?.some((filter) => !contextRelationships.some((relationship) => relationship.contextId === filter.context.contextId && relationship.contextTypeId === filter.context.contextTypeId && relationship.relationshipTypeId === filter.relationshipTypeId && (filter.direction === undefined || relationship.direction === filter.direction)))) return [];
           if (query.facetFilters?.some((filter) => {
             const assigned = record.facetValues?.find((value) => value.facetId === filter.facetId);
             if (filter.operator === "missing") return assigned !== undefined;
@@ -403,6 +421,7 @@ export function createOrganization(repository: OrganizationRepository) {
               humanClassification,
               facetValues: record.facetValues ?? [],
               workflowState: record.workflowState ?? null,
+              contextRelationships: contextRelationships.map((relationship) => ({ relationshipId: relationship.id, relationshipTypeId: relationship.relationshipTypeId, direction: relationship.direction, context: { contextTypeId: relationship.contextTypeId, contextId: relationship.contextId } })),
               revision: record.organizationRevision ?? null,
             },
             messages: matchingMessages.length > 0 ? matchingMessages : record.messages,
@@ -421,6 +440,9 @@ export function createOrganization(repository: OrganizationRepository) {
           cursorIndexes: new Map(ranked.map((thread, index) => [threadCursorKey(thread), index])),
           facetDefinitions: readSnapshot.facetWorkflow.facetDefinitions,
           workflowStates: readSnapshot.facetWorkflow.workflowStates,
+          contextTypes: contextSnapshot?.contextTypes ?? [],
+          contextRelationshipTypes: contextSnapshot?.relationshipTypes ?? [],
+          contexts: contextSnapshot?.contexts ?? [],
         };
         rankedSnapshots.set(fingerprint, snapshot);
       }
@@ -439,6 +461,9 @@ export function createOrganization(repository: OrganizationRepository) {
         nextCursor: last && start + threads.length < snapshot.threads.length ? encodeCursor(last, fingerprint) : null,
         facetDefinitions: snapshot.facetDefinitions,
         workflowStates: snapshot.workflowStates,
+        contextTypes: snapshot.contextTypes,
+        contextRelationshipTypes: snapshot.contextRelationshipTypes,
+        contexts: snapshot.contexts,
       });
     },
 
@@ -490,5 +515,6 @@ export function createOrganization(repository: OrganizationRepository) {
       throw new OrganizationOperationDisabledError("revert");
     },
     collectionsPins,
+    contexts,
   };
 }

@@ -131,10 +131,10 @@ const organizationDescribeFixture: OrganizationDescribeResponse = {
   workspaceId: "user_a",
   accountIds: ["account_a"],
   workspaceSchema: {
-    revision: 2,
+    revision: 3,
     aggregate: "thread",
-    resources: ["account", "thread", "facet", "workflow_state"],
-    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state"],
+    resources: ["account", "thread", "facet", "workflow_state", "context", "context_relationship"],
+    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship"],
   },
   capabilities: {
     operations: { describe: true, query: true, simulate: false, apply: false, revert: false },

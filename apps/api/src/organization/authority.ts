@@ -86,10 +86,10 @@ function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
 
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+export function canonicalOrganizationJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalOrganizationJson).join(",")}]`;
   if (value !== null && typeof value === "object") {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalOrganizationJson(item)}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -103,7 +103,7 @@ function bindCommand(command: OrganizationCommand): DerivedCommand {
   return {
     command: {
       id: command.id,
-      digest: `sha256:${createHash("sha256").update(canonicalJson(command)).digest("hex")}`,
+      digest: `sha256:${createHash("sha256").update(canonicalOrganizationJson(command)).digest("hex")}`,
     },
     resourceFamilies: unique(requirements.map((requirement) => requirement.resourceFamily)),
     actionFamilies: unique(requirements.map((requirement) => requirement.actionFamily)),

@@ -131,6 +131,7 @@ import {
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
+import { registerOrganizationContextRoutes } from "./organization/contexts/routes.ts";
 import {
   OrganizationCollectionsPinsAccessError,
   OrganizationCollectionsPinsConflictError,
@@ -223,6 +224,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   );
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
+  registerOrganizationContextRoutes(app, { dbFactory });
 
   const mcpPolicy = options.mcpBoundaryPolicy ?? getOrcaAgentBoundaryPolicy(options.mcpEnv);
   const mcpOAuthConfig = options.mcpOAuthConfig ?? getMcpOAuthConfig(options.mcpEnv ?? process.env);
@@ -457,6 +459,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const facetId = c.req.query("facetId");
       const facetOperator = c.req.query("facetOperator");
       const facetValueJson = c.req.query("facetValueJson");
+      const contextId = c.req.query("contextId");
+      const contextTypeId = c.req.query("contextTypeId");
+      const contextRelationshipTypeId = c.req.query("contextRelationshipTypeId");
+      const contextDirection = c.req.query("contextDirection");
       try {
         let parsedFacetValue: unknown;
         if (facetValueJson !== undefined) {
@@ -465,6 +471,13 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           } catch {
             return c.json({ error: { code: "validation_error", message: "facetValueJson must be a valid JSON scalar" } }, 400);
           }
+        }
+        const contextFilterParts = [contextId, contextTypeId, contextRelationshipTypeId].filter((value) => value !== undefined).length;
+        if (contextFilterParts > 0 && contextFilterParts < 3) {
+          return c.json({ error: { code: "validation_error", message: "Context queries require contextId, contextTypeId, and contextRelationshipTypeId together" } }, 400);
+        }
+        if (contextDirection && contextFilterParts < 3) {
+          return c.json({ error: { code: "validation_error", message: "contextDirection requires a complete stable Context relationship filter" } }, 400);
         }
         return c.json(organization.query({
           scope,
@@ -485,6 +498,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               }],
             } : {}),
             ...(c.req.query("workflowStateId") ? { workflowStateIds: [c.req.query("workflowStateId")] } : {}),
+            ...(contextId && contextTypeId && contextRelationshipTypeId ? { contextFilters: [{ context: { contextId, contextTypeId }, relationshipTypeId: contextRelationshipTypeId, ...(contextDirection ? { direction: contextDirection } : {}) }] } : {}),
             ...(limit ? { limit: Number(limit) } : {}),
             ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
           },

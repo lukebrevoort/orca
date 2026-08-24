@@ -85,13 +85,10 @@ describe("BRE-309 clean M8 migration", () => {
       const journal = JSON.parse(readFileSync(resolve(import.meta.dir, "../../../drizzle/meta/_journal.json"), "utf8")) as {
         entries: Array<{ idx: number; tag: string }>;
       };
-      assert.deepEqual(journal.entries.at(-1), {
-        idx: 24,
-        version: "6",
-        when: 1787551200001,
-        tag: "0024_organization_collections_pins",
-        breakpoints: true,
-      });
+      assert.deepEqual(journal.entries.slice(-2).map(({ idx, tag }) => ({ idx, tag })), [
+        { idx: 24, tag: "0024_organization_collections_pins" },
+        { idx: 25, tag: "0025_organization_context_relationships" },
+      ]);
     } finally {
       sqlite.close();
       rmSync(directory, { recursive: true, force: true });
