@@ -1,0 +1,176 @@
+import { z } from "zod";
+
+const nonEmptyStringSchema = z.string().trim().min(1);
+const isoDateTimeSchema = z.string().datetime({ offset: false });
+const uniqueStringsSchema = z.array(nonEmptyStringSchema).superRefine((values, context) => {
+  if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Values must be unique" });
+});
+
+export const organizationCollectionPinScopeSchema = z.object({
+  actor: z.object({ id: nonEmptyStringSchema, type: z.enum(["human", "agent", "system"]) }).strict(),
+  workspaceId: nonEmptyStringSchema,
+  accountIds: uniqueStringsSchema,
+}).strict();
+export type OrganizationCollectionPinScope = z.infer<typeof organizationCollectionPinScopeSchema>;
+
+export const organizationPinResourceFamilySchema = z.enum(["thread", "view", "collection", "sender"]);
+export const organizationPinTargetSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("resource"),
+    resource: z.object({ family: organizationPinResourceFamilySchema, id: nonEmptyStringSchema }).strict(),
+  }).strict(),
+  z.object({ type: z.literal("query"), queryId: nonEmptyStringSchema }).strict(),
+]);
+export type OrganizationPinTarget = z.infer<typeof organizationPinTargetSchema>;
+
+export const organizationSavedQueryDefinitionSchema = z.object({
+  revision: z.literal(1),
+  filters: z.object({
+    threadId: nonEmptyStringSchema.optional(),
+    attention: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+    classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
+    text: z.string().trim().max(200).optional(),
+    sender: z.string().trim().max(320).optional(),
+    collectionId: nonEmptyStringSchema.optional(),
+  }).strict(),
+}).strict();
+export type OrganizationSavedQueryDefinition = z.infer<typeof organizationSavedQueryDefinitionSchema>;
+
+export const organizationSavedQuerySchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  name: z.string().trim().min(1).max(120),
+  definition: organizationSavedQueryDefinitionSchema,
+  revision: z.number().int().positive(),
+}).strict();
+export type OrganizationSavedQuery = z.infer<typeof organizationSavedQuerySchema>;
+
+export const organizationCollectionSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  name: z.string().trim().min(1).max(80),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
+  position: z.number().int().nonnegative(),
+  threadIds: uniqueStringsSchema,
+  revision: z.number().int().positive(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+}).strict();
+export type OrganizationCollection = z.infer<typeof organizationCollectionSchema>;
+
+export const organizationPinSchema = z.object({
+  id: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  label: z.string().trim().min(1).max(120),
+  icon: z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
+  position: z.number().int().nonnegative(),
+  target: organizationPinTargetSchema,
+  revision: z.number().int().positive(),
+  createdAt: isoDateTimeSchema,
+  updatedAt: isoDateTimeSchema,
+}).strict();
+export type OrganizationPin = z.infer<typeof organizationPinSchema>;
+
+export const organizationCollectionPinQuerySchema = z.object({
+  accountIds: uniqueStringsSchema.min(1).optional(),
+  collectionId: nonEmptyStringSchema.optional(),
+  threadId: nonEmptyStringSchema.optional(),
+}).strict();
+export type OrganizationCollectionPinQuery = z.infer<typeof organizationCollectionPinQuerySchema>;
+
+export const organizationCollectionPinQueryResponseSchema = z.object({
+  workspaceId: nonEmptyStringSchema,
+  accountIds: uniqueStringsSchema,
+  collections: z.array(organizationCollectionSchema),
+  pins: z.array(organizationPinSchema),
+  queries: z.array(organizationSavedQuerySchema),
+}).strict();
+export type OrganizationCollectionPinQueryResponse = z.infer<typeof organizationCollectionPinQueryResponseSchema>;
+
+const collectionMembershipChangeSchema = z.object({
+  kind: z.literal("collection_membership"),
+  action: z.enum(["add", "remove"]),
+  accountId: nonEmptyStringSchema,
+  collectionId: nonEmptyStringSchema,
+  threadId: nonEmptyStringSchema,
+}).strict();
+const collectionChangeSchema = z.discriminatedUnion("action", [
+  z.object({
+    kind: z.literal("collection"), action: z.literal("create"), accountId: nonEmptyStringSchema,
+    collection: z.object({ id: nonEmptyStringSchema, name: z.string().trim().min(1).max(80), color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/) }).strict(),
+  }).strict(),
+  z.object({ kind: z.literal("collection"), action: z.literal("remove"), accountId: nonEmptyStringSchema, collectionId: nonEmptyStringSchema }).strict(),
+]);
+const pinChangeSchema = z.discriminatedUnion("action", [
+  z.object({
+    kind: z.literal("pin"), action: z.literal("create"), accountId: nonEmptyStringSchema,
+    pin: z.object({
+      id: nonEmptyStringSchema,
+      label: z.string().trim().min(1).max(120),
+      icon: z.enum(["person", "thread", "search", "grid", "star", "bolt", "heart", "bookmark"]),
+      color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/),
+      target: organizationPinTargetSchema,
+    }).strict(),
+  }).strict(),
+  z.object({ kind: z.literal("pin"), action: z.literal("remove"), accountId: nonEmptyStringSchema, pinId: nonEmptyStringSchema }).strict(),
+]);
+const savedQueryChangeSchema = z.discriminatedUnion("action", [
+  z.object({
+    kind: z.literal("saved_query"), action: z.literal("create"), accountId: nonEmptyStringSchema,
+    query: z.object({ id: nonEmptyStringSchema, name: z.string().trim().min(1).max(120), definition: organizationSavedQueryDefinitionSchema }).strict(),
+  }).strict(),
+  z.object({ kind: z.literal("saved_query"), action: z.literal("remove"), accountId: nonEmptyStringSchema, queryId: nonEmptyStringSchema }).strict(),
+]);
+
+export const organizationCollectionPinChangeSchema = z.union([
+  collectionMembershipChangeSchema,
+  collectionChangeSchema,
+  pinChangeSchema,
+  savedQueryChangeSchema,
+]);
+export type OrganizationCollectionPinChange = z.infer<typeof organizationCollectionPinChangeSchema>;
+
+export const organizationCollectionPinApplyRequestSchema = z.object({
+  idempotencyKey: nonEmptyStringSchema.max(200),
+  change: organizationCollectionPinChangeSchema,
+}).strict();
+export type OrganizationCollectionPinApplyRequest = z.infer<typeof organizationCollectionPinApplyRequestSchema>;
+
+export const organizationCollectionPinRevertRequestSchema = z.object({
+  idempotencyKey: nonEmptyStringSchema.max(200),
+  changeId: nonEmptyStringSchema,
+}).strict();
+export type OrganizationCollectionPinRevertRequest = z.infer<typeof organizationCollectionPinRevertRequestSchema>;
+
+export const organizationCollectionPinAuditEntrySchema = z.object({
+  id: nonEmptyStringSchema,
+  workspaceId: nonEmptyStringSchema,
+  accountId: nonEmptyStringSchema,
+  actor: z.object({ id: nonEmptyStringSchema, type: z.enum(["human", "agent", "system"]) }).strict(),
+  operation: z.enum(["apply", "revert"]),
+  changeKind: z.enum(["collection", "collection_membership", "pin", "saved_query"]),
+  resourceId: nonEmptyStringSchema,
+  before: z.unknown().nullable(),
+  after: z.unknown().nullable(),
+  reason: nonEmptyStringSchema,
+  revertsChangeId: nonEmptyStringSchema.nullable(),
+  revertedByChangeId: nonEmptyStringSchema.nullable(),
+  createdAt: isoDateTimeSchema,
+}).strict();
+export type OrganizationCollectionPinAuditEntry = z.infer<typeof organizationCollectionPinAuditEntrySchema>;
+
+export const organizationCollectionPinMutationResponseSchema = z.object({
+  change: organizationCollectionPinAuditEntrySchema,
+  state: organizationCollectionPinQueryResponseSchema,
+}).strict();
+export type OrganizationCollectionPinMutationResponse = z.infer<typeof organizationCollectionPinMutationResponseSchema>;
+
+export const organizationCollectionPinDescribeResponseSchema = z.object({
+  workspaceId: nonEmptyStringSchema,
+  accountIds: uniqueStringsSchema,
+  semantics: z.object({ collections: z.literal("explicit_thread_membership"), pins: z.literal("stable_shortcut_identity") }).strict(),
+  operations: z.object({ describe: z.literal(true), query: z.literal(true), apply: z.literal(true), revert: z.literal(true), simulate: z.literal(false) }).strict(),
+  authority: z.object({ sendMail: z.literal(false), deleteProviderMail: z.literal(false) }).strict(),
+}).strict();
+export type OrganizationCollectionPinDescribeResponse = z.infer<typeof organizationCollectionPinDescribeResponseSchema>;

@@ -92,6 +92,9 @@ export {
   organizationTraceWinnerSchema,
 } from "./organization-contract.ts";
 
+export * from "./organization-collections-pins.ts";
+export * from "./organization-collections-pins-fixtures.ts";
+
 export {
   organizationCapabilitiesSchema,
   organizationDescribeResponseSchema,

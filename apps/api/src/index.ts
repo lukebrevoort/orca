@@ -125,6 +125,7 @@ import {
 } from "./organization/module.ts";
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
+import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -203,6 +204,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   const draftMirrorJobs = new Set<string>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
+
+  registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
 
   app.use(
     "*",

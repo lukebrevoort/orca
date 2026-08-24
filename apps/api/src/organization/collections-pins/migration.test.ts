@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import { Database } from "bun:sqlite";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { describe, test } from "node:test";
+
+describe("BRE-309 clean M8 migration", () => {
+  test("backfills legacy filter Pins with stable saved-query identity without discarding their definition", () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-bre-309-migration-"));
+    const sqlite = new Database(join(directory, "legacy.sqlite"));
+    try {
+      sqlite.exec(`
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE users (id text PRIMARY KEY NOT NULL);
+        CREATE TABLE oauth_accounts (id text PRIMARY KEY NOT NULL, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE);
+        CREATE TABLE threads (id text PRIMARY KEY NOT NULL, account_id text NOT NULL REFERENCES oauth_accounts(id) ON DELETE CASCADE);
+        CREATE TABLE collections (
+          id text PRIMARY KEY NOT NULL,
+          account_id text NOT NULL REFERENCES oauth_accounts(id) ON DELETE CASCADE,
+          name text NOT NULL,
+          color text NOT NULL,
+          position integer NOT NULL,
+          created_at integer NOT NULL,
+          updated_at integer NOT NULL
+        );
+        CREATE TABLE pins (
+          id text PRIMARY KEY NOT NULL,
+          account_id text NOT NULL REFERENCES oauth_accounts(id) ON DELETE CASCADE,
+          kind text NOT NULL,
+          target_id text NOT NULL,
+          label text NOT NULL,
+          icon text NOT NULL,
+          color text NOT NULL,
+          position integer NOT NULL,
+          created_at integer NOT NULL,
+          updated_at integer NOT NULL
+        );
+        INSERT INTO users (id) VALUES ('workspace_1');
+        INSERT INTO oauth_accounts (id, user_id) VALUES ('account_1', 'workspace_1');
+        INSERT INTO pins (id, account_id, kind, target_id, label, icon, color, position, created_at, updated_at)
+        VALUES (
+          'pin_legacy',
+          'account_1',
+          'filter',
+          '{"mailbox":"focus","attention":"focus","classification":"human","person":null,"query":"launch"}',
+          'Launch',
+          'search',
+          '#70867d',
+          0,
+          1787500000000,
+          1787500000000
+        ), (
+          'pin_same_label',
+          'account_1',
+          'filter',
+          '{"mailbox":"all","attention":"all","classification":"all","person":null,"query":"roadmap"}',
+          'Launch',
+          'search',
+          '#70867d',
+          1,
+          1787500000000,
+          1787500000000
+        );
+      `);
+      const migration = readFileSync(resolve(import.meta.dir, "../../../drizzle/0024_organization_collections_pins.sql"), "utf8");
+      for (const statement of migration.split("--> statement-breakpoint").map((value) => value.trim()).filter(Boolean)) sqlite.exec(statement);
+
+      const pin = sqlite.query("SELECT target_id, target_type, saved_query_id, revision FROM pins WHERE id = 'pin_legacy'").get() as Record<string, unknown>;
+      assert.equal(pin.target_type, "query");
+      assert.equal(pin.saved_query_id, "query:legacy:pin_legacy");
+      assert.equal(pin.revision, 1);
+      assert.equal(String(pin.target_id).includes("mailbox"), true);
+
+      const query = sqlite.query("SELECT id, definition_json FROM organization_saved_queries WHERE id = 'query:legacy:pin_legacy'").get() as Record<string, unknown>;
+      assert.equal(query.id, "query:legacy:pin_legacy");
+      assert.equal(String(query.definition_json).includes("launch"), true);
+      const sameNameQueries = sqlite.query("SELECT COUNT(*) AS count FROM organization_saved_queries WHERE name = 'Launch'").get() as { count: number };
+      assert.equal(sameNameQueries.count, 2);
+      assert.equal(sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'organization_collection_pin_audits'").get() !== null, true);
+    } finally {
+      sqlite.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});

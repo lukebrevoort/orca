@@ -692,6 +692,7 @@ export const collections = sqliteTable(
     name: text("name").notNull(),
     color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
+    revision: integer("revision").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
@@ -745,16 +746,58 @@ export const pins = sqliteTable(
     accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     targetId: text("target_id").notNull(),
+    targetType: text("target_type").notNull().default("resource"),
+    resourceFamily: text("resource_family"),
+    savedQueryId: text("saved_query_id"),
     label: text("label").notNull(),
     icon: text("icon").notNull().default("person"),
     color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
+    revision: integer("revision").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
   (table) => ({
     accountTargetUniqueIdx: uniqueIndex("pins_account_target_unique_idx").on(table.accountId, table.kind, table.targetId),
     accountPositionUniqueIdx: uniqueIndex("pins_account_position_unique_idx").on(table.accountId, table.position),
+  }),
+);
+
+export const organizationSavedQueries = sqliteTable(
+  "organization_saved_queries",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    definitionJson: text("definition_json").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
+export const organizationCollectionPinAudits = sqliteTable(
+  "organization_collection_pin_audits",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").notNull(),
+    actorType: text("actor_type").notNull(),
+    operation: text("operation").notNull(),
+    changeKind: text("change_kind").notNull(),
+    resourceId: text("resource_id").notNull(),
+    beforeJson: text("before_json"),
+    afterJson: text("after_json"),
+    commandJson: text("command_json").notNull(),
+    reason: text("reason").notNull(),
+    revertsChangeId: text("reverts_change_id"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    workspaceIdempotencyUniqueIdx: uniqueIndex("organization_collection_pin_audits_workspace_idempotency_unique_idx").on(table.workspaceId, table.idempotencyKey),
+    workspaceCreatedIdx: index("organization_collection_pin_audits_workspace_created_idx").on(table.workspaceId, table.createdAt),
   }),
 );
 
