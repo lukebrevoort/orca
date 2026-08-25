@@ -221,7 +221,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
   changeId: string;
   operation: "apply" | "revert";
   authorizationEnvelopeDigest: string;
-  anchoredScope: Parameters<OrganizationContextsRepository["apply"]>[0]["scope"];
+  anchoredAuthorization: NonNullable<ReturnType<typeof consumeOrganizationContextAuthorizationAnchor>>;
 }): {
   workspaceId: string;
   expectedWorkspaceRevision: number;
@@ -251,7 +251,8 @@ function assertAuthorizedEnvelope(db: Database, input: {
   const suppliedEnvelope = envelopeResult.data;
   const suppliedDigest = digestOrganizationAuthorizationEnvelope(suppliedEnvelope);
   if (suppliedDigest !== input.authorizationEnvelopeDigest
-    || canonicalOrganizationJson(scope) !== canonicalOrganizationJson(input.anchoredScope)
+    || input.authorizationEnvelopeDigest !== input.anchoredAuthorization.authorizationEnvelopeDigest
+    || canonicalOrganizationJson(scope) !== canonicalOrganizationJson(input.anchoredAuthorization.scope)
     || suppliedEnvelope.executionContext.operation !== input.operation
     || suppliedEnvelope.trace.operation !== input.operation
     || request.expectedWorkspaceRevision !== suppliedEnvelope.executionContext.expectedRevisions.workspace
@@ -537,11 +538,11 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
       return request ? { request, change: summary(db, row) } : null;
     },
     apply(input) {
-      const anchoredScope = consumeOrganizationContextAuthorizationAnchor(input.authorization.authorizationAnchor);
-      if (!anchoredScope) throw new OrganizationAuthorityError("invalid_request", "The authenticated Context authorization anchor is missing or expired");
+      const anchoredAuthorization = consumeOrganizationContextAuthorizationAnchor(input.authorization.authorizationAnchor);
+      if (!anchoredAuthorization) throw new OrganizationAuthorityError("invalid_request", "The authenticated Context authorization anchor is missing or expired");
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredScope, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredAuthorization, command: input.authorization.command, changeId: input.changeId, operation: "apply" });
         const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
         const request = organizationContextApplyRequestSchema.parse(authorized.request);
         assertBoundCommand({ command, executionContext, actions: request.actions, allocatedIds: input.allocatedIds });
@@ -558,11 +559,11 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
       });
     },
     revert(input) {
-      const anchoredScope = consumeOrganizationContextAuthorizationAnchor(input.authorization.authorizationAnchor);
-      if (!anchoredScope) throw new OrganizationAuthorityError("invalid_request", "The authenticated Context authorization anchor is missing or expired");
+      const anchoredAuthorization = consumeOrganizationContextAuthorizationAnchor(input.authorization.authorizationAnchor);
+      if (!anchoredAuthorization) throw new OrganizationAuthorityError("invalid_request", "The authenticated Context authorization anchor is missing or expired");
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredScope, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
+        const authorized = assertAuthorizedEnvelope(executor, { request: input.request, scope: input.scope, executionContext: input.authorization.executionContext, authorityTrace: input.authorization.trace, authorizationEnvelopeDigest: input.authorization.authorizationEnvelopeDigest, anchoredAuthorization, command: input.authorization.command, changeId: input.changeId, operation: "revert" });
         const { workspaceId, expectedWorkspaceRevision, idempotencyKey, executionContext, authorityTrace, command, current } = authorized;
         const request = organizationContextRevertRequestSchema.parse(authorized.request);
         assertBoundCommand({ command, executionContext });

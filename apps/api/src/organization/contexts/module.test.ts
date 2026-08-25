@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -7,7 +8,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, threads, users } from "../../db/schema.ts";
-import { authorizeOrganizationOperation, digestOrganizationAuthorizationEnvelope } from "../authority.ts";
+import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope } from "../authority.ts";
 import { createOrganization } from "../module.ts";
 import { OrganizationAuthorityError } from "../module.ts";
 import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
@@ -15,6 +16,7 @@ import {
   OrganizationContextsAccessError,
   OrganizationContextsConflictError,
   OrganizationContextsValidationError,
+  digestOrganizationContextActions,
   organizationContextsCapability,
   queryOrganizationContextSnapshot,
 } from "./module.ts";
@@ -583,6 +585,157 @@ describe("Context Organization module", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects same-scope apply command substitution and consumes the anchor for a competing retry", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const baseContexts = baseRepository.contexts!;
+      const substitutingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          apply(input: Parameters<typeof baseContexts.apply>[0]) {
+            const request = {
+              ...input.request,
+              actions: [{ kind: "create_context_type" as const, name: "Customer", position: 0 }],
+            };
+            const command = structuredClone(input.authorization.command);
+            const typedActionsDigest = digestOrganizationContextActions(request.actions);
+            command.intents = command.intents.map((intent) => ({
+              ...intent,
+              changes: { ...intent.changes, typedActionsDigest },
+            }));
+            const capability = organizationContextsCapability(scope);
+            const decision = authorizeOrganizationOperation({
+              actor: scope.actor,
+              capabilitySnapshot: capability,
+              operation: "apply",
+              scope: capability.scope,
+              command,
+              expectedRevisions: input.authorization.executionContext.expectedRevisions,
+              idempotencyKey: request.idempotencyKey,
+            }, {
+              scope: capability.scope,
+              capability: { snapshot: capability, revokedAt: null },
+              workspaceRevision: 1,
+              resourceRevisions: {},
+              reservedIdempotencyKeys: [],
+            });
+            assert.equal(decision.allowed, true);
+            if (!decision.allowed) throw new Error("Expected substituted apply authority to allow the probe");
+            const substituted = {
+              ...input,
+              request,
+              authorization: {
+                ...input.authorization,
+                command,
+                executionContext: decision.executionContext,
+                trace: decision.trace,
+                authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+              },
+            };
+            let substitutionError: unknown;
+            try { baseContexts.apply(substituted); } catch (error) { substitutionError = error; }
+            assert.ok(substitutionError instanceof OrganizationAuthorityError);
+            assert.throws(() => baseContexts.apply(input), (error) => error instanceof OrganizationAuthorityError && /authorization anchor/.test(error.message));
+            throw substitutionError;
+          },
+        },
+      };
+
+      assert.throws(() => createOrganization(substitutingRepository).contexts!.apply({ scope, request: {
+        idempotencyKey: "same-scope-apply-substitution", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request");
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects same-scope revert target substitution without reverting either change", () => {
+    const { scope, db, sqlite } = setup();
+    try {
+      const baseRepository = createSqliteOrganizationRepository(db);
+      const contexts = createOrganization(baseRepository).contexts!;
+      const first = contexts.apply({ scope, request: {
+        idempotencyKey: "same-scope-revert-source-a", expectedWorkspaceRevision: 1,
+        actions: [{ kind: "create_context_type", name: "Project", position: 0 }],
+      } });
+      const second = contexts.apply({ scope, request: {
+        idempotencyKey: "same-scope-revert-source-b", expectedWorkspaceRevision: 2,
+        actions: [{ kind: "create_context_type", name: "Customer", position: 1 }],
+      } });
+      const baseContexts = baseRepository.contexts!;
+      const substitutingRepository = {
+        ...baseRepository,
+        contexts: {
+          ...baseContexts,
+          revert(input: Parameters<typeof baseContexts.revert>[0]) {
+            const request = { ...input.request, changeId: second.change.id };
+            const command = structuredClone(input.authorization.command);
+            command.intents = command.intents.map((intent) => ({
+              ...intent,
+              resourceId: `context_change:${request.changeId}`,
+              changes: {
+                ...intent.changes,
+                requestDigest: `sha256:${createHash("sha256").update(canonicalOrganizationJson(request)).digest("hex")}`,
+              },
+            }));
+            const capability = organizationContextsCapability(scope);
+            const decision = authorizeOrganizationOperation({
+              actor: scope.actor,
+              capabilitySnapshot: capability,
+              operation: "revert",
+              scope: capability.scope,
+              command,
+              expectedRevisions: input.authorization.executionContext.expectedRevisions,
+              idempotencyKey: request.idempotencyKey,
+            }, {
+              scope: capability.scope,
+              capability: { snapshot: capability, revokedAt: null },
+              workspaceRevision: 3,
+              resourceRevisions: {},
+              reservedIdempotencyKeys: ["same-scope-revert-source-a", "same-scope-revert-source-b"],
+            });
+            assert.equal(decision.allowed, true);
+            if (!decision.allowed) throw new Error("Expected substituted revert authority to allow the probe");
+            const substituted = {
+              ...input,
+              request,
+              authorization: {
+                ...input.authorization,
+                command,
+                executionContext: decision.executionContext,
+                trace: decision.trace,
+                authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+              },
+            };
+            let substitutionError: unknown;
+            try { baseContexts.revert(substituted); } catch (error) { substitutionError = error; }
+            assert.ok(substitutionError instanceof OrganizationAuthorityError);
+            assert.throws(() => baseContexts.revert(input), (error) => error instanceof OrganizationAuthorityError && /authorization anchor/.test(error.message));
+            throw substitutionError;
+          },
+        },
+      };
+
+      assert.throws(() => createOrganization(substitutingRepository).contexts!.revert({ scope, request: {
+        idempotencyKey: "same-scope-revert-substitution", changeId: first.change.id, expectedWorkspaceRevision: 3,
+      } }), (error) => error instanceof OrganizationAuthorityError && error.code === "invalid_request");
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 2);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 2);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 2);
+      assert.equal((sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace_owner'").get() as { revision: number }).revision, 3);
+      assert.deepEqual(contexts.query({ scope, query: { includeRetired: true } }).contextTypes.map((item) => item.name), ["Project", "Customer"]);
     } finally {
       sqlite.close();
     }

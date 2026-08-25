@@ -38,24 +38,36 @@ export type OrganizationContextAuthorizationAnchor = Readonly<{
   [organizationContextAuthorizationAnchorBrand]: true;
 }>;
 
-const organizationContextAuthorizationAnchors = new WeakMap<object, OrganizationContextScope>();
+export type OrganizationContextAuthorizationBinding = Readonly<{
+  scope: OrganizationContextScope;
+  authorizationEnvelopeDigest: string;
+}>;
+
+const organizationContextAuthorizationAnchors = new WeakMap<
+  object,
+  OrganizationContextAuthorizationBinding
+>();
 
 function issueOrganizationContextAuthorizationAnchor(
   scope: OrganizationContextScope,
+  authorizationEnvelopeDigest: string,
 ): OrganizationContextAuthorizationAnchor {
   const anchor = Object.freeze({}) as OrganizationContextAuthorizationAnchor;
-  organizationContextAuthorizationAnchors.set(anchor, structuredClone(scope));
+  organizationContextAuthorizationAnchors.set(anchor, {
+    scope: structuredClone(scope),
+    authorizationEnvelopeDigest,
+  });
   return anchor;
 }
 
 /** Transaction adapters may consume a module-issued anchor once, but repository seams cannot mint one. */
 export function consumeOrganizationContextAuthorizationAnchor(
   anchor: unknown,
-): OrganizationContextScope | null {
+): OrganizationContextAuthorizationBinding | null {
   if (typeof anchor !== "object" || anchor === null) return null;
-  const scope = organizationContextAuthorizationAnchors.get(anchor);
+  const binding = organizationContextAuthorizationAnchors.get(anchor);
   organizationContextAuthorizationAnchors.delete(anchor);
-  return scope ? structuredClone(scope) : null;
+  return binding ? structuredClone(binding) : null;
 }
 
 export type OrganizationContextsRepository = {
@@ -427,7 +439,10 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
       executionContext: decision.executionContext,
       trace: decision.trace,
       authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
-      authorizationAnchor: issueOrganizationContextAuthorizationAnchor(scope),
+      authorizationAnchor: issueOrganizationContextAuthorizationAnchor(
+        scope,
+        decision.authorizationEnvelopeDigest,
+      ),
       command,
     };
   }
