@@ -62,6 +62,7 @@ export function registerOrganizationContextRoutes(app: OrganizationApp, options:
     try {
       const contextId = c.req.query("contextId");
       const contextTypeId = c.req.query("contextTypeId");
+      if (contextId && !contextTypeId) throw new SyntaxError("contextId requires contextTypeId");
       return c.json(organization.query({ scope, query: {
         ...(c.req.query("accountId") ? { accountIds: [c.req.query("accountId")] } : {}),
         ...(c.req.query("threadId") ? { threadId: c.req.query("threadId") } : {}),

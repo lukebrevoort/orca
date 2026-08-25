@@ -62,6 +62,8 @@ describe("Context Organization REST adapter", () => {
     const query = await app.request(`/v1/organization/contexts/query?accountId=account_a&threadId=thread_incident&contextTypeId=${contextType.id}&contextId=${context.id}`, { headers });
     assert.equal(query.status, 200);
     assert.equal((await query.json()).relationships.length, 1);
+    const incompleteContextFilter = await app.request(`/v1/organization/contexts/query?contextId=${context.id}`, { headers });
+    assert.equal(incompleteContextFilter.status, 400);
     const rootQuery = await app.request(`/v1/organization/query?attention=all&contextTypeId=${contextType.id}&contextId=${context.id}&contextRelationshipTypeId=${relationshipType.id}`, { headers });
     assert.equal(rootQuery.status, 200);
     const rootBody = await rootQuery.json();
