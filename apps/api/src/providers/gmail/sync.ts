@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
@@ -11,6 +11,7 @@ import { decryptSecret } from "../../auth/gmail/crypto.ts";
 import { refreshGmailAccessToken, type FetchLike } from "../../auth/gmail/oauth.ts";
 import { readProviderTokens, storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
+import { refreshThreadAggregates } from "../../organization/thread-aggregate.ts";
 import {
   contacts,
   emailAttachments,
@@ -298,7 +299,7 @@ export async function persistGmailMessages(
     upsertAttachments(tx, normalizedMessages, input.now);
     upsertEmailLabels(tx, normalizedMessages, persistedLabels, input.now);
     upsertContacts(tx, input.accountId, normalizedMessages, input.now);
-    refreshThreads(tx, threadIds, input.now);
+    refreshThreadAggregates(tx, { accountId: input.accountId, threadIds, now: input.now });
     input.afterPersist?.(tx);
   });
 
@@ -792,49 +793,6 @@ function upsertContacts(
           updatedAt: now,
         },
       })
-      .run();
-  }
-}
-
-export function refreshThreads(db: DatabaseExecutor, threadIds: string[], now: Date) {
-  for (const threadId of threadIds) {
-    const aggregate = db
-      .select({
-        threadId: emails.threadId,
-        messageCount: sql<number>`count(*)`,
-        latestReceivedAt: sql<number>`max(${emails.receivedAt})`,
-        unreadCount: sql<number>`sum(case when ${emails.isRead} = 0 then 1 else 0 end)`,
-      })
-      .from(emails)
-      .where(eq(emails.threadId, threadId))
-      .groupBy(emails.threadId)
-      .get();
-
-    if (!aggregate) {
-      continue;
-    }
-
-    const latestEmail = db
-      .select({
-        subject: emails.subject,
-      })
-      .from(emails)
-      .where(eq(emails.threadId, threadId))
-      .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id))
-      .get();
-
-    db
-      .update(threads)
-      .set({
-        subject: latestEmail?.subject ?? null,
-        latestReceivedAt: aggregate.latestReceivedAt
-          ? new Date(aggregate.latestReceivedAt)
-          : null,
-        messageCount: aggregate.messageCount,
-        isRead: aggregate.unreadCount === 0,
-        updatedAt: now,
-      })
-      .where(eq(threads.id, threadId))
       .run();
   }
 }

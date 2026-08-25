@@ -21,9 +21,44 @@ import {
   agentProvenanceSchema,
   agentRelevanceSchema,
 } from "./agent-contract.ts";
+import {
+  organizationDescribeResponseSchema,
+  organizationQueryResponseSchema,
+} from "./organization-workspace.ts";
+import { organizationContextFilterSchema } from "./organization-contexts.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().datetime({ offset: false });
+
+export const mcpDescribeOrganizationInputSchema = z.object({
+  accountId: nonEmptyStringSchema.optional(),
+}).strict();
+export type McpDescribeOrganizationInput = z.infer<typeof mcpDescribeOrganizationInputSchema>;
+
+export const mcpDescribeOrganizationOutputSchema = organizationDescribeResponseSchema;
+export type McpDescribeOrganizationOutput = z.infer<typeof mcpDescribeOrganizationOutputSchema>;
+
+export const mcpQueryOrganizationInputSchema = z.object({
+  accountId: nonEmptyStringSchema.optional(),
+  threadId: nonEmptyStringSchema.optional(),
+  attention: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
+  classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
+  text: z.string().trim().max(200).optional(),
+  sender: z.string().trim().max(320).optional(),
+  receivedAfter: isoDateTimeStringSchema.optional(),
+  receivedBefore: isoDateTimeStringSchema.optional(),
+  contextFilters: z.array(organizationContextFilterSchema).min(1).max(20).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  cursor: z.string().trim().min(1).max(2_048).optional(),
+}).strict().superRefine((value, context) => {
+  if (value.receivedAfter && value.receivedBefore && Date.parse(value.receivedAfter) > Date.parse(value.receivedBefore)) {
+    context.addIssue({ code: "custom", path: ["receivedAfter"], message: "receivedAfter must not be later than receivedBefore" });
+  }
+});
+export type McpQueryOrganizationInput = z.infer<typeof mcpQueryOrganizationInputSchema>;
+
+export const mcpQueryOrganizationOutputSchema = organizationQueryResponseSchema;
+export type McpQueryOrganizationOutput = z.infer<typeof mcpQueryOrganizationOutputSchema>;
 
 const mcpHumanClassificationOverrideSchema = z.object({
   id: nonEmptyStringSchema,

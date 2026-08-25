@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const createdAtDefault = sql`(unixepoch() * 1000)`;
 
@@ -157,6 +157,319 @@ export const threads = sqliteTable(
       table.latestReceivedAt,
     ),
     accountIdIdUniqueIdx: uniqueIndex("threads_account_id_id_unique_idx").on(table.accountId, table.id),
+  }),
+);
+
+/** Revision root for atomic Workspace-wide Organization structure changes. */
+export const organizationWorkspaceStates = sqliteTable(
+  "organization_workspace_states",
+  {
+    workspaceId: text("workspace_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(1),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    revisionCheck: check("organization_workspace_states_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationFacets = sqliteTable(
+  "organization_facets",
+  {
+    id: text("id").notNull(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    valueType: text("value_type").notNull(),
+    cardinality: text("cardinality").notNull(),
+    isOptional: integer("is_optional", { mode: "boolean" }).notNull(),
+    defaultValue: text("default_value"),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePositionIdx: index("organization_facets_workspace_position_idx").on(table.workspaceId, table.position),
+    workspaceNameIdx: index("organization_facets_workspace_name_idx").on(table.workspaceId, table.name),
+    revisionCheck: check("organization_facets_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationWorkflowStates = sqliteTable(
+  "organization_workflow_states",
+  {
+    id: text("id").notNull(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePositionIdx: index("organization_workflow_states_workspace_position_idx").on(table.workspaceId, table.position),
+    workspaceNameIdx: index("organization_workflow_states_workspace_name_idx").on(table.workspaceId, table.name),
+    revisionCheck: check("organization_workflow_states_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationThreadFacetValues = sqliteTable(
+  "organization_thread_facet_values",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    facetId: text("facet_id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    value: text("value").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.facetId, table.accountId, table.threadId] }),
+    workspaceFacetForeignKey: foreignKey({
+      columns: [table.workspaceId, table.facetId],
+      foreignColumns: [organizationFacets.workspaceId, organizationFacets.id],
+      name: "organization_thread_facet_values_workspace_facet_fk",
+    }).onDelete("cascade"),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_thread_facet_values_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_thread_facet_values_account_thread_fk",
+    }).onDelete("cascade"),
+    accountThreadIdx: index("organization_thread_facet_values_account_thread_idx").on(table.workspaceId, table.accountId, table.threadId),
+  }),
+);
+
+export const organizationThreadWorkflowStates = sqliteTable(
+  "organization_thread_workflow_states",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    accountId: text("account_id").notNull(),
+    stateId: text("state_id").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.accountId, table.threadId] }),
+    workspaceStateForeignKey: foreignKey({
+      columns: [table.workspaceId, table.stateId],
+      foreignColumns: [organizationWorkflowStates.workspaceId, organizationWorkflowStates.id],
+      name: "organization_thread_workflow_states_workspace_state_fk",
+    }).onDelete("cascade"),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_thread_workflow_states_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_thread_workflow_states_account_thread_fk",
+    }).onDelete("cascade"),
+    accountStateIdx: index("organization_thread_workflow_states_account_state_idx").on(table.workspaceId, table.accountId, table.stateId),
+  }),
+);
+
+export const organizationThreadStates = sqliteTable(
+  "organization_thread_states",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    revision: integer("revision").notNull().default(1),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.accountId, table.threadId] }),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_thread_states_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_thread_states_account_thread_fk",
+    }).onDelete("cascade"),
+    revisionCheck: check("organization_thread_states_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationChangeSets = sqliteTable(
+  "organization_change_sets",
+  {
+    id: text("id").notNull(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    idempotencyKey: text("idempotency_key").notNull(),
+    commandDigest: text("command_digest").notNull(),
+    authorityTrace: text("authority_trace").notNull(),
+    resourceFamily: text("resource_family").notNull().default("facet_workflow"),
+    operation: text("operation").notNull().default("apply"),
+    commandJson: text("command_json").notNull().default("{}"),
+    revertsChangeId: text("reverts_change_id"),
+    workspaceRevisionBefore: integer("workspace_revision_before").notNull().default(1),
+    workspaceRevisionAfter: integer("workspace_revision_after").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspaceIdempotencyUniqueIdx: uniqueIndex("organization_change_sets_workspace_idempotency_unique_idx").on(table.workspaceId, table.idempotencyKey),
+  }),
+);
+
+/** Ordered inverse evidence for resource-specific changes in the shared Organization audit. */
+export const organizationChangeActions = sqliteTable(
+  "organization_change_actions",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    changeId: text("change_id").notNull(),
+    position: integer("position").notNull(),
+    actionKind: text("action_kind").notNull(),
+    resourceFamily: text("resource_family").notNull(),
+    resourceId: text("resource_id").notNull(),
+    beforeJson: text("before_json"),
+    afterJson: text("after_json"),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.changeId, table.position] }),
+    changeForeignKey: foreignKey({
+      columns: [table.workspaceId, table.changeId],
+      foreignColumns: [organizationChangeSets.workspaceId, organizationChangeSets.id],
+      name: "organization_change_actions_change_fk",
+    }).onDelete("cascade"),
+    resourceIdx: index("organization_change_actions_resource_idx").on(table.workspaceId, table.resourceFamily, table.resourceId),
+  }),
+);
+
+export const organizationContextTypes = sqliteTable(
+  "organization_context_types",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePositionUniqueIdx: uniqueIndex("organization_context_types_workspace_position_unique_idx").on(table.workspaceId, table.position),
+    workspaceNameUniqueIdx: uniqueIndex("organization_context_types_workspace_name_unique_idx").on(table.workspaceId, table.name),
+    positionCheck: check("organization_context_types_position_check", sql`${table.position} >= 0`),
+    revisionCheck: check("organization_context_types_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationContextRelationshipTypes = sqliteTable(
+  "organization_context_relationship_types",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    contextTypeId: text("context_type_id").notNull(),
+    name: text("name").notNull(),
+    inverseName: text("inverse_name").notNull(),
+    direction: text("direction").notNull(),
+    position: integer("position").notNull(),
+    maximumPerThread: integer("maximum_per_thread").notNull(),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    contextTypeForeignKey: foreignKey({
+      columns: [table.workspaceId, table.contextTypeId],
+      foreignColumns: [organizationContextTypes.workspaceId, organizationContextTypes.id],
+      name: "organization_context_relationship_types_context_type_fk",
+    }).onDelete("cascade"),
+    workspaceTypeNameUniqueIdx: uniqueIndex("organization_context_relationship_types_workspace_type_name_unique_idx").on(table.workspaceId, table.contextTypeId, table.name),
+    workspaceTypePositionUniqueIdx: uniqueIndex("organization_context_relationship_types_workspace_type_position_unique_idx").on(table.workspaceId, table.contextTypeId, table.position),
+    workspaceIdTypeDirectionUniqueIdx: uniqueIndex("organization_context_relationship_types_workspace_id_type_direction_unique_idx").on(table.workspaceId, table.id, table.contextTypeId, table.direction),
+    directionCheck: check("organization_context_relationship_types_direction_check", sql`${table.direction} IN ('thread_to_context', 'context_to_thread')`),
+    positionCheck: check("organization_context_relationship_types_position_check", sql`${table.position} >= 0`),
+    revisionCheck: check("organization_context_relationship_types_revision_check", sql`${table.revision} >= 1`),
+    maximumCheck: check("organization_context_relationship_types_maximum_check", sql`${table.maximumPerThread} >= 1 AND ${table.maximumPerThread} <= 20`),
+  }),
+);
+
+export const organizationContexts = sqliteTable(
+  "organization_contexts",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    contextTypeId: text("context_type_id").notNull(),
+    name: text("name").notNull(),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    contextTypeForeignKey: foreignKey({
+      columns: [table.workspaceId, table.contextTypeId],
+      foreignColumns: [organizationContextTypes.workspaceId, organizationContextTypes.id],
+      name: "organization_contexts_context_type_fk",
+    }).onDelete("cascade"),
+    workspaceTypeNameUniqueIdx: uniqueIndex("organization_contexts_workspace_type_name_unique_idx").on(table.workspaceId, table.contextTypeId, table.name),
+    workspaceIdTypeUniqueIdx: uniqueIndex("organization_contexts_workspace_id_type_unique_idx").on(table.workspaceId, table.id, table.contextTypeId),
+    revisionCheck: check("organization_contexts_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationThreadContextRelationships = sqliteTable(
+  "organization_thread_context_relationships",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    contextTypeId: text("context_type_id").notNull(),
+    contextId: text("context_id").notNull(),
+    relationshipTypeId: text("relationship_type_id").notNull(),
+    direction: text("direction").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_thread_context_relationships_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_thread_context_relationships_account_thread_fk",
+    }).onDelete("cascade"),
+    contextForeignKey: foreignKey({
+      columns: [table.workspaceId, table.contextId, table.contextTypeId],
+      foreignColumns: [organizationContexts.workspaceId, organizationContexts.id, organizationContexts.contextTypeId],
+      name: "organization_thread_context_relationships_context_fk",
+    }).onDelete("cascade"),
+    relationshipTypeForeignKey: foreignKey({
+      columns: [table.workspaceId, table.relationshipTypeId, table.contextTypeId, table.direction],
+      foreignColumns: [organizationContextRelationshipTypes.workspaceId, organizationContextRelationshipTypes.id, organizationContextRelationshipTypes.contextTypeId, organizationContextRelationshipTypes.direction],
+      name: "organization_thread_context_relationships_relationship_type_fk",
+    }).onDelete("cascade"),
+    stableEdgeUniqueIdx: uniqueIndex("organization_thread_context_relationships_stable_edge_unique_idx").on(table.workspaceId, table.accountId, table.threadId, table.contextId, table.relationshipTypeId),
+    threadIdx: index("organization_thread_context_relationships_thread_idx").on(table.workspaceId, table.accountId, table.threadId),
+    contextIdx: index("organization_thread_context_relationships_context_idx").on(table.workspaceId, table.contextId),
+    directionCheck: check("organization_thread_context_relationships_direction_check", sql`${table.direction} IN ('thread_to_context', 'context_to_thread')`),
+    revisionCheck: check("organization_thread_context_relationships_revision_check", sql`${table.revision} >= 1`),
   }),
 );
 
@@ -533,6 +846,7 @@ export const collections = sqliteTable(
     name: text("name").notNull(),
     color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
+    revision: integer("revision").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
@@ -586,16 +900,58 @@ export const pins = sqliteTable(
     accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     targetId: text("target_id").notNull(),
+    targetType: text("target_type").notNull().default("resource"),
+    resourceFamily: text("resource_family"),
+    savedQueryId: text("saved_query_id"),
     label: text("label").notNull(),
     icon: text("icon").notNull().default("person"),
     color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
+    revision: integer("revision").notNull().default(1),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
   (table) => ({
     accountTargetUniqueIdx: uniqueIndex("pins_account_target_unique_idx").on(table.accountId, table.kind, table.targetId),
     accountPositionUniqueIdx: uniqueIndex("pins_account_position_unique_idx").on(table.accountId, table.position),
+  }),
+);
+
+export const organizationSavedQueries = sqliteTable(
+  "organization_saved_queries",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    definitionJson: text("definition_json").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+);
+
+export const organizationCollectionPinAudits = sqliteTable(
+  "organization_collection_pin_audits",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    actorId: text("actor_id").notNull(),
+    actorType: text("actor_type").notNull(),
+    operation: text("operation").notNull(),
+    changeKind: text("change_kind").notNull(),
+    resourceId: text("resource_id").notNull(),
+    beforeJson: text("before_json"),
+    afterJson: text("after_json"),
+    commandJson: text("command_json").notNull(),
+    reason: text("reason").notNull(),
+    revertsChangeId: text("reverts_change_id"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    workspaceIdempotencyUniqueIdx: uniqueIndex("organization_collection_pin_audits_workspace_idempotency_unique_idx").on(table.workspaceId, table.idempotencyKey),
+    workspaceCreatedIdx: index("organization_collection_pin_audits_workspace_created_idx").on(table.workspaceId, table.createdAt),
   }),
 );
 

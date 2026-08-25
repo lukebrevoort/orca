@@ -32,6 +32,8 @@ export const organizationResourceFamilySchema = z.enum([
   "lane",
   "view",
   "collection",
+  "shortcut",
+  "saved_query",
   "facet",
   "context",
   "workflow_state",
@@ -93,6 +95,8 @@ const organizationIntentKindSchema = z.enum([
   "mutate_lane",
   "mutate_view",
   "mutate_collection",
+  "mutate_shortcut",
+  "mutate_saved_query",
   "mutate_facet",
   "mutate_context",
   "mutate_workflow_state",
@@ -108,6 +112,8 @@ const organizationMutationKinds = new Set<OrganizationIntentKind>([
   "mutate_lane",
   "mutate_view",
   "mutate_collection",
+  "mutate_shortcut",
+  "mutate_saved_query",
   "mutate_facet",
   "mutate_context",
   "mutate_workflow_state",
@@ -253,3 +259,10 @@ export const organizationExecutionContextSchema = z.object({
   requiresAtomicIdempotencyReservation: z.boolean(),
 }).strict();
 export type OrganizationExecutionContext = z.infer<typeof organizationExecutionContextSchema>;
+
+/** Canonical complete authority evidence passed across a transactional adapter seam. */
+export const organizationAuthorizationEnvelopeSchema = z.object({
+  executionContext: organizationExecutionContextSchema,
+  trace: organizationAuthorityTraceSchema,
+}).strict();
+export type OrganizationAuthorizationEnvelope = z.infer<typeof organizationAuthorizationEnvelopeSchema>;

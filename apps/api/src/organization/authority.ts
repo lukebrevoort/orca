@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 
 import {
+  organizationAuthorizationEnvelopeSchema,
   organizationLiveAuthorityStateSchema,
   organizationOperationRequestSchema,
   type OrganizationActionFamily,
+  type OrganizationAuthorizationEnvelope,
   type OrganizationActorType,
   type OrganizationAuthorityDenialCode,
   type OrganizationAuthorityTrace,
@@ -38,6 +40,8 @@ const commandRequirements = {
   mutate_lane: { resourceFamily: "lane", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_view: { resourceFamily: "view", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_collection: { resourceFamily: "collection", actionFamily: "organization_structure", risk: "medium", mutates: true },
+  mutate_shortcut: { resourceFamily: "shortcut", actionFamily: "organization_structure", risk: "medium", mutates: true },
+  mutate_saved_query: { resourceFamily: "saved_query", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_facet: { resourceFamily: "facet", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_context: { resourceFamily: "context", actionFamily: "organization_structure", risk: "medium", mutates: true },
   mutate_workflow_state: { resourceFamily: "workflow_state", actionFamily: "organization_structure", risk: "medium", mutates: true },
@@ -61,6 +65,7 @@ export type OrganizationAuthorityDecision =
       allowed: true;
       executionContext: OrganizationExecutionContext;
       trace: OrganizationAuthorityTrace;
+      authorizationEnvelopeDigest: string;
     }
   | {
       allowed: false;
@@ -84,10 +89,10 @@ function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
 }
 
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+export function canonicalOrganizationJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalOrganizationJson).join(",")}]`;
   if (value !== null && typeof value === "object") {
-    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+    return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${canonicalOrganizationJson(item)}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -101,7 +106,7 @@ function bindCommand(command: OrganizationCommand): DerivedCommand {
   return {
     command: {
       id: command.id,
-      digest: `sha256:${createHash("sha256").update(canonicalJson(command)).digest("hex")}`,
+      digest: `sha256:${createHash("sha256").update(canonicalOrganizationJson(command)).digest("hex")}`,
     },
     resourceFamilies: unique(requirements.map((requirement) => requirement.resourceFamily)),
     actionFamilies: unique(requirements.map((requirement) => requirement.actionFamily)),
@@ -113,6 +118,17 @@ function bindCommand(command: OrganizationCommand): DerivedCommand {
     hasMutation: requirements.some((requirement) => requirement.mutates),
     hasRead: requirements.some((requirement) => !requirement.mutates),
   };
+}
+
+/** Recomputes the canonical digest that binds an authorized execution payload. */
+export function digestOrganizationCommand(command: OrganizationCommand): string {
+  return bindCommand(command).command.digest;
+}
+
+/** Runtime-validates and canonically binds every field in an authority result. */
+export function digestOrganizationAuthorizationEnvelope(envelope: OrganizationAuthorizationEnvelope): string {
+  const parsed = organizationAuthorizationEnvelopeSchema.parse(envelope);
+  return `sha256:${createHash("sha256").update(canonicalOrganizationJson(parsed)).digest("hex")}`;
 }
 
 function traceFor(
@@ -249,6 +265,12 @@ export function authorizeOrganizationOperation(
 
   const isWrite = request.operation === "apply" || request.operation === "revert";
   if (isWrite) {
+    if (!request.idempotencyKey) {
+      return deny(request, derived, "idempotency_key_required", `${request.operation} requires an idempotency key`);
+    }
+    if (live.reservedIdempotencyKeys.includes(request.idempotencyKey)) {
+      return deny(request, derived, "duplicate_idempotency_key", "The idempotency key is already reserved");
+    }
     if (request.expectedRevisions.workspace === null) {
       return deny(request, derived, "expected_revision_required", `${request.operation} requires an expected Workspace revision`);
     }
@@ -270,29 +292,25 @@ export function authorizeOrganizationOperation(
         return deny(request, derived, "revision_conflict", `Create target ${resourceId} must not already exist or carry an expected revision`);
       }
     }
-
-    if (!request.idempotencyKey) {
-      return deny(request, derived, "idempotency_key_required", `${request.operation} requires an idempotency key`);
-    }
-    if (live.reservedIdempotencyKeys.includes(request.idempotencyKey)) {
-      return deny(request, derived, "duplicate_idempotency_key", "The idempotency key is already reserved");
-    }
   }
 
+  const executionContext: OrganizationExecutionContext = {
+    actor: request.actor,
+    command: derived.command,
+    operation: request.operation,
+    workspaceId: request.scope.workspaceId,
+    accountIds: requestedAccountIds,
+    capabilityId: request.capabilitySnapshot.id,
+    capabilityRevision: request.capabilitySnapshot.revision,
+    expectedRevisions: request.expectedRevisions,
+    idempotencyKey: request.idempotencyKey,
+    requiresAtomicIdempotencyReservation: isWrite,
+  };
+  const trace = traceFor(request, derived, "allowed", "Live scope, live Capability, and bound command authorize this execution precondition", null);
   return {
     allowed: true,
-    executionContext: {
-      actor: request.actor,
-      command: derived.command,
-      operation: request.operation,
-      workspaceId: request.scope.workspaceId,
-      accountIds: requestedAccountIds,
-      capabilityId: request.capabilitySnapshot.id,
-      capabilityRevision: request.capabilitySnapshot.revision,
-      expectedRevisions: request.expectedRevisions,
-      idempotencyKey: request.idempotencyKey,
-      requiresAtomicIdempotencyReservation: isWrite,
-    },
-    trace: traceFor(request, derived, "allowed", "Live scope, live Capability, and bound command authorize this execution precondition", null),
+    executionContext,
+    trace,
+    authorizationEnvelopeDigest: digestOrganizationAuthorizationEnvelope({ executionContext, trace }),
   };
 }

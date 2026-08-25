@@ -76,6 +76,7 @@ export {
   organizationActorSchema,
   organizationActorTypeSchema,
   organizationAuthorityDenialCodeSchema,
+  organizationAuthorizationEnvelopeSchema,
   organizationAuthorityTraceSchema,
   organizationBoundCommandSchema,
   organizationCapabilitySnapshotSchema,
@@ -92,11 +93,78 @@ export {
   organizationTraceWinnerSchema,
 } from "./organization-contract.ts";
 
+export * from "./organization-collections-pins.ts";
+export * from "./organization-collections-pins-fixtures.ts";
+export * from "./organization-contexts.ts";
+export * from "./organization-contexts-fixtures.ts";
+
+export {
+  organizationCapabilitiesSchema,
+  organizationDescribeResponseSchema,
+  organizationQueryResponseSchema,
+  organizationQuerySchema,
+  organizationReadScopeSchema,
+  workspaceSchemaSchema,
+  workspaceThreadMessageSchema,
+  workspaceThreadSchema,
+} from "./organization-workspace.ts";
+
+export {
+  facetCardinalitySchema,
+  facetDefinitionSchema,
+  facetFilterSchema,
+  facetScalarValueSchema,
+  facetValueTypeSchema,
+  facetValueUpdateSchema,
+  organizationFacetWorkflowActionSchema,
+  organizationFacetWorkflowApplyResponseSchema,
+  organizationFacetWorkflowApplySchema,
+  organizationFacetSupportSchema,
+  threadFacetValueSchema,
+  threadWorkflowStateSchema,
+  workflowStateDefinitionSchema,
+} from "./organization-facets.ts";
+
+export {
+  organizationFacetDefinitionsFixture,
+  organizationFacetWorkflowApplyFixture,
+  organizationWorkflowStatesFixture,
+} from "./organization-facets.fixture.ts";
+
+export type {
+  FacetCardinality,
+  FacetDefinition,
+  FacetEnumOption,
+  FacetFilter,
+  FacetScalarValue,
+  FacetValueType,
+  FacetValueUpdate,
+  OrganizationFacetWorkflowAction,
+  OrganizationFacetWorkflowApply,
+  OrganizationFacetWorkflowApplyResponse,
+  OrganizationFacetSupport,
+  ThreadFacetValue,
+  ThreadWorkflowState,
+  WorkflowStateDefinition,
+} from "./organization-facets.ts";
+
+export type {
+  OrganizationCapabilities,
+  OrganizationDescribeResponse,
+  OrganizationQuery,
+  OrganizationQueryResponse,
+  OrganizationReadScope,
+  WorkspaceSchema,
+  WorkspaceThread,
+  WorkspaceThreadMessage,
+} from "./organization-workspace.ts";
+
 export type {
   OrganizationActionFamily,
   OrganizationActor,
   OrganizationActorType,
   OrganizationAuthorityDenialCode,
+  OrganizationAuthorizationEnvelope,
   OrganizationAuthorityTrace,
   OrganizationBoundCommand,
   OrganizationCapabilitySnapshot,
@@ -115,6 +183,8 @@ export type {
 } from "./organization-contract.ts";
 
 export {
+  mcpDescribeOrganizationInputSchema,
+  mcpDescribeOrganizationOutputSchema,
   mcpAgentEventSchema,
   mcpContentSafetySchema,
   mcpGetConnectionStatusInputSchema,
@@ -126,6 +196,8 @@ export {
   mcpListAgentEventsInputSchema,
   mcpListAgentEventsOutputSchema,
   mcpMailMessageSchema,
+  mcpQueryOrganizationInputSchema,
+  mcpQueryOrganizationOutputSchema,
   mcpSearchMailInputSchema,
   mcpSearchMailOutputSchema,
   mcpThreadMessageSchema,
@@ -134,6 +206,8 @@ export {
 } from "./mcp-contract.ts";
 
 export type {
+  McpDescribeOrganizationInput,
+  McpDescribeOrganizationOutput,
   McpGetConnectionStatusInput,
   McpGetConnectionStatusOutput,
   McpGetThreadInput,
@@ -141,6 +215,8 @@ export type {
   McpListAgentEventsInput,
   McpListAgentEventsOutput,
   McpMailMessage,
+  McpQueryOrganizationInput,
+  McpQueryOrganizationOutput,
   McpSearchMailInput,
   McpSearchMailOutput,
   McpToolError,
