@@ -817,12 +817,17 @@ describe("Orca API", () => {
     try {
       db.insert(users).values({ id: "user_1", email: "luke@example.com", displayName: "Luke" }).run();
       db.insert(oauthAccounts).values({ id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" }).run();
-      db.insert(threads).values(["bank", "family", "news", "hidden"].map((id) => ({ id: `thread_${id}`, accountId: "acct_1", providerThreadId: id, subject: id, latestReceivedAt: new Date("2026-07-08T13:00:00.000Z"), messageCount: 1, isRead: false }))).run();
+      db.insert(threads).values([
+        ...["bank", "family", "news", "hidden"].map((id) => ({ id: `thread_${id}`, accountId: "acct_1", providerThreadId: id, subject: id, latestReceivedAt: new Date("2026-07-08T13:00:00.000Z"), messageCount: 1, isRead: false })),
+        { id: "thread_mixed", accountId: "acct_1", providerThreadId: "mixed", subject: "Mixed senders", latestReceivedAt: new Date("2026-07-08T16:00:00.000Z"), messageCount: 2, isRead: false },
+      ]).run();
       db.insert(emails).values([
         { id: "email_bank", accountId: "acct_1", threadId: "thread_bank", providerMessageId: "bank", fromAddress: "alerts@bank.example", subject: "Bank", receivedAt: new Date("2026-07-08T12:00:00.000Z"), isRead: false, humanSignal: 0 },
         { id: "email_family", accountId: "acct_1", threadId: "thread_family", providerMessageId: "family", fromAddress: "family@example.com", subject: "Family", receivedAt: new Date("2026-07-08T11:00:00.000Z"), isRead: false, humanSignal: 10 },
         { id: "email_news", accountId: "acct_1", threadId: "thread_news", providerMessageId: "news", fromAddress: "daily@news.example", subject: "News", receivedAt: new Date("2026-07-08T14:00:00.000Z"), isRead: false, humanSignal: 0 },
         { id: "email_hidden", accountId: "acct_1", threadId: "thread_hidden", providerMessageId: "hidden", fromAddress: "robot@hidden.example", subject: "Hidden", receivedAt: new Date("2026-07-08T15:00:00.000Z"), isRead: false, humanSignal: 0 },
+        { id: "email_mixed_latest", accountId: "acct_1", threadId: "thread_mixed", providerMessageId: "mixed-latest", fromAddress: "normal@example.com", subject: "Mixed latest", receivedAt: new Date("2026-07-08T16:00:00.000Z"), isRead: false, humanSignal: 5 },
+        { id: "email_mixed_hidden", accountId: "acct_1", threadId: "thread_mixed", providerMessageId: "mixed-hidden", fromAddress: "robot@hidden.example", subject: "Mixed hidden", receivedAt: new Date("2026-07-08T13:30:00.000Z"), isRead: false, humanSignal: 0 },
       ]).run();
       const now = new Date("2026-07-08T16:00:00.000Z");
       db.insert(senderAttentionRules).values([
@@ -840,9 +845,12 @@ describe("Orca API", () => {
       assert.equal(focus.messages[0].humanSignal, null);
       assert.equal(focus.messages[1].humanSignal, null);
       assert.equal(focus.messages[0].humanClassification.effective.classification, "unclassified");
-      assert.deepEqual(focus.counts, { focus: 2, normal: 0, quiet: 1, hidden: 1, all: 4 });
+      assert.deepEqual(focus.counts, { focus: 2, normal: 1, quiet: 1, hidden: 2, all: 6 });
       assert.deepEqual((await (await request("quiet")).json()).messages.map((message: { id: string }) => message.id), ["email_news"]);
-      assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden"]);
+      assert.deepEqual((await (await request("normal")).json()).messages.map((message: { id: string }) => message.id), ["email_mixed_latest"]);
+      assert.deepEqual((await (await request("hidden")).json()).messages.map((message: { id: string }) => message.id), ["email_hidden", "email_mixed_hidden"]);
+      const defaultInbox = await (await testApp.request("/v1/inbox", { headers: { cookie: `orca_session=${session.token}` } })).json();
+      assert.deepEqual(defaultInbox.messages.map((message: { id: string }) => message.id), ["email_family", "email_bank", "email_mixed_latest"]);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

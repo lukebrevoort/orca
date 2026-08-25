@@ -2594,6 +2594,7 @@ function readUnifiedInbox(
   const classificationFilter = classification ?? "all";
   const accountIds = accounts.map((account) => account.id).sort();
   const accountById = new Map(accounts.map((account) => [account.id, account]));
+  const attentionRulesByAccountId = new Map(accounts.map((account) => [account.id, listSenderRules(db, account.id)]));
   const organization = createOrganization(createSqliteOrganizationRepository(db));
   const scope = { actor: { id: workspaceId, type: "system" as const }, workspaceId, accountIds };
   const organizationThreads = [] as ReturnType<typeof organization.query>["threads"];
@@ -2636,7 +2637,10 @@ function readUnifiedInbox(
       humanClassifierVersion: null,
       labels: message.labels,
       provider: account.provider,
-      attentionBehavior: thread.organization.attentionBehavior,
+      attentionBehavior: resolveAttentionBehavior(
+        message.from.email,
+        attentionRulesByAccountId.get(thread.accountId) ?? [],
+      ),
     }));
   });
   const counts = {

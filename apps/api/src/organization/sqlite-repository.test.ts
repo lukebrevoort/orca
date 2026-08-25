@@ -41,6 +41,7 @@ describe("SQLite Organization repository", () => {
       ]).run();
       db.insert(threads).values([
         { id: "thread_a", accountId: "account_a", providerThreadId: "provider-thread-a", subject: "Owned", latestReceivedAt: new Date("2026-08-23T12:00:00.000Z"), messageCount: 1, isRead: false },
+        { id: "thread_unrelated", accountId: "account_a", providerThreadId: "provider-thread-unrelated", subject: "Unrelated", latestReceivedAt: new Date("2026-08-23T11:00:00.000Z"), messageCount: 1, isRead: false },
         { id: "thread_private", accountId: "account_private", providerThreadId: "provider-thread-private", subject: "Private", latestReceivedAt: new Date("2026-08-23T13:00:00.000Z"), messageCount: 1, isRead: false },
       ]).run();
       db.insert(emails).values([
@@ -50,6 +51,11 @@ describe("SQLite Organization repository", () => {
           receivedAt: new Date("2026-08-23T12:00:00.000Z"), isRead: false,
           humanSignal: 2, humanClassification: "automated_or_bulk",
           humanClassificationReasons: JSON.stringify(["provider_bulk_signal"]), humanClassifierVersion: "v1",
+        },
+        {
+          id: "message_unrelated", accountId: "account_a", threadId: "thread_unrelated", providerMessageId: "source-message-unrelated",
+          fromAddress: "unrelated@example.com", subject: "Unrelated", snippet: "Must not be fetched by a targeted read",
+          receivedAt: new Date("2026-08-23T11:00:00.000Z"), isRead: false,
         },
         {
           id: "message_private", accountId: "account_private", threadId: "thread_private", providerMessageId: "source-message-private",
@@ -70,7 +76,7 @@ describe("SQLite Organization repository", () => {
       assert.deepEqual(repository.listAccountIds("workspace_other"), ["account_private"]);
 
       const records = repository.listThreads(["account_a"]);
-      assert.equal(records.length, 1);
+      assert.equal(records.length, 2);
       assert.equal(JSON.stringify(records).includes("gmail"), false);
       assert.deepEqual(records[0]?.attentionRules, [{ scope: "domain", value: "example.com", behavior: "focus" }]);
       assert.deepEqual(records[0]?.messages[0]?.labels, ["Inbox"]);
@@ -78,6 +84,21 @@ describe("SQLite Organization repository", () => {
       assert.equal(records[0]?.messages[0]?.humanClassification?.automatic?.classification, "automated_or_bulk");
       assert.equal(records[0]?.messages[0]?.humanClassification?.effective.classification, "likely_human");
       assert.equal(JSON.stringify(records).includes("Private"), false);
+
+      const preparedSql: string[] = [];
+      const originalPrepare = sqlite.prepare.bind(sqlite);
+      Object.defineProperty(sqlite, "prepare", {
+        configurable: true,
+        value: (sql: string) => {
+          preparedSql.push(sql);
+          return originalPrepare(sql);
+        },
+      });
+      const targeted = createSqliteOrganizationRepository(db).listThreads(["account_a"], { threadId: "thread_a" });
+      assert.deepEqual(targeted.map((thread) => thread.id), ["thread_a"]);
+      assert.deepEqual(targeted[0]?.messages.map((message) => message.id), ["message_a"]);
+      assert.ok(preparedSql.some((sql) => sql.includes('from "emails"') && sql.includes('"emails"."thread_id" = ?')),
+        `targeted email SQL must include a Thread predicate: ${preparedSql.join("\n")}`);
     } finally {
       sqlite.close();
     }

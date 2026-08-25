@@ -34,7 +34,7 @@ export type OrganizationThreadRecord = {
 /** Storage seam used by the provider-neutral Organization module. */
 export type OrganizationRepository = {
   listAccountIds(workspaceId: string): string[];
-  listThreads(accountIds: readonly string[]): OrganizationThreadRecord[];
+  listThreads(accountIds: readonly string[], filter?: { threadId?: string }): OrganizationThreadRecord[];
 };
 
 export class OrganizationAccessError extends Error {
@@ -206,7 +206,10 @@ export function createOrganization(repository: OrganizationRepository) {
         const sender = query.sender?.trim().toLocaleLowerCase() ?? "";
         const after = query.receivedAfter ? Date.parse(query.receivedAfter) : null;
         const before = query.receivedBefore ? Date.parse(query.receivedBefore) : null;
-        const ranked = repository.listThreads(requestedAccountIds).flatMap((record): WorkspaceThread[] => {
+        const ranked = repository.listThreads(
+          requestedAccountIds,
+          query.threadId ? { threadId: query.threadId } : undefined,
+        ).flatMap((record): WorkspaceThread[] => {
           if (!requested.has(record.accountId)) throw new OrganizationAccessError();
           if (query.threadId && record.id !== query.threadId) return [];
           const latest = record.messages[0];

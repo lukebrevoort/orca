@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import {
   attentionBehaviorSchema,
   humanClassificationAssessmentSchema,
@@ -146,14 +146,17 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         .map((account) => account.id);
     },
 
-    listThreads(accountIds) {
-      const cacheKey = [...new Set(accountIds)].sort().join("\u0000");
+    listThreads(accountIds, filter) {
+      const cacheKey = `${[...new Set(accountIds)].sort().join("\u0000")}\u0001${filter?.threadId ?? "*"}`;
       const cached = threadCache.get(cacheKey);
       if (cached) return cached;
       const records: OrganizationThreadRecord[] = [];
       for (const accountId of [...new Set(accountIds)]) {
         const accountThreads = db.select().from(threads)
-          .where(eq(threads.accountId, accountId))
+          .where(and(
+            eq(threads.accountId, accountId),
+            ...(filter?.threadId ? [eq(threads.id, filter.threadId)] : []),
+          ))
           .orderBy(desc(threads.latestReceivedAt), asc(threads.id))
           .all();
         const messageRows = db.select({
@@ -175,7 +178,10 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         }).from(emails)
           .leftJoin(emailLabels, eq(emailLabels.emailId, emails.id))
           .leftJoin(labels, eq(labels.id, emailLabels.labelId))
-          .where(eq(emails.accountId, accountId))
+          .where(and(
+            eq(emails.accountId, accountId),
+            ...(filter?.threadId ? [eq(emails.threadId, filter.threadId)] : []),
+          ))
           .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id), asc(labels.name))
           .all();
         const overrideRecords = db.select().from(humanClassificationOverrides)
