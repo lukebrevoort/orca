@@ -5,6 +5,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
 
+import { createSession } from "../../auth/session-store.ts";
+import { oauthAccounts, users } from "../../db/schema.ts";
+import { createApp } from "../../index.ts";
+
 describe("BRE-309 clean M8 migration", () => {
   test("backfills legacy filter Pins with stable saved-query identity without discarding their definition", () => {
     const directory = mkdtempSync(join(tmpdir(), "orca-bre-309-migration-"));
@@ -113,16 +117,40 @@ describe("BRE-309 clean M8 migration", () => {
 
       const { createDatabaseClient } = await import("../../db/client.ts");
       const { migrate } = await import("drizzle-orm/bun-sqlite/migrator");
-      const client = createDatabaseClient(join(directory, "from-0023.sqlite"));
+      const databasePath = join(directory, "from-0023.sqlite");
+      const client = createDatabaseClient(databasePath);
       try {
         migrate(client.db, { migrationsFolder: partialMigrations });
+        const legacyFilter = JSON.stringify({
+          mailbox: "focus", attention: "focus", classification: "human", person: null, query: "launch",
+        });
+        client.db.insert(users).values({ id: "workspace_migrated", email: "migrated@example.com" }).run();
+        client.db.insert(oauthAccounts).values({
+          id: "account_migrated", userId: "workspace_migrated", provider: "gmail",
+          providerEmail: "migrated@example.com", providerId: "provider-migrated",
+        }).run();
+        client.sqlite.query(`
+          INSERT INTO pins (id, account_id, kind, target_id, label, icon, color, position, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run("pin_migrated", "account_migrated", "filter", legacyFilter, "Migrated", "search", "#70867d", 0, 1787500000000, 1787500000000);
         migrate(client.db, { migrationsFolder: fullMigrations });
         const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>;
         assert.equal(tables.some((table) => table.name === "organization_saved_queries"), true);
         assert.equal(tables.some((table) => table.name === "organization_collection_pin_audits"), true);
         const pinColumns = client.sqlite.query("PRAGMA table_info('pins')").all() as Array<{ name: string }>;
         assert.equal(pinColumns.some((column) => column.name === "saved_query_id"), true);
+
+        process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+        process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 30).toString("base64");
+        const session = await createSession(client.db, "workspace_migrated");
+        const app = createApp({ dbFactory: () => createDatabaseClient(databasePath) });
+        const response = await app.request("/v1/pins", { headers: { cookie: `orca_session=${session.token}` } });
+        assert.equal(response.status, 200);
+        const migratedPin = (await response.json()).find((item: { id: string }) => item.id === "pin_migrated");
+        assert.deepEqual(JSON.parse(migratedPin.targetId), JSON.parse(legacyFilter));
       } finally {
+        delete process.env.SESSION_SECRET;
+        delete process.env.TOKEN_ENCRYPTION_KEY;
         client.sqlite.close();
       }
     } finally {

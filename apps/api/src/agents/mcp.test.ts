@@ -581,6 +581,9 @@ describe("Orca read-only MCP server", () => {
       assert.deepEqual(describeBody.result.structuredContent.accountIds, ["account_a"]);
       assert.equal(describeBody.result.structuredContent.workspaceSchema.aggregate, "thread");
       assert.equal(describeBody.result.structuredContent.capabilities.operations.apply, false);
+      assert.deepEqual(describeBody.result.structuredContent.collectionsPins.operations, {
+        describe: true, query: true, apply: false, revert: false, simulate: false,
+      });
       assert.doesNotMatch(JSON.stringify(describeBody), /account_b|gmail|outlook|provider-access|provider-refresh/);
 
       const deniedDescribe = await callMcp(app, token, "tools/call", {

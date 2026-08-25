@@ -66,6 +66,11 @@ export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unkno
   });
 }
 
+export function normalizeOrganizationSavedQueryDefinition(input: unknown): OrganizationSavedQueryDefinition {
+  const current = organizationSavedQueryDefinitionSchema.safeParse(input);
+  return current.success ? current.data : organizationSavedQueryDefinitionFromLegacyPinFilter(input);
+}
+
 export function legacyPinFilterFromOrganizationSavedQueryDefinition(
   definition: OrganizationSavedQueryDefinition,
 ): PinFilter {
@@ -239,7 +244,7 @@ export const organizationCollectionPinDescribeResponseSchema = z.object({
   workspaceId: nonEmptyStringSchema,
   accountIds: uniqueStringsSchema,
   semantics: z.object({ collections: z.literal("explicit_thread_membership"), pins: z.literal("stable_shortcut_identity") }).strict(),
-  operations: z.object({ describe: z.literal(true), query: z.literal(true), apply: z.literal(true), revert: z.literal(true), simulate: z.literal(false) }).strict(),
+  operations: z.object({ describe: z.literal(true), query: z.literal(true), apply: z.boolean(), revert: z.boolean(), simulate: z.literal(false) }).strict(),
   authority: z.object({ sendMail: z.literal(false), deleteProviderMail: z.literal(false) }).strict(),
 }).strict();
 export type OrganizationCollectionPinDescribeResponse = z.infer<typeof organizationCollectionPinDescribeResponseSchema>;

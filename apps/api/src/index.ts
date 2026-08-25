@@ -51,8 +51,8 @@ import {
   mailAccountSchema,
   messageDraftSchema,
   legacyPinFilterFromOrganizationSavedQueryDefinition,
+  normalizeOrganizationSavedQueryDefinition,
   organizationSavedQueryDefinitionFromLegacyPinFilter,
-  organizationSavedQueryDefinitionSchema,
   pinFilterSchema,
   listHumanClassificationOverridesSchema,
   resolveHumanClassificationSchema,
@@ -3173,7 +3173,7 @@ function toPin(db: Database, pin: PinRecord) {
       eq(organizationSavedQueries.id, pin.savedQueryId),
     )).get();
     if (savedQuery) {
-      const definition = organizationSavedQueryDefinitionSchema.parse(JSON.parse(savedQuery.definitionJson));
+      const definition = normalizeOrganizationSavedQueryDefinition(JSON.parse(savedQuery.definitionJson));
       targetId = JSON.stringify(legacyPinFilterFromOrganizationSavedQueryDefinition(definition));
     }
   }

@@ -4,8 +4,7 @@ import {
   organizationCollectionPinAuditEntrySchema,
   organizationCollectionPinChangeSchema,
   organizationPinTargetSchema,
-  organizationSavedQueryDefinitionFromLegacyPinFilter,
-  organizationSavedQueryDefinitionSchema,
+  normalizeOrganizationSavedQueryDefinition,
   type OrganizationCollection,
   type OrganizationCollectionPinAuditEntry,
   type OrganizationCollectionPinChange,
@@ -30,6 +29,8 @@ import {
   OrganizationCollectionsPinsAccessError,
   OrganizationCollectionsPinsConflictError,
   OrganizationCollectionsPinsNotFoundError,
+  bindOrganizationCollectionPinApplyCommand,
+  bindOrganizationCollectionPinRevertCommand,
   type OrganizationCollectionsPinsRepository,
 } from "./module.ts";
 import { digestOrganizationCommand } from "../authority.ts";
@@ -63,10 +64,8 @@ function mapAudit(record: AuditRecord, revertedByChangeId: string | null = null)
 }
 
 function legacyQueryDefinition(raw: unknown): OrganizationSavedQueryDefinition {
-  const current = organizationSavedQueryDefinitionSchema.safeParse(raw);
-  if (current.success) return current.data;
   try {
-    return organizationSavedQueryDefinitionFromLegacyPinFilter(raw);
+    return normalizeOrganizationSavedQueryDefinition(raw);
   } catch {
     return { revision: 1, filters: {} };
   }
@@ -614,6 +613,7 @@ function verifyAndRecordAuthority(
     scope: OrganizationCollectionPinScope;
     idempotencyKey: string;
     authorization: Parameters<OrganizationCollectionsPinsRepository["apply"]>[0]["authorization"];
+    expectedCommand: Parameters<OrganizationCollectionsPinsRepository["apply"]>[0]["authorization"]["command"];
     now: Date;
   },
 ) {
@@ -625,6 +625,9 @@ function verifyAndRecordAuthority(
   }
   if (input.authorization.executionContext.command.digest !== digestOrganizationCommand(input.authorization.command)) {
     throw new OrganizationCollectionsPinsAccessError("Authorized command digest does not match the Collections/Pins payload");
+  }
+  if (digestOrganizationCommand(input.authorization.command) !== digestOrganizationCommand(input.expectedCommand)) {
+    throw new OrganizationCollectionsPinsAccessError("Authorized command does not match the typed Collections/Pins change");
   }
   for (const intent of input.authorization.command.intents) {
     const liveRevision = live.resourceRevisions[intent.resourceId];
@@ -657,6 +660,36 @@ function advanceWorkspaceRevision(executor: Database, workspaceId: string, curre
   if (!updated) throw new OrganizationCollectionsPinsConflictError("Workspace Organization revision changed before commit");
 }
 
+function loadRevertAuthorityTargets(executor: Database, workspaceId: string, changeId: string) {
+  const audit = executor.select().from(organizationCollectionPinAudits).where(and(
+    eq(organizationCollectionPinAudits.workspaceId, workspaceId),
+    eq(organizationCollectionPinAudits.id, changeId),
+  )).get();
+  if (!audit) return null;
+  const command = organizationCollectionPinChangeSchema.parse(JSON.parse(audit.commandJson));
+  const id = command.kind === "collection_membership" ? command.collectionId : audit.resourceId;
+  const kind = command.kind === "collection_membership" ? "collection" : command.kind;
+  const resourceId = `${kind}:${id}`;
+  const live = loadAuthorityState(executor, workspaceId);
+  const targets = [{
+    changeKind: audit.changeKind as OrganizationCollectionPinChange["kind"],
+    resourceId,
+    mutation: live.resourceRevisions[resourceId] === undefined ? "create" as const : "update" as const,
+  }];
+  if (command.kind === "pin" && command.action === "create" && command.pin.target.type === "new_query") {
+    const pin = executor.select().from(pins).where(and(eq(pins.accountId, command.accountId), eq(pins.id, audit.resourceId))).get();
+    if (pin?.savedQueryId) {
+      const queryResourceId = `saved_query:${pin.savedQueryId}`;
+      targets.push({
+        changeKind: "saved_query",
+        resourceId: queryResourceId,
+        mutation: live.resourceRevisions[queryResourceId] === undefined ? "create" : "update",
+      });
+    }
+  }
+  return targets;
+}
+
 export function createSqliteOrganizationCollectionsPinsRepository(db: Database): OrganizationCollectionsPinsRepository {
   return {
     getAuthorityState(workspaceId) {
@@ -670,33 +703,7 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
       return record ? { change: mapAudit(record), command: parseJson(record.commandJson) } : null;
     },
     getRevertAuthorityTargets(workspaceId, changeId) {
-      const audit = db.select().from(organizationCollectionPinAudits).where(and(
-        eq(organizationCollectionPinAudits.workspaceId, workspaceId),
-        eq(organizationCollectionPinAudits.id, changeId),
-      )).get();
-      if (!audit) return null;
-      const command = organizationCollectionPinChangeSchema.parse(JSON.parse(audit.commandJson));
-      const id = command.kind === "collection_membership" ? command.collectionId : audit.resourceId;
-      const kind = command.kind === "collection_membership" ? "collection" : command.kind;
-      const resourceId = `${kind}:${id}`;
-      const live = loadAuthorityState(db, workspaceId);
-      const targets = [{
-        changeKind: audit.changeKind as OrganizationCollectionPinChange["kind"],
-        resourceId,
-        mutation: live.resourceRevisions[resourceId] === undefined ? "create" as const : "update" as const,
-      }];
-      if (command.kind === "pin" && command.action === "create" && command.pin.target.type === "new_query") {
-        const pin = db.select().from(pins).where(and(eq(pins.accountId, command.accountId), eq(pins.id, audit.resourceId))).get();
-        if (pin?.savedQueryId) {
-          const queryResourceId = `saved_query:${pin.savedQueryId}`;
-          targets.push({
-            changeKind: "saved_query",
-            resourceId: queryResourceId,
-            mutation: live.resourceRevisions[queryResourceId] === undefined ? "create" : "update",
-          });
-        }
-      }
-      return targets;
+      return loadRevertAuthorityTargets(db, workspaceId, changeId);
     },
     listAccountIds(workspaceId) {
       return db.select({ id: oauthAccounts.id }).from(oauthAccounts)
@@ -734,7 +741,11 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
             return mapAudit(duplicate);
           }
           const workspaceRevision = verifyAndRecordAuthority(executor, {
-            scope, idempotencyKey: request.idempotencyKey, authorization, now,
+            scope, idempotencyKey: request.idempotencyKey, authorization,
+            expectedCommand: bindOrganizationCollectionPinApplyCommand({
+              changeId: authorization.command.id, change: request.change, trustedResourceIds,
+            }),
+            now,
           });
           const outcome = applyChange(executor, request.change, trustedResourceIds, now);
           const audit = insertAudit(executor, {
@@ -774,7 +785,17 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
             return mapAudit(duplicate);
           }
           const workspaceRevision = verifyAndRecordAuthority(executor, {
-            scope, idempotencyKey: request.idempotencyKey, authorization, now,
+            scope, idempotencyKey: request.idempotencyKey, authorization,
+            expectedCommand: bindOrganizationCollectionPinRevertCommand({
+              changeId: authorization.command.id,
+              request,
+              targets: (() => {
+                const targets = loadRevertAuthorityTargets(executor, scope.workspaceId, request.changeId);
+                if (!targets) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
+                return targets;
+              })(),
+            }),
+            now,
           });
           const original = executor.select().from(organizationCollectionPinAudits).where(and(
             eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),

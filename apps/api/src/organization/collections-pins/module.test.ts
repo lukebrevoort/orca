@@ -515,6 +515,91 @@ describe("Collections/Pins Organization module", { timeout: 20_000 }, () => {
         operations: { describe: true, query: true, apply: true, revert: true, simulate: false },
         authority: { sendMail: false, deleteProviderMail: false },
       });
+      assert.deepEqual(organization.describe({
+        scope: { ...scope, actor: { id: "agent_owner", type: "agent" } },
+      }).operations, {
+        describe: true, query: true, apply: false, revert: false, simulate: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("rejects a repository adapter that swaps an authorized apply or revert request", () => {
+    const { db, scope, sqlite } = fixture();
+    try {
+      db.insert(collections).values({
+        id: "collection_other", accountId: "account_a", name: "Other", color: "#83728d", position: 1,
+      }).run();
+      const repository = createSqliteOrganizationCollectionsPinsRepository(db);
+      const organization = createOrganizationCollectionsPins({
+        ...repository,
+        apply(input) {
+          return repository.apply({
+            ...input,
+            request: {
+              ...input.request,
+              change: {
+                kind: "collection", action: "update", accountId: "account_a",
+                collectionId: "collection_other", patch: { name: "Swapped" },
+              },
+            },
+          });
+        },
+      }, {
+        newChangeId: () => "change_swapped",
+      });
+
+      assert.throws(() => organization.apply({
+        scope,
+        request: {
+          idempotencyKey: "swapped-typed-change",
+          change: {
+            kind: "collection", action: "update", accountId: "account_a",
+            collectionId: "collection_a", patch: { name: "Allowed" },
+          },
+        },
+      }), (error) => error instanceof OrganizationCollectionsPinsAccessError);
+      assert.equal(db.select().from(collections).where(eq(collections.id, "collection_a")).get()?.name, "Account A");
+      assert.equal(db.select().from(collections).where(eq(collections.id, "collection_other")).get()?.name, "Other");
+
+      let sequence = 0;
+      const trusted = createOrganizationCollectionsPins(repository, { newChangeId: () => `trusted_${++sequence}` });
+      const first = trusted.apply({
+        scope,
+        request: {
+          idempotencyKey: "trusted-first",
+          change: {
+            kind: "collection", action: "update", accountId: "account_a",
+            collectionId: "collection_a", patch: { name: "First updated" },
+          },
+        },
+      });
+      const second = trusted.apply({
+        scope,
+        request: {
+          idempotencyKey: "trusted-second",
+          change: {
+            kind: "collection", action: "update", accountId: "account_a",
+            collectionId: "collection_other", patch: { name: "Second updated" },
+          },
+        },
+      });
+      const swappedRevert = createOrganizationCollectionsPins({
+        ...repository,
+        revert(input) {
+          return repository.revert({
+            ...input,
+            request: { ...input.request, changeId: second.change.id },
+          });
+        },
+      }, { newChangeId: () => "change_swapped_revert" });
+      assert.throws(() => swappedRevert.revert({
+        scope,
+        request: { idempotencyKey: "swapped-revert", changeId: first.change.id },
+      }), (error) => error instanceof OrganizationCollectionsPinsAccessError);
+      assert.equal(db.select().from(collections).where(eq(collections.id, "collection_a")).get()?.name, "First updated");
+      assert.equal(db.select().from(collections).where(eq(collections.id, "collection_other")).get()?.name, "Second updated");
     } finally {
       sqlite.close();
     }

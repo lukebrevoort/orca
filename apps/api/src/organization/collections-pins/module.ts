@@ -9,6 +9,7 @@ import {
   organizationCollectionPinScopeSchema,
   type OrganizationCollectionPinApplyRequest,
   type OrganizationCollectionPinAuditEntry,
+  type OrganizationCollectionPinChange,
   type OrganizationCollectionPinMutationResponse,
   type OrganizationCollectionPinQuery,
   type OrganizationCollectionPinQueryResponse,
@@ -90,7 +91,7 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function changeDigest(value: unknown): string {
+export function digestOrganizationCollectionPinChange(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
 }
 
@@ -102,6 +103,70 @@ function intentKind(kind: OrganizationCollectionPinAuditEntry["changeKind"]) {
   if (kind === "pin") return "mutate_shortcut" as const;
   if (kind === "saved_query") return "mutate_saved_query" as const;
   return "mutate_collection" as const;
+}
+
+type TrustedResourceIds = { primary: string; savedQuery: string | null } | null;
+type RevertAuthorityTarget = {
+  changeKind: OrganizationCollectionPinAuditEntry["changeKind"];
+  resourceId: string;
+  mutation: "create" | "update";
+};
+
+export function bindOrganizationCollectionPinApplyCommand(input: {
+  changeId: string;
+  change: OrganizationCollectionPinChange;
+  trustedResourceIds: TrustedResourceIds;
+}): OrganizationCommand {
+  const { change, changeId, trustedResourceIds } = input;
+  const typedChangeDigest = digestOrganizationCollectionPinChange(change);
+  const primaryId = change.kind === "collection_membership"
+    ? change.collectionId
+    : change.action === "create"
+      ? trustedResourceIds?.primary
+      : change.kind === "collection"
+        ? change.collectionId
+        : change.kind === "pin"
+          ? change.pinId
+          : change.queryId;
+  if (!primaryId) throw new OrganizationCollectionsPinsAccessError("Trusted Organization resource identity is missing");
+  const primaryKind = change.kind === "collection_membership" ? "collection" : change.kind;
+  const additionalQueryId = change.kind === "pin" && change.action === "create" && change.pin.target.type === "new_query"
+    ? trustedResourceIds?.savedQuery
+    : null;
+  if (change.kind === "pin" && change.action === "create" && change.pin.target.type === "new_query" && !additionalQueryId) {
+    throw new OrganizationCollectionsPinsAccessError("Trusted saved-query identity is missing");
+  }
+  return {
+    id: changeId,
+    intents: [{
+      kind: intentKind(change.kind),
+      resourceId: authorityResourceId(primaryKind, primaryId),
+      mutation: change.action === "create" ? "create" : "update",
+      changes: { action: change.action, typedChangeDigest },
+    }, ...(additionalQueryId ? [{
+      kind: "mutate_saved_query" as const,
+      resourceId: authorityResourceId("saved_query", additionalQueryId),
+      mutation: "create" as const,
+      changes: { action: "create", typedChangeDigest },
+    }] : [])],
+  };
+}
+
+export function bindOrganizationCollectionPinRevertCommand(input: {
+  changeId: string;
+  request: OrganizationCollectionPinRevertRequest;
+  targets: RevertAuthorityTarget[];
+}): OrganizationCommand {
+  const typedChangeDigest = digestOrganizationCollectionPinChange(input.request);
+  return {
+    id: input.changeId,
+    intents: input.targets.map((target) => ({
+      kind: intentKind(target.changeKind),
+      resourceId: target.resourceId,
+      mutation: target.mutation,
+      changes: { action: "revert", typedChangeDigest },
+    })),
+  };
 }
 
 function authorize(repository: OrganizationCollectionsPinsRepository, untrustedScope: unknown) {
@@ -206,11 +271,12 @@ export function createOrganizationCollectionsPins(
   return {
     describe(input: { scope: unknown }) {
       const { scope, accountIds } = authorize(repository, input.scope);
+      const canWrite = scope.actor.type === "human";
       return organizationCollectionPinDescribeResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds,
         semantics: { collections: "explicit_thread_membership", pins: "stable_shortcut_identity" },
-        operations: { describe: true, query: true, apply: true, revert: true, simulate: false },
+        operations: { describe: true, query: true, apply: canWrite, revert: canWrite, simulate: false },
         authority: { sendMail: false, deleteProviderMail: false },
       });
     },
@@ -233,33 +299,7 @@ export function createOrganizationCollectionsPins(
             : null,
         } : null;
       const changeId = newChangeId();
-      const digest = changeDigest(request.change);
-      const primaryId = request.change.kind === "collection_membership"
-        ? request.change.collectionId
-        : request.change.action === "create"
-          ? trustedResourceIds!.primary
-          : request.change.kind === "collection"
-            ? request.change.collectionId
-            : request.change.kind === "pin"
-              ? request.change.pinId
-              : request.change.queryId;
-      const primaryKind = request.change.kind === "collection_membership" ? "collection" : request.change.kind;
-      const command: OrganizationCommand = {
-        id: changeId,
-        intents: [{
-          kind: intentKind(request.change.kind),
-          resourceId: authorityResourceId(primaryKind, primaryId),
-          mutation: request.change.action === "create" ? "create" : "update",
-          changes: { action: request.change.action, typedChangeDigest: digest },
-        }, ...(request.change.kind === "pin" && request.change.action === "create" && request.change.pin.target.type === "new_query"
-          ? [{
-              kind: "mutate_saved_query" as const,
-              resourceId: authorityResourceId("saved_query", trustedResourceIds!.savedQuery!),
-              mutation: "create" as const,
-              changes: { action: "create", typedChangeDigest: digest },
-            }]
-          : [])],
-      };
+      const command = bindOrganizationCollectionPinApplyCommand({ changeId, change: request.change, trustedResourceIds });
       const authorization = authorizeBound({ scope, operation: "apply", idempotencyKey: request.idempotencyKey, command });
       const change = repository.apply({ scope, request, changeId, trustedResourceIds, authorization, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
@@ -272,15 +312,7 @@ export function createOrganizationCollectionsPins(
       const targets = repository.getRevertAuthorityTargets(scope.workspaceId, request.changeId);
       if (!targets) throw new OrganizationCollectionsPinsNotFoundError("Organization change not found in the authorized Account scope");
       const changeId = newChangeId();
-      const command: OrganizationCommand = {
-        id: changeId,
-        intents: targets.map((target) => ({
-          kind: intentKind(target.changeKind),
-          resourceId: target.resourceId,
-          mutation: target.mutation,
-          changes: { action: "revert", typedChangeDigest: changeDigest(request) },
-        })),
-      };
+      const command = bindOrganizationCollectionPinRevertCommand({ changeId, request, targets });
       const authorization = authorizeBound({ scope, operation: "revert", idempotencyKey: request.idempotencyKey, command });
       const change = repository.revert({ scope, request, changeId, authorization, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
