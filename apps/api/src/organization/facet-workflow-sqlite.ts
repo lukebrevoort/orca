@@ -159,6 +159,10 @@ export function createSqliteFacetWorkflowRepository(db: Database) {
         const idempotencyKey = input.executionContext.idempotencyKey;
         if (!idempotencyKey) throw new OrganizationAuthorityError("idempotency_key_required", "An authorized apply must reserve an idempotency key");
         if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets)
+          .where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.id, input.command.id))).get()) {
+          throw new OrganizationAuthorityError("invalid_request", `Change Set ${input.command.id} already exists in this Workspace`);
+        }
+        if (transaction.select({ id: organizationChangeSets.id }).from(organizationChangeSets)
           .where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get()) {
           throw new OrganizationAuthorityError("duplicate_idempotency_key", "The idempotency key was already reserved");
         }

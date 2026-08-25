@@ -1,10 +1,45 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import type { createDatabaseClient } from "../db/client.ts";
-import { emails, threads } from "../db/schema.ts";
+import { emails, oauthAccounts, organizationFacets, organizationThreadFacetValues, threads } from "../db/schema.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
-type DatabaseExecutor = Pick<Database, "select" | "update">;
+type DatabaseExecutor = Pick<Database, "insert" | "select" | "update">;
+
+function initializeRequiredFacetDefaults(
+  db: DatabaseExecutor,
+  input: { accountId: string; threadIds: readonly string[]; now: Date },
+): void {
+  const account = db.select({ workspaceId: oauthAccounts.userId }).from(oauthAccounts)
+    .where(eq(oauthAccounts.id, input.accountId)).get();
+  if (!account) return;
+  const requestedThreadIds = [...new Set(input.threadIds)];
+  if (requestedThreadIds.length === 0) return;
+  const eligibleThreadIds = new Set(db.select({ id: threads.id }).from(threads).where(and(
+    eq(threads.accountId, input.accountId),
+    inArray(threads.id, requestedThreadIds),
+  )).all().map((thread) => thread.id));
+  const requiredFacets = db.select({
+    id: organizationFacets.id,
+    defaultValue: organizationFacets.defaultValue,
+    isOptional: organizationFacets.isOptional,
+    retiredAt: organizationFacets.retiredAt,
+  }).from(organizationFacets)
+    .where(eq(organizationFacets.workspaceId, account.workspaceId)).all()
+    .filter((facet) => !facet.isOptional && facet.retiredAt === null && facet.defaultValue !== null);
+  for (const threadId of eligibleThreadIds) {
+    for (const facet of requiredFacets) {
+      db.insert(organizationThreadFacetValues).values({
+        workspaceId: account.workspaceId,
+        facetId: facet.id,
+        accountId: input.accountId,
+        threadId,
+        value: facet.defaultValue!,
+        updatedAt: input.now,
+      }).onConflictDoNothing().run();
+    }
+  }
+}
 
 /**
  * Organization-owned projection of message facts into Thread aggregate truth.
@@ -39,4 +74,5 @@ export function refreshThreadAggregates(
       updatedAt: input.now,
     }).where(and(eq(threads.accountId, input.accountId), eq(threads.id, threadId))).run();
   }
+  initializeRequiredFacetDefaults(db, input);
 }

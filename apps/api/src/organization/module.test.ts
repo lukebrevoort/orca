@@ -250,6 +250,10 @@ describe("Organization module contract", () => {
       },
     };
     const organization = createOrganization(writeRepository);
+    assert.equal(organization.describe({ scope: { ...ownerScope, accountIds: ["account_a"] } }).capabilities.operations.apply, true);
+    assert.equal(organization.describe({
+      scope: { actor: { id: "agent_a", type: "agent" }, workspaceId: "workspace_owner", accountIds: ["account_a"] },
+    }).capabilities.operations.apply, false);
     const command = (name: string, idempotencyKey: string) => ({
       id: "changeset_bound",
       idempotencyKey,

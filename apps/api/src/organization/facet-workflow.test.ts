@@ -150,6 +150,11 @@ describe("deep Facet and Workflow module", () => {
         defaultValue: null,
       },
     ], context);
+    assert.deepEqual(snapshot.threads[0]?.facetValues, [{
+      facetId: "facet_required",
+      value: "unset",
+      updatedAt: context.now,
+    }]);
     const original = structuredClone(snapshot);
 
     assert.throws(
@@ -176,7 +181,11 @@ describe("deep Facet and Workflow module", () => {
       values: [{ facetId: "facet_optional_list", value: null }],
       expectedThreadRevision: null,
     }], context);
-    assert.deepEqual(cleared.threads[0]?.facetValues, []);
+    assert.deepEqual(cleared.threads[0]?.facetValues, [{
+      facetId: "facet_required",
+      value: "unset",
+      updatedAt: context.now,
+    }]);
   });
 
   test("renames, reorders, and retires by stable identity while rejecting retired assignments", () => {

@@ -342,6 +342,19 @@ export function applyFacetWorkflowActions(
 
   validateDefinitionUniqueness("Facet", next.facetDefinitions, issues);
   validateDefinitionUniqueness("Workflow State", next.workflowStates, issues);
+  for (const definition of next.facetDefinitions.filter((candidate) => !candidate.isOptional && candidate.retiredAt === null && candidate.defaultValue !== null)) {
+    const defaultValue = definition.defaultValue;
+    if (defaultValue === null) continue;
+    for (const thread of next.threads) {
+      if (thread.facetValues.some((value) => value.facetId === definition.id)) continue;
+      thread.facetValues.push({
+        facetId: definition.id,
+        value: structuredClone(defaultValue),
+        updatedAt: context.now,
+      });
+      touchedThreads.add(`${thread.accountId}\u0000${thread.threadId}`);
+    }
+  }
   for (const thread of next.threads) {
     if (!touchedThreads.has(`${thread.accountId}\u0000${thread.threadId}`)) continue;
     const previous = snapshot.threads.find((candidate) => candidate.accountId === thread.accountId && candidate.threadId === thread.threadId);

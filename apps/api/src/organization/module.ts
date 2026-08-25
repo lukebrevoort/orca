@@ -134,13 +134,13 @@ const facetSupport = Object.freeze({
   requiredValueLifecycle: "typed_default_for_all_threads" as const,
 });
 
-function capabilitiesFor(repository: OrganizationRepository) {
+function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope) {
   return {
     operations: {
       describe: true as const,
       query: true as const,
       simulate: false as const,
-      apply: Boolean(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState),
+      apply: scope.actor.type === "human" && Boolean(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState),
       revert: false as const,
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
@@ -319,7 +319,7 @@ export function createOrganization(repository: OrganizationRepository) {
         workspaceId: scope.workspaceId,
         accountIds,
         workspaceSchema,
-        capabilities: capabilitiesFor(repository),
+        capabilities: capabilitiesFor(repository, scope),
         workspaceRevision: facetWorkflow.workspaceRevision,
         facetDefinitions: facetWorkflow.facetDefinitions,
         workflowStates: facetWorkflow.workflowStates,

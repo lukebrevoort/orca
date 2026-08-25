@@ -15,7 +15,6 @@ import {
   emails,
   humanClassificationOverrides,
   labels,
-  organizationFacets,
   organizationThreadFacetValues,
   organizationThreadStates,
   organizationThreadWorkflowStates,
@@ -177,9 +176,6 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         const account = db.select({ workspaceId: oauthAccounts.userId }).from(oauthAccounts)
           .where(eq(oauthAccounts.id, accountId)).get();
         if (!account) continue;
-        const facetDefinitions = db.select().from(organizationFacets)
-          .where(eq(organizationFacets.workspaceId, account.workspaceId))
-          .orderBy(asc(organizationFacets.position), asc(organizationFacets.id)).all();
         const accountThreads = db.select().from(threads)
           .where(and(
             eq(threads.accountId, accountId),
@@ -280,22 +276,11 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
             readState: thread.isRead ? "read" : "unread",
             messages: messagesByThread.get(thread.id) ?? [],
             attentionRules,
-            facetValues: (() => {
-              const explicit = facetValues.filter((value) => value.threadId === thread.id).map((value) => ({
+            facetValues: facetValues.filter((value) => value.threadId === thread.id).map((value) => ({
                 facetId: value.facetId,
                 value: JSON.parse(value.value) as string | number | boolean | Array<string | number | boolean>,
                 updatedAt: value.updatedAt.toISOString(),
-              }));
-              const explicitlyAssigned = new Set(explicit.map((value) => value.facetId));
-              const defaults = facetDefinitions.flatMap((definition) => definition.isOptional || definition.defaultValue === null || explicitlyAssigned.has(definition.id)
-                ? []
-                : [{
-                    facetId: definition.id,
-                    value: JSON.parse(definition.defaultValue) as string | number | boolean | Array<string | number | boolean>,
-                    updatedAt: definition.updatedAt.toISOString(),
-                  }]);
-              return [...explicit, ...defaults];
-            })(),
+              })),
             workflowState: (() => {
               const value = workflowStates.find((candidate) => candidate.threadId === thread.id);
               return value ? { stateId: value.stateId, updatedAt: value.updatedAt.toISOString() } : null;

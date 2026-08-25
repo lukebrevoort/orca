@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
 import { createSession } from "../auth/session-store.ts";
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, oauthAccounts, organizationChangeSets, threads, users } from "../db/schema.ts";
+import { emails, oauthAccounts, organizationChangeSets, organizationThreadFacetValues, threads, users } from "../db/schema.ts";
 import { createApp } from "../index.ts";
+import { refreshThreadAggregates } from "./thread-aggregate.ts";
 import { OrganizationAuthorityError, createOrganization, type OrganizationRepository } from "./module.ts";
 import { createSqliteOrganizationRepository } from "./sqlite-repository.ts";
 
@@ -85,6 +87,19 @@ describe("Facet and Workflow Organization REST adapter", () => {
       assert.equal(duplicate.status, 409);
       assert.equal((await duplicate.json()).error.code, "duplicate_idempotency_key");
 
+      const duplicateChangeSetId = await app.request("/v1/organization/apply", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          id: initialCommand.id,
+          idempotencyKey: "typed-initial-different-key",
+          expectedWorkspaceRevision: 2,
+          actions: [{ kind: "define_workflow_state", id: "workflow_duplicate_probe", name: "Duplicate probe", position: 1 }],
+        }),
+      });
+      assert.equal(duplicateChangeSetId.status, 400);
+      assert.equal((await duplicateChangeSetId.json()).error.code, "invalid_request");
+
       const workspace = await app.request("/v1/organization/query?attention=all&facetId=facet_customer&facetOperator=present", { headers });
       assert.equal(workspace.status, 200);
       const workspaceBody = await workspace.json();
@@ -103,8 +118,11 @@ describe("Facet and Workflow Organization REST adapter", () => {
 
       db.insert(threads).values({ id: "thread_future", accountId: "account_a", providerThreadId: "provider-thread-future", subject: "Future", latestReceivedAt: new Date("2026-08-24T06:00:00.000Z"), messageCount: 1 }).run();
       db.insert(emails).values({ id: "message_future", accountId: "account_a", threadId: "thread_future", providerMessageId: "message-future", subject: "Future", receivedAt: new Date("2026-08-24T06:00:00.000Z") }).run();
+      refreshThreadAggregates(db, { accountId: "account_a", threadIds: ["thread_future"], now: new Date("2026-08-24T06:01:00.000Z") });
       const futureDefault = await app.request("/v1/organization/query?attention=all&accountId=account_a&facetId=facet_score&facetOperator=equals&facetValueJson=0", { headers });
       assert.deepEqual((await futureDefault.json()).threads.map((thread: { id: string }) => thread.id), ["thread_future"]);
+      const futureDefaultTimestamp = db.select().from(organizationThreadFacetValues).where(eq(organizationThreadFacetValues.threadId, "thread_future")).get()?.updatedAt.toISOString();
+      assert.equal(futureDefaultTimestamp, "2026-08-24T06:01:00.000Z");
 
       const invalid = await app.request("/v1/organization/apply", {
         method: "POST",
@@ -130,11 +148,31 @@ describe("Facet and Workflow Organization REST adapter", () => {
       const retired = await app.request("/v1/organization/apply", {
         method: "POST",
         headers,
-        body: JSON.stringify({ id: "changeset_retire", idempotencyKey: "typed-retire-1", expectedWorkspaceRevision: 2, actions: [{ kind: "update_facet", facetId: "facet_customer", retired: true, expectedRevision: 1 }] }),
+        body: JSON.stringify({
+          id: "changeset_retire",
+          idempotencyKey: "typed-retire-1",
+          expectedWorkspaceRevision: 2,
+          actions: [
+            { kind: "update_facet", facetId: "facet_customer", retired: true, expectedRevision: 1 },
+            { kind: "update_facet", facetId: "facet_score", retired: true, expectedRevision: 1 },
+          ],
+        }),
       });
       assert.equal(retired.status, 200, await retired.text());
+      assert.equal(
+        db.select().from(organizationThreadFacetValues).where(eq(organizationThreadFacetValues.threadId, "thread_future")).get()?.updatedAt.toISOString(),
+        futureDefaultTimestamp,
+      );
       const historical = await app.request("/v1/organization/query?attention=all&facetId=facet_customer&facetOperator=equals&facetValueJson=%22true%22", { headers });
       assert.deepEqual((await historical.json()).threads.map((thread: { id: string }) => thread.id), ["thread_a"]);
+
+      db.insert(threads).values({ id: "thread_after_retire", accountId: "account_a", providerThreadId: "provider-thread-after-retire", subject: "After retire", latestReceivedAt: new Date("2026-08-24T07:00:00.000Z"), messageCount: 1 }).run();
+      db.insert(emails).values({ id: "message_after_retire", accountId: "account_a", threadId: "thread_after_retire", providerMessageId: "message-after-retire", subject: "After retire", receivedAt: new Date("2026-08-24T07:00:00.000Z") }).run();
+      refreshThreadAggregates(db, { accountId: "account_a", threadIds: ["thread_after_retire"], now: new Date("2026-08-24T07:01:00.000Z") });
+      assert.equal(
+        db.select().from(organizationThreadFacetValues).where(eq(organizationThreadFacetValues.threadId, "thread_after_retire")).get(),
+        undefined,
+      );
 
       const denied = await app.request("/v1/organization/apply", {
         method: "POST",

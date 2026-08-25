@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, oauthAccounts, threads, users } from "../db/schema.ts";
+import { emails, oauthAccounts, organizationFacets, organizationThreadFacetValues, threads, users } from "../db/schema.ts";
 import { refreshThreadAggregates } from "./thread-aggregate.ts";
 
 describe("Organization Thread aggregate sync adapter", () => {
@@ -21,6 +21,16 @@ describe("Organization Thread aggregate sync adapter", () => {
         { id: "account_a", userId: "workspace", provider: "gmail", providerEmail: "a@example.com", providerId: "a" },
         { id: "account_b", userId: "workspace", provider: "gmail", providerEmail: "b@example.com", providerId: "b" },
       ]).run();
+      db.insert(organizationFacets).values({
+        id: "facet_required",
+        workspaceId: "workspace",
+        name: "Required",
+        position: 0,
+        valueType: JSON.stringify({ kind: "text", maxLength: 20 }),
+        cardinality: JSON.stringify({ kind: "single" }),
+        isOptional: false,
+        defaultValue: JSON.stringify("unset"),
+      }).run();
       db.insert(threads).values([
         { id: "thread_a", accountId: "account_a", providerThreadId: "a", subject: "stale-a", messageCount: 0, isRead: true },
         { id: "thread_b", accountId: "account_b", providerThreadId: "b", subject: "stale-b", messageCount: 99, isRead: false },
@@ -45,6 +55,16 @@ describe("Organization Thread aggregate sync adapter", () => {
       const other = db.select().from(threads).where(eq(threads.id, "thread_b")).get()!;
       assert.equal(other.subject, "stale-b");
       assert.equal(other.messageCount, 99);
+      const ownedDefault = db.select().from(organizationThreadFacetValues).where(and(
+        eq(organizationThreadFacetValues.accountId, "account_a"),
+        eq(organizationThreadFacetValues.threadId, "thread_a"),
+      )).get();
+      assert.equal(ownedDefault?.value, JSON.stringify("unset"));
+      assert.equal(ownedDefault?.updatedAt.toISOString(), "2026-08-23T13:00:00.000Z");
+      assert.equal(db.select().from(organizationThreadFacetValues).where(and(
+        eq(organizationThreadFacetValues.accountId, "account_b"),
+        eq(organizationThreadFacetValues.threadId, "thread_b"),
+      )).get(), undefined);
     } finally {
       sqlite.close();
       rmSync(directory, { recursive: true, force: true });
