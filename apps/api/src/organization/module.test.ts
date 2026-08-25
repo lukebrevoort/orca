@@ -187,6 +187,7 @@ describe("Organization module contract", () => {
 
   test("reads definitions and Thread projections from one coherent repository snapshot", () => {
     let legacyReadCount = 0;
+    let snapshotFilter: { threadId?: string } | undefined;
     const coherentRepository: OrganizationRepository = {
       listAccountIds: () => ["account_a"],
       listThreads: () => {
@@ -197,35 +198,42 @@ describe("Organization module contract", () => {
         legacyReadCount += 1;
         throw new Error("split definition read must not run");
       },
-      readOrganizationSnapshot: () => ({
-        facetWorkflow: {
-          workspaceRevision: 7,
-          facetDefinitions: [{
-            id: "facet_generation",
-            name: "Generation seven",
-            position: 0,
-            valueType: { kind: "text", maxLength: 40 },
-            cardinality: { kind: "single" },
-            isOptional: true,
-            defaultValue: null,
-            retiredAt: null,
-            revision: 7,
+      readOrganizationSnapshot: (_workspaceId, _accountIds, filter) => {
+        snapshotFilter = filter;
+        return {
+          facetWorkflow: {
+            workspaceRevision: 7,
+            facetDefinitions: [{
+              id: "facet_generation",
+              name: "Generation seven",
+              position: 0,
+              valueType: { kind: "text", maxLength: 40 },
+              cardinality: { kind: "single" },
+              isOptional: true,
+              defaultValue: null,
+              retiredAt: null,
+              revision: 7,
+            }],
+            workflowStates: [],
+            threads: [],
+          },
+          threads: [{
+            ...threadRecord("thread_generation"),
+            facetValues: [{ facetId: "facet_generation", value: "seven", updatedAt: "2026-08-24T06:00:00.000Z" }],
+            organizationRevision: 7,
           }],
-          workflowStates: [],
-          threads: [],
-        },
-        threads: [{
-          ...threadRecord("thread_generation"),
-          facetValues: [{ facetId: "facet_generation", value: "seven", updatedAt: "2026-08-24T06:00:00.000Z" }],
-          organizationRevision: 7,
-        }],
-      }),
+        };
+      },
     };
     const result = createOrganization(coherentRepository).query({
       scope: { ...ownerScope, accountIds: ["account_a"] },
-      query: { facetFilters: [{ facetId: "facet_generation", operator: "equals", value: "seven" }] },
+      query: {
+        threadId: "thread_generation",
+        facetFilters: [{ facetId: "facet_generation", operator: "equals", value: "seven" }],
+      },
     });
     assert.equal(legacyReadCount, 0);
+    assert.deepEqual(snapshotFilter, { threadId: "thread_generation" });
     assert.equal(result.facetDefinitions?.[0]?.revision, 7);
     assert.equal(result.threads[0]?.organization.revision, 7);
   });
