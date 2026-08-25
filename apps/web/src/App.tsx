@@ -27,11 +27,12 @@ import {
 import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
-import { ClassificationBadge, ClassificationCorrection, ClassificationTabs, classificationViewItems, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
+import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
 import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
+import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -54,9 +55,30 @@ export const defaultReaderPreferences: ReaderPreferences = {
 
 const readerDensityHint = "Calm gives each message more room. Compact fits more mail and thread history on screen.";
 
-type Mailbox = "inbox" | "focus" | "quiet" | "hidden" | "all" | "later" | "drafts";
+type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
+
+type StoredSpacePreferences = {
+  revision: 1;
+  order: string[];
+  hidden: string[];
+  labels: Record<string, string>;
+};
+
+function spacePreferencesKey(accountId: string) {
+  return `orca:space-preferences:v1:${accountId}`;
+}
+
+function readSpacePreferences(accountId: string): StoredSpacePreferences | null {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(spacePreferencesKey(accountId)) ?? "null") as Partial<StoredSpacePreferences> | null;
+    if (!value || value.revision !== 1 || !Array.isArray(value.order) || !Array.isArray(value.hidden) || !value.labels || typeof value.labels !== "object") return null;
+    return { revision: 1, order: value.order.filter((id): id is string => typeof id === "string"), hidden: value.hidden.filter((id): id is string => typeof id === "string"), labels: Object.fromEntries(Object.entries(value.labels).filter((entry): entry is [string, string] => typeof entry[1] === "string")) };
+  } catch {
+    return null;
+  }
+}
 
 const pinMailboxOptions: Array<{ id: PinMailbox; label: string }> = [
   { id: "inbox", label: "Inbox" },
@@ -74,9 +96,9 @@ const pinAttentionOptions: Array<{ id: InboxFilter; label: string }> = [
 ];
 
 const pinClassificationOptions: Array<{ id: Exclude<ClassificationView, "all">; label: string }> = [
-  { id: "human", label: "Human Inbox" },
-  { id: "tideline", label: "Tideline" },
-  { id: "uncertain", label: "Review" },
+  { id: "human", label: "Likely human evidence" },
+  { id: "tideline", label: "Automated or bulk evidence" },
+  { id: "uncertain", label: "Needs review" },
 ];
 
 const pinIconOptions: Array<{ id: PinIcon; label: string; glyph: string }> = [
@@ -280,6 +302,7 @@ function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
 const mailboxes: MailboxItem[] = [
   { id: "inbox", label: "Inbox", description: "What deserves your attention now" },
   { id: "focus", label: "Focus", description: "Notify me and Keep in focus" },
+  { id: "signals", label: "Signals", description: "Important changes and high-consequence events" },
   { id: "quiet", label: "Quiet", description: "Available when you choose" },
   { id: "hidden", label: "Hidden", description: "Out of default views, never gone" },
   { id: "later", label: "Later", description: "Threads you chose to revisit" },
@@ -430,10 +453,10 @@ export function App() {
   if (calendarPreview) {
     const requestedState = new URLSearchParams(window.location.search).get("state");
     const demoState = requestedState === "disconnected" || requestedState === "error" ? requestedState : "connected";
-    return <CalendarSettingsPage demoMode demoState={demoState} theme={theme} setTheme={(next) => setTheme(next)} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Calendar"><CalendarSettingsPage demoMode demoState={demoState} theme={theme} setTheme={(next) => setTheme(next)} /></DesktopSettingsFrame>;
   }
   if (availabilityPreview) {
-    return <SchedulingAvailabilityPreviewPage theme={theme} setTheme={(next) => setTheme(next)} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Availability"><SchedulingAvailabilityPreviewPage theme={theme} setTheme={(next) => setTheme(next)} /></DesktopSettingsFrame>;
   }
   if (devPreview) {
     return <InboxApp demoMode preferences={preferences} theme={theme} setTheme={setTheme} />;
@@ -444,7 +467,7 @@ export function App() {
   }
 
   if (isReaderPreferencesRoute()) {
-    return <ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Appearance & reading"><ReaderPreferencesPage preferences={preferences} setPreferences={setPreferences} systemTheme={systemTheme} /></DesktopSettingsFrame>;
   }
 
   if (isSettingsRoute()) {
@@ -459,18 +482,18 @@ export function App() {
   }
 
   if (isGmailLabelMigrationRoute()) {
-    return <GmailLabelMigrationPage theme={theme} setTheme={setTheme} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Gmail labels"><GmailLabelMigrationPage theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
 
   if (isGmailSettingsRoute()) {
-    return <GmailConnectionSettingsPage theme={theme} setTheme={setTheme} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Gmail connection"><GmailConnectionSettingsPage theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
   if (isCalendarSettingsRoute()) {
-    return <CalendarSettingsPage theme={theme} setTheme={(next) => setTheme(next)} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Calendar"><CalendarSettingsPage theme={theme} setTheme={(next) => setTheme(next)} /></DesktopSettingsFrame>;
   }
 
   if (isAttentionSettingsRoute()) {
-    return <AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} />;
+    return <DesktopSettingsFrame onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Attention views"><AttentionViewSettingsPage onSessionExpired={() => setAccess("signedout")} theme={theme} setTheme={setTheme} /></DesktopSettingsFrame>;
   }
 
   return <InboxApp preferences={preferences} theme={theme} setTheme={setTheme} />;
@@ -532,6 +555,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
   const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
   const [connectedAccountsError, setConnectedAccountsError] = useState<string | null>(null);
+  const [settingsSyncStatus, setSettingsSyncStatus] = useState<SyncStatus | null>(null);
   const [outlookAuthorizationStatus, setOutlookAuthorizationStatus] = useState<OAuthConnectStatus>("idle");
   const [outlookAuthorizationError, setOutlookAuthorizationError] = useState<string | null>(null);
   const [agentConnections, setAgentConnections] = useState<McpConnection[]>(demoMode ? demoAgentConnections : []);
@@ -575,6 +599,14 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       .catch((error) => { if (!controller.signal.aborted) { setConnectedAccountsStatus("error"); setConnectedAccountsError(getErrorMessage(error)); } });
     return () => controller.abort();
   }, [demoMode]);
+  useEffect(() => {
+    if (demoMode) return;
+    const controller = new AbortController();
+    fetchJson("/v1/sync/status", syncStatusSchema, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) setSettingsSyncStatus(value); })
+      .catch(() => { if (!controller.signal.aborted) setSettingsSyncStatus(null); });
+    return () => controller.abort();
+  }, [demoMode]);
 
   const updateReader = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => setPreferences((current) => ({ ...current, [key]: value }));
   const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => { setSaved(false); setAccountPreferences((current) => ({ ...current, [key]: value })); };
@@ -611,9 +643,32 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const profileAccount = connectedAccounts[0] ?? null;
   const activeAgentConnections = agentConnections.filter((connection) => !connection.revokedAt);
+  const [settingsQuery, setSettingsQuery] = useState("");
+  const settingsSpaces: WorkflowSpace[] = [
+    { id: "focus", label: "Focus", description: "protected attention" },
+    { id: "signals", label: "Signals", description: "important changes" },
+    { id: "quiet", label: "Quiet", description: "low interruption" },
+    { id: "later", label: "Later", description: "held intentionally" },
+  ];
+  const settingsAccount = {
+    displayName: profileAccount?.displayName ?? profileAccount?.email ?? "Orca workspace",
+    email: profileAccount?.email ?? "",
+    accountCount: connectedAccounts.length,
+    health: (connectedAccountsStatus === "loading" ? "syncing" : connectedAccountsStatus === "error" ? "attention" : !settingsSyncStatus ? "unknown" : settingsSyncStatus.accounts.some((item) => item.state === "syncing") ? "syncing" : settingsSyncStatus.accounts.some((item) => item.state === "auth_needed" || item.state === "error") ? "attention" : "synced") as "synced" | "syncing" | "attention" | "unknown",
+    detail: demoMode ? "Preview route · account status unavailable" : !settingsSyncStatus ? "Account status unavailable" : undefined,
+  };
+  function navigateFromSettings(destination: DesktopDestination) {
+    if (destination === "settings") return;
+    if (destination === "organization") { window.location.assign("/?destination=organization"); return; }
+    if (destination.startsWith("space:")) { window.location.assign("/"); return; }
+    window.location.assign(`/?destination=${encodeURIComponent(destination)}`);
+  }
 
-  return <main className="settings-home-page">
-    <header className="attention-settings-topbar"><a className="settings-brand" href="/"><span aria-hidden="true"><WaveGlyph /></span> Orca</a><div className="settings-topbar-actions"><a className="settings-back-link" href="/">← Inbox</a><button aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} type="button">{theme === "dark" ? "☾" : "☀"}</button></div></header>
+  return <main className="desktop-shell settings-desktop-shell">
+    <AppSidebar account={settingsAccount} active="settings" onCompose={() => window.location.assign("/?compose=1")} onManageSpaces={() => window.location.assign("/settings/attention-views")} onNavigate={navigateFromSettings} spaces={settingsSpaces} theme={theme}/>
+    <section className="desktop-workspace">
+    <WorkspaceHeader health={settingsAccount.health} onQueryChange={setSettingsQuery} onQuerySubmit={(value) => window.location.assign(value.trim() ? `/?q=${encodeURIComponent(value.trim())}` : "/")} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} query={settingsQuery} theme={theme} title="Settings"/>
+    <section className="settings-home-page">
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
       <section className="settings-home-content" aria-labelledby="settings-title">
@@ -670,6 +725,8 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
       </section>
     </div>
+  </section>
+  </section>
   </main>;
 }
 
@@ -954,7 +1011,7 @@ export function InboxApp({
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
   const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
-  const [classificationView, setClassificationView] = useState<ClassificationView>("human");
+  const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
   const [allMailCursor, setAllMailCursor] = useState<string | null>(null);
@@ -991,14 +1048,31 @@ export function InboxApp({
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
   const [organizationOpen, setOrganizationOpen] = useState(false);
-  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("destination") === "organization");
+  const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
+  const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
+  const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
+  const [spacePreferencesReady, setSpacePreferencesReady] = useState(false);
+  const [hiddenSpaceIds, setHiddenSpaceIds] = useState<string[]>([]);
+  const [spaceOrder, setSpaceOrder] = useState<string[]>(["focus", "signals", "quiet", "later"]);
+  const [spaceLabels, setSpaceLabels] = useState<Record<string, string>>({});
+  const [readerOriginLabel, setReaderOriginLabel] = useState("Inbox");
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const destination = new URLSearchParams(window.location.search).get("destination");
+    return destination?.startsWith("space:") ? destination.slice("space:".length) || null : null;
+  });
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
-  const [activeMailbox, setActiveMailbox] = useState<Mailbox>("inbox");
+  const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
+    if (typeof window === "undefined") return "inbox";
+    const destination = new URLSearchParams(window.location.search).get("destination");
+    return ["inbox", "focus", "signals", "quiet", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
+  });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
-  const [streamQuery, setStreamQuery] = useState("");
+  const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
   const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
   const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
@@ -1012,6 +1086,17 @@ export function InboxApp({
   const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const destination = params.get("destination") as DesktopDestination | null;
+      setStreamQuery(params.get("q") ?? "");
+      navigateDesktop(destination ?? "inbox", false);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const demoDataInitializedRef = useRef(false);
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
@@ -1047,6 +1132,32 @@ export function InboxApp({
   useEffect(() => {
     pinOrderRef.current = pins;
   }, [pins]);
+
+  useEffect(() => {
+    if (!account?.id) return;
+    const stored = readSpacePreferences(account.id);
+    if (stored) {
+      setSpaceOrder(stored.order);
+      setHiddenSpaceIds(stored.hidden);
+      setSpaceLabels(stored.labels);
+    }
+    setSpacePreferencesReady(true);
+  }, [account?.id]);
+
+  useEffect(() => {
+    if (!account?.id || !spacePreferencesReady) return;
+    const value: StoredSpacePreferences = { revision: 1, order: spaceOrder, hidden: hiddenSpaceIds, labels: spaceLabels };
+    window.localStorage.setItem(spacePreferencesKey(account.id), JSON.stringify(value));
+  }, [account?.id, hiddenSpaceIds, spaceLabels, spaceOrder, spacePreferencesReady]);
+
+  useEffect(() => {
+    setSpaceOrder((current) => {
+      const collectionIds = collections.map((collection) => collection.id);
+      const next = current.filter((id) => ["focus", "signals", "quiet", "later"].includes(id) || collectionIds.includes(id));
+      for (const id of collectionIds) if (!next.includes(id)) next.push(id);
+      return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next;
+    });
+  }, [collections]);
 
   useEffect(() => {
     return () => {
@@ -1266,12 +1377,15 @@ export function InboxApp({
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
       fetchJson("/v1/reminders", remindersResponseSchema, controller.signal),
       fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, controller.signal),
-    ]).then(([nextCollections, nextPins, nextReminders, viewSettings]) => {
+      fetchJson("/v1/attention/view-settings", attentionViewSettingsSchema, controller.signal),
+    ]).then(([nextCollections, nextPins, nextReminders, viewSettings, attentionSettings]) => {
       if (controller.signal.aborted) return;
       setCollections(nextCollections);
       setPins(nextPins);
       setReminders(nextReminders);
       setLaterLabel(viewSettings.displayName);
+      const ids = { focus: "focus", notify: "signals", quiet: "quiet" } as const;
+      setSpaceLabels((current) => ({ ...current, ...Object.fromEntries(attentionSettings.filter((setting) => setting.behavior in ids).map((setting) => [ids[setting.behavior as keyof typeof ids], setting.displayName])) }));
     }).catch((error) => {
       if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
     });
@@ -1392,6 +1506,30 @@ export function InboxApp({
     }));
   }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
+  const workflowSpaces = useMemo<WorkflowSpace[]>(() => {
+    const builtIn: Record<string, WorkflowSpace> = {
+      focus: { id: "focus", label: spaceLabels.focus ?? "Focus", description: "protected attention", count: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length },
+      signals: { id: "signals", label: spaceLabels.signals ?? "Signals", description: "important changes", count: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length },
+      quiet: { id: "quiet", label: spaceLabels.quiet ?? "Quiet", description: "low interruption", count: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length },
+      later: { id: "later", label: spaceLabels.later ?? laterLabel, description: "held intentionally", count: reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").length },
+    };
+    const custom = new Map(collections.map((collection) => [collection.id, {
+      id: collection.id,
+      label: spaceLabels[collection.id] ?? collection.name,
+      description: "custom collection",
+      count: collection.threadIds.length,
+      color: collection.color,
+      custom: true,
+    } satisfies WorkflowSpace]));
+    return spaceOrder.map((id) => builtIn[id] ?? custom.get(id)).filter((space): space is WorkflowSpace => Boolean(space)).map((space) => ({ ...space, hidden: hiddenSpaceIds.includes(space.id) }));
+  }, [allMailMessages, attentionByAddress, collections, hiddenSpaceIds, laterLabel, reminders, spaceLabels, spaceOrder]);
+
+  const activeDesktopDestination: DesktopDestination = organizationStudioOpen
+    ? "organization"
+    : activeCollectionId
+      ? `space:${activeCollectionId}`
+      : activeMailbox === "hidden" ? "all" : activeMailbox;
+
   const readerAccountId = getSelectedThreadAccountId(allMailMessages, selectedThreadId, selectedThreadAccountId);
 
   const selectedThreadMessages = useMemo(() => {
@@ -1472,14 +1610,14 @@ export function InboxApp({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
+      const legacyShortcut = (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "m";
+      const composeShortcut = !event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === "c";
       if (
         event.defaultPrevented ||
-        !(event.metaKey || event.ctrlKey) ||
         event.altKey ||
-        !event.shiftKey ||
         event.isComposing ||
         event.repeat ||
-        event.key.toLowerCase() !== "m" ||
+        (!legacyShortcut && !composeShortcut) ||
         panelMode ||
         panelClosing ||
         (target instanceof HTMLElement && target.matches("input, textarea, [contenteditable=true]"))
@@ -1530,10 +1668,6 @@ export function InboxApp({
     })) ?? null,
     [activeCollectionId, activeMailbox, classificationView, inboxFilter, personFilter, pins, streamQuery],
   );
-  const automatedMessages = useMemo(
-    () => getLatestThreadRows(allMailMessages).filter(isTidelineMessage),
-    [allMailMessages],
-  );
   const activeMailboxLabel = activeMailboxItem.label;
   const personFilterName = personFilter
     ? pinnedPeople.find((person) => person.filterValue === personFilter)?.name
@@ -1541,13 +1675,13 @@ export function InboxApp({
       ?? activePin?.label
       ?? personFilter
     : null;
-  const inboxTitle = personFilterName ?? activeCollection?.name ?? (isClassificationMailbox ? classificationViewLabel(classificationView) : activeMailboxLabel);
+  const inboxTitle = personFilterName ?? activeCollection?.name ?? (activeMailbox === "inbox" ? "What deserves you now" : activeMailboxLabel);
   const inboxEyebrow = personFilter
     ? `Filtered ${(activeCollection?.name ?? classificationViewLabel(classificationView)).toLowerCase()}`
     : activeCollection
       ? `Collection · ${activeCollection.threadIds.length} ${activeCollection.threadIds.length === 1 ? "thread" : "threads"}`
-      : isClassificationMailbox
-        ? classificationViewItems.find((item) => item.id === classificationView)?.description ?? activeMailboxItem.description
+      : activeMailbox === "inbox"
+        ? `${visibleMessages.length} threads · organized around your attention`
         : activeMailboxItem.description;
 
   if (status === "signedout") {
@@ -1621,6 +1755,7 @@ export function InboxApp({
     if (!selectedThreadId && !inboxViewportRef.current) {
       inboxViewportRef.current = captureInboxViewport();
     }
+    setReaderOriginLabel(activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1)));
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
@@ -1857,7 +1992,7 @@ export function InboxApp({
     if (focusDestination) libraryReturnFocusRef.current = null;
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
-      if (mailbox === "inbox") setClassificationView("human");
+      if (mailbox === "inbox") setClassificationView("all");
       if (mailbox === "all") setClassificationView("all");
       setActiveCollectionId(null);
       setInboxFilter("all");
@@ -1889,26 +2024,6 @@ export function InboxApp({
       return;
     }
     setAgentEventsRefreshKey((key) => key + 1);
-  }
-
-  function selectClassification(view: ClassificationView) {
-    const sameView = view === classificationView;
-    if (sameView && isClassificationMailbox) {
-      if (classificationLoading) return;
-      if (status === "ready" && !classificationError) return;
-      retryInbox();
-      return;
-    }
-    runUiTransition("content", () => {
-      setClassificationView(view);
-      setActiveCollectionId(null);
-      setSelectedThreadId(null);
-      setSelectedThreadAccountId(null);
-      setClassificationActionError(null);
-      setClassificationActionMessage(null);
-      setActiveMailbox(view === "all" ? "all" : "inbox");
-    });
-    if (sameView) retryInbox();
   }
 
   async function loadMoreMessages() {
@@ -2049,7 +2164,7 @@ export function InboxApp({
     }
   }
 
-  async function updateCollection(collection: Collection, patch: { name?: string; color?: string; position?: number }) {
+  async function updateCollection(collection: Collection, patch: { name?: string; color?: string; position?: number }): Promise<boolean> {
     setOrganizationError(null);
     try {
       if (demoMode) {
@@ -2058,8 +2173,10 @@ export function InboxApp({
         await fetchJson(`/v1/collections/${encodeURIComponent(collection.id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) });
         setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
       }
+      return true;
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
+      return false;
     }
   }
 
@@ -2286,81 +2403,138 @@ export function InboxApp({
     setLaterLabel(displayName);
   }
 
+  function navigateDesktop(destination: DesktopDestination, pushHistory = true) {
+    setManageSpacesOpen(false);
+    if (destination === "settings") {
+      window.location.assign("/settings");
+      return;
+    }
+    if (pushHistory) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("destination", destination);
+      url.searchParams.delete("thread");
+      url.searchParams.delete("accountId");
+      url.searchParams.delete("compose");
+      window.history.pushState({ destination }, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    if (destination === "organization") {
+      runUiTransition("content", () => {
+        setOrganizationStudioOpen(true);
+        setSelectedThreadId(null);
+        setSelectedThreadAccountId(null);
+        setActiveCollectionId(null);
+      });
+      return;
+    }
+    setOrganizationStudioOpen(false);
+    if (destination.startsWith("space:")) {
+      selectCollection(destination.slice("space:".length));
+      return;
+    }
+    selectMailbox(destination as Mailbox);
+  }
+
+  async function createWorkflowSpace(name: string) {
+    setSpaceOperationStatus("saving");
+    setSpaceOperationError(null);
+    const created = await createCollection(name, true);
+    if (created) {
+      setSpaceOrder((current) => current.includes(created.id) ? current : [...current, created.id]);
+      setManageSpacesOpen(false);
+    } else {
+      setSpaceOperationError("Could not create this space. Nothing was changed; try again.");
+    }
+    setSpaceOperationStatus("idle");
+  }
+
+  async function reorderWorkflowSpaces(nextOrder: string[]) {
+    if (nextOrder.length !== spaceOrder.length || nextOrder.some((id) => !spaceOrder.includes(id))) return;
+    const previousOrder = spaceOrder;
+    setSpaceOperationStatus("saving");
+    setSpaceOperationError(null);
+    setSpaceOrder(nextOrder);
+    try {
+      if (!demoMode) {
+        const customIds = nextOrder.filter((id) => collections.some((item) => item.id === id));
+        await Promise.all(customIds.map((id, position) => {
+          const collection = collections.find((item) => item.id === id)!;
+          return fetchJson(`/v1/collections/${encodeURIComponent(id)}`, collectionSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
+        }));
+        const builtIns = nextOrder.filter((id) => ["focus", "signals", "quiet"].includes(id));
+        await Promise.all(builtIns.map((id, position) => {
+          const behavior = id === "signals" ? "notify" : id;
+          return fetchJson(`/v1/attention/view-settings/${behavior}`, attentionViewSettingSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ position }) });
+        }));
+        setCollections(await fetchJson("/v1/collections", collectionsResponseSchema));
+      }
+    } catch (error) {
+      setSpaceOrder(previousOrder);
+      setSpaceOperationError(`Could not save the new order. ${getErrorMessage(error)} Try again.`);
+    } finally {
+      setSpaceOperationStatus("idle");
+    }
+  }
+
+  async function renameWorkflowSpace(space: WorkflowSpace, name: string) {
+    setSpaceOperationStatus("saving");
+    setSpaceOperationError(null);
+    const collection = collections.find((item) => item.id === space.id);
+    try {
+      if (collection && !(await updateCollection(collection, { name }))) throw new Error("Collection rename was rejected.");
+      if (!demoMode && space.id === "later") await fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName: name }) });
+      const behavior = space.id === "focus" ? "focus" : space.id === "signals" ? "notify" : space.id === "quiet" ? "quiet" : null;
+      if (!demoMode && behavior) await fetchJson(`/v1/attention/view-settings/${behavior}`, attentionViewSettingSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ displayName: name }) });
+      setSpaceLabels((current) => ({ ...current, [space.id]: name }));
+      if (space.id === "later") setLaterLabel(name);
+    } catch (error) {
+      setSpaceOperationError(`Could not rename ${space.label}. ${getErrorMessage(error)} Try again.`);
+    } finally {
+      setSpaceOperationStatus("idle");
+    }
+  }
+
+  function hideWorkflowSpace(space: WorkflowSpace) {
+    setSpaceOperationError(null);
+    setHiddenSpaceIds((current) => current.includes(space.id) ? current : [...current, space.id]);
+  }
+
+  function restoreWorkflowSpace(space: WorkflowSpace) {
+    setSpaceOperationError(null);
+    setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
+  }
+
+  const sidebarAccount = {
+    displayName: account?.displayName ?? account?.email ?? "Orca workspace",
+    email: account?.email ?? "",
+    accountCount: Math.max(1, syncStatus?.accounts.length ?? 1),
+    health: (status === "syncing" || isGmailRefreshing ? "syncing" : status === "error" ? "attention" : typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced") as "synced" | "syncing" | "offline" | "attention",
+    avatar: <ProfileAvatar account={account} variant="sidebar" />,
+  };
+
   return (
     <div className="app-root">
-      <button
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        className="theme-toggle app-theme-toggle"
-        inert={Boolean(organizerMessage) || undefined}
-        onClick={() => runUiTransition("theme", () => setTheme((current) => (current === "dark" ? "light" : "dark")))}
-        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        type="button"
-      >
-        {theme === "dark" ? "☾" : "☀"}
-      </button>
-      <main className={`app-shell${selectedThreadId ? " app-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
-        <WaveRail
-          account={account}
-          activeMailbox={activeMailbox}
-          libraryOpen={organizationOpen}
-          onOpenLibrary={toggleLibrary}
-          onSelectMailbox={selectMailbox}
+      <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
+        <AppSidebar
+          account={sidebarAccount}
+          active={activeDesktopDestination}
+          draftCount={drafts?.length ?? 0}
+          inboxCount={messages.length}
+          onCompose={() => openCompose()}
+          onManageSpaces={() => setManageSpacesOpen(true)}
+          onNavigate={navigateDesktop}
+          spaces={workflowSpaces}
+          theme={theme}
         />
-
-        {organizationOpen ? <button aria-label="Close library" className="rail-library-backdrop" onClick={() => setOrganizationOpen(false)} tabIndex={-1} type="button" /> : null}
-        <aside aria-label="Collections and pins" aria-hidden={!organizationOpen} aria-modal={organizationOpen || undefined} className={`sidebar rail-library${organizationOpen ? " rail-library-open" : ""}`} id="collections-and-pins-drawer" inert={!organizationOpen || undefined} ref={libraryRef} role={organizationOpen ? "dialog" : undefined}>
-          <header className="sidebar-header">
-            <div className="brand-wrap">
-              <div className="brand"><WaveGlyph /> Orca</div>
-              {demoMode ? <span className="dev-preview-badge">Preview</span> : null}
-            </div>
-            <div className="header-actions">
-              <button aria-label="Close library" className="compose-button" onClick={() => setOrganizationOpen(false)} type="button">Close</button>
-            </div>
-          </header>
-
-          <label className="search-field">
-            <span>Search mail</span>
-            <input onChange={(event) => setStreamQuery(event.target.value)} placeholder="People, subjects, words" value={streamQuery} />
-          </label>
-
-          <OrganizationSidebar
-            activeCollectionId={activeCollectionId}
-            collections={collections}
-            error={organizationError}
-            onCreateCollection={createCollection}
-            onColorCollection={(collection, color) => void updateCollection(collection, { color })}
-            onDeleteCollection={deleteCollection}
-            onMoveCollection={(collection, direction) => void updateCollection(collection, { position: collection.position + direction })}
-            onRenameCollection={(collection, name) => void updateCollection(collection, { name })}
-            onSelectCollection={selectCollection}
+        <section className="desktop-workspace">
+          <WorkspaceHeader
+            health={sidebarAccount.health}
+            onQueryChange={setStreamQuery}
+            onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
+            query={streamQuery}
+            theme={theme}
+            title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
-
-          <section className="sidebar-section mailbox-section">
-            <h2>Mailboxes</h2>
-            <nav className="nav-list">
-              {mailboxItems.map((mailbox) => (
-                <button
-                  aria-current={mailbox.id === activeMailbox ? "page" : undefined}
-                  className="mailbox-tab"
-                  onClick={() => selectMailbox(mailbox.id, true)}
-                  key={mailbox.label}
-                  type="button"
-                >
-                  <span>{mailbox.label}</span>
-                  {mailbox.count !== undefined ? <small>{mailbox.count}</small> : null}
-                </button>
-              ))}
-            </nav>
-            {activeMailbox === "later" ? <button className="later-rename" onClick={() => void renameLaterView()} type="button">Rename {laterLabel}</button> : null}
-          </section>
-
-          <a className="settings-link" href="/settings">
-            <span aria-hidden="true">⚙</span> Settings
-          </a>
-        </aside>
-
-        <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} inert={organizationOpen || undefined} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
@@ -2369,16 +2543,14 @@ export function InboxApp({
               agentEventsError={agentEventsError}
               agentEventsStatus={agentEventsStatus}
               agentMutes={agentMutes}
-              automatedMessages={automatedMessages}
               busyAgentEventId={busyAgentEventId}
               errorMessage={errorMessage}
               errorStatus={errorStatus}
               inboxEyebrow={inboxEyebrow}
               inboxFilter={inboxFilter}
               inboxTitle={inboxTitle}
+              originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
-              classificationCounts={classificationCounts}
-              classificationLoading={classificationLoading}
               classificationError={classificationError}
               classificationActionError={classificationActionError}
               classificationActionMessage={classificationActionMessage}
@@ -2398,10 +2570,8 @@ export function InboxApp({
               onOpenAgentEvent={openAgentEventSource}
               onRetryAgentEvents={retryAgentEvents}
               onUnmuteAgentEvent={(event, mute) => void unmuteAgentEvent(event, mute)}
-              onSelectClassification={selectClassification}
               onLoadMoreMessages={() => void loadMoreMessages()}
               onRetry={retryInbox}
-              onClassificationChange={correctClassification}
               onOpenThread={openThread}
               onCreatePin={(input) => void createPin(input)}
               onRemovePin={removePin}
@@ -2439,6 +2609,7 @@ export function InboxApp({
               error={readerError}
               fallbackMessages={selectedThreadMessages}
               fallbackTitle={selectedThreadLatestMessage?.subject || "(no subject)"}
+              originLabel={readerOriginLabel}
               onAttentionChange={updateSenderAttention}
               onClassificationChange={correctClassification}
               notifyByDefault={preferences.notifyByDefault}
@@ -2451,10 +2622,21 @@ export function InboxApp({
               status={readerStatus}
             />
           </div>
+        </section>}
         </section>
       </main>
 
-      {!selectedThreadId ? <button aria-keyshortcuts="Meta+Shift+M Control+Shift+M" className="tidal-compose-fab" inert={organizationOpen || Boolean(organizerMessage) || undefined} onClick={() => openCompose()} type="button"><span aria-hidden="true">◇</span><span>Write</span><kbd>⌘⇧M</kbd></button> : null}
+      {manageSpacesOpen ? <ManageSpacesDialog
+        busy={spaceOperationStatus === "saving"}
+        error={spaceOperationError ?? organizationError}
+        onClose={() => setManageSpacesOpen(false)}
+        onCreate={createWorkflowSpace}
+        onHide={hideWorkflowSpace}
+        onReorder={reorderWorkflowSpaces}
+        onRename={renameWorkflowSpace}
+        onRestore={restoreWorkflowSpace}
+        spaces={workflowSpaces}
+      /> : null}
 
       {organizerMessage ? (
         <ThreadOrganizer
@@ -3247,7 +3429,7 @@ export function profileInitials(account: Pick<MailAccount, "displayName" | "emai
 export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   account: MailAccount | null;
   editable?: boolean;
-  variant?: "rail" | "settings";
+  variant?: "rail" | "settings" | "sidebar";
 }) {
   const providerImageSource = account?.avatarUrl ?? null;
   const [imageSource, setImageSource] = useState<string | null>(() => readStoredProfilePhoto(account ?? { id: "preview" }) ?? providerImageSource ?? PROFILE_PHOTO_FALLBACK_SRC);
@@ -3329,6 +3511,7 @@ export function ProfileAvatar({ account, editable = false, variant = "rail" }: {
   const image = imageSource
     ? <img alt="" className="profile-avatar-image" onError={handleImageError} src={imageSource} />
     : <span aria-hidden="true">{profileInitials(account)}</span>;
+  if (variant === "sidebar") return image;
   const avatar = variant === "rail"
     ? <a aria-label={`Account settings for ${accountLabel}`} className="wave-rail-account" href="/settings">{image}</a>
     : <div aria-label={`Profile photo for ${accountLabel}`} className="settings-profile-avatar" role="img">{image}</div>;
@@ -3669,7 +3852,6 @@ function InboxView({
   agentEventsStatus,
   agentMutes,
   agentEventSourceRefs,
-  automatedMessages,
   busyAgentEventId,
   collection,
   errorMessage,
@@ -3677,9 +3859,8 @@ function InboxView({
   inboxEyebrow,
   inboxFilter,
   inboxTitle,
+  originLabel,
   classificationView,
-  classificationCounts,
-  classificationLoading,
   classificationError,
   classificationActionError,
   classificationActionMessage,
@@ -3703,10 +3884,8 @@ function InboxView({
   onOpenAgentEvent,
   onRetryAgentEvents,
   onUnmuteAgentEvent,
-  onSelectClassification,
   onLoadMoreMessages,
   onRetry,
-  onClassificationChange,
   onCreatePin,
   onRemovePin,
   onReorderPin,
@@ -3736,7 +3915,6 @@ function InboxView({
   agentEventsStatus: "idle" | "loading" | "ready" | "error";
   agentMutes: AgentPropagationMuteRule[];
   agentEventSourceRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
-  automatedMessages: InboxMessage[];
   busyAgentEventId: string | null;
   collection: Collection | null;
   errorMessage: string | null;
@@ -3744,9 +3922,8 @@ function InboxView({
   inboxEyebrow: string;
   inboxFilter: InboxFilter;
   inboxTitle: string;
+  originLabel: string;
   classificationView: ClassificationView;
-  classificationCounts: ClassificationCounts;
-  classificationLoading: boolean;
   classificationError: string | null;
   classificationActionError: string | null;
   classificationActionMessage: string | null;
@@ -3770,10 +3947,8 @@ function InboxView({
   onOpenAgentEvent: (event: PropagatedAgentEvent) => void;
   onRetryAgentEvents: () => void;
   onUnmuteAgentEvent: (event: PropagatedAgentEvent, mute: AgentPropagationMuteRule) => void;
-  onSelectClassification: (view: ClassificationView) => void;
   onLoadMoreMessages: () => void;
   onRetry: () => void;
-  onClassificationChange: (message: ClassificationMessage, target: ClassificationCorrectionTarget, classification: HumanClassification | "reset") => Promise<void>;
   onCreatePin: (input: PinInput) => void;
   onRemovePin: (pin: Pin) => Promise<boolean>;
   onReorderPin: (pin: Pin, position: number) => Promise<void>;
@@ -3808,7 +3983,8 @@ function InboxView({
   const pinBuilderInputRef = useRef<HTMLInputElement>(null);
   const [snoozingThreadId, setSnoozingThreadId] = useState<string | null>(null);
   const [laterError, setLaterError] = useState<string | null>(null);
-  const [sweptThreadIds, setSweptThreadIds] = useState<Set<string>>(new Set());
+  const [evidenceMessage, setEvidenceMessage] = useState<InboxMessage | null>(null);
+  const [, setEvidenceTraceOpen] = useState(false);
   const [pinMenuOpen, setPinMenuOpen] = useState(false);
   const [pinFilterMailbox, setPinFilterMailbox] = useState<PinMailbox>("inbox");
   const [pinFilterClassification, setPinFilterClassification] = useState<Exclude<ClassificationView, "all">>("human");
@@ -3821,7 +3997,7 @@ function InboxView({
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
-  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery).filter((message) => !sweptThreadIds.has(message.threadId)), [messages, searchQuery, sweptThreadIds, viewMode]);
+  const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
   const selectedMessages = useMemo(
     () => displayMessages.filter((message) => selectedMessageIds.has(message.id)),
     [displayMessages, selectedMessageIds],
@@ -4030,14 +4206,7 @@ function InboxView({
 
       {errorMessage && status === "ready" ? <InboxSyncAlert errorMessage={errorMessage} errorStatus={errorStatus} /> : null}
 
-      {!collection ? <ClassificationTabs counts={classificationCounts} active={classificationView} loading={classificationLoading} onChange={onSelectClassification} /> : null}
-      <div
-        aria-labelledby={!collection ? `classification-tab-${classificationView}` : undefined}
-        className="classification-panel"
-        id={!collection ? "classification-panel" : undefined}
-        role={!collection ? "tabpanel" : undefined}
-        tabIndex={!collection ? 0 : undefined}
-      >
+      <div className="classification-panel">
         {classificationActionMessage ? <p className="classification-action-message" role="status">{classificationActionMessage}</p> : null}
         {classificationActionError ? <p className="classification-action-error" role="alert">{classificationActionError}</p> : null}
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
@@ -4071,7 +4240,7 @@ function InboxView({
                   </label>
                   <div className="pin-builder-fields">
                     <label><span>View</span><select onChange={(event) => setPinFilterMailbox(event.target.value as PinMailbox)} value={pinFilterMailbox}>{pinMailboxOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
-                    <label><span>Signal</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterClassification(event.target.value as Exclude<ClassificationView, "all">)} value={pinFilterClassification}>{pinClassificationOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
+                    <label><span>Evidence</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterClassification(event.target.value as Exclude<ClassificationView, "all">)} value={pinFilterClassification}>{pinClassificationOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                     <label><span>Attention</span><select disabled={pinFilterMailbox !== "inbox"} onChange={(event) => setPinFilterAttention(event.target.value as InboxFilter)} value={pinFilterAttention}>{pinAttentionOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label>
                   </div>
                   <fieldset className="pin-builder-people">
@@ -4108,7 +4277,7 @@ function InboxView({
                       </ul>
                     ) : <p className="pin-builder-empty">No messages match yet. Try a broader search or another view.</p>}
                   </section>
-                  <footer className="pin-builder-actions"><span>Saved as <strong>{pinFilterDisplayLabel}</strong></span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count} type="submit">Pin this filter</button></footer>
+                  <footer className="pin-builder-actions"><span>Saved as <strong>{pinFilterDisplayLabel}</strong></span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim()} type="submit">Pin this filter</button></footer>
                 </form>
               </section>
             </div>
@@ -4157,7 +4326,7 @@ function InboxView({
         ) : null}
 
         <section className="inbox-body" aria-live="polite">
-        {viewMode === "inbox" && classificationView === "human" && inboxFilter === "all" && !searchQuery.trim() && !personFilter && !selectionMode ? (
+        {viewMode === "signals" && !searchQuery.trim() && !personFilter && !selectionMode ? (
           <AgentEventTimeline
             accountLabels={account ? { [account.id]: account.email } : {}}
             actionErrors={agentEventActionErrors}
@@ -4195,6 +4364,7 @@ function InboxView({
 
         {status === "ready" && displayMessages.length === 0 ? (
           <InboxStatusState
+            action={searchQuery.trim() ? <button className="empty-state-action" onClick={() => { setPinFilterQuery(searchQuery.trim()); setPinMenuOpen(true); window.requestAnimationFrame(() => pinBuilderInputRef.current?.focus()); }} type="button">Save this search <span aria-hidden="true">+</span></button> : undefined}
             description={
               searchQuery.trim()
                 ? `No messages match “${searchQuery.trim()}”. Try a person, subject, or phrase.`
@@ -4259,7 +4429,7 @@ function InboxView({
                         <p>{message.snippet}</p>
                       </div>
                   </button>
-                    {!selectionMode ? <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact /> : null}
+                    {!selectionMode ? <button className="message-evidence-button" onClick={() => { setEvidenceTraceOpen(false); setEvidenceMessage(message); }} type="button"><span>Why here</span><strong>{originLabel}</strong></button> : null}
                     {!selectionMode && viewMode !== "later" ? <button
                       aria-label={senderPinned ? `${senderName} is pinned` : `Pin ${senderName}`}
                       aria-pressed={senderPinned}
@@ -4295,7 +4465,7 @@ function InboxView({
         ) : null}
         {laterError ? <p className="later-error" role="alert">{laterError}</p> : null}
         {hasMoreMessages ? <div className="classification-load-more"><button disabled={isLoadingMoreMessages} onClick={onLoadMoreMessages} type="button">{isLoadingMoreMessages ? "Loading more…" : searchQuery.trim() ? "Load more messages to search" : "Load more messages"}</button></div> : null}
-        {status === "ready" && viewMode === "inbox" && !searchQuery.trim() && automatedMessages.length ? <section className="tideline-section" aria-label="Automated messages"><div className="tideline-label"><span /><strong><WaveGlyph /> Tideline</strong><small>machines and newsletters rest below</small><span /></div><div className="automation-summary"><span className="automation-mark">⌁</span><div><strong>{automatedMessages.length} automated threads</strong><small>{automatedMessages.map((message) => message.from.name ?? message.from.email).slice(0, 2).join(" · ")}</small></div><button onClick={() => onSelectClassification("tideline")} type="button">Review</button>{sweptThreadIds.size ? <button className="sweep-button" onClick={() => setSweptThreadIds(new Set())} type="button">Undo sweep</button> : <button className="sweep-button" onClick={() => setSweptThreadIds(new Set(automatedMessages.map((message) => message.threadId)))} type="button">◇ Sweep away</button>}</div>{sweptThreadIds.size ? <p className="tideline-local-note" role="status">{sweptThreadIds.size} thread{sweptThreadIds.size === 1 ? " is" : "s are"} hidden for this preview only. Nothing changed at Gmail or Outlook.</p> : null}</section> : null}
+        {evidenceMessage ? <DesktopDrawer ariaLabel="Why here?" className="message-evidence-drawer" onClose={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }}><header><div><span>Message evidence</span><h2>Why here?</h2></div><button aria-label="Close evidence" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This message was opened from {originLabel}. Orca did not receive an authoritative placement trace with this inbox response, so it cannot name a winning rule or claim that safety and manual overrides were absent.</p></section><section><span>Current attention preference</span><h3>{evidenceMessage.attentionBehavior === "notify" ? "Notify me" : evidenceMessage.attentionBehavior === "focus" ? "Keep in Focus" : evidenceMessage.attentionBehavior === "quiet" ? "Quiet" : evidenceMessage.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This is the current sender/thread attention treatment. It is not proof of the rule that placed the message in this workspace.</p></section><section><span>Human Signal · evidence</span><h3>{evidenceMessage.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(evidenceMessage.humanSignal > 1 ? evidenceMessage.humanSignal / 10 : evidenceMessage.humanSignal).toFixed(2)}`}</h3><p>Conversational and sender signals may inform ranking. They never decide the destination alone.</p></section><footer><button onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onOpenThread(evidenceMessage); }} type="button">Open thread</button><button className="message-evidence-trace" onClick={() => { setEvidenceMessage(null); setEvidenceTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
         </section>
 
       </div>
@@ -4431,6 +4601,7 @@ export function MessageReader({
   error,
   fallbackMessages,
   fallbackTitle,
+  originLabel = "Inbox",
   onBack,
   onRetry,
   onSent = () => {},
@@ -4448,6 +4619,7 @@ export function MessageReader({
   error: string | null;
   fallbackMessages: InboxMessage[];
   fallbackTitle: string;
+  originLabel?: string;
   onBack: () => void;
   onRetry: () => void;
   onSent?: (result: DeliveryResult) => Promise<void> | void;
@@ -4463,6 +4635,8 @@ export function MessageReader({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
+  const [readerEvidenceOpen, setReaderEvidenceOpen] = useState(false);
+  const [, setReaderTraceOpen] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
   const fallbackAttentionByAddress = useMemo(() => new Map(fallbackMessages.map((message) => [message.from.email.trim().toLowerCase(), message.attentionBehavior])), [fallbackMessages]);
@@ -4471,6 +4645,7 @@ export function MessageReader({
   const firstUnreadMessage = messages.find((message) => message.unread);
   const jumpTarget = newestUnreadMessage ?? newestMessage;
   const title = detail?.thread.subject || fallbackTitle;
+  const readerEvidence = fallbackMessages[fallbackMessages.length - 1] ?? null;
 
   useEffect(() => {
     if (status === "ready") headingRef.current?.focus();
@@ -4504,7 +4679,7 @@ export function MessageReader({
       <nav className="reader-nav" aria-label="Reader controls">
         <button className="reader-back" onClick={onBack} type="button">
           <ArrowGlyph direction="left" />
-          <span>Inbox</span>
+          <span>{originLabel}</span>
         </button>
         <span className="reader-escape-hint" aria-hidden="true">esc</span>
       </nav>
@@ -4530,10 +4705,10 @@ export function MessageReader({
       {status === "ready" && detail ? (
         <div className="reader-document">
           <header className="reader-heading">
-            <p className="reader-kicker">Focus · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
+            <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions"><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
+            <div className="reader-top-actions">{readerEvidence ? <button aria-expanded={readerEvidenceOpen} className="reader-why-here" onClick={() => { setReaderTraceOpen(false); setReaderEvidenceOpen(true); }} type="button">Why here?</button> : null}<RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -4543,7 +4718,7 @@ export function MessageReader({
             </button>
           ) : null}
 
-          <div className="reader-message-list" aria-label="Messages in conversation">
+          <div className="reader-message-list" aria-label="Messages in conversation" role="region">
             {messageGroups.map((group) => (
               <section className="reader-day-group" key={group.key} aria-labelledby={`reader-day-${group.key}`}>
                 <h2 className="reader-day" id={`reader-day-${group.key}`}>{group.label}</h2>
@@ -4629,6 +4804,7 @@ export function MessageReader({
           <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
         </div>
       ) : null}
+      {readerEvidenceOpen && readerEvidence ? <DesktopDrawer ariaLabel="Reader placement evidence" className="message-evidence-drawer" onClose={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }}><header><div><span>Conversation evidence</span><h2>Why here?</h2></div><button aria-label="Close reader evidence" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This conversation was opened from {originLabel}. An authoritative winning-rule trace was not returned with the thread, so Orca cannot infer safety, override, or fallback decisions.</p></section><section><span>Current attention preference</span><h3>{readerEvidence.attentionBehavior === "notify" ? "Notify me" : readerEvidence.attentionBehavior === "focus" ? "Keep in Focus" : readerEvidence.attentionBehavior === "quiet" ? "Quiet" : readerEvidence.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This preference is shown separately from placement evidence. It does not establish which rule selected {originLabel}.</p></section><section><span>Human Signal · evidence</span><h3>{readerEvidence.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(readerEvidence.humanSignal > 1 ? readerEvidence.humanSignal / 10 : readerEvidence.humanSignal).toFixed(2)}`}</h3><p>Human Signal can support ranking. It never decides the destination alone.</p></section><footer><button className="message-evidence-trace" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
     </article>
   );
 }
@@ -5615,6 +5791,7 @@ export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailb
   return messages.filter((message) => {
     const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
     if (mailboxId === "inbox") return behavior !== "quiet" && behavior !== "hidden";
+    if (mailboxId === "signals") return behavior === "notify";
     return mailboxId === "focus" ? behavior === "notify" || behavior === "focus" : behavior === mailboxId;
   });
 }

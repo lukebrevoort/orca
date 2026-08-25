@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-326 implementation and verification checklist</title>
+  <style>
+    :root { color-scheme: light dark; --paper:#f6faf7; --surface:#fff; --ink:#102522; --muted:#60726d; --line:#cfdad5; --accent:#0b9b84; --warn:#b25f13; --bad:#a43b38; --done:#177457; }
+    @media (prefers-color-scheme:dark) { :root { --paper:#050505; --surface:#0d0d0d; --ink:#f4f3ef; --muted:#aaa9a4; --line:#343434; --accent:#6aa9f5; --warn:#e7a85f; --bad:#ff8b87; --done:#77d8ae; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.55 ui-sans-serif,system-ui,sans-serif; }
+    main { width:min(1180px,calc(100% - 40px)); margin:48px auto 80px; }
+    h1 { margin:0; font:600 clamp(34px,5vw,64px)/.98 Georgia,serif; letter-spacing:-.04em; }
+    h2 { margin:48px 0 14px; font:600 25px/1.1 Georgia,serif; }
+    .lede { max-width:780px; color:var(--muted); font-size:16px; }
+    .meta { display:flex; gap:8px; flex-wrap:wrap; margin:24px 0 32px; }
+    .chip { border:1px solid var(--line); border-radius:999px; padding:6px 10px; background:var(--surface); }
+    .status { font-weight:700; }
+    .gap { color:var(--bad); } .progress { color:var(--warn); } .done { color:var(--done); }
+    table { width:100%; border-collapse:separate; border-spacing:0; background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+    th,td { padding:11px 13px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+    tr:last-child td { border-bottom:0; }
+    code { font:12px ui-monospace,SFMono-Regular,monospace; }
+    .note { border-left:3px solid var(--accent); padding:10px 14px; color:var(--muted); background:color-mix(in srgb,var(--surface) 88%,var(--accent)); }
+  </style>
+</head>
+<body>
+<main>
+  <p class="chip" style="display:inline-block">BRE-326 · implementation source of truth</p>
+  <h1>Desktop UI switch<br>completion matrix</h1>
+  <p class="lede">Live checklist connecting the approved BRE-321 design package and Information Hierarchy pivot to production code, automated checks, and browser evidence. A row is complete only when behavior and both-theme evidence exist.</p>
+  <div class="meta"><span class="chip">474 tests · 0 failures</span><span class="chip">Typecheck · lint · build pass</span><span class="chip">Primary: 1440×900</span><span class="chip">Narrow: 1024px</span></div>
+  <p class="note"><strong>Product constraint:</strong> Human Signal is evidence, not primary navigation. Automated mail may be important. The UI must organize attention around user-owned spaces and transparent winning rules.</p>
+
+  <h2>Shared foundation</h2>
+  <table><thead><tr><th>Requirement</th><th>Initial finding</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+    <tr><td>One integrated persistent sidebar</td><td>Inbox, workflow spaces, custom spaces, Organization, Settings, account</td><td class="status done">Verified</td><td>Light + Black, 1440 + 1024 evidence</td></tr>
+    <tr><td>Central semantic theme and state tokens</td><td>Graphite Black surfaces and theme-safe default, hover, focus, selected, disabled states</td><td class="status done">Verified</td><td>Control interaction checks + WCAG A/AA audit</td></tr>
+    <tr><td>Light wordmark + wave; Orca Black original o tile</td><td>Approved fixed Black mark asset; no font-synthesized brand glyph</td><td class="status done">Verified</td><td>Persona review #220 + production build</td></tr>
+    <tr><td>Global Search (⌘K), Compose (C), account health</td><td>Shared actions across mail and secondary settings surfaces; unavailable health is labeled truthfully</td><td class="status done">Verified</td><td>Keyboard and settings-search journeys</td></tr>
+    <tr><td>1024px management drawer behavior</td><td>Accessible management drawer with focus transfer, Escape, trap, and restoration</td><td class="status done">Verified</td><td>1024 screenshot + focused interaction test</td></tr>
+  </tbody></table>
+
+  <h2>Mail and workflow surfaces</h2>
+  <table><thead><tr><th>Surface</th><th>Required states / journey</th><th>Status</th><th>Verification</th></tr></thead><tbody>
+    <tr><td>Session, login, onboarding</td><td>Checking, expired, OAuth preview/error/retry, success/failure</td><td class="status done">Verified</td><td>Existing route/state coverage retained in full suite</td></tr>
+    <tr><td>Inbox + triage</td><td>Clean 76px rows, readable origin/actions, selection, loading, syncing, empty, offline, error</td><td class="status done">Verified</td><td>Both-theme screenshots + interactions</td></tr>
+    <tr><td>Focus, Signals, Quiet, Later</td><td>Stable workflow-space navigation and origin labels</td><td class="status done">Verified</td><td>Navigation and history tests</td></tr>
+    <tr><td>Custom spaces</td><td>Create, rename, absolute reorder, hide, restore, navigate, reload</td><td class="status done">Verified</td><td>Multi-row drag + reload interaction tests</td></tr>
+    <tr><td>All Mail + global Search</td><td>Query, filters, no results, saved search, secondary-shell submission, safe return</td><td class="status done">Verified</td><td>Search journey + deep-link tests</td></tr>
+    <tr><td>Drafts + recovery</td><td>Local/cloud, conflict, deletion, originals preserved</td><td class="status done">Verified</td><td>Existing conflict/recovery tests retained</td></tr>
+    <tr><td>Reader + evidence</td><td>Partial data, truthful Why here, newest message, inline reply, safe return</td><td class="status done">Verified</td><td>Reader screenshot + accessible drawer test</td></tr>
+    <tr><td>Composer</td><td>New/reply/reply-all, autosave, offline, failed, sent, discard</td><td class="status done">Verified</td><td>Inline reply screenshot + delivery/recovery tests</td></tr>
+    <tr><td>Zen</td><td>Writing, saved, offline, interrupted, recovered, sent</td><td class="status done">Verified</td><td>Full-suite Zen interaction and style coverage</td></tr>
+  </tbody></table>
+
+  <h2>Organization and Settings</h2>
+  <table><thead><tr><th>Area</th><th>Acceptance</th><th>Status</th><th>Verification</th></tr></thead><tbody>
+    <tr><td>Organization home</td><td>Read-only describe/query capability in production; loading, ready, empty, error, denial states</td><td class="status done">Verified</td><td>Browser state matrix + persona review #214</td></tr>
+    <tr><td>Glass Box + Tide Table</td><td>When → If → Then → Because presentation; rich interaction only in disclosed local preview</td><td class="status done">Contract-safe</td><td>Local-preview screenshot + production capability gate</td></tr>
+    <tr><td>Simulation + authority</td><td>Production mutation disabled because BRE-308 exposes describe/query only; preview never claims authorization or persistence</td><td class="status done">Contract-safe</td><td>Persona review #214</td></tr>
+    <tr><td>Trace/Audit + revert</td><td>No invented wire schema or authoritative success; unavailable controls are disabled in production</td><td class="status done">Contract-safe</td><td>Persona review #214</td></tr>
+    <tr><td>Eight Settings areas</td><td>First-class scoped routes with truthful unavailable/loading/error state treatment</td><td class="status done">Verified</td><td>Both-theme settings evidence</td></tr>
+    <tr><td>Providers + agents + privacy</td><td>Shared account/sync contracts parsed; unavailable status is not presented as healthy</td><td class="status done">Verified</td><td>Calendar/error evidence + persona review #217</td></tr>
+  </tbody></table>
+
+  <h2>Release gate</h2>
+  <table><thead><tr><th>Check</th><th>Required result</th><th>Status</th></tr></thead><tbody>
+    <tr><td><code>bun run typecheck</code></td><td>Pass</td><td class="status done">Pass</td></tr>
+    <tr><td><code>bun test --timeout 60000</code></td><td>Pass with focused BRE-326 interaction coverage</td><td class="status done">474 pass · 0 fail</td></tr>
+    <tr><td><code>bun run build</code> + <code>bun run lint</code></td><td>Pass</td><td class="status done">Pass</td></tr>
+    <tr><td>Agent-browser visual matrix</td><td>Light/Black; 1440/1024; shell/list/reader/composer/Organization/Settings/drawers/control states</td><td class="status done">11 media screenshots</td></tr>
+    <tr><td>Independent persona review</td><td>No open P0/P1 findings after fix loop</td><td class="status done">7 of 7 resolved</td></tr>
+  </tbody></table>
+</main>
+</body>
+</html>

@@ -4,6 +4,7 @@ import { FeedbackWidget } from "@feedback-kit/react";
 import "@feedback-kit/react/styles.css";
 import { App } from "./App";
 import "./styles.css";
+import "./desktop-switch.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

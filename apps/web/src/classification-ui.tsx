@@ -259,7 +259,7 @@ export function ClassificationCorrection({
   return (
     <div className={`classification-correction${compact ? " classification-correction-compact" : ""}${open ? " classification-correction-open" : ""}`} ref={wrapperRef}>
       <button
-        aria-controls={menuId}
+        aria-controls={open ? menuId : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Correct classification: ${classificationLabel(effective)}`}
