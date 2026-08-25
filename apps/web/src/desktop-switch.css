@@ -69,9 +69,12 @@
 }
 
 .desktop-shell {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 246px minmax(0, 1fr);
+  overflow: hidden;
   background: var(--desktop-paper);
   color: var(--desktop-ink);
 }
@@ -80,7 +83,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px 14px 14px;
@@ -254,8 +257,11 @@
 .desktop-account small { margin-top: 3px; color: var(--desktop-faint); font-size: 8px; }
 
 .desktop-workspace {
+  height: 100%;
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   background: var(--desktop-paper);
 }
 
@@ -574,12 +580,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 }
 
 @media (max-width: 760px) {
-  .desktop-shell { display: block; }
+  .desktop-shell { display: block; height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
   .desktop-sidebar { position: fixed; inset: auto 0 0; width: auto; height: 64px; display: grid; grid-template-columns: repeat(5,1fr); padding: 6px; border-top: 1px solid var(--desktop-border); border-right: 0; overflow: visible; }
   .desktop-brand,.desktop-compose,.desktop-sidebar-label,.desktop-sidebar-section-head,.desktop-sidebar-spacer,.desktop-account,.desktop-sidebar-item:nth-of-type(n+6) { display: none; }
   .desktop-sidebar-item { min-height: 52px; grid-template-columns: 1fr; justify-items: center; padding: 4px; font-size: 8px; }
   .desktop-sidebar-item small { display: none; }
   .desktop-workspace-header { min-height: 58px; padding: 8px 12px; }
+  .desktop-workspace { height: auto; min-height: 100vh; min-height: 100dvh; overflow-y: visible; overscroll-behavior-y: auto; }
   .desktop-health,.desktop-header-context { display: none; }
   .desktop-workspace > .content-pane { min-height: calc(100vh - 122px); padding-bottom: 72px; }
   .organization-studio { min-height: calc(100vh - 122px); padding: 22px 14px 90px; }
