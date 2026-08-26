@@ -16,7 +16,7 @@ CREATE TABLE `organization_views` (
 	CONSTRAINT `organization_views_definition_json_check` CHECK (json_valid(`definition`))
 );
 --> statement-breakpoint
-CREATE INDEX `organization_views_workspace_position_idx` ON `organization_views` (`workspace_id`,`position`,`id`);
+CREATE UNIQUE INDEX `organization_views_workspace_position_unique_idx` ON `organization_views` (`workspace_id`,`position`);
 --> statement-breakpoint
 CREATE INDEX `organization_thread_facet_values_lookup_idx` ON `organization_thread_facet_values` (`workspace_id`,`facet_id`,`account_id`,`thread_id`,`value`);
 --> statement-breakpoint

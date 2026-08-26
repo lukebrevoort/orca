@@ -43,16 +43,16 @@ describe("BRE-313 live View contracts", () => {
   });
 
   test("requires a complete, uniquely positioned optimistic reorder set", () => {
-    const request = organizationViewReorderRequestSchema.parse({ items: [
+    const request = organizationViewReorderRequestSchema.parse({ idempotencyKey: "reorder-1", expectedWorkspaceRevision: 5, items: [
       { id: "view_weekly", expectedRevision: 2, position: 0 },
       { id: "view_all", expectedRevision: 4, position: 1 },
     ] });
     assert.deepEqual(request.items.map((item) => item.id), ["view_weekly", "view_all"]);
-    assert.equal(organizationViewReorderRequestSchema.safeParse({ items: [
+    assert.equal(organizationViewReorderRequestSchema.safeParse({ idempotencyKey: "reorder-2", expectedWorkspaceRevision: 5, items: [
       { id: "view_weekly", expectedRevision: 2, position: 0 },
       { id: "view_weekly", expectedRevision: 2, position: 1 },
     ] }).success, false);
-    assert.equal(organizationViewReorderRequestSchema.safeParse({ items: [
+    assert.equal(organizationViewReorderRequestSchema.safeParse({ idempotencyKey: "reorder-3", expectedWorkspaceRevision: 5, items: [
       { id: "view_weekly", expectedRevision: 2, position: 0 },
       { id: "view_all", expectedRevision: 4, position: 0 },
     ] }).success, false);

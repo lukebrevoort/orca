@@ -11,7 +11,9 @@ import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
+import { createOrganizationViews } from "./module.ts";
 import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, type OrganizationViewPageKey } from "./sqlite-repository.ts";
+import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -49,9 +51,9 @@ async function setup() {
   const ownerLane = (sqlite.query("SELECT id FROM organization_lanes WHERE workspace_id='owner' ORDER BY position,id LIMIT 1").get() as { id: string }).id;
   const foreignLane = (sqlite.query("SELECT id FROM organization_lanes WHERE workspace_id='foreign' ORDER BY position,id LIMIT 1").get() as { id: string }).id;
   sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-    .run("facet_owner", "owner", "Owner facet", 0, JSON.stringify({ kind: "text" }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    .run("facet_owner", "owner", "Owner facet", 0, JSON.stringify({ kind: "text", maxLength: 200 }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
   sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-    .run("facet_foreign", "foreign", "Foreign facet", 0, JSON.stringify({ kind: "text" }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    .run("facet_foreign", "foreign", "Foreign facet", 0, JSON.stringify({ kind: "text", maxLength: 200 }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
   sqlite.query("INSERT INTO organization_workflow_states (id,workspace_id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
     .run("workflow_owner", "owner", "Owner state", 0, 1, now, now);
   sqlite.query("INSERT INTO organization_workflow_states (id,workspace_id,name,position,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
@@ -74,7 +76,14 @@ async function setup() {
 }
 
 async function createView(app: ReturnType<typeof createApp>, headers: Record<string, string>, body: unknown) {
-  const response = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(body) });
+  const input = body as Record<string, unknown>;
+  const list = await app.request("/v1/organization/views", { headers });
+  const workspaceRevision = (await list.json()).workspaceRevision as number;
+  const response = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({
+    idempotencyKey: `verification:create:${crypto.randomUUID()}`,
+    expectedWorkspaceRevision: workspaceRevision,
+    ...input,
+  }) });
   const text = await response.text();
   assert.equal(response.status, 201, text);
   return JSON.parse(text) as OrganizationView;
@@ -86,11 +95,11 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const first = await createView(app, headers, { name: "First", position: 0, definition: { revision: 1 } });
     const second = await createView(app, headers, { name: "Second", position: 1, definition: { revision: 1 } });
 
-    const edited = await app.request(`/v1/organization/views/${first.id}`, { method: "PATCH", headers, body: JSON.stringify({ expectedRevision: 1, patch: { definition: { revision: 1, thread: { readState: "unread" } } } }) });
+    const edited = await app.request(`/v1/organization/views/${first.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "lifecycle-edit", expectedWorkspaceRevision: 3, expectedRevision: 1, patch: { definition: { revision: 1, thread: { readState: "unread" } } } }) });
     assert.equal(edited.status, 200);
     assert.deepEqual((await edited.json()).definition.thread, { readState: "unread" });
 
-    const reordered = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({ items: [
+    const reordered = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "lifecycle-reorder", expectedWorkspaceRevision: 4, items: [
       { id: first.id, expectedRevision: 2, position: 1 },
       { id: second.id, expectedRevision: 1, position: 0 },
     ] }) });
@@ -101,7 +110,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const beforeConflict = createDatabaseClient(path);
     const snapshot = beforeConflict.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY id").all();
     beforeConflict.sqlite.close();
-    const stale = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({ items: [
+    const stale = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "lifecycle-stale-reorder", expectedWorkspaceRevision: 5, items: [
       { id: first.id, expectedRevision: 2, position: 0 },
       { id: second.id, expectedRevision: 2, position: 1 },
     ] }) });
@@ -110,12 +119,137 @@ describe("BRE-313 independent View lifecycle verification", () => {
     assert.deepEqual(afterConflict.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY id").all(), snapshot);
     afterConflict.sqlite.close();
 
-    const staleRemove = await app.request(`/v1/organization/views/${second.id}?expectedRevision=1`, { method: "DELETE", headers });
+    const staleRemove = await app.request(`/v1/organization/views/${second.id}?expectedRevision=1&expectedWorkspaceRevision=5&idempotencyKey=lifecycle-stale-remove`, { method: "DELETE", headers });
     assert.equal(staleRemove.status, 409);
     assert.equal((await app.request(`/v1/organization/views/${second.id}/results`, { headers })).status, 200);
-    const removed = await app.request(`/v1/organization/views/${second.id}?expectedRevision=2`, { method: "DELETE", headers });
+    const removed = await app.request(`/v1/organization/views/${second.id}?expectedRevision=2&expectedWorkspaceRevision=5&idempotencyKey=lifecycle-remove`, { method: "DELETE", headers });
     assert.equal(removed.status, 204);
     assert.equal((await app.request(`/v1/organization/views/${second.id}/results`, { headers })).status, 404);
+  });
+
+  test("keeps one canonical Workspace ordering across arbitrary positions and partial reorder", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const assertCanonical = () => {
+      const verify = createDatabaseClient(path);
+      const rows = verify.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY position").all() as Array<{ id: string; position: number; revision: number }>;
+      assert.deepEqual(rows.map((row) => row.position), rows.map((_, index) => index));
+      assert.equal(new Set(rows.map((row) => row.position)).size, rows.length);
+      verify.sqlite.close();
+      return rows;
+    };
+
+    const first = await createView(app, headers, { name: "First", position: 0, definition: { revision: 1 } });
+    const second = await createView(app, headers, { name: "Second", position: 0, definition: { revision: 1 } });
+    const third = await createView(app, headers, { name: "Third", position: 99, definition: { revision: 1 } });
+    const fourth = await createView(app, headers, { name: "Fourth", position: 1, definition: { revision: 1 } });
+    let rows = assertCanonical();
+    assert.deepEqual(rows.map((row) => row.id), [second.id, fourth.id, first.id, third.id]);
+
+    const firstRevision = rows.find((row) => row.id === first.id)!.revision;
+    const moved = await app.request(`/v1/organization/views/${first.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "position-move", expectedWorkspaceRevision: 5, expectedRevision: firstRevision, patch: { position: 99 } }) });
+    assert.equal(moved.status, 200, await moved.clone().text());
+    rows = assertCanonical();
+    assert.deepEqual(rows.map((row) => row.id), [second.id, fourth.id, third.id, first.id]);
+
+    const secondRow = rows.find((row) => row.id === second.id)!;
+    const thirdRow = rows.find((row) => row.id === third.id)!;
+    const partial = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "position-partial", expectedWorkspaceRevision: 6, items: [
+      { id: third.id, expectedRevision: thirdRow.revision, position: 0 },
+      { id: second.id, expectedRevision: secondRow.revision, position: 3 },
+    ] }) });
+    assert.equal(partial.status, 200, await partial.clone().text());
+    rows = assertCanonical();
+    assert.deepEqual(rows.map((row) => row.id), [third.id, fourth.id, first.id, second.id]);
+
+    const removeTarget = rows.find((row) => row.id === fourth.id)!;
+    const removed = await app.request(`/v1/organization/views/${fourth.id}?expectedRevision=${removeTarget.revision}&expectedWorkspaceRevision=7&idempotencyKey=position-remove`, { method: "DELETE", headers });
+    assert.equal(removed.status, 204, await removed.clone().text());
+    assert.deepEqual(assertCanonical().map((row) => row.id), [third.id, first.id, second.id]);
+  });
+
+  test("routes every View lifecycle mutation through one atomic Organization authority change set", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const list = await app.request("/v1/organization/views", { headers });
+    assert.equal((await list.json()).workspaceRevision, 1);
+    const createRequest = { idempotencyKey: "view-authority-create", expectedWorkspaceRevision: 1, name: "Authorized", position: 0, definition: { revision: 1 } };
+    const createdResponse = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(createRequest) });
+    assert.equal(createdResponse.status, 201, await createdResponse.clone().text());
+    const created = await createdResponse.json() as OrganizationView;
+    const replay = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(createRequest) });
+    assert.equal(replay.status, 201);
+    assert.deepEqual(await replay.json(), created);
+    const conflictingReuse = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ ...createRequest, name: "Substituted" }) });
+    assert.equal(conflictingReuse.status, 409);
+    const stale = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ ...createRequest, idempotencyKey: "view-authority-stale", name: "Stale" }) });
+    assert.equal(stale.status, 409);
+
+    const updateRequest = { idempotencyKey: "view-authority-update", expectedWorkspaceRevision: 2, expectedRevision: 1, patch: { name: "Authorized edit" } };
+    const updatedResponse = await app.request(`/v1/organization/views/${created.id}`, { method: "PATCH", headers, body: JSON.stringify(updateRequest) });
+    assert.equal(updatedResponse.status, 200, await updatedResponse.clone().text());
+    const updated = await updatedResponse.json() as OrganizationView;
+    assert.equal(updated.revision, 2);
+    assert.deepEqual(await (await app.request(`/v1/organization/views/${created.id}`, { method: "PATCH", headers, body: JSON.stringify(updateRequest) })).json(), updated);
+
+    const removeUrl = `/v1/organization/views/${created.id}?expectedRevision=2&expectedWorkspaceRevision=3&idempotencyKey=view-authority-remove`;
+    assert.equal((await app.request(removeUrl, { method: "DELETE", headers })).status, 204);
+    assert.equal((await app.request(removeUrl, { method: "DELETE", headers })).status, 204);
+
+    const verify = createDatabaseClient(path);
+    assert.equal((verify.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision, 4);
+    const changes = verify.sqlite.query("SELECT idempotency_key,resource_family,operation,workspace_revision_before,workspace_revision_after,authority_trace FROM organization_change_sets WHERE workspace_id='owner' ORDER BY workspace_revision_before").all() as Array<Record<string, unknown>>;
+    assert.deepEqual(changes.map((change) => [change.idempotency_key, change.resource_family, change.operation, change.workspace_revision_before, change.workspace_revision_after]), [
+      ["view-authority-create", "view", "apply", 1, 2],
+      ["view-authority-update", "view", "apply", 2, 3],
+      ["view-authority-remove", "view", "apply", 3, 4],
+    ]);
+    for (const change of changes) {
+      const trace = JSON.parse(change.authority_trace as string) as { actor: { id: string; type: string }; capabilitySnapshot: { id: string }; requestedResourceFamilies: string[]; decision: string };
+      assert.deepEqual(trace.actor, { id: "owner", type: "human" });
+      assert.equal(trace.capabilitySnapshot.id, "first_party:human:owner");
+      assert.deepEqual(trace.requestedResourceFamilies, ["view"]);
+      assert.equal(trace.decision, "allowed");
+    }
+    assert.ok((verify.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner' AND resource_family='view'").get() as { count: number }).count >= 3);
+    verify.sqlite.close();
+  });
+
+  test("fails closed with zero writes when an authorized View envelope is tampered before commit", { timeout: 30_000 }, async () => {
+    const { path } = await setup();
+    const cases: Array<[string, (authorization: any) => void]> = [
+      ["actor", (authorization) => { authorization.executionContext.actor.id = "foreign"; }],
+      ["workspace", (authorization) => { authorization.executionContext.workspaceId = "foreign"; }],
+      ["idempotency", (authorization) => { authorization.executionContext.idempotencyKey = "substituted"; }],
+      ["revision", (authorization) => { authorization.executionContext.expectedRevisions.workspace = 2; }],
+      ["command", (authorization) => { authorization.command.intents[0].changes = { substituted: true }; }],
+    ];
+    for (const [name, tamper] of cases) {
+      const client = createDatabaseClient(path);
+      const beforeCounts = {
+        views: (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count,
+        changes: (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count,
+        actions: (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count,
+        workspaces: (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states WHERE workspace_id='owner'").get() as { count: number }).count,
+      };
+      const base = createSqliteOrganizationViewsRepository(client.sqlite);
+      const repository = {
+        ...base,
+        create(input: Parameters<typeof base.create>[0]) {
+          const authorization = structuredClone(input.authorization);
+          tamper(authorization);
+          return base.create({ ...input, authorization });
+        },
+      };
+      const organization = createOrganizationViews(repository, { newViewId: () => `view_tamper_${name}`, newChangeId: () => `change_tamper_${name}` });
+      assert.throws(() => organization.create({
+        scope: { workspaceId: "owner", accountIds: ["account_a", "account_b"], actor: { id: "owner", type: "human" } },
+        request: { idempotencyKey: `tamper-${name}`, expectedWorkspaceRevision: 1, name: `Tamper ${name}`, definition: { revision: 1 } },
+      }), /modified|validation|scope|Actor|Workspace|command|authority/i, name);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.views, name);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.changes, name);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.actions, name);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.workspaces, name);
+      client.sqlite.close();
+    }
   });
 
   test("rejects every foreign stable resource family without persisting or revising a View", { timeout: 30_000 }, async () => {
@@ -131,7 +265,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
       { label: "Thread", definition: { revision: 1, thread: { ids: ["thread_foreign"] } }, code: "resource_denied" },
     ];
     for (const item of definitions) {
-      const denied = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ name: `Foreign ${item.label}`, definition: item.definition }) });
+      const denied = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: `foreign-${item.label}`, expectedWorkspaceRevision: 1, name: `Foreign ${item.label}`, definition: item.definition }) });
       assert.equal(denied.status, 403, `${item.label}: ${await denied.clone().text()}`);
       assert.equal((await denied.json()).error.code, item.code);
     }
@@ -140,11 +274,50 @@ describe("BRE-313 independent View lifecycle verification", () => {
     verify.sqlite.close();
 
     const owned = await createView(app, headers, { name: "Owned", definition: { revision: 1, laneIds: [ownerLane] } });
-    const deniedUpdate = await app.request(`/v1/organization/views/${owned.id}`, { method: "PATCH", headers, body: JSON.stringify({ expectedRevision: 1, patch: { definition: { revision: 1, workflowStateIds: ["workflow_foreign"] } } }) });
+    const deniedUpdate = await app.request(`/v1/organization/views/${owned.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "foreign-update", expectedWorkspaceRevision: 2, expectedRevision: 1, patch: { definition: { revision: 1, workflowStateIds: ["workflow_foreign"] } } }) });
     assert.equal(deniedUpdate.status, 403);
     const afterUpdate = createDatabaseClient(path);
     assert.equal((afterUpdate.sqlite.query("SELECT revision FROM organization_views WHERE workspace_id='owner' AND id=?").get(owned.id) as { revision: number }).revision, 1);
     afterUpdate.sqlite.close();
+  });
+
+  test("validates owned Facet filters authoritatively while accepting repeated multi-value filters", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const seeded = createDatabaseClient(path);
+    const now = Date.parse("2026-08-25T16:00:00.000Z");
+    seeded.sqlite.query("UPDATE organization_facets SET cardinality=? WHERE workspace_id='owner' AND id='facet_owner'")
+      .run(JSON.stringify({ kind: "multi", maxItems: 5 }));
+    seeded.sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run("facet_number", "owner", "Score", 1, JSON.stringify({ kind: "number", integer: true }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    seeded.sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run("facet_enum", "owner", "State", 2, JSON.stringify({ kind: "enum", options: [
+        { id: "active", label: "Active", position: 0, retiredAt: null },
+        { id: "retired", label: "Retired", position: 1, retiredAt: "2026-08-20T00:00:00.000Z" },
+      ] }), JSON.stringify({ kind: "single" }), 1, 1, now, now);
+    seeded.sqlite.close();
+
+    const repeated = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "facet-repeated", expectedWorkspaceRevision: 1, name: "Repeated", definition: { revision: 1, facetFilters: [
+      { facetId: "facet_owner", operator: "contains", value: "alpha" },
+      { facetId: "facet_owner", operator: "contains", value: "beta" },
+    ] } }) });
+    assert.equal(repeated.status, 201, await repeated.clone().text());
+
+    const before = createDatabaseClient(path);
+    const beforeCount = (before.sqlite.query("SELECT COUNT(*) AS count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count;
+    before.sqlite.close();
+    const invalid = [
+      { label: "operator", definition: { revision: 1, facetFilters: [{ facetId: "facet_number", operator: "contains", value: 7 }] }, status: 400 },
+      { label: "value type", definition: { revision: 1, facetFilters: [{ facetId: "facet_number", operator: "equals", value: "7" }] }, status: 400 },
+      { label: "retired enum", definition: { revision: 1, facetFilters: [{ facetId: "facet_enum", operator: "equals", value: "retired" }] }, status: 400 },
+      { label: "foreign", definition: { revision: 1, facetFilters: [{ facetId: "facet_foreign", operator: "present" }] }, status: 403 },
+    ];
+    for (const item of invalid) {
+      const denied = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: `facet-invalid-${item.label}`, expectedWorkspaceRevision: 2, name: item.label, definition: item.definition }) });
+      assert.equal(denied.status, item.status, `${item.label}: ${await denied.clone().text()}`);
+    }
+    const after = createDatabaseClient(path);
+    assert.equal((after.sqlite.query("SELECT COUNT(*) AS count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count, beforeCount);
+    after.sqlite.close();
   });
 
   test("rejects malformed but correctly fingerprinted cursor fields at the HTTP boundary with zero mutation", { timeout: 30_000 }, async () => {
@@ -171,6 +344,59 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const verify = createDatabaseClient(path);
     assert.deepEqual(verify.sqlite.query("SELECT revision,position FROM organization_views WHERE workspace_id='owner' AND id=?").get(view.id), { revision: 1, position: 0 });
     verify.sqlite.close();
+  });
+
+  test("rejects non-canonical base64url cursors before query binding", { timeout: 30_000 }, async () => {
+    const { app, headers } = await setup();
+    const view = await createView(app, headers, { name: "All", definition: { revision: 1 } });
+    const first = await app.request(`/v1/organization/views/${view.id}/results?limit=1`, { headers });
+    const cursor = (await first.json()).nextCursor as string;
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const lastIndex = alphabet.indexOf(cursor.at(-1)!);
+    const unusedBits = cursor.length % 4 === 2 ? 4 : cursor.length % 4 === 3 ? 2 : 0;
+    assert.notEqual(unusedBits, 0, "fixture cursor must expose unused terminal base64 bits");
+    const nonCanonicalLast = alphabet[(lastIndex >> unusedBits << unusedBits) | 1]!;
+    const nonCanonical = `${cursor.slice(0, -1)}${nonCanonicalLast}`;
+    assert.deepEqual(Buffer.from(nonCanonical, "base64url"), Buffer.from(cursor, "base64url"));
+
+    for (const malformed of [`${cursor}!`, `${cursor}$`, `${cursor}=`, ` ${cursor}`, `${cursor}\n`, nonCanonical]) {
+      const response = await app.request(`/v1/organization/views/${view.id}/results?limit=1&cursor=${encodeURIComponent(malformed)}`, { headers });
+      assert.equal(response.status, 400, `${JSON.stringify(malformed)}: ${await response.clone().text()}`);
+      assert.equal((await response.json()).error.code, "invalid_cursor");
+    }
+  });
+
+  test("matches subject and Facet contains predicates as LIKE literals", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const seeded = createDatabaseClient(path);
+    const now = Date.parse("2026-08-23T12:00:00.000Z");
+    seeded.sqlite.query("INSERT INTO threads (id,account_id,provider_thread_id,subject,latest_received_at,created_at) VALUES (?,?,?,?,?,?)")
+      .run("thread_percent_literal", "account_a", "percent-literal", "Deploy 100% ready", now, now);
+    seeded.sqlite.query("INSERT INTO threads (id,account_id,provider_thread_id,subject,latest_received_at,created_at) VALUES (?,?,?,?,?,?)")
+      .run("thread_percent_wildcard", "account_a", "percent-wildcard", "Deploy 100X ready", now - 1, now - 1);
+    seeded.sqlite.query("INSERT INTO threads (id,account_id,provider_thread_id,subject,latest_received_at,created_at) VALUES (?,?,?,?,?,?)")
+      .run("thread_underscore_literal", "account_a", "underscore-literal", "under_score", now - 2, now - 2);
+    seeded.sqlite.query("INSERT INTO threads (id,account_id,provider_thread_id,subject,latest_received_at,created_at) VALUES (?,?,?,?,?,?)")
+      .run("thread_underscore_wildcard", "account_a", "underscore-wildcard", "underXscore", now - 3, now - 3);
+    seeded.sqlite.query("INSERT INTO organization_facets (id,workspace_id,name,position,value_type,cardinality,is_optional,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .run("facet_literal", "owner", "Literal", 1, JSON.stringify({ kind: "text", maxLength: 100 }), JSON.stringify({ kind: "multi", maxItems: 5 }), 1, 1, now, now);
+    for (const [threadId, value] of [["thread_percent_literal", ["100%"]], ["thread_percent_wildcard", ["100X"]], ["thread_underscore_literal", ["under_score"]], ["thread_underscore_wildcard", ["underXscore"]]] as const) {
+      seeded.sqlite.query("INSERT INTO organization_thread_facet_values (workspace_id,facet_id,account_id,thread_id,value,updated_at) VALUES (?,?,?,?,?,?)")
+        .run("owner", "facet_literal", "account_a", threadId, JSON.stringify(value), now);
+    }
+    seeded.sqlite.close();
+
+    for (const [name, definition, expected] of [
+      ["Subject percent", { revision: 1, thread: { subjectContains: "100%" } }, ["thread_percent_literal"]],
+      ["Subject underscore", { revision: 1, thread: { subjectContains: "under_score" } }, ["thread_underscore_literal"]],
+      ["Facet percent", { revision: 1, facetFilters: [{ facetId: "facet_literal", operator: "contains", value: "100%" }] }, ["thread_percent_literal"]],
+      ["Facet underscore", { revision: 1, facetFilters: [{ facetId: "facet_literal", operator: "contains", value: "under_score" }] }, ["thread_underscore_literal"]],
+    ] as const) {
+      const view = await createView(app, headers, { name, definition });
+      const response = await app.request(`/v1/organization/views/${view.id}/results?limit=25`, { headers });
+      assert.equal(response.status, 200, await response.clone().text());
+      assert.deepEqual((await response.json()).items.map((item: { threadId: string }) => item.threadId), expected);
+    }
   });
 
   test("uses exact indexed stable ordering through timestamp ties and null latest timestamps", { timeout: 30_000 }, async () => {

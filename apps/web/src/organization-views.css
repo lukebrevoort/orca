@@ -56,6 +56,8 @@
 .view-thread-row small { margin-top: 3px; color: var(--desktop-muted); font-size: 8px; }
 .view-thread-lane { padding: 4px 7px; border: 1px solid var(--desktop-border); border-radius: 999px; color: var(--desktop-muted); font: 750 8px/1 var(--desktop-mono); text-transform: capitalize; }
 .view-thread-row time { color: var(--desktop-muted); font: 750 8px/1 var(--desktop-mono); text-align: right; }
+.view-continuation { display: grid; justify-items: center; gap: 8px; padding: 14px 0 0; }
+.view-continuation .view-state { width: 100%; margin-top: 0; }
 @media(max-width:1100px){.view-predicate-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.views-layout{grid-template-columns:1fr}.view-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.views-workspace{padding:14px}.views-header,.view-composer>header,.view-results>header{align-items:start;flex-direction:column}.view-predicate-grid,.view-list{grid-template-columns:1fr}.view-thread-row{grid-template-columns:28px minmax(0,1fr) auto}.view-thread-lane{display:none}}
 @media(prefers-reduced-motion:reduce){.views-workspace *{scroll-behavior:auto!important;transition:none!important}}

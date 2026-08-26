@@ -195,7 +195,7 @@ export const organizationViews = sqliteTable(
   },
   (table) => ({
     primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
-    workspacePositionIdx: index("organization_views_workspace_position_idx").on(table.workspaceId, table.position, table.id),
+    workspacePositionUniqueIdx: uniqueIndex("organization_views_workspace_position_unique_idx").on(table.workspaceId, table.position),
     revisionCheck: check("organization_views_revision_check", sql`${table.revision} >= 1`),
     positionCheck: check("organization_views_position_check", sql`${table.position} >= 0`),
   }),

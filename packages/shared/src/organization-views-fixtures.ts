@@ -24,7 +24,7 @@ export const organizationViewsFixture: OrganizationView[] = [
 ];
 
 export const organizationWeeklyViewResultsFixture: OrganizationViewResultPage = {
-  viewId: "view_weekly_production", viewRevision: 1, accountIds: ["account_gmail", "account_outlook"], limit: 25, nextCursor: null,
+  viewId: "view_weekly_production", viewRevision: 1, accountIds: ["account_gmail", "account_outlook"], limit: 25, nextCursor: "demo-continuation",
   items: [{
     accountId: "account_gmail", accountEmail: "work@gmail.example", provider: "gmail", threadId: "thread_failure",
     subject: "Unresolved production failure", latestReceivedAt: "2026-08-25T18:00:00.000Z", messageCount: 4,

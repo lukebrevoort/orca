@@ -15,6 +15,7 @@ describe("BRE-313 Organization Views UI", () => {
     expect(html).toContain("2 accounts");
     expect(html).toContain("Live from current Thread organization");
     expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain("Load more");
   });
 
   test("keeps default, hover, focus, selected, and disabled controls readable in both themes", () => {

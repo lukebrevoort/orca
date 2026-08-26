@@ -7,6 +7,8 @@ import {
   organizationViewResultItemSchema,
   organizationViewResultPageSchema,
   organizationViewSchema,
+  facetDefinitionSchema,
+  type FacetDefinition,
   type FacetFilter,
   type OrganizationView,
   type OrganizationViewDefinition,
@@ -15,7 +17,9 @@ import {
   type OrganizationViewResultQuery,
 } from "@orca/shared";
 
-import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
+import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
+import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -49,7 +53,10 @@ function isBoundedIdentifier(value: unknown): value is string {
 function decodeCursor(value: string | undefined, expectedFingerprint: string): Cursor | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as unknown;
+    if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("non-canonical base64url alphabet");
+    const decoded = Buffer.from(value, "base64url");
+    if (decoded.toString("base64url") !== value) throw new Error("non-canonical base64url encoding");
+    const parsed = JSON.parse(decoded.toString("utf8")) as unknown;
     if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
       const candidate = parsed as Record<string, unknown>;
       const keys = Object.keys(candidate);
@@ -69,6 +76,10 @@ function decodeCursor(value: string | undefined, expectedFingerprint: string): C
   } catch { /* one stable public error below */ }
   throw new OrganizationViewQueryError("The View cursor does not match this live definition or Account scope");
 }
+
+function escapeLikeLiteral(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
 function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: string) {
   return Buffer.from(JSON.stringify({ version: 1, fingerprint: cursorFingerprint, receivedAt: Date.parse(item.latestReceivedAt), accountId: item.accountId, threadId: item.threadId }), "utf8").toString("base64url");
 }
@@ -84,8 +95,9 @@ function facetPredicate(filter: FacetFilter, params: SqlBinding[]) {
     params.push(jsonValue, jsonValue);
     return `EXISTS (SELECT 1 FROM organization_thread_facet_values f WHERE ${base} AND (json_extract(f.value,'$') = json_extract(?,'$') OR EXISTS (SELECT 1 FROM json_each(f.value) j WHERE j.value = json_extract(?,'$'))))`;
   }
-  params.push(String(filter.value).toLocaleLowerCase(), `%${String(filter.value).toLocaleLowerCase()}%`);
-  return `EXISTS (SELECT 1 FROM organization_thread_facet_values f WHERE ${base} AND (lower(CAST(json_extract(f.value,'$') AS TEXT)) = ? OR EXISTS (SELECT 1 FROM json_each(f.value) j WHERE lower(CAST(j.value AS TEXT)) LIKE ?)))`;
+  const literal = escapeLikeLiteral(String(filter.value).toLocaleLowerCase());
+  params.push(String(filter.value).toLocaleLowerCase(), `%${literal}%`);
+  return `EXISTS (SELECT 1 FROM organization_thread_facet_values f WHERE ${base} AND (lower(CAST(json_extract(f.value,'$') AS TEXT)) = ? OR EXISTS (SELECT 1 FROM json_each(f.value) j WHERE lower(CAST(j.value AS TEXT)) LIKE ? ESCAPE '\\')))`;
 }
 
 /**
@@ -115,7 +127,7 @@ export function buildOrganizationViewPageKeyQuery(input: { scope: OrganizationVi
     params.push(scope.workspaceId, filter.context.contextTypeId, filter.context.contextId, filter.relationshipTypeId, ...(filter.direction ? [filter.direction] : []));
   }
   if (definition.thread?.ids) { conditions.push(`t.id IN (${placeholders(definition.thread.ids)})`); params.push(...definition.thread.ids); }
-  if (definition.thread?.subjectContains) { conditions.push("lower(COALESCE(t.subject,'')) LIKE ?"); params.push(`%${definition.thread.subjectContains.toLocaleLowerCase()}%`); }
+  if (definition.thread?.subjectContains) { conditions.push("lower(COALESCE(t.subject,'')) LIKE ? ESCAPE '\\'"); params.push(`%${escapeLikeLiteral(definition.thread.subjectContains.toLocaleLowerCase())}%`); }
   if (definition.thread?.readState) { conditions.push("t.is_read = ?"); params.push(definition.thread.readState === "read" ? 1 : 0); }
 
   const emailConditions: string[] = ["e.account_id=t.account_id", "e.thread_id=t.id"];
@@ -167,8 +179,23 @@ export function buildOrganizationViewDetailQuery(keys: readonly OrganizationView
 
 function assertOwnedIds(sqlite: Database, workspaceId: string, table: "organization_lanes" | "organization_facets" | "organization_workflow_states", ids: readonly string[] | undefined) {
   if (!ids?.length) return;
-  const row = sqlite.query(`SELECT COUNT(*) AS count FROM ${table} WHERE workspace_id=? AND id IN (${placeholders(ids)})`).get(workspaceId, ...ids) as { count: number };
-  if (row.count !== ids.length) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
+  const uniqueIds = [...new Set(ids)];
+  const row = sqlite.query(`SELECT COUNT(*) AS count FROM ${table} WHERE workspace_id=? AND id IN (${placeholders(uniqueIds)})`).get(workspaceId, ...uniqueIds) as { count: number };
+  if (row.count !== uniqueIds.length) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
+}
+
+function loadFacetDefinitions(sqlite: Database, workspaceId: string, ids: readonly string[]): FacetDefinition[] {
+  if (ids.length === 0) return [];
+  const uniqueIds = [...new Set(ids)];
+  const rows = sqlite.query(`SELECT id,name,position,value_type,cardinality,is_optional,default_value,retired_at,revision FROM organization_facets WHERE workspace_id=? AND id IN (${placeholders(uniqueIds)})`).all(workspaceId, ...uniqueIds) as Array<{
+    id: string; name: string; position: number; value_type: string; cardinality: string; is_optional: number;
+    default_value: string | null; retired_at: number | null; revision: number;
+  }>;
+  return rows.map((row) => facetDefinitionSchema.parse({
+    id: row.id, name: row.name, position: row.position, valueType: JSON.parse(row.value_type), cardinality: JSON.parse(row.cardinality),
+    isOptional: Boolean(row.is_optional), defaultValue: row.default_value === null ? null : JSON.parse(row.default_value),
+    retiredAt: row.retired_at === null ? null : iso(row.retired_at), revision: row.revision,
+  }));
 }
 
 function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition: OrganizationViewDefinition) {
@@ -177,7 +204,10 @@ function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition
     if (row.count !== definition.accountIds.length) throw new OrganizationViewAccessError();
   }
   assertOwnedIds(sqlite, workspaceId, "organization_lanes", definition.laneIds);
-  assertOwnedIds(sqlite, workspaceId, "organization_facets", definition.facetFilters?.map((filter) => filter.facetId));
+  const facetFilters = definition.facetFilters ?? [];
+  assertOwnedIds(sqlite, workspaceId, "organization_facets", facetFilters.map((filter) => filter.facetId));
+  try { validateFacetFilters(loadFacetDefinitions(sqlite, workspaceId, facetFilters.map((filter) => filter.facetId)), facetFilters); }
+  catch (error) { if (error instanceof FacetWorkflowValidationError) throw new OrganizationViewValidationError(error.message); throw error; }
   assertOwnedIds(sqlite, workspaceId, "organization_workflow_states", definition.workflowStateIds);
   if (definition.thread?.ids?.length) {
     const row = sqlite.query(`SELECT COUNT(*) AS count FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id WHERE oa.user_id=? AND t.id IN (${placeholders(definition.thread.ids)})`).get(workspaceId, ...definition.thread.ids) as { count: number };
@@ -190,6 +220,106 @@ function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition
   }
 }
 
+function viewRows(sqlite: Database, workspaceId: string) {
+  return sqlite.query("SELECT * FROM organization_views WHERE workspace_id=? ORDER BY position,id").all(workspaceId) as ViewRow[];
+}
+
+/** Moves every row through unique, non-negative temporary slots before assigning the canonical 0..n-1 order. */
+function rewritePositions(sqlite: Database, workspaceId: string, orderedIds: readonly string[], changedIds: ReadonlySet<string>, now: number) {
+  const rows = viewRows(sqlite, workspaceId);
+  if (rows.length !== orderedIds.length || new Set(orderedIds).size !== rows.length) throw new OrganizationViewValidationError("A View reorder must resolve to one complete Workspace ordering");
+  const known = new Set(rows.map((row) => row.id));
+  if (orderedIds.some((id) => !known.has(id))) throw new OrganizationViewNotFoundError();
+  const temporaryBase = Math.max(rows.length, ...rows.map((row) => row.position + 1)) + rows.length + 1;
+  rows.forEach((row, index) => sqlite.query("UPDATE organization_views SET position=? WHERE workspace_id=? AND id=?").run(temporaryBase + index, workspaceId, row.id));
+  orderedIds.forEach((id, position) => {
+    sqlite.query(`UPDATE organization_views SET position=?${changedIds.has(id) ? ",revision=revision+1,updated_at=?" : ""} WHERE workspace_id=? AND id=?`)
+      .run(...(changedIds.has(id) ? [position, now, workspaceId, id] : [position, workspaceId, id]));
+  });
+}
+
+function workspaceRevision(sqlite: Database, workspaceId: string) {
+  return (sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id=?").get(workspaceId) as { revision: number } | null)?.revision ?? 1;
+}
+
+function authorityState(sqlite: Database, workspaceId: string) {
+  const resources = viewRows(sqlite, workspaceId);
+  return {
+    workspaceRevision: workspaceRevision(sqlite, workspaceId),
+    resourceRevisions: Object.fromEntries(resources.map((row) => [`view:${row.id}`, row.revision])),
+    reservedIdempotencyKeys: (sqlite.query("SELECT idempotency_key AS key FROM organization_change_sets WHERE workspace_id=?").all(workspaceId) as Array<{ key: string }>).map((row) => row.key),
+  };
+}
+
+function idempotentMutation(sqlite: Database, workspaceId: string, idempotencyKey: string) {
+  const row = sqlite.query("SELECT command_json FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=? AND resource_family='view'").get(workspaceId, idempotencyKey) as { command_json: string } | null;
+  if (!row) return null;
+  const parsed = JSON.parse(row.command_json) as { request: unknown; response: unknown };
+  return parsed;
+}
+
+function verifyAuthorization(sqlite: Database, workspaceId: string, authorization: OrganizationViewMutationAuthorization) {
+  sqlite.query("INSERT INTO organization_workspace_states (workspace_id,revision,updated_at) VALUES (?,1,?) ON CONFLICT(workspace_id) DO NOTHING").run(workspaceId, Date.now());
+  const live = authorityState(sqlite, workspaceId);
+  const capability = authorization.trace.capabilitySnapshot;
+  const decision = authorizeOrganizationOperation({
+    actor: authorization.executionContext.actor,
+    capabilitySnapshot: capability,
+    operation: authorization.executionContext.operation,
+    scope: authorization.trace.scope,
+    command: authorization.command,
+    expectedRevisions: authorization.executionContext.expectedRevisions,
+    idempotencyKey: authorization.executionContext.idempotencyKey,
+  }, {
+    scope: capability.scope,
+    capability: { snapshot: capability, revokedAt: null },
+    workspaceRevision: live.workspaceRevision,
+    resourceRevisions: live.resourceRevisions,
+    reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+  });
+  if (!decision.allowed) {
+    if (["revision_conflict", "duplicate_idempotency_key"].includes(decision.code)) throw new OrganizationViewConflictError(decision.reason);
+    throw new OrganizationViewAccessError(decision.reason, "resource_denied");
+  }
+  const envelope = { executionContext: authorization.executionContext, trace: authorization.trace };
+  if (digestOrganizationCommand(authorization.command) !== authorization.executionContext.command.digest
+    || digestOrganizationAuthorizationEnvelope(envelope) !== authorization.authorizationEnvelopeDigest
+    || canonicalOrganizationJson(decision.executionContext) !== canonicalOrganizationJson(authorization.executionContext)
+    || canonicalOrganizationJson(decision.trace) !== canonicalOrganizationJson(authorization.trace)) {
+    throw new OrganizationViewAccessError("The authorized View command was modified before commit", "resource_denied");
+  }
+  return live.workspaceRevision;
+}
+
+function authorizedMutation<T>(sqlite: Database, input: {
+  workspaceId: string; boundRequest: unknown; authorization: OrganizationViewMutationAuthorization; now: Date; mutate: () => T;
+}) {
+  return sqlite.transaction(() => {
+    const key = input.authorization.executionContext.idempotencyKey;
+    if (!key) throw new OrganizationViewValidationError("A View mutation requires an idempotency key");
+    const replay = idempotentMutation(sqlite, input.workspaceId, key);
+    if (replay) {
+      if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(input.boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
+      return replay.response as T;
+    }
+    const revisionBefore = verifyAuthorization(sqlite, input.workspaceId, input.authorization);
+    const before = new Map(viewRows(sqlite, input.workspaceId).map((row) => [row.id, mapView(row)]));
+    const response = input.mutate();
+    const after = new Map(viewRows(sqlite, input.workspaceId).map((row) => [row.id, mapView(row)]));
+    const changedIds = [...new Set([...before.keys(), ...after.keys()])].filter((id) => canonicalOrganizationJson(before.get(id) ?? null) !== canonicalOrganizationJson(after.get(id) ?? null));
+    sqlite.query("INSERT INTO organization_change_sets (workspace_id,id,idempotency_key,command_digest,authority_trace,resource_family,operation,command_json,reverts_change_id,workspace_revision_before,workspace_revision_after,created_at) VALUES (?,?,?,?,?,'view','apply',?,NULL,?,?,?)")
+      .run(input.workspaceId, input.authorization.command.id, key, input.authorization.executionContext.command.digest, JSON.stringify(input.authorization.trace), JSON.stringify({ request: input.boundRequest, response: response ?? null }), revisionBefore, revisionBefore + 1, input.now.getTime());
+    const insertAction = sqlite.query("INSERT INTO organization_change_actions (workspace_id,change_id,position,action_kind,resource_family,resource_id,before_json,after_json) VALUES (?,?,?,?,?,?,?,?)");
+    changedIds.forEach((id, position) => {
+      const previous = before.get(id) ?? null; const next = after.get(id) ?? null;
+      insertAction.run(input.workspaceId, input.authorization.command.id, position, previous === null ? "view_create" : next === null ? "view_remove" : "view_update", "view", `view:${id}`, previous === null ? null : JSON.stringify(previous), next === null ? null : JSON.stringify(next));
+    });
+    const advanced = sqlite.query("UPDATE organization_workspace_states SET revision=revision+1,updated_at=? WHERE workspace_id=? AND revision=?").run(input.now.getTime(), input.workspaceId, revisionBefore);
+    if (advanced.changes !== 1) throw new OrganizationViewConflictError("The Workspace changed before this View command could commit");
+    return response;
+  })();
+}
+
 export function createSqliteOrganizationViewsRepository(sqlite: Database): OrganizationViewsRepository {
   const get = (workspaceId: string, viewId: string) => {
     const row = sqlite.query("SELECT * FROM organization_views WHERE workspace_id = ? AND id = ?").get(workspaceId, viewId) as ViewRow | null;
@@ -200,49 +330,77 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
       return (sqlite.query("SELECT * FROM organization_views WHERE workspace_id = ? ORDER BY position,id").all(workspaceId) as ViewRow[]).map(mapView);
     },
     get,
-    create({ workspaceId, viewId, request, now }) {
+    getWorkspaceRevision(workspaceId) { return workspaceRevision(sqlite, workspaceId); },
+    getAuthorityState(workspaceId) { return authorityState(sqlite, workspaceId); },
+    getIdempotentMutation(workspaceId, idempotencyKey) { return idempotentMutation(sqlite, workspaceId, idempotencyKey); },
+    create({ workspaceId, viewId, request, boundRequest, authorization, now }) {
       const timestamp = now.getTime();
-      return sqlite.transaction(() => {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
         assertOwnedDefinition(sqlite, workspaceId, request.definition);
+        const current = viewRows(sqlite, workspaceId);
+        const target = Math.min(request.position, current.length);
+        const temporaryPosition = Math.max(current.length, ...current.map((row) => row.position + 1)) + current.length + 1;
         sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-          .run(workspaceId, viewId, request.name, request.description, request.color, request.position, JSON.stringify(request.definition), 1, timestamp, timestamp);
+          .run(workspaceId, viewId, request.name, request.description, request.color, temporaryPosition, JSON.stringify(request.definition), 1, timestamp, timestamp);
+        const ordered = current.map((row) => row.id);
+        ordered.splice(target, 0, viewId);
+        const changed = new Set(current.filter((row) => ordered.indexOf(row.id) !== row.position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, ordered, changed, timestamp);
         return get(workspaceId, viewId)!;
-      })();
+      } });
     },
-    update({ workspaceId, viewId, request, now }) {
-      return sqlite.transaction(() => {
+    update({ workspaceId, viewId, request, boundRequest, authorization, now }) {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
         const current = get(workspaceId, viewId);
         if (!current) throw new OrganizationViewNotFoundError();
         if (current.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
         const next = { ...current, ...request.patch, definition: request.patch.definition ?? current.definition };
         assertOwnedDefinition(sqlite, workspaceId, next.definition);
+        const rows = viewRows(sqlite, workspaceId);
+        const ordered = rows.map((row) => row.id);
+        if (request.patch.position !== undefined) {
+          ordered.splice(ordered.indexOf(viewId), 1);
+          ordered.splice(Math.min(request.patch.position, ordered.length), 0, viewId);
+          rewritePositions(sqlite, workspaceId, ordered, new Set(rows.filter((row) => ordered.indexOf(row.id) !== row.position && row.id !== viewId).map((row) => row.id)), now.getTime());
+        }
         const result = sqlite.query("UPDATE organization_views SET name=?,description=?,color=?,position=?,definition=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
-          .run(next.name, next.description, next.color, next.position, JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
+          .run(next.name, next.description, next.color, ordered.indexOf(viewId), JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
         if (result.changes !== 1) throw new OrganizationViewConflictError();
         return get(workspaceId, viewId)!;
-      })();
+      } });
     },
-    reorder({ workspaceId, request, now }: { workspaceId: string; request: OrganizationViewReorderRequest; now: Date }) {
-      return sqlite.transaction(() => {
+    reorder({ workspaceId, request, boundRequest, authorization, now }) {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+        const rows = viewRows(sqlite, workspaceId);
         for (const item of request.items) {
           const current = get(workspaceId, item.id);
           if (!current) throw new OrganizationViewNotFoundError();
           if (current.revision !== item.expectedRevision) throw new OrganizationViewConflictError();
         }
-        for (const item of request.items) {
-          const result = sqlite.query("UPDATE organization_views SET position=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
-            .run(item.position, now.getTime(), workspaceId, item.id, item.expectedRevision);
-          if (result.changes !== 1) throw new OrganizationViewConflictError();
-        }
-        return (sqlite.query("SELECT * FROM organization_views WHERE workspace_id = ? ORDER BY position,id").all(workspaceId) as ViewRow[]).map(mapView);
-      })();
+        if (request.items.some((item) => item.position >= rows.length)) throw new OrganizationViewValidationError("View reorder positions must fit the complete Workspace ordering");
+        const ordered = Array<string | undefined>(rows.length);
+        const requestedIds = new Set(request.items.map((item) => item.id));
+        for (const item of request.items) ordered[item.position] = item.id;
+        const untouched = rows.filter((row) => !requestedIds.has(row.id)).map((row) => row.id);
+        for (let index = 0; index < ordered.length; index += 1) if (!ordered[index]) ordered[index] = untouched.shift();
+        const complete = ordered as string[];
+        const changed = new Set(rows.filter((row) => complete.indexOf(row.id) !== row.position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, complete, changed, now.getTime());
+        return viewRows(sqlite, workspaceId).map(mapView);
+      } });
     },
-    remove({ workspaceId, viewId, expectedRevision }) {
-      const result = sqlite.query("DELETE FROM organization_views WHERE workspace_id=? AND id=? AND revision=?").run(workspaceId, viewId, expectedRevision);
-      if (result.changes !== 1) {
-        if (!get(workspaceId, viewId)) throw new OrganizationViewNotFoundError();
-        throw new OrganizationViewConflictError();
-      }
+    remove({ workspaceId, viewId, request, boundRequest, authorization, now }) {
+      authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+        const rows = viewRows(sqlite, workspaceId);
+        const target = rows.find((row) => row.id === viewId);
+        if (!target) throw new OrganizationViewNotFoundError();
+        if (target.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
+        sqlite.query("DELETE FROM organization_views WHERE workspace_id=? AND id=? AND revision=?").run(workspaceId, viewId, request.expectedRevision);
+        const remaining = rows.filter((row) => row.id !== viewId);
+        const changed = new Set(remaining.filter((row, position) => row.position !== position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, remaining.map((row) => row.id), changed, now.getTime());
+        return null;
+      } });
     },
     query({ scope, view, query }) {
       const pageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query });

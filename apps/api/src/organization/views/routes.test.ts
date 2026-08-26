@@ -75,7 +75,8 @@ describe("BRE-313 live Views REST adapter", () => {
     const app = createApp({ dbFactory: () => createDatabaseClient(path) });
     const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
     const createView = async (body: unknown) => {
-      const response = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(body) });
+      const workspaceRevision = (await (await app.request("/v1/organization/views", { headers })).json()).workspaceRevision as number;
+      const response = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: `routes:create:${crypto.randomUUID()}`, expectedWorkspaceRevision: workspaceRevision, ...(body as object) }) });
       const text = await response.text();
       assert.equal(response.status, 201, text);
       return JSON.parse(text) as { id: string };
@@ -117,10 +118,10 @@ describe("BRE-313 live Views REST adapter", () => {
     const invalidCursor = await app.request(`/v1/organization/views/${allWork.id}/results?limit=1&cursor=not-a-cursor`, { headers });
     assert.equal(invalidCursor.status, 400);
 
-    const updated = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ expectedRevision: 1, patch: { name: "All current work" } }) });
+    const updated = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "routes-update", expectedWorkspaceRevision: 5, expectedRevision: 1, patch: { name: "All current work" } }) });
     assert.equal(updated.status, 200);
     assert.equal((await updated.json()).revision, 2);
-    const staleUpdate = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ expectedRevision: 1, patch: { name: "Stale rename" } }) });
+    const staleUpdate = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "routes-stale-update", expectedWorkspaceRevision: 6, expectedRevision: 1, patch: { name: "Stale rename" } }) });
     assert.equal(staleUpdate.status, 409);
 
     const bulk = createDatabaseClient(path);
@@ -132,7 +133,7 @@ describe("BRE-313 live Views REST adapter", () => {
     const listed = await app.request("/v1/organization/views", { headers });
     assert.equal((await listed.json()).items.length, 109);
 
-    const denied = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ name: "Private leak", definition: { revision: 1, accountIds: ["account_private"] } }) });
+    const denied = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ idempotencyKey: "routes-private", expectedWorkspaceRevision: 6, name: "Private leak", definition: { revision: 1, accountIds: ["account_private"] } }) });
     assert.equal(denied.status, 403);
     assert.equal((await denied.json()).error.code, "account_denied");
   });

@@ -3,7 +3,7 @@ import { Hono, type Context } from "hono";
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { createOrganizationViews, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError } from "./module.ts";
+import { createOrganizationViews, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError } from "./module.ts";
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
@@ -13,6 +13,7 @@ function errorResponse(c: Context<{ Variables: AuthVariables }>, error: unknown)
   if (error instanceof OrganizationViewNotFoundError) return c.json({ error: { code: error.code, message: error.message } }, 404);
   if (error instanceof OrganizationViewConflictError) return c.json({ error: { code: error.code, message: error.message } }, 409);
   if (error instanceof OrganizationViewQueryError) return c.json({ error: { code: error.code, message: error.message } }, 400);
+  if (error instanceof OrganizationViewValidationError) return c.json({ error: { code: error.code, message: error.message } }, 400);
   if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid live View request" } }, 400);
   throw error;
 }
@@ -48,7 +49,11 @@ export function registerOrganizationViewRoutes(app: OrganizationApp, options: { 
   app.delete("/v1/organization/views/:viewId", requireAuth({ dbFactory }), (c) => {
     const current = open(c.get("auth").userId);
     try {
-      current.organization.remove({ scope: current.scope, viewId: c.req.param("viewId"), expectedRevision: Number(c.req.query("expectedRevision")) });
+      current.organization.remove({ scope: current.scope, viewId: c.req.param("viewId"), request: {
+        expectedRevision: Number(c.req.query("expectedRevision")),
+        expectedWorkspaceRevision: Number(c.req.query("expectedWorkspaceRevision")),
+        idempotencyKey: c.req.query("idempotencyKey"),
+      } });
       return c.body(null, 204);
     } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
   });

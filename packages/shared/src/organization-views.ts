@@ -78,6 +78,8 @@ export const organizationViewSchema = z.object({
 export type OrganizationView = z.infer<typeof organizationViewSchema>;
 
 export const organizationViewCreateRequestSchema = z.object({
+  idempotencyKey: identifierSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
   name: nonEmptyStringSchema.max(120),
   description: z.string().trim().max(500).default(""),
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).default("#0b9b84"),
@@ -87,6 +89,8 @@ export const organizationViewCreateRequestSchema = z.object({
 export type OrganizationViewCreateRequest = z.infer<typeof organizationViewCreateRequestSchema>;
 
 export const organizationViewUpdateRequestSchema = z.object({
+  idempotencyKey: identifierSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
   expectedRevision: z.number().int().positive(),
   patch: z.object({
     name: nonEmptyStringSchema.max(120).optional(),
@@ -99,6 +103,8 @@ export const organizationViewUpdateRequestSchema = z.object({
 export type OrganizationViewUpdateRequest = z.infer<typeof organizationViewUpdateRequestSchema>;
 
 export const organizationViewReorderRequestSchema = z.object({
+  idempotencyKey: identifierSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
   items: z.array(z.object({
     id: identifierSchema,
     expectedRevision: z.number().int().positive(),
@@ -112,15 +118,23 @@ export const organizationViewReorderRequestSchema = z.object({
 });
 export type OrganizationViewReorderRequest = z.infer<typeof organizationViewReorderRequestSchema>;
 
+export const organizationViewRemoveRequestSchema = z.object({
+  idempotencyKey: identifierSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
+  expectedRevision: z.number().int().positive(),
+}).strict();
+export type OrganizationViewRemoveRequest = z.infer<typeof organizationViewRemoveRequestSchema>;
+
 export const organizationViewListResponseSchema = z.object({
   workspaceId: identifierSchema,
+  workspaceRevision: z.number().int().positive(),
   items: z.array(organizationViewSchema),
 }).strict();
 export type OrganizationViewListResponse = z.infer<typeof organizationViewListResponseSchema>;
 
 export const organizationViewResultQuerySchema = z.object({
   limit: z.number().int().min(1).max(organizationViewBounds.maximumResultsPerPage).default(organizationViewBounds.defaultResultsPerPage),
-  cursor: z.string().trim().min(1).max(2_048).optional(),
+  cursor: z.string().min(1).max(2_048).optional(),
 }).strict();
 export type OrganizationViewResultQuery = z.infer<typeof organizationViewResultQuerySchema>;
 
