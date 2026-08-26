@@ -173,6 +173,29 @@ export const organizationWorkspaceStates = sqliteTable(
   }),
 );
 
+/** BRE-313 persists only a live View definition; Thread membership is always evaluated from current Organization state. */
+export const organizationViews = sqliteTable(
+  "organization_views",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    color: text("color").notNull(),
+    position: integer("position").notNull(),
+    definition: text("definition").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePositionIdx: index("organization_views_workspace_position_idx").on(table.workspaceId, table.position, table.id),
+    revisionCheck: check("organization_views_revision_check", sql`${table.revision} >= 1`),
+    positionCheck: check("organization_views_position_check", sql`${table.position} >= 0`),
+  }),
+);
+
 export const organizationLanePolicies = sqliteTable(
   "organization_lane_policies",
   {
