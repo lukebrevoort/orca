@@ -1,4 +1,4 @@
-import type { Hono } from "hono";
+import type { Hono, MiddlewareHandler } from "hono";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
@@ -7,6 +7,8 @@ import {
   RuleAuthorityError,
   RuleIdempotencyConflictError,
   RuleRevisionConflictError,
+  RuleRevisionCursorError,
+  RuleRevisionCursorStaleError,
   WorkspaceSchemaConflictError,
   createRuleRevisionService,
 } from "./service.ts";
@@ -14,10 +16,46 @@ import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
 
+/** 64 KiB Rule source budget plus 4 KiB for the fixed compile JSON envelope. */
+export const RULE_COMPILE_BODY_LIMIT_BYTES = 68 * 1024;
+
+const ruleCompileBodyLimit: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
+  const request = c.req.raw;
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength && /^\d+$/.test(declaredLength) && BigInt(declaredLength) > BigInt(RULE_COMPILE_BODY_LIMIT_BYTES)) {
+    return c.json({ error: { code: "payload_too_large", message: "Rule compile request exceeds the bounded JSON envelope" } }, 413);
+  }
+  if (!request.body) return next();
+
+  let actualLength = 0;
+  const chunks: Uint8Array[] = [];
+  const reader = request.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    actualLength += value.byteLength;
+    if (actualLength > RULE_COMPILE_BODY_LIMIT_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      return c.json({ error: { code: "payload_too_large", message: "Rule compile request exceeds the bounded JSON envelope" } }, 413);
+    }
+    chunks.push(value);
+  }
+  c.req.raw = new Request(request, {
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(chunk);
+        controller.close();
+      },
+    }),
+    duplex: "half",
+  } as RequestInit);
+  return next();
+};
+
 export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { dbFactory?: typeof createDatabaseClient } = {}) {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
 
-  app.post("/v1/organization/rules/compile", requireAuth({ dbFactory }), async (c) => {
+  app.post("/v1/organization/rules/compile", requireAuth({ dbFactory }), ruleCompileBodyLimit, async (c) => {
     const client = dbFactory();
     try {
       let request: unknown;
@@ -46,9 +84,19 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
     const client = dbFactory();
     try {
       try {
-        return c.json(createRuleRevisionService(createSqliteRuleRevisionRepository(client.db)).get({ workspaceId: c.get("auth").userId, ruleId: c.req.param("ruleId") }));
+        return c.json(createRuleRevisionService(createSqliteRuleRevisionRepository(client.db)).get({
+          workspaceId: c.get("auth").userId,
+          ruleId: c.req.param("ruleId"),
+          query: {
+            ...(c.req.query("limit") === undefined ? {} : { limit: c.req.query("limit") }),
+            ...(c.req.query("cursor") === undefined ? {} : { cursor: c.req.query("cursor") }),
+          },
+        }));
       } catch (error) {
         if (error instanceof RuleRevisionConflictError) return c.json({ error: { code: "not_found", message: "Rule is unavailable in this Workspace" } }, 404);
+        if (error instanceof RuleRevisionCursorError) return c.json({ error: { code: error.code, message: error.message } }, 400);
+        if (error instanceof RuleRevisionCursorStaleError) return c.json({ error: { code: error.code, message: error.message } }, 409);
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule revision history query" } }, 400);
         throw error;
       }
     } finally { client.sqlite.close(); }

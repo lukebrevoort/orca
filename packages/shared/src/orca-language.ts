@@ -160,8 +160,18 @@ export const orcaRuleCompileFailureSchema = z.object({
 export const orcaRuleCompileResponseSchema = z.discriminatedUnion("ok", [orcaRuleCompileSuccessSchema, orcaRuleCompileFailureSchema]);
 export type OrcaRuleCompileResponse = z.infer<typeof orcaRuleCompileResponseSchema>;
 
+export const orcaRuleRevisionPageDefaultLimit = 50;
+export const orcaRuleRevisionPageMaximumLimit = 100;
+export const orcaRuleRevisionListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(orcaRuleRevisionPageMaximumLimit).default(orcaRuleRevisionPageDefaultLimit),
+  cursor: z.string().min(1).max(2_048).optional(),
+}).strict();
+export type OrcaRuleRevisionListQuery = z.input<typeof orcaRuleRevisionListQuerySchema>;
+
 export const orcaRuleRevisionListSchema = z.object({
   rule: orcaRuleSchema,
-  revisions: z.array(orcaRuleRevisionSchema),
+  revisions: z.array(orcaRuleRevisionSchema).max(orcaRuleRevisionPageMaximumLimit),
+  nextCursor: z.string().max(2_048).nullable(),
+  limit: z.number().int().min(1).max(orcaRuleRevisionPageMaximumLimit),
 }).strict();
 export type OrcaRuleRevisionList = z.infer<typeof orcaRuleRevisionListSchema>;

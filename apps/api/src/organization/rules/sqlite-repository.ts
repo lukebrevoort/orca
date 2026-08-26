@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import {
   facetCardinalitySchema,
   facetValueTypeSchema,
@@ -7,7 +7,6 @@ import {
   orcaCompiledRuleRevisionSchema,
   orcaRuleCompileRequestSchema,
   orcaRuleCompileResponseSchema,
-  orcaRuleRevisionListSchema,
   type OrcaRule,
   type OrcaRuleRevision,
 } from "@orca/shared";
@@ -101,26 +100,27 @@ function loadWorkspaceSnapshot(executor: Database, workspaceId: string): OrcaWor
 }
 
 export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRepository {
-  const get = (workspaceId: string, ruleId: string) => {
+  const getRule = (workspaceId: string, ruleId: string) => {
     const ruleRow = db.select().from(organizationRules).where(and(eq(organizationRules.workspaceId, workspaceId), eq(organizationRules.id, ruleId))).get();
-    if (!ruleRow) return null;
-    const revisions = db.select().from(organizationRuleRevisions)
-      .where(and(eq(organizationRuleRevisions.workspaceId, workspaceId), eq(organizationRuleRevisions.ruleId, ruleId)))
-      .orderBy(asc(organizationRuleRevisions.revision)).all().map(toRevision);
-    return orcaRuleRevisionListSchema.parse({ rule: toRule(ruleRow), revisions });
+    return ruleRow ? toRule(ruleRow) : null;
   };
   return {
     loadWorkspaceSnapshot(workspaceId) { return loadWorkspaceSnapshot(db, workspaceId); },
-    getAuthorityState(workspaceId) {
+    getAuthorityState(workspaceId, lookup) {
       const state = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, workspaceId)).get();
-      const rules = db.select({ id: organizationRules.id, revision: organizationRules.latestRevision }).from(organizationRules)
-        .where(eq(organizationRules.workspaceId, workspaceId)).all();
+      const rule = db.select({ revision: organizationRules.latestRevision }).from(organizationRules).where(and(
+        eq(organizationRules.workspaceId, workspaceId),
+        eq(organizationRules.id, lookup.ruleId),
+      )).get();
+      const reserved = db.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(
+        eq(organizationChangeSets.workspaceId, workspaceId),
+        eq(organizationChangeSets.idempotencyKey, lookup.idempotencyKey),
+      )).get();
       return {
         accountIds: db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, workspaceId)).all().map((row) => row.id),
         workspaceRevision: state?.revision ?? 1,
-        resourceRevisions: Object.fromEntries(rules.map((rule) => [`rule:${rule.id}`, rule.revision])),
-        reservedIdempotencyKeys: db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets)
-          .where(eq(organizationChangeSets.workspaceId, workspaceId)).all().map((row) => row.key),
+        resourceRevisions: rule ? { [`rule:${lookup.ruleId}`]: rule.revision } : {},
+        idempotencyKeyReserved: Boolean(reserved),
       };
     },
     getIdempotent(workspaceId, idempotencyKey) {
@@ -135,7 +135,15 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
       if (!response.ok) throw new Error("Persisted Rule idempotency evidence must contain a successful response");
       return { request: orcaRuleCompileRequestSchema.parse(stored.request), response };
     },
-    get,
+    getRule,
+    listRevisions(workspaceId, ruleId, query) {
+      return db.select().from(organizationRuleRevisions).where(and(
+        eq(organizationRuleRevisions.workspaceId, workspaceId),
+        eq(organizationRuleRevisions.ruleId, ruleId),
+        gt(organizationRuleRevisions.revision, query.afterRevision),
+        lte(organizationRuleRevisions.revision, query.throughRevision),
+      )).orderBy(asc(organizationRuleRevisions.revision)).limit(query.limit).all().map(toRevision);
+    },
     append(input) {
       return db.transaction((transaction) => {
         // This process-memory capability is consumed only after SQLite enters the command

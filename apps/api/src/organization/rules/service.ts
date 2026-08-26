@@ -1,13 +1,16 @@
 import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
 import {
   orcaRuleCompileRequestSchema,
   orcaRuleCompileResponseSchema,
+  orcaRuleRevisionListQuerySchema,
   orcaRuleRevisionListSchema,
   type OrcaRule,
   type OrcaRuleCompileRequest,
   type OrcaRuleCompileResponse,
   type OrcaRuleRevision,
   type OrcaRuleRevisionList,
+  type OrcaRuleRevisionListQuery,
   type OrganizationActor,
   type OrganizationAuthorityDenialCode,
   type OrganizationAuthorityTrace,
@@ -34,6 +37,14 @@ export class RuleRevisionConflictError extends Error {
 export class RuleIdempotencyConflictError extends Error {
   readonly code = "duplicate_idempotency_key" as const;
   constructor(message = "Idempotency key was already used for a different Rule compilation") { super(message); }
+}
+export class RuleRevisionCursorError extends Error {
+  readonly code = "invalid_cursor" as const;
+  constructor(message = "Rule revision cursor is malformed or does not match this history") { super(message); }
+}
+export class RuleRevisionCursorStaleError extends Error {
+  readonly code = "stale_cursor" as const;
+  constructor() { super("Rule revision history changed after this cursor was issued"); }
 }
 export class RuleAuthorityError extends Error {
   constructor(readonly code: OrganizationAuthorityDenialCode, message: string) { super(message); }
@@ -95,11 +106,11 @@ export function consumeRuleAuthorizationAnchor(anchor: unknown): RuleAuthorizati
 
 export type RuleRevisionRepository = {
   loadWorkspaceSnapshot(workspaceId: string): OrcaWorkspaceSnapshot;
-  getAuthorityState(workspaceId: string): {
+  getAuthorityState(workspaceId: string, lookup: { ruleId: string; idempotencyKey: string }): {
     accountIds: string[];
     workspaceRevision: number;
     resourceRevisions: Record<string, number>;
-    reservedIdempotencyKeys: string[];
+    idempotencyKeyReserved: boolean;
   };
   getIdempotent(workspaceId: string, idempotencyKey: string): {
     request: OrcaRuleCompileRequest;
@@ -108,8 +119,36 @@ export type RuleRevisionRepository = {
   append(input: RulePersistenceIntent & {
     authorizationAnchor: RuleAuthorizationAnchor;
   }): OrcaRuleCompileResponse & { ok: true };
-  get(workspaceId: string, ruleId: string): OrcaRuleRevisionList | null;
+  getRule(workspaceId: string, ruleId: string): OrcaRule | null;
+  listRevisions(workspaceId: string, ruleId: string, query: { afterRevision: number; throughRevision: number; limit: number }): OrcaRuleRevision[];
 };
+
+const ruleRevisionCursorSchema = z.object({
+  v: z.literal(1),
+  workspaceId: z.string().trim().min(1).max(200),
+  ruleId: z.string().trim().min(1).max(200),
+  afterRevision: z.number().int().positive(),
+  headRevision: z.number().int().positive(),
+}).strict();
+
+function encodeRuleRevisionCursor(payload: z.infer<typeof ruleRevisionCursorSchema>): string {
+  return Buffer.from(canonicalOrganizationJson(payload), "utf8").toString("base64url");
+}
+
+function decodeRuleRevisionCursor(cursor: string): z.infer<typeof ruleRevisionCursorSchema> {
+  try {
+    if (!/^[A-Za-z0-9_-]+$/.test(cursor)) throw new Error("non-canonical alphabet");
+    const bytes = Buffer.from(cursor, "base64url");
+    if (bytes.length === 0 || bytes.toString("base64url") !== cursor) throw new Error("non-canonical encoding");
+    const json = bytes.toString("utf8");
+    if (!Buffer.from(json, "utf8").equals(bytes)) throw new Error("invalid UTF-8");
+    const payload = ruleRevisionCursorSchema.parse(JSON.parse(json));
+    if (canonicalOrganizationJson(payload) !== json || payload.afterRevision >= payload.headRevision) throw new Error("non-canonical payload");
+    return payload;
+  } catch {
+    throw new RuleRevisionCursorError();
+  }
+}
 
 export function createRuleRevisionService(repository: RuleRevisionRepository, options: {
   now?: () => Date;
@@ -141,22 +180,22 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
       const compilation = compileOrcaRule({ source: request.source, workspace });
       if (!compilation.ok) return orcaRuleCompileResponseSchema.parse(compilation);
 
-      const existing = request.ruleId ? repository.get(input.workspaceId, request.ruleId) : null;
-      const actualRevision = existing?.rule.latestRevision ?? null;
+      const existing = request.ruleId ? repository.getRule(input.workspaceId, request.ruleId) : null;
+      const actualRevision = existing?.latestRevision ?? null;
       if (request.expectedRuleRevision !== null && (!existing || actualRevision !== request.expectedRuleRevision)) {
         throw new RuleRevisionConflictError(request.expectedRuleRevision, actualRevision);
       }
       if (request.expectedRuleRevision === null && existing) throw new RuleRevisionConflictError(null, actualRevision);
       const timestamp = now().toISOString();
-      const ruleId = existing?.rule.id ?? request.ruleId ?? id();
+      const ruleId = existing?.id ?? request.ruleId ?? id();
       const revisionNumber = (actualRevision ?? 0) + 1;
       const rule: OrcaRule = {
         id: ruleId,
         workspaceId: input.workspaceId,
         name: compilation.revision.name,
         latestRevision: revisionNumber,
-        activeRevisionId: existing?.rule.activeRevisionId ?? null,
-        createdAt: existing?.rule.createdAt ?? timestamp,
+        activeRevisionId: existing?.activeRevisionId ?? null,
+        createdAt: existing?.createdAt ?? timestamp,
         updatedAt: timestamp,
       };
       const revision: OrcaRuleRevision = {
@@ -180,7 +219,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
           changes: { sourceDigest: revision.sourceDigest, revision: revisionNumber },
         }],
       };
-      const live = repository.getAuthorityState(input.workspaceId);
+      const live = repository.getAuthorityState(input.workspaceId, { ruleId, idempotencyKey: request.idempotencyKey });
       const granted = capability(input.actor, input.workspaceId, live.accountIds);
       const decision = authorizeOrganizationOperation({
         actor: input.actor,
@@ -198,7 +237,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         capability: { snapshot: granted, revokedAt: null },
         workspaceRevision: live.workspaceRevision,
         resourceRevisions: live.resourceRevisions,
-        reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+        reservedIdempotencyKeys: live.idempotencyKeyReserved ? [request.idempotencyKey] : [],
       });
       if (!decision.allowed) {
         if (decision.code === "duplicate_idempotency_key") throw new RuleIdempotencyConflictError(decision.reason);
@@ -227,10 +266,32 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         }),
       });
     },
-    get(input: { workspaceId: string; ruleId: string }): OrcaRuleRevisionList {
-      const result = repository.get(input.workspaceId, input.ruleId);
-      if (!result) throw new RuleRevisionConflictError(null, null);
-      return orcaRuleRevisionListSchema.parse(result);
+    get(input: { workspaceId: string; ruleId: string; query?: OrcaRuleRevisionListQuery }): OrcaRuleRevisionList {
+      const query = orcaRuleRevisionListQuerySchema.parse(input.query ?? {});
+      const rule = repository.getRule(input.workspaceId, input.ruleId);
+      if (!rule) throw new RuleRevisionConflictError(null, null);
+      let afterRevision = 0;
+      if (query.cursor) {
+        const cursor = decodeRuleRevisionCursor(query.cursor);
+        if (cursor.workspaceId !== input.workspaceId || cursor.ruleId !== input.ruleId) throw new RuleRevisionCursorError();
+        if (cursor.headRevision !== rule.latestRevision) throw new RuleRevisionCursorStaleError();
+        afterRevision = cursor.afterRevision;
+      }
+      const rows = repository.listRevisions(input.workspaceId, input.ruleId, {
+        afterRevision,
+        throughRevision: rule.latestRevision,
+        limit: query.limit + 1,
+      });
+      const revisions = rows.slice(0, query.limit);
+      const last = revisions.at(-1);
+      const nextCursor = rows.length > query.limit && last ? encodeRuleRevisionCursor({
+        v: 1,
+        workspaceId: input.workspaceId,
+        ruleId: input.ruleId,
+        afterRevision: last.revision,
+        headRevision: rule.latestRevision,
+      }) : null;
+      return orcaRuleRevisionListSchema.parse({ rule, revisions, nextCursor, limit: query.limit });
     },
   };
 }
