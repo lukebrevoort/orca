@@ -6,7 +6,7 @@ import {
   type OrganizationActor,
   type OrganizationCapabilitySnapshot,
 } from "./organization-contract.ts";
-import { facetValueTypeSchema } from "./organization-facets.ts";
+import { facetValueTypeSchema, validateFacetScalarValue } from "./organization-facets.ts";
 
 export const orcaLanguageTextLimits = Object.freeze({
   maximumIdentifierCodeUnits: 200,
@@ -233,6 +233,84 @@ export const orcaWorkspaceSnapshotSchema = z.object({
 }).strict();
 export type OrcaWorkspaceSnapshot = z.infer<typeof orcaWorkspaceSnapshotSchema>;
 
+export const orcaEvaluationWorkspaceSchema = orcaWorkspaceSnapshotSchema.extend({
+  fallbackLaneId: identifierSchema,
+  lanes: z.array(orcaCompilerNamedResourceSchema.extend({ defaultPolicyId: identifierSchema }).strict()),
+  lanePolicies: z.array(z.object({
+    id: identifierSchema,
+    interruption: z.enum(["notify", "badge", "quiet"]),
+    review: z.enum(["continuous", "daily", "weekly", "manual"]),
+    retention: z.union([
+      z.object({ mode: z.literal("keep"), days: z.null() }).strict(),
+      z.object({ mode: z.literal("review_after"), days: z.number().int().positive() }).strict(),
+    ]),
+  }).strict()),
+}).strict();
+export type OrcaEvaluationWorkspace = z.infer<typeof orcaEvaluationWorkspaceSchema>;
+
+export type OrcaSemanticBindingIssue = {
+  code: "workspace_mismatch" | "schema_revision_mismatch" | "resource_not_found" | "resource_family_mismatch" | "facet_cardinality_mismatch" | "facet_value_invalid" | "required_facet_unset";
+  actionIndex: number | null;
+  message: string;
+};
+
+/**
+ * Re-binds immutable compiled IR to one exact authoritative Workspace Schema
+ * snapshot. Evaluation and future Simulation share this semantic seam.
+ */
+export function validateOrcaCompiledRevisionSemantics(
+  revision: OrcaCompiledRuleRevision,
+  workspace: OrcaEvaluationWorkspace,
+): OrcaSemanticBindingIssue[] {
+  const issues: OrcaSemanticBindingIssue[] = [];
+  if (revision.workspaceId !== workspace.workspaceId) {
+    issues.push({ code: "workspace_mismatch", actionIndex: null, message: "Compiled Rule Workspace does not match the Evaluation Workspace Schema" });
+  }
+  if (revision.workspaceSchemaRevision !== workspace.revision) {
+    issues.push({ code: "schema_revision_mismatch", actionIndex: null, message: `Compiled Rule Workspace Schema revision ${revision.workspaceSchemaRevision} does not match Evaluation revision ${workspace.revision}` });
+  }
+  const laneIds = new Set(workspace.lanes.map(({ id }) => id));
+  const workflowStateIds = new Set(workspace.workflowStates.map(({ id }) => id));
+  const contextTypeIds = new Set(workspace.contextTypes.map(({ id }) => id));
+  for (const [actionIndex, action] of revision.actions.entries()) {
+    const missing = (family: string, id: string): void => {
+      issues.push({ code: "resource_not_found", actionIndex, message: `${family} ${id} is absent from the exact Workspace Schema snapshot` });
+    };
+    if (action.kind === "route_lane") {
+      if (!laneIds.has(action.laneId)) missing("Lane", action.laneId);
+    } else if (action.kind === "set_workflow_state") {
+      if (!workflowStateIds.has(action.stateId)) missing("Workflow State", action.stateId);
+    } else if (action.kind === "set_facet" || action.kind === "unset_facet") {
+      const facet = workspace.facets.find(({ id }) => id === action.facetId);
+      if (!facet) { missing("Facet", action.facetId); continue; }
+      if (facet.cardinality !== "single") {
+        issues.push({ code: "facet_cardinality_mismatch", actionIndex, message: `Facet ${action.facetId} is not a single-value Facet supported by Orca v1 Actions` });
+      }
+      if (action.kind === "unset_facet" && !facet.optional) {
+        issues.push({ code: "required_facet_unset", actionIndex, message: `Required Facet ${action.facetId} cannot be unset` });
+      }
+      if (action.kind === "set_facet") {
+        const message = validateFacetScalarValue(facet.valueType, action.value);
+        if (message) issues.push({ code: "facet_value_invalid", actionIndex, message: `Facet ${action.facetId} ${message}` });
+      }
+    } else if (action.kind === "add_collection" || action.kind === "remove_collection") {
+      const collection = workspace.collections.find(({ id }) => id === action.collectionId);
+      if (!collection) missing("Collection", action.collectionId);
+      else if (collection.accountId !== action.accountId) {
+        issues.push({ code: "resource_family_mismatch", actionIndex, message: `Collection ${action.collectionId} is not in Account ${action.accountId}` });
+      }
+    } else if (action.kind === "link_context" || action.kind === "unlink_context") {
+      if (!contextTypeIds.has(action.contextTypeId)) missing("Context Type", action.contextTypeId);
+      const context = workspace.contexts.find(({ id }) => id === action.contextId);
+      if (!context) missing("Context", action.contextId);
+      else if (context.contextTypeId !== action.contextTypeId) {
+        issues.push({ code: "resource_family_mismatch", actionIndex, message: `Context ${action.contextId} does not belong to Context Type ${action.contextTypeId}` });
+      }
+    }
+  }
+  return issues;
+}
+
 export const orcaCompileInputSchema = z.object({
   source: z.string(),
   workspace: orcaWorkspaceSnapshotSchema,
@@ -335,6 +413,12 @@ export type OrcaRuleCompileResponse = z.infer<typeof orcaRuleCompileResponseSche
 
 export const orcaRuleRevisionPageDefaultLimit = 50;
 export const orcaRuleRevisionPageMaximumLimit = 100;
+export const orcaEvaluatorLimits = Object.freeze({
+  maximumRuleRevisions: 100,
+  maximumPredicateSteps: 2_000,
+  maximumCandidates: 1_000,
+  maximumPredicateDepth: 16,
+});
 export const orcaRuleRevisionListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(orcaRuleRevisionPageMaximumLimit).default(orcaRuleRevisionPageDefaultLimit),
   cursor: z.string().min(1).max(2_048).optional(),
@@ -357,16 +441,40 @@ export const orcaEvaluationEventKindSchema = z.enum([
 ]);
 export type OrcaEvaluationEventKind = z.infer<typeof orcaEvaluationEventKindSchema>;
 
-export const orcaEvaluationEventSchema = z.object({
+const orcaEvaluationEventBaseSchema = z.object({
   id: identifierSchema,
-  kind: orcaEvaluationEventKindSchema,
-  cause: z.enum(["provider", "internal", "scheduler", "user", "evaluator"]),
   occurredAt: z.string().datetime({ offset: false }),
   workspaceId: identifierSchema,
-  accountId: identifierSchema.optional(),
   threadId: identifierSchema,
-  messageId: identifierSchema.optional(),
-}).strict();
+});
+
+export const orcaEvaluationEventSchema = z.discriminatedUnion("kind", [
+  orcaEvaluationEventBaseSchema.extend({
+    kind: z.literal("message.received"),
+    cause: z.literal("provider"),
+    accountId: identifierSchema,
+    messageId: identifierSchema,
+  }).strict(),
+  orcaEvaluationEventBaseSchema.extend({
+    kind: z.literal("thread.updated"),
+    cause: z.enum(["provider", "internal"]),
+    accountId: identifierSchema,
+    messageId: z.never().optional(),
+  }).strict(),
+  orcaEvaluationEventBaseSchema.extend({
+    kind: z.literal("schedule.reached"),
+    cause: z.literal("scheduler"),
+    accountId: identifierSchema,
+    messageId: z.never().optional(),
+  }).strict(),
+  orcaEvaluationEventBaseSchema.extend({
+    kind: z.literal("user.corrected"),
+    cause: z.literal("user"),
+    accountId: identifierSchema,
+    messageId: z.never().optional(),
+  }).strict(),
+]);
+export type OrcaEvaluationEvent = z.infer<typeof orcaEvaluationEventSchema>;
 
 export const orcaEvaluationPrecedenceSchema = z.enum([
   "safety_lock",
@@ -465,16 +573,7 @@ export type OrcaLowerLanePlacement = {
 };
 export type OrcaEvaluationTrace = {
   id: string;
-  event: {
-    id: string;
-    kind: OrcaEvaluationEventKind;
-    cause: "provider" | "internal" | "scheduler" | "user" | "evaluator";
-    occurredAt: string;
-    workspaceId: string;
-    accountId?: string;
-    threadId: string;
-    messageId?: string;
-  };
+  event: OrcaEvaluationEvent;
   workspaceSchemaRevision: number;
   ruleSet: { id: string; revision: number; activeRevisionCount: number };
   logicalTime: string;
@@ -545,13 +644,13 @@ export const orcaEvaluationTraceSchema = z.object({
   reason: z.string().trim().min(1).max(1_000),
   budget: z.object({
     status: z.enum(["complete", "exhausted"]),
-    maximumRuleRevisions: z.number().int().positive(),
-    maximumPredicateSteps: z.number().int().positive(),
-    maximumCandidates: z.number().int().positive(),
-    maximumPredicateDepth: z.number().int().positive(),
-    ruleRevisions: z.number().int().nonnegative(),
-    predicateSteps: z.number().int().nonnegative(),
-    candidates: z.number().int().nonnegative(),
+    maximumRuleRevisions: z.number().int().positive().max(orcaEvaluatorLimits.maximumRuleRevisions),
+    maximumPredicateSteps: z.number().int().positive().max(orcaEvaluatorLimits.maximumPredicateSteps),
+    maximumCandidates: z.number().int().positive().max(orcaEvaluatorLimits.maximumCandidates),
+    maximumPredicateDepth: z.number().int().positive().max(orcaEvaluatorLimits.maximumPredicateDepth),
+    ruleRevisions: z.number().int().nonnegative().max(orcaEvaluatorLimits.maximumRuleRevisions),
+    predicateSteps: z.number().int().nonnegative().max(orcaEvaluatorLimits.maximumPredicateSteps),
+    candidates: z.number().int().nonnegative().max(orcaEvaluatorLimits.maximumCandidates),
     exhausted: z.boolean(),
   }).strict().superRefine((budget, context) => {
     if ((budget.status === "exhausted") !== budget.exhausted) {

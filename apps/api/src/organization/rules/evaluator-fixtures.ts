@@ -55,7 +55,17 @@ export function reviewerEvaluationInput(options: { safetyLock?: boolean } = {}):
         { id: "policy-focus", interruption: "notify", review: "continuous", retention: { mode: "keep", days: null } },
         { id: "policy-default", interruption: "badge", review: "daily", retention: { mode: "keep", days: null } },
       ],
-      facets: [{ id: "facet-ticket", cardinality: "single" }],
+      workflowStates: [{ id: "state-review", name: "Needs review" }],
+      facets: [{
+        id: "facet-ticket",
+        name: "Ticket",
+        valueType: { kind: "enum", options: [{ id: "present", label: "Present", position: 0, retiredAt: null }] },
+        cardinality: "single",
+        optional: true,
+      }],
+      collections: [],
+      contextTypes: [],
+      contexts: [],
     },
     ruleSet: {
       id: "rules-1",

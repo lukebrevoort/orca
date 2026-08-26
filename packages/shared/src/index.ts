@@ -127,6 +127,7 @@ export {
   organizationFacetSupportSchema,
   threadFacetValueSchema,
   threadWorkflowStateSchema,
+  validateFacetScalarValue,
   workflowStateDefinitionSchema,
 } from "./organization-facets.ts";
 

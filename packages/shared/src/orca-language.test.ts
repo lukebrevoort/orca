@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import {
   orcaCompiledRuleRevisionSchema,
   orcaEvaluationEventKindSchema,
+  orcaEvaluationEventSchema,
   orcaEventKindSchema,
   orcaRuleRevisionListQuerySchema,
   orcaRuleRevisionPageDefaultLimit,
@@ -68,6 +69,33 @@ describe("Orca Event contracts", () => {
         risk: "low",
       }).event.kind).toBe(event);
     }
+  });
+
+  test("binds every Event family to authoritative cause and subject provenance", () => {
+    const base = { id: "event-1", occurredAt: "2026-08-26T12:00:00.000Z", workspaceId: "workspace-1", accountId: "account-1", threadId: "thread-1" };
+    const valid = [
+      { ...base, kind: "message.received", cause: "provider", messageId: "message-1" },
+      { ...base, kind: "thread.updated", cause: "provider" },
+      { ...base, kind: "thread.updated", cause: "internal" },
+      { ...base, kind: "schedule.reached", cause: "scheduler" },
+      { ...base, kind: "user.corrected", cause: "user" },
+    ];
+    for (const event of valid) expect(orcaEvaluationEventSchema.safeParse(event).success).toBe(true);
+
+    const invalid = [
+      { ...base, kind: "message.received", cause: "user", messageId: "message-1" },
+      { ...base, kind: "message.received", cause: "provider" },
+      { ...base, kind: "schedule.reached", cause: "provider" },
+      { ...base, kind: "schedule.reached", cause: "scheduler", messageId: "forged" },
+      { ...base, kind: "user.corrected", cause: "provider" },
+      { ...base, kind: "user.corrected", cause: "user", messageId: "forged" },
+      { ...base, kind: "thread.updated", cause: "scheduler" },
+      { ...base, kind: "thread.updated", cause: "internal", messageId: "forged" },
+      { ...base, accountId: undefined, kind: "message.received", cause: "provider", messageId: "message-1" },
+      { ...base, kind: "message.received", cause: "provider", messageId: "message-1", source: "caller:forged" },
+      { ...base, kind: "thread.updated", cause: "evaluator" },
+    ];
+    for (const event of invalid) expect(orcaEvaluationEventSchema.safeParse(event).success).toBe(false);
   });
 
   test("rejects crafted Action capability and risk downgrades at the shared revision seam", () => {

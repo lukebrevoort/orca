@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { classifyOrcaActions } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import {
@@ -121,6 +122,59 @@ because "A failed deploy blocks work"` },
 }
 
 describe("message.received Rule evaluation", () => {
+  test("rejects schema-tampered compiled IR with zero projection, Change Set, or Trace writes", async () => {
+    const { db, sqlite, compiled, now } = setup();
+    try {
+      db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      db.insert(organizationFacets).values({
+        workspaceId: "workspace-1", id: "facet-required", name: "Required priority", position: 1,
+        valueType: JSON.stringify({ kind: "enum", options: [{ id: "high", label: "High", position: 0, retiredAt: null }] }),
+        cardinality: JSON.stringify({ kind: "single" }), isOptional: false, defaultValue: JSON.stringify("high"), revision: 1, createdAt: now, updatedAt: now,
+      }).run();
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("semantic-binding")],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+      db.update(organizationRules).set({ activeRevisionId: compiled.revision.id }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "semantic-binding")).get()!;
+      const base = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(base);
+      const before = {
+        changes: db.select().from(organizationChangeSets).all().length,
+        actions: db.select().from(organizationChangeActions).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        threads: db.select().from(organizationThreadStates).all().length,
+        lanes: db.select().from(organizationThreadLaneStates).all().length,
+        facets: db.select().from(organizationThreadFacetValues).all().length,
+      };
+      const cases: Array<[string, (context: NonNullable<typeof base>) => void]> = [
+        ["forged Lane", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "route_lane", laneId: "lane-forged" }]; }],
+        ["invalid enum type", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "set_facet", facetId: "facet-urgency", value: 7 }]; }],
+        ["required Facet unset", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "unset_facet", facetId: "facet-required" }]; }],
+        ["missing resource", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "set_workflow_state", stateId: "state-missing" }]; }],
+        ["revision mismatch", (context) => { context.ruleSet.revisions[0]!.compiled.workspaceSchemaRevision += 1; }],
+      ];
+
+      for (const [, mutate] of cases) {
+        const context = structuredClone(base);
+        mutate(context);
+        const revision = context.ruleSet.revisions[0]!.compiled;
+        const classification = classifyOrcaActions(revision.actions);
+        revision.requiredCapabilities = classification.requiredCapabilities;
+        revision.risk = classification.risk;
+        assert.throws(() => evaluateAndPersistLiveContext(db, context), /Workspace Schema semantic binding/);
+        assert.deepEqual({
+          changes: db.select().from(organizationChangeSets).all().length,
+          actions: db.select().from(organizationChangeActions).all().length,
+          traces: db.select().from(organizationEvaluationTraces).all().length,
+          threads: db.select().from(organizationThreadStates).all().length,
+          lanes: db.select().from(organizationThreadLaneStates).all().length,
+          facets: db.select().from(organizationThreadFacetValues).all().length,
+        }, before);
+      }
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("reports bounded exhaustion in memory without projection, Change Set, or persisted Trace writes", async () => {
     const { db, sqlite, now } = setup();
     try {

@@ -79,6 +79,14 @@ function locatedLines(source: string): LocatedLine[] {
 
 function containsUnsafeSourceCharacter(source: string): boolean {
   if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/u.test(source)) return true;
+  let quoted = false;
+  let escaped = false;
+  for (const character of source) {
+    if (quoted && escaped) { escaped = false; continue; }
+    if (quoted && character === "\\") { escaped = true; continue; }
+    if (character === '"') { quoted = !quoted; continue; }
+    if (!quoted && character.codePointAt(0)! > 0x7f && /\p{White_Space}/u.test(character)) return true;
+  }
   for (let index = 0; index < source.length; index += 1) {
     const value = source.charCodeAt(index);
     if (value >= 0xd800 && value <= 0xdbff) {

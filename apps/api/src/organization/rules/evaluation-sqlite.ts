@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   facetCardinalitySchema,
+  facetValueTypeSchema,
   orcaCompiledRuleRevisionSchema,
+  orcaEvaluatorLimits,
   orcaEvaluationTraceSchema,
-  type OrcaEvaluationEventKind,
   type OrcaEvaluationTrace,
 } from "@orca/shared";
 
@@ -15,6 +16,8 @@ import {
   oauthAccounts,
   organizationEvaluationTraces,
   organizationFacets,
+  organizationContextTypes,
+  organizationContexts,
   organizationRuleRevisions,
   organizationRuleSets,
   organizationRules,
@@ -23,6 +26,7 @@ import {
   organizationThreadStates,
   organizationThreadWorkflowStates,
   organizationWorkspaceStates,
+  organizationWorkflowStates,
   threads,
 } from "../../db/schema.ts";
 import { createSqliteOrganizationLanesRepository } from "../lanes/sqlite-repository.ts";
@@ -32,12 +36,7 @@ import { evaluateOrcaRules, type OrcaActiveRuleRevision, type OrcaEvaluationInpu
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 
-export const orcaLiveEvaluationBudgets = Object.freeze({
-  maximumRuleRevisions: 100,
-  maximumPredicateSteps: 2_000,
-  maximumCandidates: 1_000,
-  maximumPredicateDepth: 16,
-});
+export const orcaLiveEvaluationBudgets = orcaEvaluatorLimits;
 
 function activeRuleSet(db: Database, workspaceId: string): { id: string; revision: number; activeRevisionCount: number; revisions: OrcaActiveRuleRevision[] } {
   const ruleSetRevision = db.select({ revision: organizationRuleSets.revision }).from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, workspaceId)).get()?.revision ?? 1;
@@ -66,6 +65,7 @@ function activeRuleSet(db: Database, workspaceId: string): { id: string; revisio
     revisionId: row.revision.id,
     revision: row.revision.revision,
     order: row.rule.position,
+    workspaceSchemaRevision: row.revision.workspaceSchemaRevision,
     compiled: orcaCompiledRuleRevisionSchema.parse(JSON.parse(row.revision.compiledJson)),
   }));
   return {
@@ -76,7 +76,7 @@ function activeRuleSet(db: Database, workspaceId: string): { id: string; revisio
   };
 }
 
-export function loadLiveEvaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: OrcaEvaluationEventKind }, capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability): OrcaEvaluationInput | null {
+export function loadLiveEvaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: "message.received" | "thread.updated" }, capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability): OrcaEvaluationInput | null {
   const account = db.select().from(oauthAccounts).where(eq(oauthAccounts.id, input.accountId)).get();
   const message = db.select().from(emails).where(and(eq(emails.accountId, input.accountId), eq(emails.id, input.messageId))).get();
   if (!account || !message) return null;
@@ -87,6 +87,17 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
   const lanePlacement = laneSnapshot.placements.find((placement) => placement.accountId === input.accountId && placement.threadId === thread.id);
   if (!lanePlacement) return null;
   const facets = db.select().from(organizationFacets).where(eq(organizationFacets.workspaceId, account.userId)).orderBy(asc(organizationFacets.position), asc(organizationFacets.id)).all();
+  const workflowStates = db.select({ id: organizationWorkflowStates.id, name: organizationWorkflowStates.name }).from(organizationWorkflowStates)
+    .where(and(eq(organizationWorkflowStates.workspaceId, account.userId), isNull(organizationWorkflowStates.retiredAt)))
+    .orderBy(asc(organizationWorkflowStates.position), asc(organizationWorkflowStates.id)).all();
+  const ownedAccountIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, account.userId)).all().map(({ id }) => id);
+  const workspaceCollections = ownedAccountIds.length === 0 ? [] : db.select({ id: collections.id, name: collections.name, accountId: collections.accountId }).from(collections)
+    .where(inArray(collections.accountId, ownedAccountIds)).orderBy(asc(collections.accountId), asc(collections.position), asc(collections.id)).all();
+  const contextTypes = db.select({ id: organizationContextTypes.id, name: organizationContextTypes.name }).from(organizationContextTypes)
+    .where(and(eq(organizationContextTypes.workspaceId, account.userId), isNull(organizationContextTypes.retiredAt)))
+    .orderBy(asc(organizationContextTypes.position), asc(organizationContextTypes.id)).all();
+  const workspaceContexts = db.select({ id: organizationContexts.id, name: organizationContexts.name, contextTypeId: organizationContexts.contextTypeId }).from(organizationContexts)
+    .where(and(eq(organizationContexts.workspaceId, account.userId), isNull(organizationContexts.retiredAt))).orderBy(asc(organizationContexts.id)).all();
   const facetValues = db.select().from(organizationThreadFacetValues).where(and(
     eq(organizationThreadFacetValues.workspaceId, account.userId), eq(organizationThreadFacetValues.accountId, input.accountId), eq(organizationThreadFacetValues.threadId, thread.id),
   )).all();
@@ -105,7 +116,7 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
   const receivedAt = (message.receivedAt ?? thread.latestReceivedAt ?? new Date(0)).toISOString();
   const senderEmail = message.fromAddress?.trim().toLocaleLowerCase() ?? null;
   return {
-    event: {
+    event: input.eventKind === "message.received" ? {
       id: `${input.eventKind}:${message.id}`,
       kind: input.eventKind,
       cause: "provider",
@@ -114,6 +125,14 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
       accountId: input.accountId,
       threadId: thread.id,
       messageId: message.id,
+    } : {
+      id: `${input.eventKind}:${message.id}`,
+      kind: input.eventKind,
+      cause: "provider",
+      occurredAt: receivedAt,
+      workspaceId: account.userId,
+      accountId: input.accountId,
+      threadId: thread.id,
     },
     thread: {
       workspaceId: account.userId,
@@ -138,7 +157,17 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
       fallbackLaneId: laneSnapshot.configuration.fallbackLaneId,
       lanes: laneSnapshot.configuration.lanes.filter((lane) => lane.retiredAt === null).map((lane) => ({ id: lane.id, name: lane.name, defaultPolicyId: lane.defaultPolicyId })),
       lanePolicies: laneSnapshot.configuration.policies.map((policy) => ({ id: policy.id, interruption: policy.interruption, review: policy.review, retention: policy.retention })),
-      facets: facets.filter((facet) => facet.retiredAt === null).map((facet) => ({ id: facet.id, cardinality: facetCardinalitySchema.parse(JSON.parse(facet.cardinality)).kind })),
+      workflowStates,
+      facets: facets.filter((facet) => facet.retiredAt === null).map((facet) => ({
+        id: facet.id,
+        name: facet.name,
+        valueType: facetValueTypeSchema.parse(JSON.parse(facet.valueType)),
+        cardinality: facetCardinalitySchema.parse(JSON.parse(facet.cardinality)).kind,
+        optional: facet.isOptional,
+      })),
+      collections: workspaceCollections,
+      contextTypes,
+      contexts: workspaceContexts,
     },
     ruleSet: activeRuleSet(db, account.userId),
     actor: { id: "system:gmail-sync", type: "system" },

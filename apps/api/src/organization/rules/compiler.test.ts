@@ -84,6 +84,34 @@ because "Human-reviewed source"`;
     }
   });
 
+  test("rejects ambiguous non-ASCII grammar whitespace while preserving quoted Unicode text", () => {
+    const hiddenGrammar = ["\u2028", "\u2029", "\u00a0", "\u2007", "\u202f"];
+    for (const whitespace of hiddenGrammar) {
+      const source = `orca${whitespace}1\nrule "Hidden whitespace"\nevent message.received\nwhen subject contains "status"\naction route lane "Focus"\nbecause "Must not create hidden grammar"`;
+      const result = compileOrcaRule({ workspace, source });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.diagnostics).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            phase: "parse",
+            code: "invalid_source_character",
+            span: expect.objectContaining({ start: expect.objectContaining({ line: 1 }) }),
+          }),
+        ]));
+        expect(result.budget.usage.sourceBytes).toBe(new TextEncoder().encode(source).length);
+        expect(result.budget.usage.lines).toBe(6);
+        expect(result.budget.usage.tokens).toBe(16);
+      }
+    }
+
+    const visibleUnicode = compileOrcaRule({
+      workspace,
+      source: `orca 1\nrule "Résumé ✨"\nevent message.received\nwhen subject contains "Café du monde"\naction route lane "Focus"\nbecause "Quoted Unicode remains ordinary user text"`,
+    });
+    expect(visibleUnicode.ok).toBe(true);
+  });
+
   test("satisfies the shared compiler interface on success and failure", () => {
     const success = sharedCompiler({
       workspace,
