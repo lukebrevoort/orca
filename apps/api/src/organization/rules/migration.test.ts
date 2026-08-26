@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, test } from "bun:test";
@@ -17,7 +17,7 @@ describe("BRE-314 Rule Revision migration", () => {
     try {
       migrate(client.db, { migrationsFolder: migrations });
       const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-      assert.equal(journal.entries.at(-1)?.idx, 27);
+      assert.equal(journal.entries.at(-1)?.idx, 28);
       assert.deepEqual(journal.entries.at(-1), {
         idx: 28,
         version: "7",
@@ -43,6 +43,54 @@ describe("BRE-314 Rule Revision migration", () => {
       )`).run());
     } finally {
       client.sqlite.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("upgrades 0026 through Views and Rules, replays safely, and remains foreign-key clean", () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-bre-314-stacked-upgrade-"));
+    const partialMigrations = join(directory, "migrations");
+    mkdirSync(join(partialMigrations, "meta"), { recursive: true });
+    try {
+      const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as {
+        entries: Array<{ idx: number; tag: string; when: number }>;
+      };
+      for (const entry of journal.entries.filter((item) => item.idx <= 26)) {
+        writeFileSync(join(partialMigrations, `${entry.tag}.sql`), readFileSync(join(migrations, `${entry.tag}.sql`)));
+      }
+      writeFileSync(join(partialMigrations, "meta/_journal.json"), JSON.stringify({
+        ...journal,
+        entries: journal.entries.filter((entry) => entry.idx <= 26),
+      }));
+
+      const client = createDatabaseClient(join(directory, "stacked.sqlite"));
+      try {
+        migrate(client.db, { migrationsFolder: partialMigrations });
+        client.db.insert(users).values([
+          { id: "workspace-1", email: "owner@example.com" },
+          { id: "workspace-2", email: "other@example.com" },
+        ]).run();
+        client.sqlite.query("UPDATE organization_workspace_states SET revision = 7 WHERE workspace_id = 'workspace-1'").run();
+
+        migrate(client.db, { migrationsFolder: migrations });
+        migrate(client.db, { migrationsFolder: migrations });
+
+        const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('organization_views','organization_rules','organization_rule_revisions') ORDER BY name").all() as Array<{ name: string }>;
+        assert.deepEqual(tables.map(({ name }) => name), ["organization_rule_revisions", "organization_rules", "organization_views"]);
+        const workspaceState = client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace-1'").get() as { revision: number };
+        assert.equal(workspaceState.revision, 7);
+
+        client.sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision) VALUES ('workspace-1','rule-1','Focus failures',1)").run();
+        assert.throws(() => client.sqlite.query(`INSERT INTO organization_rule_revisions (
+          workspace_id,id,rule_id,revision,workspace_schema_revision,language_version,source,source_digest,compiled_json,required_capabilities,risk,actor_id,actor_type
+        ) VALUES (
+          'workspace-2','revision-cross-workspace','rule-1',1,7,1,'orca 1','sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','{}','[]','low','workspace-2','human'
+        )`).run());
+        assert.deepEqual(client.sqlite.query("PRAGMA foreign_key_check").all(), []);
+      } finally {
+        client.sqlite.close();
+      }
+    } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });
