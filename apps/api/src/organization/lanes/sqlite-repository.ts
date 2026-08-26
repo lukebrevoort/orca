@@ -28,6 +28,7 @@ import { OrganizationAuthorityError, OrganizationRevisionConflictError } from ".
 import {
   applyLaneActions,
   digestLaneActions,
+  fallbackPlacement,
   parseLaneApply,
   type OrganizationLaneSnapshot,
   type OrganizationLanesRepository,
@@ -215,7 +216,20 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
               && storedEvidence
               && storedEvidence.winningSource !== "safety_lock"
               && storedEvidence.winningSource !== "manual_override";
-            return restoredLowerSource ? threadLanePlacementSchema.parse({ ...placement, evidence: storedEvidence }) : placement;
+            if (!restoredLowerSource) return placement;
+            if (storedEvidence.winningSource !== "workspace_fallback") {
+              return threadLanePlacementSchema.parse({ ...placement, evidence: storedEvidence });
+            }
+            const currentFallback = fallbackPlacement({
+              accountId: placement.accountId,
+              threadId: placement.threadId,
+              fallbackLaneId: applied.configuration.fallbackLaneId,
+            });
+            return threadLanePlacementSchema.parse({
+              ...placement,
+              primaryLaneId: currentFallback.primaryLaneId,
+              evidence: currentFallback.evidence,
+            });
           }),
         };
 

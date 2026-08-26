@@ -146,6 +146,10 @@ describe("Organization REST read adapter", () => {
         actor: { id: "workspace_owner", type: "human" },
         reason: "Human chose this Lane from the Thread reader.",
       });
+      const reloadedManualResponse = await app.request("/v1/organization/query?accountId=account_b&attention=all", { headers });
+      assert.equal(reloadedManualResponse.status, 200);
+      const reloadedManual = await reloadedManualResponse.json();
+      assert.deepEqual(reloadedManual.threads[0].organization.lanePlacement, unlocked.placements[0]);
 
       const fallbackLock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
         id: "0e969841-acde-4a91-acde-491000000008", idempotencyKey: "routes:lock-fallback", expectedWorkspaceRevision: 5,
@@ -176,13 +180,38 @@ describe("Organization REST read adapter", () => {
         reason: "Keep this unresolved Thread in its current Lane.",
       });
 
+      const changeFallback = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000009", idempotencyKey: "routes:change-fallback-while-locked", expectedWorkspaceRevision: 6,
+        actions: [{ kind: "set_fallback_lane", laneId }],
+      }) });
+      const changedFallback = await changeFallback.json();
+      assert.equal(changeFallback.status, 200, JSON.stringify(changedFallback));
+      assert.equal(changedFallback.laneConfiguration.fallbackLaneId, laneId);
+
+      const reloadedFallbackLockResponse = await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers });
+      assert.equal(reloadedFallbackLockResponse.status, 200);
+      const reloadedFallbackLock = await reloadedFallbackLockResponse.json();
+      assert.equal(reloadedFallbackLock.threads[0].organization.lanePlacement.primaryLaneId, description.laneConfiguration.fallbackLaneId);
+      assert.deepEqual(reloadedFallbackLock.threads[0].organization.lanePlacement.evidence, fallbackAccount.threads[0].organization.lanePlacement.evidence);
+
       const fallbackUnlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
-        id: "0e969841-acde-4a91-acde-491000000009", idempotencyKey: "routes:unlock-fallback", expectedWorkspaceRevision: 6,
+        id: "0e969841-acde-4a91-acde-491000000010", idempotencyKey: "routes:unlock-fallback", expectedWorkspaceRevision: 7,
         actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Release the unresolved Thread.", expectedThreadRevision: 2 }],
       }) });
       const fallbackUnlocked = await fallbackUnlock.json();
       assert.equal(fallbackUnlock.status, 200, JSON.stringify(fallbackUnlocked));
-      assert.equal(fallbackUnlocked.placements[0].evidence.winningSource, "workspace_fallback");
+      assert.equal(fallbackUnlocked.placements[0].primaryLaneId, laneId);
+      assert.deepEqual(fallbackUnlocked.placements[0].evidence, {
+        winningSource: "workspace_fallback",
+        sourceId: laneId,
+        precedenceLevel: "5_workspace_fallback",
+        actor: { id: "system:workspace-fallback", type: "system" },
+        reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+      });
+      const reloadedFallbackResponse = await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers });
+      assert.equal(reloadedFallbackResponse.status, 200);
+      const reloadedFallback = await reloadedFallbackResponse.json();
+      assert.deepEqual(reloadedFallback.threads[0].organization.lanePlacement, fallbackUnlocked.placements[0]);
 
       sqlite.query(`
         UPDATE organization_thread_lane_states
@@ -191,7 +220,7 @@ describe("Organization REST read adapter", () => {
         WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
       `).run();
       const lowerSourceLock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
-        id: "0e969841-acde-4a91-acde-491000000010", idempotencyKey: "routes:lock-rule-source", expectedWorkspaceRevision: 7,
+        id: "0e969841-acde-4a91-acde-491000000011", idempotencyKey: "routes:lock-rule-source", expectedWorkspaceRevision: 8,
         actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true, reason: "Protect the Rule-selected Lane.", expectedThreadRevision: 3 }],
       }) });
       const lowerSourceLocked = await lowerSourceLock.json();
@@ -211,7 +240,7 @@ describe("Organization REST read adapter", () => {
       });
 
       const lowerSourceUnlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
-        id: "0e969841-acde-4a91-acde-491000000011", idempotencyKey: "routes:unlock-rule-source", expectedWorkspaceRevision: 8,
+        id: "0e969841-acde-4a91-acde-491000000012", idempotencyKey: "routes:unlock-rule-source", expectedWorkspaceRevision: 9,
         actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Release the Rule-selected Lane.", expectedThreadRevision: 4 }],
       }) });
       const lowerSourceUnlocked = await lowerSourceUnlock.json();
@@ -223,6 +252,42 @@ describe("Organization REST read adapter", () => {
         actor: { id: "agent_rule_engine", type: "agent" },
         reason: "Rule Revision 7 selected the retained Lane.",
       });
+      const reloadedRuleResponse = await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers });
+      assert.equal(reloadedRuleResponse.status, 200);
+      const reloadedRule = await reloadedRuleResponse.json();
+      assert.deepEqual(reloadedRule.threads[0].organization.lanePlacement, lowerSourceUnlocked.placements[0]);
+
+      sqlite.query(`
+        UPDATE organization_thread_lane_states
+        SET placement_source = 'lane_policy', source_id = ?, actor_id = 'agent_policy_engine', actor_type = 'agent',
+            reason = 'Lane Policy retained the selected Lane.'
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).run(policyId);
+      const lanePolicyLock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000013", idempotencyKey: "routes:lock-lane-policy-source", expectedWorkspaceRevision: 10,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true, reason: "Protect the Lane Policy placement.", expectedThreadRevision: 5 }],
+      }) });
+      const lanePolicyLocked = await lanePolicyLock.json();
+      assert.equal(lanePolicyLock.status, 200, JSON.stringify(lanePolicyLocked));
+      assert.equal(lanePolicyLocked.placements[0].evidence.winningSource, "safety_lock");
+
+      const lanePolicyUnlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000014", idempotencyKey: "routes:unlock-lane-policy-source", expectedWorkspaceRevision: 11,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Release the Lane Policy placement.", expectedThreadRevision: 6 }],
+      }) });
+      const lanePolicyUnlocked = await lanePolicyUnlock.json();
+      assert.equal(lanePolicyUnlock.status, 200, JSON.stringify(lanePolicyUnlocked));
+      assert.deepEqual(lanePolicyUnlocked.placements[0].evidence, {
+        winningSource: "lane_policy",
+        sourceId: policyId,
+        precedenceLevel: "4_lane_policy",
+        actor: { id: "agent_policy_engine", type: "agent" },
+        reason: "Lane Policy retained the selected Lane.",
+      });
+      const reloadedLanePolicyResponse = await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers });
+      assert.equal(reloadedLanePolicyResponse.status, 200);
+      const reloadedLanePolicy = await reloadedLanePolicyResponse.json();
+      assert.deepEqual(reloadedLanePolicy.threads[0].organization.lanePlacement, lanePolicyUnlocked.placements[0]);
 
       const denied = await app.request("/v1/organization/query?accountId=account_private&attention=all", { headers });
       assert.equal(denied.status, 403);
