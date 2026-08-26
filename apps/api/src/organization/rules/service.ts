@@ -9,8 +9,14 @@ import {
   type OrcaRuleRevision,
   type OrcaRuleRevisionList,
   type OrganizationActor,
+  type OrganizationAuthorityDenialCode,
+  type OrganizationAuthorityTrace,
+  type OrganizationCapabilitySnapshot,
+  type OrganizationCommand,
+  type OrganizationExecutionContext,
 } from "@orca/shared";
 
+import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
 import { compileOrcaRule, type OrcaWorkspaceSnapshot } from "./compiler.ts";
 
 export class WorkspaceSchemaConflictError extends Error {
@@ -25,10 +31,58 @@ export class RuleRevisionConflictError extends Error {
     super(actualRevision === null ? "Rule is unavailable in this Workspace" : `Rule revision ${expectedRevision ?? "new"} is stale; current revision is ${actualRevision}`);
   }
 }
+export class RuleIdempotencyConflictError extends Error {
+  readonly code = "duplicate_idempotency_key" as const;
+  constructor(message = "Idempotency key was already used for a different Rule compilation") { super(message); }
+}
+export class RuleAuthorityError extends Error {
+  constructor(readonly code: OrganizationAuthorityDenialCode, message: string) { super(message); }
+}
+
+declare const ruleAuthorizationAnchorBrand: unique symbol;
+export type RuleAuthorizationAnchor = Readonly<{ [ruleAuthorizationAnchorBrand]: true }>;
+type RuleAuthorizationBinding = Readonly<{
+  actor: OrganizationActor;
+  workspaceId: string;
+  accountIds: string[];
+  authorizationEnvelopeDigest: string;
+}>;
+const ruleAuthorizationAnchors = new WeakMap<object, RuleAuthorizationBinding>();
+
+function issueRuleAuthorizationAnchor(binding: RuleAuthorizationBinding): RuleAuthorizationAnchor {
+  const anchor = Object.freeze({}) as RuleAuthorizationAnchor;
+  ruleAuthorizationAnchors.set(anchor, structuredClone(binding));
+  return anchor;
+}
+
+/** Transaction adapters consume a service-issued authorization binding exactly once. */
+export function consumeRuleAuthorizationAnchor(anchor: unknown): RuleAuthorizationBinding | null {
+  if (typeof anchor !== "object" || anchor === null) return null;
+  const binding = ruleAuthorizationAnchors.get(anchor);
+  ruleAuthorizationAnchors.delete(anchor);
+  return binding ? structuredClone(binding) : null;
+}
 
 export type RuleRevisionRepository = {
   loadWorkspaceSnapshot(workspaceId: string): OrcaWorkspaceSnapshot;
+  getAuthorityState(workspaceId: string): {
+    accountIds: string[];
+    workspaceRevision: number;
+    resourceRevisions: Record<string, number>;
+    reservedIdempotencyKeys: string[];
+  };
+  getIdempotent(workspaceId: string, idempotencyKey: string): {
+    request: OrcaRuleCompileRequest;
+    response: OrcaRuleCompileResponse & { ok: true };
+  } | null;
   append(input: {
+    request: OrcaRuleCompileRequest;
+    changeId: string;
+    command: OrganizationCommand;
+    executionContext: OrganizationExecutionContext;
+    authorityTrace: OrganizationAuthorityTrace;
+    authorizationEnvelopeDigest: string;
+    authorizationAnchor: RuleAuthorizationAnchor;
     expectedWorkspaceSchemaRevision: number;
     expectedRuleRevision: number | null;
     rule: OrcaRule;
@@ -43,9 +97,23 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
 } = {}) {
   const now = options.now ?? (() => new Date());
   const id = options.id ?? randomUUID;
+  const capability = (actor: OrganizationActor, workspaceId: string, accountIds: string[]): OrganizationCapabilitySnapshot => ({
+    id: `first_party:rule_compiler:${actor.type}:${actor.id}`,
+    revision: 1,
+    actor,
+    scope: { workspaceId, accountIds },
+    operations: ["query", "apply"],
+    resourceFamilies: ["rule", "audit", "change_set"],
+    actionFamilies: ["organization_read", "organization_structure"],
+  });
   return {
     compile(input: { actor: OrganizationActor; workspaceId: string; request: unknown }): OrcaRuleCompileResponse {
       const request = orcaRuleCompileRequestSchema.parse(input.request);
+      const replay = repository.getIdempotent(input.workspaceId, request.idempotencyKey);
+      if (replay) {
+        if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(request)) throw new RuleIdempotencyConflictError();
+        return replay.response;
+      }
       const workspace = repository.loadWorkspaceSnapshot(input.workspaceId);
       if (request.workspaceSchemaRevision !== workspace.revision) {
         throw new WorkspaceSchemaConflictError(request.workspaceSchemaRevision, workspace.revision);
@@ -55,11 +123,12 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
 
       const existing = request.ruleId ? repository.get(input.workspaceId, request.ruleId) : null;
       const actualRevision = existing?.rule.latestRevision ?? null;
-      if (request.ruleId && (!existing || actualRevision !== request.expectedRuleRevision)) {
+      if (request.expectedRuleRevision !== null && (!existing || actualRevision !== request.expectedRuleRevision)) {
         throw new RuleRevisionConflictError(request.expectedRuleRevision, actualRevision);
       }
+      if (request.expectedRuleRevision === null && existing) throw new RuleRevisionConflictError(null, actualRevision);
       const timestamp = now().toISOString();
-      const ruleId = existing?.rule.id ?? id();
+      const ruleId = existing?.rule.id ?? request.ruleId ?? id();
       const revisionNumber = (actualRevision ?? 0) + 1;
       const rule: OrcaRule = {
         id: ruleId,
@@ -81,7 +150,53 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         actor: input.actor,
         createdAt: timestamp,
       };
+      const changeId = id();
+      const command: OrganizationCommand = {
+        id: changeId,
+        intents: [{
+          kind: "mutate_rule",
+          resourceId: `rule:${ruleId}`,
+          mutation: request.expectedRuleRevision === null ? "create" : "update",
+          changes: { sourceDigest: revision.sourceDigest, revision: revisionNumber },
+        }],
+      };
+      const live = repository.getAuthorityState(input.workspaceId);
+      const granted = capability(input.actor, input.workspaceId, live.accountIds);
+      const decision = authorizeOrganizationOperation({
+        actor: input.actor,
+        capabilitySnapshot: granted,
+        operation: "apply",
+        scope: granted.scope,
+        command,
+        expectedRevisions: {
+          workspace: request.workspaceSchemaRevision,
+          resources: request.expectedRuleRevision === null ? {} : { [`rule:${ruleId}`]: request.expectedRuleRevision },
+        },
+        idempotencyKey: request.idempotencyKey,
+      }, {
+        scope: granted.scope,
+        capability: { snapshot: granted, revokedAt: null },
+        workspaceRevision: live.workspaceRevision,
+        resourceRevisions: live.resourceRevisions,
+        reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+      });
+      if (!decision.allowed) {
+        if (decision.code === "duplicate_idempotency_key") throw new RuleIdempotencyConflictError(decision.reason);
+        throw new RuleAuthorityError(decision.code, decision.reason);
+      }
       return repository.append({
+        request,
+        changeId,
+        command,
+        executionContext: decision.executionContext,
+        authorityTrace: decision.trace,
+        authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+        authorizationAnchor: issueRuleAuthorizationAnchor({
+          actor: input.actor,
+          workspaceId: input.workspaceId,
+          accountIds: granted.scope.accountIds,
+          authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+        }),
         expectedWorkspaceSchemaRevision: request.workspaceSchemaRevision,
         expectedRuleRevision: request.expectedRuleRevision,
         rule,

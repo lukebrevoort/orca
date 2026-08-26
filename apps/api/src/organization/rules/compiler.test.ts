@@ -11,7 +11,7 @@ const workspace: OrcaWorkspaceSnapshot = {
   facets: [{
     id: "facet-urgency",
     name: "Urgency",
-    valueType: { kind: "enum", options: [{ id: "urgent", label: "Urgent" }] },
+    valueType: { kind: "enum", options: [{ id: "urgent", label: "Urgent", position: 0, retiredAt: null }] },
     cardinality: "single",
     optional: true,
   }],
@@ -94,6 +94,77 @@ because "Known senders have an explicit fallback"`,
     expect(result.revision.predicates[1]?.expression).toMatchObject({ kind: "compare", optional: true, missingBehavior: "false" });
   });
 
+  test("binds Facet comparisons and values to authoritative types and constraints", () => {
+    const constrainedWorkspace = {
+      ...workspace,
+      facets: [
+        { id: "facet-enum", name: "Status", valueType: { kind: "enum", options: [{ id: "status-open", label: "Open", position: 0, retiredAt: null }] }, cardinality: "single", optional: true },
+        { id: "facet-text", name: "Code", valueType: { kind: "text", maxLength: 5 }, cardinality: "single", optional: true },
+        { id: "facet-boolean", name: "Approved", valueType: { kind: "boolean" }, cardinality: "single", optional: false },
+        { id: "facet-number", name: "Score", valueType: { kind: "number", minimum: 0, maximum: 10, integer: true }, cardinality: "single", optional: true },
+        { id: "facet-date", name: "Due", valueType: { kind: "datetime" }, cardinality: "single", optional: true },
+      ],
+    } as unknown as OrcaWorkspaceSnapshot;
+    const compile = (predicate: string, action = 'action route lane "Focus"') => compileOrcaRule({
+      workspace: constrainedWorkspace,
+      source: `orca 1\nrule "Typed Facet"\nevent message.received\nwhen ${predicate}\n${action}\nbecause "Facet schema is authoritative"`,
+    });
+
+    const valid = [
+      compile('facet "Status" equals "Open"'),
+      compile('facet "Code" contains "abc"'),
+      compile('facet "Approved" equals true'),
+      compile('facet "Score" greater_than 4'),
+      compile('facet "Due" less_than "2026-08-26T12:00:00Z"'),
+      compile('missing facet "Score"'),
+    ];
+    expect(valid.every((result) => result.ok)).toBe(true);
+    if (!valid[0]?.ok) throw new Error(JSON.stringify(valid[0]?.diagnostics));
+    expect(valid[0].revision.predicates[0]?.expression).toMatchObject({ facetId: "facet-enum", value: "status-open", optional: true });
+
+    const invalid = [
+      compile('facet "Status" equals "status-open"'),
+      compile('facet "Status" contains "Open"'),
+      compile('facet "Code" equals "too-long"'),
+      compile('facet "Approved" contains true'),
+      compile('facet "Score" equals 4.5'),
+      compile('facet "Score" greater_than 11'),
+      compile('facet "Due" equals "not-a-date"'),
+      compile('missing facet "Approved"'),
+      compile('facet "Code" equals "ok"', 'action set facet "Code" = "too-long"'),
+    ];
+    expect(invalid.every((result) => !result.ok)).toBe(true);
+    expect(invalid.flatMap((result) => result.ok ? [] : result.diagnostics.map((item) => item.code))).toEqual(expect.arrayContaining([
+      "literal_type_mismatch", "operator_type_mismatch", "required_field_never_missing",
+    ]));
+  });
+
+  test("stores stable Facet and enum IDs across schema renames", () => {
+    const first = compileOrcaRule({
+      workspace,
+      source: `orca 1\nrule "Urgent"\nevent message.received\nwhen facet "Urgency" equals "Urgent"\naction set facet "Urgency" = "Urgent"\nbecause "Stable IDs survive display renames"`,
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const original = structuredClone(first.revision);
+    const renamed = structuredClone(workspace);
+    renamed.revision = 8;
+    renamed.facets[0]!.name = "Priority";
+    if (renamed.facets[0]!.valueType.kind === "enum") renamed.facets[0]!.valueType.options[0]!.label = "Critical";
+
+    expect(first.revision).toEqual(original);
+    expect(compileOrcaRule({ source: first.revision.predicates.length ? `orca 1\nrule "Urgent"\nevent message.received\nwhen facet "Urgency" equals "Urgent"\naction set facet "Urgency" = "Urgent"\nbecause "Old aliases no longer bind"` : "", workspace: renamed }).ok).toBe(false);
+    const rebound = compileOrcaRule({
+      workspace: renamed,
+      source: `orca 1\nrule "Urgent"\nevent message.received\nwhen facet "Priority" equals "Critical"\naction set facet "Priority" = "Critical"\nbecause "Renamed labels bind to stable IDs"`,
+    });
+    expect(rebound.ok).toBe(true);
+    if (rebound.ok) {
+      expect(rebound.revision.predicates[0]?.expression).toMatchObject({ facetId: "facet-urgency", value: "urgent" });
+      expect(rebound.revision.actions[0]).toMatchObject({ facetId: "facet-urgency", value: "urgent" });
+    }
+  });
+
   test("rejects recursive named predicates and bounded-depth abuse", () => {
     const cycle = compileOrcaRule({
       workspace,
@@ -121,6 +192,22 @@ because "No recursive definitions"`,
     expect(depth.ok).toBe(false);
     if (!depth.ok) expect(depth.diagnostics.map((item) => item.code)).toContain("expression_too_deep");
   });
+
+  test("bounds repeated named-predicate fan-out by the dependency graph", () => {
+    const levels = Array.from({ length: 7 }, (_, index) => `level_${index + 1}`);
+    const source = [
+      "orca 1", 'rule "Bounded fan-out"', "event message.received",
+      'predicate base = subject contains "x"',
+      ...levels.map((name, index) => `predicate ${name} = all(${Array.from({ length: 10 }, () => levels[index - 1] ?? "base").join(", ")})`),
+      `when ${levels.at(-1)}`, 'action route lane "Focus"', 'because "Shared predicate paths are analyzed once"',
+    ].join("\n");
+
+    const startedAt = performance.now();
+    const result = compileOrcaRule({ source, workspace });
+
+    expect(performance.now() - startedAt).toBeLessThan(250);
+    expect(result.ok).toBe(true);
+  }, 1_000);
 
   test("enforces source-size bounds before parsing", () => {
     const result = compileOrcaRule({ source: `orca 1\n# ${"x".repeat(70_000)}`, workspace });

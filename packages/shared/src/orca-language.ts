@@ -112,12 +112,13 @@ export type OrcaCompiledRuleRevision = z.infer<typeof orcaCompiledRuleRevisionSc
 
 export const orcaRuleCompileRequestSchema = z.object({
   ruleId: identifierSchema.optional(),
+  idempotencyKey: identifierSchema,
   expectedRuleRevision: z.number().int().positive().nullable(),
   workspaceSchemaRevision: z.number().int().positive(),
   source: sourceTextSchema,
 }).strict().superRefine((request, context) => {
-  if ((request.ruleId === undefined) !== (request.expectedRuleRevision === null)) {
-    context.addIssue({ code: "custom", message: "New Rules require a null expected revision; edits require a Rule ID and expected revision" });
+  if (request.expectedRuleRevision !== null && request.ruleId === undefined) {
+    context.addIssue({ code: "custom", message: "Rule edits require a stable Rule ID and expected revision" });
   }
 });
 export type OrcaRuleCompileRequest = z.infer<typeof orcaRuleCompileRequestSchema>;

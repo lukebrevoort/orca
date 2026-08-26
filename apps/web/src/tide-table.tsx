@@ -24,6 +24,7 @@ export function TideTableEditor({ request = defaultRequest }: { request?: TideRe
   const [ruleIdentity, setRuleIdentity] = useState<{ id: string; revision: number } | null>(null);
   const [message, setMessage] = useState("Ready to compile against the current Workspace Schema.");
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const pendingIdempotencyKey = useRef<string | null>(null);
 
   async function compile() {
     if (state === "compiling") return;
@@ -36,17 +37,21 @@ export function TideTableEditor({ request = defaultRequest }: { request?: TideRe
       const description = await describeResponse.json() as { workspaceRevision?: number; laneConfiguration?: { workspaceRevision?: number } };
       const workspaceSchemaRevision = description.workspaceRevision ?? description.laneConfiguration?.workspaceRevision;
       if (!workspaceSchemaRevision) throw new Error("The Workspace Schema revision was not returned.");
+      const idempotencyKey = pendingIdempotencyKey.current ?? `rule-compile:${crypto.randomUUID()}`;
+      pendingIdempotencyKey.current = idempotencyKey;
       const response = await request("/v1/organization/rules/compile", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...(ruleIdentity ? { ruleId: ruleIdentity.id } : {}),
+          idempotencyKey,
           expectedRuleRevision: ruleIdentity?.revision ?? null,
           workspaceSchemaRevision,
           source,
         }),
       });
       const body = await response.json() as unknown;
+      pendingIdempotencyKey.current = null;
       const parsed = orcaRuleCompileResponseSchema.safeParse(body);
       if (parsed.success && !parsed.data.ok) {
         setDiagnostics(parsed.data.diagnostics);
@@ -87,7 +92,7 @@ export function TideTableEditor({ request = defaultRequest }: { request?: TideRe
       aria-describedby="tide-table-help tide-table-status"
       aria-invalid={diagnostics.length > 0 || undefined}
       aria-label="Tide Table rule source"
-      onChange={(event) => { setSource(event.target.value); setState("editing"); setDiagnostics([]); setMessage("Source changed. Compile to create a new immutable revision."); }}
+      onChange={(event) => { setSource(event.target.value); pendingIdempotencyKey.current = null; setState("editing"); setDiagnostics([]); setMessage("Source changed. Compile to create a new immutable revision."); }}
       onKeyDown={onKeyDown}
       ref={textarea}
       spellCheck={false}

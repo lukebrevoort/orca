@@ -3,7 +3,13 @@ import type { Hono } from "hono";
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { RuleRevisionConflictError, WorkspaceSchemaConflictError, createRuleRevisionService } from "./service.ts";
+import {
+  RuleAuthorityError,
+  RuleIdempotencyConflictError,
+  RuleRevisionConflictError,
+  WorkspaceSchemaConflictError,
+  createRuleRevisionService,
+} from "./service.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
@@ -23,6 +29,12 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
         return c.json(result, result.revision.revision === 1 ? 201 : 200);
       } catch (error) {
         if (error instanceof WorkspaceSchemaConflictError) return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, 409);
+        if (error instanceof RuleIdempotencyConflictError) return c.json({ error: { code: error.code, message: error.message } }, 409);
+        if (error instanceof RuleAuthorityError) {
+          const status = error.code === "revision_conflict" || error.code === "duplicate_idempotency_key" ? 409
+            : error.code === "invalid_request" || error.code === "idempotency_key_required" || error.code === "expected_revision_required" ? 400 : 403;
+          return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
         if (error instanceof RuleRevisionConflictError) return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, error.actualRevision === null ? 404 : 409);
         if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule compile request", issues: "issues" in error ? error.issues : [] } }, 400);
         throw error;

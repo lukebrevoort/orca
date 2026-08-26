@@ -27,9 +27,11 @@ afterEach(async () => {
 describe("TideTableEditor", () => {
   test("authors accepted Orca v1 source and preserves located diagnostics", async () => {
     const requests: string[] = [];
-    const request = async (path: string) => {
+    const requestBodies: unknown[] = [];
+    const request = async (path: string, init?: RequestInit) => {
       requests.push(path);
       if (path === "/v1/organization/describe") return new Response(JSON.stringify({ workspaceRevision: 7 }), { status: 200 });
+      requestBodies.push(JSON.parse(String(init?.body)));
       return new Response(JSON.stringify({ ok: false, diagnostics: [{ severity: "error", phase: "resolve", code: "unknown_resource", message: "Lane 'Missing' does not exist.", span: { start: { offset: 86, line: 5, column: 1 }, end: { offset: 110, line: 5, column: 25 } }, hint: "Choose a Lane from this Workspace revision." }] }), { status: 422 });
     };
     const container = browser.document.createElement("div");
@@ -44,6 +46,8 @@ describe("TideTableEditor", () => {
     await act(async () => (container.querySelector("button[type=button]") as unknown as HTMLButtonElement).click());
 
     expect(requests).toEqual(["/v1/organization/describe", "/v1/organization/rules/compile"]);
+    expect(requestBodies[0]).toMatchObject({ expectedRuleRevision: null, workspaceSchemaRevision: 7 });
+    expect((requestBodies[0] as { idempotencyKey?: string }).idempotencyKey).toMatch(/^rule-compile:/);
     expect(textarea.value).toContain("orca 1");
     expect(container.textContent).toContain("Line 5, column 1");
     expect(container.textContent).toContain("Lane 'Missing' does not exist.");

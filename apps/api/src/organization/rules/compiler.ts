@@ -1,4 +1,4 @@
-import { orcaCompiledRuleRevisionSchema, orcaCompilerLimits } from "@orca/shared";
+import { orcaCompiledRuleRevisionSchema, orcaCompilerLimits, type FacetValueType } from "@orca/shared";
 
 export { orcaCompilerLimits };
 
@@ -14,9 +14,7 @@ export type OrcaDiagnostic = {
 };
 
 type ScalarKind = "text" | "number" | "boolean" | "datetime" | "duration" | "email" | "domain" | "enum";
-type WorkspaceValueType =
-  | { kind: Exclude<ScalarKind, "enum"> }
-  | { kind: "enum"; options: { id: string; label: string }[] };
+type WorkspaceValueType = FacetValueType;
 
 export type OrcaWorkspaceSnapshot = {
   workspaceId: string;
@@ -143,17 +141,36 @@ function splitArguments(source: string): string[] | null {
   return values.length ? values : null;
 }
 
-function expressionDepth(expression: string, seen: ReadonlySet<string>, definitions: ReadonlyMap<string, UnresolvedPredicate>): number {
-  const ref = /^([a-z][a-z0-9_]*)$/.exec(expression)?.[1];
-  if (ref) {
-    if (seen.has(ref)) return Number.POSITIVE_INFINITY;
-    const target = definitions.get(ref);
-    return target ? 1 + expressionDepth(target.expression, new Set([...seen, ref]), definitions) : 1;
-  }
-  const group = /^(?:all|any)\((.*)\)$/.exec(expression);
-  if (group) return 1 + Math.max(...(splitArguments(group[1]!) ?? []).map((name) => expressionDepth(name, seen, definitions)), 0);
-  const not = /^not\((.*)\)$/.exec(expression);
-  return not ? 1 + expressionDepth(not[1]!.trim(), seen, definitions) : 1;
+function expressionDepths(definitions: ReadonlyMap<string, UnresolvedPredicate>): ReadonlyMap<string, number> {
+  const depths = new Map<string, number>();
+  const visiting = new Set<string>();
+
+  const definitionDepth = (name: string): number => {
+    const memoized = depths.get(name);
+    if (memoized !== undefined) return memoized;
+    if (visiting.has(name)) return Number.POSITIVE_INFINITY;
+    const definition = definitions.get(name);
+    if (!definition) return 0;
+    visiting.add(name);
+    const depth = expressionDepth(definition.expression);
+    visiting.delete(name);
+    depths.set(name, depth);
+    return depth;
+  };
+
+  const expressionDepth = (expression: string): number => {
+    const ref = /^([a-z][a-z0-9_]*)$/.exec(expression)?.[1];
+    if (ref) return 1 + definitionDepth(ref);
+    const group = /^(?:all|any)\((.*)\)$/.exec(expression);
+    if (group) {
+      return 1 + Math.max(...(splitArguments(group[1]!) ?? []).map((name) => 1 + definitionDepth(name)), 0);
+    }
+    const not = /^not\((.*)\)$/.exec(expression);
+    return not ? 1 + expressionDepth(not[1]!.trim()) : 1;
+  };
+
+  for (const name of definitions.keys()) definitionDepth(name);
+  return depths;
 }
 
 function expressionNodeCount(expression: string): number {
@@ -162,15 +179,25 @@ function expressionNodeCount(expression: string): number {
   return /^not\((.*)\)$/.test(expression) ? 2 : 1;
 }
 
-function validateLiteral(type: ScalarKind, literal: CompiledLiteral, options?: { id: string; label: string }[]): CompiledLiteral | undefined {
-  if (type === "number") return typeof literal === "number" && Number.isFinite(literal) ? literal : undefined;
+function validateLiteral(valueType: WorkspaceValueType | { kind: ScalarKind }, literal: CompiledLiteral): CompiledLiteral | undefined {
+  const type = valueType.kind;
+  if (type === "number") {
+    if (typeof literal !== "number" || !Number.isFinite(literal)) return undefined;
+    if ("integer" in valueType && valueType.integer && !Number.isInteger(literal)) return undefined;
+    if ("minimum" in valueType && valueType.minimum !== undefined && literal < valueType.minimum) return undefined;
+    if ("maximum" in valueType && valueType.maximum !== undefined && literal > valueType.maximum) return undefined;
+    return literal;
+  }
   if (type === "boolean") return typeof literal === "boolean" ? literal : undefined;
   if (typeof literal !== "string") return undefined;
+  if (type === "text" && "maxLength" in valueType && literal.length > valueType.maxLength) return undefined;
   if (type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(literal)) return undefined;
   if (type === "domain" && !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(literal)) return undefined;
   if (type === "datetime" && Number.isNaN(Date.parse(literal))) return undefined;
   if (type === "duration" && !/^P(?=\d|T\d)(?:\d+D)?(?:T(?:\d+H)?(?:\d+M)?)?$/.test(literal)) return undefined;
-  if (type === "enum") return options?.find((option) => sameName(option.label, literal))?.id;
+  if (type === "enum") return "options" in valueType
+    ? valueType.options.find((option) => option.retiredAt === null && sameName(option.label, literal))?.id
+    : undefined;
   return literal;
 }
 
@@ -215,6 +242,10 @@ function compileExpression(
       diagnostics.push(diagnostic(unresolved.location, "resolve", facet === "ambiguous" ? "ambiguous_resource" : "unknown_resource", `Facet ${facet === "ambiguous" ? "name is ambiguous" : `'${name ?? ""}' does not exist`} in Workspace revision ${workspace.revision}.`));
       return null;
     }
+    if (!facet.optional && facetExistence[1] === "missing") {
+      diagnostics.push(diagnostic(unresolved.location, "type", "required_field_never_missing", `Facet '${facet.name}' is required and cannot be missing.`));
+      return null;
+    }
     return { kind: facetExistence[1] as "exists" | "missing", field: `facet:${facet.id}`, facetId: facet.id, valueType: facet.valueType.kind, optional: facet.optional };
   }
   const existence = /^(exists|missing)\s+([a-z][a-z0-9_.]*)$/.exec(source);
@@ -237,7 +268,7 @@ function compileExpression(
   let facetId: string | undefined;
   let literalSource: string;
   let operator: "equals" | "contains" | "greater_than" | "less_than";
-  let enumOptions: { id: string; label: string }[] | undefined;
+  let facetValueType: WorkspaceValueType | undefined;
   if (facetComparison) {
     const name = quoted(facetComparison[1]!);
     const facet = name === null ? undefined : resolveNamed(workspace.facets, name);
@@ -247,7 +278,7 @@ function compileExpression(
     }
     fieldName = `facet:${facet.id}`; facetId = facet.id; fieldType = { type: facet.valueType.kind, optional: facet.optional };
     literalSource = facetComparison[3]!; operator = facetComparison[2] as typeof operator;
-    enumOptions = facet.valueType.kind === "enum" ? facet.valueType.options : undefined;
+    facetValueType = facet.valueType;
   } else if (comparison) {
     fieldName = comparison[1]!; fieldType = fields[fieldName]; literalSource = comparison[3]!; operator = comparison[2] as typeof operator;
     if (!fieldType) {
@@ -267,7 +298,7 @@ function compileExpression(
     return null;
   }
   const literal = parseLiteral(literalSource);
-  const value = literal === undefined ? undefined : validateLiteral(fieldType.type, literal, enumOptions);
+  const value = literal === undefined ? undefined : validateLiteral(facetValueType ?? { kind: fieldType.type }, literal);
   if (value === undefined) {
     diagnostics.push(diagnostic(unresolved.location, "type", "literal_type_mismatch", `Value '${literalSource}' is not a valid ${fieldType.type} literal.`));
     return null;
@@ -310,7 +341,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
       return null;
     }
     const literal = parseLiteral(facetSet[2]!);
-    const value = literal === undefined ? undefined : validateLiteral(facet.valueType.kind, literal, facet.valueType.kind === "enum" ? facet.valueType.options : undefined);
+    const value = literal === undefined ? undefined : validateLiteral(facet.valueType, literal);
     if (value === undefined) {
       diagnostics.push(diagnostic(line, "type", "literal_type_mismatch", `Facet '${facet.name}' requires a ${facet.valueType.kind} value.`));
       return null;
@@ -351,7 +382,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
   const schedule = /^schedule review ("(?:[^"\\]|\\.)*")$/.exec(source);
   if (schedule) {
     const duration = quoted(schedule[1]!);
-    if (duration === null || validateLiteral("duration", duration) === undefined) {
+    if (duration === null || validateLiteral({ kind: "duration" }, duration) === undefined) {
       diagnostics.push(diagnostic(line, "type", "invalid_duration", "Review duration must be an ISO 8601 duration such as \"P1D\".")); return null;
     }
     return { kind: "schedule_review", duration };
@@ -426,8 +457,9 @@ export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspac
   if (actionLines.length > orcaCompilerLimits.maximumActions) diagnostics.push(diagnostic(actionLines[orcaCompilerLimits.maximumActions]!, "limits", "too_many_actions", `A revision may contain at most ${orcaCompilerLimits.maximumActions} Actions.`));
   const astNodeCount = actionLines.length + predicates.reduce((count, predicate) => count + expressionNodeCount(predicate.expression), 0);
   if (astNodeCount > orcaCompilerLimits.maximumAstNodes) diagnostics.push(diagnostic(lines[0]!, "limits", "too_many_ast_nodes", `A revision may contain at most ${orcaCompilerLimits.maximumAstNodes} AST nodes.`));
+  const predicateDepths = expressionDepths(definitions);
   for (const [predicateName, definition] of definitions) {
-    const depth = expressionDepth(definition.expression, new Set([predicateName]), definitions);
+    const depth = predicateDepths.get(predicateName) ?? 1;
     if (!Number.isFinite(depth)) diagnostics.push(diagnostic(definition.location, "type", "predicate_cycle", `Predicate '${predicateName}' is recursive. Named predicates must be pure, parameterless, and nonrecursive.`));
     else if (depth > orcaCompilerLimits.maximumExpressionDepth) diagnostics.push(diagnostic(definition.location, "limits", "expression_too_deep", `Predicate depth exceeds ${orcaCompilerLimits.maximumExpressionDepth}.`));
   }
