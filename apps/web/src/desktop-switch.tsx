@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type SyncStatus } from "@orca/shared";
+import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
+
+export { DesktopDrawer } from "./desktop-drawer";
 
 export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}`;
 
@@ -257,41 +260,6 @@ export function moveSpaceOrder(order: string[], draggedId: string, targetId: str
   const targetIndex = next.indexOf(targetId);
   next.splice(from < to ? targetIndex + 1 : targetIndex, 0, draggedId);
   return next;
-}
-
-export function DesktopDrawer({ ariaLabel, children, className = "", onClose }: { ariaLabel: string; children: ReactNode; className?: string; onClose: () => void }) {
-  const drawerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const drawer = drawerRef.current;
-    const focusableSelector = 'button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
-    drawer?.querySelector<HTMLElement>(focusableSelector)?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !drawer) return;
-      const focusable = [...drawer.querySelectorAll<HTMLElement>(focusableSelector)];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown, true);
-      window.requestAnimationFrame(() => previous?.focus());
-    };
-  }, [onClose]);
-  return <div className="desktop-transient-layer" role="presentation">
-    <button aria-label={`Close ${ariaLabel}`} className="desktop-transient-backdrop" onClick={onClose} tabIndex={-1} type="button" />
-    <aside aria-label={ariaLabel} aria-modal="true" className={className} ref={drawerRef} role="dialog">{children}</aside>
-  </div>;
 }
 
 type OrganizationMode = "glass" | "tide";

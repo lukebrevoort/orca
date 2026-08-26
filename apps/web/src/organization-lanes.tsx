@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   organizationDescribeResponseSchema,
   organizationFallbackPlacementFixture,
@@ -11,6 +11,7 @@ import {
   type OrganizationLaneConfiguration,
   type ThreadLanePlacement,
 } from "@orca/shared";
+import { DesktopDrawer } from "./desktop-drawer";
 
 type LoadState = "loading" | "ready" | "saving" | "error";
 
@@ -164,7 +165,6 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
   const [state, setState] = useState<LoadState>(demoMode ? "ready" : "loading");
   const [drawer, setDrawer] = useState<"controls" | "evidence" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const drawerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (demoMode) { setPlacement(demoPlacement(accountId, threadId)); return; }
@@ -176,18 +176,6 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
     }).catch((reason) => { if (!controller.signal.aborted) { setError(reason instanceof Error ? reason.message : "Placement unavailable"); setState("error"); } });
     return () => controller.abort();
   }, [accountId, demoMode, threadId]);
-
-  useEffect(() => {
-    if (!drawer) return;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    drawerRef.current?.querySelector<HTMLElement>("button")?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault(); event.stopPropagation(); setDrawer(null);
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => { window.removeEventListener("keydown", onKeyDown, true); window.requestAnimationFrame(() => previous?.focus()); };
-  }, [drawer]);
 
   const lane = useMemo(() => configuration?.lanes.find((item) => item.id === placement?.primaryLaneId) ?? null, [configuration, placement]);
   async function apply(action: OrganizationLaneAction) {
@@ -210,7 +198,7 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
   return <div className="thread-lane-controls">
     <button aria-expanded={drawer === "controls"} className="thread-lane-trigger" disabled={!placement} onClick={() => setDrawer("controls")} type="button"><span>Lane</span><strong>{lane?.name ?? (state === "loading" ? "Loading…" : "Unavailable")}</strong></button>
     <button aria-expanded={drawer === "evidence"} className="thread-lane-why" disabled={!placement} onClick={() => setDrawer("evidence")} type="button">Why is this here?</button>
-    {drawer ? <div className="thread-lane-layer" role="presentation"><button aria-label="Close Lane drawer" className="thread-lane-backdrop" onClick={() => setDrawer(null)} tabIndex={-1} type="button"/><aside aria-label={drawer === "controls" ? "Thread Lane controls" : "Thread placement evidence"} aria-modal="true" className="thread-lane-drawer" ref={drawerRef} role="dialog"><header><div><span>{drawer === "controls" ? "Manual organization" : "Placement evidence"}</span><h2>{drawer === "controls" ? "Choose this Thread’s Lane" : "Why is this here?"}</h2></div><button aria-label="Close" onClick={() => setDrawer(null)} type="button">×</button></header>
+    {drawer ? <DesktopDrawer ariaLabel={drawer === "controls" ? "Thread Lane controls" : "Thread placement evidence"} backdropClassName="thread-lane-backdrop" className="thread-lane-drawer" layerClassName="thread-lane-layer" onClose={() => setDrawer(null)}><header><div><span>{drawer === "controls" ? "Manual organization" : "Placement evidence"}</span><h2>{drawer === "controls" ? "Choose this Thread’s Lane" : "Why is this here?"}</h2></div><button aria-label="Close" onClick={() => setDrawer(null)} type="button">×</button></header>
       {error ? <p className="thread-lane-error" role="alert">{error}</p> : null}
       {drawer === "controls" && configuration && placement ? <>
         <div className="thread-lane-options" role="group" aria-label="Manual Override Lane">{configuration.lanes.filter((item) => !item.retiredAt).map((item) => <button aria-pressed={placement.primaryLaneId === item.id} disabled={state === "saving" || placement.safetyLock.locked} key={item.id} onClick={() => void apply({ kind: "set_thread_manual_override", accountId, threadId, laneId: item.id, reason: `Human selected ${item.name} from the Thread reader.`, expectedThreadRevision: placement.revision })} type="button"><span>{item.name}</span><small>{item.id === configuration.fallbackLaneId ? "Workspace Fallback" : "Manual Override"}</small></button>)}</div>
@@ -218,6 +206,6 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
         <section className="thread-safety-lock"><div><span>Safety Lock</span><strong>{placement.safetyLock.locked ? "Locked by you" : "Changes allowed"}</strong><p>Prevents Orca rules and Manual Overrides from changing this Thread’s Lane until you unlock it.</p></div><button aria-pressed={placement.safetyLock.locked} disabled={state === "saving"} onClick={() => void apply({ kind: "set_thread_safety_lock", accountId, threadId, locked: !placement.safetyLock.locked, reason: placement.safetyLock.locked ? "Human unlocked the Thread after review." : "Human protected this Thread placement from organizational changes.", expectedThreadRevision: placement.revision })} type="button">{placement.safetyLock.locked ? "Unlock" : "Lock placement"}</button></section>
       </> : placement ? <div className="thread-evidence-grid"><section><span>Winning source</span><h3>{placement.evidence.winningSource.replaceAll("_", " ")}</h3><p>Source identity · {placement.evidence.sourceId}</p></section><section><span>Precedence level</span><h3>{placement.evidence.precedenceLevel.replaceAll("_", " ")}</h3><p>Safety Lock → Manual Override → Rule → Lane Policy → Workspace Fallback.</p></section><section><span>Actor</span><h3>{placement.evidence.actor.type} · {placement.evidence.actor.id}</h3><p>The accountable identity behind the winning decision.</p></section><section><span>Reason</span><h3>{placement.evidence.reason}</h3><p>Primary Lane · {lane?.name ?? placement.primaryLaneId}</p></section>{placement.safetyLock.locked ? <section className="thread-evidence-lock"><span>Safety Lock active</span><h3>{placement.safetyLock.reason}</h3><p>{placement.safetyLock.actor?.type} · {placement.safetyLock.actor?.id}</p></section> : null}</div> : null}
       <footer><span>Account scope · {accountId.slice(0, 12)}</span><strong>Provider mail is never moved or deleted.</strong></footer>
-    </aside></div> : null}
+    </DesktopDrawer> : null}
   </div>;
 }
