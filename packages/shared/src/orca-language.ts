@@ -2,8 +2,13 @@ import { z } from "zod";
 
 import { organizationActorSchema } from "./organization-contract.ts";
 
-const identifierSchema = z.string().trim().min(1).max(200);
-const sourceTextSchema = z.string().min(1).max(64 * 1024);
+export const orcaLanguageTextLimits = Object.freeze({
+  maximumIdentifierCodeUnits: 200,
+  maximumSourceCodeUnits: 64 * 1024,
+});
+
+const identifierSchema = z.string().trim().min(1).max(orcaLanguageTextLimits.maximumIdentifierCodeUnits);
+const sourceTextSchema = z.string().min(1).max(orcaLanguageTextLimits.maximumSourceCodeUnits);
 const sourcePositionSchema = z.object({
   offset: z.number().int().nonnegative(),
   line: z.number().int().positive(),

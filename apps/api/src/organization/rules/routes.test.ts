@@ -25,6 +25,19 @@ when subject contains "launch"
 action route lane "Everything else"
 because "Launch mail stays visible"`;
 
+function reviewerTabHeavySource(): string {
+  let result = source;
+  while (Buffer.byteLength(result) < 62_159) {
+    const remaining = 62_159 - Buffer.byteLength(result);
+    if (remaining === 1) {
+      result += "\n";
+      continue;
+    }
+    result += `\n#${"\t".repeat(Math.min(1_999, remaining - 2))}`;
+  }
+  return result;
+}
+
 describe("Rule Revision REST adapter", () => {
   test("authenticates before enforcing a byte-exact streamed compile envelope without opening the Rule service database", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
@@ -35,6 +48,13 @@ describe("Rule Revision REST adapter", () => {
     const setupClient = createDatabaseClient(path);
     migrate(setupClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
     setupClient.db.insert(users).values({ id: "owner", email: "owner@example.com" }).run();
+    setupClient.db.insert(oauthAccounts).values({
+      id: "owner-account",
+      userId: "owner",
+      provider: "gmail",
+      providerEmail: "owner@example.com",
+      providerId: "owner-provider",
+    }).run();
     const session = await createSession(setupClient.db, "owner");
     setupClient.sqlite.close();
 
@@ -44,6 +64,7 @@ describe("Rule Revision REST adapter", () => {
       return createDatabaseClient(path);
     } });
     const authenticatedHeaders = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+    assert.equal(RULE_COMPILE_BODY_LIMIT_BYTES, 395_744);
     const envelopeAt = (size: number) => {
       const base = JSON.stringify({
         idempotencyKey: "body-limit-probe",
@@ -78,15 +99,31 @@ describe("Rule Revision REST adapter", () => {
     assert.equal(unauthorized.status, 401);
     assert.equal(databaseOpens, 0);
 
+    const reviewerSource = reviewerTabHeavySource();
+    const reviewerBody = JSON.stringify({
+      ruleId: "review-wire-id",
+      idempotencyKey: "review-wire-key1",
+      expectedRuleRevision: null,
+      workspaceSchemaRevision: 1,
+      source: reviewerSource,
+    });
+    assert.equal(Buffer.byteLength(reviewerSource), 62_159);
+    assert.equal(Buffer.byteLength(reviewerBody), 124_280);
+    const reviewerResponse = await app.request(streamed(reviewerBody));
+    assert.equal(reviewerResponse.status, 201, JSON.stringify(await reviewerResponse.clone().json()));
+    assert.equal(databaseOpens, 2, "the reviewer request reaches authentication and the Rule service");
+
     const exact = await app.request(streamed(envelopeAt(RULE_COMPILE_BODY_LIMIT_BYTES)));
     assert.equal(exact.status, 400);
     assert.equal((await exact.json()).error.code, "validation_error");
-    assert.equal(databaseOpens, 2, "auth and the normal route handler each open one database");
+    assert.equal(databaseOpens, 4, "auth and the normal route handler each open one database");
 
-    const oversizedUnknown = await app.request(streamed(envelopeAt(RULE_COMPILE_BODY_LIMIT_BYTES + 1)));
+    const oversizedUnknown = await app.request(streamed(envelopeAt(RULE_COMPILE_BODY_LIMIT_BYTES + 1), {
+      "content-length": String(RULE_COMPILE_BODY_LIMIT_BYTES + 1),
+    }));
     assert.equal(oversizedUnknown.status, 413);
     assert.deepEqual(await oversizedUnknown.json(), { error: { code: "payload_too_large", message: "Rule compile request exceeds the bounded JSON envelope" } });
-    assert.equal(databaseOpens, 3, "oversized input opens only the authentication database");
+    assert.equal(databaseOpens, 5, "oversized input opens only the authentication database");
 
     const oversizedSource = JSON.stringify({
       idempotencyKey: "oversized-source",
@@ -96,11 +133,11 @@ describe("Rule Revision REST adapter", () => {
     });
     const missingLength = await app.request(streamed(oversizedSource));
     assert.equal(missingLength.status, 413);
-    assert.equal(databaseOpens, 4);
+    assert.equal(databaseOpens, 6);
 
     const lyingLength = await app.request(streamed(oversizedSource, { "content-length": "16" }));
     assert.equal(lyingLength.status, 413);
-    assert.equal(databaseOpens, 5, "a lying Content-Length cannot reach the Rule service database");
+    assert.equal(databaseOpens, 7, "a lying Content-Length cannot reach the Rule service database");
   });
 
   test("compiles, lists immutable revisions, reports diagnostics, and isolates Workspaces", async () => {

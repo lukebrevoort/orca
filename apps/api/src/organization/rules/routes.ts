@@ -1,4 +1,5 @@
 import type { Hono, MiddlewareHandler } from "hono";
+import { orcaLanguageTextLimits } from "@orca/shared";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
@@ -16,8 +17,27 @@ import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
 
-/** 64 KiB Rule source budget plus 4 KiB for the fixed compile JSON envelope. */
-export const RULE_COMPILE_BODY_LIMIT_BYTES = 68 * 1024;
+const maximumJsonEscapeBytesPerCodeUnit = 6;
+const maximumCompileEnvelopeWithoutStringValues = new TextEncoder().encode(JSON.stringify({
+  ruleId: "",
+  idempotencyKey: "",
+  expectedRuleRevision: Number.MAX_SAFE_INTEGER,
+  workspaceSchemaRevision: Number.MAX_SAFE_INTEGER,
+  source: "",
+})).byteLength;
+
+/**
+ * Maximum compact JSON serialization of the shared compile request: JSON may
+ * escape every permitted string code unit as `\uXXXX` (6 wire bytes). The
+ * fixed portion includes every field, maximum safe-integer revisions, quotes,
+ * separators, and property names. Whitespace and unknown fields remain bounded
+ * transport overhead and are rejected once they exceed this valid envelope.
+ */
+export const RULE_COMPILE_BODY_LIMIT_BYTES = maximumCompileEnvelopeWithoutStringValues
+  + maximumJsonEscapeBytesPerCodeUnit * (
+    orcaLanguageTextLimits.maximumSourceCodeUnits
+    + 2 * orcaLanguageTextLimits.maximumIdentifierCodeUnits
+  );
 
 const ruleCompileBodyLimit: MiddlewareHandler<{ Variables: AuthVariables }> = async (c, next) => {
   const request = c.req.raw;
