@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-317 · Simulation and atomic Change Sets reviewer guide</title>
+  <style>
+    :root{color-scheme:light dark;--paper:#f4f7f3;--card:#fff;--ink:#17342d;--muted:#60756f;--line:#cbd8d3;--accent:#087b68;--warn:#a36b14}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,sans-serif}main{width:min(1120px,calc(100% - 32px));margin:32px auto 80px}.eyebrow{color:var(--accent);font:800 11px/1.2 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}h1{max-width:850px;margin:.35rem 0;font:600 clamp(34px,6vw,64px)/1.02 Georgia,serif;letter-spacing:-.04em}h2{margin:0 0 14px;font:600 26px/1.1 Georgia,serif}.lede{max-width:760px;color:var(--muted);font-size:18px}.pending{display:inline-block;padding:8px 12px;border:1px solid var(--warn);border-radius:99px;color:var(--warn);font-weight:800}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:24px}.card{padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.wide{grid-column:1/-1}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center}.step{min-height:110px;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}.step strong{display:block;margin:5px 0}.step small{color:var(--muted)}.arrow{text-align:center;color:var(--accent);font-size:24px}.invariants{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.invariants div{padding:12px;border-left:3px solid var(--accent);background:var(--paper)}code{font-family:ui-monospace,SFMono-Regular,monospace}pre{overflow:auto;padding:14px;border:1px solid var(--line);border-radius:12px;background:#10251f;color:#d8eee7;font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase}ol,ul{padding-left:20px}.shots{display:grid;grid-template-columns:1fr 1fr;gap:12px}.shots img{width:100%;border:1px solid var(--line);border-radius:12px}.shots figcaption{margin-top:6px;color:var(--muted);font-size:12px}@media(max-width:800px){.grid,.shots,.invariants{grid-template-columns:1fr}.wide{grid-column:auto}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}@media(prefers-color-scheme:dark){:root{--paper:#07100e;--card:#0d1714;--ink:#e2eee9;--muted:#93aaa3;--line:#294039;--accent:#55cdb4;--warn:#efb75e}}
+  </style>
+</head>
+<body><main>
+  <p class="eyebrow">BRE-317 · reviewer handoff</p>
+  <h1>Historical Simulation, atomic Change Sets, activation, and revert</h1>
+  <p class="lede">One production semantics path now carries an immutable Rule revision from mutation-free historical analysis through authorized activation, complete explanation, and a compensating revert.</p>
+  <p class="pending">Pending independent verification — this guide is implementation evidence, not self-certification.</p>
+
+  <div class="grid">
+    <section class="card wide"><h2>State model</h2><div class="flow">
+      <div class="step"><span class="eyebrow">Proposed</span><strong>Compiled revision</strong><small>Production parser and type checker; immutable IR and Workspace Schema snapshot.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Simulated</span><strong>Historical result</strong><small>Production evaluator, precedence, conflict resolver, counts, Threads, risk, and attention.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Active</span><strong>Atomic apply</strong><small>Exact Simulation binding, authority, scope, idempotency, and revisions rechecked in one transaction.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Explained</span><strong>Complete evidence</strong><small>Trace, ordered actions, risk, inverse state, authority Trace, and resulting revisions.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Reverted</span><strong>Compensation</strong><small>New Change Set restores projections with monotonic revisions; original audit remains.</small></div>
+    </div></section>
+
+    <section class="card wide"><h2>Architecture</h2><div class="invariants">
+      <div><strong>Shared contract</strong><br><code>orca-simulation.ts</code> binds Rule revision, source digest, Workspace Schema/current revision, Rule Set revision, Accounts, and history bound.</div>
+      <div><strong>Read path</strong><br>SQLite history adapter → production compiler rebind → production evaluator/conflict resolution → deterministic report digest. No mutation callback exists.</div>
+      <div><strong>Write path</strong><br>G0 authority → transaction recheck → Rule/Lane/Facet/Thread projections + immutable Change Set/actions, or rollback all.</div>
+    </div></section>
+
+    <section class="card"><h2>Security invariants</h2><ul>
+      <li>Actor identity and live Capability snapshot are runtime validated.</li>
+      <li>Every requested Account must be both owned and granted.</li>
+      <li>Activation accepts only the exact successful Simulation digest for the same compiled Rule, Workspace, Rule Set, and history bound.</li>
+      <li>Workspace, Rule, Rule Set, and affected Thread revisions are checked before and inside the transaction.</li>
+      <li>Idempotency replay requires a canonical byte-equivalent request.</li>
+      <li>Simulation asserts unchanged row counts and state; hostile apply/revert paths assert zero writes.</li>
+      <li>Revert refuses newer state and returns resource-specific expected/actual revisions.</li>
+    </ul></section>
+
+    <section class="card"><h2>Production-failure walkthrough</h2><ol>
+      <li>Compile the supplied “Production failures” Orca rule in Tide Table.</li>
+      <li>Select <strong>Simulate history</strong>; inspect evaluated/affected counts, Lane and Facet deltas, representative Thread, risk, conflicts, and attention estimate.</li>
+      <li>Only a successful, current result enables <strong>Activate Change Set</strong>.</li>
+      <li>Inspect the Change Set explanation: complete Trace, ordered actions, inverse evidence, and resulting revisions.</li>
+      <li>Select <strong>Review revert</strong>, then apply the compensating revert. Confirm the original record is marked reverted and the compensation is appended.</li>
+      <li>To review conflict behavior, mutate an affected Thread revision before revert; verify the exact conflict and zero projection/audit writes.</li>
+    </ol></section>
+
+    <section class="card wide"><h2>RED → GREEN evidence</h2><table><thead><tr><th>Slice</th><th>RED proof</th><th>GREEN proof</th></tr></thead><tbody>
+      <tr><td>Shared contracts</td><td>Missing <code>orca-simulation</code> module.</td><td>4/4 shared contract tests.</td></tr>
+      <tr><td>Production Simulation</td><td>Missing Simulation service; later exact Workspace revision mismatch and a missing source-digest rejection exposed binding/provenance semantics.</td><td>3/3 semantic tests plus mutation-free SQLite test.</td></tr>
+      <tr><td>Atomic activation</td><td>Focused SQLite activation expectations failed before the Change Set service.</td><td>3/3 SQLite Simulation/activation tests, including stale, denial, isolation, and injected rollback.</td></tr>
+      <tr><td>Compensating revert</td><td><code>service.revert is not a function</code> (0 pass / 2 fail).</td><td>2/2 revert tests: compensation/replay and newer-state conflict.</td></tr>
+      <tr><td>REST lifecycle</td><td>Unknown lifecycle route returned a non-JSON 404.</td><td>1/1 authenticated simulate → apply → explain → revert.</td></tr>
+      <tr><td>Glass Box / Tide</td><td>No <code>data-lifecycle-state="proposed"</code> after compile.</td><td>1/1 UI flow covers proposed, conflicted, simulated, active, and reverted.</td></tr>
+    </tbody></table></section>
+
+    <section class="card wide"><h2>Exact verification commands and counts</h2><pre>CI=true bun test packages/shared/src/orca-simulation.test.ts \
+  apps/api/src/organization/rules/simulation.test.ts \
+  apps/api/src/organization/rules/simulation-sqlite.test.ts \
+  apps/api/src/organization/rules/routes.test.ts \
+  apps/web/src/desktop-switch.interaction.test.tsx \
+  apps/web/src/tide-table.test.tsx \
+  apps/web/src/organization-trace.test.tsx
+# 30 pass, 0 fail
+
+CI=true bun run test
+# 674 pass, 0 fail: shared 69, web 161, API 444
+
+bun run typecheck
+bun run build
+bun run lint
+git diff --check</pre></section>
+
+    <section class="card wide"><h2>Visual evidence</h2><div class="shots">
+      <figure><img src="artifacts/bre-317/organization-simulation-light.png" alt="Orca Light Organization historical Simulation impact"><figcaption>Orca Light · Simulation counts, risk, attention, and enabled transition.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-change-set-dark.png" alt="Orca Black Change Set explanation and revert review"><figcaption>Orca Black · labeled selected controls, explanation evidence, and compensation review.</figcaption></figure>
+    </div><p>Captured headlessly with <code>/opt/homebrew/bin/agent-browser</code> after loading its full core skill. The browser session and Vite server were closed after capture.</p></section>
+
+    <section class="card wide"><h2>Reviewer decision points</h2><ul>
+      <li>Confirm whether a conflicted Simulation should remain re-runnable (current behavior) or require returning to Tide Table first.</li>
+      <li>Confirm the representative Thread cap of 20 and activation history bound of 5,000 are appropriate for first release.</li>
+      <li>Residual risk: historical evaluation currently uses the latest persisted message per Thread, bounded by received time; it does not replay every message event in a Thread.</li>
+    </ul></section>
+  </div>
+</main></body></html>

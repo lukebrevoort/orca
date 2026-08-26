@@ -85,6 +85,86 @@ function describeResponse(workspaceRevision: number) {
 }
 
 describe("OrganizationStudio integration", () => {
+  test("shows proposed, simulated, active, and reverted Rule states across Tide Table and Glass Box", async () => {
+    const requests: string[] = [];
+    let simulationCalls = 0;
+    const simulationId = `sha256:${"a".repeat(64)}`;
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const url = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      const method = init?.method ?? "GET";
+      requests.push(`${method} ${url}`);
+      if (url === "/v1/organization/views") return Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: [] });
+      if (url === "/v1/organization/describe") return Response.json(describeResponse(7));
+      if (url === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
+      if (url === "/v1/organization/rules/compile" && method === "POST") {
+        const payload = JSON.parse(String(init?.body)) as { source: string; workspaceSchemaRevision: number };
+        return Response.json(compileSuccess(payload.source, 1, payload.workspaceSchemaRevision), { status: 201 });
+      }
+      if (url === "/v1/organization/rules/rule-production-failures/simulate") {
+        simulationCalls += 1;
+        return Response.json({
+        simulationId,
+        state: simulationCalls === 1 ? "conflicted" : "simulated",
+        binding: { ruleId: "rule-production-failures", revisionId: "rule-revision-1", ruleRevision: 1, sourceDigest: `sha256:${"1".repeat(64)}`, workspaceSchemaRevision: 7, workspaceRevision: 8, ruleSetRevision: 1 },
+        scope: { accountIds: ["account-demo"], maximumThreads: 500 },
+        counts: { evaluatedThreads: 2418, affectedThreads: 14, candidateActions: 17, conflicts: simulationCalls === 1 ? 1 : 0 },
+        laneChanges: [{ fromLaneId: "lane-everything", toLaneId: "lane-focus", count: 14 }],
+        facetChanges: [],
+        representativeThreads: [{ accountId: "account-demo", threadId: "thread-failure", subject: "Production checkout failed", lane: { before: "lane-everything", after: "lane-focus" }, facets: [], conflictCount: 0, traceId: "trace-failure" }],
+        conflicts: simulationCalls === 1 ? [{ accountId: "account-demo", threadId: "thread-failure", slot: "lane", winningCandidateId: "candidate-manual", losingCandidateIds: ["candidate-rule"] }] : [], losingRules: [], risk: "medium",
+        attentionImpact: { notifications: 3, interruptionsSuppressed: 0, estimatedMinutesSaved: 6 },
+      });
+      }
+      if (url === "/v1/organization/rules/rule-production-failures/activate") return Response.json({
+        changeSetId: "change-active", status: "active", operation: "apply", ruleId: "rule-production-failures", revisionId: "rule-revision-1", simulationId,
+        revertsChangeSetId: null, workspaceRevisionBefore: 8, workspaceRevisionAfter: 9, ruleSetRevisionAfter: 2, traceCount: 1, risk: "medium", conflicts: [],
+      });
+      if (url === "/v1/organization/change-sets/change-active") return Response.json({
+        changeSet: { id: "change-active", operation: "apply", status: "active", risk: "medium", workspaceRevisionBefore: 8, workspaceRevisionAfter: 9 },
+        trace: [{ id: "trace-failure" }], actions: [{ position: 0, kind: "activate_rule_revision", resourceFamily: "rule", resourceId: "rule-production-failures" }],
+        inverse: { threads: [{ threadId: "thread-failure" }] }, resultingRevisions: { workspace: 9 },
+      });
+      if (url === "/v1/organization/change-sets/change-active/revert") return Response.json({
+        changeSetId: "change-revert", status: "reverted", operation: "revert", ruleId: "rule-production-failures", revisionId: "rule-revision-1", simulationId,
+        revertsChangeSetId: "change-active", workspaceRevisionBefore: 9, workspaceRevisionAfter: 10, ruleSetRevisionAfter: 3, traceCount: 1, risk: "medium", conflicts: [],
+      });
+      if (url.includes("/results")) return Response.json({ viewId: "none", viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      throw new Error(`Unexpected request ${method} ${url}`);
+    }) as typeof fetch;
+
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<OrganizationStudio />));
+    await flush(); await flush();
+
+    await click(button(container, "Tide Table"));
+    await click(button(container, "Compile immutable revision"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-lifecycle-state="proposed"]')).not.toBeNull();
+
+    await click(button(container, "Simulate history"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-lifecycle-state="conflicted"]')).not.toBeNull();
+
+    await click(button(container, "Simulate history"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-lifecycle-state="simulated"]')).not.toBeNull();
+    expect(container.textContent).toContain("2,418");
+
+    await click(button(container, "Activate Change Set"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-lifecycle-state="active"]')).not.toBeNull();
+    expect(container.textContent).toContain("1 complete Trace");
+
+    await click(button(container, "Review revert"));
+    await click(button(container, "Apply compensating revert"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-lifecycle-state="reverted"]')).not.toBeNull();
+    expect(container.textContent).toContain("Audit history preserved");
+    expect(requests).toContain("POST /v1/organization/change-sets/change-active/revert");
+  });
+
   test("keeps the interactive preview local while Tide Table remains demonstrably interactive", async () => {
     const requests: string[] = [];
     globalThis.fetch = (async (request: string | URL | Request) => {

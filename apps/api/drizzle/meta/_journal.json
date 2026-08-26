@@ -225,6 +225,13 @@
       "when": 1787749200000,
       "tag": "0031_rule_compilation_workspace",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787752800000,
+      "tag": "0032_rule_simulation_change_sets",
+      "breakpoints": true
     }
   ]
 }
