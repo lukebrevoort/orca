@@ -239,12 +239,34 @@ describe("Rule Revision REST adapter", () => {
     assert.equal(staleCursor.status, 409);
     assert.equal((await staleCursor.json()).error.code, "stale_cursor");
 
+    assert.equal((await app.request("/v1/organization/rules/reorder", { method: "POST" })).status, 401);
+    const secondRuleResponse = await app.request("/v1/organization/rules/compile", {
+      method: "POST", headers: ownerHeaders,
+      body: JSON.stringify({ ruleId: "route-rule-second", idempotencyKey: "route-rule-second-create", expectedRuleRevision: null, workspaceSchemaRevision: 4, source: source.replace("Launch mail", "Second launch rule") }),
+    });
+    assert.equal(secondRuleResponse.status, 201, await secondRuleResponse.clone().text());
+    const secondRule = await secondRuleResponse.json();
+    const reorderRequest = {
+      idempotencyKey: "route-rule-reorder", expectedWorkspaceRevision: 5, expectedRuleSetRevision: 3,
+      items: [{ id: secondRule.rule.id, position: 0, expectedRevision: 1 }],
+    };
+    const reorderedResponse = await app.request("/v1/organization/rules/reorder", { method: "POST", headers: ownerHeaders, body: JSON.stringify(reorderRequest) });
+    assert.equal(reorderedResponse.status, 200, await reorderedResponse.clone().text());
+    const reordered = await reorderedResponse.json();
+    assert.equal(reordered.ruleSetRevision, 4);
+    assert.deepEqual(reordered.items.map((item: { id: string; position: number }) => [item.id, item.position]), [[secondRule.rule.id, 0], [created.rule.id, 1]]);
+    const replayReorder = await app.request("/v1/organization/rules/reorder", { method: "POST", headers: ownerHeaders, body: JSON.stringify(reorderRequest) });
+    assert.deepEqual(await replayReorder.json(), reordered);
+    const conflictingReorder = await app.request("/v1/organization/rules/reorder", { method: "POST", headers: ownerHeaders, body: JSON.stringify({ ...reorderRequest, items: [{ id: created.rule.id, position: 0, expectedRevision: 3 }] }) });
+    assert.equal(conflictingReorder.status, 409);
+    assert.equal((await conflictingReorder.json()).error.code, "duplicate_idempotency_key");
+
     const verification = createDatabaseClient(path);
     try {
-      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_rules WHERE workspace_id = 'owner'").get() as { count: number }).count, 1);
-      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions WHERE workspace_id = 'owner'").get() as { count: number }).count, 3);
-      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE workspace_id = 'owner' AND resource_family = 'rule'").get() as { count: number }).count, 3);
-      assert.equal((verification.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision, 4);
+      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_rules WHERE workspace_id = 'owner'").get() as { count: number }).count, 2);
+      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions WHERE workspace_id = 'owner'").get() as { count: number }).count, 4);
+      assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE workspace_id = 'owner' AND resource_family = 'rule'").get() as { count: number }).count, 5);
+      assert.equal((verification.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision, 6);
       assert.equal((verification.sqlite.query("SELECT COUNT(*) count FROM organization_rules WHERE workspace_id = 'private'").get() as { count: number }).count, 0);
     } finally { verification.sqlite.close(); }
   }, 20_000);

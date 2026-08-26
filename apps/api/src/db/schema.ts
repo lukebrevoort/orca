@@ -210,13 +210,34 @@ export const organizationRules = sqliteTable(
     name: text("name").notNull(),
     latestRevision: integer("latest_revision").notNull(),
     activeRevisionId: text("active_revision_id"),
+    position: integer("position").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
   (table) => ({
     primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
     workspaceUpdatedIdx: index("organization_rules_workspace_updated_idx").on(table.workspaceId, table.updatedAt, table.id),
+    workspacePositionUniqueIdx: uniqueIndex("organization_rules_workspace_position_unique_idx").on(table.workspaceId, table.position),
     latestRevisionCheck: check("organization_rules_latest_revision_check", sql`${table.latestRevision} >= 1`),
+    positionCheck: check("organization_rules_position_check", sql`${table.position} >= 0`),
+  }),
+);
+
+/** Workspace-owned revision root for the canonical, gap-free Rule Set order. */
+export const organizationRuleSets = sqliteTable(
+  "organization_rule_sets",
+  {
+    workspaceId: text("workspace_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(1),
+    orderDigest: text("order_digest").notNull(),
+    ruleCount: integer("rule_count").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    revisionCheck: check("organization_rule_sets_revision_check", sql`${table.revision} >= 1`),
+    countCheck: check("organization_rule_sets_count_check", sql`${table.ruleCount} >= 0`),
+    digestCheck: check("organization_rule_sets_digest_check", sql`${table.orderDigest} GLOB 'order-v1:[0-9a-f]*' AND length(${table.orderDigest}) = 73`),
   }),
 );
 

@@ -192,10 +192,38 @@ export const orcaRuleSchema = z.object({
   name: z.string().trim().min(1).max(200),
   latestRevision: z.number().int().positive(),
   activeRevisionId: identifierSchema.nullable(),
+  position: z.number().int().nonnegative(),
   createdAt: z.string().datetime({ offset: false }),
   updatedAt: z.string().datetime({ offset: false }),
 }).strict();
 export type OrcaRule = z.infer<typeof orcaRuleSchema>;
+
+const orcaRuleOrderItemSchema = z.object({
+  id: identifierSchema,
+  position: z.number().int().nonnegative(),
+  expectedRevision: z.number().int().positive(),
+}).strict();
+
+export const orcaRuleReorderRequestSchema = z.object({
+  idempotencyKey: identifierSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
+  expectedRuleSetRevision: z.number().int().positive(),
+  items: z.array(orcaRuleOrderItemSchema).min(1).max(10_000),
+}).strict().superRefine((request, context) => {
+  if (new Set(request.items.map(({ id }) => id)).size !== request.items.length) context.addIssue({ code: "custom", message: "Rule reorder IDs must be unique" });
+  if (new Set(request.items.map(({ position }) => position)).size !== request.items.length) context.addIssue({ code: "custom", message: "Rule reorder positions must be unique" });
+});
+export type OrcaRuleReorderRequest = z.infer<typeof orcaRuleReorderRequestSchema>;
+
+export const orcaRuleOrderResponseSchema = z.object({
+  workspaceId: identifierSchema,
+  workspaceRevision: z.number().int().positive(),
+  ruleSetRevision: z.number().int().positive(),
+  orderDigest: z.string().regex(/^order-v1:[0-9a-f]{64}$/),
+  ruleCount: z.number().int().nonnegative(),
+  items: z.array(z.object({ id: identifierSchema, position: z.number().int().nonnegative(), revision: z.number().int().positive() }).strict()),
+}).strict();
+export type OrcaRuleOrderResponse = z.infer<typeof orcaRuleOrderResponseSchema>;
 
 export const orcaRuleRevisionSchema = z.object({
   id: identifierSchema,

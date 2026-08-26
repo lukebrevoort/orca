@@ -130,6 +130,7 @@ describe("message.received Rule evaluation", () => {
         const revisionId = `${ruleId}-revision`;
         db.insert(organizationRules).values({
           workspaceId: "workspace-1", id: ruleId, name: ruleId, latestRevision: 1, activeRevisionId: revisionId,
+          position: index + 1,
           createdAt: new Date(now.getTime() + index + 1), updatedAt: new Date(now.getTime() + index + 1),
         }).run();
         db.insert(organizationRuleRevisions).values({
@@ -138,6 +139,7 @@ describe("message.received Rule evaluation", () => {
       }
       db.insert(organizationRules).values({
         workspaceId: "workspace-1", id: "zzzz-malformed", name: "malformed", latestRevision: 1,
+        position: 100,
         activeRevisionId: "zzzz-malformed-revision", createdAt: new Date(now.getTime() + 1_000), updatedAt: new Date(now.getTime() + 1_000),
       }).run();
       db.insert(organizationRuleRevisions).values({
@@ -149,6 +151,7 @@ describe("message.received Rule evaluation", () => {
         const revisionId = `${ruleId}-revision`;
         db.insert(organizationRules).values({
           workspaceId: "workspace-1", id: ruleId, name: ruleId, latestRevision: 1, activeRevisionId: revisionId,
+          position: 101 + index,
           createdAt: new Date(now.getTime() + 2_000 + index), updatedAt: new Date(now.getTime() + 2_000 + index),
         }).run();
         db.insert(organizationRuleRevisions).values({
@@ -545,6 +548,50 @@ because "These remain proposals until an authoritative apply exists"` },
 
       assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces").get() as { count: number }).count, traceCountBefore);
       assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), laneBefore);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("makes persisted Rule position authoritative for conflicting winners across reorder and reload", async () => {
+    const { db, sqlite, compiled, now, service } = setup();
+    try {
+      const second = service.compile({ actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", request: {
+        ruleId: "rule-everything-else", idempotencyKey: "bre-315-order-second", expectedRuleRevision: null, workspaceSchemaRevision: 2,
+        source: `orca 1
+rule "Everything else wins"
+event message.received
+when subject contains "failed"
+action route lane "Everything else"
+because "The explicit first Rule wins the Lane tie"`,
+      } });
+      assert.equal(second.ok, true);
+      if (!second.ok) return;
+      db.update(organizationRules).set({ activeRevisionId: compiled.revision.id }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      db.update(organizationRules).set({ activeRevisionId: second.revision.id }).where(eq(organizationRules.id, second.rule.id)).run();
+
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("ordered-winner")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "ordered-winner")).get()!;
+      const before = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: email.threadId });
+      assert.equal(before?.winners.find(({ slot }) => slot === "lane")?.revisionId, compiled.revision.id);
+      assert.deepEqual(before?.consideredRevisions.map(({ revisionId, order }) => [revisionId, order]), [[compiled.revision.id, 0], [second.revision.id, 1]]);
+
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
+      const reordered = service.reorder({ actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", request: {
+        idempotencyKey: "bre-315-order-swap", expectedWorkspaceRevision: workspaceRevision, expectedRuleSetRevision: 3,
+        items: [{ id: second.rule.id, position: 0, expectedRevision: 1 }],
+      } });
+      assert.deepEqual(reordered.items.map(({ id, position }) => [id, position]), [[second.rule.id, 0], [compiled.rule.id, 1]]);
+
+      const nextMessage = gmailMessage("ordered-after");
+      nextMessage.threadId = "provider-thread-ordered-after";
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [nextMessage], labelList: [], now: new Date(now.getTime() + 1_000), propagationTrigger: "push" });
+      const nextEmail = db.select().from(emails).where(eq(emails.providerMessageId, "ordered-after")).get()!;
+      const reloaded = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: nextEmail.id, eventKind: "message.received" });
+      assert.ok(reloaded);
+      assert.deepEqual(reloaded.ruleSet.revisions.map(({ revisionId, order }) => [revisionId, order]), [[second.revision.id, 0], [compiled.revision.id, 1]]);
+      const after = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: nextEmail.threadId })!;
+      assert.equal(after.ruleSet.revision, 4);
+      assert.equal(after.winners.find(({ slot }) => slot === "lane")?.revisionId, second.revision.id);
+      assert.deepEqual(after.consideredRevisions.map(({ revisionId, order }) => [revisionId, order]), [[second.revision.id, 0], [compiled.revision.id, 1]]);
     } finally { sqlite.close(); }
   }, 15_000);
 

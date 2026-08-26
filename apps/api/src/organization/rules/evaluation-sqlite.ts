@@ -16,6 +16,7 @@ import {
   organizationEvaluationTraces,
   organizationFacets,
   organizationRuleRevisions,
+  organizationRuleSets,
   organizationRules,
   organizationThreadContextRelationships,
   organizationThreadFacetValues,
@@ -38,17 +39,8 @@ export const orcaLiveEvaluationBudgets = Object.freeze({
   maximumPredicateDepth: 16,
 });
 
-function stableRuleSetRevision(revisions: readonly OrcaActiveRuleRevision[], activeRevisionCount: number): number {
-  let hash = 2_166_136_261;
-  const semanticIdentity = `${activeRevisionCount}\n${revisions.map((revision) => `${revision.order}:${revision.ruleId}:${revision.revisionId}:${revision.revision}`).join("\n")}`;
-  for (let index = 0; index < semanticIdentity.length; index += 1) {
-    hash ^= semanticIdentity.charCodeAt(index);
-    hash = Math.imul(hash, 16_777_619) >>> 0;
-  }
-  return Math.max(1, hash);
-}
-
 function activeRuleSet(db: Database, workspaceId: string): { id: string; revision: number; activeRevisionCount: number; revisions: OrcaActiveRuleRevision[] } {
+  const ruleSetRevision = db.select({ revision: organizationRuleSets.revision }).from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, workspaceId)).get()?.revision ?? 1;
   const activeRevisionCount = db.select({ count: sql<number>`count(*)` })
     .from(organizationRules)
     .innerJoin(organizationRuleRevisions, and(
@@ -66,19 +58,19 @@ function activeRuleSet(db: Database, workspaceId: string): { id: string; revisio
       eq(organizationRuleRevisions.id, organizationRules.activeRevisionId),
     ))
     .where(eq(organizationRules.workspaceId, workspaceId))
-    .orderBy(asc(organizationRules.createdAt), asc(organizationRules.id))
+    .orderBy(asc(organizationRules.position))
     .limit(orcaLiveEvaluationBudgets.maximumRuleRevisions + 1)
     .all();
-  const revisions = rows.slice(0, orcaLiveEvaluationBudgets.maximumRuleRevisions).map((row, order): OrcaActiveRuleRevision => ({
+  const revisions = rows.slice(0, orcaLiveEvaluationBudgets.maximumRuleRevisions).map((row): OrcaActiveRuleRevision => ({
     ruleId: row.rule.id,
     revisionId: row.revision.id,
     revision: row.revision.revision,
-    order,
+    order: row.rule.position,
     compiled: orcaCompiledRuleRevisionSchema.parse(JSON.parse(row.revision.compiledJson)),
   }));
   return {
     id: `active-rule-set:${workspaceId}`,
-    revision: stableRuleSetRevision(revisions, activeRevisionCount),
+    revision: ruleSetRevision,
     activeRevisionCount,
     revisions,
   };
