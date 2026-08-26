@@ -5,10 +5,13 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
+import { organizationViewBounds, type OrganizationView } from "@orca/shared";
+
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
+import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, type OrganizationViewPageKey } from "./sqlite-repository.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -74,7 +77,7 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
   const response = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(body) });
   const text = await response.text();
   assert.equal(response.status, 201, text);
-  return JSON.parse(text) as { id: string; revision: number; position: number; definition: unknown };
+  return JSON.parse(text) as OrganizationView;
 }
 
 describe("BRE-313 independent View lifecycle verification", () => {
@@ -184,11 +187,33 @@ describe("BRE-313 independent View lifecycle verification", () => {
     } while (cursor);
     assert.deepEqual(ids, ["account_a:thread_a", "account_a:thread_b", "account_b:thread_c", "account_b:thread_created"]);
 
+    const scope = { workspaceId: "owner", accountIds: ["account_a", "account_b"], actor: { id: "owner", type: "human" as const } };
     const verify = createDatabaseClient(path);
-    const plan = verify.sqlite.query("EXPLAIN QUERY PLAN SELECT t.id FROM threads t INDEXED BY threads_view_order_idx JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id WHERE oa.user_id=? AND t.account_id IN (?,?) ORDER BY COALESCE(t.latest_received_at,t.created_at) DESC,t.account_id ASC,t.id ASC LIMIT ?")
-      .all("owner", "account_a", "account_b", 26) as Array<{ detail: string }>;
+    for (const limit of [1, 2, 3, 4, 9, 25, 50, 100]) {
+      const productionPageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query: { limit } });
+      const plan = verify.sqlite.query(`EXPLAIN QUERY PLAN ${productionPageQuery.sql}`).all(...productionPageQuery.params) as Array<{ detail: string }>;
+      const evidence = plan.map((row) => row.detail).join("\n");
+      assert.match(evidence, /SCAN t USING (?:COVERING )?INDEX threads_view_order_idx/, `limit + 1 = ${limit + 1}\n${evidence}`);
+      assert.doesNotMatch(evidence, /USE TEMP B-TREE/, `limit + 1 = ${limit + 1}\n${evidence}`);
+    }
+
+    const productionPageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query: { limit: organizationViewBounds.maximumResultsPerPage } });
+    const pageKeys = (verify.sqlite.query(productionPageQuery.sql).all(...productionPageQuery.params) as OrganizationViewPageKey[])
+      .slice(0, organizationViewBounds.maximumResultsPerPage);
+    const detailQuery = buildOrganizationViewDetailQuery(pageKeys);
+    const detailPlan = verify.sqlite.query(`EXPLAIN QUERY PLAN ${detailQuery.sql}`).all(...detailQuery.params) as Array<{ detail: string }>;
+    const detailRows = verify.sqlite.query(detailQuery.sql).all(...detailQuery.params) as Array<{ accountId: string; threadId: string; senderEmail: string; humanSignal: number | null }>;
     verify.sqlite.close();
-    assert.match(plan.map((row) => row.detail).join("\n"), /threads_view_order_idx/);
-    assert.doesNotMatch(plan.map((row) => row.detail).join("\n"), /USE TEMP B-TREE/);
+    assert.equal(detailQuery.params.length, pageKeys.length);
+    const detailEvidence = detailPlan.map((row) => row.detail).join("\n");
+    assert.match(detailEvidence, /(?:CO-ROUTINE|MATERIALIZE) requested/);
+    assert.match(detailEvidence, new RegExp(`SCAN ${pageKeys.length} CONSTANT ROWS`));
+    assert.match(detailEvidence, /SEARCH t USING INDEX sqlite_autoindex_threads_1 \(id=\?\)/);
+    assert.deepEqual(new Set(detailRows.map((row) => `${row.accountId}:${row.threadId}`)), new Set(ids));
+    assert.ok(detailRows.every((row) => typeof row.senderEmail === "string" && (row.humanSignal === null || typeof row.humanSignal === "number")));
+
+    const maximumKeys = Array.from({ length: organizationViewBounds.maximumResultsPerPage }, (_, index) => ({ threadId: `thread_${index}` }));
+    assert.equal(buildOrganizationViewDetailQuery(maximumKeys).params.length, organizationViewBounds.maximumResultsPerPage);
+    assert.throws(() => buildOrganizationViewDetailQuery([...maximumKeys, { threadId: "thread_overflow" }]), /requires 1-100 page keys/);
   });
 });
