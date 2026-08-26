@@ -10,6 +10,8 @@ import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   propagatedAgentEventSchema,
+  organizationFallbackPlacementFixture,
+  organizationLaneConfigurationFixture,
   type AgentEventListPage,
   type McpQueryOrganizationInput,
   type OrganizationDescribeResponse,
@@ -132,11 +134,12 @@ const organizationDescribeFixture: OrganizationDescribeResponse = {
   workspaceId: "user_a",
   accountIds: ["account_a"],
   workspaceSchema: {
-    revision: 3,
+    revision: 4,
     aggregate: "thread",
-    resources: ["account", "thread", "facet", "workflow_state", "context", "context_relationship"],
-    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship"],
+    resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"],
+    filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"],
   },
+  laneConfiguration: organizationLaneConfigurationFixture,
   capabilities: {
     operations: { describe: true, query: true, simulate: false, apply: false, revert: false },
     authority: { sendMail: false, deleteProviderMail: false },
@@ -153,7 +156,7 @@ const organizationQueryFixture: OrganizationQueryResponse = {
     latestReceivedAt: "2026-08-19T16:00:00.000Z",
     messageCount: 1,
     readState: "unread",
-    organization: { attentionBehavior: "normal", humanSignal: 8, humanClassification: null },
+    organization: { attentionBehavior: "normal", humanSignal: 8, humanClassification: null, lanePlacement: { ...organizationFallbackPlacementFixture, accountId: "account_a", threadId: "thread_a" } },
     messages: [{
       id: "message_a",
       sourceId: "source_a",
@@ -169,6 +172,7 @@ const organizationQueryFixture: OrganizationQueryResponse = {
   }],
   counts: { threads: 1, messages: 1 },
   nextCursor: null,
+  laneConfiguration: organizationLaneConfigurationFixture,
 };
 
 function createProjectionTestHandler(

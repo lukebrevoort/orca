@@ -33,6 +33,7 @@ import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
+import { ThreadLaneControls } from "./organization-lanes";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -4635,8 +4636,6 @@ export function MessageReader({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const messageRefs = useRef(new Map<string, HTMLElement>());
   const [showJumpToTop, setShowJumpToTop] = useState(false);
-  const [readerEvidenceOpen, setReaderEvidenceOpen] = useState(false);
-  const [, setReaderTraceOpen] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
   const fallbackAttentionByAddress = useMemo(() => new Map(fallbackMessages.map((message) => [message.from.email.trim().toLowerCase(), message.attentionBehavior])), [fallbackMessages]);
@@ -4645,7 +4644,6 @@ export function MessageReader({
   const firstUnreadMessage = messages.find((message) => message.unread);
   const jumpTarget = newestUnreadMessage ?? newestMessage;
   const title = detail?.thread.subject || fallbackTitle;
-  const readerEvidence = fallbackMessages[fallbackMessages.length - 1] ?? null;
 
   useEffect(() => {
     if (status === "ready") headingRef.current?.focus();
@@ -4708,7 +4706,7 @@ export function MessageReader({
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions">{readerEvidence ? <button aria-expanded={readerEvidenceOpen} className="reader-why-here" onClick={() => { setReaderTraceOpen(false); setReaderEvidenceOpen(true); }} type="button">Why here?</button> : null}<RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
+            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -4804,7 +4802,6 @@ export function MessageReader({
           <footer className="reader-end"><span aria-hidden="true">◒</span><p>You’re all caught up.</p></footer>
         </div>
       ) : null}
-      {readerEvidenceOpen && readerEvidence ? <DesktopDrawer ariaLabel="Reader placement evidence" className="message-evidence-drawer" onClose={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }}><header><div><span>Conversation evidence</span><h2>Why here?</h2></div><button aria-label="Close reader evidence" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This conversation was opened from {originLabel}. An authoritative winning-rule trace was not returned with the thread, so Orca cannot infer safety, override, or fallback decisions.</p></section><section><span>Current attention preference</span><h3>{readerEvidence.attentionBehavior === "notify" ? "Notify me" : readerEvidence.attentionBehavior === "focus" ? "Keep in Focus" : readerEvidence.attentionBehavior === "quiet" ? "Quiet" : readerEvidence.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This preference is shown separately from placement evidence. It does not establish which rule selected {originLabel}.</p></section><section><span>Human Signal · evidence</span><h3>{readerEvidence.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(readerEvidence.humanSignal > 1 ? readerEvidence.humanSignal / 10 : readerEvidence.humanSignal).toFixed(2)}`}</h3><p>Human Signal can support ranking. It never decides the destination alone.</p></section><footer><button className="message-evidence-trace" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
     </article>
   );
 }

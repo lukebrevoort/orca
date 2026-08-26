@@ -140,7 +140,7 @@ describe("Context Organization module", () => {
 
       const organization = createOrganization(createSqliteOrganizationRepository(db));
       const described = organization.describe({ scope });
-      assert.equal(described.workspaceSchema.revision, 3);
+      assert.equal(described.workspaceSchema.revision, 4);
       assert.deepEqual(described.contexts?.semantics, { stableIdentity: true, arbitraryFields: false, contextEdges: "thread_context_only" });
       const projected = organization.query({ scope, query: {
         attention: "all",
@@ -386,7 +386,7 @@ describe("Context Organization module", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
-      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 2, "only Lane bootstrap states exist");
     } finally {
       sqlite.close();
     }
@@ -448,7 +448,7 @@ describe("Context Organization module", () => {
         assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0, name);
         assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0, name);
         assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0, name);
-        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0, name);
+        assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 2, `${name}: only Lane bootstrap states exist`);
         assert.deepEqual(createOrganization(baseRepository).contexts!.audit({ scope }), [], name);
       }
     } finally {
@@ -584,7 +584,7 @@ describe("Context Organization module", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
-      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 2, "only Lane bootstrap states exist");
     } finally {
       sqlite.close();
     }
@@ -655,7 +655,7 @@ describe("Context Organization module", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_context_types").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions").get() as { count: number }).count, 0);
-      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 0);
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_workspace_states").get() as { count: number }).count, 2, "only Lane bootstrap states exist");
     } finally {
       sqlite.close();
     }

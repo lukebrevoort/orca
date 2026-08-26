@@ -59,13 +59,52 @@ describe("Organization REST read adapter", () => {
       assert.equal(description.capabilities.operations.simulate, false);
       assert.deepEqual(description.facetSupport.valueTypes, ["text", "number", "boolean", "datetime", "duration", "email", "domain", "enum"]);
       assert.deepEqual(description.facetSupport.workflowStateIndependentOf, ["lane", "subject_matter"]);
+      assert.equal(description.laneConfiguration.lanes.length, 1);
+      assert.equal(description.laneConfiguration.policies[0].providerDeletion, false);
       assert.equal(JSON.stringify(description).includes("gmail"), false);
 
       const workspaceResponse = await app.request("/v1/organization/query?attention=all", { headers });
       assert.equal(workspaceResponse.status, 200);
       const workspace = await workspaceResponse.json();
       assert.deepEqual(workspace.threads.map((thread: { id: string }) => thread.id), ["thread_a", "thread_b"]);
+      assert.ok(workspace.threads.every((thread: { organization: { lanePlacement: { primaryLaneId: string } } }) => thread.organization.lanePlacement.primaryLaneId === description.laneConfiguration.fallbackLaneId));
       assert.equal(JSON.stringify(workspace).includes("Private"), false);
+
+      const policyId = "0e969841-acde-4a91-acde-491000000001";
+      const laneId = "0e969841-acde-4a91-acde-491000000002";
+      const createLane = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000003", idempotencyKey: "routes:create-lane", expectedWorkspaceRevision: 1,
+        actions: [
+          { kind: "define_lane_policy", id: policyId, visibility: "prominent", interruption: "notify", review: "continuous", retention: { mode: "keep", days: null } },
+          { kind: "define_lane", id: laneId, name: "Human now", position: 1, defaultPolicyId: policyId },
+        ],
+      }) });
+      const created = await createLane.json();
+      assert.equal(createLane.status, 200, JSON.stringify(created));
+      assert.equal(created.laneConfiguration.lanes.find((lane: { id: string }) => lane.id === laneId).name, "Human now");
+
+      const override = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000004", idempotencyKey: "routes:override", expectedWorkspaceRevision: 2,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_b", threadId: "thread_b", laneId, reason: "Human chose this Lane from the Thread reader.", expectedThreadRevision: 1 }],
+      }) });
+      const overridden = await override.json();
+      assert.equal(override.status, 200, JSON.stringify(overridden));
+      assert.equal(overridden.placements[0].primaryLaneId, laneId);
+      assert.equal(overridden.placements[0].evidence.winningSource, "manual_override");
+      assert.deepEqual(overridden.placements[0].evidence.actor, { id: "workspace_owner", type: "human" });
+
+      const lock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000005", idempotencyKey: "routes:lock", expectedWorkspaceRevision: 3,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_b", threadId: "thread_b", locked: true, reason: "Protect the human decision.", expectedThreadRevision: 2 }],
+      }) });
+      const locked = await lock.json();
+      assert.equal(lock.status, 200, JSON.stringify(locked));
+      const blocked = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000006", idempotencyKey: "routes:blocked", expectedWorkspaceRevision: 4,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_b", threadId: "thread_b", laneId: null, reason: "Attempted move.", expectedThreadRevision: 3 }],
+      }) });
+      assert.equal(blocked.status, 409);
+      assert.equal((await blocked.json()).error.code, "safety_lock_denied");
 
       const accountResponse = await app.request("/v1/organization/query?accountId=account_b&attention=all", { headers });
       assert.equal(accountResponse.status, 200);

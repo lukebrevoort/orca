@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { FacetDefinition, WorkflowStateDefinition, WorkspaceThread } from "@orca/shared";
+import { organizationFallbackPlacementFixture, type FacetDefinition, type WorkflowStateDefinition, type WorkspaceThread } from "@orca/shared";
 
 import { toOrganizationFacetQuery, toThreadFacetViewModel } from "./facet-workflow.ts";
 
@@ -65,6 +65,7 @@ const thread = {
     attentionBehavior: "normal",
     humanSignal: 8,
     humanClassification: null,
+    lanePlacement: { ...organizationFallbackPlacementFixture, accountId: "account_a", threadId: "thread_a" },
     facetValues: [
       { facetId: "facet_contacts", value: ["ada@example.com", "bea@example.com"], updatedAt: "2026-08-24T05:30:00.000Z" },
       { facetId: "facet_priority", value: "priority_high", updatedAt: "2026-08-24T05:30:00.000Z" },

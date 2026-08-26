@@ -17,8 +17,8 @@ describe("BRE-312 Context migration", () => {
     try {
       migrate(client.db, { migrationsFolder: fullMigrations });
       const journal = JSON.parse(readFileSync(join(fullMigrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-      assert.equal(journal.entries.at(-1)?.idx, 25);
-      assert.equal(journal.entries.at(-1)?.tag, "0025_organization_context_relationships");
+      const contextMigration = journal.entries.find((entry) => entry.idx === 25);
+      assert.equal(contextMigration?.tag, "0025_organization_context_relationships");
       const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>;
       for (const table of ["organization_context_types", "organization_context_relationship_types", "organization_contexts", "organization_thread_context_relationships", "organization_change_actions"]) {
         assert.equal(tables.some((item) => item.name === table), true, table);

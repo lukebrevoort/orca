@@ -5,6 +5,7 @@ import "@feedback-kit/react/styles.css";
 import { App } from "./App";
 import "./styles.css";
 import "./desktop-switch.css";
+import "./organization-lanes.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -26,6 +26,7 @@ import type { OrganizationRepository, OrganizationThreadRecord } from "./module.
 import { createSqliteFacetWorkflowRepository } from "./facet-workflow-sqlite.ts";
 import { createSqliteOrganizationCollectionsPinsRepository } from "./collections-pins/sqlite-repository.ts";
 import { createSqliteOrganizationContextsRepository } from "./contexts/sqlite-repository.ts";
+import { createSqliteOrganizationLanesRepository } from "./lanes/sqlite-repository.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type OverrideRecord = typeof humanClassificationOverrides.$inferSelect;
@@ -144,9 +145,11 @@ function resolveClassification(
 export function createSqliteOrganizationRepository(db: Database): OrganizationRepository {
   const threadCache = new Map<string, OrganizationThreadRecord[]>();
   const facetWorkflow = createSqliteFacetWorkflowRepository(db);
+  const lanes = createSqliteOrganizationLanesRepository(db);
   return {
     collectionsPins: createSqliteOrganizationCollectionsPinsRepository(db),
     contexts: createSqliteOrganizationContextsRepository(db),
+    lanes,
     getFacetWorkflowSnapshot: facetWorkflow.getFacetWorkflowSnapshot,
     getFacetWorkflowAuthorityState: facetWorkflow.getFacetWorkflowAuthorityState,
     readOrganizationSnapshot(workspaceId, accountIds, filter) {
@@ -155,6 +158,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         return {
           facetWorkflow: repository.getFacetWorkflowSnapshot!(workspaceId),
           contexts: repository.contexts?.getSnapshot(workspaceId) ?? null,
+          lanes: repository.lanes!.getSnapshot(workspaceId, accountIds),
           threads: repository.listThreads(accountIds, filter),
         };
       });

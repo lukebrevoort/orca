@@ -5,6 +5,8 @@ import {
   organizationContextBounds,
   organizationFacetWorkflowApplyResponseSchema,
   organizationFacetWorkflowApplySchema,
+  organizationLaneApplyResponseSchema,
+  organizationLaneApplySchema,
   organizationQueryResponseSchema,
   organizationQuerySchema,
   organizationReadScopeSchema,
@@ -19,6 +21,8 @@ import {
   type OrganizationExecutionContext,
   type OrganizationFacetWorkflowAction,
   type OrganizationFacetWorkflowApplyResponse,
+  type OrganizationLaneAction,
+  type OrganizationLaneApplyResponse,
   type OrganizationQueryResponse,
   type OrganizationReadScope,
   type WorkspaceThread,
@@ -35,6 +39,7 @@ import {
   type OrganizationContextSnapshot,
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
+import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -59,6 +64,7 @@ export type OrganizationThreadRecord = {
 export type OrganizationReadSnapshot = {
   facetWorkflow: FacetWorkflowSnapshot;
   contexts: OrganizationContextSnapshot | null;
+  lanes?: OrganizationLaneSnapshot;
   threads: OrganizationThreadRecord[];
 };
 
@@ -85,6 +91,7 @@ export type OrganizationRepository = {
   }): FacetWorkflowSnapshot;
   collectionsPins?: OrganizationCollectionsPinsRepository;
   contexts?: OrganizationContextsRepository;
+  lanes?: OrganizationLanesRepository;
 };
 
 export class OrganizationAuthorityError extends Error {
@@ -131,10 +138,10 @@ export class OrganizationOperationDisabledError extends Error {
 }
 
 const workspaceSchema = Object.freeze({
-  revision: 3 as const,
+  revision: 4 as const,
   aggregate: "thread" as const,
-  resources: ["account", "thread", "facet", "workflow_state", "context", "context_relationship"] as const,
-  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship"] as const,
+  resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"] as const,
+  filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] as const,
 });
 
 const facetSupport = Object.freeze({
@@ -153,7 +160,7 @@ function capabilitiesFor(repository: OrganizationRepository, scope: Organization
       describe: true as const,
       query: true as const,
       simulate: false as const,
-      apply: scope.actor.type === "human" && Boolean(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState),
+      apply: scope.actor.type === "human" && Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes),
       revert: false as const,
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
@@ -167,14 +174,17 @@ function firstPartyHumanCapability(actor: OrganizationActor & { type: "human" },
     actor,
     scope: { workspaceId, accountIds },
     operations: ["describe", "query", "apply"],
-    resourceFamilies: ["workspace_schema", "mail", "thread", "facet", "context", "workflow_state", "trace", "change_set"],
-    actionFamilies: ["organization_read", "organization_structure", "organization_thread"],
+    resourceFamilies: ["workspace_schema", "mail", "thread", "lane", "facet", "context", "workflow_state", "trace", "change_set"],
+    actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"],
   };
 }
 
 function facetResourceId(id: string): string { return `facet:${id}`; }
 function workflowResourceId(id: string): string { return `workflow_state:${id}`; }
 function threadResourceId(accountId: string, threadId: string): string { return `thread:${accountId}:${threadId}`; }
+function laneResourceId(id: string): string { return `lane:${id}`; }
+function lanePolicyResourceId(id: string): string { return `lane_policy:${id}`; }
+function fallbackResourceId(workspaceId: string): string { return `workspace_fallback:${workspaceId}`; }
 
 function bindFacetWorkflowCommand(command: ReturnType<typeof organizationFacetWorkflowApplySchema.parse>): {
   command: OrganizationCommand;
@@ -216,6 +226,50 @@ function bindFacetWorkflowCommand(command: ReturnType<typeof organizationFacetWo
     if (target.expected !== null) expectedResources[resourceId] = target.expected;
   }
   return { command: { id: command.id, intents }, expectedResources };
+}
+
+function bindLaneCommand(command: ReturnType<typeof organizationLaneApplySchema.parse>, workspaceId: string): {
+  command: OrganizationCommand;
+  expectedResources: Record<string, number>;
+} {
+  const intents: OrganizationCommand["intents"] = [];
+  const expectedResources: Record<string, number> = {};
+  const typedActionsDigest = digestLaneActions(command.actions);
+  for (const action of command.actions) {
+    let resourceId: string;
+    let mutation: "create" | "update";
+    let kind: OrganizationCommand["intents"][number]["kind"];
+    if (action.kind === "define_lane_policy") {
+      resourceId = lanePolicyResourceId(action.id); mutation = "create"; kind = "mutate_lane";
+    } else if (action.kind === "update_lane_policy") {
+      resourceId = lanePolicyResourceId(action.policyId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;
+    } else if (action.kind === "define_lane") {
+      resourceId = laneResourceId(action.id); mutation = "create"; kind = "mutate_lane";
+    } else if (action.kind === "update_lane") {
+      resourceId = laneResourceId(action.laneId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = action.expectedRevision;
+    } else if (action.kind === "set_fallback_lane") {
+      resourceId = fallbackResourceId(workspaceId); mutation = "update"; kind = "mutate_lane"; expectedResources[resourceId] = 1;
+    } else {
+      resourceId = threadResourceId(action.accountId, action.threadId); mutation = action.expectedThreadRevision === null ? "create" : "update"; kind = "organize_thread";
+      if (action.expectedThreadRevision !== null) expectedResources[resourceId] = action.expectedThreadRevision;
+    }
+    intents.push({ kind, resourceId, mutation, changes: { actionKind: action.kind, typedActionsDigest } });
+  }
+  return { command: { id: command.id, intents }, expectedResources };
+}
+
+function unconfiguredLaneSnapshot(workspaceRevision: number, accountIds: readonly string[], threads: readonly OrganizationThreadRecord[]): OrganizationLaneSnapshot {
+  const policyId = "unconfigured-lane-policy";
+  const laneId = "unconfigured-fallback-lane";
+  return {
+    configuration: {
+      workspaceRevision,
+      fallbackLaneId: laneId,
+      policies: [{ id: policyId, visibility: "standard", interruption: "badge", review: "daily", retention: { mode: "keep", days: null }, providerDeletion: false, revision: 1 }],
+      lanes: [{ id: laneId, name: "Everything else", position: 0, defaultPolicyId: policyId, retiredAt: null, revision: 1 }],
+    },
+    placements: threads.filter((thread) => accountIds.includes(thread.accountId)).map((thread) => fallbackPlacement({ accountId: thread.accountId, threadId: thread.id, fallbackLaneId: laneId })),
+  };
 }
 
 function authorizedAccounts(repository: OrganizationRepository, untrustedScope: unknown): {
@@ -278,6 +332,7 @@ function cursorFingerprint(accountIds: readonly string[], query: ReturnType<type
     receivedBefore: query.receivedBefore ?? null,
     facetFilters: query.facetFilters ?? null,
     workflowStateIds: query.workflowStateIds ?? null,
+    laneIds: query.laneIds ?? null,
     contextFilters: query.contextFilters ?? null,
   }));
 }
@@ -320,6 +375,7 @@ export function createOrganization(repository: OrganizationRepository) {
     contextTypes: ReturnType<OrganizationContextsRepository["getSnapshot"]>["contextTypes"];
     contextRelationshipTypes: ReturnType<OrganizationContextsRepository["getSnapshot"]>["relationshipTypes"];
     contexts: ReturnType<OrganizationContextsRepository["getSnapshot"]>["contexts"];
+    laneConfiguration: OrganizationLaneSnapshot["configuration"];
   }>();
   const facetWorkflowSnapshot = (workspaceId: string): FacetWorkflowSnapshot => repository.getFacetWorkflowSnapshot?.(workspaceId) ?? {
     workspaceRevision: 1,
@@ -329,11 +385,17 @@ export function createOrganization(repository: OrganizationRepository) {
   };
   const collectionsPins = repository.collectionsPins ? createOrganizationCollectionsPins(repository.collectionsPins) : null;
   const contexts = repository.contexts ? createOrganizationContexts(repository.contexts) : null;
+  const laneSnapshot = (workspaceId: string, accountIds: readonly string[], records?: readonly OrganizationThreadRecord[]): OrganizationLaneSnapshot => {
+    if (repository.lanes) return repository.lanes.getSnapshot(workspaceId, accountIds);
+    const facet = facetWorkflowSnapshot(workspaceId);
+    return unconfiguredLaneSnapshot(facet.workspaceRevision, accountIds, records ?? repository.listThreads(accountIds));
+  };
 
   return {
     describe(input: { scope: unknown }): OrganizationDescribeResponse {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
       const facetWorkflow = facetWorkflowSnapshot(scope.workspaceId);
+      const lanes = laneSnapshot(scope.workspaceId, accountIds);
       return organizationDescribeResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds,
@@ -345,6 +407,7 @@ export function createOrganization(repository: OrganizationRepository) {
         facetSupport,
         ...(collectionsPins ? { collectionsPins: collectionsPins.describe({ scope }) } : {}),
         ...(contexts ? { contexts: contexts.describe({ scope }) } : {}),
+        laneConfiguration: lanes.configuration,
       });
     },
 
@@ -358,11 +421,14 @@ export function createOrganization(repository: OrganizationRepository) {
       let snapshot = rankedSnapshots.get(fingerprint);
       if (!snapshot) {
         const threadFilter = query.threadId ? { threadId: query.threadId } : undefined;
+        const fallbackThreads = repository.readOrganizationSnapshot ? null : repository.listThreads(requestedAccountIds, threadFilter);
         const readSnapshot = repository.readOrganizationSnapshot?.(scope.workspaceId, requestedAccountIds, threadFilter) ?? {
           facetWorkflow: facetWorkflowSnapshot(scope.workspaceId),
           contexts: repository.contexts?.getSnapshot(scope.workspaceId) ?? null,
-          threads: repository.listThreads(requestedAccountIds, threadFilter),
+          lanes: laneSnapshot(scope.workspaceId, requestedAccountIds, fallbackThreads ?? undefined),
+          threads: fallbackThreads ?? [],
         };
+        const coherentLanes = readSnapshot.lanes ?? unconfiguredLaneSnapshot(readSnapshot.facetWorkflow.workspaceRevision, requestedAccountIds, readSnapshot.threads);
         validateFacetFilters(readSnapshot.facetWorkflow.facetDefinitions, query.facetFilters ?? []);
         const contextSnapshot = readSnapshot.contexts;
         for (const [index, filter] of (query.contextFilters ?? []).entries()) {
@@ -391,6 +457,9 @@ export function createOrganization(repository: OrganizationRepository) {
           if (!requested.has(record.accountId)) throw new OrganizationAccessError();
           if (query.threadId && record.id !== query.threadId) return [];
           if (query.workflowStateIds && !query.workflowStateIds.includes(record.workflowState?.stateId ?? "")) return [];
+          const lanePlacement = coherentLanes.placements.find((placement) => placement.accountId === record.accountId && placement.threadId === record.id)
+            ?? fallbackPlacement({ accountId: record.accountId, threadId: record.id, fallbackLaneId: coherentLanes.configuration.fallbackLaneId });
+          if (query.laneIds && !query.laneIds.includes(lanePlacement.primaryLaneId)) return [];
           const contextRelationships = relationshipsByThread.get(`${record.accountId}\0${record.id}`) ?? [];
           if (query.contextFilters?.some((filter) => !contextRelationships.some((relationship) => relationship.contextId === filter.context.contextId && relationship.contextTypeId === filter.context.contextTypeId && relationship.relationshipTypeId === filter.relationshipTypeId && (filter.direction === undefined || relationship.direction === filter.direction)))) return [];
           if (query.facetFilters?.some((filter) => {
@@ -439,6 +508,7 @@ export function createOrganization(repository: OrganizationRepository) {
               facetValues: record.facetValues ?? [],
               workflowState: record.workflowState ?? null,
               contextRelationships: contextRelationships.map((relationship) => ({ relationshipId: relationship.id, relationshipTypeId: relationship.relationshipTypeId, direction: relationship.direction, context: { contextTypeId: relationship.contextTypeId, contextId: relationship.contextId } })),
+              lanePlacement,
               revision: record.organizationRevision ?? null,
             },
             messages: matchingMessages.length > 0 ? matchingMessages : record.messages,
@@ -460,6 +530,7 @@ export function createOrganization(repository: OrganizationRepository) {
           contextTypes: contextSnapshot?.contextTypes ?? [],
           contextRelationshipTypes: contextSnapshot?.relationshipTypes ?? [],
           contexts: contextSnapshot?.contexts ?? [],
+          laneConfiguration: coherentLanes.configuration,
         };
         rankedSnapshots.set(fingerprint, snapshot);
       }
@@ -490,20 +561,46 @@ export function createOrganization(repository: OrganizationRepository) {
         contextTypes: pageContextTypes,
         contextRelationshipTypes: pageRelationshipTypes,
         contexts: pageContexts,
+        laneConfiguration: snapshot.laneConfiguration,
       });
     },
 
     simulate(_input: { scope: unknown }): never {
       throw new OrganizationOperationDisabledError("simulate");
     },
-    apply(input: { scope: unknown; command: unknown }): OrganizationFacetWorkflowApplyResponse {
+    apply(input: { scope: unknown; command: unknown }): OrganizationFacetWorkflowApplyResponse | OrganizationLaneApplyResponse {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
-      const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
-      if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
       if (scope.actor.type !== "human") {
         throw new OrganizationAuthorityError("actor_operation_denied", "This first-party Organization apply path requires an authenticated human session");
       }
       const humanActor: OrganizationActor & { type: "human" } = { id: scope.actor.id, type: "human" };
+      const laneResult = organizationLaneApplySchema.safeParse(input.command);
+      if (laneResult.success) {
+        if (!repository.lanes) throw new OrganizationOperationDisabledError("apply");
+        const applyCommand = laneResult.data;
+        const bound = bindLaneCommand(applyCommand, scope.workspaceId);
+        const capabilitySnapshot = firstPartyHumanCapability(humanActor, scope.workspaceId, accountIds);
+        const live = repository.lanes.getAuthorityState(scope.workspaceId);
+        const decision = authorizeOrganizationOperation({
+          actor: scope.actor,
+          capabilitySnapshot,
+          operation: "apply",
+          scope: { workspaceId: scope.workspaceId, accountIds },
+          command: bound.command,
+          expectedRevisions: { workspace: applyCommand.expectedWorkspaceRevision, resources: bound.expectedResources },
+          idempotencyKey: applyCommand.idempotencyKey,
+        }, {
+          scope: { workspaceId: scope.workspaceId, accountIds },
+          capability: { snapshot: capabilitySnapshot, revokedAt: null },
+          workspaceRevision: live.workspaceRevision,
+          resourceRevisions: live.resourceRevisions,
+          reservedIdempotencyKeys: live.reservedIdempotencyKeys,
+        });
+        if (!decision.allowed) throw new OrganizationAuthorityError(decision.code, decision.reason);
+        return organizationLaneApplyResponseSchema.parse(repository.lanes.apply({ executionContext: decision.executionContext, authorityTrace: decision.trace, boundCommand: bound.command, command: applyCommand }));
+      }
+      const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
+      if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
       const bound = bindFacetWorkflowCommand(applyCommand);
       const capabilitySnapshot = firstPartyHumanCapability(humanActor, scope.workspaceId, accountIds);
       const live = repository.getFacetWorkflowAuthorityState(scope.workspaceId);

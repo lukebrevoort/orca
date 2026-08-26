@@ -423,16 +423,48 @@ describe("Desktop evidence and navigation", () => {
 
     const row = messageRow("Mom");
     await act(async () => { row.click(); });
-    const readerTrigger = browserWindow.document.querySelector("button.reader-why-here") as unknown as HTMLButtonElement;
+    const readerTrigger = browserWindow.document.querySelector("button.thread-lane-why") as unknown as HTMLButtonElement;
     readerTrigger.setAttribute("data-focus-origin", "reader-evidence");
     readerTrigger.focus();
     await act(async () => { readerTrigger.click(); });
-    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).not.toBeNull();
+    const placementDialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]');
+    expect(placementDialog).not.toBeNull();
+    expect(placementDialog?.textContent).toContain("Winning source");
+    expect(placementDialog?.textContent).toContain("workspace fallback");
+    expect(placementDialog?.textContent).toContain("Precedence level");
+    expect(placementDialog?.textContent).toContain("Actor");
+    expect(placementDialog?.textContent).toContain("Reason");
     await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
     await act(async () => { flushAnimationFrames(); });
     expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
-    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]')).toBeNull();
     expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("reader-evidence");
+  });
+
+  test("applies a Manual Override and Safety Lock from the current Thread experience", async () => {
+    await renderApp();
+    await openMessage("Mom");
+    const trigger = browserWindow.document.querySelector("button.thread-lane-trigger") as unknown as HTMLButtonElement;
+    await act(async () => { trigger.click(); });
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
+    expect(dialog).not.toBeNull();
+    const focus = [...dialog.querySelectorAll(".thread-lane-options button")].find((button) => button.textContent?.includes("Focus")) as unknown as HTMLButtonElement;
+    await act(async () => { focus.click(); });
+    expect(trigger.textContent).toContain("Focus");
+    expect(focus.getAttribute("aria-pressed")).toBe("true");
+    const lock = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Lock placement") as unknown as HTMLButtonElement;
+    await act(async () => { lock.click(); });
+    expect(dialog.textContent).toContain("Locked by you");
+    expect([...dialog.querySelectorAll(".thread-lane-options button")].every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+    const close = dialog.querySelector('header button[aria-label="Close"]') as unknown as HTMLButtonElement;
+    await act(async () => { close.click(); });
+    const why = browserWindow.document.querySelector("button.thread-lane-why") as unknown as HTMLButtonElement;
+    await act(async () => { why.click(); });
+    const evidence = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]');
+    expect(evidence?.textContent).toContain("manual override");
+    expect(evidence?.textContent).toContain("2 manual override");
+    expect(evidence?.textContent).toContain("demo-human");
+    expect(evidence?.textContent).toContain("Safety Lock active");
   });
 
   test("writes stable destinations and follows browser history", async () => {
