@@ -95,7 +95,7 @@ function setup() {
   });
   const compiled = service.compile({
     actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
-    request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+    request: { idempotencyKey: "bre-315-production-failures", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
 rule "Production failures"
 event message.received
 predicate from_vercel = sender.domain equals "vercel.com"
@@ -159,7 +159,7 @@ describe("message.received Rule evaluation", () => {
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "initial")).get()!;
       const updateRule = service.compile({
         actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
-        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+        request: { idempotencyKey: "bre-315-thread-updated", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
 rule "Production follow-ups"
 event thread.updated
 when subject contains "failed"
@@ -194,7 +194,7 @@ because "A failed follow-up remains focused"` },
       const updateRule = service.compile({
         actor: { id: "workspace-1", type: "human" },
         workspaceId: "workspace-1",
-        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+        request: { idempotencyKey: "bre-315-safety-lock-replay", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
 rule "Production follow-ups"
 event thread.updated
 when subject contains "failed"
@@ -277,7 +277,7 @@ because "A failed follow-up remains focused"` },
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "proposal-initial")).get()!;
       const proposalRule = service.compile({
         actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
-        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+        request: { idempotencyKey: "bre-315-proposal-boundary", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
 rule "Proposal boundary"
 event thread.updated
 when subject contains "proposal"

@@ -262,7 +262,12 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       });
       continue;
     }
-    if (rule.compiled.workspaceSchemaRevision !== input.workspaceSchema.revision || rule.compiled.workspaceId !== input.workspaceSchema.workspaceId) {
+    // Persisting an immutable Rule Revision is itself an authoritative
+    // Organization mutation, so the live Workspace revision advances beyond
+    // the schema snapshot used to compile it. Historical snapshots remain
+    // valid by stable resource ID; only future-dated or cross-Workspace IR is
+    // ineligible for live evaluation.
+    if (rule.compiled.workspaceSchemaRevision > input.workspaceSchema.revision || rule.compiled.workspaceId !== input.workspaceSchema.workspaceId) {
       considered.push({ ruleId: rule.ruleId, revisionId: rule.revisionId, revision: rule.revision, order: rule.order, eventMatched: true, predicateMatched: false, authorized: false, reason: "predicate_not_matched" });
       continue;
     }
