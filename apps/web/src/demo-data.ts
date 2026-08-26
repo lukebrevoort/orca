@@ -333,7 +333,7 @@ export const messageBodies: Record<string, string> = {
 };
 
 export const messageHtmlBodies: Record<string, string> = {
-  msg_1: `<p>Hey Luke,</p><p>Here are the <strong>launch notes</strong> for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.</p><h2>What changed</h2><ul><li>People stay visible across conversations.</li><li>The reading surface keeps the message hierarchy intact.</li><li>Links remain useful without inheriting sender styling.</li></ul><p>Review the <a href="https://example.com/orca-reader" rel="noopener noreferrer" target="_blank">reader notes</a> when you have a minute.</p><p>Let me know what you think.</p><p>— Maya</p>`,
+  msg_1: `<p>Hey Luke,</p><p>Here are the <strong>launch notes</strong> for Orca Mail. The big shift is treating pinned people as filters, not shortcuts into a single thread.</p><h2>What changed</h2><ul><li>People stay visible across conversations.</li><li>The reading surface keeps the message hierarchy intact.</li><li>Links remain useful without inheriting sender styling.</li></ul><p>Review the <a href="https://example.com/orca-reader" rel="noopener noreferrer" target="_blank">reader notes</a> when you have a minute.</p><img data-orca-remote-src="https://tracker.example/launch-preview.png" alt="Launch preview"><p>Let me know what you think.</p><p>— Maya</p>`,
 };
 
 export function messageIncludesPerson(message: InboxMessage, personName: string) {

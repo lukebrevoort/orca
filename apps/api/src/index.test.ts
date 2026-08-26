@@ -15,7 +15,7 @@ import {
 import { createSession } from "./auth/session-store.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { collectionThreads, collections, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, organizationChangeSets, organizationCollectionPinAudits, organizationWorkspaceStates, pins, senderAttentionRules, threadReminders, threads, users } from "./db/schema.ts";
-import { app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
+import { DRAFT_REQUEST_MAX_BYTES, MAX_DRAFTS_PER_USER, MAX_DRAFT_STORAGE_BYTES_PER_USER, app, createApp, createHumanClassificationOverrideResolver } from "./index.ts";
 import { GmailSyncError, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { gmailProvider } from "./providers/gmail/provider.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
@@ -367,6 +367,34 @@ describe("Orca API", () => {
       });
       assert.equal(crossAccount.status, 404);
 
+      const boundedBeforeParsing = await testApp.request("/v1/drafts", {
+        method: "POST",
+        headers: { ...headers, "content-length": String(DRAFT_REQUEST_MAX_BYTES + 1) },
+        body: "{not-json",
+      });
+      assert.equal(boundedBeforeParsing.status, 413);
+      assert.equal((await boundedBeforeParsing.json()).error.code, "request_too_large");
+
+      const malformedBase64 = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({ subject: "Malformed attachment", attachments: [{ id: "file_bad", filename: "bad.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8" }] }),
+      });
+      assert.equal(malformedBase64.status, 400);
+      assert.equal((await malformedBase64.json()).error.code, "validation_error");
+
+      const mismatchedSize = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({ subject: "Mismatched attachment", attachments: [{ id: "file_mismatch", filename: "hello.txt", mimeType: "text/plain", size: 4, contentBase64: "aGVsbG8=" }] }),
+      });
+      assert.equal(mismatchedSize.status, 400);
+      assert.equal((await mismatchedSize.json()).error.code, "validation_error");
+
+      const canonicalAttachment = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({ subject: "Canonical attachment", attachments: [{ id: "file_ok", filename: "hello.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8=" }] }),
+      });
+      assert.equal(canonicalAttachment.status, 201);
+
       const tooLarge = await testApp.request("/v1/drafts", {
         method: "POST", headers,
         body: JSON.stringify({ attachments: [{ id: "file_1", filename: "large.zip", mimeType: "application/zip", size: 26 * 1024 * 1024 }] }),
@@ -394,6 +422,73 @@ describe("Orca API", () => {
       assert.equal(reservedRecord.subject, "Reserved draft");
       assert.equal(reservedRecord.deliveryStatus, "sending");
       assert.equal((await testApp.request(`/v1/drafts/${reserved.id}`, { method: "DELETE", headers })).status, 409);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("enforces per-user draft count and stored-byte quotas across account creates and updates", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 22).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-draft-quota-test-"));
+    const dbPath = join(tempDir, "draft-quota.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values({ id: "quota_user", email: "quota@example.com" }).run();
+      db.insert(oauthAccounts).values([
+        { id: "quota_primary", userId: "quota_user", provider: "gmail", providerEmail: "quota@example.com", providerId: "gmail-quota-primary" },
+        { id: "quota_secondary", userId: "quota_user", provider: "outlook", providerEmail: "quota@outlook.example", providerId: "outlook-quota-secondary" },
+      ]).run();
+      db.insert(messageDrafts).values(Array.from({ length: MAX_DRAFTS_PER_USER }, (_, index) => ({
+        id: `seed-count-${index}`,
+        accountId: "quota_secondary",
+        subject: `Seed ${index}`,
+        storageBytes: 16,
+      }))).run();
+      const session = await createSession(db, "quota_user");
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+
+      const countBlocked = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ subject: "One too many" }) });
+      assert.equal(countBlocked.status, 409);
+      assert.equal((await countBlocked.json()).error.code, "draft_quota");
+
+      db.delete(messageDrafts).where(eq(messageDrafts.id, "seed-count-0")).run();
+      const createdResponse = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ subject: "Within count quota" }) });
+      assert.equal(createdResponse.status, 201);
+      const created = await createdResponse.json();
+      assert.equal((await testApp.request(`/v1/drafts/${created.id}`, { method: "DELETE", headers })).status, 204);
+
+      db.delete(messageDrafts).run();
+      const targetResponse = await testApp.request("/v1/drafts", { method: "POST", headers, body: JSON.stringify({ subject: "Tiny" }) });
+      assert.equal(targetResponse.status, 201);
+      const target = await targetResponse.json();
+      const targetRecord = db.select().from(messageDrafts).where(eq(messageDrafts.id, target.id)).get()!;
+      db.insert(messageDrafts).values({
+        id: "seed-byte-quota",
+        accountId: "quota_secondary",
+        subject: "Other account storage",
+        storageBytes: MAX_DRAFT_STORAGE_BYTES_PER_USER - targetRecord.storageBytes - 1,
+      }).run();
+
+      const updateBlocked = await testApp.request(`/v1/drafts/${target.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "This update needs more than one byte" }),
+      });
+      assert.equal(updateBlocked.status, 409);
+      assert.equal((await updateBlocked.json()).error.code, "draft_quota");
+      assert.equal(db.select().from(messageDrafts).where(eq(messageDrafts.id, target.id)).get()!.subject, "Tiny");
+
+      db.delete(messageDrafts).where(eq(messageDrafts.id, "seed-byte-quota")).run();
+      const updateAllowed = await testApp.request(`/v1/drafts/${target.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ revision: 0, subject: "Allowed after quota is freed" }),
+      });
+      assert.equal(updateAllowed.status, 200);
+      assert.equal((await updateAllowed.json()).subject, "Allowed after quota is freed");
+      assert.equal((await testApp.request("/v1/drafts", { headers })).status, 200);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
@@ -765,7 +860,7 @@ describe("Orca API", () => {
         {
           id: "email_old", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-old",
           fromAddress: "maya@example.com", fromName: "Maya", toRecipients: JSON.stringify([{ name: "Luke", email: "luke@example.com" }]), ccRecipients: "[]", bccRecipients: "[]",
-          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<div data-email-preheader=\"true\" style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden preheader</div><div style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden spacer</div><h2>Hello <strong>Luke</strong></h2><table role=\"presentation\"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\"><script>alert(1)</script>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
+          subject: "Reader contract", snippet: "First", bodyText: null, bodyHtml: "<div data-email-preheader=\"true\" style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden preheader</div><div style=\"visibility:hidden;height:0;width:0;overflow:hidden;opacity:0\">Hidden spacer</div><h2>Hello <strong>Luke</strong></h2><table role=\"presentation\"><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\"><img src=\"cid:inline-logo\" alt=\"Inline logo\"><img data-orca-remote-src=\"javascript:alert(1)\" alt=\"Forged marker\"><script>alert(1)</script>", receivedAt: new Date("2026-07-08T12:00:00.000Z"), internalDate: new Date("2026-07-08T12:00:00.000Z"), isRead: true,
         },
         {
           id: "email_new", accountId: "acct_1", threadId: "thread_1", providerMessageId: "provider-new",
@@ -781,7 +876,11 @@ describe("Orca API", () => {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.deepEqual(body.messages.map((message: { id: string }) => message.id), ["email_old", "email_new"]);
-      assert.equal(body.messages[0].bodyHtml, "<h2>Hello <strong>Luke</strong></h2><table><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p><img src=\"https://tracker.example/pixel.gif\" />");
+      assert.equal(body.messages[0].bodyHtml, "<h2>Hello <strong>Luke</strong></h2><table><tr><td><p>Readable layout copy</p></td></tr></table><p><a href=\"https://example.com\" target=\"_blank\" rel=\"noopener noreferrer\">Read more</a></p><img data-orca-remote-src=\"https://tracker.example/pixel.gif\" /><img src=\"cid:inline-logo\" alt=\"Inline logo\" /><img alt=\"Forged marker\" />");
+      assert.doesNotMatch(body.messages[0].bodyHtml, /<img[^>]+\ssrc=["']https?:/i);
+      assert.match(body.messages[0].bodyHtml, /data-orca-remote-src="https:\/\/tracker\.example\/pixel\.gif"/);
+      assert.match(body.messages[0].bodyHtml, /src="cid:inline-logo"/);
+      assert.doesNotMatch(body.messages[0].bodyHtml, /javascript:/i);
       assert.equal(body.messages[0].bodyText, "Hello LukeReadable layout copyRead more");
       assert.equal(body.messages[1].bodyHtml, null);
       assert.equal(body.messages[1].bodyText, null);
@@ -1464,6 +1563,50 @@ describe("Orca API", () => {
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
         assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);
         assert.deepEqual(sqlite.query("select sync_cursor, last_synced_at from oauth_accounts where id = 'upgrade-account'").get(), { sync_cursor: null, last_synced_at: null });
+      } finally {
+        sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("backfills persisted draft byte usage when applying the quota migration", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-draft-quota-migration-test-"));
+    const dbPath = join(tempDir, "draft-quota-upgrade.sqlite");
+    const partialMigrations = join(tempDir, "migrations");
+    const fullMigrations = resolve(import.meta.dir, "../drizzle");
+    mkdirSync(join(partialMigrations, "meta"), { recursive: true });
+
+    try {
+      const journal = JSON.parse(readFileSync(join(fullMigrations, "meta/_journal.json"), "utf8"));
+      const preQuotaEntries = journal.entries.slice(0, 26);
+      for (const entry of preQuotaEntries) {
+        const name = `${entry.tag}.sql`;
+        writeFileSync(join(partialMigrations, name), readFileSync(join(fullMigrations, name)));
+      }
+      writeFileSync(join(partialMigrations, "meta/_journal.json"), JSON.stringify({ ...journal, entries: preQuotaEntries }));
+
+      const { db, sqlite } = createDatabaseClient(dbPath);
+      try {
+        migrate(db, { migrationsFolder: partialMigrations });
+        sqlite.run("insert into users (id, email, created_at) values ('quota-upgrade-user', 'quota-upgrade@example.com', 1)");
+        sqlite.run("insert into oauth_accounts (id, user_id, provider, provider_email, provider_id, created_at, updated_at) values ('quota-upgrade-account', 'quota-upgrade-user', 'gmail', 'quota-upgrade@example.com', 'gmail-quota-upgrade', 1, 1)");
+        const stored = {
+          toRecipients: '[{"email":"maya@example.com"}]',
+          ccRecipients: "[]",
+          bccRecipients: "[]",
+          subject: "Migration draft",
+          bodyText: "Hello Maya",
+          bodyHtml: "<p>Hello Maya</p>",
+          attachments: '[{"id":"file","contentBase64":"aGk=","size":2}]',
+        };
+        sqlite.query("insert into message_drafts (id, account_id, to_recipients, cc_recipients, bcc_recipients, subject, body_text, body_html, attachments) values (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .run("quota-upgrade-draft", "quota-upgrade-account", stored.toRecipients, stored.ccRecipients, stored.bccRecipients, stored.subject, stored.bodyText, stored.bodyHtml, stored.attachments);
+
+        migrate(db, { migrationsFolder: fullMigrations });
+        const expectedBytes = Object.values(stored).reduce((total, value) => total + Buffer.byteLength(value, "utf8"), 0);
+        assert.deepEqual(sqlite.query("select storage_bytes from message_drafts where id = 'quota-upgrade-draft'").get(), { storage_bytes: expectedBytes });
       } finally {
         sqlite.close();
       }

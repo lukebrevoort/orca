@@ -4764,7 +4764,7 @@ export function MessageReader({
                       <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} />
                     </header>
                     {message.bodyHtml ? (
-                      <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
+                      <RemoteImageBody bodyHtml={message.bodyHtml} messageId={message.id} />
                     ) : plainBody ? (
                       <>
                         <div className="reader-body reader-body-plain">{plainBody.current}</div>
@@ -4806,6 +4806,36 @@ export function MessageReader({
       ) : null}
       {readerEvidenceOpen && readerEvidence ? <DesktopDrawer ariaLabel="Reader placement evidence" className="message-evidence-drawer" onClose={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }}><header><div><span>Conversation evidence</span><h2>Why here?</h2></div><button aria-label="Close reader evidence" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); }} type="button">×</button></header><section><span>Open workspace</span><h3>{originLabel}</h3><p>This conversation was opened from {originLabel}. An authoritative winning-rule trace was not returned with the thread, so Orca cannot infer safety, override, or fallback decisions.</p></section><section><span>Current attention preference</span><h3>{readerEvidence.attentionBehavior === "notify" ? "Notify me" : readerEvidence.attentionBehavior === "focus" ? "Keep in Focus" : readerEvidence.attentionBehavior === "quiet" ? "Quiet" : readerEvidence.attentionBehavior === "hidden" ? "Hidden" : "Normal"}</h3><p>This preference is shown separately from placement evidence. It does not establish which rule selected {originLabel}.</p></section><section><span>Human Signal · evidence</span><h3>{readerEvidence.humanSignal === null ? "No confident estimate" : `Supportive evidence · ${(readerEvidence.humanSignal > 1 ? readerEvidence.humanSignal / 10 : readerEvidence.humanSignal).toFixed(2)}`}</h3><p>Human Signal can support ranking. It never decides the destination alone.</p></section><footer><button className="message-evidence-trace" onClick={() => { setReaderEvidenceOpen(false); setReaderTraceOpen(false); onRetry(); }} type="button">Retry evidence</button><button disabled type="button">Full trace unavailable</button></footer></DesktopDrawer> : null}
     </article>
+  );
+}
+
+export function RemoteImageBody({ bodyHtml, messageId }: { bodyHtml: string; messageId: string }) {
+  const hasRemoteImages = bodyHtml.includes("data-orca-remote-src=");
+  const [remoteImagesLoaded, setRemoteImagesLoaded] = useState(false);
+  const renderedHtml = remoteImagesLoaded
+    ? bodyHtml.replace(/\sdata-orca-remote-src=/g, " src=")
+    : bodyHtml;
+  const statusId = `reader-remote-images-${messageId}`;
+
+  return (
+    <>
+      {hasRemoteImages ? (
+        <div className="reader-remote-images" id={statusId}>
+          <span>{remoteImagesLoaded ? "Remote images were loaded for this message." : "Remote images are hidden to protect your privacy."}</span>
+          <button
+            aria-describedby={statusId}
+            aria-pressed={remoteImagesLoaded}
+            className="reader-load-images"
+            disabled={remoteImagesLoaded}
+            onClick={() => setRemoteImagesLoaded(true)}
+            type="button"
+          >
+            {remoteImagesLoaded ? "Images loaded" : "Load remote images"}
+          </button>
+        </div>
+      ) : null}
+      <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: renderedHtml }} />
+    </>
   );
 }
 

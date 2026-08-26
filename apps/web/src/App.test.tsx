@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { MailAccount, MessageDraft, Pin, ThreadDetail, ThreadDetailMessage } from "@orca/shared";
 import { m5InboxFixture } from "@orca/shared";
-import { ApiRequestError, App, DraftsView, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxApp, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
+import { ApiRequestError, App, DraftsView, GmailAccountSettingsList, GmailConnectionSettingsPage, GmailLabelMigrationPage, InboxApp, InboxSyncAlert, MAX_PROFILE_PHOTO_BYTES, MessageReader, MessageSubject, PROFILE_PHOTO_ACCEPT, PROFILE_PHOTO_FALLBACK_SRC, ProfileAvatar, ReaderPreferencesPage, RemoteImageBody, SettingsHome, WelcomeOrientationPage, applySenderAttention, buildGmailAuthorizationRequestPath, buildGmailLabelMigrationPath, buildGmailResyncRequest, buildPinnedPeopleFromPins, buildReaderActionDraft, buildReminderSaveRequest, buildThreadDetailRequest, defaultReaderPreferences, getLatestThreadRows, getMessagesForMailbox, getReplyRecipient, getSelectedThreadAccountId, getStreamMessages, getStreamSectionLabel, groupThreadMessages, isDevPreviewPath, isProfilePhotoDataUrl, isSessionUnauthorizedError, mergeMessages, normalizeForwardSubject, normalizeReplySubject, profileInitials, profilePhotoStorageKey, readInitialThreadSelection, readStoredPreferences, readStoredProfilePhoto, revokeAgentConnection, revokeAllAgentConnections, shouldShowReaderJumpToTop, sortThreadMessages, splitQuotedContent, syncGmailLabelsUntilReady, withGmailAccountId, writeStoredProfilePhoto } from "./App";
 import { ClassificationCorrection, ClassificationTabs, classificationExplanation } from "./classification-ui";
 import { demoMessages } from "./demo-data";
 import { buildDraftContent, collectComposeContacts, ComposeWorkspace, createEmptyComposeDraft, deliverDurableDraft, hasComposeContent, isValidEmail, markdownToEditorHtml, mergeDraftAttachments, parseRecipientText, readComposeDraft, acceptComposeFiles, sanitizeAttachmentFilename, COMPOSE_AUTOSAVE_DELAY_MS, MAX_COMPOSE_ATTACHMENT_BYTES, MAX_COMPOSE_ATTACHMENTS } from "./compose-workspace";
@@ -543,6 +543,22 @@ describe("App", () => {
     expect(html).toContain("<h2>Release notes</h2>");
     expect(html).toContain("<strong>Luke</strong>");
     expect(html).not.toContain("Plain fallback");
+  });
+
+  test("renders remote email images inert with an accessible per-message opt-in", () => {
+    const html = renderToStaticMarkup(
+      <RemoteImageBody
+        bodyHtml={'<p>Hello</p><img data-orca-remote-src="https://tracker.example/pixel.gif" alt="Remote pixel"><img src="cid:inline-logo" alt="Inline logo">'}
+        messageId="remote-message"
+      />,
+    );
+
+    expect(html).toContain("Remote images are hidden to protect your privacy.");
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).toContain(">Load remote images</button>");
+    expect(html).toContain('data-orca-remote-src="https://tracker.example/pixel.gif"');
+    expect(html).not.toMatch(/<img[^>]+\ssrc="https:\/\/tracker\.example\/pixel\.gif"/);
+    expect(html).toContain('src="cid:inline-logo"');
   });
 
   test("keeps Attention available for every sender shown in the reader", () => {

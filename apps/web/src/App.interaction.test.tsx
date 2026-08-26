@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, RemoteImageBody, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { useComposeDraft } from "./compose-workspace";
 import type { MessageDraft } from "@orca/shared";
 
@@ -485,6 +485,39 @@ describe("Desktop evidence and navigation", () => {
     });
     const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
     expect(labels.slice(0, 4)).toEqual(["Signals", "Quiet", "Later", "Focus"]);
+  });
+
+  test("loads a message's blocked remote images only after explicit opt-in", async () => {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => {
+      root!.render(
+        <RemoteImageBody
+          bodyHtml={'<p>Hello</p><img data-orca-remote-src="https://tracker.example/pixel.gif" alt="Remote pixel"><img src="cid:inline-logo" alt="Inline logo">'}
+          messageId="remote-message"
+        />,
+      );
+    });
+
+    const remoteImage = browserWindow.document.querySelector('img[alt="Remote pixel"]')!;
+    const inlineImage = browserWindow.document.querySelector('img[alt="Inline logo"]')!;
+    const loadButton = browserWindow.document.querySelector("button.reader-load-images") as unknown as HTMLButtonElement;
+    expect(remoteImage.getAttribute("src")).toBeNull();
+    expect(remoteImage.getAttribute("data-orca-remote-src")).toBe("https://tracker.example/pixel.gif");
+    expect(inlineImage.getAttribute("src")).toBe("cid:inline-logo");
+    expect(loadButton.getAttribute("aria-pressed")).toBe("false");
+    expect(loadButton.disabled).toBe(false);
+
+    await act(async () => { loadButton.click(); });
+    expect(remoteImage.isConnected).toBe(false);
+    const loadedImage = browserWindow.document.querySelector('img[alt="Remote pixel"]')!;
+    const pressedButton = browserWindow.document.querySelector("button.reader-load-images") as unknown as HTMLButtonElement;
+    expect(loadedImage.getAttribute("src")).toBe("https://tracker.example/pixel.gif");
+    expect(loadedImage.getAttribute("data-orca-remote-src")).toBeNull();
+    expect(pressedButton.getAttribute("aria-pressed")).toBe("true");
+    expect(pressedButton.disabled).toBe(true);
+    expect(pressedButton.textContent).toContain("Images loaded");
   });
 });
 

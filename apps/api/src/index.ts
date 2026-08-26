@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
@@ -137,6 +138,23 @@ import {
   OrganizationCollectionsPinsConflictError,
   OrganizationCollectionsPinsNotFoundError,
 } from "./organization/collections-pins/module.ts";
+
+export const DRAFT_REQUEST_MAX_BYTES = 36 * 1024 * 1024;
+export const MAX_DRAFTS_PER_USER = 100;
+export const MAX_DRAFT_STORAGE_BYTES_PER_USER = 100 * 1024 * 1024;
+
+const draftRequestBodyLimit = bodyLimit({
+  maxSize: DRAFT_REQUEST_MAX_BYTES,
+  onError: (c) => c.json({
+    error: {
+      code: "request_too_large",
+      message: "Draft request bodies must be 36 MB or smaller",
+      retryable: false,
+    },
+  }, 413),
+});
+
+class DraftQuotaError extends Error {}
 
 const serverConfig = getServerConfig();
 const linearFeedbackSubmitter = createLinearFeedbackSubmitter();
@@ -1611,7 +1629,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.post("/v1/drafts", validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
+  app.post("/v1/drafts", draftRequestBodyLimit, validator("json", (value, c) => validateJson(c, createMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
@@ -1628,12 +1646,24 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }, 400);
       }
       const mirrorsToProvider = capabilitiesFor(account).draft;
-      db.insert(messageDrafts).values({
-        id,
-        accountId: account.id,
-        ...draftStorage(input),
-        providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
-      }).run();
+      const storage = draftStorage(input);
+      try {
+        db.transaction((transaction) => {
+          const usage = getUserDraftUsage(transaction, c.get("auth").userId);
+          if (usage.count >= MAX_DRAFTS_PER_USER || usage.storageBytes + storage.storageBytes > MAX_DRAFT_STORAGE_BYTES_PER_USER) {
+            throw new DraftQuotaError();
+          }
+          transaction.insert(messageDrafts).values({
+            id,
+            accountId: account.id,
+            ...storage,
+            providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
+          }).run();
+        });
+      } catch (error) {
+        if (error instanceof DraftQuotaError) return draftQuotaExceeded(c);
+        throw error;
+      }
       if (mirrorsToProvider) scheduleDraftMirror(id, 0);
       return c.json(messageDraftSchema.parse(toMessageDraft(getMessageDraft(db, account.id, id)!)), 201);
     } finally { sqlite.close(); }
@@ -1651,7 +1681,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/drafts/:id", validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
+  app.patch("/v1/drafts/:id", draftRequestBodyLimit, validator("json", (value, c) => validateJson(c, updateMessageDraftSchema, value)), requireAuth({ dbFactory }), async (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
@@ -1674,21 +1704,35 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         attachments: update.attachments ?? current.attachments,
       });
       const mirrorsToProvider = capabilitiesFor(account).draft;
-      const result = db.update(messageDrafts).set({
-        ...draftStorage(content),
-        revision: sql`${messageDrafts.revision} + 1`,
-        providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
-        providerSyncError: null,
-        updatedAt: now(),
-      })
-        .where(and(
-          eq(messageDrafts.id, draft.id),
-          eq(messageDrafts.accountId, account.id),
-          eq(messageDrafts.revision, update.revision),
-          eq(messageDrafts.deliveryStatus, "draft"),
-          isNull(messageDrafts.sendIdempotencyKey),
-        ))
-        .returning({ id: messageDrafts.id }).get();
+      const storage = draftStorage(content);
+      const updatedAt = now();
+      let result: { id: string } | undefined;
+      try {
+        db.transaction((transaction) => {
+          const usage = getUserDraftUsage(transaction, c.get("auth").userId);
+          if (usage.storageBytes - draft.storageBytes + storage.storageBytes > MAX_DRAFT_STORAGE_BYTES_PER_USER) {
+            throw new DraftQuotaError();
+          }
+          result = transaction.update(messageDrafts).set({
+            ...storage,
+            revision: sql`${messageDrafts.revision} + 1`,
+            providerSyncStatus: mirrorsToProvider ? "pending" : "not_applicable",
+            providerSyncError: null,
+            updatedAt,
+          })
+            .where(and(
+              eq(messageDrafts.id, draft.id),
+              eq(messageDrafts.accountId, account.id),
+              eq(messageDrafts.revision, update.revision),
+              eq(messageDrafts.deliveryStatus, "draft"),
+              isNull(messageDrafts.sendIdempotencyKey),
+            ))
+            .returning({ id: messageDrafts.id }).get();
+        });
+      } catch (error) {
+        if (error instanceof DraftQuotaError) return draftQuotaExceeded(c);
+        throw error;
+      }
       if (!result) {
         const latest = getMessageDraft(db, account.id, draft.id);
         if (!latest) return noDraft(c);
@@ -2396,6 +2440,16 @@ function deliveryStarted(c: Context) {
   }, 409);
 }
 
+function draftQuotaExceeded(c: Context) {
+  return c.json({
+    error: {
+      code: "draft_quota",
+      message: "Draft storage is full. Discard an existing draft before saving more.",
+      retryable: false,
+    },
+  }, 409);
+}
+
 function asTransportError(error: unknown) {
   return error instanceof GmailTransportError
     ? error
@@ -2417,7 +2471,7 @@ function getMessageDraft(db: Database, accountId: string, id: string) {
 }
 
 function draftStorage(input: ReturnType<typeof createMessageDraftSchema.parse>) {
-  return {
+  const stored = {
     toRecipients: JSON.stringify(input.to),
     ccRecipients: JSON.stringify(input.cc),
     bccRecipients: JSON.stringify(input.bcc),
@@ -2427,6 +2481,20 @@ function draftStorage(input: ReturnType<typeof createMessageDraftSchema.parse>) 
     context: input.context ? JSON.stringify(input.context) : null,
     attachments: JSON.stringify(input.attachments),
   };
+  return {
+    ...stored,
+    storageBytes: Object.values(stored).reduce((total, value) => total + (value === null ? 0 : Buffer.byteLength(value, "utf8")), 0),
+  };
+}
+
+function getUserDraftUsage(db: Pick<Database, "select">, userId: string) {
+  return db.select({
+    count: sql<number>`count(*)`,
+    storageBytes: sql<number>`coalesce(sum(${messageDrafts.storageBytes}), 0)`,
+  }).from(messageDrafts)
+    .innerJoin(oauthAccounts, eq(oauthAccounts.id, messageDrafts.accountId))
+    .where(eq(oauthAccounts.userId, userId))
+    .get() ?? { count: 0, storageBytes: 0 };
 }
 
 function hasMeaningfulDraftContent(input: ReturnType<typeof createMessageDraftSchema.parse>) {
@@ -3387,7 +3455,7 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
   ],
   allowedAttributes: {
     a: ["href", "title", "target", "rel", "name"],
-    img: ["src", "alt", "width", "height", "title"],
+    img: ["src", "alt", "width", "height", "title", "data-orca-remote-src"],
     td: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
     th: ["colspan", "rowspan", "align", "valign", "width", "height", "style"],
     table: ["border", "cellpadding", "cellspacing", "width", "align", "style"],
@@ -3463,6 +3531,28 @@ const providerHtmlPolicy: sanitizeHtml.IOptions = {
       tagName: "a",
       attribs: { ...attributes, target: "_blank", rel: "noopener noreferrer" },
     }),
+    img: (_tagName, attributes) => {
+      const { "data-orca-remote-src": _untrustedRemoteSource, ...cleanAttributes } = attributes;
+      const source = cleanAttributes.src?.trim();
+      if (!source || source.toLowerCase().startsWith("cid:")) {
+        return { tagName: "img", attribs: cleanAttributes };
+      }
+      const { src: _remoteSource, ...safeAttributes } = cleanAttributes;
+      return {
+        tagName: "img",
+        attribs: { ...safeAttributes, "data-orca-remote-src": source },
+      };
+    },
+  },
+};
+
+const outboundHtmlPolicy: sanitizeHtml.IOptions = {
+  ...providerHtmlPolicy,
+  transformTags: {
+    a: (_tagName, attributes) => ({
+      tagName: "a",
+      attribs: { ...attributes, target: "_blank", rel: "noopener noreferrer" },
+    }),
   },
 };
 
@@ -3471,7 +3561,7 @@ function sanitizeProviderHtml(value: string | null) {
 }
 
 function sanitizeOutboundHtml(value: string | null) {
-  return sanitizeProviderHtml(value);
+  return value === null ? null : sanitizeHtml(value, outboundHtmlPolicy) || null;
 }
 
 function htmlToText(value: string | null) {
