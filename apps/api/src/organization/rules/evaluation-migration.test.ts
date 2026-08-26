@@ -21,6 +21,11 @@ test("BRE-315 Trace migration is ordered, Account-bound, Event-idempotent, and i
     client.sqlite.exec("INSERT INTO threads(id,account_id,provider_thread_id) VALUES ('thread-owner','account-owner','owner'),('thread-private','account-private','private')");
     const trace = JSON.stringify({ test: true }).replaceAll("'", "''");
     client.sqlite.exec(`INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner','trace-1','account-owner','thread-owner','event-1','message.received',1,'${trace}','[]',1,1)`);
+    for (const [index, eventKind] of ["thread.updated", "schedule.reached", "user.corrected"].entries()) {
+      client.sqlite.query("INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner',?,'account-owner','thread-owner',?,?,1,?, '[]',?,?)")
+        .run(`trace-event-${index}`, `event-family-${index}`, eventKind, JSON.stringify({ eventKind }), index + 2, index + 2);
+    }
+    assert.throws(() => client.sqlite.query("INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner','trace-invalid','account-owner','thread-owner','event-invalid','internal.thread_reevaluation',1,'{}','[]',9,9)").run(), /event_kind_check/);
     assert.throws(() => client.sqlite.exec("UPDATE organization_evaluation_traces SET trace_json = '{}' WHERE id = 'trace-1'"), /immutable/);
     assert.throws(() => client.sqlite.exec("DELETE FROM organization_evaluation_traces WHERE id = 'trace-1'"), /immutable/);
     assert.throws(() => client.sqlite.exec(`INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner','trace-2','account-owner','thread-owner','event-1','message.received',1,'${trace}','[]',1,1)`));

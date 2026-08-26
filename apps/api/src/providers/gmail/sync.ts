@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
 
@@ -12,7 +12,7 @@ import { refreshGmailAccessToken, type FetchLike } from "../../auth/gmail/oauth.
 import { readProviderTokens, storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { refreshThreadAggregates } from "../../organization/thread-aggregate.ts";
-import { evaluateMessageReceivedRules } from "../../organization/rules/evaluation-sqlite.ts";
+import { evaluateLiveMessageRules } from "../../organization/rules/evaluation-sqlite.ts";
 import {
   contacts,
   emailAttachments,
@@ -292,6 +292,20 @@ export async function persistGmailMessages(
   );
   const persistedLabels = buildPersistedLabels(input.accountId, input.labelList, normalizedMessages);
   const threadIds = [...new Set(normalizedMessages.map((message) => message.threadId))];
+  const messageIds = normalizedMessages.map((message) => message.id);
+  const existingThreadIds = new Set(threadIds.length === 0 ? [] : db.select({ id: threads.id }).from(threads)
+    .where(and(eq(threads.accountId, input.accountId), inArray(threads.id, threadIds))).all().map((thread) => thread.id));
+  const existingMessageIds = new Set(messageIds.length === 0 ? [] : db.select({ id: emails.id }).from(emails)
+    .where(and(eq(emails.accountId, input.accountId), inArray(emails.id, messageIds))).all().map((message) => message.id));
+  const seenThreadIds = new Set(existingThreadIds);
+  const evaluationEvents = [...normalizedMessages]
+    .sort((left, right) => Date.parse(left.receivedAt) - Date.parse(right.receivedAt) || left.id.localeCompare(right.id))
+    .filter((message) => !existingMessageIds.has(message.id))
+    .map((message) => {
+      const kind = seenThreadIds.has(message.threadId) ? "thread.updated" as const : "message.received" as const;
+      seenThreadIds.add(message.threadId);
+      return { messageId: message.id, kind };
+    });
 
   db.transaction((tx) => {
     upsertLabels(tx, input.accountId, persistedLabels, input.now);
@@ -301,9 +315,9 @@ export async function persistGmailMessages(
     upsertEmailLabels(tx, normalizedMessages, persistedLabels, input.now);
     upsertContacts(tx, input.accountId, normalizedMessages, input.now);
     refreshThreadAggregates(tx, { accountId: input.accountId, threadIds, now: input.now });
-    evaluateMessageReceivedRules(tx as unknown as DatabaseClient, {
+    evaluateLiveMessageRules(tx as unknown as DatabaseClient, {
       accountId: input.accountId,
-      messageIds: normalizedMessages.map((message) => message.id),
+      events: evaluationEvents,
     });
     input.afterPersist?.(tx);
   });

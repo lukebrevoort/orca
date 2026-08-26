@@ -3,6 +3,7 @@ import {
   facetCardinalitySchema,
   orcaCompiledRuleRevisionSchema,
   orcaEvaluationTraceSchema,
+  type OrcaEvaluationEventKind,
   type OrcaEvaluationTrace,
 } from "@orca/shared";
 
@@ -83,8 +84,10 @@ function lowerLaneCandidate(trace: OrcaEvaluationTrace) {
 
 function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: OrcaEvaluationTrace): void {
   const logicalTime = new Date(input.logicalTime);
+  let projected = false;
   const laneCandidate = lowerLaneCandidate(trace);
-  if (laneCandidate?.action.kind === "route_lane") {
+  const laneWinner = trace.winners.find((winner) => winner.slot === "lane");
+  if (laneWinner?.precedence !== "safety_lock" && laneCandidate?.action.kind === "route_lane") {
     db.update(organizationThreadLaneStates).set({
       primaryLaneId: laneCandidate.action.laneId,
       placementSource: laneCandidate.precedence,
@@ -99,6 +102,7 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
       eq(organizationThreadLaneStates.accountId, input.thread.accountId),
       eq(organizationThreadLaneStates.threadId, input.thread.id),
     )).run();
+    projected = true;
   }
 
   for (const action of trace.winners.map((winner) => winner.action)) {
@@ -110,6 +114,7 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
         target: [organizationThreadWorkflowStates.workspaceId, organizationThreadWorkflowStates.accountId, organizationThreadWorkflowStates.threadId],
         set: { stateId: action.stateId, updatedAt: logicalTime },
       }).run();
+      projected = true;
     } else if (action.kind === "set_facet") {
       db.insert(organizationThreadFacetValues).values({
         workspaceId: input.thread.workspaceId, accountId: input.thread.accountId, threadId: input.thread.id,
@@ -118,6 +123,7 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
         target: [organizationThreadFacetValues.workspaceId, organizationThreadFacetValues.facetId, organizationThreadFacetValues.accountId, organizationThreadFacetValues.threadId],
         set: { value: JSON.stringify(action.value), updatedAt: logicalTime },
       }).run();
+      projected = true;
     } else if (action.kind === "unset_facet") {
       db.delete(organizationThreadFacetValues).where(and(
         eq(organizationThreadFacetValues.workspaceId, input.thread.workspaceId),
@@ -125,6 +131,7 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
         eq(organizationThreadFacetValues.threadId, input.thread.id),
         eq(organizationThreadFacetValues.facetId, action.facetId),
       )).run();
+      projected = true;
     } else if (action.kind === "add_collection") {
       db.insert(collectionThreads).values({
         id: `${trace.id}:collection:${action.collectionId}`,
@@ -132,27 +139,32 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
         threadId: input.thread.id,
         createdAt: logicalTime,
       }).onConflictDoNothing().run();
+      projected = true;
     } else if (action.kind === "remove_collection") {
       db.delete(collectionThreads).where(and(eq(collectionThreads.collectionId, action.collectionId), eq(collectionThreads.threadId, input.thread.id))).run();
+      projected = true;
     } else if (action.kind === "link_context") {
       const relationshipType = db.select().from(organizationContextRelationshipTypes).where(and(
         eq(organizationContextRelationshipTypes.workspaceId, input.thread.workspaceId),
         eq(organizationContextRelationshipTypes.contextTypeId, action.contextTypeId),
         eq(organizationContextRelationshipTypes.direction, "thread_to_context"),
       )).orderBy(asc(organizationContextRelationshipTypes.position), asc(organizationContextRelationshipTypes.id)).get();
-      if (relationshipType) db.insert(organizationThreadContextRelationships).values({
-        workspaceId: input.thread.workspaceId,
-        id: `${trace.id}:context:${action.contextId}:${relationshipType.id}`,
-        accountId: input.thread.accountId,
-        threadId: input.thread.id,
-        contextTypeId: action.contextTypeId,
-        contextId: action.contextId,
-        relationshipTypeId: relationshipType.id,
-        direction: "thread_to_context",
-        revision: 1,
-        createdAt: logicalTime,
-        updatedAt: logicalTime,
-      }).onConflictDoNothing().run();
+      if (relationshipType) {
+        db.insert(organizationThreadContextRelationships).values({
+          workspaceId: input.thread.workspaceId,
+          id: `${trace.id}:context:${action.contextId}:${relationshipType.id}`,
+          accountId: input.thread.accountId,
+          threadId: input.thread.id,
+          contextTypeId: action.contextTypeId,
+          contextId: action.contextId,
+          relationshipTypeId: relationshipType.id,
+          direction: "thread_to_context",
+          revision: 1,
+          createdAt: logicalTime,
+          updatedAt: logicalTime,
+        }).onConflictDoNothing().run();
+        projected = true;
+      }
     } else if (action.kind === "unlink_context") {
       db.delete(organizationThreadContextRelationships).where(and(
         eq(organizationThreadContextRelationships.workspaceId, input.thread.workspaceId),
@@ -161,10 +173,11 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
         eq(organizationThreadContextRelationships.contextTypeId, action.contextTypeId),
         eq(organizationThreadContextRelationships.contextId, action.contextId),
       )).run();
+      projected = true;
     }
   }
 
-  if (trace.winners.some((winner) => ["rule_revision", "manual_override", "safety_lock"].includes(winner.precedence))) {
+  if (projected) {
     db.insert(organizationThreadStates).values({
       workspaceId: input.thread.workspaceId, accountId: input.thread.accountId, threadId: input.thread.id, revision: 1, updatedAt: logicalTime,
     }).onConflictDoUpdate({
@@ -174,7 +187,7 @@ function applyResolvedActions(db: Database, input: OrcaEvaluationInput, trace: O
   }
 }
 
-function evaluationInput(db: Database, input: { accountId: string; messageId: string }): OrcaEvaluationInput | null {
+function evaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: OrcaEvaluationEventKind }): OrcaEvaluationInput | null {
   const account = db.select().from(oauthAccounts).where(eq(oauthAccounts.id, input.accountId)).get();
   const message = db.select().from(emails).where(and(eq(emails.accountId, input.accountId), eq(emails.id, input.messageId))).get();
   if (!account || !message) return null;
@@ -201,8 +214,8 @@ function evaluationInput(db: Database, input: { accountId: string; messageId: st
   const senderEmail = message.fromAddress?.trim().toLocaleLowerCase() ?? null;
   return {
     event: {
-      id: `message.received:${message.id}`,
-      kind: "message.received",
+      id: `${input.eventKind}:${message.id}`,
+      kind: input.eventKind,
       cause: "provider",
       occurredAt: receivedAt,
       workspaceId: account.userId,
@@ -250,13 +263,20 @@ function evaluationInput(db: Database, input: { accountId: string; messageId: st
   };
 }
 
-export function evaluateMessageReceivedRules(db: Database, input: { accountId: string; messageIds: readonly string[] }): OrcaEvaluationTrace[] {
-  const messages = input.messageIds.length === 0 ? [] : db.select({ id: emails.id, receivedAt: emails.receivedAt }).from(emails)
-    .where(and(eq(emails.accountId, input.accountId), inArray(emails.id, [...new Set(input.messageIds)])))
+export function evaluateLiveMessageRules(db: Database, input: {
+  accountId: string;
+  events: readonly { messageId: string; kind: "message.received" | "thread.updated" }[];
+}): OrcaEvaluationTrace[] {
+  const eventKindByMessageId = new Map(input.events.map((event) => [event.messageId, event.kind]));
+  const messageIds = [...eventKindByMessageId.keys()];
+  const messages = messageIds.length === 0 ? [] : db.select({ id: emails.id, receivedAt: emails.receivedAt }).from(emails)
+    .where(and(eq(emails.accountId, input.accountId), inArray(emails.id, messageIds)))
     .orderBy(asc(emails.receivedAt), asc(emails.id)).all();
   const traces: OrcaEvaluationTrace[] = [];
   for (const message of messages) {
-    const context = evaluationInput(db, { accountId: input.accountId, messageId: message.id });
+    const eventKind = eventKindByMessageId.get(message.id);
+    if (!eventKind) continue;
+    const context = evaluationInput(db, { accountId: input.accountId, messageId: message.id, eventKind });
     if (!context) continue;
     const existing = db.select({ traceJson: organizationEvaluationTraces.traceJson }).from(organizationEvaluationTraces).where(and(
       eq(organizationEvaluationTraces.workspaceId, context.thread.workspaceId), eq(organizationEvaluationTraces.eventId, context.event.id),

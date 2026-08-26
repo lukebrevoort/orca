@@ -101,7 +101,12 @@ export const orcaCompiledActionSchema = z.union([
 ]);
 export type OrcaCompiledAction = z.infer<typeof orcaCompiledActionSchema>;
 
-export const orcaEventKindSchema = z.enum(["message.received", "schedule.reached", "user.corrected"]);
+export const orcaEventKindSchema = z.enum([
+  "message.received",
+  "thread.updated",
+  "schedule.reached",
+  "user.corrected",
+]);
 export const orcaRequiredCapabilitySchema = z.enum(["organization_attention", "organization_thread", "provider_delete"]);
 
 export const orcaCompiledRuleRevisionSchema = z.object({

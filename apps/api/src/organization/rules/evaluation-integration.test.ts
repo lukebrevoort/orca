@@ -14,6 +14,7 @@ import {
   oauthAccounts,
   organizationContextRelationshipTypes,
   organizationContexts,
+  organizationEvaluationTraces,
   organizationContextTypes,
   organizationFacets,
   organizationLanePolicies,
@@ -24,6 +25,7 @@ import {
   organizationThreadLaneStates,
   organizationThreadWorkflowStates,
   organizationWorkflowStates,
+  threadReminders,
   users,
 } from "../../db/schema.ts";
 import { persistGmailMessages } from "../../providers/gmail/sync.ts";
@@ -41,11 +43,11 @@ afterEach(() => {
   while (directories.length) rmSync(directories.pop()!, { recursive: true, force: true });
 });
 
-function gmailMessage(id: string, subject = "Production deploy failed"): GmailMessage {
+function gmailMessage(id: string, subject = "Production deploy failed", internalDate = "1787745600000"): GmailMessage {
   return {
     id,
     threadId: "provider-thread-1",
-    internalDate: "1787745600000",
+    internalDate,
     labelIds: ["INBOX"],
     snippet: subject,
     payload: {
@@ -109,7 +111,7 @@ because "A failed deploy blocks work"` },
   });
   if (!compiled.ok) throw new Error(`Rule compilation failed with ${compiled.diagnostics.length} diagnostics`);
   client.db.update(organizationRules).set({ activeRevisionId: compiled.revision.id }).where(eq(organizationRules.id, compiled.rule.id)).run();
-  return { ...client, compiled, now };
+  return { ...client, compiled, now, service };
 }
 
 describe("message.received Rule evaluation", () => {
@@ -151,10 +153,22 @@ describe("message.received Rule evaluation", () => {
   }, 15_000);
 
   test("preserves lower Rule placement while Manual Override remains the effective winner", async () => {
-    const { db, sqlite, now } = setup();
+    const { db, sqlite, service, now } = setup();
     try {
       await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("initial")], labelList: [], now, propagationTrigger: "sync" });
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "initial")).get()!;
+      const updateRule = service.compile({
+        actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
+        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+rule "Production follow-ups"
+event thread.updated
+when subject contains "failed"
+action route lane "Focus"
+because "A failed follow-up remains focused"` },
+      });
+      assert.equal(updateRule.ok, true);
+      if (!updateRule.ok) throw new Error("thread.updated Rule did not compile");
+      db.update(organizationRules).set({ activeRevisionId: updateRule.revision.id }).where(eq(organizationRules.id, updateRule.rule.id)).run();
       const fallbackLaneId = sqlite.query("SELECT fallback_lane_id value FROM organization_workspace_lane_settings WHERE workspace_id = 'workspace-1'").get() as { value: string };
       db.update(organizationThreadLaneStates).set({
         manualOverrideLaneId: fallbackLaneId.value, manualOverrideActorId: "workspace-1", manualOverrideActorType: "human",
@@ -168,6 +182,176 @@ describe("message.received Rule evaluation", () => {
       const query = createOrganization(createSqliteOrganizationRepository(db)).query({ scope: { actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", accountIds: ["account-1"] }, query: { threadId: email.threadId, limit: 1 } });
       assert.equal(query.threads[0]?.organization.lanePlacement.primaryLaneId, fallbackLaneId.value);
       assert.equal(query.threads[0]?.organization.lanePlacement.evidence.winningSource, "manual_override");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("keeps a Safety-Locked Lane and provenance immutable across matching and nonmatching live replay, reload, Manual Override, and unlock", async () => {
+    const { db, sqlite, service, now } = setup();
+    try {
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "initial")).get()!;
+      const fallbackLaneId = (sqlite.query("SELECT fallback_lane_id value FROM organization_workspace_lane_settings WHERE workspace_id = 'workspace-1'").get() as { value: string }).value;
+      const updateRule = service.compile({
+        actor: { id: "workspace-1", type: "human" },
+        workspaceId: "workspace-1",
+        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+rule "Production follow-ups"
+event thread.updated
+when subject contains "failed"
+action route lane "Focus"
+because "A failed follow-up remains focused"` },
+      });
+      assert.equal(updateRule.ok, true);
+      if (!updateRule.ok) throw new Error("thread.updated Rule did not compile");
+      db.update(organizationRules).set({ activeRevisionId: updateRule.revision.id }).where(eq(organizationRules.id, updateRule.rule.id)).run();
+
+      db.update(organizationThreadLaneStates).set({
+        safetyLocked: true,
+        safetyLockActorId: "human-safety",
+        safetyLockActorType: "human",
+        safetyLockReason: "Hold the incident in Focus",
+        safetyLockUpdatedAt: new Date("2026-08-26T12:00:30.000Z"),
+      }).where(and(eq(organizationThreadLaneStates.accountId, "account-1"), eq(organizationThreadLaneStates.threadId, email.threadId))).run();
+
+      const lockedStorage = db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get()!;
+      const beforeProjectionCounts = sqlite.query(`SELECT
+        (SELECT revision FROM organization_thread_states WHERE workspace_id = 'workspace-1' AND account_id = 'account-1' AND thread_id = ?) thread_revision,
+        (SELECT COUNT(*) FROM organization_thread_workflow_states WHERE thread_id = ?) workflows,
+        (SELECT COUNT(*) FROM organization_thread_facet_values WHERE thread_id = ?) facets,
+        (SELECT COUNT(*) FROM collection_threads WHERE thread_id = ?) collections,
+        (SELECT COUNT(*) FROM organization_thread_context_relationships WHERE thread_id = ?) contexts`).get(email.threadId, email.threadId, email.threadId, email.threadId, email.threadId);
+
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("nonmatching-follow-up", "All systems normal", "1787745660000")], labelList: [], now: new Date("2026-08-26T12:01:00.000Z"), propagationTrigger: "push" });
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), lockedStorage, "a losing Rule/Lane Policy/Fallback candidate must not rewrite locked storage");
+      assert.deepEqual(sqlite.query(`SELECT
+        (SELECT revision FROM organization_thread_states WHERE workspace_id = 'workspace-1' AND account_id = 'account-1' AND thread_id = ?) thread_revision,
+        (SELECT COUNT(*) FROM organization_thread_workflow_states WHERE thread_id = ?) workflows,
+        (SELECT COUNT(*) FROM organization_thread_facet_values WHERE thread_id = ?) facets,
+        (SELECT COUNT(*) FROM collection_threads WHERE thread_id = ?) collections,
+        (SELECT COUNT(*) FROM organization_thread_context_relationships WHERE thread_id = ?) contexts`).get(email.threadId, email.threadId, email.threadId, email.threadId, email.threadId), beforeProjectionCounts, "Trace-only proposals and losing placement candidates produce zero projection writes");
+
+      const nonmatchingTrace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: email.threadId });
+      assert.ok(nonmatchingTrace);
+      assert.equal(nonmatchingTrace.event.kind, "thread.updated");
+      assert.deepEqual(nonmatchingTrace.winners.find((winner) => winner.slot === "lane"), {
+        candidateId: "safety-lock:lane",
+        action: { kind: "route_lane", laneId: "lane-focus" },
+        slot: "lane",
+        precedence: "safety_lock",
+        ruleOrder: 0,
+        actionOrder: 0,
+        actor: { id: "human-safety", type: "human" },
+        reason: "Hold the incident in Focus",
+        authorized: true,
+      });
+      assert.ok(nonmatchingTrace.losers.some((loser) => loser.precedence === "workspace_fallback"));
+
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("matching-follow-up", "Production deploy failed again", "1787745720000")], labelList: [], now: new Date("2026-08-26T12:02:00.000Z"), propagationTrigger: "push" });
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), lockedStorage, "a matching Rule remains a losing Trace candidate while locked");
+      const matchingTrace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: email.threadId });
+      assert.equal(matchingTrace?.consideredRevisions.find((revision) => revision.revisionId === updateRule.revision.id)?.predicateMatched, true);
+      assert.equal(matchingTrace?.losers.find((loser) => loser.revisionId === updateRule.revision.id)?.winnerCandidateId, "safety-lock:lane");
+
+      const reloaded = createOrganization(createSqliteOrganizationRepository(db)).query({ scope: { actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", accountIds: ["account-1"] }, query: { threadId: email.threadId, limit: 1 } });
+      assert.equal(reloaded.threads[0]?.organization.lanePlacement.primaryLaneId, "lane-focus");
+      assert.deepEqual(reloaded.threads[0]?.organization.lanePlacement.evidence, {
+        winningSource: "safety_lock",
+        sourceId: "lane-focus",
+        precedenceLevel: "1_safety_lock",
+        actor: { id: "human-safety", type: "human" },
+        reason: "Hold the incident in Focus",
+      });
+
+      db.update(organizationThreadLaneStates).set({ safetyLocked: false }).where(eq(organizationThreadLaneStates.threadId, email.threadId)).run();
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("after-unlock", "All systems normal", "1787745780000")], labelList: [], now: new Date("2026-08-26T12:03:00.000Z"), propagationTrigger: "push" });
+      const unlocked = createOrganization(createSqliteOrganizationRepository(db)).query({ scope: { actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", accountIds: ["account-1"] }, query: { threadId: email.threadId, limit: 1 } });
+      assert.equal(unlocked.threads[0]?.organization.lanePlacement.primaryLaneId, fallbackLaneId);
+      assert.equal(unlocked.threads[0]?.organization.lanePlacement.evidence.winningSource, "workspace_fallback");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("persists attention, retention, and deletion proposals in evaluation evidence without forbidden live projections", async () => {
+    const { db, sqlite, service, now } = setup();
+    try {
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("proposal-initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "proposal-initial")).get()!;
+      const proposalRule = service.compile({
+        actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
+        request: { expectedRuleRevision: null, workspaceSchemaRevision: 1, source: `orca 1
+rule "Proposal boundary"
+event thread.updated
+when subject contains "proposal"
+action notify immediate
+action suppress interruption
+action schedule review "P1D"
+action propose retention review_after 30
+action propose provider deletion
+because "These remain proposals until an authoritative apply exists"` },
+      });
+      assert.equal(proposalRule.ok, true);
+      if (!proposalRule.ok) throw new Error("proposal Rule did not compile");
+      db.update(organizationRules).set({ activeRevisionId: proposalRule.revision.id }).where(eq(organizationRules.id, proposalRule.rule.id)).run();
+      db.update(organizationThreadLaneStates).set({
+        safetyLocked: true,
+        safetyLockActorId: "human-safety",
+        safetyLockActorType: "human",
+        safetyLockReason: "Keep proposal review in Focus",
+        safetyLockUpdatedAt: now,
+      }).where(eq(organizationThreadLaneStates.threadId, email.threadId)).run();
+
+      const laneBefore = db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get();
+      const projectionBefore = sqlite.query(`SELECT
+        (SELECT revision FROM organization_thread_states WHERE workspace_id = 'workspace-1' AND account_id = 'account-1' AND thread_id = ?) thread_revision,
+        (SELECT COUNT(*) FROM organization_thread_workflow_states WHERE thread_id = ?) workflows,
+        (SELECT COUNT(*) FROM organization_thread_facet_values WHERE thread_id = ?) facets,
+        (SELECT COUNT(*) FROM collection_threads WHERE thread_id = ?) collections,
+        (SELECT COUNT(*) FROM organization_thread_context_relationships WHERE thread_id = ?) contexts,
+        (SELECT COUNT(*) FROM thread_reminders WHERE account_id = 'account-1' AND thread_id = ?) reminders`).get(email.threadId, email.threadId, email.threadId, email.threadId, email.threadId, email.threadId);
+
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("proposal-follow-up", "proposal cleanup", "1787745660000")], labelList: [], now: new Date("2026-08-26T12:01:00.000Z"), propagationTrigger: "push" });
+
+      const row = db.select().from(organizationEvaluationTraces).where(eq(organizationEvaluationTraces.eventKind, "thread.updated")).get()!;
+      const persistedActions = JSON.parse(row.actionsJson) as Array<{ kind: string }>;
+      const persistedTrace = JSON.parse(row.traceJson) as { candidates: Array<{ action: { kind: string } }>; losers: Array<{ action: { kind: string }; reason: string }> };
+      const proposalKinds = new Set(["notify", "suppress_interruption", "schedule_review", "propose_retention", "propose_provider_deletion"]);
+      assert.deepEqual([...new Set(persistedTrace.candidates.map((candidate) => candidate.action.kind).filter((kind) => proposalKinds.has(kind)))], [
+        "notify", "suppress_interruption", "schedule_review", "propose_retention", "propose_provider_deletion",
+      ], "every typed proposal remains inspectable in Trace candidates");
+      assert.ok(persistedActions.some((action) => action.kind === "notify"));
+      assert.ok(persistedActions.some((action) => action.kind === "propose_retention"));
+      assert.ok(persistedTrace.losers.some((loser) => loser.action.kind === "propose_provider_deletion" && loser.reason === "capability_denied"));
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), laneBefore);
+      assert.deepEqual(sqlite.query(`SELECT
+        (SELECT revision FROM organization_thread_states WHERE workspace_id = 'workspace-1' AND account_id = 'account-1' AND thread_id = ?) thread_revision,
+        (SELECT COUNT(*) FROM organization_thread_workflow_states WHERE thread_id = ?) workflows,
+        (SELECT COUNT(*) FROM organization_thread_facet_values WHERE thread_id = ?) facets,
+        (SELECT COUNT(*) FROM collection_threads WHERE thread_id = ?) collections,
+        (SELECT COUNT(*) FROM organization_thread_context_relationships WHERE thread_id = ?) contexts,
+        (SELECT COUNT(*) FROM thread_reminders WHERE account_id = 'account-1' AND thread_id = ?) reminders`).get(email.threadId, email.threadId, email.threadId, email.threadId, email.threadId, email.threadId), projectionBefore);
+      assert.equal(db.select().from(threadReminders).where(and(eq(threadReminders.accountId, "account-1"), eq(threadReminders.threadId, email.threadId))).all().length, 0);
+      assert.ok(db.select().from(emails).where(eq(emails.providerMessageId, "proposal-follow-up")).get(), "provider mail remains present; proposal evaluation did not delete it");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("does not reinterpret an identical provider-message replay as thread.updated", async () => {
+    const { db, sqlite, now } = setup();
+    try {
+      const replayed = gmailMessage("provider-replay");
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [replayed],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, replayed.id)).get()!;
+      const laneBefore = db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get();
+      const traceCountBefore = (sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces").get() as { count: number }).count;
+
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [replayed],
+        labelList: [], now: new Date("2026-08-26T12:01:00.000Z"), propagationTrigger: "push",
+      });
+
+      assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces").get() as { count: number }).count, traceCountBefore);
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), laneBefore);
     } finally { sqlite.close(); }
   }, 15_000);
 

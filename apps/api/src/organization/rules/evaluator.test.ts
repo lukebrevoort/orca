@@ -137,6 +137,25 @@ function evaluationInput(): OrcaEvaluationInput {
 }
 
 describe("evaluateOrcaRules", () => {
+  test("matches each canonical Event family without allowing evaluator-origin recursion", () => {
+    for (const event of ["message.received", "thread.updated", "schedule.reached", "user.corrected"] as const) {
+      const input = evaluationInput();
+      input.event.kind = event;
+      input.ruleSet.revisions[0]!.compiled.event.kind = event;
+
+      const result = evaluateOrcaRules(input);
+
+      expect(result.trace.event.kind).toBe(event);
+      expect(result.trace.consideredRevisions[0]).toMatchObject({ eventMatched: true, predicateMatched: true });
+    }
+
+    const recursive = evaluationInput();
+    recursive.event.kind = "thread.updated";
+    recursive.event.cause = "evaluator";
+    recursive.ruleSet.revisions[0]!.compiled.event.kind = "thread.updated";
+    expect(evaluateOrcaRules(recursive).trace.consideredRevisions[0]?.reason).toBe("event_loop_blocked");
+  });
+
   test("combines compatible Actions, selects exact exclusive winners, and returns a complete deterministic Trace", () => {
     const input = evaluationInput();
 
@@ -189,8 +208,18 @@ describe("evaluateOrcaRules", () => {
       reason: "Do not move this incident",
       updatedAt: "2026-08-26T11:30:00.000Z",
     };
-    expect(evaluateOrcaRules(locked).actions[0]).toEqual({ kind: "route_lane", laneId: "lane-focus" });
-    expect(evaluateOrcaRules(locked).trace.winners[0]?.precedence).toBe("safety_lock");
+    const lockedResult = evaluateOrcaRules(locked);
+    expect(lockedResult.actions[0]).toEqual({ kind: "route_lane", laneId: "lane-focus" });
+    expect(lockedResult.trace.winners[0]).toMatchObject({
+      candidateId: "safety-lock:lane",
+      precedence: "safety_lock",
+      actor: { id: "human-2", type: "human" },
+      reason: "Do not move this incident",
+    });
+    expect(lockedResult.trace.losers.find((candidate) => candidate.precedence === "manual_override")).toMatchObject({
+      winnerCandidateId: "safety-lock:lane",
+      reason: "higher_precedence_candidate",
+    });
 
     const noRules = evaluationInput();
     noRules.ruleSet.revisions = [];

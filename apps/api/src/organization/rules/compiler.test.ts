@@ -21,6 +21,25 @@ const workspace: OrcaWorkspaceSnapshot = {
 };
 
 describe("compileOrcaRule", () => {
+  test("authors the same four canonical Event families accepted by evaluation Trace", () => {
+    for (const event of ["message.received", "thread.updated", "schedule.reached", "user.corrected"] as const) {
+      const result = compileOrcaRule({
+        workspace,
+        source: `orca 1
+rule "${event} rule"
+event ${event}
+when subject contains "status"
+action route lane "Focus"
+because "The canonical Event family is authorable"`,
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(`${event}: ${JSON.stringify(result.diagnostics)}`);
+      expect(result.revision.event.kind).toBe(event);
+      expect(orcaCompiledRuleRevisionSchema.parse(result.revision)).toEqual(result.revision);
+    }
+  });
+
   test("compiles one Event, reusable predicates, and ordered actions to stable IDs", () => {
     const source = `orca 1
 rule "Production failures"

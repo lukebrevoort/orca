@@ -64,7 +64,7 @@ export type OrcaCompiledRuleRevision = {
   workspaceId: string;
   workspaceSchemaRevision: number;
   name: string;
-  event: { kind: "message.received" | "schedule.reached" | "user.corrected" };
+  event: { kind: "message.received" | "thread.updated" | "schedule.reached" | "user.corrected" };
   predicates: { name: string | null; expression: OrcaCompiledPredicateExpression }[];
   actions: OrcaCompiledAction[];
   because: string;
@@ -433,7 +433,7 @@ export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspac
     if (rule) { const value = quoted(rule[1]!); if (value === null) diagnostics.push(diagnostic(line, "parse", "invalid_rule_name", "Rule names must be JSON-style quoted text.")); else if (name !== null) diagnostics.push(diagnostic(line, "parse", "duplicate_rule", "Declare one Rule name.")); else name = value; continue; }
     const event = /^event\s+([a-z.]+)$/.exec(line.trimmed);
     if (event) {
-      if (!["message.received", "schedule.reached", "user.corrected"].includes(event[1]!)) diagnostics.push(diagnostic(line, "type", "unsupported_event", `Event '${event[1]}' is not authorable in Orca v1.`));
+      if (!["message.received", "thread.updated", "schedule.reached", "user.corrected"].includes(event[1]!)) diagnostics.push(diagnostic(line, "type", "unsupported_event", `Event '${event[1]}' is not authorable in Orca v1.`));
       else events.push({ kind: event[1] as OrcaCompiledRuleRevision["event"]["kind"], line });
       continue;
     }
