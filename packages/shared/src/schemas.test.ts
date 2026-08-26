@@ -251,8 +251,17 @@ describe("shared API schemas", () => {
     };
 
     assert.equal(createMessageDraftSchema.safeParse({ subject: "Valid", attachments: [valid] }).success, true);
+    assert.equal(createMessageDraftSchema.safeParse({
+      subject: "Canonical padded endings",
+      attachments: [
+        { ...valid, id: "one-byte", size: 1, contentBase64: "Zg==" },
+        { ...valid, id: "two-bytes", size: 2, contentBase64: "Zm8=" },
+      ],
+    }).success, true);
     assert.equal(createMessageDraftSchema.safeParse({ subject: "Malformed", attachments: [{ ...valid, contentBase64: "aGVsbG8" }] }).success, false);
     assert.equal(createMessageDraftSchema.safeParse({ subject: "Non-canonical", attachments: [{ ...valid, contentBase64: "aGVsbG8===" }] }).success, false);
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Non-zero one-byte pad bits", attachments: [{ ...valid, size: 1, contentBase64: "Zh==" }] }).success, false);
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Non-zero two-byte pad bits", attachments: [{ ...valid, size: 2, contentBase64: "Zm9=" }] }).success, false);
     assert.equal(createMessageDraftSchema.safeParse({ subject: "Mismatched", attachments: [{ ...valid, size: 4 }] }).success, false);
 
     assert.equal(createMessageDraftSchema.safeParse({

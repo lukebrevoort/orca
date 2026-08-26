@@ -382,6 +382,15 @@ describe("Orca API", () => {
       assert.equal(malformedBase64.status, 400);
       assert.equal((await malformedBase64.json()).error.code, "validation_error");
 
+      for (const [contentBase64, size] of [["Zh==", 1], ["Zm9=", 2]] as const) {
+        const nonCanonicalPadBits = await testApp.request("/v1/drafts", {
+          method: "POST", headers,
+          body: JSON.stringify({ subject: "Non-zero Base64 pad bits", attachments: [{ id: `file_${size}`, filename: "pad-bits.txt", mimeType: "text/plain", size, contentBase64 }] }),
+        });
+        assert.equal(nonCanonicalPadBits.status, 400);
+        assert.equal((await nonCanonicalPadBits.json()).error.code, "validation_error");
+      }
+
       const mismatchedSize = await testApp.request("/v1/drafts", {
         method: "POST", headers,
         body: JSON.stringify({ subject: "Mismatched attachment", attachments: [{ id: "file_mismatch", filename: "hello.txt", mimeType: "text/plain", size: 4, contentBase64: "aGVsbG8=" }] }),
@@ -394,6 +403,18 @@ describe("Orca API", () => {
         body: JSON.stringify({ subject: "Canonical attachment", attachments: [{ id: "file_ok", filename: "hello.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8=" }] }),
       });
       assert.equal(canonicalAttachment.status, 201);
+
+      const canonicalPaddedAttachments = await testApp.request("/v1/drafts", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          subject: "Canonical padded attachments",
+          attachments: [
+            { id: "file_one_byte", filename: "one.txt", mimeType: "text/plain", size: 1, contentBase64: "Zg==" },
+            { id: "file_two_bytes", filename: "two.txt", mimeType: "text/plain", size: 2, contentBase64: "Zm8=" },
+          ],
+        }),
+      });
+      assert.equal(canonicalPaddedAttachments.status, 201);
 
       const tooLarge = await testApp.request("/v1/drafts", {
         method: "POST", headers,
