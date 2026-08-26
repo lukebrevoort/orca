@@ -1000,6 +1000,7 @@ export const messageDrafts = sqliteTable(
     bodyHtml: text("body_html"),
     context: text("context"),
     attachments: text("attachments").notNull().default("[]"),
+    storageBytes: integer("storage_bytes").notNull().default(0),
     providerDraftId: text("provider_draft_id"),
     providerSyncStatus: text("provider_sync_status").notNull().default("not_applicable"),
     providerSyncError: text("provider_sync_error"),

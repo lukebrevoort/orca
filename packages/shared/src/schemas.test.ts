@@ -240,4 +240,24 @@ describe("shared API schemas", () => {
     assert.equal(updateMessageDraftSchema.safeParse({ revision: 0 }).success, false);
     assert.equal(updateMessageDraftSchema.safeParse({ revision: 0, subject: "Updated" }).success, true);
   });
+
+  test("validates canonical decoded attachment bytes instead of declared metadata", () => {
+    const valid = {
+      id: "attachment-1",
+      filename: "hello.txt",
+      mimeType: "text/plain",
+      size: 5,
+      contentBase64: "aGVsbG8=",
+    };
+
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Valid", attachments: [valid] }).success, true);
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Malformed", attachments: [{ ...valid, contentBase64: "aGVsbG8" }] }).success, false);
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Non-canonical", attachments: [{ ...valid, contentBase64: "aGVsbG8===" }] }).success, false);
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Mismatched", attachments: [{ ...valid, size: 4 }] }).success, false);
+
+    assert.equal(createMessageDraftSchema.safeParse({
+      subject: "Too large",
+      attachments: [{ ...valid, size: 25 * 1024 * 1024 + 1, contentBase64: null }],
+    }).success, false);
+  });
 });

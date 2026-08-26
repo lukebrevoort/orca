@@ -351,13 +351,48 @@ const outboundContextSchema = z.object({
 }).strict();
 export type OutboundContext = z.infer<typeof outboundContextSchema>;
 
+export const MAX_OUTBOUND_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+
+export function canonicalBase64DecodedByteLength(value: string): number | null {
+  if (value.length === 0) return 0;
+  if (value.length % 4 !== 0) return null;
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  const contentLength = value.length - padding;
+  for (let index = 0; index < contentLength; index += 1) {
+    const code = value.charCodeAt(index);
+    const isCanonicalCharacter = (code >= 65 && code <= 90)
+      || (code >= 97 && code <= 122)
+      || (code >= 48 && code <= 57)
+      || code === 43
+      || code === 47;
+    if (!isCanonicalCharacter) return null;
+  }
+  for (let index = contentLength; index < value.length; index += 1) {
+    if (value.charCodeAt(index) !== 61) return null;
+  }
+  return (value.length / 4) * 3 - padding;
+}
+
 const outboundAttachmentSchema = z.object({
   id: nonEmptyStringSchema,
   filename: z.string().trim().min(1).max(255),
   mimeType: z.string().trim().max(255).regex(/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/),
-  size: z.number().int().positive().max(25 * 1024 * 1024),
+  size: z.number().int().positive().max(MAX_OUTBOUND_ATTACHMENT_BYTES),
   contentBase64: z.string().max(36 * 1024 * 1024).nullable().default(null),
-}).strict();
+}).strict().superRefine((attachment, context) => {
+  if (attachment.contentBase64 === null) return;
+  const decodedBytes = canonicalBase64DecodedByteLength(attachment.contentBase64);
+  if (decodedBytes === null) {
+    context.addIssue({ code: "custom", path: ["contentBase64"], message: "Attachment content must be canonical Base64" });
+    return;
+  }
+  if (decodedBytes > MAX_OUTBOUND_ATTACHMENT_BYTES) {
+    context.addIssue({ code: "custom", path: ["contentBase64"], message: "Attachment exceeds the 25 MB delivery limit" });
+  }
+  if (decodedBytes !== attachment.size) {
+    context.addIssue({ code: "custom", path: ["size"], message: "Attachment size must match its decoded content" });
+  }
+});
 export type OutboundAttachment = z.infer<typeof outboundAttachmentSchema>;
 
 const outboundContentShape = {
@@ -370,8 +405,14 @@ const outboundContentShape = {
   attachments: z.array(outboundAttachmentSchema).max(25).default([]),
 };
 
-function addAttachmentLimitIssue(value: { attachments?: Array<{ size: number }> }, context: z.RefinementCtx) {
-  if ((value.attachments ?? []).reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
+function attachmentBytes(attachment: { size: number; contentBase64?: string | null }) {
+  return attachment.contentBase64 === null || attachment.contentBase64 === undefined
+    ? attachment.size
+    : canonicalBase64DecodedByteLength(attachment.contentBase64) ?? attachment.size;
+}
+
+function addAttachmentLimitIssue(value: { attachments?: Array<{ size: number; contentBase64?: string | null }> }, context: z.RefinementCtx) {
+  if ((value.attachments ?? []).reduce((total, attachment) => total + attachmentBytes(attachment), 0) > MAX_OUTBOUND_ATTACHMENT_BYTES) {
     context.addIssue({ code: "custom", path: ["attachments"], message: "Attachments exceed the 25 MB delivery limit" });
   }
 }
@@ -435,7 +476,7 @@ export const updateMessageDraftSchema = z.object({
   if (Object.keys(value).length === 1) {
     context.addIssue({ code: "custom", message: "Expected at least one draft field to update" });
   }
-  if (value.attachments && value.attachments.reduce((total, attachment) => total + attachment.size, 0) > 25 * 1024 * 1024) {
+  if (value.attachments && value.attachments.reduce((total, attachment) => total + attachmentBytes(attachment), 0) > MAX_OUTBOUND_ATTACHMENT_BYTES) {
     context.addIssue({ code: "custom", path: ["attachments"], message: "Attachments exceed the 25 MB delivery limit" });
   }
 });
