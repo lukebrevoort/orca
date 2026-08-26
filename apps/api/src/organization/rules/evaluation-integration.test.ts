@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { classifyOrcaActions, orcaEvaluationTraceSchema } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
+import * as databaseSchema from "../../db/schema.ts";
 import {
   collectionThreads,
   collections,
@@ -407,6 +409,129 @@ because "Only revision-seven resources may be referenced"`,
         projections: db.select().from(organizationThreadStates).all().length,
       }, before);
     } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("bounds live Collection query inputs across many owned Accounts", async () => {
+    const { db, sqlite, compiled, now } = setup();
+    try {
+      const unrelatedAccountIds = Array.from({ length: 128 }, (_, index) => `account-unreferenced-${String(index).padStart(3, "0")}`);
+      db.insert(oauthAccounts).values(unrelatedAccountIds.map((id, index) => ({
+        id,
+        userId: "workspace-1",
+        provider: "gmail",
+        providerEmail: `unreferenced-${index}@example.com`,
+        providerId: `provider-unreferenced-${index}`,
+      }))).run();
+      db.insert(collections).values(unrelatedAccountIds.map((accountId, index) => ({
+        id: `collection-account-unreferenced-${String(index).padStart(3, "0")}`,
+        accountId,
+        name: `Account collection ${index}`,
+        color: "#666666",
+        position: 0,
+        revision: 1,
+        createdAt: now,
+        updatedAt: now,
+      }))).run();
+
+      db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("bounded-account-collections")],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+      db.update(organizationRules).set({ activeRevisionId: compiled.revision.id }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "bounded-account-collections")).get();
+      assert.ok(email);
+
+      const databaseQueries: Array<{ sql: string; params: unknown[] }> = [];
+      const observedDb = drizzle(sqlite, {
+        schema: databaseSchema,
+        logger: { logQuery: (sql, params) => databaseQueries.push({ sql, params }) },
+      });
+      const context = loadLiveEvaluationInput(observedDb, {
+        accountId: "account-1",
+        messageId: email.id,
+        eventKind: "thread.updated",
+      });
+
+      assert.ok(context);
+      assert.deepEqual(context.workspaceSchema.collections.map(({ id }) => id), ["collection-launch"]);
+      const unrelatedAccountQueryInputs = databaseQueries
+        .flatMap(({ params }) => params)
+        .filter((value): value is string => typeof value === "string" && value.startsWith("account-unreferenced-"));
+      assert.equal(unrelatedAccountQueryInputs.length, 0, "bounded Collection loading must not enumerate unrelated owned Account IDs into query inputs");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("fails closed before candidates when referenced Collections are missing or outside the Workspace", async () => {
+    for (const candidate of [
+      { name: "missing", collectionId: "collection-missing" },
+      { name: "foreign", collectionId: "collection-foreign" },
+    ]) {
+      const { db, sqlite, compiled, now, service } = setup();
+      try {
+        db.insert(users).values({ id: "workspace-foreign", email: "foreign@example.com" }).run();
+        db.insert(oauthAccounts).values({
+          id: "account-foreign", userId: "workspace-foreign", provider: "gmail",
+          providerEmail: "foreign@example.com", providerId: "provider-foreign",
+        }).run();
+        db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, compiled.rule.id)).run();
+        db.insert(collections).values({
+          id: candidate.collectionId, accountId: "account-1", name: candidate.name, color: "#663366",
+          position: 1, revision: 1, createdAt: now, updatedAt: now,
+        }).run();
+        const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()?.revision ?? 1;
+        const boundRule = service.compile({
+          actor: { id: "workspace-1", type: "human" },
+          workspaceId: "workspace-1",
+          request: {
+            idempotencyKey: `bre-316-closed-${candidate.name}-collection`,
+            expectedRuleRevision: null,
+            workspaceSchemaRevision: workspaceRevision,
+            source: `orca 1
+rule "Closed ${candidate.name} Collection"
+event thread.updated
+when subject contains "failed"
+action add collection "${candidate.name}"
+because "The bound Collection must remain owned"`,
+          },
+        });
+        assert.equal(boundRule.ok, true);
+        if (!boundRule.ok) throw new Error(`Could not compile ${candidate.name} Collection Rule`);
+        if (candidate.name === "missing") {
+          db.delete(collections).where(eq(collections.id, candidate.collectionId)).run();
+        } else {
+          db.update(collections).set({ accountId: "account-foreign" }).where(eq(collections.id, candidate.collectionId)).run();
+        }
+        await persistGmailMessages(db, {
+          accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage(`closed-${candidate.name}-collection`)],
+          labelList: [], now, propagationTrigger: "sync",
+        });
+        const email = db.select().from(emails).where(eq(emails.providerMessageId, `closed-${candidate.name}-collection`)).get();
+        assert.ok(email);
+
+        db.update(organizationRules).set({ activeRevisionId: boundRule.revision.id }).where(eq(organizationRules.id, boundRule.rule.id)).run();
+
+        const durableState = () => ({
+          projections: db.select().from(organizationThreadStates).all().length,
+          laneProjections: db.select().from(organizationThreadLaneStates).all().length,
+          workflowProjections: db.select().from(organizationThreadWorkflowStates).all().length,
+          facetProjections: db.select().from(organizationThreadFacetValues).all().length,
+          collectionProjections: db.select().from(collectionThreads).all().length,
+          contextProjections: db.select().from(organizationThreadContextRelationships).all().length,
+          reminderProjections: db.select().from(threadReminders).all().length,
+          changes: db.select().from(organizationChangeSets).all().length,
+          actions: db.select().from(organizationChangeActions).all().length,
+          traces: db.select().from(organizationEvaluationTraces).all().length,
+        });
+        const before = durableState();
+
+        assert.throws(() => evaluateLiveMessageRules(db, {
+          accountId: "account-1",
+          events: [{ messageId: email.id, kind: "thread.updated" }],
+        }), /failed current Workspace Schema semantic binding/);
+        assert.deepEqual(durableState(), before, `${candidate.name} Collection denial must produce zero projection, Change Set, Action, or Trace writes`);
+      } finally { sqlite.close(); }
+    }
   }, 15_000);
 
   test("atomically organizes a production-failure Thread and persists its complete Glass Box Trace", async () => {

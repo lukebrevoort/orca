@@ -132,10 +132,10 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
   const workflowStates = workflowStateIds.length === 0 ? [] : db.select({ id: organizationWorkflowStates.id, name: organizationWorkflowStates.name }).from(organizationWorkflowStates)
     .where(and(eq(organizationWorkflowStates.workspaceId, account.userId), inArray(organizationWorkflowStates.id, workflowStateIds), isNull(organizationWorkflowStates.retiredAt)))
     .orderBy(asc(organizationWorkflowStates.position), asc(organizationWorkflowStates.id)).all();
-  const ownedAccountIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, account.userId)).all().map(({ id }) => id);
   const collectionIds = [...referenced.collections];
-  const workspaceCollections = ownedAccountIds.length === 0 || collectionIds.length === 0 ? [] : db.select({ id: collections.id, name: collections.name, accountId: collections.accountId }).from(collections)
-    .where(and(inArray(collections.accountId, ownedAccountIds), inArray(collections.id, collectionIds)))
+  const workspaceCollections = collectionIds.length === 0 ? [] : db.select({ id: collections.id, name: collections.name, accountId: collections.accountId }).from(collections)
+    .innerJoin(oauthAccounts, and(eq(oauthAccounts.id, collections.accountId), eq(oauthAccounts.userId, account.userId)))
+    .where(inArray(collections.id, collectionIds))
     .orderBy(asc(collections.accountId), asc(collections.position), asc(collections.id)).all();
   const contextTypeIds = [...referenced.contextTypes];
   const contextTypes = contextTypeIds.length === 0 ? [] : db.select({ id: organizationContextTypes.id, name: organizationContextTypes.name }).from(organizationContextTypes)
