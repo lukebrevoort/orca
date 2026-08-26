@@ -2,9 +2,9 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   facetCardinalitySchema,
   facetValueTypeSchema,
+  orcaCompilationWorkspaceSchema,
   orcaCompiledRuleRevisionSchema,
   orcaEvaluatorLimits,
-  orcaEvaluationTraceSchema,
   type OrcaEvaluationTrace,
 } from "@orca/shared";
 
@@ -33,6 +33,7 @@ import { createSqliteOrganizationLanesRepository } from "../lanes/sqlite-reposit
 import { gmailSyncOrganizationCapability, type OrganizationSystemCapabilityAdapter } from "../system-capability.ts";
 import { applyAuthorizedEvaluationProjection } from "./evaluation-projection-sqlite.ts";
 import { evaluateOrcaRules, type OrcaActiveRuleRevision, type OrcaEvaluationInput } from "./evaluator.ts";
+import { decodePersistedOrcaEvaluationTrace } from "./persisted-trace.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 
@@ -65,8 +66,10 @@ function activeRuleSet(db: Database, workspaceId: string): { id: string; revisio
     revisionId: row.revision.id,
     revision: row.revision.revision,
     order: row.rule.position,
-    workspaceSchemaRevision: row.revision.workspaceSchemaRevision,
     compiled: orcaCompiledRuleRevisionSchema.parse(JSON.parse(row.revision.compiledJson)),
+    compilationWorkspace: row.revision.compilationWorkspaceJson
+      ? orcaCompilationWorkspaceSchema.parse(JSON.parse(row.revision.compilationWorkspaceJson))
+      : undefined,
   }));
   return {
     id: `active-rule-set:${workspaceId}`,
@@ -74,6 +77,37 @@ function activeRuleSet(db: Database, workspaceId: string): { id: string; revisio
     activeRevisionCount,
     revisions,
   };
+}
+
+function referencedCatalogIds(ruleSet: ReturnType<typeof activeRuleSet>): {
+  workflowStates: Set<string>;
+  facets: Set<string>;
+  collections: Set<string>;
+  contextTypes: Set<string>;
+  contexts: Set<string>;
+} {
+  const ids = {
+    workflowStates: new Set<string>(),
+    facets: new Set<string>(),
+    collections: new Set<string>(),
+    contextTypes: new Set<string>(),
+    contexts: new Set<string>(),
+  };
+  for (const revision of ruleSet.revisions) {
+    for (const { expression } of revision.compiled.predicates) {
+      if ("facetId" in expression && expression.facetId) ids.facets.add(expression.facetId);
+    }
+    for (const action of revision.compiled.actions) {
+      if (action.kind === "set_workflow_state") ids.workflowStates.add(action.stateId);
+      else if (action.kind === "set_facet" || action.kind === "unset_facet") ids.facets.add(action.facetId);
+      else if (action.kind === "add_collection" || action.kind === "remove_collection") ids.collections.add(action.collectionId);
+      else if (action.kind === "link_context" || action.kind === "unlink_context") {
+        ids.contextTypes.add(action.contextTypeId);
+        ids.contexts.add(action.contextId);
+      }
+    }
+  }
+  return ids;
 }
 
 export function loadLiveEvaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: "message.received" | "thread.updated" }, capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability): OrcaEvaluationInput | null {
@@ -86,18 +120,31 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
   const laneSnapshot = createSqliteOrganizationLanesRepository(db).getSnapshot(account.userId, [input.accountId]);
   const lanePlacement = laneSnapshot.placements.find((placement) => placement.accountId === input.accountId && placement.threadId === thread.id);
   if (!lanePlacement) return null;
-  const facets = db.select().from(organizationFacets).where(eq(organizationFacets.workspaceId, account.userId)).orderBy(asc(organizationFacets.position), asc(organizationFacets.id)).all();
-  const workflowStates = db.select({ id: organizationWorkflowStates.id, name: organizationWorkflowStates.name }).from(organizationWorkflowStates)
-    .where(and(eq(organizationWorkflowStates.workspaceId, account.userId), isNull(organizationWorkflowStates.retiredAt)))
+  const ruleSet = activeRuleSet(db, account.userId);
+  const referenced = referencedCatalogIds(ruleSet);
+  const facetIds = [...referenced.facets];
+  const facets = facetIds.length === 0 ? [] : db.select().from(organizationFacets).where(and(
+    eq(organizationFacets.workspaceId, account.userId),
+    inArray(organizationFacets.id, facetIds),
+    isNull(organizationFacets.retiredAt),
+  )).orderBy(asc(organizationFacets.position), asc(organizationFacets.id)).all();
+  const workflowStateIds = [...referenced.workflowStates];
+  const workflowStates = workflowStateIds.length === 0 ? [] : db.select({ id: organizationWorkflowStates.id, name: organizationWorkflowStates.name }).from(organizationWorkflowStates)
+    .where(and(eq(organizationWorkflowStates.workspaceId, account.userId), inArray(organizationWorkflowStates.id, workflowStateIds), isNull(organizationWorkflowStates.retiredAt)))
     .orderBy(asc(organizationWorkflowStates.position), asc(organizationWorkflowStates.id)).all();
   const ownedAccountIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, account.userId)).all().map(({ id }) => id);
-  const workspaceCollections = ownedAccountIds.length === 0 ? [] : db.select({ id: collections.id, name: collections.name, accountId: collections.accountId }).from(collections)
-    .where(inArray(collections.accountId, ownedAccountIds)).orderBy(asc(collections.accountId), asc(collections.position), asc(collections.id)).all();
-  const contextTypes = db.select({ id: organizationContextTypes.id, name: organizationContextTypes.name }).from(organizationContextTypes)
-    .where(and(eq(organizationContextTypes.workspaceId, account.userId), isNull(organizationContextTypes.retiredAt)))
+  const collectionIds = [...referenced.collections];
+  const workspaceCollections = ownedAccountIds.length === 0 || collectionIds.length === 0 ? [] : db.select({ id: collections.id, name: collections.name, accountId: collections.accountId }).from(collections)
+    .where(and(inArray(collections.accountId, ownedAccountIds), inArray(collections.id, collectionIds)))
+    .orderBy(asc(collections.accountId), asc(collections.position), asc(collections.id)).all();
+  const contextTypeIds = [...referenced.contextTypes];
+  const contextTypes = contextTypeIds.length === 0 ? [] : db.select({ id: organizationContextTypes.id, name: organizationContextTypes.name }).from(organizationContextTypes)
+    .where(and(eq(organizationContextTypes.workspaceId, account.userId), inArray(organizationContextTypes.id, contextTypeIds), isNull(organizationContextTypes.retiredAt)))
     .orderBy(asc(organizationContextTypes.position), asc(organizationContextTypes.id)).all();
-  const workspaceContexts = db.select({ id: organizationContexts.id, name: organizationContexts.name, contextTypeId: organizationContexts.contextTypeId }).from(organizationContexts)
-    .where(and(eq(organizationContexts.workspaceId, account.userId), isNull(organizationContexts.retiredAt))).orderBy(asc(organizationContexts.id)).all();
+  const contextIds = [...referenced.contexts];
+  const workspaceContexts = contextIds.length === 0 ? [] : db.select({ id: organizationContexts.id, name: organizationContexts.name, contextTypeId: organizationContexts.contextTypeId }).from(organizationContexts)
+    .where(and(eq(organizationContexts.workspaceId, account.userId), inArray(organizationContexts.id, contextIds), isNull(organizationContexts.retiredAt)))
+    .orderBy(asc(organizationContexts.id)).all();
   const facetValues = db.select().from(organizationThreadFacetValues).where(and(
     eq(organizationThreadFacetValues.workspaceId, account.userId), eq(organizationThreadFacetValues.accountId, input.accountId), eq(organizationThreadFacetValues.threadId, thread.id),
   )).all();
@@ -169,7 +216,7 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
       contextTypes,
       contexts: workspaceContexts,
     },
-    ruleSet: activeRuleSet(db, account.userId),
+    ruleSet,
     actor: { id: "system:gmail-sync", type: "system" },
     capabilities: capabilityAdapter.snapshot({ workspaceId: account.userId, accountId: input.accountId }),
     logicalTime: receivedAt,
@@ -227,7 +274,7 @@ export function evaluateLiveMessageRules(db: Database, input: {
     const existing = db.select({ traceJson: organizationEvaluationTraces.traceJson }).from(organizationEvaluationTraces).where(and(
       eq(organizationEvaluationTraces.workspaceId, context.thread.workspaceId), eq(organizationEvaluationTraces.eventId, context.event.id),
     )).get();
-    if (existing) { traces.push(orcaEvaluationTraceSchema.parse(JSON.parse(existing.traceJson))); continue; }
+    if (existing) { traces.push(decodePersistedOrcaEvaluationTrace(JSON.parse(existing.traceJson))); continue; }
     traces.push(evaluateAndPersistLiveContext(db, context, capabilityAdapter));
   }
   return traces;
@@ -239,5 +286,5 @@ export function getLatestOrcaEvaluationTrace(db: Database, input: { workspaceId:
     ...(input.accountId ? [eq(organizationEvaluationTraces.accountId, input.accountId)] : []),
     ...(input.threadId ? [eq(organizationEvaluationTraces.threadId, input.threadId)] : []),
   )).orderBy(desc(organizationEvaluationTraces.logicalTime), desc(organizationEvaluationTraces.id)).get();
-  return row ? orcaEvaluationTraceSchema.parse(JSON.parse(row.traceJson)) : null;
+  return row ? decodePersistedOrcaEvaluationTrace(JSON.parse(row.traceJson)) : null;
 }

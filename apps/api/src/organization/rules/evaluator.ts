@@ -15,6 +15,7 @@ import {
   type OrcaEvaluationResult,
   type OrcaEvaluationTrace,
   type OrcaEvaluationWorkspace,
+  type OrcaWorkspaceSnapshot,
   type OrganizationActor,
   type OrganizationCapabilitySnapshot,
   type ThreadLanePlacement,
@@ -52,8 +53,8 @@ export type OrcaActiveRuleRevision = {
   revisionId: string;
   revision: number;
   order: number;
-  /** Authoritative persisted schema revision supplied by the live loader. */
-  workspaceSchemaRevision?: number;
+  /** Bounded authoritative resource definitions captured at compilation. */
+  compilationWorkspace?: OrcaWorkspaceSnapshot;
   compiled: OrcaCompiledRuleRevision;
 };
 
@@ -182,13 +183,18 @@ function assertEvaluationContext(input: OrcaEvaluationInput): {
     if (!compiled.success) {
       throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed typed IR classification validation`);
     }
-    const bindingRevision = revision.workspaceSchemaRevision ?? workspace.data.revision;
-    if (!Number.isInteger(bindingRevision) || bindingRevision < 1) {
-      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} has an invalid authoritative Workspace Schema revision`);
+    const compilationWorkspace = revision.compilationWorkspace
+      ?? (compiled.data.workspaceSchemaRevision === workspace.data.revision ? workspace.data : null);
+    if (!compilationWorkspace) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} lacks its authoritative compilation-time Workspace Schema snapshot`);
     }
-    const semanticIssues = validateOrcaCompiledRevisionSemantics(compiled.data, { ...workspace.data, revision: bindingRevision });
-    if (semanticIssues.length > 0) {
-      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed Workspace Schema semantic binding: ${semanticIssues[0]!.message}`);
+    const compilationIssues = validateOrcaCompiledRevisionSemantics(compiled.data, compilationWorkspace, { revisionBinding: "exact" });
+    if (compilationIssues.length > 0) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed compilation Workspace Schema semantic binding: ${compilationIssues[0]!.message}`);
+    }
+    const currentIssues = validateOrcaCompiledRevisionSemantics(compiled.data, workspace.data, { revisionBinding: "current" });
+    if (currentIssues.length > 0) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed current Workspace Schema semantic binding: ${currentIssues[0]!.message}`);
     }
   }
   return {

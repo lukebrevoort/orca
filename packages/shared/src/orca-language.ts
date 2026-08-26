@@ -233,6 +233,63 @@ export const orcaWorkspaceSnapshotSchema = z.object({
 }).strict();
 export type OrcaWorkspaceSnapshot = z.infer<typeof orcaWorkspaceSnapshotSchema>;
 
+export const orcaCompilationWorkspaceResourceLimit = orcaCompilerLimits.maximumPredicates + orcaCompilerLimits.maximumActions;
+export const orcaCompilationWorkspaceSchema = orcaWorkspaceSnapshotSchema.superRefine((workspace, context) => {
+  for (const family of ["lanes", "workflowStates", "facets", "collections", "contextTypes", "contexts"] as const) {
+    if (workspace[family].length > orcaCompilationWorkspaceResourceLimit) {
+      context.addIssue({
+        code: "too_big",
+        maximum: orcaCompilationWorkspaceResourceLimit,
+        origin: "array",
+        inclusive: true,
+        path: [family],
+        message: `Compilation Workspace ${family} exceed the bounded referenced-resource limit`,
+      });
+    }
+  }
+});
+
+/**
+ * Preserves only the authoritative Workspace resources referenced by one
+ * bounded compiled revision. This revision-time snapshot is persisted apart
+ * from caller-mutable compiled IR and is sufficient for later semantic
+ * re-binding without relabeling the current catalog as historical state.
+ */
+export function snapshotOrcaCompiledRevisionWorkspace(
+  revision: OrcaCompiledRuleRevision,
+  workspace: OrcaWorkspaceSnapshot,
+): OrcaWorkspaceSnapshot {
+  const laneIds = new Set<string>();
+  const workflowStateIds = new Set<string>();
+  const facetIds = new Set<string>();
+  const collectionIds = new Set<string>();
+  const contextTypeIds = new Set<string>();
+  const contextIds = new Set<string>();
+  for (const { expression } of revision.predicates) {
+    if ("facetId" in expression && expression.facetId) facetIds.add(expression.facetId);
+  }
+  for (const action of revision.actions) {
+    if (action.kind === "route_lane") laneIds.add(action.laneId);
+    else if (action.kind === "set_workflow_state") workflowStateIds.add(action.stateId);
+    else if (action.kind === "set_facet" || action.kind === "unset_facet") facetIds.add(action.facetId);
+    else if (action.kind === "add_collection" || action.kind === "remove_collection") collectionIds.add(action.collectionId);
+    else if (action.kind === "link_context" || action.kind === "unlink_context") {
+      contextTypeIds.add(action.contextTypeId);
+      contextIds.add(action.contextId);
+    }
+  }
+  return orcaCompilationWorkspaceSchema.parse({
+    workspaceId: workspace.workspaceId,
+    revision: workspace.revision,
+    lanes: workspace.lanes.filter(({ id }) => laneIds.has(id)),
+    workflowStates: workspace.workflowStates.filter(({ id }) => workflowStateIds.has(id)),
+    facets: workspace.facets.filter(({ id }) => facetIds.has(id)),
+    collections: workspace.collections.filter(({ id }) => collectionIds.has(id)),
+    contextTypes: workspace.contextTypes.filter(({ id }) => contextTypeIds.has(id)),
+    contexts: workspace.contexts.filter(({ id }) => contextIds.has(id)),
+  });
+}
+
 export const orcaEvaluationWorkspaceSchema = orcaWorkspaceSnapshotSchema.extend({
   fallbackLaneId: identifierSchema,
   lanes: z.array(orcaCompilerNamedResourceSchema.extend({ defaultPolicyId: identifierSchema }).strict()),
@@ -249,10 +306,22 @@ export const orcaEvaluationWorkspaceSchema = orcaWorkspaceSnapshotSchema.extend(
 export type OrcaEvaluationWorkspace = z.infer<typeof orcaEvaluationWorkspaceSchema>;
 
 export type OrcaSemanticBindingIssue = {
-  code: "workspace_mismatch" | "schema_revision_mismatch" | "resource_not_found" | "resource_family_mismatch" | "facet_cardinality_mismatch" | "facet_value_invalid" | "required_facet_unset";
+  code: "workspace_mismatch" | "schema_revision_mismatch" | "resource_not_found" | "resource_family_mismatch" | "facet_cardinality_mismatch" | "facet_value_invalid" | "required_facet_unset"
+    | "predicate_reference_invalid" | "predicate_cycle" | "predicate_field_invalid" | "predicate_facet_mismatch" | "predicate_metadata_mismatch" | "predicate_operator_invalid" | "predicate_value_invalid";
   actionIndex: number | null;
+  predicateIndex: number | null;
   message: string;
 };
+
+const orcaPredicateFieldSemantics: Readonly<Record<string, { valueType: OrcaScalarType; optional: boolean; scalarType: z.infer<typeof facetValueTypeSchema> }>> = Object.freeze({
+  subject: { valueType: "text", optional: true, scalarType: { kind: "text", maxLength: 10_000 } },
+  "sender.domain": { valueType: "domain", optional: true, scalarType: { kind: "domain" } },
+  "sender.email": { valueType: "email", optional: true, scalarType: { kind: "email", allowDisplayName: false } },
+  "thread.message_count": { valueType: "number", optional: false, scalarType: { kind: "number", integer: false } },
+  "thread.unread": { valueType: "boolean", optional: false, scalarType: { kind: "boolean" } },
+  "thread.latest_received_at": { valueType: "datetime", optional: true, scalarType: { kind: "datetime" } },
+  "thread.human_signal": { valueType: "number", optional: true, scalarType: { kind: "number", integer: false } },
+});
 
 /**
  * Re-binds immutable compiled IR to one exact authoritative Workspace Schema
@@ -260,51 +329,139 @@ export type OrcaSemanticBindingIssue = {
  */
 export function validateOrcaCompiledRevisionSemantics(
   revision: OrcaCompiledRuleRevision,
-  workspace: OrcaEvaluationWorkspace,
+  workspace: OrcaWorkspaceSnapshot,
+  options: { revisionBinding?: "exact" | "current" } = {},
 ): OrcaSemanticBindingIssue[] {
   const issues: OrcaSemanticBindingIssue[] = [];
+  const issue = (value: Omit<OrcaSemanticBindingIssue, "actionIndex" | "predicateIndex"> & { actionIndex?: number | null; predicateIndex?: number | null }): void => {
+    issues.push({ actionIndex: null, predicateIndex: null, ...value });
+  };
   if (revision.workspaceId !== workspace.workspaceId) {
-    issues.push({ code: "workspace_mismatch", actionIndex: null, message: "Compiled Rule Workspace does not match the Evaluation Workspace Schema" });
+    issue({ code: "workspace_mismatch", message: "Compiled Rule Workspace does not match the Evaluation Workspace Schema" });
   }
-  if (revision.workspaceSchemaRevision !== workspace.revision) {
-    issues.push({ code: "schema_revision_mismatch", actionIndex: null, message: `Compiled Rule Workspace Schema revision ${revision.workspaceSchemaRevision} does not match Evaluation revision ${workspace.revision}` });
+  const revisionBinding = options.revisionBinding ?? "exact";
+  if (revisionBinding === "exact" && revision.workspaceSchemaRevision !== workspace.revision) {
+    issue({ code: "schema_revision_mismatch", message: `Compiled Rule Workspace Schema revision ${revision.workspaceSchemaRevision} does not match Evaluation revision ${workspace.revision}` });
+  } else if (revisionBinding === "current" && revision.workspaceSchemaRevision > workspace.revision) {
+    issue({ code: "schema_revision_mismatch", message: `Compiled Rule Workspace Schema revision ${revision.workspaceSchemaRevision} is newer than current revision ${workspace.revision}` });
   }
   const laneIds = new Set(workspace.lanes.map(({ id }) => id));
   const workflowStateIds = new Set(workspace.workflowStates.map(({ id }) => id));
   const contextTypeIds = new Set(workspace.contextTypes.map(({ id }) => id));
+  const facetsById = new Map(workspace.facets.map((facet) => [facet.id, facet]));
+  const collectionsById = new Map(workspace.collections.map((collection) => [collection.id, collection]));
+  const contextsById = new Map(workspace.contexts.map((context) => [context.id, context]));
+
+  const predicatesByName = new Map<string, { expression: OrcaCompiledPredicateExpression; index: number }>();
+  for (const [predicateIndex, predicate] of revision.predicates.entries()) {
+    if (predicate.name === null) continue;
+    if (predicatesByName.has(predicate.name)) {
+      issue({ code: "predicate_reference_invalid", predicateIndex, message: `Predicate name ${predicate.name} is defined more than once` });
+    } else predicatesByName.set(predicate.name, { expression: predicate.expression, index: predicateIndex });
+  }
+  const referencedNames = (expression: OrcaCompiledPredicateExpression): string[] => {
+    if (expression.kind === "reference" || expression.kind === "not") return [expression.predicate];
+    if (expression.kind === "all" || expression.kind === "any") return expression.predicates;
+    return [];
+  };
+  for (const [predicateIndex, { expression }] of revision.predicates.entries()) {
+    for (const name of referencedNames(expression)) {
+      if (!predicatesByName.has(name)) issue({ code: "predicate_reference_invalid", predicateIndex, message: `Predicate reference ${name} is not defined exactly once` });
+    }
+    if (!("field" in expression)) continue;
+    const facetFieldId = expression.field.startsWith("facet:") ? expression.field.slice("facet:".length) : null;
+    if (facetFieldId !== null || expression.facetId !== undefined) {
+      if (!facetFieldId || !expression.facetId || facetFieldId !== expression.facetId) {
+        issue({ code: "predicate_facet_mismatch", predicateIndex, message: `Predicate field ${expression.field} and Facet ID ${expression.facetId ?? "missing"} must identify the same Facet` });
+        continue;
+      }
+      const facet = facetsById.get(expression.facetId);
+      if (!facet) {
+        issue({ code: "resource_not_found", predicateIndex, message: `Facet ${expression.facetId} is absent from the authoritative Workspace Schema` });
+        continue;
+      }
+      if (facet.cardinality !== "single") {
+        issue({ code: "facet_cardinality_mismatch", predicateIndex, message: `Facet ${facet.id} is not a single-value Facet supported by Orca v1 Predicates` });
+      }
+      if (expression.valueType !== facet.valueType.kind || expression.optional !== facet.optional) {
+        issue({ code: "predicate_metadata_mismatch", predicateIndex, message: `Predicate metadata for Facet ${facet.id} does not match its authoritative type and optionality` });
+      }
+      if (expression.kind === "compare" && validateFacetScalarValue(facet.valueType, expression.value) !== null) {
+        issue({ code: "predicate_value_invalid", predicateIndex, message: `Predicate literal is invalid for Facet ${facet.id}` });
+      }
+    } else {
+      const field = orcaPredicateFieldSemantics[expression.field];
+      if (!field) {
+        issue({ code: "predicate_field_invalid", predicateIndex, message: `Predicate field ${expression.field} is not an authoritative Orca v1 field` });
+        continue;
+      }
+      if (expression.valueType !== field.valueType || expression.optional !== field.optional) {
+        issue({ code: "predicate_metadata_mismatch", predicateIndex, message: `Predicate metadata for field ${expression.field} does not match its authoritative type and optionality` });
+      }
+      if (expression.kind === "compare" && validateFacetScalarValue(field.scalarType, expression.value) !== null) {
+        issue({ code: "predicate_value_invalid", predicateIndex, message: `Predicate literal is invalid for field ${expression.field}` });
+      }
+    }
+    if (expression.kind === "missing" && !expression.optional) {
+      issue({ code: "predicate_metadata_mismatch", predicateIndex, message: `Required field ${expression.field} cannot use a missing Predicate` });
+    }
+    if (expression.kind === "compare") {
+      const permitted = expression.operator === "equals"
+        || (expression.operator === "contains" && ["text", "email", "domain"].includes(expression.valueType))
+        || ((expression.operator === "greater_than" || expression.operator === "less_than") && ["number", "datetime", "duration"].includes(expression.valueType));
+      if (!permitted) issue({ code: "predicate_operator_invalid", predicateIndex, message: `Operator ${expression.operator} is not permitted for ${expression.valueType}` });
+    }
+  }
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (name: string): void => {
+    if (visited.has(name)) return;
+    const predicate = predicatesByName.get(name);
+    if (!predicate) return;
+    if (visiting.has(name)) {
+      issue({ code: "predicate_cycle", predicateIndex: predicate.index, message: `Predicate reference graph is recursive at ${name}` });
+      return;
+    }
+    visiting.add(name);
+    for (const target of referencedNames(predicate.expression)) visit(target);
+    visiting.delete(name);
+    visited.add(name);
+  };
+  for (const name of predicatesByName.keys()) visit(name);
+
   for (const [actionIndex, action] of revision.actions.entries()) {
     const missing = (family: string, id: string): void => {
-      issues.push({ code: "resource_not_found", actionIndex, message: `${family} ${id} is absent from the exact Workspace Schema snapshot` });
+      issue({ code: "resource_not_found", actionIndex, message: `${family} ${id} is absent from the authoritative Workspace Schema` });
     };
     if (action.kind === "route_lane") {
       if (!laneIds.has(action.laneId)) missing("Lane", action.laneId);
     } else if (action.kind === "set_workflow_state") {
       if (!workflowStateIds.has(action.stateId)) missing("Workflow State", action.stateId);
     } else if (action.kind === "set_facet" || action.kind === "unset_facet") {
-      const facet = workspace.facets.find(({ id }) => id === action.facetId);
+      const facet = facetsById.get(action.facetId);
       if (!facet) { missing("Facet", action.facetId); continue; }
       if (facet.cardinality !== "single") {
-        issues.push({ code: "facet_cardinality_mismatch", actionIndex, message: `Facet ${action.facetId} is not a single-value Facet supported by Orca v1 Actions` });
+        issue({ code: "facet_cardinality_mismatch", actionIndex, message: `Facet ${action.facetId} is not a single-value Facet supported by Orca v1 Actions` });
       }
       if (action.kind === "unset_facet" && !facet.optional) {
-        issues.push({ code: "required_facet_unset", actionIndex, message: `Required Facet ${action.facetId} cannot be unset` });
+        issue({ code: "required_facet_unset", actionIndex, message: `Required Facet ${action.facetId} cannot be unset` });
       }
       if (action.kind === "set_facet") {
         const message = validateFacetScalarValue(facet.valueType, action.value);
-        if (message) issues.push({ code: "facet_value_invalid", actionIndex, message: `Facet ${action.facetId} ${message}` });
+        if (message) issue({ code: "facet_value_invalid", actionIndex, message: `Facet ${action.facetId} ${message}` });
       }
     } else if (action.kind === "add_collection" || action.kind === "remove_collection") {
-      const collection = workspace.collections.find(({ id }) => id === action.collectionId);
+      const collection = collectionsById.get(action.collectionId);
       if (!collection) missing("Collection", action.collectionId);
       else if (collection.accountId !== action.accountId) {
-        issues.push({ code: "resource_family_mismatch", actionIndex, message: `Collection ${action.collectionId} is not in Account ${action.accountId}` });
+        issue({ code: "resource_family_mismatch", actionIndex, message: `Collection ${action.collectionId} is not in Account ${action.accountId}` });
       }
     } else if (action.kind === "link_context" || action.kind === "unlink_context") {
       if (!contextTypeIds.has(action.contextTypeId)) missing("Context Type", action.contextTypeId);
-      const context = workspace.contexts.find(({ id }) => id === action.contextId);
+      const context = contextsById.get(action.contextId);
       if (!context) missing("Context", action.contextId);
       else if (context.contextTypeId !== action.contextTypeId) {
-        issues.push({ code: "resource_family_mismatch", actionIndex, message: `Context ${action.contextId} does not belong to Context Type ${action.contextTypeId}` });
+        issue({ code: "resource_family_mismatch", actionIndex, message: `Context ${action.contextId} does not belong to Context Type ${action.contextTypeId}` });
       }
     }
   }

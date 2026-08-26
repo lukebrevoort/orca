@@ -11,6 +11,10 @@ import {
   orcaRuleRevisionPageMaximumLimit,
   orcaRuleReorderRequestSchema,
   orcaRuleOrderResponseSchema,
+  orcaWorkspaceSnapshotSchema,
+  validateOrcaCompiledRevisionSemantics,
+  type OrcaCompiledRuleRevision,
+  type OrcaWorkspaceSnapshot,
 } from "./orca-language.ts";
 
 describe("Orca Rule revision history contract", () => {
@@ -133,5 +137,75 @@ describe("Orca Event contracts", () => {
       ...attentionOnly,
       requiredCapabilities: ["organization_attention", "organization_thread"],
     }).success).toBe(true);
+  });
+});
+
+describe("Orca Predicate semantic binding", () => {
+  const workspace = orcaWorkspaceSnapshotSchema.parse({
+    workspaceId: "workspace-1",
+    revision: 7,
+    lanes: [{ id: "lane-focus", name: "Focus" }],
+    workflowStates: [],
+    facets: [{
+      id: "facet-ticket",
+      name: "Ticket",
+      valueType: { kind: "enum", options: [{ id: "ticket-open", label: "Open", position: 0, retiredAt: null }] },
+      cardinality: "single",
+      optional: true,
+    }],
+    collections: [],
+    contextTypes: [],
+    contexts: [],
+  });
+  const revision = orcaCompiledRuleRevisionSchema.parse({
+    languageVersion: 1,
+    workspaceId: "workspace-1",
+    workspaceSchemaRevision: 7,
+    name: "Bound Predicate graph",
+    event: { kind: "message.received" },
+    predicates: [
+      { name: "subject_contains", expression: { kind: "compare", field: "subject", operator: "contains", value: "failed", valueType: "text", optional: true, missingBehavior: "false" } },
+      { name: "count_greater", expression: { kind: "compare", field: "thread.message_count", operator: "greater_than", value: 1, valueType: "number", optional: false, missingBehavior: "false" } },
+      { name: "date_less", expression: { kind: "compare", field: "thread.latest_received_at", operator: "less_than", value: "2026-08-27T00:00:00.000Z", valueType: "datetime", optional: true, missingBehavior: "false" } },
+      { name: "unread_equals", expression: { kind: "compare", field: "thread.unread", operator: "equals", value: true, valueType: "boolean", optional: false, missingBehavior: "false" } },
+      { name: "ticket_equals", expression: { kind: "compare", field: "facet:facet-ticket", facetId: "facet-ticket", operator: "equals", value: "ticket-open", valueType: "enum", optional: true, missingBehavior: "false" } },
+      { name: "ticket_exists", expression: { kind: "exists", field: "facet:facet-ticket", facetId: "facet-ticket", valueType: "enum", optional: true } },
+      { name: "sender_missing", expression: { kind: "missing", field: "sender.email", valueType: "email", optional: true } },
+      { name: "nested_any", expression: { kind: "any", predicates: ["subject_contains", "ticket_equals"] } },
+      { name: "nested_not", expression: { kind: "not", predicate: "sender_missing" } },
+      { name: null, expression: { kind: "all", predicates: ["nested_any", "nested_not", "count_greater", "date_less", "unread_equals", "ticket_exists"] } },
+    ],
+    actions: [{ kind: "route_lane", laneId: "lane-focus" }],
+    because: "Every Predicate node is rebound",
+    requiredCapabilities: ["organization_thread"],
+    risk: "low",
+  });
+
+  test("recursively re-binds every graph form and supported leaf/operator to authoritative field and Facet semantics", () => {
+    assert.deepEqual(validateOrcaCompiledRevisionSemantics(revision, workspace), []);
+    const cases: Array<[string, (candidate: OrcaCompiledRuleRevision, schema: OrcaWorkspaceSnapshot) => void]> = [
+      ["forged field/Facet pairing", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "subject", facetId: "facet-ticket", valueType: "enum", optional: true }; }],
+      ["missing Facet ID", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "facet:facet-ticket", valueType: "enum", optional: true }; }],
+      ["mismatched Facet ID", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "facet:facet-ticket", facetId: "facet-other", valueType: "enum", optional: true }; }],
+      ["unknown built-in field", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "thread.secret", valueType: "text", optional: true }; }],
+      ["forged built-in type", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "subject", valueType: "enum", optional: true }; }],
+      ["forged built-in optionality", (candidate) => { candidate.predicates[0]!.expression = { kind: "exists", field: "subject", valueType: "text", optional: false }; }],
+      ["forged Facet type", (candidate) => { candidate.predicates[4]!.expression = { kind: "compare", field: "facet:facet-ticket", facetId: "facet-ticket", operator: "equals", value: "ticket-open", valueType: "text", optional: true, missingBehavior: "false" }; }],
+      ["forged Facet optionality", (candidate) => { candidate.predicates[5]!.expression = { kind: "exists", field: "facet:facet-ticket", facetId: "facet-ticket", valueType: "enum", optional: false }; }],
+      ["unsupported multi-value Facet", (_candidate, schema) => { schema.facets[0]!.cardinality = "multi"; }],
+      ["contains on Boolean", (candidate) => { candidate.predicates[3]!.expression = { kind: "compare", field: "thread.unread", operator: "contains", value: true, valueType: "boolean", optional: false, missingBehavior: "false" }; }],
+      ["ordering on Text", (candidate) => { candidate.predicates[0]!.expression = { kind: "compare", field: "subject", operator: "greater_than", value: "failed", valueType: "text", optional: true, missingBehavior: "false" }; }],
+      ["invalid enum literal", (candidate) => { candidate.predicates[4]!.expression = { kind: "compare", field: "facet:facet-ticket", facetId: "facet-ticket", operator: "equals", value: "ticket-forged", valueType: "enum", optional: true, missingBehavior: "false" }; }],
+      ["missing nested reference", (candidate) => { candidate.predicates[7]!.expression = { kind: "any", predicates: ["subject_contains", "missing_name"] }; }],
+      ["duplicate Predicate name", (candidate) => { candidate.predicates[1]!.name = "subject_contains"; }],
+      ["recursive all/any/not graph", (candidate) => { candidate.predicates[7]!.expression = { kind: "any", predicates: ["nested_not"] }; candidate.predicates[8]!.expression = { kind: "not", predicate: "nested_any" }; }],
+    ];
+
+    for (const [name, mutate] of cases) {
+      const candidate = structuredClone(revision);
+      const schema = structuredClone(workspace);
+      mutate(candidate, schema);
+      assert.notEqual(validateOrcaCompiledRevisionSemantics(candidate, schema).length, 0, name);
+    }
   });
 });

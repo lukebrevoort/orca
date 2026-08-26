@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { classifyOrcaActions } from "@orca/shared";
+import { classifyOrcaActions, orcaEvaluationTraceSchema } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import {
@@ -38,13 +38,20 @@ import { persistGmailMessages } from "../../providers/gmail/sync.ts";
 import type { GmailMessage } from "../../providers/gmail/types.ts";
 import { createOrganization } from "../module.ts";
 import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
-import { evaluateAndPersistLiveContext, getLatestOrcaEvaluationTrace, loadLiveEvaluationInput } from "./evaluation-sqlite.ts";
+import { evaluateAndPersistLiveContext, evaluateLiveMessageRules, getLatestOrcaEvaluationTrace, loadLiveEvaluationInput } from "./evaluation-sqlite.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 import { createRuleRevisionService } from "./service.ts";
 import { gmailSyncOrganizationCapability, type OrganizationSystemCapabilityAdapter } from "../system-capability.ts";
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
+const bre315TraceFixture = JSON.parse(readFileSync(resolve(import.meta.dir, "../../../../web/public/docs/assets/bre-315-trace-fixture.json"), "utf8")) as {
+  trace: Record<string, unknown> & {
+    event: Record<string, unknown>;
+    budget: Record<string, unknown>;
+    ruleSet: { revision: number };
+  };
+};
 
 afterEach(() => {
   while (directories.length) rmSync(directories.pop()!, { recursive: true, force: true });
@@ -122,6 +129,123 @@ because "A failed deploy blocks work"` },
 }
 
 describe("message.received Rule evaluation", () => {
+  test("upgrades exact BRE-315 persisted Trace JSON deterministically at replay and latest-read boundaries", async () => {
+    const { db, sqlite, compiled, now } = setup();
+    try {
+      db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("legacy-trace")],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "legacy-trace")).get()!;
+      const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(context);
+      const legacy = structuredClone(bre315TraceFixture.trace);
+      legacy.id = `evaluation:${context.event.id}:legacy-rules:7`;
+      legacy.event = {
+        ...legacy.event,
+        id: context.event.id,
+        kind: "thread.updated",
+        cause: "provider",
+        workspaceId: "workspace-1",
+        accountId: "account-1",
+        threadId: email.threadId,
+        messageId: email.id,
+      };
+      legacy.budget = { ...legacy.budget };
+      delete legacy.budget.status;
+      assert.equal(orcaEvaluationTraceSchema.safeParse(legacy).success, false, "the strict current write schema must reject exact BRE-315 JSON");
+      const logicalTime = new Date(now.getTime() + 1_000);
+      db.insert(organizationEvaluationTraces).values({
+        workspaceId: "workspace-1",
+        id: String(legacy.id),
+        accountId: "account-1",
+        threadId: email.threadId,
+        eventId: context.event.id,
+        eventKind: "thread.updated",
+        ruleSetRevision: legacy.ruleSet.revision,
+        traceJson: JSON.stringify(legacy),
+        actionsJson: "[]",
+        logicalTime,
+        createdAt: logicalTime,
+      }).run();
+
+      const replayed = evaluateLiveMessageRules(db, {
+        accountId: "account-1",
+        events: [{ messageId: email.id, kind: "thread.updated" }],
+      });
+      const latest = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: email.threadId });
+      assert.equal(replayed.length, 1);
+      assert.ok(latest);
+      assert.deepEqual(replayed[0], latest);
+      assert.equal(orcaEvaluationTraceSchema.safeParse(latest).success, true);
+      assert.equal(latest.budget.status, "complete");
+      assert.equal(latest.event.kind, "thread.updated");
+      assert.equal(latest.event.id, context.event.id, "legacy Event identity preserves the original message linkage honestly");
+      assert.equal("messageId" in latest.event, false);
+      assert.equal(JSON.stringify(evaluateLiveMessageRules(db, { accountId: "account-1", events: [{ messageId: email.id, kind: "thread.updated" }] })[0]), JSON.stringify(latest));
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("rejects a Lane introduced after the compiled Workspace Schema revision with zero writes", async () => {
+    const { db, sqlite, service, compiled, now } = setup();
+    try {
+      db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, compiled.rule.id)).run();
+      db.update(organizationWorkspaceStates).set({ revision: 7 }).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).run();
+      const revisionSeven = service.compile({
+        actor: { id: "workspace-1", type: "human" },
+        workspaceId: "workspace-1",
+        request: {
+          idempotencyKey: "bre-316-revision-bound-lane",
+          expectedRuleRevision: null,
+          workspaceSchemaRevision: 7,
+          source: `orca 1
+rule "Revision-bound Lane"
+event message.received
+when subject contains "failed"
+action route lane "Focus"
+because "Only revision-seven resources may be referenced"`,
+        },
+      });
+      assert.equal(revisionSeven.ok, true);
+      if (!revisionSeven.ok) throw new Error("revision-seven Rule did not compile");
+      assert.equal(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()?.revision, 8);
+      db.insert(organizationLanes).values({
+        workspaceId: "workspace-1", id: "lane-introduced-at-8", name: "Later Lane", position: 2,
+        defaultPolicyId: "policy-focus", revision: 1, createdAt: new Date(now.getTime() + 1_000), updatedAt: new Date(now.getTime() + 1_000),
+      }).run();
+      db.update(organizationRules).set({ activeRevisionId: revisionSeven.revision.id }).where(eq(organizationRules.id, revisionSeven.rule.id)).run();
+
+      db.update(organizationRules).set({ activeRevisionId: null }).where(eq(organizationRules.id, revisionSeven.rule.id)).run();
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("revision-bound-lane")],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+      db.update(organizationRules).set({ activeRevisionId: revisionSeven.revision.id }).where(eq(organizationRules.id, revisionSeven.rule.id)).run();
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "revision-bound-lane")).get()!;
+      const before = {
+        changes: db.select().from(organizationChangeSets).all().length,
+        actions: db.select().from(organizationChangeActions).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        threads: db.select().from(organizationThreadStates).all().length,
+        lanes: db.select().from(organizationThreadLaneStates).all().length,
+      };
+
+      const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "message.received" });
+      assert.ok(context);
+      context.event.id = `${context.event.id}:tampered`;
+      context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "route_lane", laneId: "lane-introduced-at-8" }];
+      assert.throws(() => evaluateAndPersistLiveContext(db, context), /Workspace Schema semantic binding/);
+      assert.deepEqual({
+        changes: db.select().from(organizationChangeSets).all().length,
+        actions: db.select().from(organizationChangeActions).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        threads: db.select().from(organizationThreadStates).all().length,
+        lanes: db.select().from(organizationThreadLaneStates).all().length,
+      }, before);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("rejects schema-tampered compiled IR with zero projection, Change Set, or Trace writes", async () => {
     const { db, sqlite, compiled, now } = setup();
     try {
@@ -153,6 +277,20 @@ describe("message.received Rule evaluation", () => {
         ["required Facet unset", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "unset_facet", facetId: "facet-required" }]; }],
         ["missing resource", (context) => { context.ruleSet.revisions[0]!.compiled.actions = [{ kind: "set_workflow_state", stateId: "state-missing" }]; }],
         ["revision mismatch", (context) => { context.ruleSet.revisions[0]!.compiled.workspaceSchemaRevision += 1; }],
+        ["forged Predicate field/Facet pairing", (context) => {
+          context.ruleSet.revisions[0]!.compiled.predicates = [{
+            name: null,
+            expression: { kind: "exists", field: "subject", facetId: "facet-urgency", valueType: "enum", optional: true },
+          }];
+        }],
+        ["nested Predicate semantic forgery", (context) => {
+          context.ruleSet.revisions[0]!.compiled.predicates = [
+            { name: "forged_leaf", expression: { kind: "compare", field: "facet:facet-urgency", facetId: "facet-urgency", operator: "contains", value: "urgent", valueType: "enum", optional: true, missingBehavior: "false" } },
+            { name: "nested_not", expression: { kind: "not", predicate: "forged_leaf" } },
+            { name: "nested_any", expression: { kind: "any", predicates: ["nested_not"] } },
+            { name: null, expression: { kind: "all", predicates: ["nested_any"] } },
+          ];
+        }],
       ];
 
       for (const [, mutate] of cases) {
@@ -175,7 +313,7 @@ describe("message.received Rule evaluation", () => {
     } finally { sqlite.close(); }
   }, 15_000);
 
-  test("reports bounded exhaustion in memory without projection, Change Set, or persisted Trace writes", async () => {
+  test("bounds referenced live catalogs before exhausted evaluation and performs zero writes", async () => {
     const { db, sqlite, now } = setup();
     try {
       const template = db.select().from(organizationRuleRevisions).get()!;
@@ -212,6 +350,25 @@ describe("message.received Rule evaluation", () => {
           ...template, id: revisionId, ruleId, revision: 1, compiledJson: "{also malformed", createdAt: new Date(now.getTime() + 2_000 + index),
         }).run();
       }
+      for (let index = 0; index < 250; index += 1) {
+        const suffix = String(index).padStart(3, "0");
+        db.insert(organizationWorkflowStates).values({
+          workspaceId: "workspace-1", id: `state-unreferenced-${suffix}`, name: `Unreferenced state ${suffix}`,
+          position: index + 1, revision: 1, createdAt: now, updatedAt: now,
+        }).run();
+        db.insert(collections).values({
+          id: `collection-unreferenced-${suffix}`, accountId: "account-1", name: `Unreferenced collection ${suffix}`,
+          color: "#666666", position: index + 1, revision: 1, createdAt: now, updatedAt: now,
+        }).run();
+        db.insert(organizationContextTypes).values({
+          workspaceId: "workspace-1", id: `context-type-unreferenced-${suffix}`, name: `Unreferenced type ${suffix}`,
+          position: index + 1, revision: 1, createdAt: now, updatedAt: now,
+        }).run();
+        db.insert(organizationContexts).values({
+          workspaceId: "workspace-1", id: `context-unreferenced-${suffix}`, contextTypeId: `context-type-unreferenced-${suffix}`,
+          name: `Unreferenced context ${suffix}`, revision: 1, createdAt: now, updatedAt: now,
+        }).run();
+      }
 
       const before = {
         changes: db.select().from(organizationChangeSets).all().length,
@@ -233,6 +390,10 @@ describe("message.received Rule evaluation", () => {
       assert.ok(email);
       const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
       assert.ok(context);
+      assert.deepEqual(context.workspaceSchema.workflowStates.map(({ id }) => id), ["state-review"]);
+      assert.deepEqual(context.workspaceSchema.collections.map(({ id }) => id), ["collection-launch"]);
+      assert.deepEqual(context.workspaceSchema.contextTypes.map(({ id }) => id), ["context-type-project"]);
+      assert.deepEqual(context.workspaceSchema.contexts.map(({ id }) => id), ["context-orca"]);
       const trace = evaluateAndPersistLiveContext(db, context);
       assert.equal(trace.ruleSet.activeRevisionCount, 126);
       assert.equal(trace.consideredRevisions.length, 100);

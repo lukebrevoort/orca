@@ -7,6 +7,7 @@ import {
   orcaRuleRevisionListSchema,
   orcaRuleReorderRequestSchema,
   orcaRuleOrderResponseSchema,
+  snapshotOrcaCompiledRevisionWorkspace,
   type OrcaRule,
   type OrcaRuleCompileRequest,
   type OrcaRuleCompileResponse,
@@ -21,10 +22,11 @@ import {
   type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrganizationExecutionContext,
+  type OrcaWorkspaceSnapshot,
 } from "@orca/shared";
 
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
-import { compileOrcaRule, type OrcaWorkspaceSnapshot } from "./compiler.ts";
+import { compileOrcaRule } from "./compiler.ts";
 
 export class WorkspaceSchemaConflictError extends Error {
   readonly code = "workspace_schema_conflict";
@@ -75,6 +77,7 @@ export type RulePersistenceIntent = Readonly<{
   expectedRuleRevision: number | null;
   rule: OrcaRule;
   revision: OrcaRuleRevision;
+  compilationWorkspace: OrcaWorkspaceSnapshot;
   orderPlan: RuleOrderMutationPlan | null;
 }>;
 export type RuleOrderState = Readonly<{
@@ -120,6 +123,7 @@ export function digestRulePersistenceIntent(input: RulePersistenceIntent): strin
     expectedRuleRevision: input.expectedRuleRevision,
     rule: input.rule,
     revision: input.revision,
+    compilationWorkspace: input.compilationWorkspace,
     orderPlan: input.orderPlan,
   };
   return `sha256:${createHash("sha256").update(canonicalOrganizationJson(intent)).digest("hex")}`;
@@ -271,6 +275,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         actor: input.actor,
         createdAt: timestamp,
       };
+      const compilationWorkspace = snapshotOrcaCompiledRevisionWorkspace(compilation.revision, workspace);
       const changeId = id();
       const orderedRuleIds = [...currentOrder.items.map(({ id: currentId }) => currentId), ...(existing ? [] : [ruleId])];
       const clientRequestDigest = `sha256:${createHash("sha256").update(canonicalOrganizationJson(request)).digest("hex")}`;
@@ -330,6 +335,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         expectedRuleRevision: request.expectedRuleRevision,
         rule,
         revision,
+        compilationWorkspace,
         orderPlan,
       };
       return repository.append({

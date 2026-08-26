@@ -290,6 +290,7 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
           source: input.revision.source,
           sourceDigest: input.revision.sourceDigest,
           compiledJson: JSON.stringify(input.revision.compiled),
+          compilationWorkspaceJson: JSON.stringify(input.compilationWorkspace),
           requiredCapabilities: JSON.stringify(input.revision.compiled.requiredCapabilities),
           risk: input.revision.compiled.risk,
           actorId: input.revision.actor.id,
