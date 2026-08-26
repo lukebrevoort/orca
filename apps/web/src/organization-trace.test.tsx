@@ -71,6 +71,9 @@ describe("Organization Glass Box Trace", () => {
     expect(browser.document.body.textContent).toContain("sender.domain = vercel.com");
     expect(browser.document.body.textContent).toContain("Route to lane-focus");
     expect(browser.document.body.textContent).toContain("A failed deploy blocks work");
+    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+      "Complete Trace evaluation:event-1:rules-1:7 loaded for Thread thread-1. 3 winners and 3 losers resolved deterministically.",
+    );
     const open = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Open complete Trace");
     expect(open?.disabled).toBe(false);
     act(() => open?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
@@ -124,6 +127,92 @@ describe("Organization Glass Box Trace", () => {
     expect(content).toContain("Winner link · safety-lock:lane");
     expect(content).toContain("rule:rule-production:rule-production-r2:0 · Loser");
     expect(content).toContain("Reason · Hold the incident in Focus");
+  });
+
+  test("announces the exact empty Trace state without retaining compile-only wording", async () => {
+    setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
+      return Response.json({ error: { code: "not_available" } }, { status: 503 });
+    });
+
+    await act(async () => {
+      root!.render(<OrganizationStudio />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.document.querySelector(".glass-trace-state-empty")?.textContent).toBe(
+      "No evaluation yetA complete When → If → Then → Because explanation will appear after the first evaluation.",
+    );
+    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+      "No complete Trace is available. No Rule evaluation has been recorded yet.",
+    );
+  });
+
+  test("announces the exact Trace error without retaining empty or success wording", async () => {
+    setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/evaluations/latest") {
+        return Response.json({ error: { code: "upstream_unavailable" } }, { status: 503 });
+      }
+      return Response.json({ error: { code: "not_available" } }, { status: 503 });
+    });
+
+    await act(async () => {
+      root!.render(<OrganizationStudio />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.document.querySelector(".glass-trace-state-error")?.textContent).toBe(
+      "Trace unavailableOrca kept the interface honest: no causal claim is shown without its Trace.",
+    );
+    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+      "Complete Trace unavailable. Trace request failed (503). No causal claim is shown without evidence.",
+    );
+  });
+
+  test("keeps the current Thread and Trace wording when an older response resolves last", async () => {
+    let resolveOlder!: (response: Response) => void;
+    const olderResponse = new Promise<Response>((resolve) => { resolveOlder = resolve; });
+    const olderTrace = structuredClone(trace);
+    olderTrace.id = "evaluation:event-old:rules-1:7";
+    olderTrace.event.id = "event-old";
+    olderTrace.event.threadId = "thread-old";
+    const currentTrace = structuredClone(trace);
+    currentTrace.id = "evaluation:event-current:rules-1:7";
+    currentTrace.event.id = "event-current";
+    currentTrace.event.threadId = "thread-current";
+    let traceReads = 0;
+    setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/evaluations/latest") {
+        traceReads += 1;
+        return traceReads === 1 ? olderResponse : Response.json({ trace: currentTrace });
+      }
+      return Response.json({ error: { code: "not_available" } }, { status: 503 });
+    });
+
+    await act(async () => { root!.render(<OrganizationStudio />); await Promise.resolve(); });
+    await act(async () => { root!.render(<OrganizationStudio interactivePreview />); await Promise.resolve(); });
+    await act(async () => {
+      root!.render(<OrganizationStudio />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const currentStatus = "Complete Trace evaluation:event-current:rules-1:7 loaded for Thread thread-current. 3 winners and 3 losers resolved deterministically.";
+    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(currentStatus);
+    expect(browser.document.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
+
+    await act(async () => {
+      resolveOlder(Response.json({ trace: olderTrace }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(currentStatus);
+    expect(browser.document.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
+    const open = [...browser.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Open complete Trace");
+    act(() => open?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    const content = browser.document.body.textContent ?? "";
+    expect(content).toContain("Event ID · event-current");
+    expect(content).toContain("Thread · thread-current");
+    expect(content).not.toContain("thread-old");
   });
 
   test("keeps the browser reviewer fixture identical to real evaluator output", async () => {
