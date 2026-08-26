@@ -41,7 +41,16 @@ export function createTidePreviewRequest(): TideRequest {
       const prefix = payload.source.slice(0, offset);
       const line = prefix.split("\n").length;
       const column = (prefix.split("\n").at(-1)?.length ?? 0) + 1;
-      return Response.json({ ok: false, diagnostics: [{ severity: "error", phase: "resolve", code: "preview_unknown_lane", message: "Lane 'Missing' does not exist in this local preview.", span: { start: { offset, line, column }, end: { offset: offset + 9, line, column: column + 9 } }, hint: "Use Everything else for the deterministic preview." }] }, { status: 422 });
+      return Response.json({
+        ok: false,
+        diagnostics: [{ severity: "error", phase: "resolve", code: "preview_unknown_lane", message: "Lane 'Missing' does not exist in this local preview.", span: { start: { offset, line, column }, end: { offset: offset + 9, line, column: column + 9 } }, hint: "Use Everything else for the deterministic preview." }],
+        budget: {
+          status: "complete",
+          exhausted: [],
+          limits: { maximumSourceBytes: 65_536, maximumLines: 1_000, maximumLineBytes: 2_000, maximumTokens: 8_000, maximumAstNodes: 1_000, maximumExpressionDepth: 16, maximumPredicates: 100, maximumActions: 100 },
+          usage: { sourceBytes: 1, lines: 1, maximumLineBytes: 1, tokens: 1, astNodes: 1, expressionDepth: 1, predicates: 1, actions: 1 },
+        },
+      }, { status: 422 });
     }
     const revision = (payload.expectedRuleRevision ?? 0) + 1;
     const ruleId = payload.ruleId ?? "preview-rule-production-failures";
@@ -57,7 +66,7 @@ export function createTidePreviewRequest(): TideRequest {
           event: { kind: "message.received" },
           predicates: [{ name: null, expression: { kind: "compare", field: "subject", operator: "contains", value: "failed", valueType: "text", optional: false, missingBehavior: "false" } }],
           actions: [{ kind: "route_lane", laneId: "preview-lane-everything-else" }], because: "A failed deploy blocks work and needs a human response",
-          requiredCapabilities: ["organization_attention"], risk: "low",
+          requiredCapabilities: ["organization_thread"], risk: "low",
         },
         actor: { id: "preview-human", type: "human" }, createdAt,
       },

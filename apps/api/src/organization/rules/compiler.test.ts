@@ -27,6 +27,63 @@ const workspace: OrcaWorkspaceSnapshot = {
 };
 
 describe("compileOrcaRule", () => {
+  test("reports exact deterministic compiler budget counters through the public result", () => {
+    const result = compileOrcaRule({
+      workspace,
+      source: `orca 1
+rule "Budget"
+event message.received
+when subject contains "x"
+action route lane "Focus"
+because "Measured"`,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.budget).toEqual({
+      status: "complete",
+      exhausted: [],
+      limits: {
+        maximumSourceBytes: 65_536,
+        maximumLines: 1_000,
+        maximumLineBytes: 2_000,
+        maximumTokens: 8_000,
+        maximumAstNodes: 1_000,
+        maximumExpressionDepth: 16,
+        maximumPredicates: 100,
+        maximumActions: 100,
+      },
+      usage: {
+        sourceBytes: 114,
+        lines: 6,
+        maximumLineBytes: 25,
+        tokens: 16,
+        astNodes: 2,
+        expressionDepth: 1,
+        predicates: 1,
+        actions: 1,
+      },
+    });
+  });
+
+  test("rejects control and bidirectional source characters before semantic compilation", () => {
+    const valid = `orca 1
+rule "Unicode safety"
+event message.received
+when subject contains "status"
+action route lane "Focus"
+because "Human-reviewed source"`;
+    const probes = [
+      valid.replace("Human-reviewed", "Human\u0000reviewed"),
+      valid.replace("Human-reviewed", "Human\u202Ereviewed"),
+    ];
+
+    for (const source of probes) {
+      const result = compileOrcaRule({ workspace, source });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.diagnostics.map((item) => item.code)).toContain("invalid_source_character");
+    }
+  });
+
   test("satisfies the shared compiler interface on success and failure", () => {
     const success = sharedCompiler({
       workspace,
@@ -338,7 +395,113 @@ because "No recursive definitions"`,
   test("enforces source-size bounds before parsing", () => {
     const result = compileOrcaRule({ source: `orca 1\n# ${"x".repeat(70_000)}`, workspace });
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.diagnostics.map((item) => item.code)).toContain("source_too_large");
+    if (!result.ok) {
+      expect(result.diagnostics.map((item) => item.code)).toContain("source_too_large");
+      expect(result.budget).toMatchObject({ status: "exhausted", exhausted: expect.arrayContaining(["source_bytes"]) });
+    }
+  });
+
+  test("stops oversized source at the byte preflight without scanning later compiler units", () => {
+    const result = compileOrcaRule({ source: "x".repeat(2_000_000), workspace });
+
+    expect(result.ok).toBe(false);
+    expect(result.budget).toMatchObject({
+      status: "exhausted",
+      exhausted: ["source_bytes"],
+      usage: {
+        sourceBytes: 65_537,
+        lines: 0,
+        maximumLineBytes: 0,
+        tokens: 0,
+        astNodes: 0,
+        expressionDepth: 0,
+        predicates: 0,
+        actions: 0,
+      },
+    });
+  });
+
+  test("reports each compiler resource limit independently through bounded adversarial source", () => {
+    const tokenLines = Array.from({ length: 81 }, (_, line) => Array.from({ length: line === 80 ? 1 : 100 }, () => "x").join(" ")).join("\n");
+    const cases: Array<[string, string, string]> = [
+      ["source bytes", Array.from({ length: 650 }, () => `# ${"x".repeat(100)}`).join("\n"), "source_bytes"],
+      ["lines", Array.from({ length: 1_001 }, () => "#").join("\n"), "lines"],
+      ["line bytes", `#${"é".repeat(1_000)}`, "line_bytes"],
+      ["tokens", tokenLines, "tokens"],
+      ["predicates", ["orca 1", 'rule "Predicates"', "event message.received", ...Array.from({ length: 101 }, (_, index) => `predicate p${index} = subject contains "x"`), "when p0", 'action route lane "Focus"', 'because "Bounded"'].join("\n"), "predicates"],
+      ["actions", ["orca 1", 'rule "Actions"', "event message.received", 'when subject contains "x"', ...Array.from({ length: 101 }, () => 'action route lane "Focus"'), 'because "Bounded"'].join("\n"), "actions"],
+    ];
+
+    for (const [name, source, exhausted] of cases) {
+      const result = compileOrcaRule({ workspace, source });
+      expect({ name, ok: result.ok, status: result.budget.status, exhausted: result.budget.exhausted }).toEqual({
+        name,
+        ok: false,
+        status: "exhausted",
+        exhausted: expect.arrayContaining([exhausted]),
+      });
+    }
+  });
+
+  test("keeps ambient capabilities, general loops, dynamic evaluation, and undeclared Workspace data unrepresentable", () => {
+    const directives = [
+      "action fetch network \"https://example.com\"",
+      "action read filesystem \"/etc/passwd\"",
+      "action read process env \"TOKEN\"",
+      "action read ambient time",
+      "action eval javascript \"danger()\"",
+      "action run shell \"echo danger\"",
+      "action while subject contains \"x\"",
+      "action emit event thread.updated",
+      "action send mail \"recipient@example.com\"",
+      "action reply mail \"message\"",
+      "action forward mail \"recipient@example.com\"",
+      "action delete provider message",
+    ];
+    for (const directive of directives) {
+      const result = compileOrcaRule({
+        workspace,
+        source: `orca 1\nrule "Isolation"\nevent message.received\nwhen subject contains "x"\n${directive}\nbecause "Ambient authority is unavailable"`,
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.diagnostics.map((item) => item.code)).toContain("invalid_action");
+    }
+
+    for (const predicate of ["process.env equals \"x\"", "workspace.secret equals \"x\"", "ambient.now greater_than \"2026-01-01T00:00:00Z\""]) {
+      const result = compileOrcaRule({
+        workspace,
+        source: `orca 1\nrule "Isolation"\nevent message.received\nwhen ${predicate}\naction route lane "Focus"\nbecause "Only declared fields exist"`,
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.diagnostics.map((item) => item.code)).toContain("unknown_field");
+    }
+  });
+
+  test("fails closed on case aliases, missing resources, and crafted labels while preserving stable IDs", () => {
+    const ambiguous = structuredClone(workspace);
+    ambiguous.lanes.push({ id: "lane-focus-alias", name: "focus" });
+    const alias = compileOrcaRule({
+      workspace: ambiguous,
+      source: `orca 1\nrule "Alias"\nevent message.received\nwhen subject contains "x"\naction route lane "Focus"\nbecause "Aliases cannot select authority"`,
+    });
+    expect(alias.ok).toBe(false);
+    if (!alias.ok) expect(alias.diagnostics.map((item) => item.code)).toContain("ambiguous_resource");
+
+    const unicodeAliases = structuredClone(workspace);
+    unicodeAliases.lanes = [{ id: "lane-cafe-1", name: "Café" }, { id: "lane-cafe-2", name: "Cafe\u0301" }];
+    const unicodeAlias = compileOrcaRule({
+      workspace: unicodeAliases,
+      source: `orca 1\nrule "Unicode alias"\nevent message.received\nwhen subject contains "x"\naction route lane "Café"\nbecause "Canonical Unicode aliases cannot choose authority"`,
+    });
+    expect(unicodeAlias.ok).toBe(false);
+    if (!unicodeAlias.ok) expect(unicodeAlias.diagnostics.map((item) => item.code)).toContain("ambiguous_resource");
+
+    const missing = compileOrcaRule({
+      workspace,
+      source: `orca 1\nrule "Missing"\nevent message.received\nwhen subject contains "x"\naction route lane "provider_delete"\nbecause "A crafted label grants nothing"`,
+    });
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.diagnostics.map((item) => item.code)).toContain("unknown_resource");
   });
 
   test("bounds aggregate expression AST nodes independently of lines and tokens", () => {

@@ -57,7 +57,7 @@
         "order": 0,
         "eventMatched": true,
         "predicateMatched": true,
-        "authorized": true,
+        "authorized": false,
         "reason": "matched"
       }
     ],
@@ -425,6 +425,7 @@
     },
     "reason": "Hold the incident in Focus",
     "budget": {
+      "status": "complete",
       "maximumRuleRevisions": 100,
       "maximumPredicateSteps": 2000,
       "maximumCandidates": 1000,

@@ -85,7 +85,7 @@ describe("Organization Glass Box Trace", () => {
     expect(content).toContain("Workspace Schema · revision 7");
     expect(content).toContain("Top-level Actor · system · system:gmail-sync");
     expect(content).toContain("Rule rule-production · revision 2 · order 0");
-    expect(content).toContain("Event matched yes · Predicate matched yes · Authorized yes");
+    expect(content).toContain("Event matched yes · Predicate matched yes · Authorized no");
     expect(content).toContain("ticket_present · exists · false");
     expect(content).toContain("facet:facet-ticket is missing");
     expect(content).toContain("rule:rule-production:rule-production-r2:0 · Winner");

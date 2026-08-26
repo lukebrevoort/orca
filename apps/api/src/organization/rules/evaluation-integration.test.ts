@@ -121,7 +121,7 @@ because "A failed deploy blocks work"` },
 }
 
 describe("message.received Rule evaluation", () => {
-  test("bounds active Rule loading before parse and records authoritative exhaustion metadata", async () => {
+  test("reports bounded exhaustion in memory without projection, Change Set, or persisted Trace writes", async () => {
     const { db, sqlite, now } = setup();
     try {
       const template = db.select().from(organizationRuleRevisions).get()!;
@@ -159,18 +159,38 @@ describe("message.received Rule evaluation", () => {
         }).run();
       }
 
+      const before = {
+        changes: db.select().from(organizationChangeSets).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        projections: db.select().from(organizationThreadStates).all().length,
+      };
       await persistGmailMessages(db, {
         accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("bounded-rules")],
         labelList: [], now, propagationTrigger: "sync",
       });
 
-      const trace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1" });
-      assert.ok(trace);
+      assert.equal(getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1" }), null);
+      assert.deepEqual({
+        changes: db.select().from(organizationChangeSets).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        projections: db.select().from(organizationThreadStates).all().length,
+      }, before);
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "bounded-rules")).get();
+      assert.ok(email);
+      const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(context);
+      const trace = evaluateAndPersistLiveContext(db, context);
       assert.equal(trace.ruleSet.activeRevisionCount, 126);
       assert.equal(trace.consideredRevisions.length, 100);
       assert.equal(trace.budget.ruleRevisions, 100);
+      assert.equal(trace.budget.status, "exhausted");
       assert.equal(trace.budget.exhausted, true);
       assert.equal(trace.lowerLanePlacement.placementSource, "workspace_fallback");
+      assert.deepEqual({
+        changes: db.select().from(organizationChangeSets).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+        projections: db.select().from(organizationThreadStates).all().length,
+      }, before);
     } finally { sqlite.close(); }
   }, 15_000);
 

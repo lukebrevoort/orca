@@ -63,7 +63,7 @@ function compileSuccess(source: string, revision: number, workspaceSchemaRevisio
         languageVersion: 1, workspaceId: "workspace-demo", workspaceSchemaRevision, name: "Production failures", event: { kind: "message.received" as const },
         predicates: [{ name: null, expression: { kind: "compare" as const, field: "subject", operator: "contains" as const, value: "failed", valueType: "text" as const, optional: false, missingBehavior: "false" as const } }],
         actions: [{ kind: "route_lane" as const, laneId: "lane-everything-else" }], because: "A failed deploy blocks work and needs a human response",
-        requiredCapabilities: ["organization_attention" as const], risk: "low" as const,
+        requiredCapabilities: ["organization_thread" as const], risk: "low" as const,
       },
       actor: { id: "human-demo", type: "human" as const }, createdAt,
     },

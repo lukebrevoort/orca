@@ -443,6 +443,21 @@ because "Ordered predicates and actions stay bound"`;
     } finally { sqlite.close(); }
   });
 
+  test("keeps G1-passing compiled revisions inactive until the later Simulation activation gate", () => {
+    const { service, sqlite } = setup();
+    try {
+      const compiled = service.compile({
+        actor: { id: "owner", type: "human" }, workspaceId: "owner",
+        request: { idempotencyKey: "g1-inactive-rule", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() },
+      });
+
+      assert.equal(compiled.ok, true);
+      if (!compiled.ok) return;
+      assert.equal(compiled.rule.activeRevisionId, null);
+      assert.equal((sqlite.query("SELECT active_revision_id FROM organization_rules WHERE workspace_id='owner' AND id=?").get(compiled.rule.id) as { active_revision_id: string | null }).active_revision_id, null);
+    } finally { sqlite.close(); }
+  });
+
   test("fails closed on stale Workspace, Rule Set, direct Rule, collateral snapshot, and reorder tamper", () => {
     const cases: Array<[string, (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => void]> = [
       ["workspace race", (_input, sqlite) => { sqlite.query("UPDATE organization_workspace_states SET revision=revision+1 WHERE workspace_id='owner'").run(); }],

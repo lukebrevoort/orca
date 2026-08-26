@@ -33,6 +33,49 @@ export const orcaCompilerLimits = Object.freeze({
   maximumActions: 100,
 });
 
+const orcaCompilerLimitNameSchema = z.enum([
+  "source_bytes",
+  "lines",
+  "line_bytes",
+  "tokens",
+  "ast_nodes",
+  "expression_depth",
+  "predicates",
+  "actions",
+]);
+export const orcaCompileBudgetSchema = z.object({
+  status: z.enum(["complete", "exhausted"]),
+  exhausted: z.array(orcaCompilerLimitNameSchema),
+  limits: z.object({
+    maximumSourceBytes: z.number().int().positive(),
+    maximumLines: z.number().int().positive(),
+    maximumLineBytes: z.number().int().positive(),
+    maximumTokens: z.number().int().positive(),
+    maximumAstNodes: z.number().int().positive(),
+    maximumExpressionDepth: z.number().int().positive(),
+    maximumPredicates: z.number().int().positive(),
+    maximumActions: z.number().int().positive(),
+  }).strict(),
+  usage: z.object({
+    sourceBytes: z.number().int().nonnegative(),
+    lines: z.number().int().nonnegative(),
+    maximumLineBytes: z.number().int().nonnegative(),
+    tokens: z.number().int().nonnegative(),
+    astNodes: z.number().int().nonnegative(),
+    expressionDepth: z.number().int().nonnegative(),
+    predicates: z.number().int().nonnegative(),
+    actions: z.number().int().nonnegative(),
+  }).strict(),
+}).strict().superRefine((budget, context) => {
+  if ((budget.status === "exhausted") !== (budget.exhausted.length > 0)) {
+    context.addIssue({ code: "custom", message: "Compiler budget status and exhausted limits must agree" });
+  }
+  if (new Set(budget.exhausted).size !== budget.exhausted.length) {
+    context.addIssue({ code: "custom", path: ["exhausted"], message: "Exhausted compiler limits must be unique" });
+  }
+});
+export type OrcaCompileBudget = z.infer<typeof orcaCompileBudgetSchema>;
+
 export const orcaSourceSpanSchema = z.object({
   start: sourcePositionSchema,
   end: sourcePositionSchema,
@@ -115,6 +158,33 @@ export type OrcaRequiredCapability = z.infer<typeof orcaRequiredCapabilitySchema
 export const orcaRuleRiskSchema = z.enum(["low", "medium", "high", "destructive"]);
 export type OrcaRuleRisk = z.infer<typeof orcaRuleRiskSchema>;
 
+/**
+ * Authoritative classification of resolved typed Actions. Source labels and
+ * caller-supplied metadata are never inputs to this decision.
+ */
+export function classifyOrcaActions(actions: readonly OrcaCompiledAction[]): {
+  requiredCapabilities: OrcaRequiredCapability[];
+  risk: OrcaRuleRisk;
+} {
+  const capabilities = new Set<OrcaRequiredCapability>();
+  let risk: OrcaRuleRisk = "low";
+  for (const action of actions) {
+    if (action.kind === "propose_provider_deletion") {
+      capabilities.add("provider_delete");
+      risk = "destructive";
+    } else {
+      capabilities.add("organization_thread");
+      if (action.kind === "notify" || action.kind === "suppress_interruption" || action.kind === "schedule_review") {
+        capabilities.add("organization_attention");
+        if (risk === "low") risk = "medium";
+      } else if (action.kind === "propose_retention" && risk !== "destructive") {
+        risk = "high";
+      }
+    }
+  }
+  return { requiredCapabilities: [...capabilities].sort(), risk };
+}
+
 export const orcaCompiledRuleRevisionSchema = z.object({
   languageVersion: z.literal(1),
   workspaceId: identifierSchema,
@@ -128,7 +198,16 @@ export const orcaCompiledRuleRevisionSchema = z.object({
     if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Required Capabilities must be unique" });
   }),
   risk: orcaRuleRiskSchema,
-}).strict();
+}).strict().superRefine((revision, context) => {
+  const classification = classifyOrcaActions(revision.actions);
+  if (classification.risk !== revision.risk) {
+    context.addIssue({ code: "custom", path: ["risk"], message: "Rule risk must be derived from resolved typed Actions" });
+  }
+  if (classification.requiredCapabilities.length !== revision.requiredCapabilities.length
+    || classification.requiredCapabilities.some((capability, index) => capability !== revision.requiredCapabilities[index])) {
+    context.addIssue({ code: "custom", path: ["requiredCapabilities"], message: "Required Capabilities must exactly match resolved typed Actions" });
+  }
+});
 export type OrcaCompiledRuleRevision = z.infer<typeof orcaCompiledRuleRevisionSchema>;
 
 const orcaCompilerNamedResourceSchema = z.object({
@@ -164,10 +243,12 @@ export const orcaCompileSuccessSchema = z.object({
   ok: z.literal(true),
   revision: orcaCompiledRuleRevisionSchema,
   diagnostics: z.tuple([]),
+  budget: orcaCompileBudgetSchema,
 }).strict();
 export const orcaCompileFailureSchema = z.object({
   ok: z.literal(false),
   diagnostics: z.array(orcaDiagnosticSchema).min(1),
+  budget: orcaCompileBudgetSchema,
 }).strict();
 export const orcaCompileResultSchema = z.discriminatedUnion("ok", [orcaCompileSuccessSchema, orcaCompileFailureSchema]);
 export type OrcaCompileResult = z.infer<typeof orcaCompileResultSchema>;
@@ -247,6 +328,7 @@ export const orcaRuleCompileSuccessSchema = z.object({
 export const orcaRuleCompileFailureSchema = z.object({
   ok: z.literal(false),
   diagnostics: z.array(orcaDiagnosticSchema).min(1),
+  budget: orcaCompileBudgetSchema,
 }).strict();
 export const orcaRuleCompileResponseSchema = z.discriminatedUnion("ok", [orcaRuleCompileSuccessSchema, orcaRuleCompileFailureSchema]);
 export type OrcaRuleCompileResponse = z.infer<typeof orcaRuleCompileResponseSchema>;
@@ -274,6 +356,17 @@ export const orcaEvaluationEventKindSchema = z.enum([
   "user.corrected",
 ]);
 export type OrcaEvaluationEventKind = z.infer<typeof orcaEvaluationEventKindSchema>;
+
+export const orcaEvaluationEventSchema = z.object({
+  id: identifierSchema,
+  kind: orcaEvaluationEventKindSchema,
+  cause: z.enum(["provider", "internal", "scheduler", "user", "evaluator"]),
+  occurredAt: z.string().datetime({ offset: false }),
+  workspaceId: identifierSchema,
+  accountId: identifierSchema.optional(),
+  threadId: identifierSchema,
+  messageId: identifierSchema.optional(),
+}).strict();
 
 export const orcaEvaluationPrecedenceSchema = z.enum([
   "safety_lock",
@@ -411,6 +504,7 @@ export type OrcaEvaluationTrace = {
   lowerLanePlacement: OrcaLowerLanePlacement;
   reason: string;
   budget: {
+    status: "complete" | "exhausted";
     maximumRuleRevisions: number;
     maximumPredicateSteps: number;
     maximumCandidates: number;
@@ -424,16 +518,7 @@ export type OrcaEvaluationTrace = {
 
 export const orcaEvaluationTraceSchema = z.object({
   id: identifierSchema,
-  event: z.object({
-    id: identifierSchema,
-    kind: orcaEvaluationEventKindSchema,
-    cause: z.enum(["provider", "internal", "scheduler", "user", "evaluator"]),
-    occurredAt: z.string().datetime({ offset: false }),
-    workspaceId: identifierSchema,
-    accountId: identifierSchema.optional(),
-    threadId: identifierSchema,
-    messageId: identifierSchema.optional(),
-  }).strict(),
+  event: orcaEvaluationEventSchema,
   workspaceSchemaRevision: z.number().int().positive(),
   ruleSet: z.object({
     id: identifierSchema,
@@ -459,6 +544,7 @@ export const orcaEvaluationTraceSchema = z.object({
   }).strict(),
   reason: z.string().trim().min(1).max(1_000),
   budget: z.object({
+    status: z.enum(["complete", "exhausted"]),
     maximumRuleRevisions: z.number().int().positive(),
     maximumPredicateSteps: z.number().int().positive(),
     maximumCandidates: z.number().int().positive(),
@@ -467,7 +553,11 @@ export const orcaEvaluationTraceSchema = z.object({
     predicateSteps: z.number().int().nonnegative(),
     candidates: z.number().int().nonnegative(),
     exhausted: z.boolean(),
-  }).strict(),
+  }).strict().superRefine((budget, context) => {
+    if ((budget.status === "exhausted") !== budget.exhausted) {
+      context.addIssue({ code: "custom", message: "Evaluation budget status and exhausted flag must agree" });
+    }
+  }),
 }).strict() as unknown as z.ZodType<OrcaEvaluationTrace>;
 
 export const orcaEvaluationResultSchema = z.object({

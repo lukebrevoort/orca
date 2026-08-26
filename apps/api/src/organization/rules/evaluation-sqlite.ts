@@ -154,6 +154,10 @@ export function evaluateAndPersistLiveContext(
   capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability,
 ): OrcaEvaluationTrace {
   const result = evaluateOrcaRules(context);
+  // Exhaustion is reportable in memory but is never durable evaluation
+  // evidence: persisting either the fallback projection or its Trace would
+  // make a partial evaluator outcome indistinguishable from a complete one.
+  if (result.trace.budget.exhausted) return result.trace;
   db.transaction((transaction) => {
     const executor = transaction as unknown as Database;
     applyAuthorizedEvaluationProjection(executor, context, result, capabilityAdapter);

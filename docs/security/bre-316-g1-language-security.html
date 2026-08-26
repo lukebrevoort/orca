@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-316 · G1 Language Security and Determinism</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f3f0e8;--panel:#fffdf8;--ink:#192321;--muted:#63706c;--line:#c6d0ca;--accent:#087b73;--ok:#247448;--danger:#a33d3d;--code:#eef3ef}
+    @media(prefers-color-scheme:dark){:root{--bg:#101716;--panel:#18211f;--ink:#edf5f1;--muted:#a9b8b2;--line:#35443f;--accent:#72d5c8;--ok:#80d4a3;--danger:#ff9b96;--code:#202b28}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif}main{max-width:1180px;margin:auto;padding:48px 24px 80px}h1{font:750 clamp(32px,5vw,58px)/1.04 ui-serif,Georgia,serif;max-width:900px;margin:8px 0 14px}h2{font-size:22px;margin:44px 0 16px}h3{font-size:16px;margin:0 0 8px}.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.13em;text-transform:uppercase}.lede{font-size:19px;color:var(--muted);max-width:80ch}.verdict{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--panel);border:2px solid var(--ok);border-radius:18px;padding:20px;margin:28px 0}.stamp{color:var(--ok);font-size:34px;font-weight:900}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:17px}.metric{font:800 26px/1 ui-monospace,SFMono-Regular,monospace;color:var(--accent)}table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line)}th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}code,.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{background:var(--code);border-radius:5px;padding:1px 4px}.code{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:15px;overflow:auto;white-space:pre-wrap}.pass{color:var(--ok);font-weight:800}.deny{color:var(--danger);font-weight:750}.small{color:var(--muted);font-size:13px}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}.nowrap{white-space:nowrap}@media(max-width:720px){main{padding:28px 14px 60px}.verdict{grid-template-columns:1fr}table{display:block;overflow:auto}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">BRE-316 · Blocking G1 assessment</div>
+  <h1>Orca Rule source is bounded, isolated, deterministic, and still inactive.</h1>
+  <p class="lede">This assessment attacks the exported compiler, evaluator, and live persistence seam. The gate passes after focused remediation. Passing G1 does not activate Rules: historical Simulation, activation/apply, and revert product flows remain BRE-317 work.</p>
+
+  <section class="verdict">
+    <div class="stamp">PASS</div>
+    <div><strong>G1 language security and determinism gate passed.</strong><br>All seven Linear criteria have executable evidence. Compiled revisions remain <code>activeRevisionId = null</code>; send, reply, forward, and provider deletion execution remain unavailable.</div>
+  </section>
+
+  <div class="grid">
+    <article class="card"><div class="metric">49 / 49</div><h3>Required focused suite</h3><p>Shared contract, compiler, evaluator, and live integration.</p></article>
+    <article class="card"><div class="metric">648 / 648</div><h3>Full repository suite</h3><p>63 shared, 160 web, and 425 API tests passed.</p></article>
+    <article class="card"><div class="metric">491a…062c</div><h3>Golden SHA-256</h3><p>Canonical semantic result plus complete Trace, invariant to equivalent Rule-array input order.</p></article>
+    <article class="card"><div class="metric">0 writes</div><h3>Exhaustion / denial</h3><p>No Thread projection, Change Set, or persisted Trace survives.</p></article>
+    <article class="card"><div class="metric">inactive</div><h3>Activation</h3><p>Compile appends an immutable revision but does not select an active revision.</p></article>
+  </div>
+
+  <h2>Explicit resource limits</h2>
+  <table><thead><tr><th>Phase</th><th>Unit</th><th>Limit</th><th>Measurement and exhaustion</th></tr></thead><tbody>
+    <tr><td rowspan="8">Compiler</td><td>UTF-8 source bytes</td><td>65,536</td><td>Byte preflight runs first. Oversize reports consumed sentinel <code>65,537</code> and scans zero later units.</td></tr>
+    <tr><td>Lines</td><td>1,000</td><td><code>too_many_lines</code></td></tr>
+    <tr><td>UTF-8 bytes per line</td><td>2,000</td><td><code>line_too_large</code></td></tr>
+    <tr><td>Tokens</td><td>8,000</td><td><code>too_many_tokens</code></td></tr>
+    <tr><td>AST nodes</td><td>1,000</td><td><code>too_many_ast_nodes</code></td></tr>
+    <tr><td>Expression depth</td><td>16</td><td><code>expression_too_deep</code>; cycles separately report <code>predicate_cycle</code>.</td></tr>
+    <tr><td>Predicates</td><td>100</td><td><code>too_many_predicates</code></td></tr>
+    <tr><td>Actions</td><td>100</td><td><code>too_many_actions</code></td></tr>
+    <tr><td rowspan="4">Live evaluator</td><td>Active Rule Revisions</td><td>100</td><td rowspan="4"><code>budget.status = exhausted</code>, <code>exhausted = true</code>, exact capped counters, and <code>budget_exhausted</code> considered/loser reasons. Live persistence returns the Trace only in memory and performs zero writes.</td></tr>
+    <tr><td>Predicate steps</td><td>2,000</td></tr>
+    <tr><td>Candidate Actions</td><td>1,000</td></tr>
+    <tr><td>Predicate depth</td><td>16</td></tr>
+  </tbody></table>
+  <p class="small">Callers may supply smaller positive evaluator limits. Tests force predicate and candidate exhaustion at 2 and 3 respectively and assert counters stop exactly at those values.</p>
+
+  <h2>Linear acceptance criteria → executable evidence</h2>
+  <table><thead><tr><th>#</th><th>Criterion</th><th>Exact tests</th><th>Verdict</th></tr></thead><tbody>
+    <tr><td>1</td><td>Malformed, deep, oversized, cyclic, recursive, and high-fan-out source is bounded.</td><td><code>compiler.test.ts</code>: “returns actionable located diagnostics…”, “rejects recursive named predicates…”, “bounds repeated named-predicate fan-out…”, “stops oversized source at the byte preflight…”, “reports each compiler resource limit independently…”, “bounds aggregate expression AST nodes…”.</td><td class="pass">PASS</td></tr>
+    <tr><td>2</td><td>No network, filesystem, process, ambient time, dynamic eval, loops, or undeclared Workspace reads.</td><td><code>compiler.test.ts</code>: “keeps ambient capabilities, general loops, dynamic evaluation, and undeclared Workspace data unrepresentable”; “rejects control and bidirectional source characters…”.</td><td class="pass">PASS</td></tr>
+    <tr><td>3</td><td>Events and Actions cannot create user-authored evaluation loops.</td><td><code>compiler.test.ts</code> rejects <code>action emit event</code>. <code>evaluator.test.ts</code>: “matches each canonical Event family without allowing evaluator-origin recursion”; “fails closed on crafted Event provenance…”.</td><td class="pass">PASS</td></tr>
+    <tr><td>4</td><td>Compile/evaluation budgets measured, enforced, reported, and atomic.</td><td><code>compiler.test.ts</code>: “reports exact deterministic compiler budget counters…” and resource-limit matrix. <code>evaluator.test.ts</code>: exact complete counters, predicate/candidate exhaustion. <code>evaluation-integration.test.ts</code>: “reports bounded exhaustion in memory without projection, Change Set, or persisted Trace writes”; existing capability-denial rollback test.</td><td class="pass">PASS</td></tr>
+    <tr><td>5</td><td>Identical contexts produce byte-stable results and equivalent Traces.</td><td><code>evaluator.test.ts</code>: “produces one byte-stable semantic result and Trace for equivalent fresh invocation order”; golden SHA-256 <code>491a9ae8a2e66079e2cad0edecbdb39498dbee652bfc36be16ab781f9e38062c</code>.</td><td class="pass">PASS</td></tr>
+    <tr><td>6</td><td>Capability/risk cannot be bypassed by aliases, rename, missing data, or crafted references.</td><td><code>orca-language.test.ts</code>: crafted Action downgrade. <code>compiler.test.ts</code>: stable Facet/enum/Lane IDs, rename tests, case/Unicode alias ambiguity, missing/crafted labels. <code>evaluator.test.ts</code>: missing values, Account denial, runtime forged IR rejection.</td><td class="pass">PASS</td></tr>
+    <tr><td>7</td><td>Assessment has remediation evidence and activation remains gated.</td><td>This guide plus <code>service.test.ts</code>: “keeps G1-passing compiled revisions inactive until the later Simulation activation gate”.</td><td class="pass">PASS</td></tr>
+  </tbody></table>
+
+  <h2>Threat → control → evidence</h2>
+  <table><thead><tr><th>Threat</th><th>Control</th><th>Executable evidence</th></tr></thead><tbody>
+    <tr><td>Parser or diagnostic resource exhaustion</td><td>Byte-first preflight; bounded line/token/AST/depth/count phases; no semantic compile after limit denial.</td><td>Every compiler limit independently exhausted; 2 MB probe consumes only the byte counter.</td></tr>
+    <tr><td>Source display spoofing / hidden control syntax</td><td>NUL, unsafe C0/DEL, bidi overrides/isolates, BOM, and unpaired surrogates rejected lexically.</td><td><code>invalid_source_character</code> RED → GREEN slice.</td></tr>
+    <tr><td>Arbitrary code or ambient authority</td><td>Closed declarative grammar and strict typed Action union; no host capability objects enter evaluation.</td><td>Network, filesystem, environment, wall clock, JS, shell, loop, Event emission, send/reply/forward/delete probes all fail.</td></tr>
+    <tr><td>Recursive Event cascade</td><td>No Event-emitting Action. Strict Event object. <code>cause = evaluator</code> is always nonmatching with <code>event_loop_blocked</code>.</td><td>Compiler and evaluator loop suites.</td></tr>
+    <tr><td>Crafted low-risk IR containing destructive Action</td><td>Shared schema and evaluator re-derive exact canonical capabilities/risk from resolved typed Actions.</td><td><code>propose_provider_deletion</code> labeled low/thread is rejected; destructive/provider_delete is accepted only as proposal IR.</td></tr>
+    <tr><td>Alias/rename authority confusion</td><td>Names resolve once to stable IDs; Unicode NFC/case aliases fail ambiguous; current names cannot rewrite compiled IDs.</td><td>Facet/enum/Lane rename and alias tests.</td></tr>
+    <tr><td>Budget exhaustion commits a fallback as if complete</td><td>Pure evaluator reports exhaustion; live persistence exits before its transaction.</td><td>Exact zero deltas for Thread projections, Change Sets, and persisted Traces.</td></tr>
+    <tr><td>Locale/process-dependent ordering</td><td>Code-unit comparator replaces ambient-locale collation; canonical object keys and semantic candidates are stable.</td><td>Equivalent reordered input matches pinned digest exactly.</td></tr>
+  </tbody></table>
+
+  <h2>Remediation record: behavior-first RED → GREEN</h2>
+  <table><thead><tr><th>Slice</th><th>RED evidence</th><th>GREEN control</th></tr></thead><tbody>
+    <tr><td>Typed Action classification</td><td>Crafted destructive revision: expected schema rejection, received acceptance.</td><td>Authoritative <code>classifyOrcaActions</code> plus shared cross-field refinement.</td></tr>
+    <tr><td>Attention capability composition</td><td>Attention-only IR omitted inherited <code>organization_thread</code>; runtime then authorized Notify with only <code>organization_attention</code>.</td><td>One shared Action classifier now drives both compile-time metadata and per-Action evaluation denial; missing Thread authority is traced.</td></tr>
+    <tr><td>Compiler budget report</td><td>Expected literal budget object; received <code>undefined</code>.</td><td>Shared budget contract on success/failure with exact counters and exhausted-limit list.</td></tr>
+    <tr><td>Unsafe source characters</td><td>NUL produced only <code>invalid_reason</code>; bidi text could reach semantic parsing.</td><td>Stable lexical <code>invalid_source_character</code> denial.</td></tr>
+    <tr><td>Evaluator runtime boundary</td><td>Forged risk/capability metadata evaluated without throwing.</td><td>Strict Event and compiled-revision validation at exported evaluator entry.</td></tr>
+    <tr><td>Evaluation budget status</td><td><code>status</code> absent; predicate counter reached 4 for a limit of 2.</td><td>Explicit complete/exhausted status and exact capped consumption.</td></tr>
+    <tr><td>Candidate fan-out</td><td>Candidate counter reached 7 for a limit of 3.</td><td>Candidate insertion stops before the fourth unit.</td></tr>
+    <tr><td>Oversized preflight</td><td>2 MB source scanned line/token units and reported its full line.</td><td>Byte sentinel 65,537; every later usage counter remains zero.</td></tr>
+    <tr><td>Atomic exhaustion persistence</td><td>Exhausted live evaluation persisted a fallback Trace/projection.</td><td>Exhausted Trace is returned in memory only; durable row deltas are zero.</td></tr>
+  </tbody></table>
+
+  <h2>Authority boundary and non-goals</h2>
+  <div class="grid">
+    <article class="card"><h3 class="deny">Unavailable</h3><p>Send, reply, forward, arbitrary provider deletion, network calls, filesystem/process access, dynamic eval, and Event emission.</p></article>
+    <article class="card"><h3>Proposal-only destructive syntax</h3><p><code>propose provider deletion</code> compiles only to typed evidence, is always <code>destructive</code> + <code>provider_delete</code>, and is not projected to provider mail.</p></article>
+    <article class="card"><h3>BRE-317 not implemented</h3><p>No historical Simulation, activation endpoint/service, atomic activation/apply product flow, or compensating revert was added. Test fixtures that directly select active revisions exist only to exercise the inherited BRE-315 evaluator.</p></article>
+  </div>
+
+  <h2>Reproduce</h2>
+  <div class="code">CI=true bun test packages/shared/src/orca-language.test.ts apps/api/src/organization/rules/compiler.test.ts apps/api/src/organization/rules/evaluator.test.ts apps/api/src/organization/rules/evaluation-integration.test.ts
+CI=true bun test apps/api/src/organization/rules/service.test.ts
+CI=true bun run typecheck
+CI=true bun run test
+CI=true bun run build
+CI=true bun run lint
+git diff --check</div>
+  <p class="small">Assessment source: <code>docs/security/bre-316-g1-language-security.html</code>. No browser screenshot is required for this backend/security-only gate.</p>
+</main></body></html>

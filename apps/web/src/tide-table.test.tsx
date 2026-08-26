@@ -53,7 +53,7 @@ describe("TideTableEditor", () => {
         predicates: [{ name: null, expression: { kind: "compare" as const, field: "subject", operator: "contains" as const, value: "failed", valueType: "text" as const, optional: false, missingBehavior: "false" as const } }],
         actions: [{ kind: "route_lane" as const, laneId: "lane-everything-else" }],
         because: "A failed deploy blocks work and needs a human response",
-        requiredCapabilities: ["organization_attention" as const],
+        requiredCapabilities: ["organization_thread" as const],
         risk: "low" as const,
       },
       actor: { id: "human-demo", type: "human" as const },
@@ -91,7 +91,15 @@ describe("TideTableEditor", () => {
       requests.push(path);
       if (path === "/v1/organization/describe") return new Response(JSON.stringify({ workspaceRevision: 7 }), { status: 200 });
       requestBodies.push(JSON.parse(String(init?.body)));
-      return new Response(JSON.stringify({ ok: false, diagnostics: [{ severity: "error", phase: "resolve", code: "unknown_resource", message: "Lane 'Missing' does not exist.", span: { start: { offset: 86, line: 5, column: 1 }, end: { offset: 110, line: 5, column: 25 } }, hint: "Choose a Lane from this Workspace revision." }] }), { status: 422 });
+      return new Response(JSON.stringify({
+        ok: false,
+        diagnostics: [{ severity: "error", phase: "resolve", code: "unknown_resource", message: "Lane 'Missing' does not exist.", span: { start: { offset: 86, line: 5, column: 1 }, end: { offset: 110, line: 5, column: 25 } }, hint: "Choose a Lane from this Workspace revision." }],
+        budget: {
+          status: "complete", exhausted: [],
+          limits: { maximumSourceBytes: 65_536, maximumLines: 1_000, maximumLineBytes: 2_000, maximumTokens: 8_000, maximumAstNodes: 1_000, maximumExpressionDepth: 16, maximumPredicates: 100, maximumActions: 100 },
+          usage: { sourceBytes: 1, lines: 1, maximumLineBytes: 1, tokens: 1, astNodes: 1, expressionDepth: 1, predicates: 1, actions: 1 },
+        },
+      }), { status: 422 });
     };
     const container = browser.document.createElement("div");
     browser.document.body.append(container);

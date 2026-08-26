@@ -69,4 +69,41 @@ describe("Orca Event contracts", () => {
       }).event.kind).toBe(event);
     }
   });
+
+  test("rejects crafted Action capability and risk downgrades at the shared revision seam", () => {
+    const destructive = {
+      languageVersion: 1,
+      workspaceId: "workspace-1",
+      workspaceSchemaRevision: 1,
+      name: "Crafted downgrade",
+      event: { kind: "message.received" },
+      predicates: [{
+        name: null,
+        expression: { kind: "exists", field: "subject", valueType: "text", optional: true },
+      }],
+      actions: [{ kind: "propose_provider_deletion" }],
+      because: "A label must never downgrade a resolved Action",
+      requiredCapabilities: ["organization_thread"],
+      risk: "low",
+    };
+
+    expect(orcaCompiledRuleRevisionSchema.safeParse(destructive).success).toBe(false);
+    expect(orcaCompiledRuleRevisionSchema.safeParse({
+      ...destructive,
+      requiredCapabilities: ["provider_delete"],
+      risk: "destructive",
+    }).success).toBe(true);
+
+    const attentionOnly = {
+      ...destructive,
+      actions: [{ kind: "notify", urgency: "immediate" }],
+      requiredCapabilities: ["organization_attention"],
+      risk: "medium",
+    };
+    expect(orcaCompiledRuleRevisionSchema.safeParse(attentionOnly).success).toBe(false);
+    expect(orcaCompiledRuleRevisionSchema.safeParse({
+      ...attentionOnly,
+      requiredCapabilities: ["organization_attention", "organization_thread"],
+    }).success).toBe(true);
+  });
 });
