@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { orcaCompiledRuleRevisionSchema } from "@orca/shared";
+import {
+  orcaCompiledRuleRevisionSchema,
+  orcaCompileResultSchema,
+  type OrcaCompiler,
+} from "@orca/shared";
 
 import { compileOrcaRule, type OrcaWorkspaceSnapshot } from "./compiler.ts";
+
+const sharedCompiler: OrcaCompiler = compileOrcaRule;
 
 const workspace: OrcaWorkspaceSnapshot = {
   workspaceId: "workspace-1",
@@ -21,6 +27,17 @@ const workspace: OrcaWorkspaceSnapshot = {
 };
 
 describe("compileOrcaRule", () => {
+  test("satisfies the shared compiler interface on success and failure", () => {
+    const success = sharedCompiler({
+      workspace,
+      source: `orca 1\nrule "Shared interface"\nevent thread.updated\nwhen subject contains "status"\naction add collection "Launch"\nbecause "Compiler drift must fail at the shared seam"`,
+    });
+    const failure = sharedCompiler({ source: "not orca", workspace });
+
+    expect(orcaCompileResultSchema.parse(success)).toEqual(success);
+    expect(orcaCompileResultSchema.parse(failure)).toEqual(failure);
+  });
+
   test("authors the same four canonical Event families accepted by evaluation Trace", () => {
     for (const event of ["message.received", "thread.updated", "schedule.reached", "user.corrected"] as const) {
       const result = compileOrcaRule({

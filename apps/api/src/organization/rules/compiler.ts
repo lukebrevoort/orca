@@ -1,80 +1,38 @@
-import { orcaCompiledRuleRevisionSchema, orcaCompilerLimits, type FacetValueType } from "@orca/shared";
+import {
+  orcaCompiledRuleRevisionSchema,
+  orcaCompilerLimits,
+  orcaEventKindSchema,
+  type FacetValueType,
+  type OrcaCompileInput,
+  type OrcaCompileResult,
+  type OrcaCompiledAction,
+  type OrcaCompiledPredicateExpression,
+  type OrcaCompiledRuleRevision,
+  type OrcaDiagnostic,
+  type OrcaScalarType,
+  type OrcaSourceSpan,
+  type OrcaWorkspaceSnapshot,
+} from "@orca/shared";
 
 import { validateFacetScalarValue } from "../facet-workflow.ts";
 
 export { orcaCompilerLimits };
+export type {
+  OrcaCompileInput,
+  OrcaCompileResult,
+  OrcaCompiledAction,
+  OrcaCompiledPredicateExpression,
+  OrcaCompiledRuleRevision,
+  OrcaDiagnostic,
+  OrcaSourcePosition,
+  OrcaSourceSpan,
+  OrcaWorkspaceSnapshot,
+} from "@orca/shared";
 
-export type OrcaSourcePosition = { offset: number; line: number; column: number };
-export type OrcaSourceSpan = { start: OrcaSourcePosition; end: OrcaSourcePosition };
-export type OrcaDiagnostic = {
-  severity: "error";
-  phase: "limits" | "parse" | "resolve" | "type";
-  code: string;
-  message: string;
-  span: OrcaSourceSpan;
-  hint?: string;
-};
-
-type ScalarKind = "text" | "number" | "boolean" | "datetime" | "duration" | "email" | "domain" | "enum";
+type ScalarKind = OrcaScalarType;
 type WorkspaceValueType = FacetValueType;
-
-export type OrcaWorkspaceSnapshot = {
-  workspaceId: string;
-  revision: number;
-  lanes: { id: string; name: string }[];
-  workflowStates: { id: string; name: string }[];
-  facets: { id: string; name: string; valueType: WorkspaceValueType; cardinality: "single" | "multi"; optional: boolean }[];
-  collections: { id: string; accountId: string; name: string }[];
-  contextTypes: { id: string; name: string }[];
-  contexts: { id: string; contextTypeId: string; name: string }[];
-};
-
-type CompiledLiteral = string | number | boolean;
-export type OrcaCompiledPredicateExpression =
-  | { kind: "reference"; predicate: string }
-  | { kind: "all" | "any"; predicates: string[] }
-  | { kind: "not"; predicate: string }
-  | { kind: "exists" | "missing"; field: string; valueType: ScalarKind; optional: boolean; facetId?: string }
-  | {
-    kind: "compare";
-    field: string;
-    operator: "equals" | "contains" | "greater_than" | "less_than";
-    value: CompiledLiteral;
-    valueType: ScalarKind;
-    optional: boolean;
-    missingBehavior: "false";
-    facetId?: string;
-  };
-
-export type OrcaCompiledAction =
-  | { kind: "route_lane"; laneId: string }
-  | { kind: "set_workflow_state"; stateId: string }
-  | { kind: "set_facet"; facetId: string; value: CompiledLiteral }
-  | { kind: "unset_facet"; facetId: string }
-  | { kind: "add_collection" | "remove_collection"; accountId: string; collectionId: string }
-  | { kind: "link_context" | "unlink_context"; contextTypeId: string; contextId: string }
-  | { kind: "notify"; urgency: "immediate" | "digest" }
-  | { kind: "suppress_interruption" }
-  | { kind: "schedule_review"; duration: string }
-  | { kind: "propose_retention"; mode: "keep" | "review_after"; days: number | null }
-  | { kind: "propose_provider_deletion" };
-
-export type OrcaCompiledRuleRevision = {
-  languageVersion: 1;
-  workspaceId: string;
-  workspaceSchemaRevision: number;
-  name: string;
-  event: { kind: "message.received" | "thread.updated" | "schedule.reached" | "user.corrected" };
-  predicates: { name: string | null; expression: OrcaCompiledPredicateExpression }[];
-  actions: OrcaCompiledAction[];
-  because: string;
-  requiredCapabilities: ("organization_attention" | "organization_thread" | "provider_delete")[];
-  risk: "low" | "medium" | "high" | "destructive";
-};
-
-export type OrcaCompileResult =
-  | { ok: true; revision: OrcaCompiledRuleRevision; diagnostics: [] }
-  | { ok: false; diagnostics: OrcaDiagnostic[] };
+type CompiledLiteral = Extract<OrcaCompiledPredicateExpression, { kind: "compare" }>["value"];
+type ComparisonOperator = Extract<OrcaCompiledPredicateExpression, { kind: "compare" }>["operator"];
 
 type LocatedLine = { text: string; trimmed: string; line: number; offset: number };
 type UnresolvedPredicate = { name: string | null; expression: string; location: LocatedLine };
@@ -113,7 +71,7 @@ function diagnostic(line: LocatedLine, phase: OrcaDiagnostic["phase"], code: str
 function quoted(value: string): string | null {
   if (!value.startsWith('"') || !value.endsWith('"')) return null;
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed: unknown = JSON.parse(value);
     return typeof parsed === "string" ? parsed : null;
   } catch {
     return null;
@@ -127,6 +85,18 @@ function parseLiteral(source: string): CompiledLiteral | undefined {
   if (source === "false") return false;
   if (/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(source)) return Number(source);
   return undefined;
+}
+
+function parseComparisonOperator(source: string): ComparisonOperator | null {
+  switch (source) {
+    case "equals":
+    case "contains":
+    case "greater_than":
+    case "less_than":
+      return source;
+    default:
+      return null;
+  }
 }
 
 function sameName(left: string, right: string) {
@@ -225,7 +195,7 @@ function compileExpression(
       return null;
     }
     for (const name of names) if (!definitions.has(name)) diagnostics.push(diagnostic(unresolved.location, "resolve", "unknown_predicate", `Predicate '${name}' is not defined.`));
-    return diagnostics.length ? null : { kind: group[1] as "all" | "any", predicates: names };
+    return diagnostics.length ? null : { kind: group[1] === "all" ? "all" : "any", predicates: names };
   }
   const not = /^not\(\s*([a-z][a-z0-9_]*)\s*\)$/.exec(source);
   if (not) {
@@ -247,7 +217,7 @@ function compileExpression(
       diagnostics.push(diagnostic(unresolved.location, "type", "required_field_never_missing", `Facet '${facet.name}' is required and cannot be missing.`));
       return null;
     }
-    return { kind: facetExistence[1] as "exists" | "missing", field: `facet:${facet.id}`, facetId: facet.id, valueType: facet.valueType.kind, optional: facet.optional };
+    return { kind: facetExistence[1] === "exists" ? "exists" : "missing", field: `facet:${facet.id}`, facetId: facet.id, valueType: facet.valueType.kind, optional: facet.optional };
   }
   const existence = /^(exists|missing)\s+([a-z][a-z0-9_.]*)$/.exec(source);
   if (existence) {
@@ -260,7 +230,7 @@ function compileExpression(
       diagnostics.push(diagnostic(unresolved.location, "type", "required_field_never_missing", `Field '${existence[2]}' is required and cannot be missing.`));
       return null;
     }
-    return { kind: existence[1] as "exists" | "missing", field: existence[2]!, valueType: field.type, optional: field.optional };
+    return { kind: existence[1] === "exists" ? "exists" : "missing", field: existence[2]!, valueType: field.type, optional: field.optional };
   }
   const facetComparison = /^facet\s+("(?:[^"\\]|\\.)*")\s+(equals|contains|greater_than|less_than)\s+(.+)$/.exec(source);
   const comparison = /^([a-z][a-z0-9_.]*)\s+(equals|contains|greater_than|less_than)\s+(.+)$/.exec(source);
@@ -278,10 +248,16 @@ function compileExpression(
       return null;
     }
     fieldName = `facet:${facet.id}`; facetId = facet.id; fieldType = { type: facet.valueType.kind, optional: facet.optional };
-    literalSource = facetComparison[3]!; operator = facetComparison[2] as typeof operator;
+    literalSource = facetComparison[3]!;
+    const parsedOperator = parseComparisonOperator(facetComparison[2]!);
+    if (parsedOperator === null) return null;
+    operator = parsedOperator;
     facetValueType = facet.valueType;
   } else if (comparison) {
-    fieldName = comparison[1]!; fieldType = fields[fieldName]; literalSource = comparison[3]!; operator = comparison[2] as typeof operator;
+    fieldName = comparison[1]!; fieldType = fields[fieldName]; literalSource = comparison[3]!;
+    const parsedOperator = parseComparisonOperator(comparison[2]!);
+    if (parsedOperator === null) return null;
+    operator = parsedOperator;
     if (!fieldType) {
       diagnostics.push(diagnostic(unresolved.location, "resolve", "unknown_field", `Field '${fieldName}' is not available for Orca v1 Events.`));
       return null;
@@ -312,23 +288,24 @@ function compileExpression(
 
 function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diagnostics: OrcaDiagnostic[]): OrcaCompiledAction | null {
   const source = line.trimmed.slice("action ".length);
-  const named = (pattern: RegExp, items: { id: string; name: string }[], kind: OrcaCompiledAction["kind"], idKey: string) => {
-    const match = pattern.exec(source);
-    if (!match) return undefined;
+  const namedResource = (match: RegExpExecArray, items: { id: string; name: string }[]) => {
     const name = quoted(match[1]!);
     const resource = name === null ? undefined : resolveNamed(items, name);
     if (!resource || resource === "ambiguous") {
       diagnostics.push(diagnostic(line, "resolve", resource === "ambiguous" ? "ambiguous_resource" : "unknown_resource", `${name ?? "Resource"} does not resolve uniquely in Workspace revision ${workspace.revision}.`));
       return null;
     }
-    return { kind, [idKey]: resource.id } as OrcaCompiledAction;
+    return resource;
   };
-  for (const [pattern, items, kind, idKey] of [
-    [/^route lane ("(?:[^"\\]|\\.)*")$/, workspace.lanes, "route_lane", "laneId"],
-    [/^set workflow ("(?:[^"\\]|\\.)*")$/, workspace.workflowStates, "set_workflow_state", "stateId"],
-  ] as const) {
-    const result = named(pattern, items, kind, idKey);
-    if (result !== undefined) return result;
+  const laneMatch = /^route lane ("(?:[^"\\]|\\.)*")$/.exec(source);
+  if (laneMatch) {
+    const resource = namedResource(laneMatch, workspace.lanes);
+    return resource === null ? null : { kind: "route_lane", laneId: resource.id };
+  }
+  const workflowMatch = /^set workflow ("(?:[^"\\]|\\.)*")$/.exec(source);
+  if (workflowMatch) {
+    const resource = namedResource(workflowMatch, workspace.workflowStates);
+    return resource === null ? null : { kind: "set_workflow_state", stateId: resource.id };
   }
   for (const [pattern, kind] of [
     [/^add collection ("(?:[^"\\]|\\.)*")$/, "add_collection"],
@@ -392,7 +369,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
     return { kind: context[1] === "link" ? "link_context" : "unlink_context", contextTypeId: type.id, contextId: value.id };
   }
   const notify = /^notify (immediate|digest)$/.exec(source);
-  if (notify) return { kind: "notify", urgency: notify[1] as "immediate" | "digest" };
+  if (notify) return { kind: "notify", urgency: notify[1] === "immediate" ? "immediate" : "digest" };
   if (source === "suppress interruption") return { kind: "suppress_interruption" };
   if (source === "propose provider deletion") return { kind: "propose_provider_deletion" };
   const schedule = /^schedule review ("(?:[^"\\]|\\.)*")$/.exec(source);
@@ -416,7 +393,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
   return null;
 }
 
-export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspaceSnapshot }): OrcaCompileResult {
+export function compileOrcaRule(input: OrcaCompileInput): OrcaCompileResult {
   const { source, workspace } = input;
   const lines = locatedLines(source);
   const diagnostics: OrcaDiagnostic[] = [];
@@ -445,8 +422,9 @@ export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspac
     if (rule) { const value = quoted(rule[1]!); if (value === null) diagnostics.push(diagnostic(line, "parse", "invalid_rule_name", "Rule names must be JSON-style quoted text.")); else if (name !== null) diagnostics.push(diagnostic(line, "parse", "duplicate_rule", "Declare one Rule name.")); else name = value; continue; }
     const event = /^event\s+([a-z.]+)$/.exec(line.trimmed);
     if (event) {
-      if (!["message.received", "thread.updated", "schedule.reached", "user.corrected"].includes(event[1]!)) diagnostics.push(diagnostic(line, "type", "unsupported_event", `Event '${event[1]}' is not authorable in Orca v1.`));
-      else events.push({ kind: event[1] as OrcaCompiledRuleRevision["event"]["kind"], line });
+      const parsedEvent = orcaEventKindSchema.safeParse(event[1]);
+      if (!parsedEvent.success) diagnostics.push(diagnostic(line, "type", "unsupported_event", `Event '${event[1]}' is not authorable in Orca v1.`));
+      else events.push({ kind: parsedEvent.data, line });
       continue;
     }
     const predicate = /^predicate\s+([a-z][a-z0-9_]*)\s*=\s*(.+)$/.exec(line.trimmed);
@@ -482,7 +460,8 @@ export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspac
   const compiledPredicates = predicates.map((predicate) => ({ name: predicate.name, expression: compileExpression(predicate, workspace, definitions, diagnostics) }));
   const actions = actionLines.map((line) => compileAction(line, workspace, diagnostics));
   if (diagnostics.length || compiledPredicates.some((item) => !item.expression) || actions.some((action) => !action)) return { ok: false, diagnostics };
-  const finalActions = actions as OrcaCompiledAction[];
+  const finalPredicates = compiledPredicates.filter((item): item is OrcaCompiledRuleRevision["predicates"][number] => item.expression !== null);
+  const finalActions = actions.filter((action): action is OrcaCompiledAction => action !== null);
   const requiredCapabilities = new Set<OrcaCompiledRuleRevision["requiredCapabilities"][number]>();
   if (finalActions.some((action) => action.kind !== "propose_provider_deletion")) requiredCapabilities.add("organization_thread");
   if (finalActions.some((action) => ["notify", "suppress_interruption", "schedule_review"].includes(action.kind))) requiredCapabilities.add("organization_attention");
@@ -491,16 +470,16 @@ export function compileOrcaRule(input: { source: string; workspace: OrcaWorkspac
     : finalActions.some((action) => action.kind === "propose_retention") ? "high"
     : finalActions.some((action) => ["notify", "suppress_interruption", "schedule_review"].includes(action.kind)) ? "medium" : "low";
   const revision = orcaCompiledRuleRevisionSchema.parse({
-      languageVersion: 1,
-      workspaceId: workspace.workspaceId,
-      workspaceSchemaRevision: workspace.revision,
-      name: name!,
-      event: { kind: events[0]!.kind },
-      predicates: compiledPredicates as { name: string | null; expression: OrcaCompiledPredicateExpression }[],
-      actions: finalActions,
-      because: because!,
-      requiredCapabilities: [...requiredCapabilities].sort(),
-      risk,
-  }) as OrcaCompiledRuleRevision;
+    languageVersion: 1,
+    workspaceId: workspace.workspaceId,
+    workspaceSchemaRevision: workspace.revision,
+    name: name!,
+    event: { kind: events[0]!.kind },
+    predicates: finalPredicates,
+    actions: finalActions,
+    because: because!,
+    requiredCapabilities: [...requiredCapabilities].sort(),
+    risk,
+  } satisfies OrcaCompiledRuleRevision);
   return { ok: true, diagnostics: [], revision };
 }

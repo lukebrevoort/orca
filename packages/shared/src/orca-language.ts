@@ -6,6 +6,7 @@ import {
   type OrganizationActor,
   type OrganizationCapabilitySnapshot,
 } from "./organization-contract.ts";
+import { facetValueTypeSchema } from "./organization-facets.ts";
 
 export const orcaLanguageTextLimits = Object.freeze({
   maximumIdentifierCodeUnits: 200,
@@ -19,6 +20,7 @@ const sourcePositionSchema = z.object({
   line: z.number().int().positive(),
   column: z.number().int().positive(),
 }).strict();
+export type OrcaSourcePosition = z.infer<typeof sourcePositionSchema>;
 
 export const orcaCompilerLimits = Object.freeze({
   maximumSourceBytes: 64 * 1024,
@@ -107,7 +109,11 @@ export const orcaEventKindSchema = z.enum([
   "schedule.reached",
   "user.corrected",
 ]);
+export type OrcaEventKind = z.infer<typeof orcaEventKindSchema>;
 export const orcaRequiredCapabilitySchema = z.enum(["organization_attention", "organization_thread", "provider_delete"]);
+export type OrcaRequiredCapability = z.infer<typeof orcaRequiredCapabilitySchema>;
+export const orcaRuleRiskSchema = z.enum(["low", "medium", "high", "destructive"]);
+export type OrcaRuleRisk = z.infer<typeof orcaRuleRiskSchema>;
 
 export const orcaCompiledRuleRevisionSchema = z.object({
   languageVersion: z.literal(1),
@@ -121,9 +127,51 @@ export const orcaCompiledRuleRevisionSchema = z.object({
   requiredCapabilities: z.array(orcaRequiredCapabilitySchema).max(3).superRefine((values, context) => {
     if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Required Capabilities must be unique" });
   }),
-  risk: z.enum(["low", "medium", "high", "destructive"]),
+  risk: orcaRuleRiskSchema,
 }).strict();
 export type OrcaCompiledRuleRevision = z.infer<typeof orcaCompiledRuleRevisionSchema>;
+
+const orcaCompilerNamedResourceSchema = z.object({
+  id: identifierSchema,
+  name: identifierSchema,
+}).strict();
+
+export const orcaWorkspaceSnapshotSchema = z.object({
+  workspaceId: identifierSchema,
+  revision: z.number().int().positive(),
+  lanes: z.array(orcaCompilerNamedResourceSchema),
+  workflowStates: z.array(orcaCompilerNamedResourceSchema),
+  facets: z.array(z.object({
+    id: identifierSchema,
+    name: identifierSchema,
+    valueType: facetValueTypeSchema,
+    cardinality: z.enum(["single", "multi"]),
+    optional: z.boolean(),
+  }).strict()),
+  collections: z.array(orcaCompilerNamedResourceSchema.extend({ accountId: identifierSchema }).strict()),
+  contextTypes: z.array(orcaCompilerNamedResourceSchema),
+  contexts: z.array(orcaCompilerNamedResourceSchema.extend({ contextTypeId: identifierSchema }).strict()),
+}).strict();
+export type OrcaWorkspaceSnapshot = z.infer<typeof orcaWorkspaceSnapshotSchema>;
+
+export const orcaCompileInputSchema = z.object({
+  source: z.string(),
+  workspace: orcaWorkspaceSnapshotSchema,
+}).strict();
+export type OrcaCompileInput = z.infer<typeof orcaCompileInputSchema>;
+
+export const orcaCompileSuccessSchema = z.object({
+  ok: z.literal(true),
+  revision: orcaCompiledRuleRevisionSchema,
+  diagnostics: z.tuple([]),
+}).strict();
+export const orcaCompileFailureSchema = z.object({
+  ok: z.literal(false),
+  diagnostics: z.array(orcaDiagnosticSchema).min(1),
+}).strict();
+export const orcaCompileResultSchema = z.discriminatedUnion("ok", [orcaCompileSuccessSchema, orcaCompileFailureSchema]);
+export type OrcaCompileResult = z.infer<typeof orcaCompileResultSchema>;
+export type OrcaCompiler = (input: OrcaCompileInput) => OrcaCompileResult;
 
 export const orcaRuleCompileRequestSchema = z.object({
   ruleId: identifierSchema.optional(),
