@@ -16,15 +16,20 @@ import {
   organizationContexts,
   organizationEvaluationTraces,
   organizationContextTypes,
+  organizationChangeActions,
+  organizationChangeSets,
   organizationFacets,
   organizationLanePolicies,
   organizationLanes,
+  organizationRuleRevisions,
   organizationRules,
   organizationThreadContextRelationships,
   organizationThreadFacetValues,
   organizationThreadLaneStates,
   organizationThreadWorkflowStates,
+  organizationThreadStates,
   organizationWorkflowStates,
+  organizationWorkspaceStates,
   threadReminders,
   users,
 } from "../../db/schema.ts";
@@ -32,9 +37,10 @@ import { persistGmailMessages } from "../../providers/gmail/sync.ts";
 import type { GmailMessage } from "../../providers/gmail/types.ts";
 import { createOrganization } from "../module.ts";
 import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
-import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
+import { evaluateAndPersistLiveContext, getLatestOrcaEvaluationTrace, loadLiveEvaluationInput } from "./evaluation-sqlite.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 import { createRuleRevisionService } from "./service.ts";
+import { gmailSyncOrganizationCapability, type OrganizationSystemCapabilityAdapter } from "../system-capability.ts";
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
@@ -115,9 +121,60 @@ because "A failed deploy blocks work"` },
 }
 
 describe("message.received Rule evaluation", () => {
+  test("bounds active Rule loading before parse and records authoritative exhaustion metadata", async () => {
+    const { db, sqlite, now } = setup();
+    try {
+      const template = db.select().from(organizationRuleRevisions).get()!;
+      for (let index = 0; index < 99; index += 1) {
+        const ruleId = `zz-valid-${String(index).padStart(3, "0")}`;
+        const revisionId = `${ruleId}-revision`;
+        db.insert(organizationRules).values({
+          workspaceId: "workspace-1", id: ruleId, name: ruleId, latestRevision: 1, activeRevisionId: revisionId,
+          createdAt: new Date(now.getTime() + index + 1), updatedAt: new Date(now.getTime() + index + 1),
+        }).run();
+        db.insert(organizationRuleRevisions).values({
+          ...template, id: revisionId, ruleId, revision: 1, createdAt: new Date(now.getTime() + index + 1),
+        }).run();
+      }
+      db.insert(organizationRules).values({
+        workspaceId: "workspace-1", id: "zzzz-malformed", name: "malformed", latestRevision: 1,
+        activeRevisionId: "zzzz-malformed-revision", createdAt: new Date(now.getTime() + 1_000), updatedAt: new Date(now.getTime() + 1_000),
+      }).run();
+      db.insert(organizationRuleRevisions).values({
+        ...template, id: "zzzz-malformed-revision", ruleId: "zzzz-malformed", revision: 1,
+        compiledJson: "{not valid json", createdAt: new Date(now.getTime() + 1_000),
+      }).run();
+      for (let index = 0; index < 25; index += 1) {
+        const ruleId = `zzzzz-growth-${String(index).padStart(3, "0")}`;
+        const revisionId = `${ruleId}-revision`;
+        db.insert(organizationRules).values({
+          workspaceId: "workspace-1", id: ruleId, name: ruleId, latestRevision: 1, activeRevisionId: revisionId,
+          createdAt: new Date(now.getTime() + 2_000 + index), updatedAt: new Date(now.getTime() + 2_000 + index),
+        }).run();
+        db.insert(organizationRuleRevisions).values({
+          ...template, id: revisionId, ruleId, revision: 1, compiledJson: "{also malformed", createdAt: new Date(now.getTime() + 2_000 + index),
+        }).run();
+      }
+
+      await persistGmailMessages(db, {
+        accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("bounded-rules")],
+        labelList: [], now, propagationTrigger: "sync",
+      });
+
+      const trace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1" });
+      assert.ok(trace);
+      assert.equal(trace.ruleSet.activeRevisionCount, 126);
+      assert.equal(trace.consideredRevisions.length, 100);
+      assert.equal(trace.budget.ruleRevisions, 100);
+      assert.equal(trace.budget.exhausted, true);
+      assert.equal(trace.lowerLanePlacement.placementSource, "workspace_fallback");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("atomically organizes a production-failure Thread and persists its complete Glass Box Trace", async () => {
     const { db, sqlite, compiled, now } = setup();
     try {
+      const workspaceRevisionBefore = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
       await persistGmailMessages(db, {
         accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("production-failure")],
         labelList: [{ id: "INBOX", name: "Inbox", type: "system" }], now, propagationTrigger: "sync",
@@ -143,6 +200,19 @@ describe("message.received Rule evaluation", () => {
       assert.equal(trace.actor.id, "system:gmail-sync");
       assert.deepEqual(trace.capabilities.actionFamilies, ["organization_thread", "organization_attention"]);
 
+      const change = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, trace.id)).get();
+      assert.ok(change, "the live system projection reserves an authoritative Change Set");
+      assert.equal(change.resourceFamily, "thread");
+      assert.equal(change.workspaceRevisionBefore, workspaceRevisionBefore);
+      assert.equal(change.workspaceRevisionAfter, workspaceRevisionBefore + 1);
+      const authority = JSON.parse(change.authorityTrace) as { decision: string; requestedResourceIds: string[] };
+      assert.equal(authority.decision, "allowed");
+      assert.deepEqual(authority.requestedResourceIds, [`thread:account-1:${email.threadId}`]);
+      const auditedFamilies = db.select().from(organizationChangeActions).where(eq(organizationChangeActions.changeId, trace.id)).all().map((action) => action.resourceFamily);
+      assert.deepEqual(new Set(auditedFamilies), new Set(["lane", "workflow_state", "facet", "collection", "context", "thread"]));
+      assert.equal(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision, workspaceRevisionBefore + 1);
+      assert.equal(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, email.threadId)).get()!.revision, 1);
+
       const queried = createOrganization(createSqliteOrganizationRepository(db)).query({
         scope: { actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", accountIds: ["account-1"] },
         query: { threadId: email.threadId, attention: "all", classification: "all", limit: 1 },
@@ -152,14 +222,135 @@ describe("message.received Rule evaluation", () => {
     } finally { sqlite.close(); }
   }, 15_000);
 
+  test("rolls back projection and Trace evidence when the live system Capability is denied", async () => {
+    const { db, sqlite, now } = setup();
+    try {
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("capability-initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "capability-initial")).get()!;
+      const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(context);
+      const stateBefore = {
+        workspace: db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get(),
+        thread: db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, email.threadId)).get(),
+        lane: db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(),
+        changes: db.select().from(organizationChangeSets).all().length,
+        traces: db.select().from(organizationEvaluationTraces).all().length,
+      };
+      const denied: OrganizationSystemCapabilityAdapter = {
+        snapshot: gmailSyncOrganizationCapability.snapshot,
+        live(input) {
+          const live = gmailSyncOrganizationCapability.live(input);
+          return { ...live, snapshot: { ...live.snapshot, actionFamilies: ["organization_attention"] } };
+        },
+      };
+
+      assert.throws(() => evaluateAndPersistLiveContext(db, context, denied), /Capability snapshot is not the current live revision/);
+      assert.deepEqual(db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get(), stateBefore.workspace);
+      assert.deepEqual(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, email.threadId)).get(), stateBefore.thread);
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), stateBefore.lane);
+      assert.equal(db.select().from(organizationChangeSets).all().length, stateBefore.changes);
+      assert.equal(db.select().from(organizationEvaluationTraces).all().length, stateBefore.traces);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("does not overwrite a concurrent authoritative human Lane write from a stale evaluation snapshot", async () => {
+    const { db, sqlite, now } = setup();
+    try {
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("stale-initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "stale-initial")).get()!;
+      const stale = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(stale);
+      const fallbackLaneId = (sqlite.query("SELECT fallback_lane_id value FROM organization_workspace_lane_settings WHERE workspace_id = 'workspace-1'").get() as { value: string }).value;
+      const organization = createOrganization(createSqliteOrganizationRepository(db));
+      organization.apply({
+        scope: { actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1", accountIds: ["account-1"] },
+        command: {
+          id: "0e969841-acde-4a91-acde-491000000315",
+          idempotencyKey: "bre-315-concurrent-human-write",
+          expectedWorkspaceRevision: stale.workspaceSchema.revision,
+          actions: [{
+            kind: "set_thread_manual_override", accountId: "account-1", threadId: email.threadId,
+            laneId: fallbackLaneId, reason: "A human moved this while evaluation was pending", expectedThreadRevision: stale.thread.lanePlacement.revision,
+          }],
+        },
+      });
+      const humanLane = db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get();
+      const traceCount = db.select().from(organizationEvaluationTraces).all().length;
+
+      assert.throws(() => evaluateAndPersistLiveContext(db, stale), /expected Workspace revision is stale/);
+      assert.deepEqual(db.select().from(organizationThreadLaneStates).where(eq(organizationThreadLaneStates.threadId, email.threadId)).get(), humanLane);
+      assert.equal(db.select().from(organizationEvaluationTraces).all().length, traceCount);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("denies live Collection add and remove across Accounts without mutating foreign membership", async () => {
+    const { db, sqlite, service, now } = setup();
+    try {
+      db.insert(oauthAccounts).values({ id: "account-2", userId: "workspace-1", provider: "gmail", providerEmail: "second@example.com", providerId: "provider-second" }).run();
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
+      const removeRule = service.compile({
+        actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
+        request: { idempotencyKey: "bre-315-cross-account-remove", expectedRuleRevision: null, workspaceSchemaRevision: workspaceRevision, source: `orca 1
+rule "Remove Launch"
+event thread.updated
+when subject contains "failed"
+action remove collection "Launch"
+because "Only the owning Account may change membership"` },
+      });
+      assert.equal(removeRule.ok, true);
+      if (!removeRule.ok) throw new Error("cross-Account remove Rule did not compile");
+      db.update(organizationRules).set({ activeRevisionId: removeRule.revision.id }).where(eq(organizationRules.id, removeRule.rule.id)).run();
+      await persistGmailMessages(db, { accountId: "account-2", accountEmail: "second@example.com", gmailMessages: [gmailMessage("account-2-initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "account-2-initial")).get()!;
+      const receivedTrace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-2", threadId: email.threadId });
+      assert.ok(receivedTrace?.losers.some((loser) => loser.action.kind === "add_collection" && loser.reason === "account_denied"));
+      assert.equal(db.select().from(collectionThreads).where(eq(collectionThreads.threadId, email.threadId)).get(), undefined);
+
+      db.insert(collectionThreads).values({ id: "foreign-membership", collectionId: "collection-launch", threadId: email.threadId, createdAt: now }).run();
+      const updatedContext = loadLiveEvaluationInput(db, { accountId: "account-2", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(updatedContext);
+      const updatedTrace = evaluateAndPersistLiveContext(db, updatedContext);
+      assert.ok(updatedTrace.losers.some((loser) => loser.action.kind === "remove_collection" && loser.reason === "account_denied"));
+      assert.ok(db.select().from(collectionThreads).where(eq(collectionThreads.id, "foreign-membership")).get(), "denied remove preserves the foreign Account membership");
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("applies a live Collection remove within the Thread Account", async () => {
+    const { db, sqlite, service, now } = setup();
+    try {
+      await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("same-account-initial")], labelList: [], now, propagationTrigger: "sync" });
+      const email = db.select().from(emails).where(eq(emails.providerMessageId, "same-account-initial")).get()!;
+      assert.ok(db.select().from(collectionThreads).where(eq(collectionThreads.threadId, email.threadId)).get());
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
+      const removeRule = service.compile({
+        actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
+        request: { idempotencyKey: "bre-315-same-account-remove", expectedRuleRevision: null, workspaceSchemaRevision: workspaceRevision, source: `orca 1
+rule "Remove Launch"
+event thread.updated
+when subject contains "failed"
+action remove collection "Launch"
+because "The owning Account may change membership"` },
+      });
+      assert.equal(removeRule.ok, true);
+      if (!removeRule.ok) throw new Error("same-Account remove Rule did not compile");
+      db.update(organizationRules).set({ activeRevisionId: removeRule.revision.id }).where(eq(organizationRules.id, removeRule.rule.id)).run();
+      const context = loadLiveEvaluationInput(db, { accountId: "account-1", messageId: email.id, eventKind: "thread.updated" });
+      assert.ok(context);
+      const trace = evaluateAndPersistLiveContext(db, context);
+      assert.ok(trace.winners.some((winner) => winner.action.kind === "remove_collection"));
+      assert.equal(db.select().from(collectionThreads).where(eq(collectionThreads.threadId, email.threadId)).get(), undefined);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("preserves lower Rule placement while Manual Override remains the effective winner", async () => {
     const { db, sqlite, service, now } = setup();
     try {
       await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("initial")], labelList: [], now, propagationTrigger: "sync" });
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "initial")).get()!;
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
       const updateRule = service.compile({
         actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
-        request: { idempotencyKey: "bre-315-thread-updated", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
+        request: { idempotencyKey: "bre-315-thread-updated", expectedRuleRevision: null, workspaceSchemaRevision: workspaceRevision, source: `orca 1
 rule "Production follow-ups"
 event thread.updated
 when subject contains "failed"
@@ -191,10 +382,11 @@ because "A failed follow-up remains focused"` },
       await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("initial")], labelList: [], now, propagationTrigger: "sync" });
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "initial")).get()!;
       const fallbackLaneId = (sqlite.query("SELECT fallback_lane_id value FROM organization_workspace_lane_settings WHERE workspace_id = 'workspace-1'").get() as { value: string }).value;
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
       const updateRule = service.compile({
         actor: { id: "workspace-1", type: "human" },
         workspaceId: "workspace-1",
-        request: { idempotencyKey: "bre-315-safety-lock-replay", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
+        request: { idempotencyKey: "bre-315-safety-lock-replay", expectedRuleRevision: null, workspaceSchemaRevision: workspaceRevision, source: `orca 1
 rule "Production follow-ups"
 event thread.updated
 when subject contains "failed"
@@ -275,9 +467,10 @@ because "A failed follow-up remains focused"` },
     try {
       await persistGmailMessages(db, { accountId: "account-1", accountEmail: "owner@example.com", gmailMessages: [gmailMessage("proposal-initial")], labelList: [], now, propagationTrigger: "sync" });
       const email = db.select().from(emails).where(eq(emails.providerMessageId, "proposal-initial")).get()!;
+      const workspaceRevision = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, "workspace-1")).get()!.revision;
       const proposalRule = service.compile({
         actor: { id: "workspace-1", type: "human" }, workspaceId: "workspace-1",
-        request: { idempotencyKey: "bre-315-proposal-boundary", expectedRuleRevision: null, workspaceSchemaRevision: 2, source: `orca 1
+        request: { idempotencyKey: "bre-315-proposal-boundary", expectedRuleRevision: null, workspaceSchemaRevision: workspaceRevision, source: `orca 1
 rule "Proposal boundary"
 event thread.updated
 when subject contains "proposal"

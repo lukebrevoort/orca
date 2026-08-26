@@ -43,6 +43,7 @@ export type OrcaEvaluationThreadSnapshot = {
   collectionIds: readonly string[];
   contextIds: readonly string[];
   lanePlacement: ThreadLanePlacement;
+  organizationRevision: number | null;
 };
 
 export type OrcaEvaluationWorkspaceSchema = {
@@ -78,7 +79,7 @@ export type OrcaEvaluationInput = {
   event: OrcaEvaluationEvent;
   thread: OrcaEvaluationThreadSnapshot;
   workspaceSchema: OrcaEvaluationWorkspaceSchema;
-  ruleSet: { id: string; revision: number; revisions: readonly OrcaActiveRuleRevision[] };
+  ruleSet: { id: string; revision: number; activeRevisionCount?: number; revisions: readonly OrcaActiveRuleRevision[] };
   actor: OrganizationActor;
   capabilities: OrganizationCapabilitySnapshot;
   logicalTime: string;
@@ -160,6 +161,10 @@ function assertEvaluationContext(input: OrcaEvaluationInput): void {
   if (!input.capabilities.scope.accountIds.includes(input.thread.accountId)) throw new OrcaEvaluationInputError("Thread Account is outside the immutable Capability Snapshot");
   if (input.actor.id !== input.capabilities.actor.id || input.actor.type !== input.capabilities.actor.type) throw new OrcaEvaluationInputError("Actor and Capability Snapshot Actor must agree");
   if (!Number.isInteger(input.ruleSet.revision) || input.ruleSet.revision < 1) throw new OrcaEvaluationInputError("Rule Set revision must be positive");
+  const activeRevisionCount = input.ruleSet.activeRevisionCount ?? input.ruleSet.revisions.length;
+  if (!Number.isInteger(activeRevisionCount) || activeRevisionCount < input.ruleSet.revisions.length) {
+    throw new OrcaEvaluationInputError("Rule Set active revision count must cover the bounded revision prefix");
+  }
   for (const [name, value] of Object.entries(input.budgets)) {
     if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new OrcaEvaluationInputError(`${name} must be a positive integer`);
   }
@@ -248,7 +253,8 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
 
   const orderedRevisions = [...input.ruleSet.revisions].sort((left, right) => left.order - right.order
     || left.ruleId.localeCompare(right.ruleId) || left.revision - right.revision || left.revisionId.localeCompare(right.revisionId));
-  if (orderedRevisions.length > input.budgets.maximumRuleRevisions) usage.exhausted = true;
+  const activeRevisionCount = input.ruleSet.activeRevisionCount ?? orderedRevisions.length;
+  if (activeRevisionCount > input.budgets.maximumRuleRevisions) usage.exhausted = true;
 
   for (const rule of orderedRevisions.slice(0, input.budgets.maximumRuleRevisions)) {
     usage.ruleRevisions += 1;
@@ -349,11 +355,14 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
     if (!predicateMatched) continue;
     for (const [actionOrder, action] of rule.compiled.actions.entries()) {
       const missingCapabilities = requiredCapabilities(action).filter((capability) => !granted.has(capability));
+      const collectionAccountDenied = (action.kind === "add_collection" || action.kind === "remove_collection")
+        && action.accountId !== input.thread.accountId;
       addCandidate({
         candidateId: `rule:${rule.ruleId}:${rule.revisionId}:${actionOrder}`,
         action, slot: actionSlot(action), precedence: "rule_revision", ruleOrder: rule.order, actionOrder,
-        actor: input.actor, reason: rule.compiled.because, authorized: missingCapabilities.length === 0,
+        actor: input.actor, reason: rule.compiled.because, authorized: missingCapabilities.length === 0 && !collectionAccountDenied,
         revisionId: rule.revisionId,
+        ...(collectionAccountDenied ? { authorityDenialCode: "account_denied" as const } : {}),
         ...(missingCapabilities.length ? { missingCapabilities } : {}),
       });
     }
@@ -380,7 +389,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
   const winnerBySlot = new Map<string, Candidate>();
   for (const candidate of [...candidates].sort(compareCandidate)) {
     if (!candidate.authorized) {
-      losers.push({ ...candidate, candidateReason: candidate.reason, reason: "capability_denied" });
+      losers.push({ ...candidate, candidateReason: candidate.reason, reason: candidate.authorityDenialCode ?? "capability_denied" });
       continue;
     }
     if (usage.exhausted && candidate.precedence === "rule_revision") {
@@ -393,6 +402,28 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
   }
   winners.sort(compareCandidate);
   losers.sort(compareCandidate);
+  const lowerLaneCandidate = candidates.filter((candidate) => candidate.slot === "lane"
+    && candidate.action.kind === "route_lane"
+    && candidate.authorized
+    && ["rule_revision", "lane_policy", "workspace_fallback"].includes(candidate.precedence)
+    && (!usage.exhausted || candidate.precedence !== "rule_revision"))
+    .sort(compareCandidate)[0];
+  if (!lowerLaneCandidate || lowerLaneCandidate.action.kind !== "route_lane"
+    || !["rule_revision", "lane_policy", "workspace_fallback"].includes(lowerLaneCandidate.precedence)) {
+    throw new OrcaEvaluationInputError("Evaluation did not resolve an authoritative lower Lane placement");
+  }
+  const lowerLanePlacement = {
+    candidateId: lowerLaneCandidate.candidateId,
+    laneId: lowerLaneCandidate.action.laneId,
+    placementSource: lowerLaneCandidate.precedence as "rule_revision" | "lane_policy" | "workspace_fallback",
+    sourceId: lowerLaneCandidate.precedence === "rule_revision"
+      ? lowerLaneCandidate.revisionId!
+      : lowerLaneCandidate.precedence === "lane_policy"
+        ? input.thread.lanePlacement.evidence.sourceId
+        : lowerLaneCandidate.action.laneId,
+    actor: lowerLaneCandidate.actor,
+    reason: lowerLaneCandidate.reason,
+  };
   /**
    * The top-level reason is the authoritative reason of the primary Lane
    * winner. Evaluations without a Lane winner use the first resolved winner;
@@ -410,7 +441,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       id: `evaluation:${input.event.id}:${input.ruleSet.id}:${input.ruleSet.revision}`,
       event: input.event,
       workspaceSchemaRevision: input.workspaceSchema.revision,
-      ruleSet: { id: input.ruleSet.id, revision: input.ruleSet.revision },
+      ruleSet: { id: input.ruleSet.id, revision: input.ruleSet.revision, activeRevisionCount },
       logicalTime: input.logicalTime,
       actor: input.actor,
       capabilities: input.capabilities,
@@ -420,6 +451,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       candidates,
       winners,
       losers,
+      lowerLanePlacement,
       reason,
       budget: {
         maximumRuleRevisions: input.budgets.maximumRuleRevisions,

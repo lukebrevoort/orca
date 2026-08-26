@@ -90,8 +90,8 @@ export const orcaCompiledActionSchema = z.union([
   resourceAction("set_workflow_state", "stateId"),
   z.object({ kind: z.literal("set_facet"), facetId: identifierSchema, value: z.union([z.string(), z.number().finite(), z.boolean()]) }).strict(),
   resourceAction("unset_facet", "facetId"),
-  resourceAction("add_collection", "collectionId"),
-  resourceAction("remove_collection", "collectionId"),
+  z.object({ kind: z.literal("add_collection"), accountId: identifierSchema, collectionId: identifierSchema }).strict(),
+  z.object({ kind: z.literal("remove_collection"), accountId: identifierSchema, collectionId: identifierSchema }).strict(),
   z.object({ kind: z.enum(["link_context", "unlink_context"]), contextTypeId: identifierSchema, contextId: identifierSchema }).strict(),
   z.object({ kind: z.literal("notify"), urgency: z.enum(["immediate", "digest"]) }).strict(),
   z.object({ kind: z.literal("suppress_interruption") }).strict(),
@@ -236,6 +236,7 @@ const orcaEvaluationCandidateSchema = z.object({
   actor: organizationActorSchema,
   reason: z.string().trim().min(1).max(1_000),
   authorized: z.boolean(),
+  authorityDenialCode: z.literal("account_denied").optional(),
   revisionId: identifierSchema.optional(),
   missingCapabilities: z.array(orcaRequiredCapabilitySchema).optional(),
 }).strict();
@@ -244,6 +245,7 @@ const orcaEvaluationLoserSchema = orcaEvaluationCandidateSchema.extend({
   reason: z.enum([
     "higher_precedence_candidate",
     "capability_denied",
+    "account_denied",
     "predicate_not_matched",
     "event_not_matched",
     "event_loop_blocked",
@@ -274,14 +276,23 @@ export type OrcaEvaluationCandidate = {
   actor: OrganizationActor;
   reason: string;
   authorized: boolean;
+  authorityDenialCode?: "account_denied";
   revisionId?: string;
   missingCapabilities?: RequiredCapability[];
 };
 type RequiredCapability = z.infer<typeof orcaRequiredCapabilitySchema>;
 export type OrcaEvaluationLoser = Omit<OrcaEvaluationCandidate, "reason"> & {
-  reason: "higher_precedence_candidate" | "capability_denied" | "predicate_not_matched" | "event_not_matched" | "event_loop_blocked" | "budget_exhausted";
+  reason: "higher_precedence_candidate" | "capability_denied" | "account_denied" | "predicate_not_matched" | "event_not_matched" | "event_loop_blocked" | "budget_exhausted";
   candidateReason: string;
   winnerCandidateId?: string;
+};
+export type OrcaLowerLanePlacement = {
+  candidateId: string;
+  laneId: string;
+  placementSource: "rule_revision" | "lane_policy" | "workspace_fallback";
+  sourceId: string;
+  actor: OrganizationActor;
+  reason: string;
 };
 export type OrcaEvaluationTrace = {
   id: string;
@@ -296,7 +307,7 @@ export type OrcaEvaluationTrace = {
     messageId?: string;
   };
   workspaceSchemaRevision: number;
-  ruleSet: { id: string; revision: number };
+  ruleSet: { id: string; revision: number; activeRevisionCount: number };
   logicalTime: string;
   actor: OrganizationActor;
   capabilities: OrganizationCapabilitySnapshot;
@@ -321,6 +332,7 @@ export type OrcaEvaluationTrace = {
   candidates: OrcaEvaluationCandidate[];
   winners: OrcaEvaluationCandidate[];
   losers: OrcaEvaluationLoser[];
+  lowerLanePlacement: OrcaLowerLanePlacement;
   reason: string;
   budget: {
     maximumRuleRevisions: number;
@@ -347,7 +359,11 @@ export const orcaEvaluationTraceSchema = z.object({
     messageId: identifierSchema.optional(),
   }).strict(),
   workspaceSchemaRevision: z.number().int().positive(),
-  ruleSet: z.object({ id: identifierSchema, revision: z.number().int().positive() }).strict(),
+  ruleSet: z.object({
+    id: identifierSchema,
+    revision: z.number().int().positive(),
+    activeRevisionCount: z.number().int().nonnegative(),
+  }).strict(),
   logicalTime: z.string().datetime({ offset: false }),
   actor: organizationActorSchema,
   capabilities: organizationCapabilitySnapshotSchema,
@@ -357,6 +373,14 @@ export const orcaEvaluationTraceSchema = z.object({
   candidates: z.array(orcaEvaluationCandidateSchema),
   winners: z.array(orcaEvaluationCandidateSchema),
   losers: z.array(orcaEvaluationLoserSchema),
+  lowerLanePlacement: z.object({
+    candidateId: identifierSchema,
+    laneId: identifierSchema,
+    placementSource: z.enum(["rule_revision", "lane_policy", "workspace_fallback"]),
+    sourceId: identifierSchema,
+    actor: organizationActorSchema,
+    reason: z.string().trim().min(1).max(1_000),
+  }).strict(),
   reason: z.string().trim().min(1).max(1_000),
   budget: z.object({
     maximumRuleRevisions: z.number().int().positive(),

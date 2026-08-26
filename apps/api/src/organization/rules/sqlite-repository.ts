@@ -90,7 +90,7 @@ function loadWorkspaceSnapshot(executor: Database, workspaceId: string): OrcaWor
     workflowStates: executor.select({ id: organizationWorkflowStates.id, name: organizationWorkflowStates.name }).from(organizationWorkflowStates)
       .where(and(eq(organizationWorkflowStates.workspaceId, workspaceId), isNull(organizationWorkflowStates.retiredAt))).orderBy(asc(organizationWorkflowStates.position), asc(organizationWorkflowStates.id)).all(),
     facets,
-    collections: accountIds.length === 0 ? [] : executor.select({ id: collections.id, name: collections.name }).from(collections)
+    collections: accountIds.length === 0 ? [] : executor.select({ id: collections.id, accountId: collections.accountId, name: collections.name }).from(collections)
       .where(inArray(collections.accountId, accountIds)).orderBy(asc(collections.position), asc(collections.id)).all(),
     contextTypes: executor.select({ id: organizationContextTypes.id, name: organizationContextTypes.name }).from(organizationContextTypes)
       .where(and(eq(organizationContextTypes.workspaceId, workspaceId), isNull(organizationContextTypes.retiredAt))).orderBy(asc(organizationContextTypes.position), asc(organizationContextTypes.id)).all(),

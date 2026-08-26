@@ -15,7 +15,7 @@ const workspace: OrcaWorkspaceSnapshot = {
     cardinality: "single",
     optional: true,
   }],
-  collections: [{ id: "collection-launch", name: "Launch" }],
+  collections: [{ id: "collection-launch", accountId: "account-1", name: "Launch" }],
   contextTypes: [{ id: "context-type-project", name: "Project" }],
   contexts: [{ id: "context-orca", contextTypeId: "context-type-project", name: "Orca" }],
 };
@@ -68,6 +68,7 @@ because "A failed deploy blocks work"`;
     ]);
     expect(result.revision.actions[0]).toMatchObject({ laneId: "lane-focus" });
     expect(result.revision.actions[2]).toMatchObject({ facetId: "facet-urgency", value: "urgent" });
+    expect(result.revision.actions[3]).toEqual({ kind: "add_collection", accountId: "account-1", collectionId: "collection-launch" });
     expect(result.revision.actions[4]).toMatchObject({ contextTypeId: "context-type-project", contextId: "context-orca" });
     expect(result.revision.requiredCapabilities).toEqual(["organization_attention", "organization_thread"]);
     expect(result.revision.risk).toBe("medium");

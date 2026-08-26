@@ -62,6 +62,7 @@ function evaluationInput(): OrcaEvaluationInput {
         },
         revision: 1,
       },
+      organizationRevision: 1,
     },
     workspaceSchema: {
       workspaceId: "workspace-1",
@@ -97,7 +98,7 @@ function evaluationInput(): OrcaEvaluationInput {
               { kind: "route_lane", laneId: "lane-focus" },
               { kind: "set_workflow_state", stateId: "state-review" },
               { kind: "set_facet", facetId: "facet-urgency", value: "urgent" },
-              { kind: "add_collection", collectionId: "collection-launch" },
+              { kind: "add_collection", accountId: "account-1", collectionId: "collection-launch" },
               { kind: "link_context", contextTypeId: "context-type-project", contextId: "context-orca" },
               { kind: "notify", urgency: "immediate" },
             ],
@@ -114,7 +115,7 @@ function evaluationInput(): OrcaEvaluationInput {
             name: "General failures",
             actions: [
               { kind: "route_lane", laneId: "lane-fallback" },
-              { kind: "add_collection", collectionId: "collection-failures" },
+              { kind: "add_collection", accountId: "account-1", collectionId: "collection-failures" },
             ],
             because: "All failures remain reviewable",
           }),
@@ -166,10 +167,10 @@ describe("evaluateOrcaRules", () => {
       { kind: "route_lane", laneId: "lane-focus" },
       { kind: "set_workflow_state", stateId: "state-review" },
       { kind: "set_facet", facetId: "facet-urgency", value: "urgent" },
-      { kind: "add_collection", collectionId: "collection-launch" },
+      { kind: "add_collection", accountId: "account-1", collectionId: "collection-launch" },
       { kind: "link_context", contextTypeId: "context-type-project", contextId: "context-orca" },
       { kind: "notify", urgency: "immediate" },
-      { kind: "add_collection", collectionId: "collection-failures" },
+      { kind: "add_collection", accountId: "account-1", collectionId: "collection-failures" },
     ]);
     expect(first.trace.consideredRevisions.map((item) => [item.revisionId, item.eventMatched, item.predicateMatched])).toEqual([
       ["rule-production-r2", true, true],
@@ -224,6 +225,14 @@ describe("evaluateOrcaRules", () => {
       winnerCandidateId: "safety-lock:lane",
     });
     expect(result.trace.reason).toBe("Hold the incident in Focus");
+    expect(result.trace.lowerLanePlacement).toEqual({
+      candidateId: "rule:rule-production:rule-production-r2:0",
+      laneId: "lane-focus",
+      placementSource: "rule_revision",
+      sourceId: "rule-production-r2",
+      actor: { id: "system:gmail-sync", type: "system" },
+      reason: "A failed deploy blocks work",
+    });
   });
 
   test("keeps the top-level reason aligned with the deterministic Lane winner across the precedence matrix", () => {
@@ -391,6 +400,32 @@ describe("evaluateOrcaRules", () => {
     expect(result.trace.losers).toContainEqual(expect.objectContaining({ authorized: false, reason: "capability_denied" }));
   });
 
+  test("denies Collection add and remove candidates bound to a different Account", () => {
+    for (const kind of ["add_collection", "remove_collection"] as const) {
+      const input = evaluationInput();
+      input.ruleSet.revisions = [{
+        ruleId: `rule-${kind}`,
+        revisionId: `revision-${kind}`,
+        revision: 1,
+        order: 1,
+        compiled: compiled({
+          name: kind,
+          actions: [{ kind, accountId: "account-2", collectionId: "collection-foreign" }],
+          because: "The Collection belongs to another Account",
+        }),
+      }];
+
+      const result = evaluateOrcaRules(input);
+
+      expect(result.actions).not.toContainEqual({ kind, accountId: "account-2", collectionId: "collection-foreign" });
+      expect(result.trace.losers).toContainEqual(expect.objectContaining({
+        action: { kind, accountId: "account-2", collectionId: "collection-foreign" },
+        authorized: false,
+        reason: "account_denied",
+      }));
+    }
+  });
+
   test("resists evaluator-origin event loops and stops fan-out graphs at explicit deterministic budgets", () => {
     const loop = evaluationInput();
     loop.event.cause = "evaluator";
@@ -402,5 +437,24 @@ describe("evaluateOrcaRules", () => {
     expect(result.trace.budget.exhausted).toBe(true);
     expect(result.trace.reason).toBe("No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.");
     expect(result.actions.some((action) => action.kind === "route_lane" && action.laneId === "lane-fallback")).toBe(true);
+    expect(result.trace.lowerLanePlacement).toMatchObject({ laneId: "lane-fallback", placementSource: "workspace_fallback" });
+  });
+
+  test("does not project an earlier matching Rule after a later Rule exhausts the evaluation budget", () => {
+    const input = evaluationInput();
+    input.budgets.maximumPredicateSteps = 3;
+
+    const result = evaluateOrcaRules(input);
+
+    expect(result.trace.candidates.some((candidate) => candidate.precedence === "rule_revision" && candidate.action.kind === "route_lane")).toBe(true);
+    expect(result.trace.losers.some((candidate) => candidate.precedence === "rule_revision" && candidate.reason === "budget_exhausted")).toBe(true);
+    expect(result.trace.lowerLanePlacement).toEqual({
+      candidateId: "workspace-fallback:lane",
+      laneId: "lane-fallback",
+      placementSource: "workspace_fallback",
+      sourceId: "lane-fallback",
+      actor: { id: "system:workspace-fallback", type: "system" },
+      reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+    });
   });
 });

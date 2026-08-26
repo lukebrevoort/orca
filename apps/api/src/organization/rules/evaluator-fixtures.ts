@@ -41,6 +41,7 @@ export function reviewerEvaluationInput(options: { safetyLock?: boolean } = {}):
         },
         revision: 1,
       },
+      organizationRevision: 1,
     },
     workspaceSchema: {
       workspaceId: "workspace-1",

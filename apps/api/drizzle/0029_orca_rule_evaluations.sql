@@ -25,6 +25,19 @@ CREATE TRIGGER `organization_evaluation_traces_no_update` BEFORE UPDATE ON `orga
 	SELECT RAISE(ABORT, 'Evaluation Traces are immutable');
 END;
 --> statement-breakpoint
-CREATE TRIGGER `organization_evaluation_traces_no_delete` BEFORE DELETE ON `organization_evaluation_traces` BEGIN
+CREATE TRIGGER `organization_evaluation_traces_no_delete` BEFORE DELETE ON `organization_evaluation_traces`
+WHEN EXISTS (
+	SELECT 1 FROM `users`
+	WHERE `id` = OLD.`workspace_id`
+)
+AND EXISTS (
+	SELECT 1 FROM `oauth_accounts`
+	WHERE `user_id` = OLD.`workspace_id` AND `id` = OLD.`account_id`
+)
+AND EXISTS (
+	SELECT 1 FROM `threads`
+	WHERE `account_id` = OLD.`account_id` AND `id` = OLD.`thread_id`
+)
+BEGIN
 	SELECT RAISE(ABORT, 'Evaluation Traces are immutable');
 END;

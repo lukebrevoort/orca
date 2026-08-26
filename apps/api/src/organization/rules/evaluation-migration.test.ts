@@ -30,6 +30,18 @@ test("BRE-315 Trace migration is ordered, Account-bound, Event-idempotent, and i
     assert.throws(() => client.sqlite.exec("DELETE FROM organization_evaluation_traces WHERE id = 'trace-1'"), /immutable/);
     assert.throws(() => client.sqlite.exec(`INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner','trace-2','account-owner','thread-owner','event-1','message.received',1,'${trace}','[]',1,1)`));
     assert.throws(() => client.sqlite.exec(`INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('owner','trace-3','account-private','thread-private','event-3','message.received',1,'${trace}','[]',1,1)`));
+
+    client.sqlite.query("INSERT INTO organization_evaluation_traces(workspace_id,id,account_id,thread_id,event_id,event_kind,rule_set_revision,trace_json,actions_json,logical_time,created_at) VALUES ('private','trace-private','account-private','thread-private','event-private','message.received',1,?, '[]',10,10)").run(JSON.stringify({ private: true }));
+    client.sqlite.query("DELETE FROM oauth_accounts WHERE id = 'account-owner'").run();
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces WHERE workspace_id = 'owner'").get() as { count: number }).count, 0);
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM threads WHERE account_id = 'account-owner'").get() as { count: number }).count, 0);
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM users WHERE id = 'owner'").get() as { count: number }).count, 1);
+
+    client.sqlite.query("DELETE FROM oauth_accounts WHERE id = 'account-private'").run();
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces WHERE workspace_id = 'private'").get() as { count: number }).count, 0);
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM oauth_accounts WHERE id = 'account-private'").get() as { count: number }).count, 0);
+    client.sqlite.query("DELETE FROM users WHERE id = 'private'").run();
+    assert.equal((client.sqlite.query("SELECT COUNT(*) count FROM users WHERE id = 'private'").get() as { count: number }).count, 0);
     assert.deepEqual(client.sqlite.query("PRAGMA foreign_key_check").all(), []);
   } finally {
     client.sqlite.close();

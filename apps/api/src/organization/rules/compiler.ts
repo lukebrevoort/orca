@@ -24,7 +24,7 @@ export type OrcaWorkspaceSnapshot = {
   lanes: { id: string; name: string }[];
   workflowStates: { id: string; name: string }[];
   facets: { id: string; name: string; valueType: WorkspaceValueType; cardinality: "single" | "multi"; optional: boolean }[];
-  collections: { id: string; name: string }[];
+  collections: { id: string; accountId: string; name: string }[];
   contextTypes: { id: string; name: string }[];
   contexts: { id: string; contextTypeId: string; name: string }[];
 };
@@ -51,7 +51,7 @@ export type OrcaCompiledAction =
   | { kind: "set_workflow_state"; stateId: string }
   | { kind: "set_facet"; facetId: string; value: CompiledLiteral }
   | { kind: "unset_facet"; facetId: string }
-  | { kind: "add_collection" | "remove_collection"; collectionId: string }
+  | { kind: "add_collection" | "remove_collection"; accountId: string; collectionId: string }
   | { kind: "link_context" | "unlink_context"; contextTypeId: string; contextId: string }
   | { kind: "notify"; urgency: "immediate" | "digest" }
   | { kind: "suppress_interruption" }
@@ -326,11 +326,23 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
   for (const [pattern, items, kind, idKey] of [
     [/^route lane ("(?:[^"\\]|\\.)*")$/, workspace.lanes, "route_lane", "laneId"],
     [/^set workflow ("(?:[^"\\]|\\.)*")$/, workspace.workflowStates, "set_workflow_state", "stateId"],
-    [/^add collection ("(?:[^"\\]|\\.)*")$/, workspace.collections, "add_collection", "collectionId"],
-    [/^remove collection ("(?:[^"\\]|\\.)*")$/, workspace.collections, "remove_collection", "collectionId"],
   ] as const) {
     const result = named(pattern, items, kind, idKey);
     if (result !== undefined) return result;
+  }
+  for (const [pattern, kind] of [
+    [/^add collection ("(?:[^"\\]|\\.)*")$/, "add_collection"],
+    [/^remove collection ("(?:[^"\\]|\\.)*")$/, "remove_collection"],
+  ] as const) {
+    const match = pattern.exec(source);
+    if (!match) continue;
+    const name = quoted(match[1]!);
+    const resource = name === null ? undefined : resolveNamed(workspace.collections, name);
+    if (!resource || resource === "ambiguous") {
+      diagnostics.push(diagnostic(line, "resolve", resource === "ambiguous" ? "ambiguous_resource" : "unknown_resource", `${name ?? "Resource"} does not resolve uniquely in Workspace revision ${workspace.revision}.`));
+      return null;
+    }
+    return { kind, accountId: resource.accountId, collectionId: resource.id };
   }
   const facetSet = /^set facet ("(?:[^"\\]|\\.)*")\s*=\s*(.+)$/.exec(source);
   if (facetSet) {
