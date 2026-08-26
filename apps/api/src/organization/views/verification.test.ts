@@ -165,6 +165,62 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const removed = await app.request(`/v1/organization/views/${fourth.id}?expectedRevision=${removeTarget.revision}&expectedWorkspaceRevision=7&idempotencyKey=position-remove`, { method: "DELETE", headers });
     assert.equal(removed.status, 204, await removed.clone().text());
     assert.deepEqual(assertCanonical().map((row) => row.id), [third.id, first.id, second.id]);
+
+    const audit = createDatabaseClient(path);
+    const changes = audit.sqlite.query("SELECT id,authority_trace FROM organization_change_sets WHERE workspace_id='owner' AND resource_family='view' ORDER BY workspace_revision_before").all() as Array<{ id: string; authority_trace: string }>;
+    for (const change of changes) {
+      const trace = JSON.parse(change.authority_trace) as { requestedResourceIds: string[]; expectedRevisions: { resources: Record<string, number> } };
+      const actions = audit.sqlite.query("SELECT resource_id,before_json FROM organization_change_actions WHERE workspace_id='owner' AND change_id=? ORDER BY position").all(change.id) as Array<{ resource_id: string; before_json: string | null }>;
+      for (const action of actions) {
+        assert.ok(trace.requestedResourceIds.includes(action.resource_id), `${change.id} mutated ${action.resource_id} outside its authorized command`);
+        if (action.before_json !== null) {
+          assert.equal(trace.expectedRevisions.resources[action.resource_id], (JSON.parse(action.before_json) as OrganizationView).revision, `${change.id} did not CAS ${action.resource_id}`);
+        }
+      }
+    }
+    audit.sqlite.close();
+  });
+
+  test("CAS-protects every collateral View before lifecycle canonicalization with zero command writes", { timeout: 30_000 }, async () => {
+    for (const operation of ["create", "update", "reorder", "remove"] as const) {
+      const { app, headers, path } = await setup();
+      const first = await createView(app, headers, { name: `${operation} first`, position: 0, definition: { revision: 1 } });
+      const second = await createView(app, headers, { name: `${operation} second`, position: 1, definition: { revision: 1 } });
+      const third = await createView(app, headers, { name: `${operation} third`, position: 2, definition: { revision: 1 } });
+      const client = createDatabaseClient(path);
+      const base = createSqliteOrganizationViewsRepository(client.sqlite);
+      const injectCollateralRace = () => client.sqlite.query("UPDATE organization_views SET revision=revision+1 WHERE workspace_id='owner' AND id=?").run(second.id);
+      const repository = {
+        ...base,
+        create(input: Parameters<typeof base.create>[0]) { if (operation === "create") injectCollateralRace(); return base.create(input); },
+        update(input: Parameters<typeof base.update>[0]) { if (operation === "update") injectCollateralRace(); return base.update(input); },
+        reorder(input: Parameters<typeof base.reorder>[0]) { if (operation === "reorder") injectCollateralRace(); return base.reorder(input); },
+        remove(input: Parameters<typeof base.remove>[0]) { if (operation === "remove") injectCollateralRace(); return base.remove(input); },
+      };
+      const organization = createOrganizationViews(repository, { newViewId: () => `view_${operation}_race`, newChangeId: () => `change_${operation}_race` });
+      const before = client.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY position").all() as Array<{ id: string; position: number; revision: number }>;
+      const beforeWorkspaceRevision = (client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision;
+      const beforeChanges = (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count;
+      const beforeActions = (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count;
+      const scope = { workspaceId: "owner", accountIds: ["account_a", "account_b"], actor: { id: "owner", type: "human" as const } };
+
+      assert.throws(() => {
+        if (operation === "create") organization.create({ scope, request: { idempotencyKey: "race-create", expectedWorkspaceRevision: 4, name: "Racing create", position: 0, definition: { revision: 1 } } });
+        if (operation === "update") organization.update({ scope, viewId: first.id, request: { idempotencyKey: "race-update", expectedWorkspaceRevision: 4, expectedRevision: first.revision, patch: { position: 2 } } });
+        if (operation === "reorder") organization.reorder({ scope, request: { idempotencyKey: "race-reorder", expectedWorkspaceRevision: 4, items: [
+          { id: first.id, expectedRevision: first.revision, position: 2 },
+          { id: third.id, expectedRevision: third.revision, position: 1 },
+        ] } });
+        if (operation === "remove") organization.remove({ scope, viewId: first.id, request: { idempotencyKey: "race-remove", expectedWorkspaceRevision: 4, expectedRevision: first.revision } });
+      }, /revision|stale|changed/i, operation);
+
+      const after = client.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY position").all() as Array<{ id: string; position: number; revision: number }>;
+      assert.deepEqual(after, before.map((view) => view.id === second.id ? { ...view, revision: view.revision + 1 } : view), operation);
+      assert.equal((client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision, beforeWorkspaceRevision, operation);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count, beforeChanges, operation);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count, beforeActions, operation);
+      client.sqlite.close();
+    }
   });
 
   test("routes every View lifecycle mutation through one atomic Organization authority change set", { timeout: 30_000 }, async () => {

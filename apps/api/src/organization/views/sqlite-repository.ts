@@ -19,7 +19,7 @@ import {
 
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
-import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -292,7 +292,7 @@ function verifyAuthorization(sqlite: Database, workspaceId: string, authorizatio
 }
 
 function authorizedMutation<T>(sqlite: Database, input: {
-  workspaceId: string; boundRequest: unknown; authorization: OrganizationViewMutationAuthorization; now: Date; mutate: () => T;
+  workspaceId: string; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date; mutate: () => T;
 }) {
   return sqlite.transaction(() => {
     const key = input.authorization.executionContext.idempotencyKey;
@@ -307,6 +307,22 @@ function authorizedMutation<T>(sqlite: Database, input: {
     const response = input.mutate();
     const after = new Map(viewRows(sqlite, input.workspaceId).map((row) => [row.id, mapView(row)]));
     const changedIds = [...new Set([...before.keys(), ...after.keys()])].filter((id) => canonicalOrganizationJson(before.get(id) ?? null) !== canonicalOrganizationJson(after.get(id) ?? null));
+    if (canonicalOrganizationJson([...after.values()].map((view) => view.id)) !== canonicalOrganizationJson(input.plan.orderedViewIds)) {
+      throw new OrganizationViewAccessError("The authorized View order does not match the committed mutation", "resource_denied");
+    }
+    const intents = new Map(input.authorization.command.intents.map((intent) => [intent.resourceId, intent]));
+    for (const id of changedIds) {
+      const previous = before.get(id) ?? null;
+      const next = after.get(id) ?? null;
+      const intent = intents.get(`view:${id}`);
+      if (!intent
+        || (previous === null && intent.mutation !== "create")
+        || (previous !== null && intent.mutation !== "update")
+        || (next === null && intent.changes?.remove !== true)
+        || (next !== null && intent.changes?.position !== next.position)) {
+        throw new OrganizationViewAccessError(`View ${id} changed outside the exact authorized command`, "resource_denied");
+      }
+    }
     sqlite.query("INSERT INTO organization_change_sets (workspace_id,id,idempotency_key,command_digest,authority_trace,resource_family,operation,command_json,reverts_change_id,workspace_revision_before,workspace_revision_after,created_at) VALUES (?,?,?,?,?,'view','apply',?,NULL,?,?,?)")
       .run(input.workspaceId, input.authorization.command.id, key, input.authorization.executionContext.command.digest, JSON.stringify(input.authorization.trace), JSON.stringify({ request: input.boundRequest, response: response ?? null }), revisionBefore, revisionBefore + 1, input.now.getTime());
     const insertAction = sqlite.query("INSERT INTO organization_change_actions (workspace_id,change_id,position,action_kind,resource_family,resource_id,before_json,after_json) VALUES (?,?,?,?,?,?,?,?)");
@@ -333,72 +349,59 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     getWorkspaceRevision(workspaceId) { return workspaceRevision(sqlite, workspaceId); },
     getAuthorityState(workspaceId) { return authorityState(sqlite, workspaceId); },
     getIdempotentMutation(workspaceId, idempotencyKey) { return idempotentMutation(sqlite, workspaceId, idempotencyKey); },
-    create({ workspaceId, viewId, request, boundRequest, authorization, now }) {
+    create({ workspaceId, viewId, request, boundRequest, plan, authorization, now }) {
       const timestamp = now.getTime();
-      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {
         assertOwnedDefinition(sqlite, workspaceId, request.definition);
         const current = viewRows(sqlite, workspaceId);
-        const target = Math.min(request.position, current.length);
         const temporaryPosition = Math.max(current.length, ...current.map((row) => row.position + 1)) + current.length + 1;
         sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
           .run(workspaceId, viewId, request.name, request.description, request.color, temporaryPosition, JSON.stringify(request.definition), 1, timestamp, timestamp);
-        const ordered = current.map((row) => row.id);
-        ordered.splice(target, 0, viewId);
-        const changed = new Set(current.filter((row) => ordered.indexOf(row.id) !== row.position).map((row) => row.id));
-        rewritePositions(sqlite, workspaceId, ordered, changed, timestamp);
+        const changed = new Set(current.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, plan.orderedViewIds, changed, timestamp);
         return get(workspaceId, viewId)!;
       } });
     },
-    update({ workspaceId, viewId, request, boundRequest, authorization, now }) {
-      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+    update({ workspaceId, viewId, request, boundRequest, plan, authorization, now }) {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {
         const current = get(workspaceId, viewId);
         if (!current) throw new OrganizationViewNotFoundError();
         if (current.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
         const next = { ...current, ...request.patch, definition: request.patch.definition ?? current.definition };
         assertOwnedDefinition(sqlite, workspaceId, next.definition);
-        const rows = viewRows(sqlite, workspaceId);
-        const ordered = rows.map((row) => row.id);
         if (request.patch.position !== undefined) {
-          ordered.splice(ordered.indexOf(viewId), 1);
-          ordered.splice(Math.min(request.patch.position, ordered.length), 0, viewId);
-          rewritePositions(sqlite, workspaceId, ordered, new Set(rows.filter((row) => ordered.indexOf(row.id) !== row.position && row.id !== viewId).map((row) => row.id)), now.getTime());
+          const rows = viewRows(sqlite, workspaceId);
+          rewritePositions(sqlite, workspaceId, plan.orderedViewIds, new Set(rows.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position && row.id !== viewId).map((row) => row.id)), now.getTime());
         }
         const result = sqlite.query("UPDATE organization_views SET name=?,description=?,color=?,position=?,definition=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
-          .run(next.name, next.description, next.color, ordered.indexOf(viewId), JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
+          .run(next.name, next.description, next.color, plan.orderedViewIds.indexOf(viewId), JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
         if (result.changes !== 1) throw new OrganizationViewConflictError();
         return get(workspaceId, viewId)!;
       } });
     },
-    reorder({ workspaceId, request, boundRequest, authorization, now }) {
-      return authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+    reorder({ workspaceId, request, boundRequest, plan, authorization, now }) {
+      return authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {
         const rows = viewRows(sqlite, workspaceId);
         for (const item of request.items) {
           const current = get(workspaceId, item.id);
           if (!current) throw new OrganizationViewNotFoundError();
           if (current.revision !== item.expectedRevision) throw new OrganizationViewConflictError();
         }
-        if (request.items.some((item) => item.position >= rows.length)) throw new OrganizationViewValidationError("View reorder positions must fit the complete Workspace ordering");
-        const ordered = Array<string | undefined>(rows.length);
-        const requestedIds = new Set(request.items.map((item) => item.id));
-        for (const item of request.items) ordered[item.position] = item.id;
-        const untouched = rows.filter((row) => !requestedIds.has(row.id)).map((row) => row.id);
-        for (let index = 0; index < ordered.length; index += 1) if (!ordered[index]) ordered[index] = untouched.shift();
-        const complete = ordered as string[];
-        const changed = new Set(rows.filter((row) => complete.indexOf(row.id) !== row.position).map((row) => row.id));
-        rewritePositions(sqlite, workspaceId, complete, changed, now.getTime());
+        const changed = new Set(rows.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, plan.orderedViewIds, changed, now.getTime());
         return viewRows(sqlite, workspaceId).map(mapView);
       } });
     },
-    remove({ workspaceId, viewId, request, boundRequest, authorization, now }) {
-      authorizedMutation(sqlite, { workspaceId, boundRequest, authorization, now, mutate: () => {
+    remove({ workspaceId, viewId, request, boundRequest, plan, authorization, now }) {
+      authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {
         const rows = viewRows(sqlite, workspaceId);
         const target = rows.find((row) => row.id === viewId);
         if (!target) throw new OrganizationViewNotFoundError();
         if (target.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
         sqlite.query("DELETE FROM organization_views WHERE workspace_id=? AND id=? AND revision=?").run(workspaceId, viewId, request.expectedRevision);
         const remaining = rows.filter((row) => row.id !== viewId);
-        const changed = new Set(remaining.filter((row, position) => row.position !== position).map((row) => row.id));
-        rewritePositions(sqlite, workspaceId, remaining.map((row) => row.id), changed, now.getTime());
+        const changed = new Set(remaining.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position).map((row) => row.id));
+        rewritePositions(sqlite, workspaceId, plan.orderedViewIds, changed, now.getTime());
         return null;
       } });
     },
