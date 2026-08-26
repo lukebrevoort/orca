@@ -137,7 +137,7 @@ describe("message.received Rule evaluation", () => {
 
       const trace = getLatestOrcaEvaluationTrace(db, { workspaceId: "workspace-1", accountId: "account-1", threadId: email.threadId });
       assert.ok(trace);
-      assert.equal(trace.reason, "Production failures: A failed deploy blocks work");
+      assert.equal(trace.reason, "A failed deploy blocks work");
       assert.equal(trace.consideredRevisions[0]?.revisionId, compiled.revision.id);
       assert.equal(trace.winners.find((winner) => winner.slot === "lane")?.action.kind, "route_lane");
       assert.equal(trace.actor.id, "system:gmail-sync");

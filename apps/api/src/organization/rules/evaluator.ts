@@ -209,7 +209,6 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
   const predicateResults: OrcaEvaluationTrace["predicateResults"] = [];
   const considered: OrcaEvaluationTrace["consideredRevisions"] = [];
   const candidates: Candidate[] = [];
-  const matchedReasons: Array<{ order: number; reason: string }> = [];
 
   const addCandidate = (candidate: Omit<Candidate, "candidateId"> & { candidateId: string }) => {
     usage.candidates += 1;
@@ -343,7 +342,6 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       reason: usage.exhausted ? "budget_exhausted" : predicateMatched ? "matched" : "predicate_not_matched",
     });
     if (!predicateMatched) continue;
-    matchedReasons.push({ order: rule.order, reason: `${rule.compiled.name}: ${rule.compiled.because}` });
     for (const [actionOrder, action] of rule.compiled.actions.entries()) {
       const missingCapabilities = requiredCapabilities(action).filter((capability) => !granted.has(capability));
       addCandidate({
@@ -390,11 +388,16 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
   }
   winners.sort(compareCandidate);
   losers.sort(compareCandidate);
-  const reason = usage.exhausted
-    ? "Evaluation budget exhausted; only non-Rule precedence sources were resolved."
-    : matchedReasons.sort((left, right) => left.order - right.order || left.reason.localeCompare(right.reason))[0]?.reason
-      ?? winners[0]?.reason
-      ?? "No candidate Action was authorized.";
+  /**
+   * The top-level reason is the authoritative reason of the primary Lane
+   * winner. Evaluations without a Lane winner use the first resolved winner;
+   * only an evaluation with no winner at all uses an evaluator status label.
+   */
+  const primaryWinner = winners.find((winner) => winner.slot === "lane") ?? winners[0];
+  const reason = primaryWinner?.reason
+    ?? (usage.exhausted
+      ? "Evaluation budget exhausted; no candidate Action was resolved."
+      : "No candidate Action was authorized.");
 
   return orcaEvaluationResultSchema.parse({
     actions: [...winners].sort(compareResolvedAction).map((winner) => winner.action),

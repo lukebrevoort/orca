@@ -184,9 +184,154 @@ describe("evaluateOrcaRules", () => {
     expect(first.trace.losers.some((item) => item.action.kind === "route_lane" && item.reason === "higher_precedence_candidate")).toBe(true);
     expect(first.trace.actor).toEqual(input.actor);
     expect(first.trace.capabilities).toEqual(input.capabilities);
-    expect(first.trace.reason).toBe("Production failures: A failed deploy blocks work");
+    expect(first.trace.reason).toBe("A failed deploy blocks work");
     expect(first.trace.budget.exhausted).toBe(false);
     expect(serializeOrcaEvaluation(first)).toBe(serializeOrcaEvaluation(second));
+  });
+
+  test("reports the authoritative Safety Lock reason when it wins over a Manual Override and matching Rule", () => {
+    const input = evaluationInput();
+    input.thread.lanePlacement.primaryLaneId = "lane-focus";
+    input.thread.lanePlacement.manualOverride = {
+      laneId: "lane-fallback",
+      actor: { id: "human-manual", type: "human" },
+      reason: "Move after unlock",
+      updatedAt: "2026-08-26T11:00:00.000Z",
+    };
+    input.thread.lanePlacement.safetyLock = {
+      locked: true,
+      actor: { id: "human-safety", type: "human" },
+      reason: "Hold the incident in Focus",
+      updatedAt: "2026-08-26T11:30:00.000Z",
+    };
+
+    const result = evaluateOrcaRules(input);
+
+    expect(result.trace.winners.find((candidate) => candidate.slot === "lane")).toMatchObject({
+      candidateId: "safety-lock:lane",
+      precedence: "safety_lock",
+      actor: { id: "human-safety", type: "human" },
+      reason: "Hold the incident in Focus",
+    });
+    expect(result.trace.losers.find((candidate) => candidate.candidateId === "manual-override:lane")).toMatchObject({
+      candidateReason: "Move after unlock",
+      reason: "higher_precedence_candidate",
+      winnerCandidateId: "safety-lock:lane",
+    });
+    expect(result.trace.losers.find((candidate) => candidate.precedence === "rule_revision" && candidate.slot === "lane")).toMatchObject({
+      candidateReason: "A failed deploy blocks work",
+      reason: "higher_precedence_candidate",
+      winnerCandidateId: "safety-lock:lane",
+    });
+    expect(result.trace.reason).toBe("Hold the incident in Focus");
+  });
+
+  test("keeps the top-level reason aligned with the deterministic Lane winner across the precedence matrix", () => {
+    const fallbackReason = "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.";
+    const cases: Array<{
+      name: string;
+      input: OrcaEvaluationInput;
+      candidateId: string;
+      precedence: "safety_lock" | "manual_override" | "rule_revision" | "lane_policy" | "workspace_fallback";
+      reason: string;
+    }> = [];
+
+    const safetyOverRule = evaluationInput();
+    safetyOverRule.thread.lanePlacement.primaryLaneId = "lane-focus";
+    safetyOverRule.thread.lanePlacement.safetyLock = {
+      locked: true,
+      actor: { id: "human-safety", type: "human" },
+      reason: "Safety Lock keeps Focus",
+      updatedAt: "2026-08-26T11:30:00.000Z",
+    };
+    cases.push({ name: "Safety Lock over matching Rule", input: safetyOverRule, candidateId: "safety-lock:lane", precedence: "safety_lock", reason: "Safety Lock keeps Focus" });
+
+    const safetyOverFallback = structuredClone(safetyOverRule);
+    safetyOverFallback.thread.subject = "Routine status update";
+    cases.push({ name: "Safety Lock over nonmatching Rules and fallback", input: safetyOverFallback, candidateId: "safety-lock:lane", precedence: "safety_lock", reason: "Safety Lock keeps Focus" });
+
+    const manualOverRule = evaluationInput();
+    manualOverRule.thread.lanePlacement.manualOverride = {
+      laneId: "lane-fallback",
+      actor: { id: "human-manual", type: "human" },
+      reason: "Manual Override keeps Everything else",
+      updatedAt: "2026-08-26T11:00:00.000Z",
+    };
+    cases.push({ name: "Manual Override over Rule", input: manualOverRule, candidateId: "manual-override:lane", precedence: "manual_override", reason: "Manual Override keeps Everything else" });
+
+    cases.push({ name: "Rule winner", input: evaluationInput(), candidateId: "rule:rule-production:rule-production-r2:0", precedence: "rule_revision", reason: "A failed deploy blocks work" });
+
+    const lanePolicy = evaluationInput();
+    lanePolicy.ruleSet.revisions = [];
+    lanePolicy.thread.lanePlacement.primaryLaneId = "lane-focus";
+    lanePolicy.thread.lanePlacement.evidence = {
+      winningSource: "lane_policy",
+      sourceId: "policy-focus",
+      precedenceLevel: "4_lane_policy",
+      actor: { id: "agent:lane-policy", type: "agent" },
+      reason: "Lane Policy retained Focus",
+    };
+    cases.push({ name: "Lane Policy winner", input: lanePolicy, candidateId: "lane-policy:lane", precedence: "lane_policy", reason: "Lane Policy retained Focus" });
+
+    const fallback = evaluationInput();
+    fallback.ruleSet.revisions = [];
+    cases.push({ name: "Workspace Fallback winner", input: fallback, candidateId: "workspace-fallback:lane", precedence: "workspace_fallback", reason: fallbackReason });
+
+    const capabilityDeniedRule = evaluationInput();
+    capabilityDeniedRule.capabilities.actionFamilies = ["organization_attention"];
+    cases.push({ name: "capability-denied Rule", input: capabilityDeniedRule, candidateId: "workspace-fallback:lane", precedence: "workspace_fallback", reason: fallbackReason });
+
+    const multiSlot = evaluationInput();
+    multiSlot.ruleSet.revisions = [
+      {
+        ruleId: "rule-unrelated",
+        revisionId: "rule-unrelated-r1",
+        revision: 1,
+        order: 1,
+        compiled: compiled({
+          name: "Unrelated actions",
+          actions: [{ kind: "set_workflow_state", stateId: "state-review" }, { kind: "notify", urgency: "immediate" }],
+          capabilities: ["organization_attention", "organization_thread"],
+          because: "Workflow and attention need review",
+        }),
+      },
+      {
+        ruleId: "rule-lane",
+        revisionId: "rule-lane-r1",
+        revision: 1,
+        order: 2,
+        compiled: compiled({
+          name: "Lane decision",
+          actions: [{ kind: "route_lane", laneId: "lane-focus" }],
+          because: "The incident belongs in Focus",
+        }),
+      },
+    ];
+    cases.push({ name: "multi-slot Actions", input: multiSlot, candidateId: "rule:rule-lane:rule-lane-r1:0", precedence: "rule_revision", reason: "The incident belongs in Focus" });
+
+    for (const item of cases) {
+      const result = evaluateOrcaRules(item.input);
+      const laneWinner = result.trace.winners.find((candidate) => candidate.slot === "lane");
+      expect({
+        name: item.name,
+        candidateId: laneWinner?.candidateId,
+        precedence: laneWinner?.precedence,
+        winnerReason: laneWinner?.reason,
+        traceReason: result.trace.reason,
+      }).toEqual({
+        name: item.name,
+        candidateId: item.candidateId,
+        precedence: item.precedence,
+        winnerReason: item.reason,
+        traceReason: item.reason,
+      });
+    }
+
+    const denied = evaluateOrcaRules(capabilityDeniedRule);
+    expect(denied.trace.losers.some((candidate) => candidate.slot === "lane" && candidate.precedence === "rule_revision" && candidate.reason === "capability_denied")).toBe(true);
+    const mixed = evaluateOrcaRules(multiSlot);
+    expect(mixed.trace.winners[0]).toMatchObject({ slot: "workflow_state", reason: "Workflow and attention need review" });
+    expect(mixed.trace.reason).toBe("The incident belongs in Focus");
   });
 
   test("enforces Safety Lock then Manual Override before ordered Rule, Lane Policy, and Workspace fallback", () => {
@@ -255,7 +400,7 @@ describe("evaluateOrcaRules", () => {
     bounded.budgets.maximumPredicateSteps = 2;
     const result = evaluateOrcaRules(bounded);
     expect(result.trace.budget.exhausted).toBe(true);
-    expect(result.trace.reason).toBe("Evaluation budget exhausted; only non-Rule precedence sources were resolved.");
+    expect(result.trace.reason).toBe("No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.");
     expect(result.actions.some((action) => action.kind === "route_lane" && action.laneId === "lane-fallback")).toBe(true);
   });
 });
