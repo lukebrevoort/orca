@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "../../auth/session-store.ts";
@@ -11,9 +11,14 @@ import { createDatabaseClient } from "../../db/client.ts";
 import { createApp } from "../../index.ts";
 import {
   emails,
+  collectionThreads,
+  collections,
   oauthAccounts,
   organizationChangeActions,
   organizationChangeSets,
+  organizationContexts,
+  organizationContextRelationshipTypes,
+  organizationContextTypes,
   organizationFacets,
   organizationLanePolicies,
   organizationLanes,
@@ -21,8 +26,11 @@ import {
   organizationRuleSets,
   organizationRules,
   organizationThreadFacetValues,
+  organizationThreadContextRelationships,
   organizationThreadLaneStates,
   organizationThreadStates,
+  organizationThreadWorkflowStates,
+  organizationWorkflowStates,
   organizationWorkspaceStates,
   threads,
   users,
@@ -33,7 +41,7 @@ import { createRuleRevisionService } from "./service.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 import { createHistoricalRuleSimulationService } from "./simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./simulation-sqlite.ts";
-import { createSqliteRuleChangeSetService } from "./change-set-sqlite.ts";
+import { bre317ActionSupport, createSqliteRuleChangeSetService, sqliteRuleChangeSetCapabilitySource } from "./change-set-sqlite.ts";
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
@@ -63,7 +71,9 @@ function message(): GmailMessage {
   };
 }
 
-async function setup() {
+async function setup(actionSource = `action route lane "Focus"
+action set facet "Severity" = "Critical"
+action notify immediate`) {
   const directory = mkdtempSync(join(tmpdir(), "orca-bre-317-simulation-"));
   directories.push(directory);
   const path = join(directory, "simulation.sqlite");
@@ -89,6 +99,27 @@ async function setup() {
     cardinality: JSON.stringify({ kind: "single" }), isOptional: true, defaultValue: null,
     retiredAt: null, revision: 1, createdAt: now, updatedAt: now,
   }).run();
+  client.db.insert(organizationWorkflowStates).values({
+    workspaceId: "workspace-1", id: "state-review", name: "Needs review", position: 0,
+    retiredAt: null, revision: 1, createdAt: now, updatedAt: now,
+  }).run();
+  client.db.insert(collections).values({
+    id: "collection-launch", accountId: "account-1", name: "Launch", color: "#336699",
+    position: 0, revision: 1, createdAt: now, updatedAt: now,
+  }).run();
+  client.db.insert(organizationContextTypes).values({
+    workspaceId: "workspace-1", id: "context-type-project", name: "Project", position: 0,
+    retiredAt: null, revision: 1, createdAt: now, updatedAt: now,
+  }).run();
+  client.db.insert(organizationContextRelationshipTypes).values({
+    workspaceId: "workspace-1", id: "relationship-project", contextTypeId: "context-type-project",
+    name: "belongs to", inverseName: "contains", direction: "thread_to_context", position: 0,
+    maximumPerThread: 20, retiredAt: null, revision: 1, createdAt: now, updatedAt: now,
+  }).run();
+  client.db.insert(organizationContexts).values({
+    workspaceId: "workspace-1", id: "context-orca", contextTypeId: "context-type-project",
+    name: "Orca", retiredAt: null, revision: 1, createdAt: now, updatedAt: now,
+  }).run();
 
   const rules = createRuleRevisionService(createSqliteRuleRevisionRepository(client.db), {
     now: () => now,
@@ -105,9 +136,7 @@ async function setup() {
 rule "Production failures"
 event message.received
 when subject contains "failed"
-action route lane "Focus"
-action set facet "Severity" = "Critical"
-action notify immediate
+${actionSource}
 because "A production failure needs a human"`,
     },
   });
@@ -130,12 +159,17 @@ function snapshot(db: Awaited<ReturnType<typeof setup>>["db"]) {
   const tables = {
     users, oauthAccounts, threads, emails, organizationWorkspaceStates,
     organizationRules, organizationRuleRevisions, organizationRuleSets, organizationChangeSets, organizationChangeActions,
-    organizationThreadLaneStates, organizationThreadFacetValues, organizationThreadStates,
+    organizationThreadLaneStates, organizationThreadFacetValues, organizationThreadWorkflowStates,
+    collectionThreads, organizationThreadContextRelationships, organizationThreadStates,
   };
   return Object.fromEntries(Object.entries(tables).map(([name, table]) => [name, {
     count: db.select({ count: sql<number>`count(*)` }).from(table).get()!.count,
     rows: db.select().from(table).all(),
   }]));
+}
+
+function validCapability(db: Awaited<ReturnType<typeof setup>>["db"]) {
+  return sqliteRuleChangeSetCapabilitySource.load(db, { workspaceId: "workspace-1" })!.snapshot;
 }
 
 describe("BRE-317 SQLite historical Simulation adapter", () => {
@@ -173,6 +207,259 @@ describe("BRE-317 SQLite historical Simulation adapter", () => {
 });
 
 describe("BRE-317 atomic Rule activation", () => {
+  test("rejects an arbitrary self-asserted Capability with zero writes", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const forgedCapability = {
+        id: "attacker-self-asserted-capability",
+        revision: 999,
+        actor,
+        scope: { workspaceId: "workspace-1", accountIds: ["account-1"] },
+        operations: ["simulate", "apply", "revert"] as const,
+        resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
+        actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"] as const,
+      };
+      const before = snapshot(db);
+
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db).activate({
+          actor,
+          capabilitySnapshot: forgedCapability,
+          workspaceId: "workspace-1",
+          request: {
+            ruleId: compiled.rule.id,
+            revisionId: compiled.revision.id,
+            simulationId: simulation.simulationId,
+            accountIds: ["account-1"],
+            maximumThreads: 500,
+            expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+            expectedRuleRevision: compiled.rule.latestRevision,
+            expectedRuleSetRevision: ruleSet.revision,
+            idempotencyKey: "activate-forged-capability",
+          },
+        }),
+        /Capability snapshot is not the current live revision/,
+      );
+      assert.deepEqual(snapshot(db), before);
+    } finally {
+      sqlite.close();
+    }
+  }, 15_000);
+
+  test("denies stale, revoked, missing, and mis-scoped live authority with zero writes", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor, workspaceId: "workspace-1", request: {
+          ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"], maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const request = {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+        accountIds: ["account-1"], maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "authority-variant",
+      };
+      const live = validCapability(db);
+      const variants = [
+        ["stale revision", { ...live, revision: live.revision + 1 }],
+        ["wrong Actor", { ...live, actor: { id: "attacker", type: "human" as const } }],
+        ["wrong audience", { ...live, actor: { id: live.actor.id, type: "agent" as const } }],
+        ["wrong Workspace", { ...live, scope: { ...live.scope, workspaceId: "workspace-2" } }],
+        ["wrong Account", { ...live, scope: { ...live.scope, accountIds: ["account-2"] } }],
+        ["wrong operation", { ...live, operations: ["simulate", "revert"] as const }],
+        ["wrong resource scope", { ...live, resourceFamilies: live.resourceFamilies.filter((family) => family !== "rule") }],
+        ["wrong action/risk scope", { ...live, actionFamilies: live.actionFamilies.filter((family) => family !== "organization_thread") }],
+      ] as const;
+      for (const [name, capabilitySnapshot] of variants) {
+        const before = snapshot(db);
+        assert.throws(
+          () => createSqliteRuleChangeSetService(db).activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: { ...request, idempotencyKey: `deny-${name}` } }),
+          /different Actor identity or type|Capability snapshot is not the current live revision/,
+          name,
+        );
+        assert.deepEqual(snapshot(db), before, `${name} denial must write nothing`);
+      }
+
+      for (const [name, capabilitySource, expected] of [
+        ["revoked", { load: () => ({ snapshot: live, revokedAt: "2026-08-26T12:00:00.000Z" }) }, /live Capability has been revoked/],
+        ["missing", { load: () => null }, /No current live Capability/],
+      ] as const) {
+        const before = snapshot(db);
+        assert.throws(
+          () => createSqliteRuleChangeSetService(db, { capabilitySource }).activate({ actor, capabilitySnapshot: live, workspaceId: "workspace-1", request: { ...request, idempotencyKey: `deny-${name}` } }),
+          expected,
+        );
+        assert.deepEqual(snapshot(db), before, `${name} denial must write nothing`);
+      }
+
+      let resolutions = 0;
+      const beforeRace = snapshot(db);
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, {
+          capabilitySource: { load: () => ++resolutions === 1 ? { snapshot: live, revokedAt: null } : { snapshot: live, revokedAt: "2026-08-26T12:00:01.000Z" } },
+        }).activate({ actor, capabilitySnapshot: live, workspaceId: "workspace-1", request: { ...request, idempotencyKey: "deny-revoked-during-commit" } }),
+        /live Capability has been revoked/,
+      );
+      assert.equal(resolutions, 2, "live authority is resolved again inside the SQLite transaction");
+      assert.deepEqual(snapshot(db), beforeRace, "transaction-side revocation must roll back every write");
+    } finally { sqlite.close(); }
+  }, 30_000);
+
+  test("projects a winning Workflow State action and increments the Thread revision", async () => {
+    const { db, sqlite, compiled, threadId } = await setup(`action set workflow "Needs review"`);
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      assert.equal(simulation.counts.affectedThreads, 1);
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+
+      const service = createSqliteRuleChangeSetService(db, {
+        id: (() => { let value = 0; return () => `workflow-change-${++value}`; })(),
+      });
+      const activationRequest = {
+        ruleId: compiled.rule.id,
+        revisionId: compiled.revision.id,
+        simulationId: simulation.simulationId,
+        accountIds: ["account-1"],
+        maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision,
+        expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "activate-workflow-state",
+      };
+      const applied = service.activate({
+        actor,
+        capabilitySnapshot: validCapability(db),
+        workspaceId: "workspace-1",
+        request: activationRequest,
+      });
+
+      assert.equal(db.select().from(organizationThreadWorkflowStates).where(eq(organizationThreadWorkflowStates.threadId, threadId)).get()?.stateId, "state-review");
+      assert.equal(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, threadId)).get()?.revision, 2);
+      const applyActions = db.select().from(organizationChangeActions).where(eq(organizationChangeActions.changeId, applied.changeSetId)).all();
+      assert.deepEqual(applyActions.map(({ position, actionKind }) => ({ position, actionKind })), [
+        { position: 0, actionKind: "activate_rule_revision" },
+        { position: 1, actionKind: "set_workflow_state" },
+      ]);
+      const inverse = JSON.parse(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!.inverseJson);
+      assert.deepEqual(inverse.threads[0].beforeWorkflow, null);
+      assert.deepEqual(inverse.threads[0].beforeCollections, []);
+      assert.deepEqual(inverse.threads[0].beforeContexts, []);
+
+      const afterApply = snapshot(db);
+      assert.deepEqual(service.activate({ actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1", request: activationRequest }), applied);
+      assert.deepEqual(snapshot(db), afterApply);
+
+      const reverted = service.revert({
+        actor,
+        capabilitySnapshot: validCapability(db),
+        workspaceId: "workspace-1",
+        request: {
+          changeSetId: applied.changeSetId,
+          accountIds: ["account-1"],
+          expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+          idempotencyKey: "revert-workflow-state",
+        },
+      });
+      assert.equal(reverted.status, "reverted");
+      assert.equal(db.select().from(organizationThreadWorkflowStates).where(eq(organizationThreadWorkflowStates.threadId, threadId)).get(), undefined);
+      assert.equal(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, threadId)).get()?.revision, 3);
+    } finally {
+      sqlite.close();
+    }
+  }, 15_000);
+
+  test("projects Collection and Context winners in evaluator order and compensates them", async () => {
+    const { db, sqlite, compiled, threadId } = await setup(`action set workflow "Needs review"
+action add collection "Launch"
+action link context "Project" "Orca"`);
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor, workspaceId: "workspace-1", request: {
+          ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"], maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const service = createSqliteRuleChangeSetService(db, { id: (() => { let value = 0; return () => `complete-change-${++value}`; })() });
+      const applied = service.activate({ actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+        accountIds: ["account-1"], maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "activate-complete-projections",
+      } });
+
+      assert.ok(db.select().from(collectionThreads).where(and(eq(collectionThreads.collectionId, "collection-launch"), eq(collectionThreads.threadId, threadId))).get());
+      assert.ok(db.select().from(organizationThreadContextRelationships).where(and(
+        eq(organizationThreadContextRelationships.contextId, "context-orca"), eq(organizationThreadContextRelationships.threadId, threadId),
+      )).get());
+      assert.equal(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, threadId)).get()?.revision, 2);
+      const actions = db.select().from(organizationChangeActions).where(eq(organizationChangeActions.changeId, applied.changeSetId)).all();
+      assert.deepEqual(actions.map(({ position, actionKind }) => ({ position, actionKind })), [
+        { position: 0, actionKind: "activate_rule_revision" },
+        { position: 1, actionKind: "set_workflow_state" },
+        { position: 2, actionKind: "add_collection" },
+        { position: 3, actionKind: "link_context" },
+      ]);
+      const inverse = JSON.parse(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!.inverseJson);
+      assert.deepEqual(inverse.threads[0].beforeCollections, [{ collectionId: "collection-launch", membership: null }]);
+      assert.deepEqual(inverse.threads[0].beforeContexts, [{ contextTypeId: "context-type-project", contextId: "context-orca", relationship: null }]);
+
+      service.revert({ actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1", request: {
+        changeSetId: applied.changeSetId, accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter, idempotencyKey: "revert-complete-projections",
+      } });
+      assert.equal(db.select().from(collectionThreads).where(eq(collectionThreads.threadId, threadId)).get(), undefined);
+      assert.equal(db.select().from(organizationThreadContextRelationships).where(eq(organizationThreadContextRelationships.threadId, threadId)).get(), undefined);
+      assert.equal(db.select().from(organizationThreadWorkflowStates).where(eq(organizationThreadWorkflowStates.threadId, threadId)).get(), undefined);
+      assert.equal(db.select().from(organizationThreadStates).where(eq(organizationThreadStates.threadId, threadId)).get()?.revision, 3);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("keeps the BRE-317 planner exhaustive over every production evaluator Action kind", () => {
+    assert.deepEqual(Object.keys(bre317ActionSupport).sort(), [
+      "add_collection", "link_context", "notify", "propose_provider_deletion", "propose_retention",
+      "remove_collection", "route_lane", "schedule_review", "set_facet", "set_workflow_state",
+      "suppress_interruption", "unlink_context", "unset_facet",
+    ]);
+    assert.deepEqual(Object.entries(bre317ActionSupport).filter(([, support]) => support === "projected").map(([kind]) => kind).sort(), [
+      "add_collection", "link_context", "remove_collection", "route_lane", "set_facet",
+      "set_workflow_state", "unlink_context", "unset_facet",
+    ]);
+  });
+
   test("applies one exact successful Simulation atomically and replays the same idempotency key", async () => {
     const { db, sqlite, compiled, threadId } = await setup();
     try {
@@ -188,15 +475,7 @@ describe("BRE-317 atomic Rule activation", () => {
       const simulation = simulationService.simulate({ actor, workspaceId: "workspace-1", request: simulationRequest });
       assert.equal(simulation.state, "simulated");
       const ruleSetBefore = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
-      const capabilitySnapshot = {
-        id: "capability-bre-317-human",
-        revision: 4,
-        actor,
-        scope: { workspaceId: "workspace-1", accountIds: ["account-1"] },
-        operations: ["simulate", "apply", "revert"] as const,
-        resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
-        actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"] as const,
-      };
+      const capabilitySnapshot = validCapability(db);
       const request = {
         ruleId: compiled.rule.id,
         revisionId: compiled.revision.id,
@@ -256,17 +535,9 @@ describe("BRE-317 atomic Rule activation", () => {
           },
         });
         const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
-        const capabilitySnapshot = {
-          id: "capability-bre-317-human",
-          revision: 4,
-          actor,
-          scope: { workspaceId: "workspace-1", accountIds: ["account-1"] },
-          operations: ["simulate", "apply", "revert"] as const,
-          resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
-          actionFamilies: (failure === "authority"
-            ? ["organization_read", "organization_structure"]
-            : ["organization_read", "organization_structure", "organization_thread", "organization_attention"]) as Array<"organization_read" | "organization_structure" | "organization_thread" | "organization_attention">,
-        };
+        const capabilitySnapshot = failure === "authority"
+          ? { ...validCapability(db), actionFamilies: ["organization_read", "organization_structure"] as const }
+          : validCapability(db);
         const request = {
           ruleId: compiled.rule.id,
           revisionId: compiled.revision.id,
@@ -285,7 +556,7 @@ describe("BRE-317 atomic Rule activation", () => {
         const service = createSqliteRuleChangeSetService(db, { id: () => `change-failure-${failure}` });
         assert.throws(
           () => service.activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request }),
-          failure === "authority" ? /outside the Capability snapshot/
+          failure === "authority" ? /Capability snapshot is not the current live revision/
             : failure === "account" ? /Account scope is not owned/
               : failure === "rollback" ? /injected BRE-317 facet failure/
                 : /exact current successful Simulation/,
@@ -296,20 +567,128 @@ describe("BRE-317 atomic Rule activation", () => {
       }
     }
   }, 30_000);
+
+  test("rolls back a forced Workflow projection failure and rejects an unsupported future winner before writes", async () => {
+    for (const failure of ["workflow_rollback", "unsupported_action"] as const) {
+      const { db, sqlite, compiled } = await setup(`action set workflow "Needs review"`);
+      try {
+        const actor = { id: "workspace-1", type: "human" as const };
+        const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({ actor, workspaceId: "workspace-1", request: {
+          ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"], maximumThreads: 500,
+        } });
+        const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+        if (failure === "workflow_rollback") {
+          sqlite.run(`CREATE TRIGGER bre317_abort_workflow BEFORE INSERT ON organization_thread_workflow_states BEGIN SELECT RAISE(ABORT, 'injected BRE-317 workflow failure'); END`);
+        } else {
+          const row = db.select().from(organizationRuleRevisions).where(eq(organizationRuleRevisions.id, compiled.revision.id)).get()!;
+          const tampered = JSON.parse(row.compiledJson);
+          tampered.actions = [{ kind: "future_projection_action", targetId: "silently-dropped" }];
+          sqlite.run(`DROP TRIGGER organization_rule_revisions_no_update`);
+          db.update(organizationRuleRevisions).set({ compiledJson: JSON.stringify(tampered) }).where(eq(organizationRuleRevisions.id, compiled.revision.id)).run();
+        }
+        const before = snapshot(db);
+        assert.throws(
+          () => createSqliteRuleChangeSetService(db).activate({ actor, capabilitySnapshot: validCapability(db), workspaceId: "workspace-1", request: {
+            ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+            accountIds: ["account-1"], maximumThreads: 500,
+            expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+            expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+            idempotencyKey: `activate-${failure}`,
+          } }),
+          failure === "workflow_rollback" ? /injected BRE-317 workflow failure/ : /Invalid input|future_projection_action/,
+        );
+        assert.deepEqual(snapshot(db), before, `${failure} must preserve all projections, revisions, and audit rows`);
+      } finally { sqlite.close(); }
+    }
+  }, 15_000);
+
+  test("reports a newer Thread revision conflict instead of compensating Workflow state", async () => {
+    const { db, sqlite, compiled, threadId } = await setup(`action set workflow "Needs review"`);
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({ actor, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+        workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+        accountIds: ["account-1"], maximumThreads: 500,
+      } });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const service = createSqliteRuleChangeSetService(db, { id: () => "workflow-conflict" });
+      const applied = service.activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+        accountIds: ["account-1"], maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "workflow-conflict-apply",
+      } });
+      db.update(organizationThreadStates).set({ revision: 3 }).where(eq(organizationThreadStates.threadId, threadId)).run();
+      const before = snapshot(db);
+      assert.throws(
+        () => service.revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: {
+          changeSetId: applied.changeSetId, accountIds: ["account-1"],
+          expectedWorkspaceRevision: applied.workspaceRevisionAfter, idempotencyKey: "workflow-conflict-revert",
+        } }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "compensation_conflict",
+      );
+      assert.equal(db.select().from(organizationThreadWorkflowStates).where(eq(organizationThreadWorkflowStates.threadId, threadId)).get()?.stateId, "state-review");
+      assert.deepEqual(snapshot(db), before);
+    } finally { sqlite.close(); }
+  }, 15_000);
 });
 
 describe("BRE-317 compensating Rule Change Set revert", () => {
+  test("rejects forged and transaction-revoked revert authority with zero writes", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({ actor, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id,
+        workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+        accountIds: ["account-1"], maximumThreads: 500,
+      } });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const applied = createSqliteRuleChangeSetService(db, { id: () => "authority-apply" }).activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id, revisionId: compiled.revision.id, simulationId: simulation.simulationId,
+        accountIds: ["account-1"], maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision, expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "authority-apply",
+      } });
+      const request = {
+        changeSetId: applied.changeSetId, accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter, idempotencyKey: "forged-revert",
+      };
+      const beforeForged = snapshot(db);
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db).revert({
+          actor, capabilitySnapshot: { ...capabilitySnapshot, id: "attacker-self-asserted-capability", revision: 999 },
+          workspaceId: "workspace-1", request,
+        }),
+        /Capability snapshot is not the current live revision/,
+      );
+      assert.deepEqual(snapshot(db), beforeForged);
+
+      let resolutions = 0;
+      const beforeRace = snapshot(db);
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, {
+          capabilitySource: { load: () => ++resolutions === 1 ? { snapshot: capabilitySnapshot, revokedAt: null } : null },
+        }).revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: { ...request, idempotencyKey: "revoked-during-revert" } }),
+        /No current live Capability/,
+      );
+      assert.equal(resolutions, 2);
+      assert.deepEqual(snapshot(db), beforeRace);
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("appends an idempotent compensating Change Set and restores projections without erasing audit history", async () => {
     const { db, sqlite, compiled, threadId } = await setup();
     try {
       const actor = { id: "workspace-1", type: "human" as const };
-      const capabilitySnapshot = {
-        id: "capability-bre-317-human", revision: 4, actor,
-        scope: { workspaceId: "workspace-1", accountIds: ["account-1"] },
-        operations: ["simulate", "apply", "revert"] as const,
-        resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
-        actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"] as const,
-      };
+      const capabilitySnapshot = validCapability(db);
       const simulationService = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db));
       const simulation = simulationService.simulate({ actor, workspaceId: "workspace-1", request: {
         ruleId: compiled.rule.id, revisionId: compiled.revision.id,
@@ -361,17 +740,81 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
     }
   }, 15_000);
 
+  test("reverts pre-fix Lane and Facet Change Sets without disturbing projections absent from legacy evidence", async () => {
+    const { db, sqlite, compiled, threadId } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const seededAt = new Date("2026-08-26T12:00:01.000Z");
+      db.insert(organizationThreadWorkflowStates).values({
+        workspaceId: "workspace-1", accountId: "account-1", threadId,
+        stateId: "state-review", updatedAt: seededAt,
+      }).run();
+      db.insert(collectionThreads).values({
+        id: "legacy-membership", collectionId: "collection-launch", threadId, createdAt: seededAt,
+      }).run();
+      db.insert(organizationThreadContextRelationships).values({
+        workspaceId: "workspace-1", id: "legacy-context", accountId: "account-1", threadId,
+        contextTypeId: "context-type-project", contextId: "context-orca",
+        relationshipTypeId: "relationship-project", direction: "thread_to_context",
+        revision: 1, createdAt: seededAt, updatedAt: seededAt,
+      }).run();
+      db.update(organizationThreadStates).set({ revision: 2, updatedAt: seededAt })
+        .where(eq(organizationThreadStates.threadId, threadId)).run();
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const service = createSqliteRuleChangeSetService(db, { id: (() => { let value = 0; return () => `legacy-change-${++value}`; })() });
+      const applied = service.activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: {
+        ruleId: compiled.rule.id,
+        revisionId: compiled.revision.id,
+        simulationId: simulation.simulationId,
+        accountIds: ["account-1"],
+        maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision,
+        expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "activate-legacy-evidence",
+      } });
+      const stored = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!;
+      const legacyInverse = JSON.parse(stored.inverseJson) as { threads: Array<Record<string, unknown>> };
+      for (const thread of legacyInverse.threads) {
+        delete thread.beforeWorkflow;
+        delete thread.beforeCollections;
+        delete thread.beforeContexts;
+      }
+      db.update(organizationChangeSets).set({ inverseJson: JSON.stringify(legacyInverse) })
+        .where(eq(organizationChangeSets.id, applied.changeSetId)).run();
+
+      const reverted = service.revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: {
+        changeSetId: applied.changeSetId,
+        accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+        idempotencyKey: "revert-legacy-evidence",
+      } });
+      assert.equal(reverted.status, "reverted");
+      assert.equal(db.select().from(organizationThreadWorkflowStates).where(eq(organizationThreadWorkflowStates.threadId, threadId)).get()?.stateId, "state-review");
+      assert.equal(db.select().from(collectionThreads).where(eq(collectionThreads.threadId, threadId)).get()?.id, "legacy-membership");
+      assert.equal(db.select().from(organizationThreadContextRelationships).where(eq(organizationThreadContextRelationships.threadId, threadId)).get()?.id, "legacy-context");
+    } finally {
+      sqlite.close();
+    }
+  }, 15_000);
+
   test("reports exact newer-state compensation conflicts and performs no partial revert", async () => {
     const { db, sqlite, compiled, threadId } = await setup();
     try {
       const actor = { id: "workspace-1", type: "human" as const };
-      const capabilitySnapshot = {
-        id: "capability-bre-317-human", revision: 4, actor,
-        scope: { workspaceId: "workspace-1", accountIds: ["account-1"] },
-        operations: ["simulate", "apply", "revert"] as const,
-        resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
-        actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"] as const,
-      };
+      const capabilitySnapshot = validCapability(db);
       const simulationService = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db));
       const simulation = simulationService.simulate({ actor, workspaceId: "workspace-1", request: {
         ruleId: compiled.rule.id, revisionId: compiled.revision.id,

@@ -12,7 +12,7 @@
   <p class="eyebrow">BRE-317 · reviewer handoff</p>
   <h1>Historical Simulation, atomic Change Sets, activation, and revert</h1>
   <p class="lede">One production semantics path now carries an immutable Rule revision from mutation-free historical analysis through authorized activation, complete explanation, and a compensating revert.</p>
-  <p class="pending">Pending independent verification — this guide is implementation evidence, not self-certification.</p>
+  <p class="pending">REVERIFY — independent gate fixes are implemented; fresh independent verification is still required. This guide is evidence, not self-certification.</p>
 
   <div class="grid">
     <section class="card wide"><h2>State model</h2><div class="flow">
@@ -26,11 +26,13 @@
     <section class="card wide"><h2>Architecture</h2><div class="invariants">
       <div><strong>Shared contract</strong><br><code>orca-simulation.ts</code> binds Rule revision, source digest, Workspace Schema/current revision, Rule Set revision, Accounts, and history bound.</div>
       <div><strong>Read path</strong><br>SQLite history adapter → production compiler rebind → production evaluator/conflict resolution → deterministic report digest. No mutation callback exists.</div>
-      <div><strong>Write path</strong><br>G0 authority → transaction recheck → Rule/Lane/Facet/Thread projections + immutable Change Set/actions, or rollback all.</div>
+      <div><strong>Write path</strong><br>Authoritative G0 Capability lookup → transaction recheck → Rule/Lane/Facet/Workflow/Collection/Context/Thread projections + immutable Change Set/actions, or rollback all.</div>
     </div></section>
 
     <section class="card"><h2>Security invariants</h2><ul>
-      <li>Actor identity and live Capability snapshot are runtime validated.</li>
+      <li>The caller presents an immutable Capability claim, but never supplies the live side of the authority decision. Apply and revert resolve the exact current first-party Capability from persisted Workspace/Account ownership.</li>
+      <li>Capability identity, revision, actor, audience, Workspace, Accounts, operation, resource families, action families, and risk scope are compared against that authoritative snapshot.</li>
+      <li>The authoritative Capability is resolved again inside the SQLite transaction, closing preflight-to-commit revocation and replacement races.</li>
       <li>Every requested Account must be both owned and granted.</li>
       <li>Activation accepts only the exact successful Simulation digest for the same compiled Rule, Workspace, Rule Set, and history bound.</li>
       <li>Workspace, Rule, Rule Set, and affected Thread revisions are checked before and inside the transaction.</li>
@@ -40,8 +42,8 @@
     </ul></section>
 
     <section class="card"><h2>Production-failure walkthrough</h2><ol>
-      <li>Compile the supplied “Production failures” Orca rule in Tide Table.</li>
-      <li>Select <strong>Simulate history</strong>; inspect evaluated/affected counts, Lane and Facet deltas, representative Thread, risk, conflicts, and attention estimate.</li>
+      <li>Compile the supplied “Production failures” Orca rule in Tide Table. Its winning projected actions route to “Focus” and set Workflow State “Needs review”; notification remains proposal-only evidence.</li>
+      <li>Select <strong>Simulate history</strong>; inspect evaluated/affected counts, Lane and Workflow deltas, representative Thread, risk, conflicts, and attention estimate.</li>
       <li>Only a successful, current result enables <strong>Activate Change Set</strong>.</li>
       <li>Inspect the Change Set explanation: complete Trace, ordered actions, inverse evidence, and resulting revisions.</li>
       <li>Select <strong>Review revert</strong>, then apply the compensating revert. Confirm the original record is marked reverted and the compensation is appended.</li>
@@ -52,6 +54,9 @@
       <tr><td>Shared contracts</td><td>Missing <code>orca-simulation</code> module.</td><td>4/4 shared contract tests.</td></tr>
       <tr><td>Production Simulation</td><td>Missing Simulation service; later exact Workspace revision mismatch and a missing source-digest rejection exposed binding/provenance semantics.</td><td>3/3 semantic tests plus mutation-free SQLite test.</td></tr>
       <tr><td>Atomic activation</td><td>Focused SQLite activation expectations failed before the Change Set service.</td><td>3/3 SQLite Simulation/activation tests, including stale, denial, isolation, and injected rollback.</td></tr>
+      <tr><td>Capability trust blocker</td><td><code>attacker-self-asserted-capability</code>, revision 999 activated successfully: <code>AssertionError: Missing expected exception</code>.</td><td>Forged, missing, revoked, stale, wrong actor/audience/Workspace/Account/operation/resource/action/risk variants deny with zero writes; apply and revert re-resolve authority inside the transaction.</td></tr>
+      <tr><td>Action completeness blocker</td><td>A winning <code>set_workflow_state</code> reported one affected Thread, but the authoritative Workflow projection remained absent.</td><td>Workflow, Collection, and Context winners now have ordered apply evidence, inverse state, Thread revision updates, replay, rollback, conflict, and compensating revert coverage. An exhaustive action-support map prevents evaluator/apply drift; unknown winners fail before writes.</td></tr>
+      <tr><td>Persisted inverse compatibility</td><td>A pre-fix Lane/Facet Change Set failed revert with <code>invalid_change_set</code> after the new evidence fields were introduced.</td><td>Absent Workflow/Collection/Context inverse fields retain legacy “not managed by this Change Set” semantics, so already-active pre-fix Change Sets remain revertible without disturbing those projections.</td></tr>
       <tr><td>Compensating revert</td><td><code>service.revert is not a function</code> (0 pass / 2 fail).</td><td>2/2 revert tests: compensation/replay and newer-state conflict.</td></tr>
       <tr><td>REST lifecycle</td><td>Unknown lifecycle route returned a non-JSON 404.</td><td>1/1 authenticated simulate → apply → explain → revert.</td></tr>
       <tr><td>Glass Box / Tide</td><td>No <code>data-lifecycle-state="proposed"</code> after compile.</td><td>1/1 UI flow covers proposed, conflicted, simulated, active, and reverted.</td></tr>
@@ -64,25 +69,34 @@
   apps/web/src/desktop-switch.interaction.test.tsx \
   apps/web/src/tide-table.test.tsx \
   apps/web/src/organization-trace.test.tsx
-# 30 pass, 0 fail
+# 39 pass, 0 fail
 
-CI=true bun run test
-# 674 pass, 0 fail: shared 69, web 161, API 444
+CI=true bun --filter @orca/shared test  # 69 pass, 0 fail
+CI=true bun --filter @orca/web test     # 161 pass, 0 fail
+CI=true bun --filter @orca/api test     # 453 pass, 0 fail
+# Full total: 683 pass, 0 fail
 
 bun run typecheck
 bun run build
 bun run lint
+
+bun /tmp/bre317-migration-check.ts
+# journal order, fresh, 0031 upgrade, replay, integrity, FK, indexes: PASS
+
 git diff --check</pre></section>
 
-    <section class="card wide"><h2>Visual evidence</h2><div class="shots">
-      <figure><img src="artifacts/bre-317/organization-simulation-light.png" alt="Orca Light Organization historical Simulation impact"><figcaption>Orca Light · Simulation counts, risk, attention, and enabled transition.</figcaption></figure>
-      <figure><img src="artifacts/bre-317/organization-change-set-dark.png" alt="Orca Black Change Set explanation and revert review"><figcaption>Orca Black · labeled selected controls, explanation evidence, and compensation review.</figcaption></figure>
-    </div><p>Captured headlessly with <code>/opt/homebrew/bin/agent-browser</code> after loading its full core skill. The browser session and Vite server were closed after capture.</p></section>
+    <section class="card wide"><h2>Authenticated production-adapter evidence</h2><div class="shots">
+      <figure><img src="artifacts/bre-317/organization-proposed-light.png" alt="Authenticated Orca Light proposed Rule revision"><figcaption>PROPOSED · immutable Rule revision compiled through the authenticated Organization route.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-simulation-light.png" alt="Authenticated Orca Light historical Simulation with Workflow action"><figcaption>SIMULATED · one affected historical Thread, with “Focus” and “Needs review” visible in the real rule source.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-change-set-dark.png" alt="Authenticated Orca Black active Change Set with ordered actions"><figcaption>ACTIVE · three ordered audit actions from the production apply route; Rule revision 2 is active.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-reverted-light.png" alt="Authenticated Orca Light reverted Change Set"><figcaption>REVERTED · production compensating Change Set appended and original audit history preserved.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-conflict-dark.png" alt="Authenticated Orca Black conflicted compensating revert"><figcaption>CONFLICTED · a newer authoritative Thread revision (4 → 5) blocked the production revert without partial compensation.</figcaption></figure>
+    </div><p>These are not interactive-preview fixtures. They were captured headlessly from the real authenticated REST/UI lifecycle against an isolated SQLite database created by the production migration runner and seeded with a representative Gmail row. No external Gmail request was needed. <code>/opt/homebrew/bin/agent-browser</code> loaded its full core skill; the browser, API, and Vite sessions were closed after capture.</p></section>
 
     <section class="card wide"><h2>Reviewer decision points</h2><ul>
-      <li>Confirm whether a conflicted Simulation should remain re-runnable (current behavior) or require returning to Tide Table first.</li>
       <li>Confirm the representative Thread cap of 20 and activation history bound of 5,000 are appropriate for first release.</li>
       <li>Residual risk: historical evaluation currently uses the latest persisted message per Thread, bounded by received time; it does not replay every message event in a Thread.</li>
+      <li>Residual verification status: the two independent blockers and the evidence-claim blocker are fixed locally, but the status remains <strong>REVERIFY</strong> until the independent verifier reruns at the new commit.</li>
     </ul></section>
   </div>
 </main></body></html>

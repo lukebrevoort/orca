@@ -10,6 +10,7 @@ import {
   OrcaRuleChangeSetError,
   OrcaRuleCompensationConflictError,
   createSqliteRuleChangeSetService,
+  sqliteRuleChangeSetCapabilitySource,
 } from "./change-set-sqlite.ts";
 import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
 import { HistoricalSimulationBindingError, createHistoricalRuleSimulationService } from "./simulation.ts";
@@ -88,18 +89,9 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
   const dbFactory = options.dbFactory ?? createDatabaseClient;
 
   const capabilityFor = (db: ReturnType<typeof createDatabaseClient>["db"], workspaceId: string) => {
-    const actor = { id: workspaceId, type: "human" as const };
-    const accountIds = db.select({ id: oauthAccounts.id }).from(oauthAccounts)
-      .where(eq(oauthAccounts.userId, workspaceId)).orderBy(asc(oauthAccounts.id)).all().map(({ id }) => id);
-    return {
-      id: `first_party:rule_change_set:human:${workspaceId}`,
-      revision: 1,
-      actor,
-      scope: { workspaceId, accountIds },
-      operations: ["simulate", "apply", "revert"] as const,
-      resourceFamilies: ["rule", "thread", "lane", "facet", "change_set", "trace", "audit"] as const,
-      actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"] as const,
-    };
+    const capability = sqliteRuleChangeSetCapabilitySource.load(db, { workspaceId });
+    if (!capability) throw new OrcaRuleChangeSetError("capability_missing", "No current live Capability authorizes Rule Change Sets");
+    return capability.snapshot;
   };
 
   app.post("/v1/organization/rules/compile", requireAuth({ dbFactory }), ruleCompileBodyLimit, async (c) => {
