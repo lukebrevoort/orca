@@ -1,112 +1,135 @@
 import { Hono } from "hono";
 import type { Handler, MiddlewareHandler } from "hono";
-import { and, eq } from "drizzle-orm";
 
+import { completeOAuthLogin } from "../complete-oauth-login.ts";
+import type { OAuthAccountStore, OAuthAccountUpsert } from "../gmail/oauth-accounts.ts";
+import { DatabaseOAuthAccountStore } from "../gmail/oauth-accounts.ts";
 import { buildSessionCookie, getSessionCookieOptions } from "../jwt.ts";
 import { requireAuth, type AuthVariables } from "../middleware.ts";
-import { createSession } from "../session-store.ts";
-import { DatabaseOAuthAccountStore, type OAuthAccountStore } from "../gmail/oauth-accounts.ts";
+import {
+  buildClearedOAuthAttemptCookie,
+  buildOAuthAttemptCookie,
+  consumeOAuthTransactionForBindings,
+  createOAuthAttemptBinding,
+  DatabaseOAuthTransactionStore,
+  normalizeOAuthReturnTo,
+  oauthLoginRateLimitKey,
+  resolveOAuthCallbackBindings,
+  type OAuthTransactionStore,
+} from "../oauth-transactions.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts, users } from "../../db/schema.ts";
 import { loadOutlookOAuthConfig, validateOutlookOAuthConfig, type OutlookOAuthConfig } from "./config.ts";
-import { createOutlookOAuthService, type OutlookFetch } from "./oauth.ts";
+import { buildOutlookOAuthError, createOutlookOAuthService, type OutlookFetch } from "./oauth.ts";
 
-type Options = { authMiddleware?: MiddlewareHandler<{ Variables: AuthVariables }>; config?: OutlookOAuthConfig; store?: OAuthAccountStore; fetch?: OutlookFetch; dbFactory?: typeof createDatabaseClient };
+type Options = {
+  authMiddleware?: MiddlewareHandler<{ Variables: AuthVariables }>;
+  config?: OutlookOAuthConfig;
+  store?: OAuthAccountStore;
+  transactionStore?: OAuthTransactionStore;
+  fetch?: OutlookFetch;
+  dbFactory?: typeof createDatabaseClient;
+};
 
 export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: AuthVariables }> {
   const config = options.config ?? loadOutlookOAuthConfig();
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const store = options.store ?? new DatabaseOAuthAccountStore(dbFactory, "outlook");
+  const transactionStore = options.transactionStore ?? new DatabaseOAuthTransactionStore(dbFactory);
   const service = createOutlookOAuthService({ config, store, fetch: options.fetch });
-  const auth = options.authMiddleware ?? requireAuth({ dbFactory });
+  const authMiddleware = options.authMiddleware ?? requireAuth({ dbFactory });
   const app = new Hono<{ Variables: AuthVariables }>();
 
-  const start = (initialLogin: boolean): Handler<{ Variables: AuthVariables }> => async (c) => {
-    const missing = validateOutlookOAuthConfig(config);
-    if (missing.length) return c.json({ error: "outlook_oauth_not_configured", message: `Missing Outlook OAuth configuration: ${missing.join(", ")}` }, 503);
-    const result = service.getAuthorizationUrl(c.req.query("returnTo"), initialLogin);
+  app.get("/connect", authMiddleware, async (c) => {
+    const configurationError = outlookConfigurationError(c, config);
+    if (configurationError) return configurationError;
+    const auth = c.get("auth");
+    const started = await transactionStore.begin({
+      provider: "outlook",
+      intent: "connect",
+      sessionId: auth.sessionId,
+      userId: auth.userId,
+      returnTo: normalizeOAuthReturnTo(c.req.query("returnTo"), config.webOrigin),
+      usePkce: true,
+    });
+    if (!started.ok) return rateLimited(c);
+    if (!started.codeVerifier) return c.json({ error: "outlook_oauth_start_failed", message: "Could not create a secure Outlook OAuth transaction." }, 500);
+    const result = service.getAuthorizationUrl(started.state, started.codeVerifier);
     return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
+  });
+
+  app.get("/login", async (c) => {
+    const configurationError = outlookConfigurationError(c, config);
+    if (configurationError) return configurationError;
+    const attempt = await createOAuthAttemptBinding();
+    const started = await transactionStore.begin({
+      provider: "outlook",
+      intent: "login",
+      ...attempt.binding,
+      returnTo: normalizeOAuthReturnTo(c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`, config.webOrigin),
+      usePkce: true,
+      rateLimitKey: oauthLoginRateLimitKey(c.req.raw),
+    });
+    if (!started.ok) return rateLimited(c);
+    if (!started.codeVerifier) return c.json({ error: "outlook_oauth_start_failed", message: "Could not create a secure Outlook OAuth transaction." }, 500);
+    const result = service.getAuthorizationUrl(started.state, started.codeVerifier);
+    c.header("Set-Cookie", buildOAuthAttemptCookie(attempt.token, attempt.expiresAt));
+    return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
+  });
+
+  const callback: Handler<{ Variables: AuthVariables }> = async (c) => {
+    const bindings = options.authMiddleware
+      ? [c.get("auth")]
+      : await resolveOAuthCallbackBindings(c.req.header("cookie") ?? null, dbFactory);
+    const transaction = await consumeOAuthTransactionForBindings(
+      transactionStore,
+      c.req.query("state") ?? null,
+      "outlook",
+      bindings,
+    );
+    if (!transaction) {
+      return respond(c, buildOutlookOAuthError("invalid_state", "Could not verify OAuth state.", config.errorRedirectUrl));
+    }
+
+    let result = await service.handleCallback(new URLSearchParams(c.req.query()), transaction);
+    if (!result.ok) return respond(c, result);
+
+    if (result.initialLogin) {
+      const completed = await completeOAuthLogin({
+        dbFactory,
+        attemptedUserId: transaction.userId,
+        grant: withoutUserId(result.grant),
+        completeOnboardingForNewUser: true,
+      });
+      if (!completed.ok) {
+        result = buildOutlookOAuthError(
+          "account_identity_conflict",
+          "This Microsoft identity does not match the existing Orca account.",
+          transaction.returnTo ?? config.errorRedirectUrl,
+        );
+        return respond(c, result);
+      }
+      c.header("Set-Cookie", buildSessionCookie(completed.session.token, completed.session.expiresAt, getSessionCookieOptions()));
+      c.header("Set-Cookie", buildClearedOAuthAttemptCookie(), { append: true });
+      if (completed.returningUser && result.redirectUrl) {
+        return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
+      }
+      return respond(c, result);
+    }
+
+    try {
+      await store.upsert(result.grant);
+    } catch {
+      result = buildOutlookOAuthError(
+        "account_persistence_failed",
+        "Could not safely update the Outlook connection.",
+        transaction.returnTo ?? config.errorRedirectUrl,
+      );
+    }
+    return respond(c, result);
   };
 
-  app.get("/connect", auth, start(false));
-  app.get("/login", async (c) => {
-    const missing = validateOutlookOAuthConfig(config);
-    if (missing.length) return c.json({ error: "outlook_oauth_not_configured", message: `Missing Outlook OAuth configuration: ${missing.join(", ")}` }, 503);
-    const { db, sqlite } = dbFactory();
-    try {
-      const userId = `user_${crypto.randomUUID()}`;
-      db.insert(users).values({ id: userId, email: `pending-${crypto.randomUUID()}@orca.invalid` }).run();
-      const session = await createSession(db, userId);
-      c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
-      const result = service.getAuthorizationUrl(c.req.query("returnTo") ?? `${config.webOrigin}/onboarding`, true);
-      return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
-    } finally { sqlite.close(); }
-  });
-  app.get("/callback", auth, async (c) => {
-    const current = c.get("auth");
-    const result = await service.handleCallback(new URLSearchParams(c.req.query()), current.userId);
-    if (result.ok && result.initialLogin) {
-      const { db, sqlite } = dbFactory();
-      try {
-        const existingUser = db.select({ id: users.id }).from(users)
-          .where(eq(users.email, result.account.providerEmail)).get();
-
-        if (existingUser && existingUser.id !== current.userId) {
-          const existingAccount = db.select().from(oauthAccounts)
-            .where(and(
-              eq(oauthAccounts.userId, existingUser.id),
-              eq(oauthAccounts.provider, "outlook"),
-              eq(oauthAccounts.providerId, result.account.providerAccountId),
-            )).get();
-          const pendingAccount = db.select().from(oauthAccounts)
-            .where(and(
-              eq(oauthAccounts.userId, current.userId),
-              eq(oauthAccounts.provider, "outlook"),
-              eq(oauthAccounts.providerId, result.account.providerAccountId),
-            )).get();
-
-          if (pendingAccount && existingAccount) {
-            db.update(oauthAccounts)
-              .set({
-                providerEmail: pendingAccount.providerEmail,
-                providerId: pendingAccount.providerId,
-                profileImageUrl: pendingAccount.profileImageUrl ?? existingAccount.profileImageUrl,
-                accessTokenEncrypted: pendingAccount.accessTokenEncrypted,
-                refreshTokenEncrypted: pendingAccount.refreshTokenEncrypted ?? existingAccount.refreshTokenEncrypted,
-                tokenExpiry: pendingAccount.tokenExpiry,
-                scope: pendingAccount.scope,
-                updatedAt: new Date(),
-              })
-              .where(eq(oauthAccounts.id, existingAccount.id))
-              .run();
-            db.delete(oauthAccounts).where(eq(oauthAccounts.id, pendingAccount.id)).run();
-          } else if (pendingAccount) {
-            db.update(oauthAccounts)
-              .set({ userId: existingUser.id })
-              .where(eq(oauthAccounts.id, pendingAccount.id))
-              .run();
-          }
-
-          db.update(users)
-            .set({ authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
-            .where(eq(users.id, existingUser.id))
-            .run();
-          db.delete(users).where(eq(users.id, current.userId)).run();
-          const session = await createSession(db, existingUser.id);
-          c.header("Set-Cookie", buildSessionCookie(session.token, session.expiresAt, getSessionCookieOptions()));
-
-          if (result.redirectUrl) return c.redirect(redirectReturningUserToWorkspace(result.redirectUrl), 302);
-        } else {
-          db.update(users)
-            .set({ email: result.account.providerEmail, authenticatedAt: new Date(), onboardingCompletedAt: new Date() })
-            .where(eq(users.id, current.userId))
-            .run();
-        }
-      } finally { sqlite.close(); }
-    }
-    if (result.redirectUrl) return c.redirect(result.redirectUrl, 302);
-    return result.ok ? c.json({ ok: true, provider: "outlook", account: result.account }) : c.json({ ok: false, error: result.code, message: result.message }, 400);
-  });
+  if (options.authMiddleware) app.get("/callback", options.authMiddleware, callback);
+  else app.get("/callback", callback);
   return app;
 }
 
@@ -114,4 +137,27 @@ export function redirectReturningUserToWorkspace(redirectUrl: string): string {
   const url = new URL(redirectUrl);
   url.pathname = "/";
   return url.toString();
+}
+
+function outlookConfigurationError(c: Parameters<Handler>[0], config: OutlookOAuthConfig) {
+  const missing = validateOutlookOAuthConfig(config);
+  return missing.length
+    ? c.json({ error: "outlook_oauth_not_configured", message: `Missing Outlook OAuth configuration: ${missing.join(", ")}` }, 503)
+    : null;
+}
+
+function rateLimited(c: Parameters<Handler>[0]) {
+  c.header("Retry-After", "60");
+  return c.json({ error: "oauth_start_rate_limited", message: "Too many OAuth login attempts. Try again shortly." }, 429);
+}
+
+function respond(c: Parameters<Handler>[0], result: { ok: boolean; redirectUrl: string | null; code?: string; message?: string; account?: unknown }) {
+  if (result.redirectUrl) return c.redirect(result.redirectUrl, 302);
+  if (result.ok) return c.json({ ok: true, provider: "outlook", account: result.account });
+  return c.json({ ok: false, error: result.code, message: result.message }, 400);
+}
+
+function withoutUserId(input: OAuthAccountUpsert): Omit<OAuthAccountUpsert, "userId"> {
+  const { userId: _userId, ...grant } = input;
+  return grant;
 }

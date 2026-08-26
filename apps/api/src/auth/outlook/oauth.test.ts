@@ -9,10 +9,10 @@ const key = Buffer.alloc(32, 7).toString("base64");
 const config: OutlookOAuthConfig = { clientId: "client", clientSecret: "secret", tenant: "common", redirectUri: "http://localhost:3000/v1/auth/outlook/callback", scopes: ["openid", "offline_access", "User.Read", "Mail.Read"], tokenEncryptionKey: key, stateSecret: "state-secret", successRedirectUrl: "http://localhost:5173/onboarding", errorRedirectUrl: "http://localhost:5173/login", webOrigin: "http://localhost:5173" };
 
 describe("Outlook OAuth", () => {
-  test("uses read-first Microsoft scopes and persists encrypted tokens", async () => {
+  test("uses read-first Microsoft scopes and returns encrypted tokens for persistence", async () => {
     const store = new InMemoryOAuthAccountStore();
     const requests: string[] = [];
-    let expectedCodeVerifier = "";
+    const expectedCodeVerifier = "server-side-pkce-verifier";
     const service = createOutlookOAuthService({ config, store, fetch: async (input, init) => {
       requests.push(String(input));
       if (String(input).includes("/token")) {
@@ -26,32 +26,54 @@ describe("Outlook OAuth", () => {
       }
       return Response.json({ id: "microsoft-user", mail: "person@outlook.com" });
     } });
-    const authorization = service.getAuthorizationUrl("http://localhost:5173/onboarding", true);
+    const transaction = {
+      id: "txn-1",
+      provider: "outlook" as const,
+      intent: "login" as const,
+      sessionId: "attempt-session",
+      userId: "attempt-user",
+      returnTo: "http://localhost:5173/onboarding",
+      accountId: null,
+      codeVerifier: expectedCodeVerifier,
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+    };
+    const authorization = service.getAuthorizationUrl("opaque-server-state", expectedCodeVerifier);
     const authUrl = new URL(authorization.url);
     expect(authUrl.hostname).toBe("login.microsoftonline.com");
     expect(authUrl.searchParams.get("scope")).toContain("Mail.Read");
     expect(authUrl.searchParams.get("scope")).not.toContain("Mail.ReadWrite");
     expect(authUrl.searchParams.get("code_challenge_method")).toBe("S256");
-    const statePayload = JSON.parse(Buffer.from(authorization.state.split(".")[0]!, "base64url").toString("utf8")) as { codeVerifier: string };
-    expectedCodeVerifier = statePayload.codeVerifier;
+    expect(authorization.state).toBe("opaque-server-state");
+    expect(authorization.state).not.toContain(expectedCodeVerifier);
     expect(authUrl.searchParams.get("code_challenge")).toBe(
-      createHash("sha256").update(statePayload.codeVerifier).digest("base64url"),
+      createHash("sha256").update(expectedCodeVerifier).digest("base64url"),
     );
 
-    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: authorization.state }), "user-1");
+    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: authorization.state }), transaction);
     expect(result.ok).toBe(true);
     expect(requests).toEqual([expect.stringContaining("/token"), "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName", "https://graph.microsoft.com/v1.0/me/photo/$value"]);
-    const account = store.getAll()[0]!;
-    expect(account.provider).toBe("outlook");
-    expect(account.encryptedAccessToken).not.toContain("access");
-    expect(decryptSecret(account.encryptedAccessToken, key)).toBe("access");
-    expect(account.profileImageUrl).toBe("data:image/png;base64,AQID");
+    if (!result.ok) throw new Error(result.message);
+    expect(result.grant.provider).toBe("outlook");
+    expect(result.grant.encryptedAccessToken).not.toContain("access");
+    expect(decryptSecret(result.grant.encryptedAccessToken, key)).toBe("access");
+    expect(result.grant.profileImageUrl).toBe("data:image/png;base64,AQID");
   });
 
-  test("rejects a tampered state before exchanging tokens", async () => {
+  test("rejects a transaction without its server-side PKCE verifier before exchanging tokens", async () => {
     const service = createOutlookOAuthService({ config, store: new InMemoryOAuthAccountStore(), fetch: async () => { throw new Error("must not fetch"); } });
-    const { state } = service.getAuthorizationUrl();
-    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: `${state}x` }), "user-1");
+    const result = await service.handleCallback(new URLSearchParams({ code: "code", state: "opaque" }), {
+      id: "txn-2",
+      provider: "outlook",
+      intent: "connect",
+      sessionId: "session",
+      userId: "user-1",
+      returnTo: null,
+      accountId: null,
+      codeVerifier: null,
+      expiresAt: new Date(Date.now() + 60_000),
+      createdAt: new Date(),
+    });
     expect(result).toMatchObject({ ok: false, code: "invalid_state" });
   });
 });

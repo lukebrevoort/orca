@@ -1,37 +1,18 @@
-import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
 import { encryptSecret } from "../gmail/crypto.ts";
-import type { OAuthAccountStore } from "../gmail/oauth-accounts.ts";
+import type { OAuthAccountStore, OAuthAccountUpsert } from "../gmail/oauth-accounts.ts";
+import type { OAuthTransactionRecord } from "../oauth-transactions.ts";
 import type { OutlookOAuthConfig } from "./config.ts";
 
 export type OutlookFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-type OutlookOAuthState = {
-  nonce: string;
-  issuedAt: number;
-  returnTo: string | null;
-  initialLogin: boolean;
-  codeVerifier: string;
-};
-
-const maxStateAgeMs = 1000 * 60 * 10;
 const maxProviderProfileImageBytes = 2_000_000;
 const providerProfileImageTypes = new Set(["image/gif", "image/jpeg", "image/png", "image/webp"]);
 
 export function createOutlookOAuthService(options: { config: OutlookOAuthConfig; store: OAuthAccountStore; fetch?: OutlookFetch }) {
   const fetchImpl = options.fetch ?? fetch;
   return {
-    getAuthorizationUrl(returnTo?: string | null, initialLogin = false) {
-      const codeVerifier = randomBytes(32).toString("base64url");
-      const state = sign(
-        {
-          nonce: randomUUID(),
-          issuedAt: Date.now(),
-          returnTo: safeReturnTo(returnTo, options.config.webOrigin),
-          initialLogin,
-          codeVerifier,
-        },
-        options.config.stateSecret,
-      );
+    getAuthorizationUrl(state: string, codeVerifier: string) {
       const url = new URL(`https://login.microsoftonline.com/${encodeURIComponent(options.config.tenant)}/oauth2/v2.0/authorize`);
       url.search = new URLSearchParams({
         client_id: options.config.clientId,
@@ -45,10 +26,9 @@ export function createOutlookOAuthService(options: { config: OutlookOAuthConfig;
       }).toString();
       return { url: url.toString(), state, scopes: options.config.scopes };
     },
-    async handleCallback(params: URLSearchParams, userId: string) {
-      const state = verify(params.get("state"), options.config.stateSecret);
-      const redirect = state?.returnTo ?? options.config.errorRedirectUrl;
-      if (!state) return failure("invalid_state", "Could not verify OAuth state.", redirect);
+    async handleCallback(params: URLSearchParams, transaction: OAuthTransactionRecord) {
+      const redirect = transaction.returnTo ?? options.config.errorRedirectUrl;
+      if (!transaction.codeVerifier) return buildOutlookOAuthError("invalid_state", "Could not verify OAuth state.", redirect);
       if (params.get("error")) return failure("provider_error", `Microsoft returned an OAuth error: ${params.get("error")}.`, redirect);
       const code = params.get("code");
       if (!code) return failure("missing_code", "Missing OAuth authorization code.", redirect);
@@ -61,7 +41,7 @@ export function createOutlookOAuthService(options: { config: OutlookOAuthConfig;
             client_id: options.config.clientId,
             client_secret: options.config.clientSecret,
             code,
-            code_verifier: state.codeVerifier,
+            code_verifier: transaction.codeVerifier,
             redirect_uri: options.config.redirectUri,
             grant_type: "authorization_code",
             scope: options.config.scopes.join(" "),
@@ -77,8 +57,8 @@ export function createOutlookOAuthService(options: { config: OutlookOAuthConfig;
       const email = profile.mail ?? profile.userPrincipalName;
       if (!profile.id || !email) return failure("account_identity_missing", "Microsoft did not return an account id and email.", redirect);
       const profileImageUrl = await fetchOutlookProfileImage(tokens.access_token, fetchImpl);
-      await options.store.upsert({ userId, provider: "outlook", providerAccountId: profile.id, providerEmail: email, profileImageUrl, grantedScopes: (tokens.scope ?? options.config.scopes.join(" ")).split(/\s+/), encryptedAccessToken: encryptSecret(tokens.access_token, options.config.tokenEncryptionKey), encryptedRefreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token, options.config.tokenEncryptionKey) : null, expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null });
-      return { ok: true as const, initialLogin: state.initialLogin, redirectUrl: statusUrl(state.returnTo ?? options.config.successRedirectUrl, "success"), account: { providerEmail: email, providerAccountId: profile.id } };
+      const grant: OAuthAccountUpsert = { userId: transaction.userId, provider: "outlook", providerAccountId: profile.id, providerEmail: email, profileImageUrl, grantedScopes: (tokens.scope ?? options.config.scopes.join(" ")).split(/\s+/), encryptedAccessToken: encryptSecret(tokens.access_token, options.config.tokenEncryptionKey), encryptedRefreshToken: tokens.refresh_token ? encryptSecret(tokens.refresh_token, options.config.tokenEncryptionKey) : null, expiresAt: tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000) : null };
+      return { ok: true as const, initialLogin: transaction.intent === "login", redirectUrl: statusUrl(transaction.returnTo ?? options.config.successRedirectUrl, "success"), account: { providerEmail: email, providerAccountId: profile.id }, grant };
     },
   };
 }
@@ -107,52 +87,8 @@ async function fetchOutlookProfileImage(accessToken: string, fetchImpl: OutlookF
   }
 }
 
-function sign(value: object, secret: string) {
-  const payload = Buffer.from(JSON.stringify(value)).toString("base64url");
-  return `${payload}.${createHmac("sha256", secret).update(payload).digest("base64url")}`;
-}
-
-function verify(value: string | null, secret: string): OutlookOAuthState | null {
-  if (!value) return null;
-
-  const [payload, signature] = value.split(".");
-  if (!payload || !signature) return null;
-
-  const expected = createHmac("sha256", secret).update(payload).digest("base64url");
-  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-    return null;
-  }
-
-  try {
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as Partial<OutlookOAuthState>;
-    if (
-      typeof data.nonce !== "string"
-      || typeof data.issuedAt !== "number"
-      || (typeof data.returnTo !== "string" && data.returnTo !== null)
-      || typeof data.initialLogin !== "boolean"
-      || typeof data.codeVerifier !== "string"
-    ) {
-      return null;
-    }
-
-    return Date.now() - data.issuedAt <= maxStateAgeMs ? data as OutlookOAuthState : null;
-  } catch {
-    return null;
-  }
-}
-
 function createCodeChallenge(codeVerifier: string) {
   return createHash("sha256").update(codeVerifier).digest("base64url");
-}
-
-function safeReturnTo(value: string | null | undefined, origin: string) {
-  if (!value) return null;
-  try {
-    const url = new URL(value, origin);
-    return url.origin === origin ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 function statusUrl(value: string | null, status: string) {
@@ -163,6 +99,8 @@ function statusUrl(value: string | null, status: string) {
   return url.toString();
 }
 
-function failure(code: string, message: string, redirect: string | null) {
+export function buildOutlookOAuthError(code: string, message: string, redirect: string | null) {
   return { ok: false as const, code, message, redirectUrl: statusUrl(redirect, "error") };
 }
+
+const failure = buildOutlookOAuthError;
