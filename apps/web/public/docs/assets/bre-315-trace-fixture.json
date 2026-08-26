@@ -14,7 +14,8 @@
     "workspaceSchemaRevision": 7,
     "ruleSet": {
       "id": "rules-1",
-      "revision": 7
+      "revision": 7,
+      "activeRevisionCount": 1
     },
     "logicalTime": "2026-08-26T12:00:00.000Z",
     "actor": {
@@ -411,6 +412,17 @@
         "winnerCandidateId": "safety-lock:lane"
       }
     ],
+    "lowerLanePlacement": {
+      "candidateId": "rule:rule-production:rule-production-r2:0",
+      "laneId": "lane-focus",
+      "placementSource": "rule_revision",
+      "sourceId": "rule-production-r2",
+      "actor": {
+        "id": "system:gmail-sync",
+        "type": "system"
+      },
+      "reason": "A failed deploy blocks work"
+    },
     "reason": "Hold the incident in Focus",
     "budget": {
       "maximumRuleRevisions": 100,
