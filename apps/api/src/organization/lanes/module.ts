@@ -50,6 +50,21 @@ export function fallbackPlacement(input: { accountId: string; threadId: string; 
 }
 
 function placementWithEvidence(placement: ThreadLanePlacement): ThreadLanePlacement {
+  if (placement.safetyLock.locked) {
+    if (!placement.safetyLock.actor || !placement.safetyLock.reason) {
+      throw new OrganizationLaneValidationError("A locked Thread must preserve the Safety Lock Actor and reason");
+    }
+    return threadLanePlacementSchema.parse({
+      ...placement,
+      evidence: {
+        winningSource: "safety_lock",
+        sourceId: placement.primaryLaneId,
+        precedenceLevel: "1_safety_lock",
+        actor: placement.safetyLock.actor,
+        reason: placement.safetyLock.reason,
+      },
+    });
+  }
   if (placement.manualOverride) {
     return threadLanePlacementSchema.parse({
       ...placement,
@@ -62,6 +77,9 @@ function placementWithEvidence(placement: ThreadLanePlacement): ThreadLanePlacem
         reason: placement.manualOverride.reason,
       },
     });
+  }
+  if (placement.evidence.winningSource === "rule_revision" || placement.evidence.winningSource === "lane_policy") {
+    return threadLanePlacementSchema.parse(placement);
   }
   return threadLanePlacementSchema.parse({
     ...placement,
@@ -130,7 +148,7 @@ export function applyLaneActions(
       if (!lane || lane.retiredAt) throw new OrganizationLaneValidationError("Fallback Lane must be an active Lane");
       configuration.fallbackLaneId = lane.id;
       for (const placement of placements.values()) {
-        if (placement.manualOverride === null) {
+        if (placement.evidence.winningSource === "workspace_fallback" && !placement.safetyLock.locked) {
           placement.primaryLaneId = lane.id;
           placement.revision = (placement.revision ?? 0) + 1;
         }

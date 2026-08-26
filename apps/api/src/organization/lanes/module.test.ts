@@ -47,6 +47,60 @@ describe("BRE-311 Lane module", () => {
     assert.ok(result.placements.every((placement) => placement.evidence.winningSource === "workspace_fallback"));
   });
 
+  test("Safety Lock keeps an unresolved Thread in place when the Workspace Fallback changes", () => {
+    const lockReason = "Do not let automation move this launch.";
+    const locked = applyLaneActions(snapshot(), [{
+      kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true,
+      reason: lockReason, expectedThreadRevision: 1,
+    }], context);
+
+    const result = applyLaneActions(locked, [{ kind: "set_fallback_lane", laneId: "lane_focus" }], context);
+    const protectedThread = result.placements.find((placement) => placement.accountId === "account_a")!;
+    const unresolvedThread = result.placements.find((placement) => placement.accountId === "account_b")!;
+
+    assert.equal(result.configuration.fallbackLaneId, "lane_focus");
+    assert.equal(protectedThread.primaryLaneId, "lane_everything_else");
+    assert.equal(protectedThread.revision, 2);
+    assert.deepEqual(protectedThread.evidence, {
+      winningSource: "safety_lock", sourceId: "lane_everything_else", precedenceLevel: "1_safety_lock",
+      actor: human, reason: lockReason,
+    });
+    assert.equal(unresolvedThread.primaryLaneId, "lane_focus");
+    assert.equal(unresolvedThread.revision, 2);
+    assert.equal(unresolvedThread.evidence.winningSource, "workspace_fallback");
+  });
+
+  test("Fallback changes do not outrank Rule Revision placements whether unlocked or Safety-Locked", () => {
+    const ruleActor = { id: "agent_rule_engine", type: "agent" as const };
+    const ruleSnapshot = snapshot();
+    ruleSnapshot.placements[0] = {
+      ...ruleSnapshot.placements[0]!,
+      evidence: {
+        winningSource: "rule_revision",
+        sourceId: "rule_revision_7",
+        precedenceLevel: "3_rule_revision",
+        actor: ruleActor,
+        reason: "Rule Revision 7 selected the retained Lane.",
+      },
+    };
+
+    const changedWhileUnlocked = applyLaneActions(ruleSnapshot, [{ kind: "set_fallback_lane", laneId: "lane_focus" }], context);
+    const rulePlaced = changedWhileUnlocked.placements.find((placement) => placement.accountId === "account_a")!;
+    assert.equal(rulePlaced.primaryLaneId, "lane_everything_else");
+    assert.equal(rulePlaced.revision, 1);
+    assert.equal(rulePlaced.evidence.winningSource, "rule_revision");
+
+    const locked = applyLaneActions(ruleSnapshot, [{
+      kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true,
+      reason: "Protect the Rule-selected Lane.", expectedThreadRevision: 1,
+    }], context);
+    const changedWhileLocked = applyLaneActions(locked, [{ kind: "set_fallback_lane", laneId: "lane_focus" }], context);
+    const protectedRulePlacement = changedWhileLocked.placements.find((placement) => placement.accountId === "account_a")!;
+    assert.equal(protectedRulePlacement.primaryLaneId, "lane_everything_else");
+    assert.equal(protectedRulePlacement.revision, 2);
+    assert.equal(protectedRulePlacement.evidence.winningSource, "safety_lock");
+  });
+
   test("routes across authorized Accounts while preserving Account-qualified Thread identity", () => {
     const result = applyLaneActions(snapshot(), [{
       kind: "set_thread_manual_override", accountId: "account_b", threadId: "thread_b", laneId: "lane_focus",
@@ -69,6 +123,9 @@ describe("BRE-311 Lane module", () => {
     assert.throws(() => applyLaneActions(locked, [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: "lane_focus", reason: "move", expectedThreadRevision: 2 }], context), OrganizationSafetyLockError);
     const unlocked = applyLaneActions(locked, [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Human reviewed the lock.", expectedThreadRevision: 2 }], context);
     assert.equal(unlocked.placements[0]?.safetyLock.locked, false);
+    const overridden = applyLaneActions(unlocked, [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: "lane_focus", reason: "Human move after unlock.", expectedThreadRevision: 3 }], context);
+    assert.equal(overridden.placements[0]?.primaryLaneId, "lane_focus");
+    assert.equal(overridden.placements[0]?.evidence.winningSource, "manual_override");
   });
 
   test("cannot retire the Fallback Lane or a Lane with routed Threads", () => {

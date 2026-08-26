@@ -99,6 +99,26 @@ describe("Organization REST read adapter", () => {
       }) });
       const locked = await lock.json();
       assert.equal(lock.status, 200, JSON.stringify(locked));
+      assert.equal(locked.placements[0].primaryLaneId, laneId);
+      assert.deepEqual(locked.placements[0].evidence, {
+        winningSource: "safety_lock",
+        sourceId: laneId,
+        precedenceLevel: "1_safety_lock",
+        actor: { id: "workspace_owner", type: "human" },
+        reason: "Protect the human decision.",
+      });
+      const storedManualLock = sqlite.query(`
+        SELECT placement_source, actor_id, reason, safety_lock_actor_id, safety_lock_reason
+        FROM organization_thread_lane_states
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_b' AND thread_id = 'thread_b'
+      `).get() as Record<string, string>;
+      assert.deepEqual(storedManualLock, {
+        placement_source: "manual_override",
+        actor_id: "workspace_owner",
+        reason: "Human chose this Lane from the Thread reader.",
+        safety_lock_actor_id: "workspace_owner",
+        safety_lock_reason: "Protect the human decision.",
+      });
       const blocked = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
         id: "0e969841-acde-4a91-acde-491000000006", idempotencyKey: "routes:blocked", expectedWorkspaceRevision: 4,
         actions: [{ kind: "set_thread_manual_override", accountId: "account_b", threadId: "thread_b", laneId: null, reason: "Attempted move.", expectedThreadRevision: 3 }],
@@ -108,7 +128,101 @@ describe("Organization REST read adapter", () => {
 
       const accountResponse = await app.request("/v1/organization/query?accountId=account_b&attention=all", { headers });
       assert.equal(accountResponse.status, 200);
-      assert.deepEqual((await accountResponse.json()).threads.map((thread: { id: string }) => thread.id), ["thread_b"]);
+      const account = await accountResponse.json();
+      assert.deepEqual(account.threads.map((thread: { id: string }) => thread.id), ["thread_b"]);
+      assert.deepEqual(account.threads[0].organization.lanePlacement.evidence, locked.placements[0].evidence);
+
+      const unlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000007", idempotencyKey: "routes:unlock", expectedWorkspaceRevision: 4,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_b", threadId: "thread_b", locked: false, reason: "Human reviewed the protected decision.", expectedThreadRevision: 3 }],
+      }) });
+      const unlocked = await unlock.json();
+      assert.equal(unlock.status, 200, JSON.stringify(unlocked));
+      assert.equal(unlocked.placements[0].primaryLaneId, laneId);
+      assert.deepEqual(unlocked.placements[0].evidence, {
+        winningSource: "manual_override",
+        sourceId: laneId,
+        precedenceLevel: "2_manual_override",
+        actor: { id: "workspace_owner", type: "human" },
+        reason: "Human chose this Lane from the Thread reader.",
+      });
+
+      const fallbackLock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000008", idempotencyKey: "routes:lock-fallback", expectedWorkspaceRevision: 5,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true, reason: "Keep this unresolved Thread in its current Lane.", expectedThreadRevision: 1 }],
+      }) });
+      const fallbackLocked = await fallbackLock.json();
+      assert.equal(fallbackLock.status, 200, JSON.stringify(fallbackLocked));
+      const storedFallbackLock = sqlite.query(`
+        SELECT placement_source, source_id, actor_id, safety_lock_actor_id, safety_lock_reason
+        FROM organization_thread_lane_states
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).get() as Record<string, string>;
+      assert.deepEqual(storedFallbackLock, {
+        placement_source: "workspace_fallback",
+        source_id: description.laneConfiguration.fallbackLaneId,
+        actor_id: "system:workspace-fallback",
+        safety_lock_actor_id: "workspace_owner",
+        safety_lock_reason: "Keep this unresolved Thread in its current Lane.",
+      });
+      const fallbackAccountResponse = await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers });
+      assert.equal(fallbackAccountResponse.status, 200);
+      const fallbackAccount = await fallbackAccountResponse.json();
+      assert.deepEqual(fallbackAccount.threads[0].organization.lanePlacement.evidence, {
+        winningSource: "safety_lock",
+        sourceId: description.laneConfiguration.fallbackLaneId,
+        precedenceLevel: "1_safety_lock",
+        actor: { id: "workspace_owner", type: "human" },
+        reason: "Keep this unresolved Thread in its current Lane.",
+      });
+
+      const fallbackUnlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000009", idempotencyKey: "routes:unlock-fallback", expectedWorkspaceRevision: 6,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Release the unresolved Thread.", expectedThreadRevision: 2 }],
+      }) });
+      const fallbackUnlocked = await fallbackUnlock.json();
+      assert.equal(fallbackUnlock.status, 200, JSON.stringify(fallbackUnlocked));
+      assert.equal(fallbackUnlocked.placements[0].evidence.winningSource, "workspace_fallback");
+
+      sqlite.query(`
+        UPDATE organization_thread_lane_states
+        SET placement_source = 'rule_revision', source_id = 'rule_revision_7', actor_id = 'agent_rule_engine', actor_type = 'agent',
+            reason = 'Rule Revision 7 selected the retained Lane.'
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).run();
+      const lowerSourceLock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000010", idempotencyKey: "routes:lock-rule-source", expectedWorkspaceRevision: 7,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: true, reason: "Protect the Rule-selected Lane.", expectedThreadRevision: 3 }],
+      }) });
+      const lowerSourceLocked = await lowerSourceLock.json();
+      assert.equal(lowerSourceLock.status, 200, JSON.stringify(lowerSourceLocked));
+      assert.equal(lowerSourceLocked.placements[0].evidence.winningSource, "safety_lock");
+      const storedLowerSourceLock = sqlite.query(`
+        SELECT placement_source, source_id, actor_id, actor_type, reason
+        FROM organization_thread_lane_states
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).get() as Record<string, string>;
+      assert.deepEqual(storedLowerSourceLock, {
+        placement_source: "rule_revision",
+        source_id: "rule_revision_7",
+        actor_id: "agent_rule_engine",
+        actor_type: "agent",
+        reason: "Rule Revision 7 selected the retained Lane.",
+      });
+
+      const lowerSourceUnlock = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000011", idempotencyKey: "routes:unlock-rule-source", expectedWorkspaceRevision: 8,
+        actions: [{ kind: "set_thread_safety_lock", accountId: "account_a", threadId: "thread_a", locked: false, reason: "Release the Rule-selected Lane.", expectedThreadRevision: 4 }],
+      }) });
+      const lowerSourceUnlocked = await lowerSourceUnlock.json();
+      assert.equal(lowerSourceUnlock.status, 200, JSON.stringify(lowerSourceUnlocked));
+      assert.deepEqual(lowerSourceUnlocked.placements[0].evidence, {
+        winningSource: "rule_revision",
+        sourceId: "rule_revision_7",
+        precedenceLevel: "3_rule_revision",
+        actor: { id: "agent_rule_engine", type: "agent" },
+        reason: "Rule Revision 7 selected the retained Lane.",
+      });
 
       const denied = await app.request("/v1/organization/query?accountId=account_private&attention=all", { headers });
       assert.equal(denied.status, 403);

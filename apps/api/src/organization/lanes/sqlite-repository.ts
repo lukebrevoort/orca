@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   laneInterruptionSchema,
+  lanePlacementSourceSchema,
   laneReviewSchema,
   laneVisibilitySchema,
   organizationLaneApplyResponseSchema,
@@ -33,11 +34,13 @@ import {
 } from "./module.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
+type PlacementEvidence = ThreadLanePlacement["evidence"];
 
 function laneResourceId(id: string) { return `lane:${id}`; }
 function policyResourceId(id: string) { return `lane_policy:${id}`; }
 function threadResourceId(accountId: string, threadId: string) { return `thread:${accountId}:${threadId}`; }
 function fallbackResourceId(workspaceId: string) { return `workspace_fallback:${workspaceId}`; }
+function placementKey(accountId: string, threadId: string) { return `${accountId}\0${threadId}`; }
 function auditResourceId(action: ReturnType<typeof parseLaneApply>["actions"][number]): string {
   if (action.kind === "define_lane_policy") return action.id;
   if (action.kind === "update_lane_policy") return action.policyId;
@@ -50,7 +53,43 @@ function actor(type: string, id: string): OrganizationActor {
   return { type: type === "human" ? "human" : type === "agent" ? "agent" : "system", id };
 }
 
-function loadSnapshot(executor: Database, workspaceId: string, accountIds: readonly string[]): OrganizationLaneSnapshot {
+function precedence(source: PlacementEvidence["winningSource"]): PlacementEvidence["precedenceLevel"] {
+  if (source === "safety_lock") return "1_safety_lock";
+  if (source === "manual_override") return "2_manual_override";
+  if (source === "rule_revision") return "3_rule_revision";
+  if (source === "lane_policy") return "4_lane_policy";
+  return "5_workspace_fallback";
+}
+
+function persistedPlacementEvidence(placement: ThreadLanePlacement, storedEvidence: PlacementEvidence | undefined): PlacementEvidence {
+  if (!placement.safetyLock.locked) return placement.evidence;
+  if (placement.manualOverride) {
+    return {
+      winningSource: "manual_override",
+      sourceId: placement.manualOverride.laneId,
+      precedenceLevel: "2_manual_override",
+      actor: placement.manualOverride.actor,
+      reason: placement.manualOverride.reason,
+    };
+  }
+  if (storedEvidence && storedEvidence.winningSource !== "safety_lock" && storedEvidence.winningSource !== "manual_override") {
+    return storedEvidence;
+  }
+  return {
+    winningSource: "workspace_fallback",
+    sourceId: placement.primaryLaneId,
+    precedenceLevel: "5_workspace_fallback",
+    actor: { id: "system:workspace-fallback", type: "system" },
+    reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+  };
+}
+
+function loadSnapshot(
+  executor: Database,
+  workspaceId: string,
+  accountIds: readonly string[],
+  storedEvidenceByThread?: Map<string, PlacementEvidence>,
+): OrganizationLaneSnapshot {
   const state = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, workspaceId)).get();
   const settings = executor.select().from(organizationWorkspaceLaneSettings).where(eq(organizationWorkspaceLaneSettings.workspaceId, workspaceId)).get();
   if (!settings) throw new OrganizationAuthorityError("invalid_live_authority", "Workspace Lane defaults are not provisioned");
@@ -75,7 +114,20 @@ function loadSnapshot(executor: Database, workspaceId: string, accountIds: reado
     const manualOverride = row.manualOverrideLaneId && row.manualOverrideAt
       ? { laneId: row.manualOverrideLaneId, actor: sourceActor, reason: row.reason, updatedAt: row.manualOverrideAt.toISOString() }
       : null;
-    const source = manualOverride ? "manual_override" as const : "workspace_fallback" as const;
+    const safetyLockActor = row.safetyLockActorId && row.safetyLockActorType ? actor(row.safetyLockActorType, row.safetyLockActorId) : null;
+    if (row.safetyLocked && (!safetyLockActor || !row.safetyLockReason)) {
+      throw new OrganizationAuthorityError("invalid_live_authority", "A locked Thread is missing its Safety Lock Actor or reason");
+    }
+    const storedSource = lanePlacementSourceSchema.parse(row.placementSource);
+    const storedEvidence = {
+      winningSource: storedSource,
+      sourceId: row.sourceId,
+      precedenceLevel: precedence(storedSource),
+      actor: sourceActor,
+      reason: row.reason,
+    } satisfies PlacementEvidence;
+    storedEvidenceByThread?.set(placementKey(row.accountId, row.threadId), storedEvidence);
+    const source = row.safetyLocked ? "safety_lock" as const : storedSource;
     return threadLanePlacementSchema.parse({
       accountId: row.accountId,
       threadId: row.threadId,
@@ -83,16 +135,16 @@ function loadSnapshot(executor: Database, workspaceId: string, accountIds: reado
       manualOverride,
       safetyLock: {
         locked: row.safetyLocked,
-        actor: row.safetyLockActorId && row.safetyLockActorType ? actor(row.safetyLockActorType, row.safetyLockActorId) : null,
+        actor: safetyLockActor,
         reason: row.safetyLockReason,
         updatedAt: row.safetyLockUpdatedAt?.toISOString() ?? null,
       },
       evidence: {
         winningSource: source,
-        sourceId: row.sourceId,
-        precedenceLevel: source === "manual_override" ? "2_manual_override" : "5_workspace_fallback",
-        actor: sourceActor,
-        reason: row.reason,
+        sourceId: source === "safety_lock" ? row.primaryLaneId : row.sourceId,
+        precedenceLevel: precedence(source),
+        actor: source === "safety_lock" ? safetyLockActor! : sourceActor,
+        reason: source === "safety_lock" ? row.safetyLockReason! : row.reason,
       },
       revision: row.revision,
     });
@@ -129,7 +181,8 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
         const workspaceId = input.executionContext.workspaceId;
-        const current = loadSnapshot(executor, workspaceId, input.executionContext.accountIds);
+        const storedEvidenceByThread = new Map<string, PlacementEvidence>();
+        const current = loadSnapshot(executor, workspaceId, input.executionContext.accountIds, storedEvidenceByThread);
         const expected = input.executionContext.expectedRevisions.workspace;
         if (expected === null || current.configuration.workspaceRevision !== expected) throw new OrganizationRevisionConflictError(expected ?? 0, current.configuration.workspaceRevision);
         if (input.executionContext.command.digest !== digestOrganizationCommand(input.boundCommand)) throw new OrganizationAuthorityError("invalid_request", "Authorized Lane command digest does not match execution payload");
@@ -148,7 +201,23 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const existingThreads = new Set(executor.select({ accountId: threads.accountId, threadId: threads.id }).from(threads)
           .where(inArray(threads.accountId, [...input.executionContext.accountIds])).all().map((row) => `${row.accountId}\0${row.threadId}`));
         const now = new Date().toISOString();
-        const next = applyLaneActions(current, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
+        const applied = applyLaneActions(current, parsed.actions, { actor: input.executionContext.actor, authorizedAccountIds: input.executionContext.accountIds, existingThreads, now });
+        const currentPlacements = new Map(current.placements.map((placement) => [placementKey(placement.accountId, placement.threadId), placement]));
+        const next = {
+          configuration: applied.configuration,
+          placements: applied.placements.map((placement) => {
+            const threadKey = placementKey(placement.accountId, placement.threadId);
+            const previous = currentPlacements.get(threadKey);
+            const storedEvidence = storedEvidenceByThread.get(threadKey);
+            const restoredLowerSource = previous?.safetyLock.locked
+              && !placement.safetyLock.locked
+              && placement.manualOverride === null
+              && storedEvidence
+              && storedEvidence.winningSource !== "safety_lock"
+              && storedEvidence.winningSource !== "manual_override";
+            return restoredLowerSource ? threadLanePlacementSchema.parse({ ...placement, evidence: storedEvidence }) : placement;
+          }),
+        };
 
         transaction.insert(organizationChangeSets).values({
           workspaceId,
@@ -188,21 +257,24 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           name: lane.name, position: lane.position, defaultPolicyId: lane.defaultPolicyId, retiredAt: lane.retiredAt ? new Date(lane.retiredAt) : null, revision: lane.revision, updatedAt: new Date(now),
         }}).run();
         transaction.update(organizationWorkspaceLaneSettings).set({ fallbackLaneId: next.configuration.fallbackLaneId, revision: sql`${organizationWorkspaceLaneSettings.revision} + 1`, updatedAt: new Date(now) }).where(eq(organizationWorkspaceLaneSettings.workspaceId, workspaceId)).run();
-        for (const placement of next.placements) transaction.insert(organizationThreadLaneStates).values({
-          workspaceId, accountId: placement.accountId, threadId: placement.threadId, primaryLaneId: placement.primaryLaneId,
-          placementSource: placement.evidence.winningSource, sourceId: placement.evidence.sourceId, actorId: placement.evidence.actor.id, actorType: placement.evidence.actor.type,
-          reason: placement.evidence.reason, manualOverrideLaneId: placement.manualOverride?.laneId ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
-          safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
-          safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
-          revision: placement.revision ?? 1, updatedAt: new Date(now),
-        }).onConflictDoUpdate({ target: [organizationThreadLaneStates.workspaceId, organizationThreadLaneStates.accountId, organizationThreadLaneStates.threadId], set: {
-          primaryLaneId: placement.primaryLaneId, placementSource: placement.evidence.winningSource, sourceId: placement.evidence.sourceId,
-          actorId: placement.evidence.actor.id, actorType: placement.evidence.actor.type, reason: placement.evidence.reason,
-          manualOverrideLaneId: placement.manualOverride?.laneId ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
-          safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
-          safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
-          revision: placement.revision ?? 1, updatedAt: new Date(now),
-        }}).run();
+        for (const placement of next.placements) {
+          const persistedEvidence = persistedPlacementEvidence(placement, storedEvidenceByThread.get(placementKey(placement.accountId, placement.threadId)));
+          transaction.insert(organizationThreadLaneStates).values({
+            workspaceId, accountId: placement.accountId, threadId: placement.threadId, primaryLaneId: placement.primaryLaneId,
+            placementSource: persistedEvidence.winningSource, sourceId: persistedEvidence.sourceId, actorId: persistedEvidence.actor.id, actorType: persistedEvidence.actor.type,
+            reason: persistedEvidence.reason, manualOverrideLaneId: placement.manualOverride?.laneId ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
+            safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
+            safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
+            revision: placement.revision ?? 1, updatedAt: new Date(now),
+          }).onConflictDoUpdate({ target: [organizationThreadLaneStates.workspaceId, organizationThreadLaneStates.accountId, organizationThreadLaneStates.threadId], set: {
+            primaryLaneId: placement.primaryLaneId, placementSource: persistedEvidence.winningSource, sourceId: persistedEvidence.sourceId,
+            actorId: persistedEvidence.actor.id, actorType: persistedEvidence.actor.type, reason: persistedEvidence.reason,
+            manualOverrideLaneId: placement.manualOverride?.laneId ?? null, manualOverrideAt: placement.manualOverride ? new Date(placement.manualOverride.updatedAt) : null,
+            safetyLocked: placement.safetyLock.locked, safetyLockActorId: placement.safetyLock.actor?.id ?? null, safetyLockActorType: placement.safetyLock.actor?.type ?? null,
+            safetyLockReason: placement.safetyLock.reason, safetyLockUpdatedAt: placement.safetyLock.updatedAt ? new Date(placement.safetyLock.updatedAt) : null,
+            revision: placement.revision ?? 1, updatedAt: new Date(now),
+          }}).run();
+        }
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.configuration.workspaceRevision, updatedAt: new Date(now) })
           .where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.configuration.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.configuration.workspaceRevision, current.configuration.workspaceRevision + 1);
