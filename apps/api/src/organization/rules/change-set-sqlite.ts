@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import {
   organizationCapabilitySnapshotSchema,
   organizationCommandSchema,
+  organizationAuthorityTraceSchema,
   orcaRuleActivationRequestSchema,
   orcaRuleRevertRequestSchema,
   type OrcaEvaluationTrace,
@@ -36,6 +37,7 @@ import {
 import {
   authorizeOrganizationOperation,
   canonicalOrganizationJson,
+  digestOrganizationCommand,
 } from "../authority.ts";
 import { createHistoricalRuleSimulationService } from "./simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./simulation-sqlite.ts";
@@ -159,6 +161,118 @@ function parseReplay(row: typeof organizationChangeSets.$inferSelect, request: u
     throw new OrcaRuleChangeSetError("duplicate_idempotency_key", "The idempotency key belongs to a different Change Set request");
   }
   return stored.response;
+}
+
+function denyReplay(code: string, reason: string): never {
+  throw new OrcaRuleChangeSetError(code, reason);
+}
+
+function validateCurrentCapabilityClaim(input: {
+  actor: OrganizationActor;
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  liveCapability: RuleChangeSetLiveCapability;
+  workspaceId: string;
+  accountIds: string[];
+  operation: "apply" | "revert";
+}) {
+  if (input.actor.id !== input.capabilitySnapshot.actor.id
+    || input.actor.type !== input.capabilitySnapshot.actor.type) {
+    denyReplay("actor_mismatch", "The Capability snapshot belongs to a different Actor identity or type");
+  }
+  if (input.liveCapability.revokedAt !== null) {
+    denyReplay("capability_revoked", "The live Capability has been revoked");
+  }
+  if (JSON.stringify(input.capabilitySnapshot) !== JSON.stringify(input.liveCapability.snapshot)) {
+    denyReplay("capability_stale", "The Capability snapshot is not the current live revision");
+  }
+  if (input.workspaceId !== input.capabilitySnapshot.scope.workspaceId
+    || input.workspaceId !== input.liveCapability.snapshot.scope.workspaceId) {
+    denyReplay("workspace_denied", "Workspace scope is not both current and granted");
+  }
+  const liveAccounts = new Set(input.liveCapability.snapshot.scope.accountIds);
+  const grantedAccounts = new Set(input.capabilitySnapshot.scope.accountIds);
+  if (input.accountIds.some((accountId) => !liveAccounts.has(accountId) || !grantedAccounts.has(accountId))) {
+    denyReplay("account_denied", "Account scope is not owned or granted");
+  }
+  if (!input.capabilitySnapshot.operations.includes(input.operation)) {
+    denyReplay("missing_operation_capability", `The Capability snapshot does not grant ${input.operation}`);
+  }
+}
+
+function sameValues(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length
+    && [...left].sort().every((value, index) => value === [...right].sort()[index]);
+}
+
+function legacyReplayCommand(trace: ReturnType<typeof organizationAuthorityTraceSchema.parse>): OrganizationCommand {
+  return organizationCommandSchema.parse({
+    id: trace.command.id,
+    intents: trace.requestedResourceIds.map((resourceId) => ({
+      kind: resourceId.startsWith("thread:") ? "organize_thread" : "mutate_rule",
+      resourceId,
+      mutation: "update",
+      changes: { replay: true },
+    })),
+  });
+}
+
+function authorizeReplay(input: {
+  row: typeof organizationChangeSets.$inferSelect;
+  actor: OrganizationActor;
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  liveCapability: RuleChangeSetLiveCapability;
+  workspaceId: string;
+  accountIds: string[];
+  operation: "apply" | "revert";
+  idempotencyKey: string;
+}) {
+  let trace: ReturnType<typeof organizationAuthorityTraceSchema.parse>;
+  let storedCommand: OrganizationCommand | undefined;
+  try {
+    trace = organizationAuthorityTraceSchema.parse(JSON.parse(input.row.authorityTrace));
+    const stored = JSON.parse(input.row.commandJson) as { command?: unknown };
+    if (stored.command !== undefined) storedCommand = organizationCommandSchema.parse(stored.command);
+  } catch {
+    denyReplay("invalid_change_set", "The stored Change Set authority evidence is invalid");
+  }
+  if (input.row.operation !== input.operation) {
+    denyReplay("duplicate_idempotency_key", "The idempotency key belongs to a different Change Set request");
+  }
+  if (trace.operation !== input.operation
+    || trace.command.digest !== input.row.commandDigest
+    || trace.scope.workspaceId !== input.workspaceId
+    || !sameAccountScope(trace.scope.accountIds, input.accountIds)) {
+    denyReplay("invalid_change_set", "The stored Change Set authority evidence does not match this replay");
+  }
+
+  const command = storedCommand ?? legacyReplayCommand(trace);
+  if (storedCommand && digestOrganizationCommand(storedCommand) !== input.row.commandDigest) {
+    denyReplay("invalid_change_set", "The stored Change Set command digest is invalid");
+  }
+  const decision = authorizeOrganizationOperation({
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    operation: input.operation,
+    scope: { workspaceId: input.workspaceId, accountIds: input.accountIds },
+    command,
+    expectedRevisions: trace.expectedRevisions,
+    idempotencyKey: input.idempotencyKey,
+  }, {
+    scope: input.liveCapability.snapshot.scope,
+    capability: input.liveCapability,
+    workspaceRevision: trace.expectedRevisions.workspace,
+    resourceRevisions: trace.expectedRevisions.resources,
+    reservedIdempotencyKeys: [],
+  });
+  if (!decision.allowed) denyReplay(decision.code, decision.reason);
+  if (!storedCommand && (
+    !sameValues(decision.trace.requestedResourceFamilies, trace.requestedResourceFamilies)
+    || !sameValues(decision.trace.requestedActionFamilies, trace.requestedActionFamilies)
+    || !sameValues(decision.trace.requestedResourceIds, trace.requestedResourceIds)
+    || decision.trace.risk !== trace.risk
+  )) {
+    denyReplay("invalid_change_set", "The legacy Change Set authority requirements are inconsistent");
+  }
 }
 
 function proposedWinners(trace: OrcaEvaluationTrace, revisionId: string) {
@@ -388,11 +502,32 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
     }): OrcaRuleChangeSetResult {
       const request = orcaRuleActivationRequestSchema.parse(input.request);
       const capabilitySnapshot = organizationCapabilitySnapshotSchema.parse(input.capabilitySnapshot);
+      const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
+      validateCurrentCapabilityClaim({
+        actor: input.actor,
+        capabilitySnapshot,
+        liveCapability,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "apply",
+      });
       const replay = db.select().from(organizationChangeSets).where(and(
         eq(organizationChangeSets.workspaceId, input.workspaceId),
         eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
       )).get();
-      if (replay) return parseReplay(replay, request);
+      if (replay) {
+        authorizeReplay({
+          row: replay,
+          actor: input.actor,
+          capabilitySnapshot,
+          liveCapability,
+          workspaceId: input.workspaceId,
+          accountIds: request.accountIds,
+          operation: "apply",
+          idempotencyKey: request.idempotencyKey,
+        });
+        return parseReplay(replay, request);
+      }
 
       const revisionRow = db.select().from(organizationRuleRevisions).where(and(
         eq(organizationRuleRevisions.workspaceId, input.workspaceId),
@@ -446,7 +581,6 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         [`rule_set:${input.workspaceId}`, ruleSet.revision],
         ...plans.map((plan) => [`thread:${plan.accountId}:${plan.threadId}`, plan.expectedRevision] as const),
       ]);
-      const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
       const ownedAccounts = liveCapability.snapshot.scope.accountIds;
       const liveResourceRevisions = {
         ...expectedResources,
@@ -759,7 +893,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           authorityTrace: JSON.stringify(transactionAuthority.trace),
           resourceFamily: "rule",
           operation: "apply",
-          commandJson: JSON.stringify({ request, response }),
+          commandJson: JSON.stringify({ request, response, command }),
           revertsChangeId: null,
           simulationId: request.simulationId,
           risk: preparation.report.risk,
@@ -788,11 +922,32 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
     }): OrcaRuleChangeSetResult {
       const request = orcaRuleRevertRequestSchema.parse(input.request);
       const capabilitySnapshot = organizationCapabilitySnapshotSchema.parse(input.capabilitySnapshot);
+      const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
+      validateCurrentCapabilityClaim({
+        actor: input.actor,
+        capabilitySnapshot,
+        liveCapability,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "revert",
+      });
       const replay = db.select().from(organizationChangeSets).where(and(
         eq(organizationChangeSets.workspaceId, input.workspaceId),
         eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
       )).get();
-      if (replay) return parseReplay(replay, request);
+      if (replay) {
+        authorizeReplay({
+          row: replay,
+          actor: input.actor,
+          capabilitySnapshot,
+          liveCapability,
+          workspaceId: input.workspaceId,
+          accountIds: request.accountIds,
+          operation: "revert",
+          idempotencyKey: request.idempotencyKey,
+        });
+        return parseReplay(replay, request);
+      }
 
       const original = db.select().from(organizationChangeSets).where(and(
         eq(organizationChangeSets.workspaceId, input.workspaceId),
@@ -859,7 +1014,6 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           thread.expectedRevisionAfter,
         ] as const),
       ]);
-      const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
       const ownedAccounts = liveCapability.snapshot.scope.accountIds;
       const reservedKeys = db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets)
         .where(eq(organizationChangeSets.workspaceId, input.workspaceId)).all().map(({ key }) => key);
@@ -1202,7 +1356,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           authorityTrace: JSON.stringify(transactionAuthority.trace),
           resourceFamily: "rule",
           operation: "revert",
-          commandJson: JSON.stringify({ request, response }),
+          commandJson: JSON.stringify({ request, response, command }),
           revertsChangeId: original.id,
           simulationId: evidence.response.simulationId,
           risk: evidence.response.risk,

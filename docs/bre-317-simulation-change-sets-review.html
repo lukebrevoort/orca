@@ -33,6 +33,7 @@
       <li>The caller presents an immutable Capability claim, but never supplies the live side of the authority decision. Apply and revert resolve the exact current first-party Capability from persisted Workspace/Account ownership.</li>
       <li>Capability identity, revision, actor, audience, Workspace, Accounts, operation, resource families, action families, and risk scope are compared against that authoritative snapshot.</li>
       <li>The authoritative Capability is resolved again inside the SQLite transaction, closing preflight-to-commit revocation and replacement races.</li>
+      <li>Every exact activation and revert replay re-resolves current authority and revalidates Actor, audience, Workspace, Account, operation, resource, action, and risk requirements before stored lifecycle evidence is returned.</li>
       <li>Every requested Account must be both owned and granted.</li>
       <li>Activation accepts only the exact successful Simulation digest for the same compiled Rule, Workspace, Rule Set, and history bound.</li>
       <li>Workspace, Rule, Rule Set, and affected Thread revisions are checked before and inside the transaction.</li>
@@ -55,6 +56,7 @@
       <tr><td>Production Simulation</td><td>Missing Simulation service; later exact Workspace revision mismatch and a missing source-digest rejection exposed binding/provenance semantics.</td><td>3/3 semantic tests plus mutation-free SQLite test.</td></tr>
       <tr><td>Atomic activation</td><td>Focused SQLite activation expectations failed before the Change Set service.</td><td>3/3 SQLite Simulation/activation tests, including stale, denial, isolation, and injected rollback.</td></tr>
       <tr><td>Capability trust blocker</td><td><code>attacker-self-asserted-capability</code>, revision 999 activated successfully: <code>AssertionError: Missing expected exception</code>.</td><td>Forged, missing, revoked, stale, wrong actor/audience/Workspace/Account/operation/resource/action/risk variants deny with zero writes; apply and revert re-resolve authority inside the transaction.</td></tr>
+      <tr><td>Idempotent replay authority blocker</td><td>After a valid commit, exact activation and revert replays still returned stored lifecycle responses after the authoritative Capability was removed: <code>AssertionError: Missing expected exception</code>.</td><td>Apply and revert replays independently revalidate current non-revoked authority before parsing stored responses; valid and legacy replays remain write-free, collisions remain byte-exact, and unauthorized collisions fail closed on authority.</td></tr>
       <tr><td>Action completeness blocker</td><td>A winning <code>set_workflow_state</code> reported one affected Thread, but the authoritative Workflow projection remained absent.</td><td>Workflow, Collection, and Context winners now have ordered apply evidence, inverse state, Thread revision updates, replay, rollback, conflict, and compensating revert coverage. An exhaustive action-support map prevents evaluator/apply drift; unknown winners fail before writes.</td></tr>
       <tr><td>Persisted inverse compatibility</td><td>A pre-fix Lane/Facet Change Set failed revert with <code>invalid_change_set</code> after the new evidence fields were introduced.</td><td>Absent Workflow/Collection/Context inverse fields retain legacy “not managed by this Change Set” semantics, so already-active pre-fix Change Sets remain revertible without disturbing those projections.</td></tr>
       <tr><td>Compensating revert</td><td><code>service.revert is not a function</code> (0 pass / 2 fail).</td><td>2/2 revert tests: compensation/replay and newer-state conflict.</td></tr>
@@ -69,12 +71,12 @@
   apps/web/src/desktop-switch.interaction.test.tsx \
   apps/web/src/tide-table.test.tsx \
   apps/web/src/organization-trace.test.tsx
-# 39 pass, 0 fail
+# 42 pass, 0 fail
 
 CI=true bun --filter @orca/shared test  # 69 pass, 0 fail
 CI=true bun --filter @orca/web test     # 161 pass, 0 fail
-CI=true bun --filter @orca/api test     # 453 pass, 0 fail
-# Full total: 683 pass, 0 fail
+CI=true bun --filter @orca/api test     # 456 pass, 0 fail
+# Full total: 686 pass, 0 fail
 
 bun run typecheck
 bun run build
@@ -96,7 +98,7 @@ git diff --check</pre></section>
     <section class="card wide"><h2>Reviewer decision points</h2><ul>
       <li>Confirm the representative Thread cap of 20 and activation history bound of 5,000 are appropriate for first release.</li>
       <li>Residual risk: historical evaluation currently uses the latest persisted message per Thread, bounded by received time; it does not replay every message event in a Thread.</li>
-      <li>Residual verification status: the two independent blockers and the evidence-claim blocker are fixed locally, but the status remains <strong>REVERIFY</strong> until the independent verifier reruns at the new commit.</li>
+      <li>Residual verification status: the previously confirmed blockers and the remaining replay-authority gate are fixed locally, but the status remains <strong>REVERIFY</strong> until the independent verifier reruns at the new commit.</li>
     </ul></section>
   </div>
 </main></body></html>

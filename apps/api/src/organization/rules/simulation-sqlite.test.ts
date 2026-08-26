@@ -517,6 +517,172 @@ action link context "Project" "Orca"`);
     }
   }, 15_000);
 
+  test("denies an exact activation replay when the authoritative Capability was removed after commit", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const request = {
+        ruleId: compiled.rule.id,
+        revisionId: compiled.revision.id,
+        simulationId: simulation.simulationId,
+        accountIds: ["account-1"],
+        maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision,
+        expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "activate-before-capability-removal",
+      };
+      const applied = createSqliteRuleChangeSetService(db).activate({
+        actor,
+        capabilitySnapshot,
+        workspaceId: "workspace-1",
+        request,
+      });
+      assert.equal(applied.status, "active");
+      const beforeReplay = snapshot(db);
+
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, { capabilitySource: { load: () => null } }).activate({
+          actor,
+          capabilitySnapshot,
+          workspaceId: "workspace-1",
+          request,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_missing",
+      );
+      assert.deepEqual(snapshot(db), beforeReplay);
+    } finally {
+      sqlite.close();
+    }
+  }, 15_000);
+
+  test("revalidates every activation replay Capability dimension before returning stored lifecycle evidence", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const request = {
+        ruleId: compiled.rule.id,
+        revisionId: compiled.revision.id,
+        simulationId: simulation.simulationId,
+        accountIds: ["account-1"],
+        maximumThreads: 500,
+        expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+        expectedRuleRevision: compiled.rule.latestRevision,
+        expectedRuleSetRevision: ruleSet.revision,
+        idempotencyKey: "activate-replay-authority-matrix",
+      };
+      const applied = createSqliteRuleChangeSetService(db).activate({
+        actor,
+        capabilitySnapshot,
+        workspaceId: "workspace-1",
+        request,
+      });
+      const afterApply = snapshot(db);
+
+      assert.deepEqual(createSqliteRuleChangeSetService(db).activate({
+        actor, capabilitySnapshot, workspaceId: "workspace-1", request,
+      }), applied);
+      assert.deepEqual(snapshot(db), afterApply, "an authorized exact replay must remain write-free");
+
+      const wrongActor = { ...capabilitySnapshot, actor: { id: "attacker", type: "human" as const } };
+      const wrongAudience = { ...capabilitySnapshot, actor: { id: actor.id, type: "agent" as const } };
+      const wrongWorkspace = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, workspaceId: "workspace-2" } };
+      const wrongAccount = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, accountIds: ["account-2"] } };
+      const wrongOperation = { ...capabilitySnapshot, operations: capabilitySnapshot.operations.filter((operation) => operation !== "apply") };
+      const wrongResource = { ...capabilitySnapshot, resourceFamilies: capabilitySnapshot.resourceFamilies.filter((family) => family !== "rule") };
+      const wrongActionRisk = { ...capabilitySnapshot, actionFamilies: capabilitySnapshot.actionFamilies.filter((family) => family !== "organization_structure") };
+      const variants = [
+        ["revoked", capabilitySnapshot, { snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }, "capability_revoked"],
+        ["stale", capabilitySnapshot, { snapshot: { ...capabilitySnapshot, revision: capabilitySnapshot.revision + 1 }, revokedAt: null }, "capability_stale"],
+        ["wrong Actor", wrongActor, { snapshot: wrongActor, revokedAt: null }, "actor_mismatch"],
+        ["wrong audience", wrongAudience, { snapshot: wrongAudience, revokedAt: null }, "actor_mismatch"],
+        ["wrong Workspace", wrongWorkspace, { snapshot: wrongWorkspace, revokedAt: null }, "workspace_denied"],
+        ["wrong Account", wrongAccount, { snapshot: wrongAccount, revokedAt: null }, "account_denied"],
+        ["wrong operation", wrongOperation, { snapshot: wrongOperation, revokedAt: null }, "missing_operation_capability"],
+        ["wrong resource scope", wrongResource, { snapshot: wrongResource, revokedAt: null }, "resource_family_denied"],
+        ["wrong action/risk scope", wrongActionRisk, { snapshot: wrongActionRisk, revokedAt: null }, "action_family_denied"],
+      ] as const;
+      for (const [name, claimed, live, code] of variants) {
+        assert.throws(
+          () => createSqliteRuleChangeSetService(db, { capabilitySource: { load: () => live } }).activate({
+            actor, capabilitySnapshot: claimed, workspaceId: "workspace-1", request,
+          }),
+          (error: unknown) => error instanceof Error && "code" in error && error.code === code,
+          name,
+        );
+        assert.deepEqual(snapshot(db), afterApply, `${name} replay denial must write nothing`);
+      }
+
+      const collidingRequest = { ...request, maximumThreads: request.maximumThreads - 1 };
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db).activate({
+          actor, capabilitySnapshot, workspaceId: "workspace-1", request: collidingRequest,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "duplicate_idempotency_key",
+      );
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, {
+          capabilitySource: { load: () => ({ snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }) },
+        }).activate({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: collidingRequest }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_revoked",
+      );
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db).revert({
+          actor,
+          capabilitySnapshot,
+          workspaceId: "workspace-1",
+          request: {
+            changeSetId: applied.changeSetId,
+            accountIds: ["account-1"],
+            expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+            idempotencyKey: request.idempotencyKey,
+          },
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "duplicate_idempotency_key",
+      );
+      assert.deepEqual(snapshot(db), afterApply, "activation command collisions must remain write-free and fail closed on authority");
+
+      const storedApply = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, applied.changeSetId)).get()!;
+      const legacyApplyEnvelope = JSON.parse(storedApply.commandJson);
+      delete legacyApplyEnvelope.command;
+      db.update(organizationChangeSets).set({ commandJson: JSON.stringify(legacyApplyEnvelope) })
+        .where(eq(organizationChangeSets.id, applied.changeSetId)).run();
+      const legacyApplySnapshot = snapshot(db);
+      assert.deepEqual(createSqliteRuleChangeSetService(db).activate({
+        actor, capabilitySnapshot, workspaceId: "workspace-1", request,
+      }), applied);
+      assert.deepEqual(snapshot(db), legacyApplySnapshot, "pre-fix activation evidence must replay without writes");
+    } finally {
+      sqlite.close();
+    }
+  }, 30_000);
+
   test("fails with zero writes for stale binding, authority denial, Account isolation, and a mid-transaction SQLite abort", async () => {
     for (const failure of ["stale", "authority", "account", "rollback"] as const) {
       const { db, sqlite, compiled } = await setup();
@@ -739,6 +905,112 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
       sqlite.close();
     }
   }, 15_000);
+
+  test("revalidates every revert replay Capability dimension before returning stored lifecycle evidence", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const service = createSqliteRuleChangeSetService(db);
+      const applied = service.activate({
+        actor,
+        capabilitySnapshot,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          simulationId: simulation.simulationId,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+          expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+          expectedRuleRevision: compiled.rule.latestRevision,
+          expectedRuleSetRevision: ruleSet.revision,
+          idempotencyKey: "activate-before-revert-replay-matrix",
+        },
+      });
+      const request = {
+        changeSetId: applied.changeSetId,
+        accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+        idempotencyKey: "revert-replay-authority-matrix",
+      };
+      const reverted = service.revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request });
+      const afterRevert = snapshot(db);
+
+      assert.deepEqual(service.revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request }), reverted);
+      assert.deepEqual(snapshot(db), afterRevert, "an authorized exact revert replay must remain write-free");
+
+      const wrongActor = { ...capabilitySnapshot, actor: { id: "attacker", type: "human" as const } };
+      const wrongAudience = { ...capabilitySnapshot, actor: { id: actor.id, type: "agent" as const } };
+      const wrongWorkspace = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, workspaceId: "workspace-2" } };
+      const wrongAccount = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, accountIds: ["account-2"] } };
+      const wrongOperation = { ...capabilitySnapshot, operations: capabilitySnapshot.operations.filter((operation) => operation !== "revert") };
+      const wrongResource = { ...capabilitySnapshot, resourceFamilies: capabilitySnapshot.resourceFamilies.filter((family) => family !== "rule") };
+      const wrongActionRisk = { ...capabilitySnapshot, actionFamilies: capabilitySnapshot.actionFamilies.filter((family) => family !== "organization_structure") };
+      const variants = [
+        ["missing", capabilitySnapshot, null, "capability_missing"],
+        ["revoked", capabilitySnapshot, { snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }, "capability_revoked"],
+        ["stale", capabilitySnapshot, { snapshot: { ...capabilitySnapshot, revision: capabilitySnapshot.revision + 1 }, revokedAt: null }, "capability_stale"],
+        ["wrong Actor", wrongActor, { snapshot: wrongActor, revokedAt: null }, "actor_mismatch"],
+        ["wrong audience", wrongAudience, { snapshot: wrongAudience, revokedAt: null }, "actor_mismatch"],
+        ["wrong Workspace", wrongWorkspace, { snapshot: wrongWorkspace, revokedAt: null }, "workspace_denied"],
+        ["wrong Account", wrongAccount, { snapshot: wrongAccount, revokedAt: null }, "account_denied"],
+        ["wrong operation", wrongOperation, { snapshot: wrongOperation, revokedAt: null }, "missing_operation_capability"],
+        ["wrong resource scope", wrongResource, { snapshot: wrongResource, revokedAt: null }, "resource_family_denied"],
+        ["wrong action/risk scope", wrongActionRisk, { snapshot: wrongActionRisk, revokedAt: null }, "action_family_denied"],
+      ] as const;
+      for (const [name, claimed, live, code] of variants) {
+        assert.throws(
+          () => createSqliteRuleChangeSetService(db, { capabilitySource: { load: () => live } }).revert({
+            actor, capabilitySnapshot: claimed, workspaceId: "workspace-1", request,
+          }),
+          (error: unknown) => error instanceof Error && "code" in error && error.code === code,
+          name,
+        );
+        assert.deepEqual(snapshot(db), afterRevert, `${name} revert replay denial must write nothing`);
+      }
+
+      const collidingRequest = { ...request, changeSetId: "different-change-set" };
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db).revert({
+          actor, capabilitySnapshot, workspaceId: "workspace-1", request: collidingRequest,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "duplicate_idempotency_key",
+      );
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, {
+          capabilitySource: { load: () => ({ snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }) },
+        }).revert({ actor, capabilitySnapshot, workspaceId: "workspace-1", request: collidingRequest }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_revoked",
+      );
+      assert.deepEqual(snapshot(db), afterRevert, "revert command collisions must remain write-free and fail closed on authority");
+
+      const storedRevert = db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, reverted.changeSetId)).get()!;
+      const legacyRevertEnvelope = JSON.parse(storedRevert.commandJson);
+      delete legacyRevertEnvelope.command;
+      db.update(organizationChangeSets).set({ commandJson: JSON.stringify(legacyRevertEnvelope) })
+        .where(eq(organizationChangeSets.id, reverted.changeSetId)).run();
+      const legacyRevertSnapshot = snapshot(db);
+      assert.deepEqual(createSqliteRuleChangeSetService(db).revert({
+        actor, capabilitySnapshot, workspaceId: "workspace-1", request,
+      }), reverted);
+      assert.deepEqual(snapshot(db), legacyRevertSnapshot, "pre-fix revert evidence must replay without writes");
+    } finally {
+      sqlite.close();
+    }
+  }, 30_000);
 
   test("reverts pre-fix Lane and Facet Change Sets without disturbing projections absent from legacy evidence", async () => {
     const { db, sqlite, compiled, threadId } = await setup();
