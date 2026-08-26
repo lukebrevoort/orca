@@ -256,6 +256,41 @@ export const organizationRuleRevisions = sqliteTable(
   }),
 );
 
+/** Immutable deterministic Rule evaluation evidence for one Event and Thread. */
+export const organizationEvaluationTraces = sqliteTable(
+  "organization_evaluation_traces",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    eventId: text("event_id").notNull(),
+    eventKind: text("event_kind").notNull(),
+    ruleSetRevision: integer("rule_set_revision").notNull(),
+    traceJson: text("trace_json").notNull(),
+    actionsJson: text("actions_json").notNull(),
+    logicalTime: integer("logical_time", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_evaluation_traces_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_evaluation_traces_account_thread_fk",
+    }).onDelete("cascade"),
+    eventUniqueIdx: uniqueIndex("organization_evaluation_traces_event_unique_idx").on(table.workspaceId, table.eventId),
+    threadLatestIdx: index("organization_evaluation_traces_thread_latest_idx").on(table.workspaceId, table.accountId, table.threadId, table.logicalTime, table.id),
+    eventKindCheck: check("organization_evaluation_traces_event_kind_check", sql`${table.eventKind} IN ('message.received','thread.updated','schedule.reached','user.corrected')`),
+    ruleSetRevisionCheck: check("organization_evaluation_traces_rule_set_revision_check", sql`${table.ruleSetRevision} >= 1`),
+  }),
+);
+
 export const organizationLanePolicies = sqliteTable(
   "organization_lane_policies",
   {

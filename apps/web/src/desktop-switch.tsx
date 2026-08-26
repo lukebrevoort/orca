@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace } from "./organization-views";
@@ -267,6 +267,38 @@ export function moveSpaceOrder(order: string[], draggedId: string, targetId: str
 type OrganizationMode = "glass" | "tide";
 type SimulationState = "idle" | "running" | "ready" | "stale";
 
+function evaluationActionLabel(action: OrcaCompiledAction): string {
+  switch (action.kind) {
+    case "route_lane": return `Route to ${action.laneId}`;
+    case "set_workflow_state": return `Set workflow to ${action.stateId}`;
+    case "set_facet": return `Set ${action.facetId} to ${String(action.value)}`;
+    case "unset_facet": return `Unset ${action.facetId}`;
+    case "add_collection": return `Add to ${action.collectionId}`;
+    case "remove_collection": return `Remove from ${action.collectionId}`;
+    case "link_context": return `Link ${action.contextId}`;
+    case "unlink_context": return `Unlink ${action.contextId}`;
+    case "notify": return action.urgency === "immediate" ? "Notify immediately" : "Add to digest";
+    case "suppress_interruption": return "Suppress interruption";
+    case "schedule_review": return `Review after ${action.duration}`;
+    case "propose_retention": return action.mode === "keep" ? "Propose keep" : `Propose review after ${action.days} days`;
+    case "propose_provider_deletion": return "Propose provider deletion · approval required";
+  }
+}
+
+function observedValueLabel(value: OrcaEvaluationTrace["observedValues"][number]): string {
+  return value.present ? `${value.field} = ${String(value.value)}` : `${value.field} is missing`;
+}
+
+function traceRuleName(trace: OrcaEvaluationTrace): string {
+  const separator = trace.reason.indexOf(":");
+  return separator > 0 ? trace.reason.slice(0, separator) : "Latest evaluation";
+}
+
+function traceBecause(trace: OrcaEvaluationTrace): string {
+  const separator = trace.reason.indexOf(":");
+  return separator > 0 ? trace.reason.slice(separator + 1).trim() : trace.reason;
+}
+
 export function OrganizationStudio({ interactivePreview = false }: { interactivePreview?: boolean }) {
   const [mode, setMode] = useState<OrganizationMode>("glass");
   const [simulation, setSimulation] = useState<SimulationState>("idle");
@@ -275,6 +307,8 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
   const [traceTab, setTraceTab] = useState<"trace" | "audit">("trace");
   const [revertReview, setRevertReview] = useState(false);
   const [organizationInvalidation, setOrganizationInvalidation] = useState(0);
+  const [liveTrace, setLiveTrace] = useState<OrcaEvaluationTrace | null>(null);
+  const [traceState, setTraceState] = useState<"loading" | "ready" | "empty" | "error">(interactivePreview ? "empty" : "loading");
   const [status, setStatus] = useState(interactivePreview
     ? "UI preview · local session only. No rule, provider mail, or audit record is changed or persisted."
     : "Immutable source compilation is available in Tide Table. Simulation, activation, revert, Trace, and Audit are not part of this compile-only revision.");
@@ -284,6 +318,26 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
     if (!interactivePreview) setOrganizationInvalidation((current) => current + 1);
   }, [interactivePreview]);
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(() => {
+    if (interactivePreview) return;
+    const controller = new AbortController();
+    void fetch("/v1/organization/evaluations/latest", { credentials: "include", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Trace request failed (${response.status})`);
+        const body = await response.json() as { trace?: unknown };
+        const parsed = orcaEvaluationTraceSchema.nullable().safeParse(body.trace ?? null);
+        if (!parsed.success) throw new Error("Latest Trace did not match the Orca evaluation contract");
+        setLiveTrace(parsed.data);
+        setTraceState(parsed.data ? "ready" : "empty");
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setTraceState("error");
+          setStatus(error instanceof Error ? error.message : "Latest Trace is unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, [interactivePreview]);
   function updateDraft() {
     if (!interactivePreview) return;
     setSimulation("stale");
@@ -296,14 +350,16 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
   }
   function activate() { if (!interactivePreview || simulation !== "ready") return; setActiveRevision((value) => value + 1); setSimulation("idle"); setStatus("Preview state changed for this local session. No revision was authorized, persisted, or audited."); setTraceTab("trace"); setTraceOpen(true); }
   function revert() { if (!interactivePreview) return; setActiveRevision((value) => value + 1); setRevertReview(false); setStatus("Local preview state restored. No server history or production behavior changed."); }
+  const displayTrace = !interactivePreview && traceState === "ready" ? liveTrace : null;
   return <section className="organization-studio" aria-labelledby="organization-title">
     <OrganizationViewsWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationInvalidation} />
     <OrganizationLaneWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationInvalidation} />
-    <header className="organization-heading"><div><span>{interactivePreview ? `Organization UI preview · session ${activeRevision}` : "Organization · compile-only"}</span><h1 id="organization-title">Production failures</h1><p>{interactivePreview ? "Local interaction preview for Focus · nothing is persisted" : "Tide Table can append Rule Revisions; activation authority remains unavailable"}</p></div><div><button disabled={!interactivePreview} onClick={() => setTraceOpen(true)} type="button">{interactivePreview ? "Preview changes" : "History unavailable"}</button><button className="organization-primary" disabled={!interactivePreview} onClick={updateDraft} type="button">{interactivePreview ? "New rule" : "Use Tide Table"}</button></div></header>
+    <header className="organization-heading"><div><span>{interactivePreview ? `Organization UI preview · session ${activeRevision}` : displayTrace ? `Live evaluation · Rule Set ${displayTrace.ruleSet.revision}` : "Organization · deterministic evaluation"}</span><h1 id="organization-title">{displayTrace ? traceRuleName(displayTrace) : "Production failures"}</h1><p>{interactivePreview ? "Local interaction preview for Focus · nothing is persisted" : displayTrace ? `${displayTrace.event.kind} · Thread ${displayTrace.event.threadId} · ${new Date(displayTrace.logicalTime).toLocaleString()}` : traceState === "loading" ? "Loading the latest complete Trace…" : traceState === "error" ? "The latest Trace could not be read" : "No Rule evaluation has been recorded yet"}</p></div><div><button className="organization-trace-trigger" disabled={!interactivePreview && !displayTrace} onClick={() => setTraceOpen(true)} type="button">{interactivePreview ? "Preview changes" : "Open complete Trace"}</button><button className="organization-primary" disabled={!interactivePreview} onClick={updateDraft} type="button">{interactivePreview ? "New rule" : "Use Tide Table"}</button></div></header>
     <div className="organization-grid"><section className="organization-editor"><nav aria-label="Rule authoring mode"><button aria-pressed={mode === "glass"} onClick={() => setMode("glass")} type="button">Glass Box</button><button aria-pressed={mode === "tide"} onClick={() => setMode("tide")} type="button">Tide Table</button></nav>
-      {mode === "glass" ? <div className="glass-box"><label><span>When</span><textarea aria-label="When" defaultValue="A thread receives a new message" onChange={updateDraft} readOnly={!interactivePreview}/></label><i>→</i><label><span>If</span><textarea aria-label="If" defaultValue={'Sender is Vercel and subject contains “failed”'} onChange={updateDraft} readOnly={!interactivePreview}/></label><i>→</i><label><span>Then</span><textarea aria-label="Then" defaultValue="Move to Everything else and notify immediately" onChange={updateDraft} readOnly={!interactivePreview}/></label><label className="glass-because"><span>Because</span><textarea aria-label="Because" defaultValue="A failed deploy blocks work and needs a human response" onChange={updateDraft} readOnly={!interactivePreview}/></label></div> : <TideTableEditor onCompiled={invalidateOrganization} previewMode={interactivePreview} request={interactivePreview ? previewTideRequest : undefined} />}
+      {mode === "glass" ? displayTrace ? <div className="glass-box glass-live-trace"><article><span>When</span><strong>{displayTrace.event.kind}</strong><small>{displayTrace.event.cause} Event · {displayTrace.event.id}</small></article><i>→</i><article><span>If</span><ul>{displayTrace.observedValues.map((value) => <li key={value.field}>{observedValueLabel(value)}</li>)}</ul><small>{displayTrace.predicateResults.filter((result) => result.result).length} Predicate results were true</small></article><i>→</i><article><span>Then</span><ul>{displayTrace.winners.map((winner) => <li key={winner.candidateId}>{evaluationActionLabel(winner.action)}</li>)}</ul><small>{displayTrace.losers.length} lower candidate{displayTrace.losers.length === 1 ? "" : "s"} preserved in Trace</small></article><article className="glass-because"><span>Because</span><strong>{traceBecause(displayTrace)}</strong><small>{displayTrace.actor.type} Actor · {displayTrace.actor.id}</small></article></div> : <div className={`glass-trace-state glass-trace-state-${traceState}`} role="status"><span>{traceState === "loading" ? "Reading Trace" : traceState === "error" ? "Trace unavailable" : "No evaluation yet"}</span><strong>{traceState === "loading" ? "Following the latest message.received path…" : traceState === "error" ? "Orca kept the interface honest: no causal claim is shown without its Trace." : "A complete When → If → Then → Because explanation will appear after the first evaluation."}</strong></div> : <TideTableEditor onCompiled={invalidateOrganization} previewMode={interactivePreview} request={interactivePreview ? previewTideRequest : undefined} />}
       <p aria-live="polite" className={`organization-status organization-status-${simulation}`}>{status}</p>
-    </section><aside className="simulation-card" aria-busy={simulation === "running" || undefined}><span>{interactivePreview ? "Local sample preview" : "Simulation unavailable"}</span><h2>{simulation === "running" ? "Generating sample…" : simulation === "stale" ? "Sample is outdated" : interactivePreview ? "Preview impact" : "No activation contract"}</h2><dl><div><dt>Sample messages</dt><dd>{simulation === "ready" ? "2,418" : "—"}</dd></div><div><dt>Would move to Focus</dt><dd>{simulation === "ready" ? "14" : "—"}</dd></div><div><dt>Would notify</dt><dd>{simulation === "ready" ? "3" : "—"}</dd></div><div><dt>Would hide</dt><dd>{simulation === "ready" ? "0" : "—"}</dd></div><div><dt>Sample risk</dt><dd>{simulation === "ready" ? "Low" : "Not calculated"}</dd></div><div><dt>Authority</dt><dd>Not checked</dd></div></dl><button disabled={!interactivePreview || simulation === "running"} onClick={runSimulation} type="button">{simulation === "running" ? "Generating…" : simulation === "stale" ? "Preview again" : "Preview sample"}</button><button className="organization-primary" disabled={!interactivePreview || simulation !== "ready"} onClick={activate} type="button">Change preview state</button></aside></div>
+    </section><aside className="simulation-card" aria-busy={simulation === "running" || undefined}><span>{interactivePreview ? "Local sample preview" : displayTrace ? "Latest evaluation" : "Trace status"}</span><h2>{interactivePreview ? simulation === "running" ? "Generating sample…" : simulation === "stale" ? "Sample is outdated" : "Preview impact" : displayTrace ? "Resolved deterministically" : traceState === "loading" ? "Reading evidence…" : "No complete Trace"}</h2><dl>{displayTrace ? <><div><dt>Rules considered</dt><dd>{displayTrace.consideredRevisions.length}</dd></div><div><dt>Candidates</dt><dd>{displayTrace.candidates.length}</dd></div><div><dt>Winners</dt><dd>{displayTrace.winners.length}</dd></div><div><dt>Losers</dt><dd>{displayTrace.losers.length}</dd></div><div><dt>Budget</dt><dd>{displayTrace.budget.exhausted ? "Exhausted" : "Within bounds"}</dd></div><div><dt>Authority</dt><dd>{displayTrace.capabilities.id}</dd></div></> : <><div><dt>Sample messages</dt><dd>{simulation === "ready" ? "2,418" : "—"}</dd></div><div><dt>Would move to Focus</dt><dd>{simulation === "ready" ? "14" : "—"}</dd></div><div><dt>Would notify</dt><dd>{simulation === "ready" ? "3" : "—"}</dd></div><div><dt>Would hide</dt><dd>{simulation === "ready" ? "0" : "—"}</dd></div><div><dt>Sample risk</dt><dd>{simulation === "ready" ? "Low" : "Not calculated"}</dd></div><div><dt>Authority</dt><dd>Not checked</dd></div></>}</dl>{displayTrace ? <button className="organization-trace-trigger" onClick={() => setTraceOpen(true)} type="button">Inspect candidates</button> : <><button disabled={!interactivePreview || simulation === "running"} onClick={runSimulation} type="button">{simulation === "running" ? "Generating…" : simulation === "stale" ? "Preview again" : "Preview sample"}</button><button className="organization-primary" disabled={!interactivePreview || simulation !== "ready"} onClick={activate} type="button">Change preview state</button></>}</aside></div>
+    {traceOpen && displayTrace ? <DesktopDrawer ariaLabel="Complete deterministic Trace" className="trace-drawer" onClose={() => setTraceOpen(false)}><header><div><span>Complete explanation</span><h2>Deterministic Trace</h2></div><button aria-label="Close Trace" onClick={() => setTraceOpen(false)} type="button">×</button></header><div className="trace-tabs"><button aria-pressed="true" type="button">Trace</button><button disabled type="button">Audit follows apply</button></div><ol>{displayTrace.consideredRevisions.map((revision) => <li className={revision.reason === "matched" ? "trace-winner" : undefined} key={revision.revisionId}><span>Rule Revision · {revision.reason.replaceAll("_", " ")}</span><strong>{revision.revisionId} · Predicate {revision.predicateMatched ? "matched" : "did not match"}</strong></li>)}{displayTrace.winners.map((winner) => <li className="trace-winner" key={winner.candidateId}><span>Winner · {winner.precedence.replaceAll("_", " ")}</span><strong>{evaluationActionLabel(winner.action)} · {winner.reason}</strong></li>)}{displayTrace.losers.map((loser) => <li key={loser.candidateId}><span>Loser · {loser.reason.replaceAll("_", " ")}</span><strong>{evaluationActionLabel(loser.action)} · {loser.candidateReason}</strong></li>)}</ol><section className="trace-authority"><span>Actor & Capability Snapshot</span><h3>{displayTrace.actor.id}</h3><p>{displayTrace.capabilities.actionFamilies.join(" · ")}</p><p>{displayTrace.budget.predicateSteps.toLocaleString()} / {displayTrace.budget.maximumPredicateSteps.toLocaleString()} predicate steps · {displayTrace.budget.candidates.toLocaleString()} / {displayTrace.budget.maximumCandidates.toLocaleString()} candidates</p></section></DesktopDrawer> : null}
     {traceOpen && interactivePreview ? <DesktopDrawer ariaLabel="Local preview changes" className="trace-drawer" onClose={() => setTraceOpen(false)}><header><div><span>{traceTab === "trace" ? "UI explanation preview" : "Local session changes"}</span><h2>{traceTab === "trace" ? "Preview" : "Session"}</h2></div><button aria-label="Close preview changes" onClick={() => setTraceOpen(false)} type="button">×</button></header><div className="trace-tabs"><button aria-pressed={traceTab === "trace"} onClick={() => setTraceTab("trace")} type="button">Explanation</button><button aria-pressed={traceTab === "audit"} onClick={() => setTraceTab("audit")} type="button">Session changes</button></div>{traceTab === "trace" ? <ol><li><span>Sample only</span><strong>No server trace was requested.</strong></li><li><span>Authority</span><strong>Not checked.</strong></li><li className="trace-winner"><span>Preview rule</span><strong>Production failures · local state {activeRevision}.</strong></li><li><span>Persistence</span><strong>Reloading clears this preview.</strong></li></ol> : <ol className="audit-log"><li><span>Local state {activeRevision}</span><strong>Changed in this browser session</strong></li><li><span>Sample preview</span><strong>Illustrative counts · no production query</strong></li><li><span>Audit record</span><strong>None created</strong></li><li><span>Provider mail</span><strong>Not changed</strong></li></ol>}<section><span>Preview restore</span><h3>{revertReview ? `Restore local state ${Math.max(1, activeRevision - 1)}?` : "Changes only this local preview"}</h3><p>{revertReview ? "This updates local component state only. It does not create, rewrite, or preserve any server revision." : "The Organization API does not currently expose revert. This control exists only to review the intended interaction."}</p>{revertReview ? <div className="trace-revert-actions"><button onClick={() => setRevertReview(false)} type="button">Cancel</button><button className="trace-revert-apply" onClick={revert} type="button">Restore local preview</button></div> : <button onClick={() => setRevertReview(true)} type="button">Review local restore</button>}</section></DesktopDrawer> : null}
   </section>;
 }

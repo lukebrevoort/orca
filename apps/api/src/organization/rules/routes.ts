@@ -1,9 +1,12 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import { orcaLanguageTextLimits } from "@orca/shared";
+import { eq } from "drizzle-orm";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
+import { oauthAccounts } from "../../db/schema.ts";
+import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
 import {
   RuleAuthorityError,
   RuleIdempotencyConflictError,
@@ -119,6 +122,21 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
         if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule revision history query" } }, 400);
         throw error;
       }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.get("/v1/organization/evaluations/latest", requireAuth({ dbFactory }), (c) => {
+    const client = dbFactory();
+    try {
+      const workspaceId = c.get("auth").userId;
+      const accountId = c.req.query("accountId")?.trim() || undefined;
+      const threadId = c.req.query("threadId")?.trim() || undefined;
+      if (accountId) {
+        const owned = client.db.select({ id: oauthAccounts.id }).from(oauthAccounts)
+          .where(eq(oauthAccounts.userId, workspaceId)).all().some((account) => account.id === accountId);
+        if (!owned) return c.json({ error: { code: "account_denied", message: "Account is outside this Workspace" } }, 403);
+      }
+      return c.json({ trace: getLatestOrcaEvaluationTrace(client.db, { workspaceId, ...(accountId ? { accountId } : {}), ...(threadId ? { threadId } : {}) }) });
     } finally { client.sqlite.close(); }
   });
 }

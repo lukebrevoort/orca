@@ -12,6 +12,7 @@ import { refreshGmailAccessToken, type FetchLike } from "../../auth/gmail/oauth.
 import { readProviderTokens, storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { refreshThreadAggregates } from "../../organization/thread-aggregate.ts";
+import { evaluateMessageReceivedRules } from "../../organization/rules/evaluation-sqlite.ts";
 import {
   contacts,
   emailAttachments,
@@ -300,6 +301,10 @@ export async function persistGmailMessages(
     upsertEmailLabels(tx, normalizedMessages, persistedLabels, input.now);
     upsertContacts(tx, input.accountId, normalizedMessages, input.now);
     refreshThreadAggregates(tx, { accountId: input.accountId, threadIds, now: input.now });
+    evaluateMessageReceivedRules(tx as unknown as DatabaseClient, {
+      accountId: input.accountId,
+      messageIds: normalizedMessages.map((message) => message.id),
+    });
     input.afterPersist?.(tx);
   });
 

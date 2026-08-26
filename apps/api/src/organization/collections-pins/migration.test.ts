@@ -85,8 +85,8 @@ describe("BRE-309 clean M8 migration", () => {
       const journal = JSON.parse(readFileSync(resolve(import.meta.dir, "../../../drizzle/meta/_journal.json"), "utf8")) as {
         entries: Array<{ idx: number; tag: string }>;
       };
-      const journalWithLaterMigration = [...journal.entries, { idx: 29, tag: "0029_future_migration" }];
-      const historicalChain = [24, 25, 26, 27, 28].map((idx) => {
+      const journalWithLaterMigration = [...journal.entries, { idx: 30, tag: "0030_future_migration" }];
+      const historicalChain = [24, 25, 26, 27, 28, 29].map((idx) => {
         const entry = journalWithLaterMigration.find((candidate) => candidate.idx === idx);
         assert.ok(entry, `missing migration journal entry ${idx}`);
         return { idx: entry.idx, tag: entry.tag };
@@ -97,6 +97,7 @@ describe("BRE-309 clean M8 migration", () => {
         { idx: 26, tag: "0026_organization_lanes" },
         { idx: 27, tag: "0027_organization_live_views" },
         { idx: 28, tag: "0028_orca_rule_revisions" },
+        { idx: 29, tag: "0029_orca_rule_evaluations" },
       ]);
     } finally {
       sqlite.close();
