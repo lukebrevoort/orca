@@ -201,6 +201,61 @@ export const organizationViews = sqliteTable(
   }),
 );
 
+/** Stable Rule identity. Source edits append immutable Rule Revision rows. */
+export const organizationRules = sqliteTable(
+  "organization_rules",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    latestRevision: integer("latest_revision").notNull(),
+    activeRevisionId: text("active_revision_id"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspaceUpdatedIdx: index("organization_rules_workspace_updated_idx").on(table.workspaceId, table.updatedAt, table.id),
+    latestRevisionCheck: check("organization_rules_latest_revision_check", sql`${table.latestRevision} >= 1`),
+  }),
+);
+
+/** Compiler output is append-only evidence; SQLite triggers reject UPDATE and DELETE. */
+export const organizationRuleRevisions = sqliteTable(
+  "organization_rule_revisions",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    ruleId: text("rule_id").notNull(),
+    revision: integer("revision").notNull(),
+    workspaceSchemaRevision: integer("workspace_schema_revision").notNull(),
+    languageVersion: integer("language_version").notNull(),
+    source: text("source").notNull(),
+    sourceDigest: text("source_digest").notNull(),
+    compiledJson: text("compiled_json").notNull(),
+    requiredCapabilities: text("required_capabilities").notNull(),
+    risk: text("risk").notNull(),
+    actorId: text("actor_id").notNull(),
+    actorType: text("actor_type").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    ruleForeignKey: foreignKey({
+      columns: [table.workspaceId, table.ruleId],
+      foreignColumns: [organizationRules.workspaceId, organizationRules.id],
+      name: "organization_rule_revisions_rule_fk",
+    }).onDelete("cascade"),
+    ruleRevisionUniqueIdx: uniqueIndex("organization_rule_revisions_rule_revision_unique_idx").on(table.workspaceId, table.ruleId, table.revision),
+    workspaceCreatedIdx: index("organization_rule_revisions_workspace_created_idx").on(table.workspaceId, table.createdAt, table.id),
+    revisionCheck: check("organization_rule_revisions_revision_check", sql`${table.revision} >= 1`),
+    workspaceSchemaRevisionCheck: check("organization_rule_revisions_schema_revision_check", sql`${table.workspaceSchemaRevision} >= 1`),
+    languageCheck: check("organization_rule_revisions_language_check", sql`${table.languageVersion} = 1`),
+    riskCheck: check("organization_rule_revisions_risk_check", sql`${table.risk} IN ('low','medium','high','destructive')`),
+    actorTypeCheck: check("organization_rule_revisions_actor_type_check", sql`${table.actorType} IN ('human','agent','system')`),
+  }),
+);
+
 export const organizationLanePolicies = sqliteTable(
   "organization_lane_policies",
   {

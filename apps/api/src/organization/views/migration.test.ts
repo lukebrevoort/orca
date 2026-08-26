@@ -15,7 +15,13 @@ describe("BRE-313 Views migration", () => {
     try {
       migrate(client.db, { migrationsFolder: migrations });
       const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-      assert.equal(journal.entries.at(-1)?.tag, "0027_organization_live_views");
+      assert.deepEqual(journal.entries.find((entry) => entry.idx === 27), {
+        idx: 27,
+        version: "7",
+        when: 1787702400000,
+        tag: "0027_organization_live_views",
+        breakpoints: true,
+      });
       const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'organization_view%' ORDER BY name").all() as Array<{ name: string }>;
       assert.deepEqual(tables.map((item) => item.name), ["organization_views"]);
       const indexes = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('organization_views_workspace_position_unique_idx','organization_thread_facet_values_lookup_idx','emails_thread_view_evidence_idx','threads_view_order_idx') ORDER BY name").all() as Array<{ name: string }>;
