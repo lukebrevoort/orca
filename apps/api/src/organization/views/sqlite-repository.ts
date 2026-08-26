@@ -19,7 +19,7 @@ import {
 
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
-import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -244,9 +244,13 @@ function workspaceRevision(sqlite: Database, workspaceId: string) {
 
 function authorityState(sqlite: Database, workspaceId: string) {
   const resources = viewRows(sqlite, workspaceId);
+  const currentWorkspaceRevision = workspaceRevision(sqlite, workspaceId);
   return {
-    workspaceRevision: workspaceRevision(sqlite, workspaceId),
-    resourceRevisions: Object.fromEntries(resources.map((row) => [`view:${row.id}`, row.revision])),
+    workspaceRevision: currentWorkspaceRevision,
+    resourceRevisions: {
+      ...Object.fromEntries(resources.map((row) => [`view:${row.id}`, row.revision])),
+      [organizationViewOrderResourceId(workspaceId)]: currentWorkspaceRevision,
+    },
     reservedIdempotencyKeys: (sqlite.query("SELECT idempotency_key AS key FROM organization_change_sets WHERE workspace_id=?").all(workspaceId) as Array<{ key: string }>).map((row) => row.key),
   };
 }
@@ -303,33 +307,65 @@ function authorizedMutation<T>(sqlite: Database, input: {
       return replay.response as T;
     }
     const revisionBefore = verifyAuthorization(sqlite, input.workspaceId, input.authorization);
-    const before = new Map(viewRows(sqlite, input.workspaceId).map((row) => [row.id, mapView(row)]));
+    const beforeRows = viewRows(sqlite, input.workspaceId);
+    const actualSnapshot = beforeRows.map((row) => ({ id: row.id, position: row.position, revision: row.revision }));
+    if (canonicalOrganizationJson(actualSnapshot) !== canonicalOrganizationJson(input.plan.expectedViews)) {
+      throw new OrganizationViewConflictError("The View ordering snapshot changed before this command could commit");
+    }
+    const intents = new Map(input.authorization.command.intents.map((intent) => [intent.resourceId, intent]));
+    const orderResourceId = organizationViewOrderResourceId(input.workspaceId);
+    const orderIntent = intents.get(orderResourceId);
+    const beforeOrderIds = beforeRows.map((row) => row.id);
+    const orderChanges = canonicalOrganizationJson(beforeOrderIds) !== canonicalOrganizationJson(input.plan.orderedViewIds);
+    if (orderIntent) {
+      if (orderIntent.mutation !== "update"
+        || orderIntent.changes?.orderDigest !== digestOrganizationViewOrder(input.plan.orderedViewIds)
+        || orderIntent.changes?.viewCount !== input.plan.orderedViewIds.length) {
+        throw new OrganizationViewAccessError("The authorized View ordering aggregate does not match the exact target order", "resource_denied");
+      }
+    } else if (orderChanges) {
+      throw new OrganizationViewAccessError("A View order changed without aggregate authority", "resource_denied");
+    }
+    const before = new Map(beforeRows.map((row) => [row.id, mapView(row)]));
     const response = input.mutate();
     const after = new Map(viewRows(sqlite, input.workspaceId).map((row) => [row.id, mapView(row)]));
     const changedIds = [...new Set([...before.keys(), ...after.keys()])].filter((id) => canonicalOrganizationJson(before.get(id) ?? null) !== canonicalOrganizationJson(after.get(id) ?? null));
     if (canonicalOrganizationJson([...after.values()].map((view) => view.id)) !== canonicalOrganizationJson(input.plan.orderedViewIds)) {
       throw new OrganizationViewAccessError("The authorized View order does not match the committed mutation", "resource_denied");
     }
-    const intents = new Map(input.authorization.command.intents.map((intent) => [intent.resourceId, intent]));
     for (const id of changedIds) {
       const previous = before.get(id) ?? null;
       const next = after.get(id) ?? null;
       const intent = intents.get(`view:${id}`);
-      if (!intent
-        || (previous === null && intent.mutation !== "create")
-        || (previous !== null && intent.mutation !== "update")
-        || (next === null && intent.changes?.remove !== true)
-        || (next !== null && intent.changes?.position !== next.position)) {
+      if (intent) {
+        if ((previous === null && intent.mutation !== "create")
+          || (previous !== null && intent.mutation !== "update")
+          || (next === null && intent.changes?.remove !== true)
+          || (next !== null && intent.changes?.position !== next.position)) {
+          throw new OrganizationViewAccessError(`View ${id} changed outside the exact authorized command`, "resource_denied");
+        }
+        continue;
+      }
+      if (!orderIntent || previous === null || next === null
+        || next.revision !== previous.revision + 1
+        || canonicalOrganizationJson({ ...previous, position: next.position, revision: next.revision, updatedAt: next.updatedAt }) !== canonicalOrganizationJson(next)) {
         throw new OrganizationViewAccessError(`View ${id} changed outside the exact authorized command`, "resource_denied");
       }
     }
     sqlite.query("INSERT INTO organization_change_sets (workspace_id,id,idempotency_key,command_digest,authority_trace,resource_family,operation,command_json,reverts_change_id,workspace_revision_before,workspace_revision_after,created_at) VALUES (?,?,?,?,?,'view','apply',?,NULL,?,?,?)")
       .run(input.workspaceId, input.authorization.command.id, key, input.authorization.executionContext.command.digest, JSON.stringify(input.authorization.trace), JSON.stringify({ request: input.boundRequest, response: response ?? null }), revisionBefore, revisionBefore + 1, input.now.getTime());
     const insertAction = sqlite.query("INSERT INTO organization_change_actions (workspace_id,change_id,position,action_kind,resource_family,resource_id,before_json,after_json) VALUES (?,?,?,?,?,?,?,?)");
-    changedIds.forEach((id, position) => {
+    const directChangedIds = changedIds.filter((id) => intents.has(`view:${id}`));
+    directChangedIds.forEach((id, position) => {
       const previous = before.get(id) ?? null; const next = after.get(id) ?? null;
       insertAction.run(input.workspaceId, input.authorization.command.id, position, previous === null ? "view_create" : next === null ? "view_remove" : "view_update", "view", `view:${id}`, previous === null ? null : JSON.stringify(previous), next === null ? null : JSON.stringify(next));
     });
+    if (orderIntent) {
+      const beforeOrder = { orderDigest: digestOrganizationViewOrder(beforeOrderIds), revision: revisionBefore, viewCount: beforeOrderIds.length };
+      const afterOrderIds = [...after.values()].map((view) => view.id);
+      const afterOrder = { orderDigest: digestOrganizationViewOrder(afterOrderIds), revision: revisionBefore + 1, viewCount: afterOrderIds.length };
+      insertAction.run(input.workspaceId, input.authorization.command.id, directChangedIds.length, "view_order_update", "view", orderResourceId, JSON.stringify(beforeOrder), JSON.stringify(afterOrder));
+    }
     const advanced = sqlite.query("UPDATE organization_workspace_states SET revision=revision+1,updated_at=? WHERE workspace_id=? AND revision=?").run(input.now.getTime(), input.workspaceId, revisionBefore);
     if (advanced.changes !== 1) throw new OrganizationViewConflictError("The Workspace changed before this View command could commit");
     return response;

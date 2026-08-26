@@ -60,6 +60,7 @@ export type OrganizationViewMutationAuthorization = {
 
 export type OrganizationViewMutationPlan = {
   orderedViewIds: string[];
+  expectedViews: Array<{ id: string; position: number; revision: number }>;
 };
 
 export type OrganizationViewsRepository = {
@@ -85,12 +86,18 @@ function authorizedAccountIds(scope: OrganizationViewScope, requested: readonly 
 function viewResourceId(viewId: string) { return `view:${viewId}`; }
 function digest(value: unknown) { return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`; }
 
-function positionChangedViews(current: readonly OrganizationView[], orderedViewIds: readonly string[]) {
-  return current.filter((view) => orderedViewIds.indexOf(view.id) !== view.position);
+export function organizationViewOrderResourceId(workspaceId: string) { return `view_order:${workspaceId}`; }
+export function digestOrganizationViewOrder(orderedViewIds: readonly string[]) { return digest(orderedViewIds); }
+
+function mutationPlan(current: readonly OrganizationView[], orderedViewIds: readonly string[]): OrganizationViewMutationPlan {
+  return {
+    orderedViewIds: [...orderedViewIds],
+    expectedViews: current.map((view) => ({ id: view.id, position: view.position, revision: view.revision })),
+  };
 }
 
-function expectedViewRevisions(views: readonly OrganizationView[]) {
-  return Object.fromEntries(views.map((view) => [viewResourceId(view.id), view.revision]));
+function orderChanged(current: readonly OrganizationView[], orderedViewIds: readonly string[]) {
+  return current.length !== orderedViewIds.length || current.some((view, position) => view.id !== orderedViewIds[position]);
 }
 
 function viewIntent(input: { viewId: string; mutation: "create" | "update"; requestDigest: string; position?: number; remove?: boolean }): OrganizationCommand["intents"][number] {
@@ -102,8 +109,17 @@ function viewIntent(input: { viewId: string; mutation: "create" | "update"; requ
   };
 }
 
-function assertBoundedViewCommand(intents: OrganizationCommand["intents"]) {
-  if (intents.length > 100) throw new OrganizationViewValidationError("A single View command can revise at most 100 Views");
+function orderingIntent(workspaceId: string, orderedViewIds: readonly string[], requestDigest: string): OrganizationCommand["intents"][number] {
+  return {
+    kind: "mutate_view",
+    resourceId: organizationViewOrderResourceId(workspaceId),
+    mutation: "update",
+    changes: {
+      clientRequestDigest: requestDigest,
+      orderDigest: digestOrganizationViewOrder(orderedViewIds),
+      viewCount: orderedViewIds.length,
+    },
+  };
 }
 
 function firstPartyViewsCapability(scope: OrganizationViewScope): OrganizationCapabilitySnapshot {
@@ -171,15 +187,21 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       const current = repository.list(input.scope.workspaceId);
       const orderedViewIds = current.map((view) => view.id);
       orderedViewIds.splice(Math.min(request.position, orderedViewIds.length), 0, viewId);
-      const shifted = positionChangedViews(current, orderedViewIds);
       const requestDigest = digest(boundRequest);
       const intents = [
         viewIntent({ viewId, mutation: "create", requestDigest, position: orderedViewIds.indexOf(viewId) }),
-        ...shifted.map((view) => viewIntent({ viewId: view.id, mutation: "update", requestDigest, position: orderedViewIds.indexOf(view.id) })),
+        orderingIntent(input.scope.workspaceId, orderedViewIds, requestDigest),
       ];
-      assertBoundedViewCommand(intents);
       const command: OrganizationCommand = { id: newChangeId(), intents };
-      return repository.create({ workspaceId: input.scope.workspaceId, viewId, request, boundRequest, plan: { orderedViewIds }, authorization: authorizeBound(input.scope, request, command, expectedViewRevisions(shifted)), now: now() });
+      return repository.create({
+        workspaceId: input.scope.workspaceId,
+        viewId,
+        request,
+        boundRequest,
+        plan: mutationPlan(current, orderedViewIds),
+        authorization: authorizeBound(input.scope, request, command, { [organizationViewOrderResourceId(input.scope.workspaceId)]: request.expectedWorkspaceRevision }),
+        now: now(),
+      });
     },
     update(input: { scope: OrganizationViewScope; viewId: string; request: unknown }) {
       const request = organizationViewUpdateRequestSchema.parse(input.request);
@@ -195,15 +217,24 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         orderedViewIds.splice(orderedViewIds.indexOf(input.viewId), 1);
         orderedViewIds.splice(Math.min(request.patch.position, orderedViewIds.length), 0, input.viewId);
       }
-      const shifted = positionChangedViews(current, orderedViewIds).filter((view) => view.id !== input.viewId);
       const requestDigest = digest(boundRequest);
       const intents = [
         viewIntent({ viewId: input.viewId, mutation: "update", requestDigest, position: orderedViewIds.indexOf(input.viewId) }),
-        ...shifted.map((view) => viewIntent({ viewId: view.id, mutation: "update", requestDigest, position: orderedViewIds.indexOf(view.id) })),
+        ...(orderChanged(current, orderedViewIds) ? [orderingIntent(input.scope.workspaceId, orderedViewIds, requestDigest)] : []),
       ];
-      assertBoundedViewCommand(intents);
       const command: OrganizationCommand = { id: newChangeId(), intents };
-      return repository.update({ workspaceId: input.scope.workspaceId, viewId: input.viewId, request, boundRequest, plan: { orderedViewIds }, authorization: authorizeBound(input.scope, request, command, { [viewResourceId(input.viewId)]: request.expectedRevision, ...expectedViewRevisions(shifted) }), now: now() });
+      return repository.update({
+        workspaceId: input.scope.workspaceId,
+        viewId: input.viewId,
+        request,
+        boundRequest,
+        plan: mutationPlan(current, orderedViewIds),
+        authorization: authorizeBound(input.scope, request, command, {
+          [viewResourceId(input.viewId)]: request.expectedRevision,
+          ...(orderChanged(current, orderedViewIds) ? { [organizationViewOrderResourceId(input.scope.workspaceId)]: request.expectedWorkspaceRevision } : {}),
+        }),
+        now: now(),
+      });
     },
     reorder(input: { scope: OrganizationViewScope; request: unknown }) {
       const request = organizationViewReorderRequestSchema.parse(input.request);
@@ -220,15 +251,17 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       const untouched = current.filter((view) => !requestedIds.has(view.id)).map((view) => view.id);
       for (let index = 0; index < ordered.length; index += 1) if (!ordered[index]) ordered[index] = untouched.shift();
       const orderedViewIds = ordered as string[];
-      const shifted = positionChangedViews(current, orderedViewIds);
-      const authorized = [...request.items.map((item) => byId.get(item.id)!), ...shifted.filter((view) => !requestedIds.has(view.id))];
-      const requestedRevisions = Object.fromEntries(request.items.map((item) => [viewResourceId(item.id), item.expectedRevision]));
       const requestDigest = digest(boundRequest);
-      const intents = authorized.map((view) => viewIntent({ viewId: view.id, mutation: "update", requestDigest, position: orderedViewIds.indexOf(view.id) }));
-      assertBoundedViewCommand(intents);
+      const intents = [orderingIntent(input.scope.workspaceId, orderedViewIds, requestDigest)];
       const command: OrganizationCommand = { id: newChangeId(), intents };
-      const expected = { ...expectedViewRevisions(authorized), ...requestedRevisions };
-      const items = repository.reorder({ workspaceId: input.scope.workspaceId, request, boundRequest, plan: { orderedViewIds }, authorization: authorizeBound(input.scope, request, command, expected), now: now() });
+      const items = repository.reorder({
+        workspaceId: input.scope.workspaceId,
+        request,
+        boundRequest,
+        plan: mutationPlan(current, orderedViewIds),
+        authorization: authorizeBound(input.scope, request, command, { [organizationViewOrderResourceId(input.scope.workspaceId)]: request.expectedWorkspaceRevision }),
+        now: now(),
+      });
       return { workspaceId: input.scope.workspaceId, workspaceRevision: repository.getWorkspaceRevision(input.scope.workspaceId), items };
     },
     remove(input: { scope: OrganizationViewScope; viewId: string; request: unknown }) {
@@ -240,15 +273,24 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       const target = current.find((view) => view.id === input.viewId);
       if (!target) throw new OrganizationViewNotFoundError();
       const orderedViewIds = current.filter((view) => view.id !== input.viewId).map((view) => view.id);
-      const shifted = positionChangedViews(current.filter((view) => view.id !== input.viewId), orderedViewIds);
       const requestDigest = digest(boundRequest);
       const intents = [
         viewIntent({ viewId: input.viewId, mutation: "update", requestDigest, remove: true }),
-        ...shifted.map((view) => viewIntent({ viewId: view.id, mutation: "update", requestDigest, position: orderedViewIds.indexOf(view.id) })),
+        orderingIntent(input.scope.workspaceId, orderedViewIds, requestDigest),
       ];
-      assertBoundedViewCommand(intents);
       const command: OrganizationCommand = { id: newChangeId(), intents };
-      repository.remove({ workspaceId: input.scope.workspaceId, viewId: input.viewId, request, boundRequest, plan: { orderedViewIds }, authorization: authorizeBound(input.scope, request, command, { [viewResourceId(input.viewId)]: request.expectedRevision, ...expectedViewRevisions(shifted) }), now: now() });
+      repository.remove({
+        workspaceId: input.scope.workspaceId,
+        viewId: input.viewId,
+        request,
+        boundRequest,
+        plan: mutationPlan(current, orderedViewIds),
+        authorization: authorizeBound(input.scope, request, command, {
+          [viewResourceId(input.viewId)]: request.expectedRevision,
+          [organizationViewOrderResourceId(input.scope.workspaceId)]: request.expectedWorkspaceRevision,
+        }),
+        now: now(),
+      });
     },
     results(input: { scope: OrganizationViewScope; viewId: string; query: unknown }) {
       const view = repository.get(input.scope.workspaceId, input.viewId);

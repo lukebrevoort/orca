@@ -90,6 +90,108 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
 }
 
 describe("BRE-313 independent View lifecycle verification", () => {
+  test("keeps unlimited View ordering behind one bounded aggregate authority resource", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const seeded = createDatabaseClient(path);
+    const insert = seeded.sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
+    const timestamp = Date.parse("2026-08-25T16:00:00.000Z");
+    seeded.sqlite.transaction(() => {
+      for (let position = 0; position < 101; position += 1) {
+        insert.run("owner", `view_existing_${position}`, `Existing ${position}`, "", "#70867d", position, JSON.stringify({ revision: 1 }), 1, timestamp, timestamp);
+      }
+    })();
+    seeded.sqlite.close();
+
+    const snapshot = () => {
+      const client = createDatabaseClient(path);
+      const views = client.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY position,id").all() as Array<{ id: string; position: number; revision: number }>;
+      const workspaceRevision = (client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision;
+      const changes = (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count;
+      const actions = (client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count;
+      client.sqlite.close();
+      return { views, workspaceRevision, changes, actions };
+    };
+    const assertCanonical = () => {
+      const current = snapshot();
+      assert.deepEqual(current.views.map((view) => view.position), current.views.map((_, position) => position));
+      assert.equal(new Set(current.views.map((view) => view.position)).size, current.views.length);
+      return current;
+    };
+
+    const createRequest = { idempotencyKey: "unlimited-create", expectedWorkspaceRevision: 1, name: "Created first", position: 0, definition: { revision: 1 } };
+    const createdResponse = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(createRequest) });
+    assert.equal(createdResponse.status, 201, await createdResponse.clone().text());
+    const created = await createdResponse.json() as OrganizationView;
+    assert.equal(assertCanonical().views[0]?.id, created.id);
+
+    const beforeReplay = snapshot();
+    const replay = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify(createRequest) });
+    assert.equal(replay.status, 201);
+    assert.deepEqual(await replay.json(), created);
+    assert.deepEqual(snapshot(), beforeReplay);
+    const conflict = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ ...createRequest, name: "Conflicting reuse" }) });
+    assert.equal(conflict.status, 409);
+    assert.deepEqual(snapshot(), beforeReplay);
+    const staleWorkspace = await app.request("/v1/organization/views", { method: "POST", headers, body: JSON.stringify({ ...createRequest, idempotencyKey: "unlimited-stale-workspace", name: "Stale Workspace" }) });
+    assert.equal(staleWorkspace.status, 409);
+    assert.deepEqual(snapshot(), beforeReplay);
+
+    const movedResponse = await app.request(`/v1/organization/views/${created.id}`, { method: "PATCH", headers, body: JSON.stringify({
+      idempotencyKey: "unlimited-move", expectedWorkspaceRevision: 2, expectedRevision: created.revision, patch: { position: 101 },
+    }) });
+    assert.equal(movedResponse.status, 200, await movedResponse.clone().text());
+    assert.equal(assertCanonical().views.at(-1)?.id, created.id);
+
+    let current = snapshot();
+    const first = current.views[0]!;
+    const penultimate = current.views.at(-2)!;
+    const reorderResponse = await app.request("/v1/organization/views/reorder", { method: "POST", headers, body: JSON.stringify({
+      idempotencyKey: "unlimited-reorder", expectedWorkspaceRevision: 3, items: [
+        { id: first.id, expectedRevision: first.revision, position: 100 },
+        { id: penultimate.id, expectedRevision: penultimate.revision, position: 0 },
+      ],
+    }) });
+    assert.equal(reorderResponse.status, 200, await reorderResponse.clone().text());
+    current = assertCanonical();
+    assert.equal(current.views[0]?.id, penultimate.id);
+    assert.equal(current.views[100]?.id, first.id);
+
+    const removeTarget = current.views[0]!;
+    const removeResponse = await app.request(`/v1/organization/views/${removeTarget.id}?expectedRevision=${removeTarget.revision}&expectedWorkspaceRevision=4&idempotencyKey=unlimited-remove`, { method: "DELETE", headers });
+    assert.equal(removeResponse.status, 204, await removeResponse.clone().text());
+    current = assertCanonical();
+    assert.equal(current.views.length, 101);
+
+    const directTarget = current.views.find((view) => view.id === created.id)!;
+    const directRace = createDatabaseClient(path);
+    directRace.sqlite.query("UPDATE organization_views SET revision=revision+1 WHERE workspace_id='owner' AND id=?").run(directTarget.id);
+    directRace.sqlite.close();
+    const beforeDirectConflict = snapshot();
+    const staleDirect = await app.request(`/v1/organization/views/${directTarget.id}`, { method: "PATCH", headers, body: JSON.stringify({
+      idempotencyKey: "unlimited-stale-direct", expectedWorkspaceRevision: 5, expectedRevision: directTarget.revision, patch: { name: "Must not persist" },
+    }) });
+    assert.equal(staleDirect.status, 409);
+    assert.deepEqual(snapshot(), beforeDirectConflict);
+
+    const audit = createDatabaseClient(path);
+    const changes = audit.sqlite.query("SELECT id,idempotency_key,authority_trace FROM organization_change_sets WHERE workspace_id='owner' ORDER BY workspace_revision_before").all() as Array<{ id: string; idempotency_key: string; authority_trace: string }>;
+    assert.deepEqual(changes.map((change) => change.idempotency_key), ["unlimited-create", "unlimited-move", "unlimited-reorder", "unlimited-remove"]);
+    for (const change of changes) {
+      const trace = JSON.parse(change.authority_trace) as { requestedResourceIds: string[]; expectedRevisions: { resources: Record<string, number> } };
+      const actions = audit.sqlite.query("SELECT action_kind,resource_id,before_json,after_json FROM organization_change_actions WHERE workspace_id='owner' AND change_id=? ORDER BY position").all(change.id) as Array<{ action_kind: string; resource_id: string; before_json: string | null; after_json: string | null }>;
+      assert.ok(trace.requestedResourceIds.length <= 100, change.idempotency_key);
+      assert.ok(Object.keys(trace.expectedRevisions.resources).length <= 100, change.idempotency_key);
+      assert.ok(actions.length <= 2, `${change.idempotency_key} serialized ${actions.length} actions`);
+      assert.ok(trace.requestedResourceIds.includes("view_order:owner"), change.idempotency_key);
+      assert.ok(actions.some((action) => action.resource_id === "view_order:owner" && action.action_kind === "view_order_update"), change.idempotency_key);
+      const aggregate = actions.find((action) => action.resource_id === "view_order:owner")!;
+      assert.deepEqual(Object.keys(JSON.parse(aggregate.before_json!)).sort(), ["orderDigest", "revision", "viewCount"]);
+      assert.deepEqual(Object.keys(JSON.parse(aggregate.after_json!)).sort(), ["orderDigest", "revision", "viewCount"]);
+    }
+    assert.deepEqual(changes.map((change) => (JSON.parse(change.authority_trace) as { requestedResourceIds: string[] }).requestedResourceIds.length), [2, 2, 1, 2]);
+    audit.sqlite.close();
+  });
+
   test("edits definitions, reorders atomically, and removes with optimistic revisions", { timeout: 30_000 }, async () => {
     const { app, headers, path } = await setup();
     const first = await createView(app, headers, { name: "First", position: 0, definition: { revision: 1 } });
@@ -181,15 +283,17 @@ describe("BRE-313 independent View lifecycle verification", () => {
     audit.sqlite.close();
   });
 
-  test("CAS-protects every collateral View before lifecycle canonicalization with zero command writes", { timeout: 30_000 }, async () => {
-    for (const operation of ["create", "update", "reorder", "remove"] as const) {
+  test("CAS-protects every collateral View revision and position before lifecycle canonicalization with zero command writes", { timeout: 30_000 }, async () => {
+    for (const race of ["revision", "position"] as const) for (const operation of ["create", "update", "reorder", "remove"] as const) {
       const { app, headers, path } = await setup();
       const first = await createView(app, headers, { name: `${operation} first`, position: 0, definition: { revision: 1 } });
       const second = await createView(app, headers, { name: `${operation} second`, position: 1, definition: { revision: 1 } });
       const third = await createView(app, headers, { name: `${operation} third`, position: 2, definition: { revision: 1 } });
       const client = createDatabaseClient(path);
       const base = createSqliteOrganizationViewsRepository(client.sqlite);
-      const injectCollateralRace = () => client.sqlite.query("UPDATE organization_views SET revision=revision+1 WHERE workspace_id='owner' AND id=?").run(second.id);
+      const injectCollateralRace = () => race === "revision"
+        ? client.sqlite.query("UPDATE organization_views SET revision=revision+1 WHERE workspace_id='owner' AND id=?").run(second.id)
+        : client.sqlite.query("UPDATE organization_views SET position=99 WHERE workspace_id='owner' AND id=?").run(second.id);
       const repository = {
         ...base,
         create(input: Parameters<typeof base.create>[0]) { if (operation === "create") injectCollateralRace(); return base.create(input); },
@@ -215,10 +319,12 @@ describe("BRE-313 independent View lifecycle verification", () => {
       }, /revision|stale|changed/i, operation);
 
       const after = client.sqlite.query("SELECT id,position,revision FROM organization_views WHERE workspace_id='owner' ORDER BY position").all() as Array<{ id: string; position: number; revision: number }>;
-      assert.deepEqual(after, before.map((view) => view.id === second.id ? { ...view, revision: view.revision + 1 } : view), operation);
-      assert.equal((client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision, beforeWorkspaceRevision, operation);
-      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count, beforeChanges, operation);
-      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count, beforeActions, operation);
+      const expectedAfter = before.map((view) => view.id !== second.id ? view : race === "revision" ? { ...view, revision: view.revision + 1 } : { ...view, position: 99 })
+        .sort((left, right) => left.position - right.position);
+      assert.deepEqual(after, expectedAfter, `${operation}:${race}`);
+      assert.equal((client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id='owner'").get() as { revision: number }).revision, beforeWorkspaceRevision, `${operation}:${race}`);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count, beforeChanges, `${operation}:${race}`);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count, beforeActions, `${operation}:${race}`);
       client.sqlite.close();
     }
   });
@@ -271,12 +377,14 @@ describe("BRE-313 independent View lifecycle verification", () => {
 
   test("fails closed with zero writes when an authorized View envelope is tampered before commit", { timeout: 30_000 }, async () => {
     const { path } = await setup();
-    const cases: Array<[string, (authorization: any) => void]> = [
-      ["actor", (authorization) => { authorization.executionContext.actor.id = "foreign"; }],
-      ["workspace", (authorization) => { authorization.executionContext.workspaceId = "foreign"; }],
-      ["idempotency", (authorization) => { authorization.executionContext.idempotencyKey = "substituted"; }],
-      ["revision", (authorization) => { authorization.executionContext.expectedRevisions.workspace = 2; }],
-      ["command", (authorization) => { authorization.command.intents[0].changes = { substituted: true }; }],
+    const cases: Array<[string, (input: any) => void]> = [
+      ["actor", (input) => { input.authorization.executionContext.actor.id = "foreign"; }],
+      ["workspace", (input) => { input.authorization.executionContext.workspaceId = "foreign"; }],
+      ["idempotency", (input) => { input.authorization.executionContext.idempotencyKey = "substituted"; }],
+      ["revision", (input) => { input.authorization.executionContext.expectedRevisions.workspace = 2; }],
+      ["command", (input) => { input.authorization.command.intents[0].changes = { substituted: true }; }],
+      ["target-order", (input) => { input.plan.orderedViewIds.unshift("view_forged"); }],
+      ["ordering-snapshot", (input) => { input.plan.expectedViews.push({ id: "view_forged", position: 0, revision: 1 }); }],
     ];
     for (const [name, tamper] of cases) {
       const client = createDatabaseClient(path);
@@ -290,16 +398,16 @@ describe("BRE-313 independent View lifecycle verification", () => {
       const repository = {
         ...base,
         create(input: Parameters<typeof base.create>[0]) {
-          const authorization = structuredClone(input.authorization);
-          tamper(authorization);
-          return base.create({ ...input, authorization });
+          const candidate = structuredClone(input);
+          tamper(candidate);
+          return base.create(candidate);
         },
       };
       const organization = createOrganizationViews(repository, { newViewId: () => `view_tamper_${name}`, newChangeId: () => `change_tamper_${name}` });
       assert.throws(() => organization.create({
         scope: { workspaceId: "owner", accountIds: ["account_a", "account_b"], actor: { id: "owner", type: "human" } },
         request: { idempotencyKey: `tamper-${name}`, expectedWorkspaceRevision: 1, name: `Tamper ${name}`, definition: { revision: 1 } },
-      }), /modified|validation|scope|Actor|Workspace|command|authority/i, name);
+      }), /modified|validation|scope|Actor|Workspace|command|authority|order|snapshot/i, name);
       assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_views WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.views, name);
       assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.changes, name);
       assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE workspace_id='owner'").get() as { count: number }).count, beforeCounts.actions, name);
