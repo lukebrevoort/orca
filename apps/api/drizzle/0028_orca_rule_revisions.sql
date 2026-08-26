@@ -46,6 +46,11 @@ CREATE TRIGGER `organization_rule_revisions_no_update` BEFORE UPDATE ON `organiz
 	SELECT RAISE(ABORT, 'Rule Revisions are immutable');
 END;
 --> statement-breakpoint
-CREATE TRIGGER `organization_rule_revisions_no_delete` BEFORE DELETE ON `organization_rule_revisions` BEGIN
+CREATE TRIGGER `organization_rule_revisions_no_delete` BEFORE DELETE ON `organization_rule_revisions`
+WHEN EXISTS (
+	SELECT 1 FROM `organization_rules`
+	WHERE `workspace_id` = OLD.`workspace_id` AND `id` = OLD.`rule_id`
+)
+BEGIN
 	SELECT RAISE(ABORT, 'Rule Revisions are immutable');
 END;

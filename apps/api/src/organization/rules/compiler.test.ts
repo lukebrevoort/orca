@@ -139,6 +139,95 @@ because "Known senders have an explicit fallback"`,
     ]));
   });
 
+  test("accepts and rejects the full authoritative Facet scalar matrix", () => {
+    const typedWorkspace = {
+      ...workspace,
+      facets: [
+        { id: "facet-text", name: "Text", valueType: { kind: "text", maxLength: 4 }, cardinality: "single", optional: true },
+        { id: "facet-number", name: "Number", valueType: { kind: "number", minimum: 1, maximum: 5, integer: false }, cardinality: "single", optional: true },
+        { id: "facet-integer", name: "Integer", valueType: { kind: "number", minimum: 1, maximum: 5, integer: true }, cardinality: "single", optional: true },
+        { id: "facet-boolean", name: "Boolean", valueType: { kind: "boolean" }, cardinality: "single", optional: false },
+        { id: "facet-datetime", name: "DateTime", valueType: { kind: "datetime" }, cardinality: "single", optional: true },
+        { id: "facet-duration", name: "Duration", valueType: { kind: "duration" }, cardinality: "single", optional: true },
+        { id: "facet-email-strict", name: "Strict email", valueType: { kind: "email", allowDisplayName: false }, cardinality: "single", optional: true },
+        { id: "facet-email-display", name: "Display email", valueType: { kind: "email", allowDisplayName: true }, cardinality: "single", optional: true },
+        { id: "facet-domain", name: "Domain", valueType: { kind: "domain" }, cardinality: "single", optional: true },
+        { id: "facet-enum", name: "Status", valueType: { kind: "enum", options: [{ id: "status-open", label: "Open", position: 0, retiredAt: null }] }, cardinality: "single", optional: true },
+      ],
+    } as OrcaWorkspaceSnapshot;
+    const compile = (predicate: string, action = 'action route lane "Focus"') => compileOrcaRule({
+      workspace: typedWorkspace,
+      source: `orca 1\nrule "Facet matrix"\nevent message.received\nwhen ${predicate}\n${action}\nbecause "Compiled IR must use the Facet contract"`,
+    });
+
+    const valid: Array<[name: string, literal: string, compiled: string | number | boolean]> = [
+      ["Text", '"orca"', "orca"],
+      ["Number", "3.5", 3.5],
+      ["Integer", "3", 3],
+      ["Boolean", "true", true],
+      ["DateTime", '"2026-08-26T12:00:00Z"', "2026-08-26T12:00:00Z"],
+      ["DateTime", '"2026-08-26T12:00:00+05:30"', "2026-08-26T12:00:00+05:30"],
+      ["Duration", '"P1Y"', "P1Y"],
+      ["Duration", '"P2M3W4DT5H6M7.5S"', "P2M3W4DT5H6M7.5S"],
+      ["Strict email", '"ada@example.com"', "ada@example.com"],
+      ["Display email", '"Ada Lovelace <ada@example.com>"', "Ada Lovelace <ada@example.com>"],
+      ["Domain", '"sub.example.com"', "sub.example.com"],
+      ["Status", '"Open"', "status-open"],
+    ];
+    const failures = {
+      rejectedPredicates: [] as string[],
+      rejectedActions: [] as string[],
+      acceptedInvalidPredicates: [] as string[],
+      acceptedInvalidActions: [] as string[],
+      operatorMismatches: [] as string[],
+    };
+    for (const [name, literal, compiled] of valid) {
+      const predicate = compile(`facet "${name}" equals ${literal}`);
+      if (!predicate.ok) failures.rejectedPredicates.push(`${name} ${literal}`);
+      if (predicate.ok) expect(predicate.revision.predicates[0]?.expression).toMatchObject({ value: compiled });
+      const action = compile(`facet "${name}" equals ${literal}`, `action set facet "${name}" = ${literal}`);
+      if (!action.ok) failures.rejectedActions.push(`${name} ${literal}`);
+      if (action.ok) expect(action.revision.actions[0]).toMatchObject({ facetId: typedWorkspace.facets.find((facet) => facet.name === name)!.id, value: compiled });
+    }
+
+    const invalid: Array<[name: string, literal: string]> = [
+      ["Text", '"orcas"'],
+      ["Number", "6"],
+      ["Integer", "3.5"],
+      ["Boolean", '"true"'],
+      ["DateTime", '"2026-08-26T12:00:00"'],
+      ["DateTime", '"tomorrow"'],
+      ["Duration", '"1 year"'],
+      ["Strict email", '"Ada Lovelace <ada@example.com>"'],
+      ["Display email", '"Ada Lovelace"'],
+      ["Domain", '"Example.COM"'],
+      ["Domain", '"https://example.com/path"'],
+      ["Status", '"status-open"'],
+    ];
+    for (const [name, literal] of invalid) {
+      if (compile(`facet "${name}" equals ${literal}`).ok) failures.acceptedInvalidPredicates.push(`${name} ${literal}`);
+      if (compile('facet "Text" equals "orca"', `action set facet "${name}" = ${literal}`).ok) failures.acceptedInvalidActions.push(`${name} ${literal}`);
+    }
+
+    for (const [probe, expected] of [
+      ['facet "Text" contains "orc"', true],
+      ['facet "Strict email" contains "ada@example.com"', true],
+      ['facet "Domain" contains "example.com"', true],
+      ['facet "Boolean" contains true', false],
+      ['missing facet "Boolean"', false],
+      ['missing facet "Text"', true],
+    ] as const) {
+      if (compile(probe).ok !== expected) failures.operatorMismatches.push(probe);
+    }
+    expect(failures).toEqual({
+      rejectedPredicates: [],
+      rejectedActions: [],
+      acceptedInvalidPredicates: [],
+      acceptedInvalidActions: [],
+      operatorMismatches: [],
+    });
+  });
+
   test("stores stable Facet and enum IDs across schema renames", () => {
     const first = compileOrcaRule({
       workspace,

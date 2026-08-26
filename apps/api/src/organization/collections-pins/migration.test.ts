@@ -85,7 +85,13 @@ describe("BRE-309 clean M8 migration", () => {
       const journal = JSON.parse(readFileSync(resolve(import.meta.dir, "../../../drizzle/meta/_journal.json"), "utf8")) as {
         entries: Array<{ idx: number; tag: string }>;
       };
-      assert.deepEqual(journal.entries.slice(-5).map(({ idx, tag }) => ({ idx, tag })), [
+      const journalWithLaterMigration = [...journal.entries, { idx: 29, tag: "0029_future_migration" }];
+      const historicalChain = [24, 25, 26, 27, 28].map((idx) => {
+        const entry = journalWithLaterMigration.find((candidate) => candidate.idx === idx);
+        assert.ok(entry, `missing migration journal entry ${idx}`);
+        return { idx: entry.idx, tag: entry.tag };
+      });
+      assert.deepEqual(historicalChain, [
         { idx: 24, tag: "0024_organization_collections_pins" },
         { idx: 25, tag: "0025_organization_context_relationships" },
         { idx: 26, tag: "0026_organization_lanes" },

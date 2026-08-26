@@ -17,8 +17,24 @@ describe("BRE-314 Rule Revision migration", () => {
     try {
       migrate(client.db, { migrationsFolder: migrations });
       const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-      assert.equal(journal.entries.at(-1)?.idx, 28);
-      assert.deepEqual(journal.entries.at(-1), {
+      const journalWithLaterMigration = [...journal.entries, {
+        idx: 29,
+        version: "7",
+        when: 1787702400002,
+        tag: "0029_future_migration",
+        breakpoints: true,
+      }];
+      const stackedChain = [26, 27, 28].map((idx) => {
+        const entry = journalWithLaterMigration.find((candidate) => candidate.idx === idx);
+        assert.ok(entry, `missing migration journal entry ${idx}`);
+        return { idx: entry.idx, tag: entry.tag };
+      });
+      assert.deepEqual(stackedChain, [
+        { idx: 26, tag: "0026_organization_lanes" },
+        { idx: 27, tag: "0027_organization_live_views" },
+        { idx: 28, tag: "0028_orca_rule_revisions" },
+      ]);
+      assert.deepEqual(journalWithLaterMigration.find((entry) => entry.idx === 28), {
         idx: 28,
         version: "7",
         when: 1787702400001,
@@ -41,6 +57,22 @@ describe("BRE-314 Rule Revision migration", () => {
       ) VALUES (
         'workspace-1','revision-2','rule-1',1,1,1,'orca 1','sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','{}','[]','low','workspace-1','human'
       )`).run());
+
+      client.sqlite.query(`INSERT INTO organization_change_sets (
+        workspace_id,id,idempotency_key,command_digest,authority_trace,resource_family,operation,command_json,workspace_revision_before,workspace_revision_after
+      ) VALUES (
+        'workspace-1','change-rule-1','rule-create-1','sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc','human:test','rule','apply','{}',1,2
+      )`).run();
+      client.sqlite.query(`INSERT INTO organization_change_actions (
+        workspace_id,change_id,position,action_kind,resource_family,resource_id,before_json,after_json
+      ) VALUES ('workspace-1','change-rule-1',0,'create_rule','rule','rule-1',NULL,'{}')`).run();
+
+      client.sqlite.query("DELETE FROM users WHERE id = 'workspace-1'").run();
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_rules").get() as { count: number }).count, 0);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_rule_revisions").get() as { count: number }).count, 0);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_sets WHERE resource_family = 'rule'").get() as { count: number }).count, 0);
+      assert.equal((client.sqlite.query("SELECT COUNT(*) AS count FROM organization_change_actions WHERE resource_family = 'rule'").get() as { count: number }).count, 0);
+      assert.deepEqual(client.sqlite.query("PRAGMA foreign_key_check").all(), []);
     } finally {
       client.sqlite.close();
       rmSync(directory, { recursive: true, force: true });

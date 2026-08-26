@@ -88,7 +88,8 @@ function isValidDomain(value: string): boolean {
   return value.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
 }
 
-function scalarValueIssue(type: FacetValueType, value: FacetScalarValue): string | null {
+/** Authoritative scalar contract for every Facet value producer and consumer. */
+export function validateFacetScalarValue(type: FacetValueType, value: FacetScalarValue): string | null {
   switch (type.kind) {
     case "text":
       return typeof value === "string" && value.length <= type.maxLength ? null : `must be text of at most ${type.maxLength} characters`;
@@ -140,7 +141,7 @@ function validateFacetValue(
     issues.push({ code: "cardinality_exceeded", path, message: `Facet ${definition.name} accepts at most ${definition.cardinality.maxItems} values` });
   }
   for (const scalar of values) {
-    const message = scalarValueIssue(definition.valueType, scalar);
+    const message = validateFacetScalarValue(definition.valueType, scalar);
     if (message) issues.push({ code: "invalid_value", path, message: `Facet ${definition.name} ${message}` });
   }
   return issues.length === initialIssueCount;
@@ -168,7 +169,7 @@ export function validateFacetFilters(
       });
       continue;
     }
-    const message = scalarValueIssue(definition.valueType, filter.value);
+    const message = validateFacetScalarValue(definition.valueType, filter.value);
     if (message) issues.push({ code: "invalid_value", path: `facetFilters[${index}].value`, message: `Facet ${definition.name} ${message}` });
   }
   if (issues.length > 0) throw new FacetWorkflowValidationError(issues);

@@ -1,5 +1,7 @@
 import { orcaCompiledRuleRevisionSchema, orcaCompilerLimits, type FacetValueType } from "@orca/shared";
 
+import { validateFacetScalarValue } from "../facet-workflow.ts";
+
 export { orcaCompilerLimits };
 
 export type OrcaSourcePosition = { offset: number; line: number; column: number };
@@ -179,26 +181,25 @@ function expressionNodeCount(expression: string): number {
   return /^not\((.*)\)$/.test(expression) ? 2 : 1;
 }
 
-function validateLiteral(valueType: WorkspaceValueType | { kind: ScalarKind }, literal: CompiledLiteral): CompiledLiteral | undefined {
-  const type = valueType.kind;
-  if (type === "number") {
-    if (typeof literal !== "number" || !Number.isFinite(literal)) return undefined;
-    if ("integer" in valueType && valueType.integer && !Number.isInteger(literal)) return undefined;
-    if ("minimum" in valueType && valueType.minimum !== undefined && literal < valueType.minimum) return undefined;
-    if ("maximum" in valueType && valueType.maximum !== undefined && literal > valueType.maximum) return undefined;
-    return literal;
-  }
-  if (type === "boolean") return typeof literal === "boolean" ? literal : undefined;
-  if (typeof literal !== "string") return undefined;
-  if (type === "text" && "maxLength" in valueType && literal.length > valueType.maxLength) return undefined;
-  if (type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(literal)) return undefined;
-  if (type === "domain" && !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(literal)) return undefined;
-  if (type === "datetime" && Number.isNaN(Date.parse(literal))) return undefined;
-  if (type === "duration" && !/^P(?=\d|T\d)(?:\d+D)?(?:T(?:\d+H)?(?:\d+M)?)?$/.test(literal)) return undefined;
-  if (type === "enum") return "options" in valueType
+function canonicalFacetLiteral(valueType: WorkspaceValueType, literal: CompiledLiteral): CompiledLiteral | undefined {
+  const value = valueType.kind === "enum" && typeof literal === "string"
     ? valueType.options.find((option) => option.retiredAt === null && sameName(option.label, literal))?.id
-    : undefined;
-  return literal;
+    : literal;
+  if (value === undefined || validateFacetScalarValue(valueType, value) !== null) return undefined;
+  return value;
+}
+
+function builtinValueType(kind: ScalarKind): WorkspaceValueType | undefined {
+  switch (kind) {
+    case "text": return { kind: "text", maxLength: 10_000 };
+    case "number": return { kind: "number", integer: false };
+    case "boolean": return { kind: "boolean" };
+    case "datetime": return { kind: "datetime" };
+    case "duration": return { kind: "duration" };
+    case "email": return { kind: "email", allowDisplayName: false };
+    case "domain": return { kind: "domain" };
+    case "enum": return undefined;
+  }
 }
 
 function compileExpression(
@@ -289,8 +290,8 @@ function compileExpression(
     diagnostics.push(diagnostic(unresolved.location, "parse", "invalid_predicate", "Expected a named predicate, Boolean group, existence check, or typed comparison."));
     return null;
   }
-  if (operator === "contains" && fieldType.type !== "text") {
-    diagnostics.push(diagnostic(unresolved.location, "type", "operator_type_mismatch", `'contains' requires Text, but '${fieldName}' is ${fieldType.type}.`));
+  if (operator === "contains" && !["text", "email", "domain"].includes(fieldType.type)) {
+    diagnostics.push(diagnostic(unresolved.location, "type", "operator_type_mismatch", `'contains' requires Text, Email, or Domain, but '${fieldName}' is ${fieldType.type}.`));
     return null;
   }
   if ((operator === "greater_than" || operator === "less_than") && !["number", "datetime", "duration"].includes(fieldType.type)) {
@@ -298,7 +299,10 @@ function compileExpression(
     return null;
   }
   const literal = parseLiteral(literalSource);
-  const value = literal === undefined ? undefined : validateLiteral(facetValueType ?? { kind: fieldType.type }, literal);
+  const authoritativeType = facetValueType ?? builtinValueType(fieldType.type);
+  const value = literal === undefined || authoritativeType === undefined
+    ? undefined
+    : canonicalFacetLiteral(authoritativeType, literal);
   if (value === undefined) {
     diagnostics.push(diagnostic(unresolved.location, "type", "literal_type_mismatch", `Value '${literalSource}' is not a valid ${fieldType.type} literal.`));
     return null;
@@ -341,7 +345,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
       return null;
     }
     const literal = parseLiteral(facetSet[2]!);
-    const value = literal === undefined ? undefined : validateLiteral(facet.valueType, literal);
+    const value = literal === undefined ? undefined : canonicalFacetLiteral(facet.valueType, literal);
     if (value === undefined) {
       diagnostics.push(diagnostic(line, "type", "literal_type_mismatch", `Facet '${facet.name}' requires a ${facet.valueType.kind} value.`));
       return null;
@@ -382,7 +386,7 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
   const schedule = /^schedule review ("(?:[^"\\]|\\.)*")$/.exec(source);
   if (schedule) {
     const duration = quoted(schedule[1]!);
-    if (duration === null || validateLiteral({ kind: "duration" }, duration) === undefined) {
+    if (duration === null || canonicalFacetLiteral({ kind: "duration" }, duration) === undefined) {
       diagnostics.push(diagnostic(line, "type", "invalid_duration", "Review duration must be an ISO 8601 duration such as \"P1D\".")); return null;
     }
     return { kind: "schedule_review", duration };
