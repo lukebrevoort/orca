@@ -35,7 +35,7 @@ const demoContinuationItem: OrganizationViewResultItem = {
   humanSignal: 9, humanClassification: "likely_human",
 };
 
-export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: boolean }) {
+export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutation, refreshToken = 0 }: { demoMode?: boolean; onWorkspaceMutation?: () => void; refreshToken?: number }) {
   const [views, setViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const [activeViewId, setActiveViewId] = useState(demoMode ? organizationViewsFixture[0]!.id : "");
   const [results, setResults] = useState<OrganizationViewResultPage | null>(demoMode ? organizationWeeklyViewResultsFixture : null);
@@ -65,19 +65,26 @@ export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: bo
   const [subjectContains, setSubjectContains] = useState("");
   const [readState, setReadState] = useState<"any" | "read" | "unread">("any");
   const resultRequest = useRef(0);
+  const listRequest = useRef(0);
+  const mutationRequest = useRef(0);
+  const [canonicalGeneration, setCanonicalGeneration] = useState(0);
   const activeView = views.find((view) => view.id === activeViewId) ?? null;
 
   useEffect(() => {
     if (demoMode) return;
     const controller = new AbortController();
+    const requestId = ++listRequest.current;
+    resultRequest.current += 1;
+    mutationRequest.current += 1;
     setStatus("loading");
+    setResults(null); setPageStatus("idle"); setPageError(null); setError(null);
     void readJson("/v1/organization/views", { signal: controller.signal }).then((body) => {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || requestId !== listRequest.current) return;
       const parsed = organizationViewListResponseSchema.parse(body);
-      setViews(parsed.items); setWorkspaceRevision(parsed.workspaceRevision); setActiveViewId((current) => current || parsed.items[0]?.id || ""); setStatus("ready");
-    }).catch((reason) => { if (!controller.signal.aborted) { setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not load Views"); } });
+      setViews(parsed.items); setWorkspaceRevision(parsed.workspaceRevision); setActiveViewId((current) => parsed.items.some((item) => item.id === current) ? current : parsed.items[0]?.id ?? ""); setCanonicalGeneration((current) => current + 1);
+    }).catch((reason) => { if (!controller.signal.aborted && requestId === listRequest.current) { setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not load Views"); } });
     return () => controller.abort();
-  }, [demoMode]);
+  }, [demoMode, refreshToken]);
 
   useEffect(() => {
     if (demoMode || !activeViewId || !activeView) return;
@@ -91,7 +98,7 @@ export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: bo
       if (!controller.signal.aborted && requestId === resultRequest.current && parsed.viewId === activeViewId && parsed.viewRevision === revision) { setResults(parsed); setStatus("ready"); }
     }).catch((reason) => { if (!controller.signal.aborted) { setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not run View"); } });
     return () => controller.abort();
-  }, [activeViewId, activeView?.revision, demoMode]);
+  }, [activeViewId, activeView?.revision, canonicalGeneration, demoMode]);
 
   const accountCount = results?.accountIds.length || activeView?.definition.accountIds?.length || (demoMode ? 2 : 0);
   const items = results?.viewId === activeViewId ? results.items : [];
@@ -175,27 +182,33 @@ export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: bo
 
   async function saveView() {
     const definition = draftDefinition();
+    const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
       if (composerMode === "edit" && activeView) {
         const updated = demoMode
           ? { ...activeView, name: name.trim(), description: description.trim(), color, definition, revision: activeView.revision + 1, updatedAt: new Date().toISOString() }
           : organizationViewListResponseSchema.shape.items.element.parse(await readJson(`/v1/organization/views/${encodeURIComponent(activeView.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: mutationKey("update"), expectedWorkspaceRevision: workspaceRevision, expectedRevision: activeView.revision, patch: { name: name.trim(), description: description.trim(), color, definition } }) }));
+        if (requestId !== mutationRequest.current) return;
         setViews((current) => current.map((view) => view.id === updated.id ? updated : view)); setWorkspaceRevision((current) => current + 1);
         setResults((current) => demoMode && current?.viewId === updated.id ? { ...current, viewRevision: updated.revision } : null);
         setComposerMode(null); setStatus("ready");
+        if (!demoMode) onWorkspaceMutation?.();
       } else {
         const created = demoMode
           ? { id: `view_demo_${views.length + 1}`, workspaceId: "workspace_demo", name: name.trim(), description: description.trim(), color, position: views.length, definition, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as OrganizationView
           : organizationViewListResponseSchema.shape.items.element.parse(await readJson("/v1/organization/views", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: mutationKey("create"), expectedWorkspaceRevision: workspaceRevision, name: name.trim(), description: description.trim(), color, position: views.length, definition }) }));
+        if (requestId !== mutationRequest.current) return;
         setViews((current) => [...current, created]); setWorkspaceRevision((current) => current + 1); setActiveViewId(created.id); setResults(null); setComposerMode(null); setName(""); setStatus("ready");
+        if (!demoMode) onWorkspaceMutation?.();
       }
-    } catch (reason) { setStatus("ready"); setError(reason instanceof Error ? reason.message : `Could not ${composerMode === "edit" ? "update" : "create"} View`); }
+    } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : `Could not ${composerMode === "edit" ? "update" : "create"} View`); } }
   }
 
   async function moveView(view: OrganizationView, direction: -1 | 1) {
     const index = views.findIndex((candidate) => candidate.id === view.id); const other = views[index + direction];
     if (!other || status === "saving") return;
+    const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
       if (demoMode) {
@@ -206,13 +219,18 @@ export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: bo
           { id: view.id, expectedRevision: view.revision, position: other.position },
           { id: other.id, expectedRevision: other.revision, position: view.position },
         ] }) });
-        const parsed = organizationViewListResponseSchema.parse(body); setViews(parsed.items); setWorkspaceRevision(parsed.workspaceRevision);
+        const parsed = organizationViewListResponseSchema.parse(body);
+        if (requestId !== mutationRequest.current) return;
+        setViews(parsed.items); setWorkspaceRevision(parsed.workspaceRevision);
       }
+      if (requestId !== mutationRequest.current) return;
       setStatus("ready");
-    } catch (reason) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not reorder Views"); }
+      if (!demoMode) onWorkspaceMutation?.();
+    } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not reorder Views"); } }
   }
 
   async function removeView(view: OrganizationView) {
+    const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
       let remaining: OrganizationView[];
@@ -225,13 +243,15 @@ export function OrganizationViewsWorkspace({ demoMode = false }: { demoMode?: bo
         remaining = canonical.items;
         setWorkspaceRevision(canonical.workspaceRevision);
       }
+      if (requestId !== mutationRequest.current) return;
       setViews(remaining); setPendingRemoveId(null); setComposerMode(null);
       if (activeViewId === view.id) {
         const next = remaining[Math.min(views.indexOf(view), remaining.length - 1)] ?? null;
         setActiveViewId(next?.id ?? ""); setResults(next && demoMode ? (next.id === organizationWeeklyViewResultsFixture.viewId ? organizationWeeklyViewResultsFixture : emptyResults(next)) : null);
       }
       setStatus("ready");
-    } catch (reason) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not remove View"); }
+      if (!demoMode) onWorkspaceMutation?.();
+    } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not remove View"); } }
   }
 
   return <section className="views-workspace" aria-labelledby="views-title">
