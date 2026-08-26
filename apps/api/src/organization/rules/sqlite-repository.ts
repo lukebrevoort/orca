@@ -136,9 +136,12 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
     },
     get,
     append(input) {
-      const authorizationBinding = consumeRuleAuthorizationAnchor(input.authorizationAnchor);
-      if (!authorizationBinding) throw new RuleAuthorityError("invalid_request", "The authenticated Rule authorization anchor is missing or expired");
       return db.transaction((transaction) => {
+        // This process-memory capability is consumed only after SQLite enters the command
+        // transaction, but intentionally is not restored when that transaction rolls back.
+        // A failed command must receive fresh authority rather than reuse a one-shot anchor.
+        const authorizationBinding = consumeRuleAuthorizationAnchor(input.authorizationAnchor);
+        if (!authorizationBinding) throw new RuleAuthorityError("invalid_request", "The authenticated Rule authorization anchor is missing or expired");
         const executor = transaction as unknown as Database;
         const commandResult = organizationCommandSchema.safeParse(input.command);
         const envelopeResult = organizationAuthorizationEnvelopeSchema.safeParse({ executionContext: input.executionContext, trace: input.authorityTrace });

@@ -8,7 +8,7 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
-import { RuleRevisionConflictError, createRuleRevisionService } from "./service.ts";
+import { RuleAuthorityError, RuleRevisionConflictError, createRuleRevisionService, type RuleRevisionRepository } from "./service.ts";
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
@@ -36,7 +36,7 @@ function setup(options: { tamperAuthorization?: boolean } = {}) {
     now: () => new Date("2026-08-25T12:00:00.000Z"),
     id: (() => { let value = 0; return () => `id-${++value}`; })(),
   });
-  return { ...client, service };
+  return { ...client, repository, service };
 }
 
 afterEach(() => {
@@ -62,6 +62,69 @@ describe("Rule Revision service", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE resource_family = 'rule'").get() as { count: number }).count, 0);
       assert.equal((sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision, 1);
     } finally { sqlite.close(); }
+  });
+
+  test("consumes one-shot Rule authorization only after transaction entry and never restores it on rollback", () => {
+    const { db, repository, service, sqlite } = setup();
+    const originalAppend = repository.append.bind(repository);
+    const originalTransaction = db.transaction.bind(db);
+    const capture = (request: Parameters<typeof service.compile>[0]["request"]) => {
+      let captured: Parameters<RuleRevisionRepository["append"]>[0] | undefined;
+      repository.append = (input) => {
+        captured = input;
+        throw new Error("captured Rule append");
+      };
+      assert.throws(() => service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request }), /captured Rule append/);
+      repository.append = originalAppend;
+      assert.ok(captured);
+      return captured;
+    };
+    const countWrites = () => ({
+      rules: (sqlite.query("SELECT COUNT(*) count FROM organization_rules").get() as { count: number }).count,
+      revisions: (sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions").get() as { count: number }).count,
+      audit: (sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE resource_family = 'rule'").get() as { count: number }).count,
+    });
+    try {
+      const beforeEntry = capture({
+        ruleId: "transaction-order-rule",
+        idempotencyKey: "transaction-order-rule-1",
+        expectedRuleRevision: null,
+        workspaceSchemaRevision: 1,
+        source: source(),
+      });
+      db.transaction = (() => { throw new Error("forced failure before transaction closure"); }) as typeof db.transaction;
+      assert.throws(() => originalAppend(beforeEntry), /forced failure before transaction closure/);
+      db.transaction = originalTransaction;
+      assert.equal(originalAppend(beforeEntry).ok, true);
+      assert.throws(() => originalAppend(beforeEntry), (error: unknown) =>
+        error instanceof RuleAuthorityError && error.code === "invalid_request" && /authorization anchor/.test(error.message));
+
+      const rolledBack = capture({
+        ruleId: "transaction-rollback-rule",
+        idempotencyKey: "transaction-rollback-rule-1",
+        expectedRuleRevision: null,
+        workspaceSchemaRevision: 2,
+        source: source("Everything else", "Rollback probe"),
+      });
+      const writesBeforeRollback = countWrites();
+      let enteredTransactionClosure = false;
+      db.transaction = ((callback) => originalTransaction((transaction) => {
+        enteredTransactionClosure = true;
+        callback(transaction);
+        throw new Error("forced failure after Rule writes");
+      })) as typeof db.transaction;
+      assert.throws(() => originalAppend(rolledBack), /forced failure after Rule writes/);
+      assert.equal(enteredTransactionClosure, true);
+      assert.deepEqual(countWrites(), writesBeforeRollback);
+      db.transaction = originalTransaction;
+      assert.throws(() => originalAppend(rolledBack), (error: unknown) =>
+        error instanceof RuleAuthorityError && error.code === "invalid_request" && /authorization anchor/.test(error.message));
+      assert.deepEqual(countWrites(), writesBeforeRollback);
+    } finally {
+      repository.append = originalAppend;
+      db.transaction = originalTransaction;
+      sqlite.close();
+    }
   });
 
   test("replays an exact duplicate create and rejects conflicting Rule/idempotency reuse atomically", () => {
