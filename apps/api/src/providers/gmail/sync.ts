@@ -293,32 +293,41 @@ export async function persistGmailMessages(
   const persistedLabels = buildPersistedLabels(input.accountId, input.labelList, normalizedMessages);
   const threadIds = [...new Set(normalizedMessages.map((message) => message.threadId))];
   const messageIds = normalizedMessages.map((message) => message.id);
+  const orderedMessages = [...normalizedMessages]
+    .sort((left, right) => Date.parse(left.receivedAt) - Date.parse(right.receivedAt) || left.id.localeCompare(right.id));
   const existingThreadIds = new Set(threadIds.length === 0 ? [] : db.select({ id: threads.id }).from(threads)
     .where(and(eq(threads.accountId, input.accountId), inArray(threads.id, threadIds))).all().map((thread) => thread.id));
   const existingMessageIds = new Set(messageIds.length === 0 ? [] : db.select({ id: emails.id }).from(emails)
     .where(and(eq(emails.accountId, input.accountId), inArray(emails.id, messageIds))).all().map((message) => message.id));
   const seenThreadIds = new Set(existingThreadIds);
-  const evaluationEvents = [...normalizedMessages]
-    .sort((left, right) => Date.parse(left.receivedAt) - Date.parse(right.receivedAt) || left.id.localeCompare(right.id))
+  const evaluationEventsByMessageId = new Map(orderedMessages
     .filter((message) => !existingMessageIds.has(message.id))
     .map((message) => {
       const kind = seenThreadIds.has(message.threadId) ? "thread.updated" as const : "message.received" as const;
       seenThreadIds.add(message.threadId);
-      return { messageId: message.id, kind };
-    });
+      return [message.id, { messageId: message.id, kind }] as const;
+    }));
 
   db.transaction((tx) => {
     upsertLabels(tx, input.accountId, persistedLabels, input.now);
-    upsertThreads(tx, normalizedMessages, input.now);
-    upsertEmails(tx, normalizedMessages, input.now);
-    upsertAttachments(tx, normalizedMessages, input.now);
-    upsertEmailLabels(tx, normalizedMessages, persistedLabels, input.now);
-    upsertContacts(tx, input.accountId, normalizedMessages, input.now);
-    refreshThreadAggregates(tx, { accountId: input.accountId, threadIds, now: input.now });
-    evaluateLiveMessageRules(tx as unknown as DatabaseClient, {
-      accountId: input.accountId,
-      events: evaluationEvents,
-    });
+    for (const message of orderedMessages) {
+      const messageBatch = [message];
+      upsertThreads(tx, messageBatch, input.now);
+      upsertEmails(tx, messageBatch, input.now);
+      upsertAttachments(tx, messageBatch, input.now);
+      upsertEmailLabels(tx, messageBatch, persistedLabels, input.now);
+      upsertContacts(tx, input.accountId, messageBatch, input.now);
+      refreshThreadAggregates(tx, { accountId: input.accountId, threadIds: [message.threadId], now: input.now });
+
+      const evaluationEvent = evaluationEventsByMessageId.get(message.id);
+      if (evaluationEvent) {
+        evaluateLiveMessageRules(tx as unknown as DatabaseClient, {
+          accountId: input.accountId,
+          events: [evaluationEvent],
+        });
+        evaluationEventsByMessageId.delete(message.id);
+      }
+    }
     input.afterPersist?.(tx);
   });
 
