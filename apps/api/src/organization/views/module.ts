@@ -1,17 +1,19 @@
 import {
   organizationViewCreateRequestSchema,
+  organizationViewReorderRequestSchema,
   organizationViewResultQuerySchema,
   organizationViewUpdateRequestSchema,
   type OrganizationView,
   type OrganizationViewCreateRequest,
+  type OrganizationViewReorderRequest,
   type OrganizationViewResultPage,
   type OrganizationViewResultQuery,
   type OrganizationViewUpdateRequest,
 } from "@orca/shared";
 
 export class OrganizationViewAccessError extends Error {
-  readonly code = "account_denied" as const;
-  constructor(message = "The requested Account scope is not authorized for this Workspace") { super(message); this.name = "OrganizationViewAccessError"; }
+  readonly code: "account_denied" | "resource_denied";
+  constructor(message = "The requested Account scope is not authorized for this Workspace", code: "account_denied" | "resource_denied" = "account_denied") { super(message); this.code = code; this.name = "OrganizationViewAccessError"; }
 }
 
 export class OrganizationViewNotFoundError extends Error {
@@ -40,6 +42,7 @@ export type OrganizationViewsRepository = {
   get(workspaceId: string, viewId: string): OrganizationView | null;
   create(input: { workspaceId: string; viewId: string; request: OrganizationViewCreateRequest; now: Date }): OrganizationView;
   update(input: { workspaceId: string; viewId: string; request: OrganizationViewUpdateRequest; now: Date }): OrganizationView;
+  reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; now: Date }): OrganizationView[];
   remove(input: { workspaceId: string; viewId: string; expectedRevision: number }): void;
   query(input: { scope: OrganizationViewScope; view: OrganizationView; query: OrganizationViewResultQuery }): OrganizationViewResultPage;
 };
@@ -71,6 +74,11 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       authorizedAccountIds(input.scope, request.patch.definition?.accountIds);
       if (!repository.get(input.scope.workspaceId, input.viewId)) throw new OrganizationViewNotFoundError();
       return repository.update({ workspaceId: input.scope.workspaceId, viewId: input.viewId, request, now: now() });
+    },
+    reorder(input: { scope: OrganizationViewScope; request: unknown }) {
+      if (input.scope.actor.type !== "human") throw new OrganizationViewAccessError("Only an authenticated human can reorder Views");
+      const request = organizationViewReorderRequestSchema.parse(input.request);
+      return { workspaceId: input.scope.workspaceId, items: repository.reorder({ workspaceId: input.scope.workspaceId, request, now: now() }) };
     },
     remove(input: { scope: OrganizationViewScope; viewId: string; expectedRevision: number }) {
       if (input.scope.actor.type !== "human") throw new OrganizationViewAccessError("Only an authenticated human can remove a View");

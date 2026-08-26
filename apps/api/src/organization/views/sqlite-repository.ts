@@ -9,10 +9,11 @@ import {
   type FacetFilter,
   type OrganizationView,
   type OrganizationViewDefinition,
+  type OrganizationViewReorderRequest,
   type OrganizationViewResultItem,
 } from "@orca/shared";
 
-import { OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, type OrganizationViewsRepository } from "./module.ts";
+import { OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, type OrganizationViewsRepository } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -34,11 +35,29 @@ function fingerprint(view: OrganizationView, accountIds: readonly string[]) {
   return createHash("sha256").update(JSON.stringify([view.id, view.revision, view.definition, accountIds])).digest("hex");
 }
 type Cursor = { version: 1; fingerprint: string; receivedAt: number; accountId: string; threadId: string };
+function isBoundedIdentifier(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= 200;
+}
 function decodeCursor(value: string | undefined, expectedFingerprint: string): Cursor | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Cursor;
-    if (parsed.version === 1 && parsed.fingerprint === expectedFingerprint && Number.isFinite(parsed.receivedAt) && parsed.accountId && parsed.threadId) return parsed;
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as unknown;
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      const candidate = parsed as Record<string, unknown>;
+      const keys = Object.keys(candidate);
+      if (keys.length === 5
+        && keys.every((key) => ["version", "fingerprint", "receivedAt", "accountId", "threadId"].includes(key))
+        && candidate.version === 1
+        && typeof candidate.fingerprint === "string"
+        && /^[0-9a-f]{64}$/.test(candidate.fingerprint)
+        && candidate.fingerprint === expectedFingerprint
+        && typeof candidate.receivedAt === "number"
+        && Number.isSafeInteger(candidate.receivedAt)
+        && candidate.receivedAt >= 0
+        && candidate.receivedAt <= 8_640_000_000_000_000
+        && isBoundedIdentifier(candidate.accountId)
+        && isBoundedIdentifier(candidate.threadId)) return candidate as Cursor;
+    }
   } catch { /* one stable public error below */ }
   throw new OrganizationViewQueryError("The View cursor does not match this live definition or Account scope");
 }
@@ -61,6 +80,31 @@ function facetPredicate(filter: FacetFilter, params: SqlBinding[]) {
   return `EXISTS (SELECT 1 FROM organization_thread_facet_values f WHERE ${base} AND (lower(CAST(json_extract(f.value,'$') AS TEXT)) = ? OR EXISTS (SELECT 1 FROM json_each(f.value) j WHERE lower(CAST(j.value AS TEXT)) LIKE ?)))`;
 }
 
+function assertOwnedIds(sqlite: Database, workspaceId: string, table: "organization_lanes" | "organization_facets" | "organization_workflow_states", ids: readonly string[] | undefined) {
+  if (!ids?.length) return;
+  const row = sqlite.query(`SELECT COUNT(*) AS count FROM ${table} WHERE workspace_id=? AND id IN (${placeholders(ids)})`).get(workspaceId, ...ids) as { count: number };
+  if (row.count !== ids.length) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
+}
+
+function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition: OrganizationViewDefinition) {
+  if (definition.accountIds?.length) {
+    const row = sqlite.query(`SELECT COUNT(*) AS count FROM oauth_accounts WHERE user_id=? AND id IN (${placeholders(definition.accountIds)})`).get(workspaceId, ...definition.accountIds) as { count: number };
+    if (row.count !== definition.accountIds.length) throw new OrganizationViewAccessError();
+  }
+  assertOwnedIds(sqlite, workspaceId, "organization_lanes", definition.laneIds);
+  assertOwnedIds(sqlite, workspaceId, "organization_facets", definition.facetFilters?.map((filter) => filter.facetId));
+  assertOwnedIds(sqlite, workspaceId, "organization_workflow_states", definition.workflowStateIds);
+  if (definition.thread?.ids?.length) {
+    const row = sqlite.query(`SELECT COUNT(*) AS count FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id WHERE oa.user_id=? AND t.id IN (${placeholders(definition.thread.ids)})`).get(workspaceId, ...definition.thread.ids) as { count: number };
+    if (row.count !== definition.thread.ids.length) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
+  }
+  for (const filter of definition.contextFilters ?? []) {
+    const owned = sqlite.query("SELECT 1 FROM organization_context_types context_type JOIN organization_contexts context ON context.workspace_id=context_type.workspace_id AND context.context_type_id=context_type.id JOIN organization_context_relationship_types relationship ON relationship.workspace_id=context_type.workspace_id AND relationship.context_type_id=context_type.id WHERE context_type.workspace_id=? AND context_type.id=? AND context.id=? AND relationship.id=?" + (filter.direction ? " AND relationship.direction=?" : "") + " LIMIT 1")
+      .get(workspaceId, filter.context.contextTypeId, filter.context.contextId, filter.relationshipTypeId, ...(filter.direction ? [filter.direction] : []));
+    if (!owned) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
+  }
+}
+
 export function createSqliteOrganizationViewsRepository(sqlite: Database): OrganizationViewsRepository {
   const get = (workspaceId: string, viewId: string) => {
     const row = sqlite.query("SELECT * FROM organization_views WHERE workspace_id = ? AND id = ?").get(workspaceId, viewId) as ViewRow | null;
@@ -73,19 +117,40 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     get,
     create({ workspaceId, viewId, request, now }) {
       const timestamp = now.getTime();
-      sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-        .run(workspaceId, viewId, request.name, request.description, request.color, request.position, JSON.stringify(request.definition), 1, timestamp, timestamp);
-      return get(workspaceId, viewId)!;
+      return sqlite.transaction(() => {
+        assertOwnedDefinition(sqlite, workspaceId, request.definition);
+        sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+          .run(workspaceId, viewId, request.name, request.description, request.color, request.position, JSON.stringify(request.definition), 1, timestamp, timestamp);
+        return get(workspaceId, viewId)!;
+      })();
     },
     update({ workspaceId, viewId, request, now }) {
-      const current = get(workspaceId, viewId);
-      if (!current) throw new OrganizationViewNotFoundError();
-      if (current.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
-      const next = { ...current, ...request.patch, definition: request.patch.definition ?? current.definition };
-      const result = sqlite.query("UPDATE organization_views SET name=?,description=?,color=?,position=?,definition=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
-        .run(next.name, next.description, next.color, next.position, JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
-      if (result.changes !== 1) throw new OrganizationViewConflictError();
-      return get(workspaceId, viewId)!;
+      return sqlite.transaction(() => {
+        const current = get(workspaceId, viewId);
+        if (!current) throw new OrganizationViewNotFoundError();
+        if (current.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
+        const next = { ...current, ...request.patch, definition: request.patch.definition ?? current.definition };
+        assertOwnedDefinition(sqlite, workspaceId, next.definition);
+        const result = sqlite.query("UPDATE organization_views SET name=?,description=?,color=?,position=?,definition=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
+          .run(next.name, next.description, next.color, next.position, JSON.stringify(next.definition), now.getTime(), workspaceId, viewId, request.expectedRevision);
+        if (result.changes !== 1) throw new OrganizationViewConflictError();
+        return get(workspaceId, viewId)!;
+      })();
+    },
+    reorder({ workspaceId, request, now }: { workspaceId: string; request: OrganizationViewReorderRequest; now: Date }) {
+      return sqlite.transaction(() => {
+        for (const item of request.items) {
+          const current = get(workspaceId, item.id);
+          if (!current) throw new OrganizationViewNotFoundError();
+          if (current.revision !== item.expectedRevision) throw new OrganizationViewConflictError();
+        }
+        for (const item of request.items) {
+          const result = sqlite.query("UPDATE organization_views SET position=?,revision=revision+1,updated_at=? WHERE workspace_id=? AND id=? AND revision=?")
+            .run(item.position, now.getTime(), workspaceId, item.id, item.expectedRevision);
+          if (result.changes !== 1) throw new OrganizationViewConflictError();
+        }
+        return (sqlite.query("SELECT * FROM organization_views WHERE workspace_id = ? ORDER BY position,id").all(workspaceId) as ViewRow[]).map(mapView);
+      })();
     },
     remove({ workspaceId, viewId, expectedRevision }) {
       const result = sqlite.query("DELETE FROM organization_views WHERE workspace_id=? AND id=? AND revision=?").run(workspaceId, viewId, expectedRevision);
@@ -139,7 +204,7 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         params.push(cursor.receivedAt, cursor.receivedAt, cursor.accountId, cursor.accountId, cursor.threadId);
       }
       params.push(query.limit + 1);
-      const sql = `SELECT t.account_id AS accountId,oa.provider_email AS accountEmail,oa.provider,t.id AS threadId,COALESCE(t.subject,'') AS subject,COALESCE(t.latest_received_at,t.created_at) AS latestReceivedAt,t.message_count AS messageCount,t.is_read AS isRead,lane.primary_lane_id AS primaryLaneId,latest.from_name AS senderName,COALESCE(latest.from_address,'') AS senderEmail,(SELECT MAX(signal_email.human_signal) FROM emails signal_email WHERE signal_email.account_id=t.account_id AND signal_email.thread_id=t.id) AS humanSignal,latest.human_classification AS humanClassification FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id LEFT JOIN emails latest ON latest.id=(SELECT latest_id.id FROM emails latest_id WHERE latest_id.account_id=t.account_id AND latest_id.thread_id=t.id ORDER BY latest_id.received_at DESC,latest_id.id DESC LIMIT 1) WHERE ${conditions.join(" AND ")} ORDER BY COALESCE(t.latest_received_at,t.created_at) DESC,t.account_id ASC,t.id ASC LIMIT ?`;
+      const sql = `SELECT t.account_id AS accountId,oa.provider_email AS accountEmail,oa.provider,t.id AS threadId,COALESCE(t.subject,'') AS subject,COALESCE(t.latest_received_at,t.created_at) AS latestReceivedAt,t.message_count AS messageCount,t.is_read AS isRead,lane.primary_lane_id AS primaryLaneId,latest.from_name AS senderName,COALESCE(latest.from_address,'') AS senderEmail,(SELECT MAX(signal_email.human_signal) FROM emails signal_email WHERE signal_email.account_id=t.account_id AND signal_email.thread_id=t.id) AS humanSignal,latest.human_classification AS humanClassification FROM threads t INDEXED BY threads_view_order_idx JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id LEFT JOIN emails latest ON latest.id=(SELECT latest_id.id FROM emails latest_id WHERE latest_id.account_id=t.account_id AND latest_id.thread_id=t.id ORDER BY latest_id.received_at DESC,latest_id.id DESC LIMIT 1) WHERE ${conditions.join(" AND ")} ORDER BY COALESCE(t.latest_received_at,t.created_at) DESC,t.account_id ASC,t.id ASC LIMIT ?`;
       const rows = sqlite.query(sql).all(...params) as Array<{ accountId: string; accountEmail: string; provider: string; threadId: string; subject: string; latestReceivedAt: number; messageCount: number; isRead: number; primaryLaneId: string; senderName: string | null; senderEmail: string; humanSignal: number | null; humanClassification: string | null }>;
       const hasMore = rows.length > query.limit;
       const items = rows.slice(0, query.limit).map((row) => organizationViewResultItemSchema.parse({

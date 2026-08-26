@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
   organizationViewCreateRequestSchema,
   organizationViewDefinitionSchema,
+  organizationViewReorderRequestSchema,
   organizationViewResultPageSchema,
 } from "./organization-views.ts";
 
@@ -39,5 +40,21 @@ describe("BRE-313 live View contracts", () => {
       accountIds: ["account_gmail", "account_gmail"],
       date: { receivedAfter: "2026-08-26T00:00:00.000Z", receivedBefore: "2026-08-18T00:00:00.000Z" },
     }).success, false);
+  });
+
+  test("requires a complete, uniquely positioned optimistic reorder set", () => {
+    const request = organizationViewReorderRequestSchema.parse({ items: [
+      { id: "view_weekly", expectedRevision: 2, position: 0 },
+      { id: "view_all", expectedRevision: 4, position: 1 },
+    ] });
+    assert.deepEqual(request.items.map((item) => item.id), ["view_weekly", "view_all"]);
+    assert.equal(organizationViewReorderRequestSchema.safeParse({ items: [
+      { id: "view_weekly", expectedRevision: 2, position: 0 },
+      { id: "view_weekly", expectedRevision: 2, position: 1 },
+    ] }).success, false);
+    assert.equal(organizationViewReorderRequestSchema.safeParse({ items: [
+      { id: "view_weekly", expectedRevision: 2, position: 0 },
+      { id: "view_all", expectedRevision: 4, position: 0 },
+    ] }).success, false);
   });
 });

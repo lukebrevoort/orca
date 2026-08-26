@@ -98,6 +98,20 @@ export const organizationViewUpdateRequestSchema = z.object({
 }).strict();
 export type OrganizationViewUpdateRequest = z.infer<typeof organizationViewUpdateRequestSchema>;
 
+export const organizationViewReorderRequestSchema = z.object({
+  items: z.array(z.object({
+    id: identifierSchema,
+    expectedRevision: z.number().int().positive(),
+    position: z.number().int().nonnegative(),
+  }).strict()).min(2),
+}).strict().superRefine((value, context) => {
+  const ids = value.items.map((item) => item.id);
+  const positions = value.items.map((item) => item.position);
+  if (new Set(ids).size !== ids.length) context.addIssue({ code: "custom", path: ["items"], message: "View identifiers must be unique" });
+  if (new Set(positions).size !== positions.length) context.addIssue({ code: "custom", path: ["items"], message: "View positions must be unique" });
+});
+export type OrganizationViewReorderRequest = z.infer<typeof organizationViewReorderRequestSchema>;
+
 export const organizationViewListResponseSchema = z.object({
   workspaceId: identifierSchema,
   items: z.array(organizationViewSchema),

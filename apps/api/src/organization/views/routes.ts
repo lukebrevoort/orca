@@ -37,6 +37,10 @@ export function registerOrganizationViewRoutes(app: OrganizationApp, options: { 
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.create({ scope: current.scope, request: await c.req.json() }), 201); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
   });
+  app.post("/v1/organization/views/reorder", requireAuth({ dbFactory }), async (c) => {
+    const current = open(c.get("auth").userId);
+    try { return c.json(current.organization.reorder({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
+  });
   app.patch("/v1/organization/views/:viewId", requireAuth({ dbFactory }), async (c) => {
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.update({ scope: current.scope, viewId: c.req.param("viewId"), request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }

@@ -156,6 +156,11 @@ export const threads = sqliteTable(
       table.accountId,
       table.latestReceivedAt,
     ),
+    viewOrderIdx: index("threads_view_order_idx").on(
+      sql`COALESCE(${table.latestReceivedAt},${table.createdAt}) DESC`,
+      table.accountId,
+      table.id,
+    ),
     accountIdIdUniqueIdx: uniqueIndex("threads_account_id_id_unique_idx").on(table.accountId, table.id),
   }),
 );

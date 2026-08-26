@@ -18,8 +18,10 @@ describe("BRE-313 Views migration", () => {
       assert.equal(journal.entries.at(-1)?.tag, "0027_organization_live_views");
       const tables = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'organization_view%' ORDER BY name").all() as Array<{ name: string }>;
       assert.deepEqual(tables.map((item) => item.name), ["organization_views"]);
-      const indexes = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('organization_views_workspace_position_idx','organization_thread_facet_values_lookup_idx','emails_thread_view_evidence_idx') ORDER BY name").all() as Array<{ name: string }>;
-      assert.deepEqual(indexes.map((item) => item.name), ["emails_thread_view_evidence_idx", "organization_thread_facet_values_lookup_idx", "organization_views_workspace_position_idx"]);
+      const indexes = client.sqlite.query("SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('organization_views_workspace_position_idx','organization_thread_facet_values_lookup_idx','emails_thread_view_evidence_idx','threads_view_order_idx') ORDER BY name").all() as Array<{ name: string }>;
+      assert.deepEqual(indexes.map((item) => item.name), ["emails_thread_view_evidence_idx", "organization_thread_facet_values_lookup_idx", "organization_views_workspace_position_idx", "threads_view_order_idx"]);
+      const ordering = client.sqlite.query("SELECT sql FROM sqlite_master WHERE type='index' AND name='threads_view_order_idx'").get() as { sql: string };
+      assert.match(ordering.sql, /COALESCE\(`latest_received_at`,`created_at`\) DESC,`account_id`,`id`/);
     } finally {
       client.sqlite.close();
       rmSync(directory, { recursive: true, force: true });

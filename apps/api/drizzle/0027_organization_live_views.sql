@@ -22,4 +22,4 @@ CREATE INDEX `organization_thread_facet_values_lookup_idx` ON `organization_thre
 --> statement-breakpoint
 CREATE INDEX `emails_thread_view_evidence_idx` ON `emails` (`account_id`,`thread_id`,`received_at`,`from_address`,`human_signal`,`human_classification`);
 --> statement-breakpoint
-CREATE INDEX `threads_view_order_idx` ON `threads` (`account_id`,`latest_received_at`,`id`);
+CREATE INDEX `threads_view_order_idx` ON `threads` (COALESCE(`latest_received_at`,`created_at`) DESC,`account_id`,`id`);
