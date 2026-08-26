@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("Organization REST read adapter", () => {
-  test("describes and queries only the session Workspace Accounts", async () => {
+  test("describes and queries only the session Workspace Accounts", { timeout: 20_000 }, async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 18).toString("base64");
     const directory = mkdtempSync(join(tmpdir(), "orca-organization-routes-"));
@@ -108,14 +108,17 @@ describe("Organization REST read adapter", () => {
         reason: "Protect the human decision.",
       });
       const storedManualLock = sqlite.query(`
-        SELECT placement_source, actor_id, reason, safety_lock_actor_id, safety_lock_reason
+        SELECT primary_lane_id, placement_source, actor_id, reason, manual_override_actor_id, manual_override_reason, safety_lock_actor_id, safety_lock_reason
         FROM organization_thread_lane_states
         WHERE workspace_id = 'workspace_owner' AND account_id = 'account_b' AND thread_id = 'thread_b'
       `).get() as Record<string, string>;
       assert.deepEqual(storedManualLock, {
-        placement_source: "manual_override",
-        actor_id: "workspace_owner",
-        reason: "Human chose this Lane from the Thread reader.",
+        primary_lane_id: description.laneConfiguration.fallbackLaneId,
+        placement_source: "workspace_fallback",
+        actor_id: "system:workspace-fallback",
+        reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+        manual_override_actor_id: "workspace_owner",
+        manual_override_reason: "Human chose this Lane from the Thread reader.",
         safety_lock_actor_id: "workspace_owner",
         safety_lock_reason: "Protect the human decision.",
       });
@@ -288,6 +291,105 @@ describe("Organization REST read adapter", () => {
       assert.equal(reloadedLanePolicyResponse.status, 200);
       const reloadedLanePolicy = await reloadedLanePolicyResponse.json();
       assert.deepEqual(reloadedLanePolicy.threads[0].organization.lanePlacement, lanePolicyUnlocked.placements[0]);
+
+      sqlite.query(`
+        UPDATE organization_thread_lane_states
+        SET placement_source = 'rule_revision', source_id = 'rule_revision_9', actor_id = 'agent_rule_engine', actor_type = 'agent',
+            reason = 'Rule Revision 9 selected the retained Lane.'
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).run();
+      const ruleOverride = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000015", idempotencyKey: "routes:override-rule-source", expectedWorkspaceRevision: 12,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: description.laneConfiguration.fallbackLaneId, reason: "Temporarily override the Rule Revision.", expectedThreadRevision: 7 }],
+      }) });
+      assert.equal(ruleOverride.status, 200, await ruleOverride.text());
+      const clearRuleOverride = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000016", idempotencyKey: "routes:clear-rule-source", expectedWorkspaceRevision: 13,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: null, reason: "Return to the Rule Revision winner.", expectedThreadRevision: 8 }],
+      }) });
+      const clearedRuleOverride = await clearRuleOverride.json();
+      assert.equal(clearRuleOverride.status, 200, JSON.stringify(clearedRuleOverride));
+      assert.deepEqual(clearedRuleOverride.placements[0].evidence, {
+        winningSource: "rule_revision", sourceId: "rule_revision_9", precedenceLevel: "3_rule_revision",
+        actor: { id: "agent_rule_engine", type: "agent" }, reason: "Rule Revision 9 selected the retained Lane.",
+      });
+      const reloadedClearedRule = await (await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers })).json();
+      assert.deepEqual(reloadedClearedRule.threads[0].organization.lanePlacement, clearedRuleOverride.placements[0]);
+
+      sqlite.query(`
+        UPDATE organization_thread_lane_states
+        SET placement_source = 'lane_policy', source_id = ?, actor_id = 'agent_policy_engine', actor_type = 'agent',
+            reason = 'Lane Policy remained the lower winner.'
+        WHERE workspace_id = 'workspace_owner' AND account_id = 'account_a' AND thread_id = 'thread_a'
+      `).run(policyId);
+      const policyOverride = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000017", idempotencyKey: "routes:override-policy-source", expectedWorkspaceRevision: 14,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: description.laneConfiguration.fallbackLaneId, reason: "Temporarily override the Lane Policy.", expectedThreadRevision: 9 }],
+      }) });
+      assert.equal(policyOverride.status, 200, await policyOverride.text());
+      const clearPolicyOverride = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000018", idempotencyKey: "routes:clear-policy-source", expectedWorkspaceRevision: 15,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_a", threadId: "thread_a", laneId: null, reason: "Return to the Lane Policy winner.", expectedThreadRevision: 10 }],
+      }) });
+      const clearedPolicyOverride = await clearPolicyOverride.json();
+      assert.equal(clearPolicyOverride.status, 200, JSON.stringify(clearedPolicyOverride));
+      assert.deepEqual(clearedPolicyOverride.placements[0].evidence, {
+        winningSource: "lane_policy", sourceId: policyId, precedenceLevel: "4_lane_policy",
+        actor: { id: "agent_policy_engine", type: "agent" }, reason: "Lane Policy remained the lower winner.",
+      });
+      const reloadedClearedPolicy = await (await app.request("/v1/organization/query?accountId=account_a&attention=all", { headers })).json();
+      assert.deepEqual(reloadedClearedPolicy.threads[0].organization.lanePlacement, clearedPolicyOverride.placements[0]);
+
+      const clearRebasedFallback = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: "0e969841-acde-4a91-acde-491000000019", idempotencyKey: "routes:clear-rebased-fallback", expectedWorkspaceRevision: 16,
+        actions: [{ kind: "set_thread_manual_override", accountId: "account_b", threadId: "thread_b", laneId: null, reason: "Return to the rebased Workspace Fallback.", expectedThreadRevision: 4 }],
+      }) });
+      const clearedRebasedFallback = await clearRebasedFallback.json();
+      assert.equal(clearRebasedFallback.status, 200, JSON.stringify(clearedRebasedFallback));
+      assert.equal(clearedRebasedFallback.placements[0].primaryLaneId, laneId);
+      assert.equal(clearedRebasedFallback.placements[0].evidence.winningSource, "workspace_fallback");
+
+      const createAuditRows = sqlite.query(`
+        SELECT resource_id, before_json, after_json
+        FROM organization_change_actions
+        WHERE workspace_id = 'workspace_owner' AND change_id = '0e969841-acde-4a91-acde-491000000003'
+        ORDER BY position
+      `).all() as Array<{ resource_id: string; before_json: string | null; after_json: string | null }>;
+      assert.ok(createAuditRows.length >= 2);
+      assert.ok(createAuditRows.every((row) => {
+        const before = row.before_json === null ? null : JSON.parse(row.before_json);
+        const after = row.after_json === null ? null : JSON.parse(row.after_json);
+        return before === null && after?.configuration === undefined && after?.placements === undefined;
+      }), JSON.stringify(createAuditRows));
+
+      const untouchedPoliciesBefore = sqlite.query("SELECT * FROM organization_lane_policies WHERE workspace_id = 'workspace_owner' ORDER BY id").all();
+      const untouchedPlacementsBefore = sqlite.query("SELECT * FROM organization_thread_lane_states WHERE workspace_id = 'workspace_owner' ORDER BY account_id, thread_id").all();
+      const untouchedLanesBefore = sqlite.query("SELECT * FROM organization_lanes WHERE workspace_id = 'workspace_owner' AND id <> ? ORDER BY id").all(laneId);
+      const renameChangeId = "0e969841-acde-4a91-acde-491000000020";
+      const renameLane = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: renameChangeId, idempotencyKey: "routes:rename-only", expectedWorkspaceRevision: 17,
+        actions: [{ kind: "update_lane", laneId, name: "Human priority", expectedRevision: 1 }],
+      }) });
+      const renamedLane = await renameLane.json();
+      assert.equal(renameLane.status, 200, JSON.stringify(renamedLane));
+      assert.deepEqual(sqlite.query("SELECT * FROM organization_lane_policies WHERE workspace_id = 'workspace_owner' ORDER BY id").all(), untouchedPoliciesBefore);
+      assert.deepEqual(sqlite.query("SELECT * FROM organization_thread_lane_states WHERE workspace_id = 'workspace_owner' ORDER BY account_id, thread_id").all(), untouchedPlacementsBefore);
+      assert.deepEqual(sqlite.query("SELECT * FROM organization_lanes WHERE workspace_id = 'workspace_owner' AND id <> ? ORDER BY id").all(laneId), untouchedLanesBefore);
+
+      const stateBeforeDuplicate = sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace_owner'").get();
+      const targetLaneBeforeDuplicate = sqlite.query("SELECT revision, name, updated_at FROM organization_lanes WHERE workspace_id = 'workspace_owner' AND id = ?").get(laneId);
+      const changeSetCountBeforeDuplicate = sqlite.query("SELECT count(*) AS count FROM organization_change_sets WHERE workspace_id = 'workspace_owner'").get();
+      const auditCountBeforeDuplicate = sqlite.query("SELECT count(*) AS count FROM organization_change_actions WHERE workspace_id = 'workspace_owner'").get();
+      const duplicateChangeId = await app.request("/v1/organization/apply", { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({
+        id: renameChangeId, idempotencyKey: "routes:fresh-key-duplicate-change", expectedWorkspaceRevision: 18,
+        actions: [{ kind: "update_lane", laneId, name: "Must not persist", expectedRevision: 2 }],
+      }) });
+      assert.equal(duplicateChangeId.status, 400);
+      assert.equal((await duplicateChangeId.json()).error.code, "invalid_request");
+      assert.deepEqual(sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace_owner'").get(), stateBeforeDuplicate);
+      assert.deepEqual(sqlite.query("SELECT revision, name, updated_at FROM organization_lanes WHERE workspace_id = 'workspace_owner' AND id = ?").get(laneId), targetLaneBeforeDuplicate);
+      assert.deepEqual(sqlite.query("SELECT count(*) AS count FROM organization_change_sets WHERE workspace_id = 'workspace_owner'").get(), changeSetCountBeforeDuplicate);
+      assert.deepEqual(sqlite.query("SELECT count(*) AS count FROM organization_change_actions WHERE workspace_id = 'workspace_owner'").get(), auditCountBeforeDuplicate);
 
       const denied = await app.request("/v1/organization/query?accountId=account_private&attention=all", { headers });
       assert.equal(denied.status, 403);

@@ -60,6 +60,9 @@ CREATE TABLE `organization_thread_lane_states` (
 	`actor_type` text DEFAULT 'system' NOT NULL,
 	`reason` text NOT NULL,
 	`manual_override_lane_id` text,
+	`manual_override_actor_id` text,
+	`manual_override_actor_type` text,
+	`manual_override_reason` text,
 	`manual_override_at` integer,
 	`safety_locked` integer DEFAULT 0 NOT NULL,
 	`safety_lock_actor_id` text,
@@ -73,8 +76,9 @@ CREATE TABLE `organization_thread_lane_states` (
 	CONSTRAINT `organization_thread_lane_states_account_thread_fk` FOREIGN KEY (`account_id`,`thread_id`) REFERENCES `threads`(`account_id`,`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT `organization_thread_lane_states_primary_lane_fk` FOREIGN KEY (`workspace_id`,`primary_lane_id`) REFERENCES `organization_lanes`(`workspace_id`,`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT `organization_thread_lane_states_manual_override_lane_fk` FOREIGN KEY (`workspace_id`,`manual_override_lane_id`) REFERENCES `organization_lanes`(`workspace_id`,`id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT `organization_thread_lane_states_source_check` CHECK (`placement_source` IN ('safety_lock','manual_override','rule_revision','lane_policy','workspace_fallback')),
+	CONSTRAINT `organization_thread_lane_states_source_check` CHECK (`placement_source` IN ('rule_revision','lane_policy','workspace_fallback')),
 	CONSTRAINT `organization_thread_lane_states_actor_type_check` CHECK (`actor_type` IN ('human','agent','system')),
+	CONSTRAINT `organization_thread_lane_states_manual_actor_type_check` CHECK (`manual_override_actor_type` IS NULL OR `manual_override_actor_type` IN ('human','agent','system')),
 	CONSTRAINT `organization_thread_lane_states_safety_actor_type_check` CHECK (`safety_lock_actor_type` IS NULL OR `safety_lock_actor_type` IN ('human','agent','system')),
 	CONSTRAINT `organization_thread_lane_states_revision_check` CHECK (`revision` >= 1)
 );
