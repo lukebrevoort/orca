@@ -7,8 +7,9 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createApp } from "../../index.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts, users } from "../../db/schema.ts";
+import { oauthAccounts, oauthTransactions, sessions, users } from "../../db/schema.ts";
 import { decryptSecret, encryptSecret } from "../gmail/crypto.ts";
+import { createSession } from "../session-store.ts";
 import type { OutlookOAuthConfig } from "./config.ts";
 import { createOutlookAuthApp } from "./routes.ts";
 
@@ -77,6 +78,17 @@ describe("Outlook auth routes", () => {
       const pendingCookie = loginResponse.headers.get("set-cookie")?.split(";", 1)[0];
       expect(pendingCookie).toBeTruthy();
 
+      const beforeCallback = dbFactory();
+      try {
+        expect(beforeCallback.db.select().from(users).all()).toHaveLength(1);
+        expect(beforeCallback.db.select().from(sessions).all()).toEqual([]);
+        const transaction = beforeCallback.db.select().from(oauthTransactions).get();
+        expect(transaction?.stateHash).not.toBe(loginBody.state);
+        expect(transaction?.codeVerifier).toBeTruthy();
+      } finally {
+        beforeCallback.sqlite.close();
+      }
+
       const callbackResponse = await authApp.request(
         "/callback?code=returning-code&state=" + encodeURIComponent(loginBody.state),
         { headers: { cookie: pendingCookie! }, redirect: "manual" },
@@ -104,6 +116,134 @@ describe("Outlook auth routes", () => {
         expect(verificationClient.db.select().from(oauthAccounts).all()).toHaveLength(1);
       } finally {
         verificationClient.sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
+    }
+  });
+
+  test("binds connect callbacks to the initiating session and rejects replay before Microsoft calls", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-outlook-bound-connect-"));
+    const dbPath = join(tempDir, "bound-connect.sqlite");
+    const initial = createDatabaseClient(dbPath);
+    migrate(initial.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+    initial.db.insert(users).values([
+      { id: "outlook_user_a", email: "a@example.com" },
+      { id: "outlook_user_b", email: "b@example.com" },
+    ]).run();
+    const sessionA = await createSession(initial.db, "outlook_user_a");
+    const sessionB = await createSession(initial.db, "outlook_user_b");
+    initial.sqlite.close();
+    let providerCalls = 0;
+
+    try {
+      const dbFactory = () => createDatabaseClient(dbPath);
+      const app = createOutlookAuthApp({
+        config,
+        dbFactory,
+        fetch: async (input, init) => {
+          providerCalls += 1;
+          if (input.toString().includes("/token")) {
+            expect(new URLSearchParams(String(init?.body)).get("code_verifier")).toBeTruthy();
+            return Response.json({ access_token: "outlook-access", scope: config.scopes.join(" ") });
+          }
+          if (input.toString().endsWith("/photo/$value")) return new Response(null, { status: 404 });
+          return Response.json({ id: "bound-microsoft", mail: "bound@outlook.com" });
+        },
+      });
+      const cookieA = `orca_session=${sessionA.token}`;
+      const cookieB = `orca_session=${sessionB.token}`;
+      const start = await app.request("/connect", { headers: { cookie: cookieA } });
+      const { state } = await start.json() as { state: string };
+      const callback = `/callback?code=outlook-code&state=${encodeURIComponent(state)}`;
+
+      const crossed = await app.request(callback, { headers: { cookie: cookieB }, redirect: "manual" });
+      expect(crossed.headers.get("location")).toContain("status=error");
+      expect(providerCalls).toBe(0);
+
+      const accepted = await app.request(callback, { headers: { cookie: cookieA }, redirect: "manual" });
+      expect(accepted.headers.get("location")).toContain("status=success");
+      expect(providerCalls).toBe(3);
+      const replay = await app.request(callback, { headers: { cookie: cookieA }, redirect: "manual" });
+      expect(replay.headers.get("location")).toContain("status=error");
+      expect(providerCalls).toBe(3);
+
+      const after = dbFactory();
+      try {
+        expect(after.db.select().from(oauthAccounts).all()).toMatchObject([{ userId: "outlook_user_a", providerId: "bound-microsoft" }]);
+      } finally {
+        after.sqlite.close();
+      }
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
+    }
+  });
+
+  test("binds login callbacks to the exact short-lived attempt without preallocating users or sessions", async () => {
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = config.tokenEncryptionKey;
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-outlook-bound-login-"));
+    const dbPath = join(tempDir, "bound-login.sqlite");
+    const initial = createDatabaseClient(dbPath);
+    migrate(initial.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
+    initial.sqlite.close();
+    let providerCalls = 0;
+
+    try {
+      const dbFactory = () => createDatabaseClient(dbPath);
+      const app = createOutlookAuthApp({
+        config,
+        dbFactory,
+        fetch: async (input) => {
+          providerCalls += 1;
+          if (input.toString().includes("/token")) return Response.json({ access_token: "login-access", refresh_token: "login-refresh", scope: config.scopes.join(" ") });
+          if (input.toString().endsWith("/photo/$value")) return new Response(null, { status: 404 });
+          return Response.json({ id: "login-microsoft", mail: "new@outlook.com" });
+        },
+      });
+      const startA = await app.request("/login");
+      const startB = await app.request("/login");
+      const stateA = (await startA.json() as { state: string }).state;
+      const cookieA = startA.headers.get("set-cookie")!.split(";", 1)[0]!;
+      const cookieB = startB.headers.get("set-cookie")!.split(";", 1)[0]!;
+      const callback = `/callback?code=login-code&state=${encodeURIComponent(stateA)}`;
+
+      const before = dbFactory();
+      try {
+        expect(before.db.select().from(users).all()).toEqual([]);
+        expect(before.db.select().from(sessions).all()).toEqual([]);
+      } finally {
+        before.sqlite.close();
+      }
+
+      expect((await app.request(callback, { headers: { cookie: cookieB }, redirect: "manual" })).headers.get("location")).toContain("status=error");
+      expect(providerCalls).toBe(0);
+      expect((await app.request(callback, { headers: { cookie: cookieA }, redirect: "manual" })).headers.get("location")).toContain("status=success");
+      expect(providerCalls).toBe(3);
+      expect((await app.request(callback, { headers: { cookie: cookieA }, redirect: "manual" })).headers.get("location")).toContain("status=error");
+      expect(providerCalls).toBe(3);
+
+      const after = dbFactory();
+      try {
+        expect(after.db.select().from(users).all()).toHaveLength(1);
+        expect(after.db.select().from(sessions).all()).toHaveLength(1);
+        expect(after.db.select().from(oauthAccounts).all()).toMatchObject([{ provider: "outlook", providerId: "login-microsoft" }]);
+      } finally {
+        after.sqlite.close();
       }
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

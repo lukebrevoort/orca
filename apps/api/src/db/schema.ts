@@ -1036,6 +1036,38 @@ export const sessions = sqliteTable(
   }),
 );
 
+/**
+ * Short-lived, single-use provider OAuth transactions. Login bindings use
+ * ephemeral session/user identifiers that deliberately do not reference the
+ * durable users or sessions tables.
+ */
+export const oauthTransactions = sqliteTable(
+  "oauth_transactions",
+  {
+    id: text("id").primaryKey(),
+    stateHash: text("state_hash").notNull(),
+    provider: text("provider").notNull(),
+    intent: text("intent").notNull(),
+    sessionId: text("session_id").notNull(),
+    userId: text("user_id").notNull(),
+    returnTo: text("return_to"),
+    accountId: text("account_id"),
+    codeVerifier: text("code_verifier"),
+    rateLimitKey: text("rate_limit_key"),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(createdAtDefault),
+  },
+  (table) => ({
+    stateHashUniqueIdx: uniqueIndex("oauth_transactions_state_hash_unique_idx").on(table.stateHash),
+    expiresAtIdx: index("oauth_transactions_expires_at_idx").on(table.expiresAt),
+    createdAtIdx: index("oauth_transactions_created_at_idx").on(table.createdAt),
+    loginRateIdx: index("oauth_transactions_login_rate_idx").on(table.intent, table.rateLimitKey, table.createdAt),
+  }),
+);
+
 export const mcpOAuthClients = sqliteTable(
   "mcp_oauth_clients",
   {

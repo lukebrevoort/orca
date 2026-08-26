@@ -13,6 +13,7 @@ const migrationsFolder = resolve(import.meta.dir, "../../drizzle");
 const requiredTables = [
   "users",
   "oauth_accounts",
+  "oauth_transactions",
   "threads",
   "labels",
   "emails",
