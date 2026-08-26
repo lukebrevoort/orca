@@ -358,18 +358,28 @@ export function canonicalBase64DecodedByteLength(value: string): number | null {
   if (value.length % 4 !== 0) return null;
   const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
   const contentLength = value.length - padding;
+  let finalSextet = 0;
   for (let index = 0; index < contentLength; index += 1) {
     const code = value.charCodeAt(index);
-    const isCanonicalCharacter = (code >= 65 && code <= 90)
-      || (code >= 97 && code <= 122)
-      || (code >= 48 && code <= 57)
-      || code === 43
-      || code === 47;
-    if (!isCanonicalCharacter) return null;
+    const sextet = code >= 65 && code <= 90
+      ? code - 65
+      : code >= 97 && code <= 122
+        ? code - 71
+        : code >= 48 && code <= 57
+          ? code + 4
+          : code === 43
+            ? 62
+            : code === 47
+              ? 63
+              : -1;
+    if (sextet < 0) return null;
+    finalSextet = sextet;
   }
   for (let index = contentLength; index < value.length; index += 1) {
     if (value.charCodeAt(index) !== 61) return null;
   }
+  if ((padding === 2 && (finalSextet & 0b1111) !== 0)
+    || (padding === 1 && (finalSextet & 0b11) !== 0)) return null;
   return (value.length / 4) * 3 - padding;
 }
 
