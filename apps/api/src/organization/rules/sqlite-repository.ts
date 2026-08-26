@@ -31,6 +31,7 @@ import type { OrcaWorkspaceSnapshot } from "./compiler.ts";
 import { canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
 import {
   consumeRuleAuthorizationAnchor,
+  digestRulePersistenceIntent,
   RuleAuthorityError,
   RuleIdempotencyConflictError,
   RuleRevisionConflictError,
@@ -142,6 +143,9 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         // A failed command must receive fresh authority rather than reuse a one-shot anchor.
         const authorizationBinding = consumeRuleAuthorizationAnchor(input.authorizationAnchor);
         if (!authorizationBinding) throw new RuleAuthorityError("invalid_request", "The authenticated Rule authorization anchor is missing or expired");
+        if (digestRulePersistenceIntent(input) !== authorizationBinding.persistenceIntentDigest) {
+          throw new RuleAuthorityError("invalid_request", "The Rule persistence intent does not match its authenticated authorization anchor");
+        }
         const executor = transaction as unknown as Database;
         const commandResult = organizationCommandSchema.safeParse(input.command);
         const envelopeResult = organizationAuthorizationEnvelopeSchema.safeParse({ executionContext: input.executionContext, trace: input.authorityTrace });

@@ -12,8 +12,9 @@ import { RuleAuthorityError, RuleRevisionConflictError, createRuleRevisionServic
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
+type RuleAppendInput = Parameters<RuleRevisionRepository["append"]>[0];
 
-function setup(options: { tamperAuthorization?: boolean } = {}) {
+function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-bre-314-service-"));
   directories.push(directory);
   const client = createDatabaseClient(join(directory, "rules.sqlite"));
@@ -24,12 +25,13 @@ function setup(options: { tamperAuthorization?: boolean } = {}) {
     { id: "private-account", userId: "private", provider: "gmail", providerEmail: "private@example.com", providerId: "private-provider" },
   ]).run();
   const repository = createSqliteRuleRevisionRepository(client.db);
-  if (options.tamperAuthorization) {
+  if (options.tamperAuthorization || options.tamperAppend) {
     const append = repository.append.bind(repository);
     repository.append = (input) => {
       const tampered = structuredClone(input);
-      tampered.executionContext.actor.id = "forged-actor";
-      return append(tampered);
+      tampered.authorizationAnchor = input.authorizationAnchor;
+      if (options.tamperAuthorization) tampered.executionContext.actor.id = "forged-actor";
+      return append(options.tamperAppend?.(tampered) ?? tampered);
     };
   }
   const service = createRuleRevisionService(repository, {
@@ -51,6 +53,121 @@ action route lane "${lane}"
 because "Launch mail stays visible"`;
 
 describe("Rule Revision service", () => {
+  test("rejects destructive compiled IR substituted behind an authentic authorization anchor without writes", () => {
+    const { service, sqlite } = setup({
+      tamperAppend(input) {
+        input.revision.compiled.actions = [{ kind: "propose_provider_deletion" }];
+        input.revision.compiled.requiredCapabilities = ["provider_delete"];
+        input.revision.compiled.risk = "destructive";
+        return input;
+      },
+    });
+    const persistenceState = () => ({
+      rules: (sqlite.query("SELECT COUNT(*) count FROM organization_rules").get() as { count: number }).count,
+      revisions: (sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions").get() as { count: number }).count,
+      changeSets: (sqlite.query("SELECT COUNT(*) count FROM organization_change_sets").get() as { count: number }).count,
+      changeActions: (sqlite.query("SELECT COUNT(*) count FROM organization_change_actions").get() as { count: number }).count,
+      workspaceRevision: (sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision,
+    });
+    try {
+      const before = persistenceState();
+      assert.deepEqual(before, { rules: 0, revisions: 0, changeSets: 0, changeActions: 0, workspaceRevision: 1 });
+      assert.throws(() => service.compile({
+        actor: { id: "owner", type: "human" }, workspaceId: "owner",
+        request: { ruleId: "substituted-rule", idempotencyKey: "substituted-rule-create-1", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() },
+      }), (error: unknown) => error instanceof RuleAuthorityError && error.code === "invalid_request");
+      assert.deepEqual(persistenceState(), before);
+    } finally { sqlite.close(); }
+  });
+
+  test("rejects every persistence-intent mutation behind an authentic anchor without writes", () => {
+    let mutate: (input: RuleAppendInput) => RuleAppendInput = (input) => input;
+    const { service, sqlite } = setup({ tamperAppend: (input) => mutate(input) });
+    const persistenceState = () => ({
+      rules: (sqlite.query("SELECT COUNT(*) count FROM organization_rules").get() as { count: number }).count,
+      revisions: (sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions").get() as { count: number }).count,
+      changeSets: (sqlite.query("SELECT COUNT(*) count FROM organization_change_sets").get() as { count: number }).count,
+      changeActions: (sqlite.query("SELECT COUNT(*) count FROM organization_change_actions").get() as { count: number }).count,
+      workspaceRevision: (sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'owner'").get() as { revision: number }).revision,
+    });
+    const changedSource = source("Everything else", "Substituted source");
+    const cases: Array<[string, (input: RuleAppendInput) => RuleAppendInput]> = [
+      ["request-rule-id", (input) => { input.request.ruleId = "substituted-rule"; return input; }],
+      ["request-idempotency", (input) => { input.request.idempotencyKey = "substituted-key"; return input; }],
+      ["request-expected-rule-revision", (input) => { input.request.expectedRuleRevision = 1; return input; }],
+      ["request-workspace-revision", (input) => { input.request.workspaceSchemaRevision = 2; return input; }],
+      ["request-source", (input) => { input.request.source = changedSource; return input; }],
+      ["change-id", (input) => ({ ...input, changeId: "substituted-change" })],
+      ["command", (input) => { input.command.id = "substituted-command"; return input; }],
+      ["command-intent", (input) => { input.command.intents[0]!.resourceId = "rule:substituted-rule"; return input; }],
+      ["execution-actor", (input) => { input.executionContext.actor.id = "private"; return input; }],
+      ["execution-account-scope", (input) => { input.executionContext.accountIds = ["private-account"]; return input; }],
+      ["execution-expected-revisions", (input) => { input.executionContext.expectedRevisions.workspace = 2; return input; }],
+      ["execution-idempotency", (input) => { input.executionContext.idempotencyKey = "substituted-key"; return input; }],
+      ["authority-trace", (input) => { input.authorityTrace.risk = "destructive"; return input; }],
+      ["authority-trace-scope", (input) => { input.authorityTrace.scope.accountIds = ["private-account"]; return input; }],
+      ["authorization-envelope-digest", (input) => ({ ...input, authorizationEnvelopeDigest: `sha256:${"0".repeat(64)}` })],
+      ["expected-workspace-revision", (input) => ({ ...input, expectedWorkspaceSchemaRevision: 2 })],
+      ["expected-rule-revision", (input) => ({ ...input, expectedRuleRevision: 1 })],
+      ["rule-id", (input) => { input.rule.id = "substituted-rule"; return input; }],
+      ["rule-workspace", (input) => { input.rule.workspaceId = "private"; return input; }],
+      ["rule-name", (input) => { input.rule.name = "Substituted name"; return input; }],
+      ["rule-latest-revision", (input) => { input.rule.latestRevision = 2; return input; }],
+      ["rule-active-revision", (input) => { input.rule.activeRevisionId = "substituted-revision"; return input; }],
+      ["rule-created-at", (input) => { input.rule.createdAt = "2026-08-25T12:00:01.000Z"; return input; }],
+      ["rule-updated-at", (input) => { input.rule.updatedAt = "2026-08-25T12:00:01.000Z"; return input; }],
+      ["revision-id", (input) => { input.revision.id = "substituted-revision"; return input; }],
+      ["revision-rule-id", (input) => { input.revision.ruleId = "substituted-rule"; return input; }],
+      ["revision-workspace", (input) => { input.revision.workspaceId = "private"; return input; }],
+      ["revision-number", (input) => { input.revision.revision = 2; return input; }],
+      ["revision-source", (input) => { input.revision.source = changedSource; return input; }],
+      ["revision-source-digest", (input) => { input.revision.sourceDigest = `sha256:${"0".repeat(64)}`; return input; }],
+      ["compiled-language-version", (input) => { (input.revision.compiled as { languageVersion: number }).languageVersion = 2; return input; }],
+      ["compiled-workspace", (input) => { input.revision.compiled.workspaceId = "private"; return input; }],
+      ["compiled-workspace-revision", (input) => { input.revision.compiled.workspaceSchemaRevision = 2; return input; }],
+      ["compiled-name", (input) => { input.revision.compiled.name = "Substituted name"; return input; }],
+      ["compiled-event", (input) => { input.revision.compiled.event.kind = "schedule.reached"; return input; }],
+      ["compiled-predicate-content", (input) => { input.revision.compiled.predicates[0]!.name = "substituted-predicate"; return input; }],
+      ["compiled-predicate-order", (input) => { input.revision.compiled.predicates.reverse(); return input; }],
+      ["compiled-action-content", (input) => {
+        const action = input.revision.compiled.actions[0];
+        if (action?.kind !== "route_lane") throw new Error("Expected ordered matrix source to compile a route_lane first");
+        action.laneId = "substituted-lane";
+        return input;
+      }],
+      ["compiled-action-order", (input) => { input.revision.compiled.actions.reverse(); return input; }],
+      ["compiled-because", (input) => { input.revision.compiled.because = "Substituted rationale"; return input; }],
+      ["compiled-capabilities", (input) => { input.revision.compiled.requiredCapabilities = ["provider_delete"]; return input; }],
+      ["compiled-risk", (input) => { input.revision.compiled.risk = "destructive"; return input; }],
+      ["revision-actor", (input) => { input.revision.actor.id = "private"; return input; }],
+      ["revision-created-at", (input) => { input.revision.createdAt = "2026-08-25T12:00:01.000Z"; return input; }],
+    ];
+    const orderedSource = `orca 1
+rule "Ordered launch mail"
+event message.received
+predicate launch = subject contains "launch"
+predicate unread = thread.unread equals true
+when launch
+when unread
+action route lane "Everything else"
+action notify digest
+because "Ordered predicates and actions stay bound"`;
+    const before = persistenceState();
+    try {
+      assert.deepEqual(before, { rules: 0, revisions: 0, changeSets: 0, changeActions: 0, workspaceRevision: 1 });
+      for (const [index, [name, mutation]] of cases.entries()) {
+        mutate = mutation;
+        assert.throws(() => service.compile({
+          actor: { id: "owner", type: "human" }, workspaceId: "owner",
+          request: { ruleId: `matrix-rule-${index}`, idempotencyKey: `matrix-key-${index}`, expectedRuleRevision: null, workspaceSchemaRevision: 1, source: orderedSource },
+        }), (error: unknown) => error instanceof RuleAuthorityError
+          && error.code === "invalid_request"
+          && /persistence intent/.test(error.message), name);
+        assert.deepEqual(persistenceState(), before, name);
+      }
+    } finally { sqlite.close(); }
+  }, 15_000);
+
   test("rejects a forged authorization envelope before any Rule transaction write", () => {
     const { service, sqlite } = setup({ tamperAuthorization: true });
     try {

@@ -41,13 +41,43 @@ export class RuleAuthorityError extends Error {
 
 declare const ruleAuthorizationAnchorBrand: unique symbol;
 export type RuleAuthorizationAnchor = Readonly<{ [ruleAuthorizationAnchorBrand]: true }>;
+export type RulePersistenceIntent = Readonly<{
+  request: OrcaRuleCompileRequest;
+  changeId: string;
+  command: OrganizationCommand;
+  executionContext: OrganizationExecutionContext;
+  authorityTrace: OrganizationAuthorityTrace;
+  authorizationEnvelopeDigest: string;
+  expectedWorkspaceSchemaRevision: number;
+  expectedRuleRevision: number | null;
+  rule: OrcaRule;
+  revision: OrcaRuleRevision;
+}>;
 type RuleAuthorizationBinding = Readonly<{
   actor: OrganizationActor;
   workspaceId: string;
   accountIds: string[];
   authorizationEnvelopeDigest: string;
+  persistenceIntentDigest: string;
 }>;
 const ruleAuthorizationAnchors = new WeakMap<object, RuleAuthorizationBinding>();
+
+/** Canonically binds every caller-controlled field that can affect Rule authority or persistence. */
+export function digestRulePersistenceIntent(input: RulePersistenceIntent): string {
+  const intent: RulePersistenceIntent = {
+    request: input.request,
+    changeId: input.changeId,
+    command: input.command,
+    executionContext: input.executionContext,
+    authorityTrace: input.authorityTrace,
+    authorizationEnvelopeDigest: input.authorizationEnvelopeDigest,
+    expectedWorkspaceSchemaRevision: input.expectedWorkspaceSchemaRevision,
+    expectedRuleRevision: input.expectedRuleRevision,
+    rule: input.rule,
+    revision: input.revision,
+  };
+  return `sha256:${createHash("sha256").update(canonicalOrganizationJson(intent)).digest("hex")}`;
+}
 
 function issueRuleAuthorizationAnchor(binding: RuleAuthorizationBinding): RuleAuthorizationAnchor {
   const anchor = Object.freeze({}) as RuleAuthorizationAnchor;
@@ -75,18 +105,8 @@ export type RuleRevisionRepository = {
     request: OrcaRuleCompileRequest;
     response: OrcaRuleCompileResponse & { ok: true };
   } | null;
-  append(input: {
-    request: OrcaRuleCompileRequest;
-    changeId: string;
-    command: OrganizationCommand;
-    executionContext: OrganizationExecutionContext;
-    authorityTrace: OrganizationAuthorityTrace;
-    authorizationEnvelopeDigest: string;
+  append(input: RulePersistenceIntent & {
     authorizationAnchor: RuleAuthorizationAnchor;
-    expectedWorkspaceSchemaRevision: number;
-    expectedRuleRevision: number | null;
-    rule: OrcaRule;
-    revision: OrcaRuleRevision;
   }): OrcaRuleCompileResponse & { ok: true };
   get(workspaceId: string, ruleId: string): OrcaRuleRevisionList | null;
 };
@@ -184,23 +204,27 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         if (decision.code === "duplicate_idempotency_key") throw new RuleIdempotencyConflictError(decision.reason);
         throw new RuleAuthorityError(decision.code, decision.reason);
       }
-      return repository.append({
+      const persistenceIntent: RulePersistenceIntent = {
         request,
         changeId,
         command,
         executionContext: decision.executionContext,
         authorityTrace: decision.trace,
         authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+        expectedWorkspaceSchemaRevision: request.workspaceSchemaRevision,
+        expectedRuleRevision: request.expectedRuleRevision,
+        rule,
+        revision,
+      };
+      return repository.append({
+        ...persistenceIntent,
         authorizationAnchor: issueRuleAuthorizationAnchor({
           actor: input.actor,
           workspaceId: input.workspaceId,
           accountIds: granted.scope.accountIds,
           authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
+          persistenceIntentDigest: digestRulePersistenceIntent(persistenceIntent),
         }),
-        expectedWorkspaceSchemaRevision: request.workspaceSchemaRevision,
-        expectedRuleRevision: request.expectedRuleRevision,
-        rule,
-        revision,
       });
     },
     get(input: { workspaceId: string; ruleId: string }): OrcaRuleRevisionList {
