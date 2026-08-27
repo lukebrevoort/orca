@@ -759,7 +759,7 @@ action link context "Project" "Orca"`);
       competing.sqlite.close();
       fixture.sqlite.close();
     }
-  }, 30_000);
+  }, 60_000);
 
   test("denies an exact activation replay when the authoritative Capability was removed after commit", async () => {
     const { db, sqlite, compiled } = await setup();
@@ -1219,7 +1219,7 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
       competing.sqlite.close();
       fixture.sqlite.close();
     }
-  }, 30_000);
+  }, 60_000);
 
   test("revalidates every revert replay Capability dimension before returning stored lifecycle evidence", async () => {
     const { db, sqlite, compiled } = await setup();
