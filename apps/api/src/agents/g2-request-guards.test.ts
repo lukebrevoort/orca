@@ -110,6 +110,34 @@ describe("BRE-319 MCP exhaustion guards", () => {
     if (recovered.allowed) recovered.release();
   });
 
+  test("evicts many expired zero-in-flight keys while preserving active lease accounting", () => {
+    let now = 0;
+    const limiter = new McpRequestLimiter({ now: () => now, windowMilliseconds: 10, maximumConnectionInFlight: 2, maximumWorkspaceInFlight: 2 });
+    for (let i = 0; i < 2_000; i++) {
+      const lease = limiter.acquire({ connectionId: `c-${i}`, workspaceId: `w-${i}`, cost: 1 });
+      if (lease.allowed) lease.release();
+    }
+    now = 20;
+    const active = limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 });
+    assert.equal(active.allowed, true);
+    const blocked = limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 });
+    assert.equal(blocked.allowed, true);
+    if (active.allowed) active.release();
+    if (blocked.allowed) blocked.release();
+    now = 40;
+    assert.equal(limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 }).allowed, true);
+  });
+
+  test("preserves abort signal on bounded exchange after admission", async () => {
+    const controller = new AbortController();
+    const guarded = await boundedMcpRequest(new Request("https://orca.example/mcp", { method: "POST", body: "{}", signal: controller.signal }));
+    assert.equal(guarded.allowed, true);
+    if (!guarded.allowed) return;
+    assert.equal(guarded.request.signal.aborted, false);
+    controller.abort();
+    assert.equal(guarded.request.signal.aborted, true);
+  });
+
   test("exports every stable BRE-319 denial and exhaustion error code", () => {
     for (const code of [
       "denial",

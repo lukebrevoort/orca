@@ -81,4 +81,17 @@ describe("BRE-319 bounded mutation-attempt audit", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  test("two database connections retain both newest concurrent attempts under the 1,000-row cap", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-g2-attempt-race-"));
+    const path = join(directory, "audit.sqlite");
+    const first = createDatabaseClient(path); const second = createDatabaseClient(path);
+    try {
+      migrate(first.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+      first.sqlite.exec("INSERT INTO users (id,email) VALUES ('workspace','owner@example.com'); INSERT INTO mcp_oauth_clients (id,name,redirect_uris) VALUES ('client','Client','[]'); INSERT INTO mcp_connections (id,user_id,client_id,resource,scopes) VALUES ('connection','workspace','client','https://api.orca.test/mcp','organization:control');");
+      await Promise.all([1, 2].map((n) => Promise.resolve().then(() => recordOrganizationMutationAttempt({ db: n === 1 ? first.db : second.db, workspaceId: "workspace", connectionId: "connection", actor: { id: `client-${n}`, type: "agent" }, operation: "apply", query: { accountIds: ["account"], target: { request: { idempotencyKey: `k-${n}`, actions: [] } } } as unknown as McpApplyOrganizationInput, error: Object.assign(new Error("race"), { code: "revision_conflict" }), id: `race-${n}`, now: new Date(10_000 + n) }))));
+      const rows = first.db.select().from(organizationMutationAttempts).all().filter((r) => r.workspaceId === "workspace");
+      assert.equal(rows.length, 2); assert.equal(rows.some((r) => r.id === "race-1"), true); assert.equal(rows.some((r) => r.id === "race-2"), true);
+    } finally { first.sqlite.close(); second.sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
+  });
 });
