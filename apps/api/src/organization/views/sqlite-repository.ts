@@ -263,6 +263,21 @@ function idempotentMutation(sqlite: Database, workspaceId: string, idempotencyKe
   return { ...parsed, authorityTrace: JSON.parse(row.authority_trace) as unknown };
 }
 
+function verifyReplayAuthorization(
+  sqlite: Database,
+  scope: OrganizationViewScope,
+  agentCapabilitySource: OrganizationViewMutationAuthorization["agentCapabilitySource"],
+  replay: NonNullable<ReturnType<typeof idempotentMutation>>,
+) {
+  if (scope.actor.type !== "agent") return;
+  const agentScope = { ...scope, actor: scope.actor as typeof scope.actor & { type: "agent" } };
+  if (!loadAuthorizedOrganizationAgentCapability(
+    agentScope, agentCapabilitySource, sqlite,
+    { operation: "apply", resourceFamily: "view", actionFamily: "organization_structure" },
+  )) throw new OrganizationViewAccessError("The persisted MCP Organization grant no longer authorizes View apply", "resource_denied");
+  if (!organizationReplayAuthorityMatches(agentScope, replay.authorityTrace)) throw new OrganizationViewAccessError("The cached View mutation belongs to a different Organization authority", "resource_denied");
+}
+
 function verifyAuthorization(sqlite: Database, workspaceId: string, authorization: OrganizationViewMutationAuthorization) {
   sqlite.query("INSERT INTO organization_workspace_states (workspace_id,revision,updated_at) VALUES (?,1,?) ON CONFLICT(workspace_id) DO NOTHING").run(workspaceId, Date.now());
   const live = authorityState(sqlite, workspaceId);
@@ -315,6 +330,11 @@ function authorizedMutation<T>(sqlite: Database, input: {
     if (!key) throw new OrganizationViewValidationError("A View mutation requires an idempotency key");
     const replay = idempotentMutation(sqlite, input.workspaceId, key);
     if (replay) {
+      verifyReplayAuthorization(sqlite, {
+        actor: input.authorization.executionContext.actor,
+        workspaceId: input.workspaceId,
+        accountIds: input.authorization.executionContext.accountIds,
+      }, input.authorization.agentCapabilitySource, replay);
       if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(input.boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
       return replay.response as T;
     }
@@ -399,13 +419,9 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     replay(input) {
       return sqlite.transaction(() => {
         const executor = sqlite;
-        const agentScope = input.scope.actor.type === "agent" ? { ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } } : null;
-        if (agentScope && !loadAuthorizedOrganizationAgentCapability(
-          agentScope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "view", actionFamily: "organization_structure" },
-        )) throw new OrganizationViewAccessError("The persisted MCP Organization grant no longer authorizes View apply", "resource_denied");
         const existing = idempotentMutation(executor, input.scope.workspaceId, input.idempotencyKey);
         if (!existing) return null;
-        if (agentScope && !organizationReplayAuthorityMatches(agentScope, existing.authorityTrace)) throw new OrganizationViewAccessError("The cached View mutation belongs to a different Organization authority", "resource_denied");
+        verifyReplayAuthorization(executor, input.scope, input.agentCapabilitySource, existing);
         if (canonicalOrganizationJson(existing.request) !== canonicalOrganizationJson(input.boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
         return { response: existing.response };
       })();

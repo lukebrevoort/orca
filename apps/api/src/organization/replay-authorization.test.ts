@@ -22,7 +22,8 @@ afterEach(() => { while (directories.length) rmSync(directories.pop()!, { recurs
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), "orca-replay-authorization-"));
   directories.push(directory);
-  const client = createDatabaseClient(join(directory, "organization.sqlite"));
+  const path = join(directory, "organization.sqlite");
+  const client = createDatabaseClient(path);
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
   client.db.insert(users).values({ id: "workspace", email: "owner@example.com" }).run();
   client.db.insert(oauthAccounts).values({ id: "account", userId: "workspace", provider: "gmail", providerEmail: "owner@example.com", providerId: "provider" }).run();
@@ -41,6 +42,7 @@ function fixture() {
     load(_scope, executor) { if (executor) transactionLoads += 1; return current; },
   };
   const reset = () => { current = { snapshot: structuredClone(baseline), revokedAt: null }; };
+  const revoke = () => { current = { snapshot: structuredClone(baseline), revokedAt: "2026-08-26T00:00:00.000Z" }; };
   const denyCases: Array<[string, () => void]> = [
     ["revocation", () => { current = { snapshot: structuredClone(baseline), revokedAt: "2026-08-26T00:00:00.000Z" }; }],
     ["operation downgrade", () => { const snapshot = structuredClone(baseline); snapshot.operations = ["query"]; current = { snapshot, revokedAt: null }; }],
@@ -50,10 +52,39 @@ function fixture() {
     ["workspace mismatch", () => { const snapshot = structuredClone(baseline); snapshot.scope.workspaceId = "other-workspace"; current = { snapshot, revokedAt: null }; }],
   ];
   const count = (key: string) => client.db.select().from(organizationChangeSets).all().filter((row) => row.idempotencyKey === key).length;
-  return { ...client, scope, source, reset, denyCases, count, transactionLoads: () => transactionLoads };
+  return { ...client, path, scope, source, reset, revoke, denyCases, count, transactionLoads: () => transactionLoads };
 }
 
 describe("BRE-318 transaction-live agent replay authorization", () => {
+  test("View duplicate return reauthorizes after another connection commits and revokes between preflight and transaction entry", () => {
+    const f = fixture();
+    const competing = createDatabaseClient(f.path);
+    try {
+      const primary = createSqliteOrganizationViewsRepository(f.sqlite);
+      const secondary = createSqliteOrganizationViewsRepository(competing.sqlite);
+      let interleaved = false;
+      const repository = {
+        ...primary,
+        create(input: Parameters<typeof primary.create>[0]) {
+          if (!interleaved) {
+            interleaved = true;
+            secondary.create(input);
+            f.revoke();
+          }
+          return primary.create(input);
+        },
+      };
+      const service = createOrganizationViews(repository, { agentCapabilitySource: f.source, newViewId: () => "raced-view", newChangeId: () => "raced-change", now: () => new Date("2026-08-26T00:00:00.000Z") });
+      const request = { idempotencyKey: "view-duplicate-race", expectedWorkspaceRevision: 1, name: "Raced", position: 0, definition: { revision: 1, accountIds: ["account"] } };
+      assert.throws(() => service.create({ scope: f.scope, request }), OrganizationViewAccessError);
+      assert.equal(interleaved, true);
+      assert.equal(f.count(request.idempotencyKey), 1);
+    } finally {
+      competing.sqlite.close();
+      f.sqlite.close();
+    }
+  });
+
   test("View replay is identical and write-free only while the exact persisted grant remains live", () => {
     const f = fixture();
     try {
