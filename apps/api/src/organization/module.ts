@@ -28,7 +28,7 @@ import {
   type WorkspaceThread,
   type WorkspaceThreadMessage,
 } from "@orca/shared";
-import { authorizeOrganizationOperation } from "./authority.ts";
+import { authorizeOrganizationOperation, canonicalOrganizationJson } from "./authority.ts";
 import { digestFacetWorkflowActions, validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 import {
   createOrganizationCollectionsPins,
@@ -40,7 +40,7 @@ import {
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
 import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
-import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
+import { isAgentOrganizationActor, requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -162,26 +162,54 @@ const facetSupport = Object.freeze({
 });
 
 function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope, agentCapabilitySource?: OrganizationAgentCapabilitySource) {
-  const agentActor = scope.actor.type === "agent" ? { ...scope.actor, type: "agent" as const } : null;
-  const agentCapability = agentActor
-    ? agentCapabilitySource?.load({ actor: agentActor, workspaceId: scope.workspaceId, accountIds: scope.accountIds })?.snapshot ?? null
+  const agentScope = isAgentOrganizationActor(scope.actor)
+    ? { actor: scope.actor, workspaceId: scope.workspaceId, accountIds: scope.accountIds }
     : null;
-  const can = (operation: "describe" | "query" | "simulate" | "apply" | "revert") => agentCapability?.operations.includes(operation) ?? false;
+  const live = agentScope
+    ? agentCapabilitySource?.load(agentScope) ?? null
+    : null;
+  const snapshot = live?.revokedAt === null
+    && live.snapshot.actor.type === "agent"
+    && live.snapshot.actor.id === scope.actor.id
+    && live.snapshot.scope.workspaceId === scope.workspaceId
+    && canonicalOrganizationJson([...live.snapshot.scope.accountIds].sort()) === canonicalOrganizationJson([...scope.accountIds].sort())
+    ? live.snapshot
+    : null;
+  const grants = (
+    operation: OrganizationCapabilitySnapshot["operations"][number],
+    resourceFamilies: OrganizationCapabilitySnapshot["resourceFamilies"][number][],
+  ) => Boolean(snapshot?.operations.includes(operation)
+    && snapshot.actionFamilies.includes("organization_structure")
+    && resourceFamilies.some((family) => snapshot.resourceFamilies.includes(family)));
+  const supportedApplyFamilies: OrganizationCapabilitySnapshot["resourceFamilies"][number][] = [
+    ...(repository.lanes ? ["lane" as const, "thread" as const] : []),
+    ...(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState ? ["facet" as const, "workflow_state" as const, "thread" as const] : []),
+    ...(repository.collectionsPins ? ["collection" as const, "shortcut" as const, "saved_query" as const] : []),
+    ...(repository.contexts ? ["context" as const] : []),
+  ];
   const human = scope.actor.type === "human";
   const mcp = scope.actor.type === "agent";
   const structureApplyAvailable = Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes);
+  const canDescribe = Boolean(snapshot?.operations.includes("describe"));
+  const canQuery = Boolean(snapshot?.operations.includes("query"));
+  const canSimulate = grants("simulate", ["rule"]);
+  const canApply = supportedApplyFamilies.length > 0 && grants("apply", supportedApplyFamilies);
+  const canRevert = grants("revert", ["rule", "change_set"]);
+  const canCorrect = Boolean(snapshot?.operations.includes("apply")
+    && snapshot.actionFamilies.includes("organization_thread")
+    && ["thread", "trace", "change_set", "audit"].every((family) => snapshot.resourceFamilies.includes(family as OrganizationCapabilitySnapshot["resourceFamilies"][number])));
   return {
     operations: {
       describe: true as const,
       query: true as const,
-      simulate: human || can("simulate"),
-      apply: (human || can("apply")) && structureApplyAvailable,
-      revert: human || can("revert"),
+      simulate: human || canSimulate,
+      apply: human ? structureApplyAvailable : canApply,
+      revert: human || canRevert,
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
     surfaces: {
       rest: { describe: human, query: human, simulate: human, apply: human && structureApplyAvailable, revert: human, correct: human },
-      mcp: { describe: mcp && can("describe"), query: mcp && can("query"), simulate: mcp && can("simulate"), apply: mcp && can("apply"), revert: mcp && can("revert"), correct: mcp && can("apply") },
+      mcp: { describe: mcp && canDescribe, query: mcp && canQuery, simulate: mcp && canSimulate, apply: mcp && canApply, revert: mcp && canRevert, correct: mcp && canCorrect },
     },
   };
 }

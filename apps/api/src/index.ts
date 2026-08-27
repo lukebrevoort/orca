@@ -55,6 +55,7 @@ import {
   legacyPinFilterFromOrganizationSavedQueryDefinition,
   normalizeOrganizationSavedQueryDefinition,
   organizationSavedQueryDefinitionFromLegacyPinFilter,
+  organizationAuthorityTraceSchema,
   pinFilterSchema,
   listHumanClassificationOverridesSchema,
   resolveHumanClassificationSchema,
@@ -496,15 +497,20 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const correctionChangeSetId = query.target.kind === "thread_correction" && resultRecord.changeSetId !== null
           ? String(resultRecord.changeSetId) : null;
         const persistedChangeSet = correctionChangeSetId
-          ? db.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(
+          ? db.select({ id: organizationChangeSets.id, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
             eq(organizationChangeSets.workspaceId, userId), eq(organizationChangeSets.id, correctionChangeSetId),
           )).get()
-          : db.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(
+          : db.select({ id: organizationChangeSets.id, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
             eq(organizationChangeSets.workspaceId, userId), eq(organizationChangeSets.idempotencyKey, idempotencyKey),
           )).get();
         const rejected = query.target.kind === "rule_revision" && resultRecord.ok === false;
         if (!rejected && !persistedChangeSet && query.target.kind !== "thread_correction") throw new Error(`Successful ${query.target.kind} mutation did not persist its Change Set`);
-        return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], resourceFamily: query.resourceFamily, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: persistedChangeSet ? [persistedChangeSet.id] : [], rejected: [] }, result };
+        const resourceFamilies = query.target.kind === "thread_correction"
+          ? ["thread" as const, "trace" as const, "change_set" as const, "audit" as const]
+          : persistedChangeSet
+            ? organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies
+            : ["rule" as const];
+        return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], targetKind: query.targetKind, resourceFamilies, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: persistedChangeSet ? [persistedChangeSet.id] : [], rejected: [] }, result };
       } catch (error) {
         recordOrganizationMutationAttempt({
           db,
@@ -527,7 +533,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const capability = capabilitySource.load(db, { workspaceId: userId });
         if (!capability) throw new McpReadError("account_denied", "The Rule Change Set Capability is unavailable");
         const result = createSqliteRuleChangeSetService(db, { capabilitySource }).revert({ actor, capabilitySnapshot: capability.snapshot, workspaceId: userId, request: query.request });
-        return { operation: "revert" as const, workspaceId: userId, accountIds: [...allowedAccountIds], resourceFamily: query.resourceFamily, actor, capabilityId: capability.snapshot.id, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk: result.risk, changeSetIds: { applied: [result.changeSetId], rejected: [] }, result };
+        const persistedChangeSet = db.select({ authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, userId), eq(organizationChangeSets.id, result.changeSetId),
+        )).get();
+        if (!persistedChangeSet) throw new Error("Successful Rule Change Set revert did not persist authority evidence");
+        const resourceFamilies = organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies;
+        return { operation: "revert" as const, workspaceId: userId, accountIds: [...allowedAccountIds], targetKind: query.targetKind, resourceFamilies, actor, capabilityId: capability.snapshot.id, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk: result.risk, changeSetIds: { applied: [result.changeSetId], rejected: [] }, result };
       } catch (error) {
         recordOrganizationMutationAttempt({
           db,

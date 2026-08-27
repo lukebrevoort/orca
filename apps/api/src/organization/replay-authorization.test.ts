@@ -117,6 +117,35 @@ describe("BRE-318 transaction-live agent replay authorization", () => {
     } finally { f.sqlite.close(); }
   });
 
+  test("Collection/Pin transaction duplicate rejects cached authority committed by another Actor", () => {
+    const f = fixture();
+    const competing = createDatabaseClient(f.path);
+    try {
+      const otherActor = { id: "other-mcp-client", type: "agent" as const };
+      const otherSnapshot = { ...structuredClone((f.source.load(f.scope)!).snapshot), id: "other-grant", actor: otherActor };
+      const otherScope = { ...f.scope, actor: otherActor };
+      const otherSource: OrganizationAgentCapabilitySource = { load: () => ({ snapshot: otherSnapshot, revokedAt: null }) };
+      const secondary = createOrganizationCollectionsPins(createSqliteOrganizationCollectionsPinsRepository(competing.db), {
+        agentCapabilitySource: otherSource, newChangeId: () => "other-change", newResourceId: () => "shared-collection", now: () => new Date("2026-08-26T00:00:00.000Z"),
+      });
+      const primary = createSqliteOrganizationCollectionsPinsRepository(f.db);
+      const originalApply = primary.apply.bind(primary);
+      let interleaved = false;
+      primary.apply = (input) => {
+        if (!interleaved) {
+          interleaved = true;
+          secondary.apply({ scope: otherScope, request, expectedWorkspaceRevision: 1 });
+        }
+        return originalApply(input);
+      };
+      const service = createOrganizationCollectionsPins(primary, { agentCapabilitySource: f.source, newChangeId: () => "primary-change", newResourceId: () => "shared-collection", now: () => new Date("2026-08-26T00:00:00.000Z") });
+      const request = { idempotencyKey: "collection-actor-race", change: { kind: "collection" as const, action: "create" as const, accountId: "account", collection: { name: "Raced", color: "#336699" } } };
+      assert.throws(() => service.apply({ scope: f.scope, request, expectedWorkspaceRevision: 1 }), OrganizationCollectionsPinsAccessError);
+      assert.equal(interleaved, true);
+      assert.equal(f.count(request.idempotencyKey), 1);
+    } finally { competing.sqlite.close(); f.sqlite.close(); }
+  });
+
   test("Context replay is identical and write-free only while the exact persisted grant remains live", () => {
     const f = fixture();
     try {

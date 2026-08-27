@@ -684,6 +684,16 @@ action link context "Project" "Orca"`);
       }), applied);
       assert.deepEqual(snapshot(db), afterApply, "an authorized exact replay must remain write-free");
 
+      const otherActor = { id: "other-client", type: "human" as const };
+      const otherCapability = { ...structuredClone(capabilitySnapshot), id: "other-capability", actor: otherActor };
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, { capabilitySource: { load: () => ({ snapshot: otherCapability, revokedAt: null }) } }).activate({
+          actor: otherActor, capabilitySnapshot: otherCapability, workspaceId: "workspace-1", request,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "invalid_change_set",
+      );
+      assert.deepEqual(snapshot(db), afterApply, "a different Actor and Capability must not receive cached lifecycle evidence");
+
       const wrongActor = { ...capabilitySnapshot, actor: { id: "attacker", type: "human" as const } };
       const wrongAudience = { ...capabilitySnapshot, actor: { id: actor.id, type: "agent" as const } };
       const wrongWorkspace = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, workspaceId: "workspace-2" } };
@@ -691,6 +701,7 @@ action link context "Project" "Orca"`);
       const wrongOperation = { ...capabilitySnapshot, operations: capabilitySnapshot.operations.filter((operation) => operation !== "apply") };
       const wrongResource = { ...capabilitySnapshot, resourceFamilies: capabilitySnapshot.resourceFamilies.filter((family) => family !== "rule") };
       const wrongActionRisk = { ...capabilitySnapshot, actionFamilies: capabilitySnapshot.actionFamilies.filter((family) => family !== "organization_structure") };
+      const differentCapabilityIdentity = { ...capabilitySnapshot, id: "different-live-capability" };
       const variants = [
         ["revoked", capabilitySnapshot, { snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }, "capability_revoked"],
         ["stale", capabilitySnapshot, { snapshot: { ...capabilitySnapshot, revision: capabilitySnapshot.revision + 1 }, revokedAt: null }, "capability_stale"],
@@ -701,6 +712,7 @@ action link context "Project" "Orca"`);
         ["wrong operation", wrongOperation, { snapshot: wrongOperation, revokedAt: null }, "missing_operation_capability"],
         ["wrong resource scope", wrongResource, { snapshot: wrongResource, revokedAt: null }, "resource_family_denied"],
         ["wrong action/risk scope", wrongActionRisk, { snapshot: wrongActionRisk, revokedAt: null }, "action_family_denied"],
+        ["different Capability identity", differentCapabilityIdentity, { snapshot: differentCapabilityIdentity, revokedAt: null }, "invalid_change_set"],
       ] as const;
       for (const [name, claimed, live, code] of variants) {
         assert.throws(

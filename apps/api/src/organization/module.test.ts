@@ -353,6 +353,36 @@ describe("Organization module contract", () => {
     assert.notEqual(actionDigests[0], actionDigests[1]);
   });
 
+  test("derives advertised agent mutations from the exact live persisted grant", () => {
+    const actor = { id: "agent_a", type: "agent" as const };
+    const scope = { actor, workspaceId: "workspace_owner", accountIds: ["account_a"] };
+    const full: import("@orca/shared").OrganizationCapabilitySnapshot = {
+      id: "grant_a", revision: 1, actor,
+      scope: { workspaceId: scope.workspaceId, accountIds: scope.accountIds },
+      operations: ["describe", "query", "simulate", "apply", "revert"],
+      resourceFamilies: ["rule", "change_set", "facet", "workflow_state", "thread"],
+      actionFamilies: ["organization_read", "organization_structure"],
+    };
+    let live: { snapshot: typeof full; revokedAt: string | null } | null = { snapshot: full, revokedAt: null };
+    const writeRepository: OrganizationRepository = {
+      listAccountIds: () => ["account_a"], listThreads: () => [],
+      getFacetWorkflowAuthorityState: () => ({ workspaceRevision: 1, resourceRevisions: {}, reservedIdempotencyKeys: [] }),
+      applyFacetWorkflow: () => ({ workspaceRevision: 2, facetDefinitions: [], workflowStates: [], threads: [] }),
+    };
+    const organization = createOrganization(writeRepository, { agentCapabilitySource: { load: () => live } });
+    assert.deepEqual(organization.describe({ scope }).capabilities.operations, {
+      describe: true, query: true, simulate: true, apply: true, revert: true,
+    });
+    live = { snapshot: { ...full, operations: ["describe", "query"], resourceFamilies: ["workspace_schema", "mail", "thread"], actionFamilies: ["organization_read"] }, revokedAt: null };
+    assert.deepEqual(organization.describe({ scope }).capabilities.operations, {
+      describe: true, query: true, simulate: false, apply: false, revert: false,
+    });
+    live = { snapshot: full, revokedAt: "2026-08-26T00:00:00.000Z" };
+    assert.deepEqual(organization.describe({ scope }).capabilities.operations, {
+      describe: true, query: true, simulate: false, apply: false, revert: false,
+    });
+  });
+
   test("fails closed when either authorization scope or filter names an unowned Account", () => {
     const organization = createOrganization(repository);
 

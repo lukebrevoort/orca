@@ -234,7 +234,7 @@ async function callProjectionHandler(
       authorization: `Bearer ${token}`,
       host: new URL(resource).host,
     },
-    body: rpc("tools/call", { name, arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: name === "describe_organization" ? 4 : organizationQueryFixture.laneConfiguration.workspaceRevision, resourceFamilies: name === "describe_organization" ? ["workspace_schema"] : ["mail", "thread"], ...args } }),
+    body: rpc("tools/call", { name, arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: name === "describe_organization" ? 4 : organizationQueryFixture.laneConfiguration.workspaceRevision, ...args } }),
   }));
 }
 
@@ -685,7 +685,7 @@ describe("Orca scoped MCP server", () => {
 
       const describe = await callMcp(app, token, "tools/call", {
         name: "describe_organization",
-        arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema", "mail", "thread", "lane", "view", "collection", "facet", "context", "workflow_state", "rule", "change_set", "trace"] },
+        arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1 },
       });
       const describeBody = await rpcBody(describe);
       assert.deepEqual(describeBody.result.structuredContent.accountIds, ["account_a"]);
@@ -700,7 +700,7 @@ describe("Orca scoped MCP server", () => {
 
       const deniedDescribe = await callMcp(app, token, "tools/call", {
         name: "describe_organization",
-        arguments: { workspaceId: "user_a", accountIds: ["account_b"], expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema"] },
+        arguments: { workspaceId: "user_a", accountIds: ["account_b"], expectedWorkspaceRevision: 1 },
       });
       const deniedDescribeBody = await rpcBody(deniedDescribe);
       assert.equal(deniedDescribeBody.result.isError, true);
@@ -708,7 +708,7 @@ describe("Orca scoped MCP server", () => {
 
       const organizationQuery = await callMcp(app, token, "tools/call", {
         name: "query_organization",
-        arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamilies: ["mail", "thread"], attention: "all", limit: 25 },
+        arguments: { workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, attention: "all", limit: 25 },
       });
       const organizationBody = await rpcBody(organizationQuery);
       assert.deepEqual(organizationBody.result.structuredContent.accountIds, ["account_a"]);
@@ -717,7 +717,7 @@ describe("Orca scoped MCP server", () => {
 
       const deniedOrganization = await callMcp(app, token, "tools/call", {
         name: "query_organization",
-        arguments: { workspaceId: "user_a", accountIds: ["account_b"], expectedWorkspaceRevision: 1, resourceFamilies: ["mail", "thread"], attention: "all" },
+        arguments: { workspaceId: "user_a", accountIds: ["account_b"], expectedWorkspaceRevision: 1, attention: "all" },
       });
       const deniedOrganizationBody = await rpcBody(deniedOrganization);
       assert.equal(deniedOrganizationBody.result.isError, true);
@@ -827,7 +827,7 @@ describe("Orca scoped MCP server", () => {
       }))).run();
       const describe = await callMcp(app, token, "tools/call", {
         name: "describe_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema", "mail", "thread", "lane", "view", "collection", "facet", "context", "workflow_state", "rule", "change_set", "trace"] },
+        arguments: { ...scope, expectedWorkspaceRevision: 1 },
       });
       const described = (await rpcBody(describe)).result.structuredContent;
       assert.deepEqual(described.capabilities.operations, { describe: true, query: true, simulate: true, apply: true, revert: true });
@@ -848,7 +848,7 @@ describe("Orca scoped MCP server", () => {
       const laneArguments = {
           ...scope,
           expectedWorkspaceRevision: 1,
-          resourceFamily: "lane",
+          targetKind: "lanes",
           target: { kind: "lanes", request: { id: "mcp-lanes-r1", idempotencyKey: "mcp-lanes-r1", expectedWorkspaceRevision: 1, actions: [
             { kind: "define_lane_policy", id: "policy-focus", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
             { kind: "define_lane", id: "lane-focus", name: "Focus", position: 1, defaultPolicyId: "policy-focus" },
@@ -860,6 +860,9 @@ describe("Orca scoped MCP server", () => {
       const lanesBody = await rpcBody(lanes);
       assert.ok(lanesBody.result?.structuredContent, JSON.stringify(lanesBody));
       assert.deepEqual(lanesBody.result.structuredContent.changeSetIds, { applied: ["mcp-lanes-r1"], rejected: [] });
+      assert.equal(lanesBody.result.structuredContent.targetKind, "lanes");
+      assert.deepEqual(lanesBody.result.structuredContent.resourceFamilies, JSON.parse(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-lanes-r1")).get()!.authorityTrace).requestedResourceFamilies);
+      assert.equal("resourceFamily" in lanesBody.result.structuredContent, false);
       const laneReplay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: laneArguments }));
       assert.deepEqual(laneReplay.result.structuredContent, lanesBody.result.structuredContent);
       assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-lanes-r1")).all().length, 1);
@@ -872,7 +875,7 @@ describe("Orca scoped MCP server", () => {
       assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-lanes-r1")).all().length, 1);
       let structureRevision = lanesBody.result.structuredContent.result.workspaceRevision;
       const facetArguments = {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "facet",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "facets_workflow",
         target: { kind: "facets_workflow", request: { id: "mcp-facets-r1", idempotencyKey: "mcp-facets-r1", expectedWorkspaceRevision: structureRevision, actions: [
           { kind: "define_facet", id: bre320ProductionFailureFixture.facet.id, name: bre320ProductionFailureFixture.facet.name, position: 0, valueType: { kind: "text", maxLength: 200 }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null },
           { kind: "define_workflow_state", id: bre320ProductionFailureFixture.workflow.id, name: bre320ProductionFailureFixture.workflow.name, position: 0 },
@@ -882,6 +885,8 @@ describe("Orca scoped MCP server", () => {
       const facetsBody = await rpcBody(facets);
       assert.ok(facetsBody.result?.structuredContent, JSON.stringify(facetsBody));
       assert.deepEqual(facetsBody.result.structuredContent.changeSetIds, { applied: ["mcp-facets-r1"], rejected: [] });
+      assert.equal(facetsBody.result.structuredContent.targetKind, "facets_workflow");
+      assert.deepEqual(facetsBody.result.structuredContent.resourceFamilies, JSON.parse(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-facets-r1")).get()!.authorityTrace).requestedResourceFamilies);
       const facetReplay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: facetArguments }));
       assert.ok(facetReplay.result?.structuredContent, JSON.stringify(facetReplay));
       assert.deepEqual(facetReplay.result.structuredContent, facetsBody.result.structuredContent);
@@ -896,7 +901,7 @@ describe("Orca scoped MCP server", () => {
       structureRevision = facetsBody.result.structuredContent.result.workspaceRevision;
 
       const view = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "view",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "view_create",
         target: { kind: "view_create", request: { idempotencyKey: "mcp-view-r1", expectedWorkspaceRevision: structureRevision, name: bre320ProductionFailureFixture.view.name, description: bre320ProductionFailureFixture.view.description, color: bre320ProductionFailureFixture.view.color, position: 0, definition: { revision: 1, accountIds: ["account_a"], laneIds: [bre320ProductionFailureFixture.lanes.production.id] } } },
       } });
       const viewBody = await rpcBody(view);
@@ -908,7 +913,7 @@ describe("Orca scoped MCP server", () => {
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
       const collection = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "collection",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "collection",
         target: { kind: "collection", request: { idempotencyKey: "mcp-collection-r1", change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: bre320ProductionFailureFixture.collection.name, color: bre320ProductionFailureFixture.collection.color } } } },
       } });
       const collectionBody = await rpcBody(collection);
@@ -918,7 +923,7 @@ describe("Orca scoped MCP server", () => {
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
       const context = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "context",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "context",
         target: { kind: "context", request: { idempotencyKey: "mcp-context-r1", expectedWorkspaceRevision: structureRevision, actions: [{ kind: "create_context_type", name: "Project", position: 0 }] } },
       } });
       const contextBody = await rpcBody(context);
@@ -928,13 +933,13 @@ describe("Orca scoped MCP server", () => {
       structureRevision = contextBody.result.structuredContent.result.state.workspaceRevision;
       const projectType = contextBody.result.structuredContent.result.state.contextTypes[0];
       const relationship = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "context",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "context",
         target: { kind: "context", request: { idempotencyKey: "mcp-context-relationship-r1", expectedWorkspaceRevision: structureRevision, actions: [{ kind: "create_relationship_type", contextTypeId: projectType.id, name: bre320ProductionFailureFixture.context.relationshipName, inverseName: "contains", direction: "thread_to_context", position: 0, maximumPerThread: 20 }] } },
       } }));
       assert.ok(relationship.result?.structuredContent, JSON.stringify(relationship));
       structureRevision = relationship.result.structuredContent.result.state.workspaceRevision;
       const contextInstance = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "context",
+        ...scope, expectedWorkspaceRevision: structureRevision, targetKind: "context",
         target: { kind: "context", request: { idempotencyKey: "mcp-context-instance-r1", expectedWorkspaceRevision: structureRevision, actions: [{ kind: "create_context", contextTypeId: projectType.id, name: bre320ProductionFailureFixture.context.name }] } },
       } }));
       assert.ok(contextInstance.result?.structuredContent, JSON.stringify(contextInstance));
@@ -947,7 +952,7 @@ describe("Orca scoped MCP server", () => {
         arguments: {
           ...scope,
           expectedWorkspaceRevision: laneWorkspaceRevision,
-          resourceFamily: "rule",
+          targetKind: "rule_revision",
           target: { kind: "rule_revision", request: { idempotencyKey: "mcp-rule-r1", expectedRuleRevision: null, workspaceSchemaRevision: laneWorkspaceRevision, source } },
         },
       });
@@ -1000,7 +1005,7 @@ describe("Orca scoped MCP server", () => {
       };
       const missingApproval = await callMcp(app, token, "tools/call", {
         name: "apply_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, resourceFamily: "rule", target: { kind: "rule_change_set", request: activationRequest } },
+        arguments: { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, targetKind: "rule_change_set", target: { kind: "rule_change_set", request: activationRequest } },
       });
       const missingApprovalBody = await rpcBody(missingApproval);
       assert.ok(missingApprovalBody.error?.code === -32602 || missingApprovalBody.result?.isError === true, JSON.stringify(missingApprovalBody));
@@ -1008,13 +1013,13 @@ describe("Orca scoped MCP server", () => {
       const beforeRejected = db.select().from(organizationChangeSets).all().length;
       const staleApproval = await callMcp(app, token, "tools/call", {
         name: "apply_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, resourceFamily: "rule", target: { kind: "rule_change_set", request: activationRequest, approval: { source: "oauth_organization_control_grant", simulationId: simulated.simulationId, acknowledgedRisk: "high" } } },
+        arguments: { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, targetKind: "rule_change_set", target: { kind: "rule_change_set", request: activationRequest, approval: { source: "oauth_organization_control_grant", simulationId: simulated.simulationId, acknowledgedRisk: "high" } } },
       });
       const staleApprovalBody = await rpcBody(staleApproval);
       assert.equal(staleApprovalBody.result.isError, true);
       assert.equal(db.select().from(organizationChangeSets).all().length, beforeRejected);
 
-      const applyArguments = { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, resourceFamily: "rule", target: { kind: "rule_change_set", request: activationRequest, approval: { source: "oauth_organization_control_grant", simulationId: simulated.simulationId, acknowledgedRisk: simulated.risk } } };
+      const applyArguments = { ...scope, expectedWorkspaceRevision: simulated.binding.workspaceRevision, targetKind: "rule_change_set", target: { kind: "rule_change_set", request: activationRequest, approval: { source: "oauth_organization_control_grant", simulationId: simulated.simulationId, acknowledgedRisk: simulated.risk } } };
       const applied = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: applyArguments });
       const appliedBody = await rpcBody(applied);
       assert.ok(appliedBody.result?.structuredContent, JSON.stringify(appliedBody));
@@ -1060,7 +1065,7 @@ describe("Orca scoped MCP server", () => {
 
       const organized = await callMcp(app, token, "tools/call", {
         name: "query_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, resourceFamilies: ["mail", "thread", "lane", "rule", "trace"], threadId: bre320ProductionFailureFixture.historicalThreads[0].id, attention: "all", classification: "all", limit: 1 },
+        arguments: { ...scope, expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, threadId: bre320ProductionFailureFixture.historicalThreads[0].id, attention: "all", classification: "all", limit: 1 },
       });
       const organizedBody = await rpcBody(organized);
       assert.equal(organizedBody.result.structuredContent.threads[0].organization.lanePlacement.evidence.winningSource, "rule_revision");
@@ -1081,7 +1086,7 @@ describe("Orca scoped MCP server", () => {
       const liveThread = db.select().from(threads).where(and(eq(threads.accountId, "account_a"), eq(threads.providerThreadId, live.providerThreadId))).get()!;
       const postLiveWorkspaceRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
       const liveQuery = await rpcBody(await callMcp(app, token, "tools/call", { name: "query_organization", arguments: {
-        ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, resourceFamilies: ["mail", "thread", "lane", "rule", "trace"], threadId: liveThread.id, attention: "all", classification: "all", limit: 1,
+        ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, threadId: liveThread.id, attention: "all", classification: "all", limit: 1,
       } }));
       assert.equal(liveQuery.result.structuredContent.threads[0].organization.lanePlacement.primaryLaneId, bre320ProductionFailureFixture.lanes.production.id);
       assert.equal(liveQuery.result.structuredContent.threads[0].organization.lanePlacement.evidence.sourceId, compiled.revision.id);
@@ -1099,11 +1104,13 @@ describe("Orca scoped MCP server", () => {
 
       const reverted = await callMcp(app, token, "tools/call", {
         name: "revert_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, resourceFamily: "change_set", request: { changeSetId: appliedOutput.result.changeSetId, accountIds: ["account_a"], expectedWorkspaceRevision: postLiveWorkspaceRevision, idempotencyKey: "mcp-revert-r1" } },
+        arguments: { ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, targetKind: "rule_change_set", request: { changeSetId: appliedOutput.result.changeSetId, accountIds: ["account_a"], expectedWorkspaceRevision: postLiveWorkspaceRevision, idempotencyKey: "mcp-revert-r1" } },
       });
       const revertedBody = await rpcBody(reverted);
       assert.equal(revertedBody.result.structuredContent.result.status, "reverted");
       assert.equal(revertedBody.result.structuredContent.result.revertsChangeSetId, appliedOutput.result.changeSetId);
+      assert.equal(revertedBody.result.structuredContent.targetKind, "rule_change_set");
+      assert.deepEqual(revertedBody.result.structuredContent.resourceFamilies, JSON.parse(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, revertedBody.result.structuredContent.result.changeSetId)).get()!.authorityTrace).requestedResourceFamilies);
 
       const correctionWorkspaceRevision = revertedBody.result.structuredContent.result.workspaceRevisionAfter;
       const correctionThreadRevision = db.select().from(organizationThreadStates).where(and(
@@ -1112,7 +1119,7 @@ describe("Orca scoped MCP server", () => {
       const correctionArguments = {
         ...scope,
         expectedWorkspaceRevision: correctionWorkspaceRevision,
-        resourceFamily: "thread",
+        targetKind: "thread_correction",
         target: {
           kind: "thread_correction",
           request: {
@@ -1138,7 +1145,7 @@ describe("Orca scoped MCP server", () => {
       const postCorrectionWorkspaceRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
       const readOnlyDescribe = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
         name: "describe_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision, resourceFamilies: ["workspace_schema"] },
+        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision },
       }));
       assert.ok(readOnlyDescribe.result?.structuredContent, JSON.stringify(readOnlyDescribe));
       assert.deepEqual(readOnlyDescribe.result.structuredContent.capabilities.surfaces, {
@@ -1147,14 +1154,16 @@ describe("Orca scoped MCP server", () => {
       });
       const readOnlyQuery = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
         name: "query_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision, resourceFamilies: ["mail", "thread"], attention: "all", classification: "all", limit: 1 },
+        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision, attention: "all", classification: "all", limit: 1 },
       }));
       assert.ok(readOnlyQuery.result?.structuredContent, JSON.stringify(readOnlyQuery));
       const deniedControl = await callMcp(app, mailOnlyToken, "tools/call", { name: "simulate_organization", arguments: { ...scope, expectedWorkspaceRevision: currentWorkspace, resourceFamily: "rule", request: simulationRequest } });
       assert.equal(deniedControl.status, 403);
-      const smuggledDescribe = await callMcp(app, token, "tools/call", { name: "describe_organization", arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema"], target: { kind: "rule_revision", request: {} } } });
+      const smuggledDescribe = await callMcp(app, token, "tools/call", { name: "describe_organization", arguments: { ...scope, expectedWorkspaceRevision: 1, target: { kind: "rule_revision", request: {} } } });
       const smuggledDescribeBody = await rpcBody(smuggledDescribe);
       assert.ok(smuggledDescribeBody.error?.code === -32602 || smuggledDescribeBody.result?.isError === true, JSON.stringify(smuggledDescribeBody));
+      const ignoredReadAuthority = await rpcBody(await callMcp(app, token, "tools/call", { name: "query_organization", arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["mail"] } }));
+      assert.ok(ignoredReadAuthority.error?.code === -32602 || ignoredReadAuthority.result?.isError === true, JSON.stringify(ignoredReadAuthority));
     } finally { sqlite.close(); }
   }, 20_000);
 
@@ -1169,7 +1178,7 @@ describe("Orca scoped MCP server", () => {
       try {
         const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
         const response = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "lane",
+          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "lanes",
           target: { kind: "lanes", request: { id: `grant-race-${index}`, idempotencyKey: `grant-race-${index}`, expectedWorkspaceRevision: 1, actions: [
             { kind: "define_lane_policy", id: `grant-policy-${index}`, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
           ] } },
@@ -1190,7 +1199,7 @@ describe("Orca scoped MCP server", () => {
       const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
       const crossAccountKey = "g2-cross-account-resource";
       const crossAccount = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
-        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "collection",
+        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "collection",
         target: { kind: "collection", request: {
           idempotencyKey: crossAccountKey,
           change: { kind: "collection", action: "create", accountId: "account_b", collection: { name: "Guessed", color: "#336699" } },
@@ -1203,7 +1212,7 @@ describe("Orca scoped MCP server", () => {
       const crossWorkspaceKey = "g2-cross-workspace-credential";
       const replayedCredential = await signToken({ userId: "user_b", accountIds: ["account_b"], scopes: ["orca:organization:control"] });
       const crossWorkspace = await rpcBody(await callMcp(app, replayedCredential, "tools/call", { name: "apply_organization", arguments: {
-        workspaceId: "user_b", accountIds: ["account_b"], expectedWorkspaceRevision: 1, resourceFamily: "lane",
+        workspaceId: "user_b", accountIds: ["account_b"], expectedWorkspaceRevision: 1, targetKind: "lanes",
         target: { kind: "lanes", request: { id: crossWorkspaceKey, idempotencyKey: crossWorkspaceKey, expectedWorkspaceRevision: 1, actions: [
           { kind: "define_lane_policy", id: "cross-workspace-policy", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
         ] } },
@@ -1229,7 +1238,7 @@ describe("Orca scoped MCP server", () => {
     try {
       const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
       const arguments_ = {
-        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "context",
+        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "context",
         target: { kind: "context", request: { idempotencyKey, expectedWorkspaceRevision: 1, actions: [{ kind: "create_context_type", name: "Replay race", position: 0 }] } },
       };
       const first = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: arguments_ }));
@@ -1261,7 +1270,7 @@ describe("Orca scoped MCP server", () => {
       try {
         const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
         const request = {
-          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "lane",
+          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "lanes",
           target: { kind: "lanes", request: { id: idempotencyKey, idempotencyKey, expectedWorkspaceRevision: 1, actions: [
             { kind: "define_lane_policy", id: policyId, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
             { kind: "define_lane", id: laneId, name: "Must roll back", position: 1, defaultPolicyId: policyId },
