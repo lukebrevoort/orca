@@ -496,13 +496,14 @@ function CompleteTraceDrawer({ onClose, trace }: { onClose: () => void; trace: O
   </DesktopDrawer>;
 }
 
-function RuleLifecycleSummary({ state, operationState, simulation, changeSet, explanation, busy, revertReview, onSimulate, onActivate, onReviewRevert, onCancelRevert, onRevert }: {
+function RuleLifecycleSummary({ state, operationState, simulation, changeSet, explanation, busy, controlsEnabled = true, revertReview, onSimulate, onActivate, onReviewRevert, onCancelRevert, onRevert }: {
   state: RuleLifecycleState;
   operationState: LifecycleOperationState;
   simulation: OrcaHistoricalSimulationResponse | null;
   changeSet: LifecycleChangeSet | null;
   explanation: LifecycleExplanation | null;
   busy: boolean;
+  controlsEnabled?: boolean;
   revertReview: boolean;
   onSimulate: () => void;
   onActivate: () => void;
@@ -520,9 +521,23 @@ function RuleLifecycleSummary({ state, operationState, simulation, changeSet, ex
     active: "The exact simulated Change Set is active for historical and subsequently arriving mail.",
     reverted: "A compensating Change Set restored prior state while preserving the audit record.",
   };
+  const nextAction = operationState === "loading" ? "Wait for the current operation to finish."
+    : operationState === "unavailable" ? "Retry after Organization operations become available."
+    : operationState === "no_access" ? "Ask a Workspace owner for Organization control access."
+    : operationState === "offline" ? "Reconnect, then retry from the preserved proposal."
+    : operationState === "transaction_failure" ? "Review the failure, then retry the atomic transaction."
+    : operationState === "conflict" ? "Re-simulate against the latest Workspace revisions."
+    : operationState === "active" ? "Review a compensating revert if the active outcome is wrong."
+    : operationState === "reverted" ? "Review the preserved audit before creating a new proposal."
+    : state === "proposed" ? "Run mutation-free historical Simulation."
+    : state === "simulated" ? "Review the proposal, then activate its exact Change Set."
+    : state === "active" ? "Review a compensating revert if the active outcome is wrong."
+    : state === "conflicted" ? "Re-simulate against the latest Workspace revisions."
+    : "Review the preserved audit before creating a new proposal.";
   return <div className={`rule-lifecycle rule-lifecycle-${state} rule-lifecycle-operation-${operationState}`} data-lifecycle-state={state} data-operation-state={operationState}>
     <div className="rule-lifecycle-state-overview"><div className="rule-lifecycle-heading"><span>Atomic Change Set</span><strong>{operationState === "ready" ? state : operationState.replaceAll("_", " ")}</strong></div>
       {operationCopy[operationState] ? <p className="rule-lifecycle-operation" role="status">{operationCopy[operationState]}</p> : null}
+      <p className="rule-lifecycle-next-action" data-next-action><strong>Next action ·</strong> {nextAction}</p>
     </div>
     {simulation ? <dl>
       <div><dt>Historical Threads</dt><dd>{simulation.counts.evaluatedThreads.toLocaleString()}</dd></div>
@@ -559,26 +574,50 @@ function RuleLifecycleSummary({ state, operationState, simulation, changeSet, ex
       <p className="rule-lifecycle-evidence">{explanation.trace.length} complete Trace{explanation.trace.length === 1 ? "" : "s"} · created {explanation.changeSet.createdAt}</p>
     </section> : null}
     {state === "reverted" ? <p className="rule-lifecycle-evidence">Audit history preserved · compensating Change Set {changeSet?.changeSetId}</p> : null}
-    {state === "proposed" || state === "conflicted" ? <button disabled={busy} onClick={onSimulate} type="button">{busy ? "Simulating…" : "Simulate history"}</button> : null}
-    {state === "simulated" ? <button className="organization-primary" disabled={busy} onClick={onActivate} type="button">{busy ? "Activating…" : "Activate Change Set"}</button> : null}
-    {state === "active" && !revertReview ? <button disabled={busy} onClick={onReviewRevert} type="button">Review revert</button> : null}
-    {state === "active" && revertReview ? <div className="trace-revert-actions"><button disabled={busy} onClick={onCancelRevert} type="button">Cancel</button><button className="trace-revert-apply" disabled={busy} onClick={onRevert} type="button">{busy ? "Reverting…" : "Apply compensating revert"}</button></div> : null}
+    {controlsEnabled && (state === "proposed" || state === "conflicted") ? <button disabled={busy} onClick={onSimulate} type="button">{busy ? "Simulating…" : "Simulate history"}</button> : null}
+    {controlsEnabled && state === "simulated" ? <button className="organization-primary" disabled={busy} onClick={onActivate} type="button">{busy ? "Activating…" : "Activate Change Set"}</button> : null}
+    {controlsEnabled && state === "active" && !revertReview ? <button disabled={busy} onClick={onReviewRevert} type="button">Review revert</button> : null}
+    {controlsEnabled && state === "active" && revertReview ? <div className="trace-revert-actions"><button disabled={busy} onClick={onCancelRevert} type="button">Cancel</button><button className="trace-revert-apply" disabled={busy} onClick={onRevert} type="button">{busy ? "Reverting…" : "Apply compensating revert"}</button></div> : null}
   </div>;
 }
 
 function Bre320ReleaseEvidence({ operationState }: { operationState: LifecycleOperationState }) {
   const [trace, setTrace] = useState<OrcaEvaluationTrace | null>(null);
+  const [loadState, setLoadState] = useState<{ status: "loading" | "ready" | "unavailable" | "error"; detail: string }>(() => ({ status: "loading", detail: "Reading the deterministic Trace fixture before any release-state claim is shown." }));
+  const [loadAttempt, setLoadAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/docs/assets/bre-315-trace-fixture.json", { signal: controller.signal })
-      .then((response) => response.json())
-      .then((body: unknown) => {
+    setTrace(null);
+    setLoadState({ status: "loading", detail: "Reading the deterministic Trace fixture before any release-state claim is shown." });
+    void (async () => {
+      try {
+        const response = await fetch("/docs/assets/bre-315-trace-fixture.json", { signal: controller.signal });
+        if (!response.ok) {
+          if (!controller.signal.aborted) setLoadState({ status: "unavailable", detail: `Trace fixture request failed (${response.status})` });
+          return;
+        }
+        const body = await response.json() as unknown;
         const parsed = orcaEvaluationTraceSchema.safeParse(typeof body === "object" && body !== null && "trace" in body ? body.trace : null);
-        if (!controller.signal.aborted && parsed.success) setTrace(parsed.data);
-      });
+        if (!parsed.success) throw new Error("Trace fixture did not match the Orca evaluation contract");
+        if (controller.signal.aborted) return;
+        setTrace(parsed.data);
+        setLoadState({ status: "ready", detail: "Deterministic Trace evidence loaded." });
+      } catch (error) {
+        if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
+        setLoadState({ status: "error", detail: error instanceof Error ? error.message : "Trace fixture request failed" });
+      }
+    })();
     return () => controller.abort();
-  }, []);
-  if (!trace) return <div className="rule-lifecycle rule-lifecycle-operation-loading" role="status">Loading deterministic BRE-320 review evidence…</div>;
+  }, [loadAttempt]);
+  if (!trace || loadState.status !== "ready") return <section className={`bre320-release-evidence bre320-release-evidence-${loadState.status}`} aria-label="BRE-320 deterministic operational-state evidence" data-evidence-load-state={loadState.status}>
+    <header><span>BRE-320 deterministic state fixture</span><strong>Provider send · absent&nbsp;&nbsp; Provider delete · absent</strong></header>
+    <div className="bre320-evidence-load-state" role="status">
+      <span>{loadState.status === "loading" ? "Loading review evidence" : loadState.status === "unavailable" ? "Review evidence unavailable" : "Review evidence failed"}</span>
+      <strong>{loadState.detail}</strong>
+      <p>{loadState.status === "loading" ? "No release-state claim is shown until the Trace contract is validated." : "No simulated or applied claim is shown without validated Trace evidence."}</p>
+      {loadState.status === "unavailable" || loadState.status === "error" ? <button onClick={() => setLoadAttempt((attempt) => attempt + 1)} type="button">Retry review evidence</button> : null}
+    </div>
+  </section>;
   const historicalTrace = { ...structuredClone(trace), id: "bre320-trace-historical", event: { ...structuredClone(trace.event), id: "bre320-event-historical", accountId: "bre320-account", threadId: "bre320-thread-production-checkout" } };
   const liveTrace = { ...structuredClone(trace), id: "bre320-trace-live", event: { ...structuredClone(trace.event), id: "bre320-event-live", accountId: "bre320-account", threadId: "bre320-thread-production-live" } };
   const simulation: OrcaHistoricalSimulationResponse = {
@@ -608,11 +647,14 @@ function Bre320ReleaseEvidence({ operationState }: { operationState: LifecycleOp
     inverse: { actions: [{ kind: "restore_lane", threadId: "bre320-thread-production-checkout", laneId: "bre320-lane-everything" }, { kind: "deactivate_rule_revision", revisionId: simulation.binding.revisionId }] },
     resultingRevisions: { workspace: 25, ruleSet: 6, threads: { "bre320-thread-production-checkout": 3, "bre320-thread-production-live": 2 } },
   };
-  const lifecycleState: RuleLifecycleState = operationState === "reverted" ? "reverted" : operationState === "conflict" ? "conflicted" : operationState === "active" ? "active" : "simulated";
+  const lifecycleState: RuleLifecycleState = operationState === "reverted" ? "reverted" : operationState === "conflict" ? "conflicted" : operationState === "active" ? "active" : operationState === "ready" ? "simulated" : "proposed";
+  const reviewSimulation = operationState === "ready" || operationState === "active" || operationState === "reverted" || operationState === "conflict" ? simulation : null;
+  const appliedChangeSet = operationState === "active" || operationState === "reverted" ? changeSet : null;
+  const appliedExplanation = operationState === "active" || operationState === "reverted" ? explanation : null;
   return <section className="bre320-release-evidence" aria-label="BRE-320 deterministic operational-state evidence">
     <header><span>BRE-320 deterministic state fixture</span><strong>Provider send · absent&nbsp;&nbsp; Provider delete · absent</strong></header>
     <div className="bre320-state-matrix" aria-label="Operational state matrix" role="list">{(["ready", "loading", "unavailable", "no_access", "offline", "transaction_failure", "conflict", "active", "reverted"] as LifecycleOperationState[]).map((state) => <span aria-current={state === operationState ? "true" : undefined} key={state} role="listitem">{state.replaceAll("_", " ")}</span>)}</div>
-    <RuleLifecycleSummary state={lifecycleState} operationState={operationState} simulation={simulation} changeSet={changeSet} explanation={explanation} busy={operationState === "loading"} revertReview={false} onSimulate={() => {}} onActivate={() => {}} onReviewRevert={() => {}} onCancelRevert={() => {}} onRevert={() => {}} />
+    <RuleLifecycleSummary state={lifecycleState} operationState={operationState} simulation={reviewSimulation} changeSet={appliedChangeSet} explanation={appliedExplanation} busy={operationState === "loading"} controlsEnabled={false} revertReview={false} onSimulate={() => {}} onActivate={() => {}} onReviewRevert={() => {}} onCancelRevert={() => {}} onRevert={() => {}} />
   </section>;
 }
 

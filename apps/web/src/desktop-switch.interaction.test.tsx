@@ -218,7 +218,7 @@ describe("OrganizationStudio integration", () => {
     expect(container.textContent).toContain("Not persisted or activated");
   });
 
-  test("renders the deterministic full review and every distinct operational-state label", async () => {
+  test("renders the deterministic active review and every distinct operational-state label", async () => {
     globalThis.fetch = (async (request: string | URL | Request) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
       if (path === "/docs/assets/bre-315-trace-fixture.json") return Response.json({ trace: reviewTrace });
@@ -227,10 +227,10 @@ describe("OrganizationStudio integration", () => {
     const container = browserWindow.document.createElement("div");
     browserWindow.document.body.append(container);
     root = createRoot(container as unknown as Element);
-    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="transaction_failure" />));
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
     await flush(); await flush();
 
-    expect(container.querySelector('[data-operation-state="transaction_failure"]')).not.toBeNull();
+    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
     for (const label of ["ready", "loading", "unavailable", "no access", "offline", "transaction failure", "conflict", "active", "reverted"]) {
       expect(container.querySelector(".bre320-state-matrix")?.textContent).toContain(label);
     }
@@ -241,6 +241,96 @@ describe("OrganizationStudio integration", () => {
     expect(container.textContent).toContain("activate_rule_revision");
     expect(container.textContent).toContain("Provider send · absent");
     expect(container.textContent).toContain("Provider delete · absent");
+  });
+
+  test("keeps every non-success release state free of applied evidence and mutation controls", async () => {
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path === "/docs/assets/bre-315-trace-fixture.json") return Response.json({ trace: reviewTrace });
+      throw new Error(`Unexpected evidence request ${path}`);
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    const states = [
+      ["no_access", "Ask a Workspace owner for Organization control access."],
+      ["unavailable", "Retry after Organization operations become available."],
+      ["offline", "Reconnect, then retry from the preserved proposal."],
+      ["transaction_failure", "Review the failure, then retry the atomic transaction."],
+    ] as const;
+    for (const [state, nextAction] of states) {
+      await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState={state} />));
+      await flush(); await flush();
+      const evidence = container.querySelector(`[data-operation-state="${state}"]`)!;
+      expect(evidence.querySelector("[data-next-action]")?.textContent).toBe(`Next action · ${nextAction}`);
+      expect(evidence.querySelector('[aria-label="Applied Change Set audit"]')).toBeNull();
+      expect(evidence.querySelectorAll("button")).toHaveLength(0);
+      expect(evidence.textContent).not.toContain("Activate Change Set");
+      expect(evidence.textContent).not.toContain("Ordered actions & audit");
+      expect(evidence.textContent).not.toContain("Change Set bre320-change-set-apply");
+    }
+  });
+
+  test("turns trace-fixture HTTP and network failures into retryable unavailable and error states", async () => {
+    let attempts = 0;
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path !== "/docs/assets/bre-315-trace-fixture.json") throw new Error(`Unexpected evidence request ${path}`);
+      attempts += 1;
+      if (attempts === 1) return Response.json({ error: { code: "upstream_unavailable" } }, { status: 503 });
+      if (attempts === 2) throw new TypeError("Network request failed");
+      return Response.json({ trace: reviewTrace });
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
+    await flush(); await flush();
+    const unavailable = container.querySelector('[data-evidence-load-state="unavailable"]')!;
+    expect(unavailable.textContent).toContain("Review evidence unavailable");
+    expect(unavailable.textContent).toContain("Trace fixture request failed (503)");
+    expect(unavailable.textContent).toContain("No simulated or applied claim is shown");
+
+    await click(button(container, "Retry review evidence"));
+    await flush(); await flush();
+    const error = container.querySelector('[data-evidence-load-state="error"]')!;
+    expect(error.textContent).toContain("Review evidence failed");
+    expect(error.textContent).toContain("Network request failed");
+    expect(error.textContent).toContain("No simulated or applied claim is shown");
+
+    await click(button(container, "Retry review evidence"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Applied Change Set audit"]')).not.toBeNull();
+    expect(attempts).toBe(3);
+  });
+
+  test("treats an aborted trace-fixture fetch as lifecycle cleanup rather than an evidence error", async () => {
+    let aborted = false;
+    globalThis.fetch = ((request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path !== "/docs/assets/bre-315-trace-fixture.json") return Promise.reject(new Error(`Unexpected evidence request ${path}`));
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          aborted = true;
+          reject(new DOMException("The operation was aborted", "AbortError"));
+        }, { once: true });
+      });
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
+    expect(container.querySelector('[data-evidence-load-state="loading"]')).not.toBeNull();
+    await act(async () => root!.render(<OrganizationStudio interactivePreview />));
+    await flush();
+
+    expect(aborted).toBe(true);
+    expect(container.querySelector('[data-evidence-load-state="error"]')).toBeNull();
+    expect(container.textContent).not.toContain("Review evidence failed");
   });
 
   test("rebinds Views and Lanes after Rule compilation and every sibling Workspace mutation", async () => {

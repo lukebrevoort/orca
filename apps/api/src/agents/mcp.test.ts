@@ -1165,7 +1165,10 @@ describe("Orca scoped MCP server", () => {
       const ignoredReadAuthority = await rpcBody(await callMcp(app, token, "tools/call", { name: "query_organization", arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["mail"] } }));
       assert.ok(ignoredReadAuthority.error?.code === -32602 || ignoredReadAuthority.result?.isError === true, JSON.stringify(ignoredReadAuthority));
     } finally { sqlite.close(); }
-  }, 20_000);
+  // This single acceptance journey deliberately crosses every real MCP and SQLite
+  // lifecycle boundary. Isolated runs are stable at 3.25–3.43s; allow shared CI
+  // worker contention without relaxing any journey assertion or production budget.
+  }, 60_000);
 
   test("fails closed with zero Organization writes when the persisted grant changes between preflight and the Lane transaction", async () => {
     const mutations = [
