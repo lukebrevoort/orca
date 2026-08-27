@@ -99,7 +99,14 @@ describe("Orca MCP OAuth 2.1", () => {
     const consent = await app.request(`/oauth/authorize?${query}`, { headers });
     assert.equal(consent.status, 200);
     const html = await consent.text();
-    assert.match(html, /revocable, read-only connection/);
+    if (scope.split(/\s+/).includes("organization:control")) {
+      assert.match(html, /revocable, account-scoped Organization-control connection/);
+      assert.match(html, /cannot send, reply, forward, delete provider mail/);
+      assert.match(html, /Describe, query, simulate, apply, and revert bounded Orca Organization changes/);
+      assert.match(html, /Allow scoped access/);
+    } else {
+      assert.match(html, /revocable, read-only connection/);
+    }
     assert.doesNotMatch(html, /account_b/);
     const consentRequest = /name="consent_request" value="([^"]+)"/.exec(html)?.[1];
     assert.ok(consentRequest);
@@ -156,7 +163,7 @@ describe("Orca MCP OAuth 2.1", () => {
     const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
     const resourceMetadata = await app.request("/.well-known/oauth-protected-resource/mcp");
     assert.equal(resourceMetadata.status, 200);
-    assert.deepEqual((await resourceMetadata.json()).scopes_supported, ["mail:read", "agent_events:read"]);
+    assert.deepEqual((await resourceMetadata.json()).scopes_supported, ["mail:read", "agent_events:read", "organization:control"]);
     const authorizationMetadata = await app.request("/.well-known/oauth-authorization-server");
     const metadata = await authorizationMetadata.json();
     assert.deepEqual(metadata.code_challenge_methods_supported, ["S256"]);
@@ -222,6 +229,17 @@ describe("Orca MCP OAuth 2.1", () => {
         (error: unknown) => error instanceof McpTokenError && error.code === "invalid_token",
       );
     } finally { sqlite.close(); }
+  });
+
+  test("issues an explicit account-scoped Organization-control grant with truthful consent", async () => {
+    const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
+    const client = await registerClient(app);
+    const grant = await authorize(app, client.client_id, "organization:control");
+    const response = await exchange(app, client.client_id, grant.code, grant.verifier);
+    assert.equal(response.status, 200);
+    const tokens = await response.json();
+    assert.equal(tokens.scope, "organization:control");
+    assert.deepEqual(decodeJwt(tokens.access_token).account_ids, ["account_a"]);
   });
 
   test("registers protected-resource metadata at the full configured resource path", async () => {

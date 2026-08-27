@@ -4,6 +4,7 @@ import {
   organizationCapabilitySnapshotSchema,
   organizationCommandSchema,
   organizationAuthorityTraceSchema,
+  mcpOrganizationApprovalSchema,
   orcaRuleActivationRequestSchema,
   orcaRuleRevertRequestSchema,
   type OrcaEvaluationTrace,
@@ -12,6 +13,7 @@ import {
   type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrcaRuleRisk,
+  type McpOrganizationApproval,
 } from "@orca/shared";
 
 import type { createDatabaseClient } from "../../db/client.ts";
@@ -103,6 +105,33 @@ export const sqliteRuleChangeSetCapabilitySource: RuleChangeSetCapabilitySource 
   },
 };
 
+/** Explicit external-agent grant used only by the authenticated MCP adapter. */
+export function createScopedAgentRuleChangeSetCapabilitySource(input: {
+  actor: OrganizationActor & { type: "agent" };
+  accountIds: readonly string[];
+}): RuleChangeSetCapabilitySource {
+  const grantedAccountIds = [...new Set(input.accountIds)].sort();
+  return {
+    load(db, { workspaceId }) {
+      const owned = new Set(db.select({ id: oauthAccounts.id }).from(oauthAccounts)
+        .where(eq(oauthAccounts.userId, workspaceId)).all().map(({ id: accountId }) => accountId));
+      if (grantedAccountIds.length === 0 || grantedAccountIds.some((accountId) => !owned.has(accountId))) return null;
+      return {
+        snapshot: {
+          id: `mcp:rule_change_set:${input.actor.id}:${workspaceId}`,
+          revision: 1,
+          actor: input.actor,
+          scope: { workspaceId, accountIds: grantedAccountIds },
+          operations: ["simulate", "apply", "revert"],
+          resourceFamilies: ["rule", "thread", "lane", "facet", "workflow_state", "collection", "context", "change_set", "trace", "audit"],
+          actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"],
+        },
+        revokedAt: null,
+      };
+    },
+  };
+}
+
 function loadRequiredCapability(source: RuleChangeSetCapabilitySource, db: Database, workspaceId: string): RuleChangeSetLiveCapability {
   const capability = source.load(db, { workspaceId });
   if (!capability) throw new OrcaRuleChangeSetError("capability_missing", "No current live Capability authorizes this Rule Change Set operation");
@@ -155,9 +184,9 @@ function sameRequest(left: unknown, right: unknown): boolean {
   return canonicalOrganizationJson(left) === canonicalOrganizationJson(right);
 }
 
-function parseReplay(row: typeof organizationChangeSets.$inferSelect, request: unknown): OrcaRuleChangeSetResult {
-  const stored = JSON.parse(row.commandJson) as { request?: unknown; response?: OrcaRuleChangeSetResult };
-  if (!stored.response || !sameRequest(stored.request, request)) {
+function parseReplay(row: typeof organizationChangeSets.$inferSelect, request: unknown, approval?: McpOrganizationApproval): OrcaRuleChangeSetResult {
+  const stored = JSON.parse(row.commandJson) as { request?: unknown; response?: OrcaRuleChangeSetResult; approval?: unknown };
+  if (!stored.response || !sameRequest(stored.request, request) || (approval !== undefined && !sameRequest(stored.approval, approval))) {
     throw new OrcaRuleChangeSetError("duplicate_idempotency_key", "The idempotency key belongs to a different Change Set request");
   }
   return stored.response;
@@ -499,8 +528,10 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
       capabilitySnapshot: OrganizationCapabilitySnapshot | unknown;
       workspaceId: string;
       request: unknown;
+      approval?: unknown;
     }): OrcaRuleChangeSetResult {
       const request = orcaRuleActivationRequestSchema.parse(input.request);
+      const approval = input.actor.type === "agent" ? mcpOrganizationApprovalSchema.parse(input.approval) : undefined;
       const capabilitySnapshot = organizationCapabilitySnapshotSchema.parse(input.capabilitySnapshot);
       const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
       validateCurrentCapabilityClaim({
@@ -526,7 +557,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           operation: "apply",
           idempotencyKey: request.idempotencyKey,
         });
-        return parseReplay(replay, request);
+        return parseReplay(replay, request, approval);
       }
 
       const revisionRow = db.select().from(organizationRuleRevisions).where(and(
@@ -550,6 +581,9 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         || preparation.report.state !== "simulated"
         || preparation.report.binding.workspaceRevision !== request.expectedWorkspaceRevision) {
         throw new OrcaRuleChangeSetError("simulation_binding_conflict", "Activation requires the exact current successful Simulation");
+      }
+      if (approval && (approval.simulationId !== preparation.report.simulationId || approval.acknowledgedRisk !== preparation.report.risk)) {
+        throw new OrcaRuleChangeSetError("approval_binding_conflict", "Agent approval must bind the exact successful Simulation and its derived risk");
       }
 
       const workspace = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
@@ -610,7 +644,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           eq(organizationChangeSets.workspaceId, input.workspaceId),
           eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
         )).get();
-        if (duplicate) return parseReplay(duplicate, request);
+        if (duplicate) return parseReplay(duplicate, request, approval);
 
         const currentWorkspace = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
         const currentRule = executor.select().from(organizationRules).where(and(
@@ -893,7 +927,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           authorityTrace: JSON.stringify(transactionAuthority.trace),
           resourceFamily: "rule",
           operation: "apply",
-          commandJson: JSON.stringify({ request, response, command }),
+          commandJson: JSON.stringify({ request, response, command, ...(approval ? { approval } : {}) }),
           revertsChangeId: null,
           simulationId: request.simulationId,
           risk: preparation.report.risk,

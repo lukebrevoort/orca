@@ -16,10 +16,12 @@ import {
   type OrganizationCollectionPinRevertRequest,
   type OrganizationCollectionPinScope,
   type OrganizationAuthorityTrace,
+  type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrganizationExecutionContext,
 } from "@orca/shared";
 import { authorizeOrganizationOperation } from "../authority.ts";
+import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
 export class OrganizationCollectionsPinsAccessError extends Error {
   readonly code = "account_denied" as const;
@@ -189,6 +191,7 @@ export function createOrganizationCollectionsPins(
     now?: () => Date;
     newChangeId?: () => string;
     newResourceId?: (kind: "collection" | "pin" | "saved_query") => string;
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
   } = {},
 ) {
   const now = dependencies.now ?? (() => new Date());
@@ -201,36 +204,41 @@ export function createOrganizationCollectionsPins(
     operation: "apply" | "revert";
     idempotencyKey: string;
     command: OrganizationCommand;
+    expectedWorkspaceRevision?: number;
   }) {
-    if (input.scope.actor.type !== "human") {
-      throw new OrganizationCollectionsPinsAccessError("Collections/Pins writes require an authenticated human session");
-    }
     const live = repository.getAuthorityState(input.scope.workspaceId);
     const expectedResources = Object.fromEntries(input.command.intents.flatMap((intent) => {
       if (intent.mutation !== "update") return [];
       const revision = live.resourceRevisions[intent.resourceId];
       return revision === undefined ? [] : [[intent.resourceId, revision]];
     }));
-    const capability = {
-      id: `first_party:human:${input.scope.actor.id}`,
+    const humanCapability = (actor: OrganizationCollectionPinScope["actor"] & { type: "human" }): OrganizationCapabilitySnapshot => ({
+      id: `first_party:human:${actor.id}`,
       revision: 1,
-      actor: input.scope.actor,
+      actor,
       scope: { workspaceId: input.scope.workspaceId, accountIds: input.scope.accountIds },
-      operations: ["describe", "query", "apply", "revert"] as const,
-      resourceFamilies: ["collection", "shortcut", "saved_query", "thread", "audit", "change_set"] as const,
-      actionFamilies: ["organization_read", "organization_structure", "organization_thread"] as const,
-    };
+      operations: ["describe", "query", "apply", "revert"],
+      resourceFamilies: ["collection", "shortcut", "saved_query", "thread", "audit", "change_set"],
+      actionFamilies: ["organization_read", "organization_structure", "organization_thread"],
+    });
+    let liveCapability;
+    try {
+      liveCapability = requireOrganizationCapability(input.scope, humanCapability, dependencies.agentCapabilitySource);
+    } catch (error) {
+      throw new OrganizationCollectionsPinsAccessError(error instanceof Error ? error.message : "Collections/Pins Actor is not authorized");
+    }
+    const capability = liveCapability.snapshot;
     const decision = authorizeOrganizationOperation({
       actor: input.scope.actor,
       capabilitySnapshot: capability,
       operation: input.operation,
       scope: capability.scope,
       command: input.command,
-      expectedRevisions: { workspace: live.workspaceRevision, resources: expectedResources },
+      expectedRevisions: { workspace: input.expectedWorkspaceRevision ?? live.workspaceRevision, resources: expectedResources },
       idempotencyKey: input.idempotencyKey,
     }, {
       scope: capability.scope,
-      capability: { snapshot: capability, revokedAt: null },
+      capability: liveCapability,
       workspaceRevision: live.workspaceRevision,
       resourceRevisions: live.resourceRevisions,
       reservedIdempotencyKeys: live.reservedIdempotencyKeys,
@@ -271,7 +279,7 @@ export function createOrganizationCollectionsPins(
   return {
     describe(input: { scope: unknown }) {
       const { scope, accountIds } = authorize(repository, input.scope);
-      const canWrite = scope.actor.type === "human";
+      const canWrite = scope.actor.type === "human" || (scope.actor.type === "agent" && Boolean(dependencies.agentCapabilitySource));
       return organizationCollectionPinDescribeResponseSchema.parse({
         workspaceId: scope.workspaceId,
         accountIds,
@@ -284,7 +292,7 @@ export function createOrganizationCollectionsPins(
       const { scope } = authorize(repository, input.scope);
       return queryAuthorized(scope, organizationCollectionPinQuerySchema.parse(input.query));
     },
-    apply(input: { scope: unknown; request: unknown }): OrganizationCollectionPinMutationResponse {
+    apply(input: { scope: unknown; request: unknown; expectedWorkspaceRevision?: number }): OrganizationCollectionPinMutationResponse {
       const { scope } = authorize(repository, input.scope);
       const request = organizationCollectionPinApplyRequestSchema.parse(input.request);
       if (!scope.accountIds.includes(request.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
@@ -300,7 +308,7 @@ export function createOrganizationCollectionsPins(
         } : null;
       const changeId = newChangeId();
       const command = bindOrganizationCollectionPinApplyCommand({ changeId, change: request.change, trustedResourceIds });
-      const authorization = authorizeBound({ scope, operation: "apply", idempotencyKey: request.idempotencyKey, command });
+      const authorization = authorizeBound({ scope, operation: "apply", idempotencyKey: request.idempotencyKey, command, expectedWorkspaceRevision: input.expectedWorkspaceRevision });
       const change = repository.apply({ scope, request, changeId, trustedResourceIds, authorization, now: now() });
       return { change, state: queryAuthorized(scope, {}) };
     },

@@ -44,6 +44,7 @@ import {
   digestOrganizationCommand,
 } from "../authority.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
+import { isAgentOrganizationActor, isHumanOrganizationActor } from "../agent-capability.ts";
 import {
   OrganizationContextsAccessError,
   OrganizationContextsConflictError,
@@ -265,10 +266,28 @@ function assertAuthorizedEnvelope(db: Database, input: {
   }
   const current = loadSnapshot(db, scope.workspaceId);
   const liveAccountIds = new Set(current.accountIds);
-  if (scope.actor.type !== "human"
-    || scope.actor.id !== scope.workspaceId
-    || scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
+  if (scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
     throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+  }
+  let liveCapability;
+  if (isHumanOrganizationActor(scope.actor)) {
+    if (scope.actor.id !== scope.workspaceId) {
+      throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+    }
+    liveCapability = { snapshot: organizationContextsCapability(scope), revokedAt: null };
+  } else {
+    if (!isAgentOrganizationActor(scope.actor)) {
+      throw new OrganizationAuthorityError("account_denied", "Only an authenticated human or external agent can authorize Context writes");
+    }
+    const source = input.anchoredAuthorization.agentCapabilitySource;
+    liveCapability = source?.load({
+      actor: scope.actor,
+      workspaceId: scope.workspaceId,
+      accountIds: scope.accountIds,
+    }) ?? null;
+    if (!liveCapability) {
+      throw new OrganizationAuthorityError("account_denied", "The external-agent Context Capability is unavailable or revoked");
+    }
   }
   const resourceRevisions = organizationContextResourceRevisions(current);
   const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => {
@@ -276,7 +295,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
     const revision = resourceRevisions[intent.resourceId];
     return revision === undefined ? [] : [[intent.resourceId, revision]];
   }));
-  const capability = organizationContextsCapability(scope);
+  const capability = liveCapability.snapshot;
   const reservedIdempotencyKeys = db.select({ key: organizationChangeSets.idempotencyKey })
     .from(organizationChangeSets)
     .where(eq(organizationChangeSets.workspaceId, scope.workspaceId))
@@ -292,7 +311,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
     idempotencyKey: request.idempotencyKey,
   }, {
     scope: capability.scope,
-    capability: { snapshot: capability, revokedAt: null },
+    capability: liveCapability,
     workspaceRevision: current.workspaceRevision,
     resourceRevisions,
     reservedIdempotencyKeys,

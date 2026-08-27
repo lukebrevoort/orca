@@ -26,6 +26,7 @@ const resourceScopesByOAuthScope = {
     "orca:connection-status:read",
   ],
   "agent_events:read": ["orca:agent-events:read"],
+  "organization:control": ["orca:organization:control"],
 } as const satisfies Record<McpOAuthScope, readonly OrcaMcpScope[]>;
 
 function invalidToken(message = "The access token is invalid or expired"): never {

@@ -40,6 +40,7 @@ import {
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
 import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
+import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -154,14 +155,14 @@ const facetSupport = Object.freeze({
   requiredValueLifecycle: "typed_default_for_all_threads" as const,
 });
 
-function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope) {
+function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope, agentCapabilitySource?: OrganizationAgentCapabilitySource) {
   return {
     operations: {
       describe: true as const,
       query: true as const,
-      simulate: false as const,
-      apply: scope.actor.type === "human" && Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes),
-      revert: false as const,
+      simulate: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
+      apply: (scope.actor.type === "human" || (scope.actor.type === "agent" && Boolean(agentCapabilitySource))) && Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes),
+      revert: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
   };
@@ -363,7 +364,7 @@ function encodeCursor(thread: Pick<WorkspaceThread, "accountId" | "id">, fingerp
  * The complete Organization interface. REST, MCP, sync, background work, and
  * React are adapters; organizational meaning and Account enforcement live here.
  */
-export function createOrganization(repository: OrganizationRepository) {
+export function createOrganization(repository: OrganizationRepository, dependencies: { agentCapabilitySource?: OrganizationAgentCapabilitySource } = {}) {
   // One Organization instance represents one stable read transaction. Adapters
   // may page it without reloading and re-sorting the complete mailbox each time.
   const rankedSnapshots = new Map<string, {
@@ -383,8 +384,8 @@ export function createOrganization(repository: OrganizationRepository) {
     workflowStates: [],
     threads: [],
   };
-  const collectionsPins = repository.collectionsPins ? createOrganizationCollectionsPins(repository.collectionsPins) : null;
-  const contexts = repository.contexts ? createOrganizationContexts(repository.contexts) : null;
+  const collectionsPins = repository.collectionsPins ? createOrganizationCollectionsPins(repository.collectionsPins, { agentCapabilitySource: dependencies.agentCapabilitySource }) : null;
+  const contexts = repository.contexts ? createOrganizationContexts(repository.contexts, { agentCapabilitySource: dependencies.agentCapabilitySource }) : null;
   const laneSnapshot = (workspaceId: string, accountIds: readonly string[], records?: readonly OrganizationThreadRecord[]): OrganizationLaneSnapshot => {
     if (repository.lanes) return repository.lanes.getSnapshot(workspaceId, accountIds);
     const facet = facetWorkflowSnapshot(workspaceId);
@@ -400,7 +401,7 @@ export function createOrganization(repository: OrganizationRepository) {
         workspaceId: scope.workspaceId,
         accountIds,
         workspaceSchema,
-        capabilities: capabilitiesFor(repository, scope),
+        capabilities: capabilitiesFor(repository, scope, dependencies.agentCapabilitySource),
         workspaceRevision: facetWorkflow.workspaceRevision,
         facetDefinitions: facetWorkflow.facetDefinitions,
         workflowStates: facetWorkflow.workflowStates,
@@ -570,16 +571,18 @@ export function createOrganization(repository: OrganizationRepository) {
     },
     apply(input: { scope: unknown; command: unknown }): OrganizationFacetWorkflowApplyResponse | OrganizationLaneApplyResponse {
       const { scope, accountIds } = authorizedAccounts(repository, input.scope);
-      if (scope.actor.type !== "human") {
-        throw new OrganizationAuthorityError("actor_operation_denied", "This first-party Organization apply path requires an authenticated human session");
-      }
-      const humanActor: OrganizationActor & { type: "human" } = { id: scope.actor.id, type: "human" };
       const laneResult = organizationLaneApplySchema.safeParse(input.command);
       if (laneResult.success) {
         if (!repository.lanes) throw new OrganizationOperationDisabledError("apply");
         const applyCommand = laneResult.data;
         const bound = bindLaneCommand(applyCommand, scope.workspaceId);
-        const capabilitySnapshot = firstPartyHumanCapability(humanActor, scope.workspaceId, accountIds);
+        let liveCapability;
+        try {
+          liveCapability = requireOrganizationCapability(scope, (actor) => firstPartyHumanCapability(actor, scope.workspaceId, accountIds), dependencies.agentCapabilitySource);
+        } catch (error) {
+          throw new OrganizationAuthorityError("actor_operation_denied", error instanceof Error ? error.message : "Organization Actor is not authorized");
+        }
+        const capabilitySnapshot = liveCapability.snapshot;
         const live = repository.lanes.getAuthorityState(scope.workspaceId);
         const decision = authorizeOrganizationOperation({
           actor: scope.actor,
@@ -591,7 +594,7 @@ export function createOrganization(repository: OrganizationRepository) {
           idempotencyKey: applyCommand.idempotencyKey,
         }, {
           scope: { workspaceId: scope.workspaceId, accountIds },
-          capability: { snapshot: capabilitySnapshot, revokedAt: null },
+          capability: liveCapability,
           workspaceRevision: live.workspaceRevision,
           resourceRevisions: live.resourceRevisions,
           reservedIdempotencyKeys: live.reservedIdempotencyKeys,
@@ -602,7 +605,13 @@ export function createOrganization(repository: OrganizationRepository) {
       const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
       if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
       const bound = bindFacetWorkflowCommand(applyCommand);
-      const capabilitySnapshot = firstPartyHumanCapability(humanActor, scope.workspaceId, accountIds);
+      let liveCapability;
+      try {
+        liveCapability = requireOrganizationCapability(scope, (actor) => firstPartyHumanCapability(actor, scope.workspaceId, accountIds), dependencies.agentCapabilitySource);
+      } catch (error) {
+        throw new OrganizationAuthorityError("actor_operation_denied", error instanceof Error ? error.message : "Organization Actor is not authorized");
+      }
+      const capabilitySnapshot = liveCapability.snapshot;
       const live = repository.getFacetWorkflowAuthorityState(scope.workspaceId);
       const decision = authorizeOrganizationOperation({
         actor: scope.actor,
@@ -614,7 +623,7 @@ export function createOrganization(repository: OrganizationRepository) {
         idempotencyKey: applyCommand.idempotencyKey,
       }, {
         scope: { workspaceId: scope.workspaceId, accountIds },
-        capability: { snapshot: capabilitySnapshot, revokedAt: null },
+        capability: liveCapability,
         workspaceRevision: live.workspaceRevision,
         resourceRevisions: live.resourceRevisions,
         reservedIdempotencyKeys: live.reservedIdempotencyKeys,

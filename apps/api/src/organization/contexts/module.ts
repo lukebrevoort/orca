@@ -25,6 +25,7 @@ import {
   type OrganizationExecutionContext,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
+import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
 export type OrganizationContextSnapshot = OrganizationContextQueryResponse & {
   threads: Array<{ accountId: string; threadId: string }>;
@@ -41,6 +42,7 @@ export type OrganizationContextAuthorizationAnchor = Readonly<{
 export type OrganizationContextAuthorizationBinding = Readonly<{
   scope: OrganizationContextScope;
   authorizationEnvelopeDigest: string;
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
 }>;
 
 const organizationContextAuthorizationAnchors = new WeakMap<
@@ -51,11 +53,13 @@ const organizationContextAuthorizationAnchors = new WeakMap<
 function issueOrganizationContextAuthorizationAnchor(
   scope: OrganizationContextScope,
   authorizationEnvelopeDigest: string,
+  agentCapabilitySource?: OrganizationAgentCapabilitySource,
 ): OrganizationContextAuthorizationAnchor {
   const anchor = Object.freeze({}) as OrganizationContextAuthorizationAnchor;
   organizationContextAuthorizationAnchors.set(anchor, {
     scope: structuredClone(scope),
     authorizationEnvelopeDigest,
+    ...(scope.actor.type === "agent" && agentCapabilitySource ? { agentCapabilitySource } : {}),
   });
   return anchor;
 }
@@ -67,7 +71,11 @@ export function consumeOrganizationContextAuthorizationAnchor(
   if (typeof anchor !== "object" || anchor === null) return null;
   const binding = organizationContextAuthorizationAnchors.get(anchor);
   organizationContextAuthorizationAnchors.delete(anchor);
-  return binding ? structuredClone(binding) : null;
+  return binding ? {
+    scope: structuredClone(binding.scope),
+    authorizationEnvelopeDigest: binding.authorizationEnvelopeDigest,
+    ...(binding.agentCapabilitySource ? { agentCapabilitySource: binding.agentCapabilitySource } : {}),
+  } : null;
 }
 
 export type OrganizationContextsRepository = {
@@ -414,7 +422,7 @@ export function organizationContextsCapability(scope: OrganizationContextScope):
   };
 }
 
-export function createOrganizationContexts(repository: OrganizationContextsRepository, dependencies: { now?: () => Date; newId?: () => string } = {}) {
+export function createOrganizationContexts(repository: OrganizationContextsRepository, dependencies: { now?: () => Date; newId?: () => string; agentCapabilitySource?: OrganizationAgentCapabilitySource } = {}) {
   const now = dependencies.now ?? (() => new Date());
   const newId = dependencies.newId ?? (() => crypto.randomUUID());
 
@@ -426,11 +434,16 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
   }
 
   function authorizeBound(scope: OrganizationContextScope, operation: "apply" | "revert", idempotencyKey: string, command: OrganizationCommand, expectedWorkspaceRevision: number) {
-    if (scope.actor.type !== "human") throw new OrganizationContextsAccessError("Context writes require an authenticated human session");
     const live = repository.getAuthorityState(scope.workspaceId);
     const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => intent.mutation === "update" && live.resourceRevisions[intent.resourceId] !== undefined ? [[intent.resourceId, live.resourceRevisions[intent.resourceId]!]] : []));
-    const capability = organizationContextsCapability(scope);
-    const decision = authorizeOrganizationOperation({ actor: scope.actor, capabilitySnapshot: capability, operation, scope: capability.scope, command, expectedRevisions: { workspace: expectedWorkspaceRevision, resources: expectedResources }, idempotencyKey }, { scope: capability.scope, capability: { snapshot: capability, revokedAt: null }, workspaceRevision: live.workspaceRevision, resourceRevisions: live.resourceRevisions, reservedIdempotencyKeys: live.reservedIdempotencyKeys });
+    let liveCapability;
+    try {
+      liveCapability = requireOrganizationCapability(scope, (actor) => organizationContextsCapability({ ...scope, actor }), dependencies.agentCapabilitySource);
+    } catch (error) {
+      throw new OrganizationContextsAccessError(error instanceof Error ? error.message : "Context Actor is not authorized");
+    }
+    const capability = liveCapability.snapshot;
+    const decision = authorizeOrganizationOperation({ actor: scope.actor, capabilitySnapshot: capability, operation, scope: capability.scope, command, expectedRevisions: { workspace: expectedWorkspaceRevision, resources: expectedResources }, idempotencyKey }, { scope: capability.scope, capability: liveCapability, workspaceRevision: live.workspaceRevision, resourceRevisions: live.resourceRevisions, reservedIdempotencyKeys: live.reservedIdempotencyKeys });
     if (!decision.allowed) {
       if (decision.code === "revision_conflict" || decision.code === "duplicate_idempotency_key") throw new OrganizationContextsConflictError(decision.reason);
       throw new OrganizationContextsAccessError(decision.reason);
@@ -442,6 +455,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
       authorizationAnchor: issueOrganizationContextAuthorizationAnchor(
         scope,
         decision.authorizationEnvelopeDigest,
+        dependencies.agentCapabilitySource,
       ),
       command,
     };

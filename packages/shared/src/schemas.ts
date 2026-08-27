@@ -513,7 +513,7 @@ export const authSessionSchema = z
   });
 export type AuthSession = z.infer<typeof authSessionSchema>;
 
-export const mcpOAuthScopes = ["mail:read", "agent_events:read"] as const;
+export const mcpOAuthScopes = ["mail:read", "agent_events:read", "organization:control"] as const;
 export const mcpOAuthScopeSchema = z.enum(mcpOAuthScopes);
 export type McpOAuthScope = z.infer<typeof mcpOAuthScopeSchema>;
 

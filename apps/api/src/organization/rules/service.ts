@@ -26,6 +26,7 @@ import {
 } from "@orca/shared";
 
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
+import { isAgentOrganizationActor, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 import { compileOrcaRule } from "./compiler.ts";
 
 export class WorkspaceSchemaConflictError extends Error {
@@ -107,6 +108,7 @@ type RuleAuthorizationBinding = Readonly<{
   accountIds: string[];
   authorizationEnvelopeDigest: string;
   persistenceIntentDigest: string;
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
 }>;
 const ruleAuthorizationAnchors = new WeakMap<object, RuleAuthorizationBinding>();
 
@@ -153,7 +155,16 @@ export function digestRuleReorderPersistenceIntent(input: RuleReorderPersistence
 
 function issueRuleAuthorizationAnchor(binding: RuleAuthorizationBinding): RuleAuthorizationAnchor {
   const anchor = Object.freeze({}) as RuleAuthorizationAnchor;
-  ruleAuthorizationAnchors.set(anchor, structuredClone(binding));
+  ruleAuthorizationAnchors.set(anchor, {
+    ...structuredClone({
+      actor: binding.actor,
+      workspaceId: binding.workspaceId,
+      accountIds: binding.accountIds,
+      authorizationEnvelopeDigest: binding.authorizationEnvelopeDigest,
+      persistenceIntentDigest: binding.persistenceIntentDigest,
+    }),
+    ...(binding.agentCapabilitySource ? { agentCapabilitySource: binding.agentCapabilitySource } : {}),
+  });
   return anchor;
 }
 
@@ -162,7 +173,16 @@ export function consumeRuleAuthorizationAnchor(anchor: unknown): RuleAuthorizati
   if (typeof anchor !== "object" || anchor === null) return null;
   const binding = ruleAuthorizationAnchors.get(anchor);
   ruleAuthorizationAnchors.delete(anchor);
-  return binding ? structuredClone(binding) : null;
+  return binding ? {
+    ...structuredClone({
+      actor: binding.actor,
+      workspaceId: binding.workspaceId,
+      accountIds: binding.accountIds,
+      authorizationEnvelopeDigest: binding.authorizationEnvelopeDigest,
+      persistenceIntentDigest: binding.persistenceIntentDigest,
+    }),
+    ...(binding.agentCapabilitySource ? { agentCapabilitySource: binding.agentCapabilitySource } : {}),
+  } : null;
 }
 
 export type RuleRevisionRepository = {
@@ -217,6 +237,7 @@ function decodeRuleRevisionCursor(cursor: string): z.infer<typeof ruleRevisionCu
 export function createRuleRevisionService(repository: RuleRevisionRepository, options: {
   now?: () => Date;
   id?: () => string;
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
 } = {}) {
   const now = options.now ?? (() => new Date());
   const id = options.id ?? randomUUID;
@@ -229,9 +250,16 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
     resourceFamilies: ["rule", "audit", "change_set"],
     actionFamilies: ["organization_read", "organization_structure"],
   });
+  const liveCapability = (actor: OrganizationActor, workspaceId: string, accountIds: string[]) => {
+    if (!isAgentOrganizationActor(actor)) return { snapshot: capability(actor, workspaceId, accountIds), revokedAt: null };
+    const live = options.agentCapabilitySource?.load({ actor, workspaceId, accountIds });
+    if (!live) throw new RuleAuthorityError("missing_operation_capability", "No explicit external-agent Capability authorizes this Rule revision");
+    return live;
+  };
   return {
-    compile(input: { actor: OrganizationActor; workspaceId: string; request: unknown }): OrcaRuleCompileResponse {
+    compile(input: { actor: OrganizationActor; workspaceId: string; accountIds?: string[]; request: unknown }): OrcaRuleCompileResponse {
       const request = orcaRuleCompileRequestSchema.parse(input.request);
+      if (isAgentOrganizationActor(input.actor)) liveCapability(input.actor, input.workspaceId, input.accountIds ?? []);
       const replay = repository.getIdempotent(input.workspaceId, request.idempotencyKey);
       if (replay) {
         if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(request)) throw new RuleIdempotencyConflictError();
@@ -299,7 +327,12 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         }] : [])],
       };
       const live = repository.getAuthorityState(input.workspaceId, { ruleId, idempotencyKey: request.idempotencyKey });
-      const granted = capability(input.actor, input.workspaceId, live.accountIds);
+      const grantedLive = liveCapability(
+        input.actor,
+        input.workspaceId,
+        isAgentOrganizationActor(input.actor) ? input.accountIds ?? [] : live.accountIds,
+      );
+      const granted = grantedLive.snapshot;
       const decision = authorizeOrganizationOperation({
         actor: input.actor,
         capabilitySnapshot: granted,
@@ -315,7 +348,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
         idempotencyKey: request.idempotencyKey,
       }, {
         scope: granted.scope,
-        capability: { snapshot: granted, revokedAt: null },
+        capability: grantedLive,
         workspaceRevision: live.workspaceRevision,
         resourceRevisions: live.resourceRevisions,
         reservedIdempotencyKeys: live.idempotencyKeyReserved ? [request.idempotencyKey] : [],
@@ -346,6 +379,9 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
           accountIds: granted.scope.accountIds,
           authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest,
           persistenceIntentDigest: digestRulePersistenceIntent(persistenceIntent),
+          ...(isAgentOrganizationActor(input.actor) && options.agentCapabilitySource
+            ? { agentCapabilitySource: options.agentCapabilitySource }
+            : {}),
         }),
       });
     },

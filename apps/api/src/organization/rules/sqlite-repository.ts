@@ -32,6 +32,7 @@ import {
 } from "../../db/schema.ts";
 import type { OrcaWorkspaceSnapshot } from "./compiler.ts";
 import { canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
+import { isAgentOrganizationActor } from "../agent-capability.ts";
 import {
   consumeRuleAuthorizationAnchor,
   digestRuleOrder,
@@ -232,12 +233,26 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         }
         const liveAccountIds = executor.select({ id: oauthAccounts.id }).from(oauthAccounts)
           .where(eq(oauthAccounts.userId, input.rule.workspaceId)).all().map((row) => row.id).sort();
+        const boundAccountIds = [...authorizationBinding.accountIds].sort();
+        const agentCapability = isAgentOrganizationActor(authorizationBinding.actor)
+          ? authorizationBinding.agentCapabilitySource?.load({
+              actor: authorizationBinding.actor,
+              workspaceId: authorizationBinding.workspaceId,
+              accountIds: boundAccountIds,
+            }) ?? null
+          : null;
+        const accountsRemainAuthorized = isAgentOrganizationActor(authorizationBinding.actor)
+          ? agentCapability !== null
+            && agentCapability.revokedAt === null
+            && boundAccountIds.every((accountId) => liveAccountIds.includes(accountId))
+            && canonicalOrganizationJson(agentCapability.snapshot) === canonicalOrganizationJson(envelope.trace.capabilitySnapshot)
+          : canonicalOrganizationJson(liveAccountIds) === canonicalOrganizationJson(boundAccountIds);
         if (input.revision.actor.id !== authorizationBinding.actor.id
           || input.revision.actor.type !== authorizationBinding.actor.type
           || input.revision.workspaceId !== input.rule.workspaceId
           || input.revision.ruleId !== input.rule.id
           || input.revision.compiled.workspaceId !== input.rule.workspaceId
-          || canonicalOrganizationJson(liveAccountIds) !== canonicalOrganizationJson([...authorizationBinding.accountIds].sort())) {
+          || !accountsRemainAuthorized) {
           throw new RuleAuthorityError("account_denied", "The Rule authorization scope is not currently owned");
         }
         const duplicate = executor.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(

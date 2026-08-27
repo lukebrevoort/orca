@@ -1,5 +1,5 @@
 import {
-  orcaMcpReadOnlyTools,
+  orcaMcpTools,
   type MailAccount,
   type OrcaAgentExposure,
   type OrcaMcpScope,
@@ -184,10 +184,10 @@ export function authorizeAgentToolRequest(
 ): AgentBoundaryDecision {
   if (!policy.enabled) return deny("integration_disabled");
 
-  const tool = orcaMcpReadOnlyTools.find((candidate) => candidate.name === input.toolName);
+  const tool = orcaMcpTools.find((candidate) => candidate.name === input.toolName);
   if (!tool) return deny("unsupported_tool");
 
-  const supportedScopes = new Set(orcaMcpReadOnlyTools.map((candidate) => candidate.requiredScope));
+  const supportedScopes = new Set(orcaMcpTools.map((candidate) => candidate.requiredScope));
   if (input.authorization.scopes.some((scope) => !supportedScopes.has(scope))) {
     return deny("scope_escalation");
   }

@@ -19,6 +19,7 @@ import {
   type OrganizationViewUpdateRequest,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
+import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
 export class OrganizationViewAccessError extends Error {
   readonly code: "account_denied" | "resource_denied";
@@ -134,7 +135,7 @@ function firstPartyViewsCapability(scope: OrganizationViewScope): OrganizationCa
   };
 }
 
-export function createOrganizationViews(repository: OrganizationViewsRepository, dependencies: { newViewId?: () => string; newChangeId?: () => string; now?: () => Date } = {}) {
+export function createOrganizationViews(repository: OrganizationViewsRepository, dependencies: { newViewId?: () => string; newChangeId?: () => string; now?: () => Date; agentCapabilitySource?: OrganizationAgentCapabilitySource } = {}) {
   const newViewId = dependencies.newViewId ?? (() => `view_${crypto.randomUUID()}`);
   const newChangeId = dependencies.newChangeId ?? (() => `change_${crypto.randomUUID()}`);
   const now = dependencies.now ?? (() => new Date());
@@ -147,8 +148,13 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
   }
 
   function authorizeBound(scope: OrganizationViewScope, request: { idempotencyKey: string; expectedWorkspaceRevision: number }, command: OrganizationCommand, expectedResources: Record<string, number>): OrganizationViewMutationAuthorization {
-    if (scope.actor.type !== "human") throw new OrganizationViewAccessError("View writes require an authenticated human session", "resource_denied");
-    const capability = firstPartyViewsCapability(scope);
+    let liveCapability;
+    try {
+      liveCapability = requireOrganizationCapability(scope, (actor) => firstPartyViewsCapability({ ...scope, actor }), dependencies.agentCapabilitySource);
+    } catch (error) {
+      throw new OrganizationViewAccessError(error instanceof Error ? error.message : "View Actor is not authorized", "resource_denied");
+    }
+    const capability = liveCapability.snapshot;
     const live = repository.getAuthorityState(scope.workspaceId);
     const decision = authorizeOrganizationOperation({
       actor: scope.actor,
@@ -160,7 +166,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       idempotencyKey: request.idempotencyKey,
     }, {
       scope: capability.scope,
-      capability: { snapshot: capability, revokedAt: null },
+      capability: liveCapability,
       workspaceRevision: live.workspaceRevision,
       resourceRevisions: live.resourceRevisions,
       reservedIdempotencyKeys: live.reservedIdempotencyKeys,

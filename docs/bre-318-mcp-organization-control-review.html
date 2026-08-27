@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-318 · MCP Organization control reviewer guide</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f4f1e8; --card:#fffdf7; --ink:#17302d; --muted:#61706c; --line:#d8d4ca; --good:#0a705f; --accent:#dff3ec; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 Inter,ui-sans-serif,system-ui,sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:40px auto 72px; }
+    h1,h2,h3 { font-family:Georgia,serif; line-height:1.15; }
+    h1 { font-size:clamp(36px,6vw,68px); margin:.2em 0; }
+    h2 { margin-top:42px; font-size:30px; }
+    p { max-width:82ch; }
+    .eyebrow { letter-spacing:.13em; text-transform:uppercase; font-size:12px; font-weight:800; color:var(--good); }
+    .summary,.card,table { background:var(--card); border:1px solid var(--line); border-radius:18px; }
+    .summary { padding:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .metric strong { display:block; font-size:28px; color:var(--good); }
+    .flow { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; align-items:stretch; }
+    .flow .card { padding:16px; position:relative; }
+    .flow .card:not(:last-child)::after { content:"→"; position:absolute; right:-11px; top:42%; z-index:2; color:var(--good); font-weight:900; }
+    code,pre { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#112522; color:#edf6f3; padding:16px; border-radius:14px; }
+    table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; }
+    th,td { text-align:left; vertical-align:top; padding:13px 14px; border-bottom:1px solid var(--line); }
+    tr:last-child td { border-bottom:0; }
+    th { background:var(--accent); }
+    .pass { color:var(--good); font-weight:800; }
+    ul { padding-left:22px; }
+    a { color:var(--good); }
+    @media (prefers-color-scheme:dark) {
+      :root { --bg:#111816; --card:#1a2421; --ink:#edf3f1; --muted:#aebbb7; --line:#34423e; --accent:#173c34; }
+    }
+    @media (max-width:780px) { .summary,.flow { grid-template-columns:1fr; } .flow .card::after { display:none; } table { font-size:13px; } }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">BRE-318 · independent review</p>
+  <h1>Scoped agents can organize Orca—without becoming mail providers.</h1>
+  <p>This guide maps the five MCP Organization operations to the canonical Orca modules and gives reviewers a reproducible fixture-backed acceptance path. It is intentionally explicit about the negative space: no send, reply, forward, provider deletion, arbitrary code, or unscoped mailbox mutation exists in the tool catalog.</p>
+
+  <section class="summary" aria-label="Implementation summary">
+    <div class="metric"><strong>5</strong>semantic Organization operations</div>
+    <div class="metric"><strong>1</strong>canonical authority/evaluator path</div>
+    <div class="metric"><strong>0</strong>provider-write tools introduced</div>
+  </section>
+
+  <h2>Architecture and authority mapping</h2>
+  <div class="flow" aria-label="Request flow">
+    <div class="card"><strong>OAuth bearer</strong><br>Live user, client, resource, scope, and Account intersection.</div>
+    <div class="card"><strong>Shared Zod edge</strong><br>Actor, Workspace, Accounts, resource family, expected revision, typed target.</div>
+    <div class="card"><strong>MCP adapter</strong><br>Exactly describe, query, simulate, apply, revert for Organization.</div>
+    <div class="card"><strong>Organization modules</strong><br>Existing authority, compiler, evaluator, Views, Lanes, Facets, Contexts, Collections.</div>
+    <div class="card"><strong>SQLite transaction</strong><br>Rechecks ownership, capability binding, command digest, revisions, idempotency; appends Change Sets.</div>
+  </div>
+  <p>The explicit <code>OrganizationAgentCapabilitySource</code> is the trust seam. Human callers retain their existing behavior. Agent writes fail closed unless the authenticated adapter injects a live source; Context and Rule revision one-shot anchors carry that source to the transactional adapter for a fresh comparison.</p>
+
+  <h2>Acceptance-criterion matrix</h2>
+  <table>
+    <thead><tr><th>#</th><th>Status</th><th>Implementation evidence</th><th>Test evidence</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td class="pass">Pass</td><td><code>agent-contract.ts</code> declares five semantic Organization tools; <code>mcp.ts</code> delegates to the canonical Organization modules.</td><td>MCP tool-list assertion checks the exact five names and annotations.</td></tr>
+      <tr><td>2</td><td class="pass">Pass</td><td>Typed apply targets cover Lanes/Policies, Facets/Workflow States, Views, Collections, Contexts, Rule revisions, and Rule Change Sets.</td><td>Fixture lifecycle creates every family, simulates historical mail, then activates one Change Set.</td></tr>
+      <tr><td>3</td><td class="pass">Pass</td><td>Strict shared schemas bind Workspace, Accounts, resource family and expected revision; OAuth client identity becomes the agent Actor; live capability sources are Account-scoped.</td><td>Cross-Account, missing scope, direct agent, stale revision, and strict-schema tests fail closed.</td></tr>
+      <tr><td>4</td><td class="pass">Pass</td><td>Simulation output adds exact winning Rule/revision counts and observed trace reasons while retaining conflicts, risk and representative impacts. Mutation output contains applied/rejected Change Set IDs.</td><td>Lifecycle asserts winner, reason, risk, stored apply ID, and compensating ID.</td></tr>
+      <tr><td>5</td><td class="pass">Pass</td><td>No contract/tool for send, reply, forward, deletion, code execution, or provider mutation; authority forbids mail-send/provider-delete actions.</td><td>Tool catalog and hostile-content M6 compatibility assertions prove absence.</td></tr>
+      <tr><td>6</td><td class="pass">Pass</td><td>Rule activation requires exact OAuth-control approval bound to Simulation ID and acknowledged risk; read schemas are strict.</td><td>Missing/stale approval creates zero Change Sets; mutation smuggling into describe is rejected.</td></tr>
+      <tr><td>7</td><td class="pass">Pass</td><td>Canonical idempotency and BRE-317 compensating revert services are reused; approval is stored in immutable command JSON.</td><td>Exact apply retry returns identical structured output; query observes active shared state; revert succeeds.</td></tr>
+      <tr><td>8</td><td class="pass">Pass</td><td>Historical Simulation uses the production compiler/evaluator and fixture-backed persisted mail repository.</td><td>Foundational external-agent lifecycle runs against <code>thread_a_2</code> historical fixture mail.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Reproduce</h2>
+  <p>Run from the repository root with Bun 1.3+:</p>
+  <pre>CI=true bun test apps/api/src/agents/mcp.test.ts \
+  apps/api/src/auth/mcp/oauth.test.ts \
+  apps/api/src/organization/module.test.ts \
+  apps/api/src/organization/contexts/module.test.ts \
+  apps/api/src/organization/rules/service.test.ts \
+  apps/api/src/organization/rules/simulation.test.ts
+
+CI=true bun run typecheck
+CI=true bun run test
+CI=true bun run build
+CI=true bun run lint</pre>
+
+  <h2>High-value evidence locations</h2>
+  <ul>
+    <li><code>packages/shared/src/mcp-contract.ts</code> — strict bounded inputs, typed apply union, approval and output schemas.</li>
+    <li><code>packages/shared/src/agent-contract.ts</code> — exact tool catalog; separately filtered read-only catalog.</li>
+    <li><code>apps/api/src/agents/mcp.ts</code> — OAuth/Account authorization, tool registration, structured results.</li>
+    <li><code>apps/api/src/index.ts</code> — thin adapter composition over canonical Organization modules.</li>
+    <li><code>apps/api/src/organization/agent-capability.ts</code> — explicit agent capability seam and discriminated actor guards.</li>
+    <li><code>apps/api/src/organization/rules/change-set-sqlite.ts</code> — live MCP capability, durable approval binding, activation/revert.</li>
+    <li><code>apps/api/src/agents/mcp.test.ts</code> — full five-operation fixture lifecycle and adversarial cases.</li>
+    <li><code>apps/api/src/auth/mcp/oauth.test.ts</code> — truthful control consent and Account-scoped grant.</li>
+  </ul>
+
+  <h2>Independent-verifier focus</h2>
+  <ol>
+    <li>Change the OAuth Account grant or Workspace ID and confirm every Organization operation fails before state changes.</li>
+    <li>Replay activation after removing Account ownership or changing the acknowledged risk and confirm zero writes.</li>
+    <li>Inspect <code>organization_change_sets.command_json</code> to confirm exact approval, Simulation ID, and risk are durable.</li>
+    <li>Compare MCP query state after activation/revert with the REST Organization read path.</li>
+    <li>Inspect <code>tools/list</code> and ensure apply/revert are non-read-only but non-destructive/idempotent, while the legacy read-only list contains neither.</li>
+  </ol>
+</main>
+</body>
+</html>

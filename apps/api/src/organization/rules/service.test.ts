@@ -81,6 +81,19 @@ action route lane "${lane}"
 because "Launch mail stays visible"`;
 
 describe("Rule Revision service", () => {
+  test("denies a direct external-agent compile without an explicit Capability source", () => {
+    const { service, sqlite } = setup();
+    try {
+      assert.throws(() => service.compile({ actor: { id: "external-client", type: "agent" }, workspaceId: "owner", accountIds: ["owner-account"], request: {
+        idempotencyKey: "direct-agent-denied",
+        expectedRuleRevision: null,
+        workspaceSchemaRevision: 1,
+        source: source(),
+      } }), (error: unknown) => error instanceof RuleAuthorityError && error.code === "missing_operation_capability");
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_rule_revisions").get() as { count: number }).count, 0);
+    } finally { sqlite.close(); }
+  });
+
   test("paginates a large immutable history with a canonical Rule/head-bound keyset cursor", () => {
     const { service, sqlite } = setup();
     try {
