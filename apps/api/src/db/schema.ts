@@ -1366,6 +1366,7 @@ export const mcpConnections = sqliteTable(
   },
   (table) => ({
     userIdx: index("mcp_connections_user_idx").on(table.userId),
+    workspaceConnectionUniqueIdx: uniqueIndex("mcp_connections_workspace_connection_unique_idx").on(table.userId, table.id),
     revokedAtIdx: index("mcp_connections_revoked_at_idx").on(table.revokedAt),
   }),
 );
@@ -1387,6 +1388,67 @@ export const mcpConnectionAccounts = sqliteTable(
   (table) => ({
     connectionAccountUniqueIdx: uniqueIndex("mcp_connection_accounts_connection_account_unique_idx").on(table.connectionId, table.accountId),
     accountIdx: index("mcp_connection_accounts_account_idx").on(table.accountId),
+  }),
+);
+
+/**
+ * One-use materialization of the persisted OAuth Organization grant for an
+ * exact simulated mutation. It deliberately contains digests and bounded
+ * identifiers only—never bearer credentials, Rule source, or mail content.
+ */
+export const mcpOrganizationApprovals = sqliteTable(
+  "mcp_organization_approvals",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    connectionId: text("connection_id").notNull(),
+    clientId: text("client_id").notNull(),
+    approverUserId: text("approver_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    operation: text("operation").notNull(),
+    accountIdsDigest: text("account_ids_digest").notNull(),
+    commandDigest: text("command_digest").notNull(),
+    simulationId: text("simulation_id").notNull(),
+    risk: text("risk").notNull(),
+    revisionsJson: text("revisions_json").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    consumedAt: integer("consumed_at", { mode: "timestamp_ms" }).notNull(),
+    consumedByIdempotencyKey: text("consumed_by_idempotency_key").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    workspaceConnectionFk: foreignKey({
+      columns: [table.workspaceId, table.connectionId],
+      foreignColumns: [mcpConnections.userId, mcpConnections.id],
+      name: "mcp_organization_approvals_workspace_connection_fk",
+    }).onDelete("cascade"),
+    oneUseSimulationIdx: uniqueIndex("mcp_organization_approvals_connection_simulation_unique_idx")
+      .on(table.connectionId, table.simulationId),
+    workspaceCreatedIdx: index("mcp_organization_approvals_workspace_created_idx").on(table.workspaceId, table.createdAt),
+  }),
+);
+
+/** Bounded, redacted record for failed MCP Organization mutation attempts. */
+export const organizationMutationAttempts = sqliteTable(
+  "organization_mutation_attempts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    connectionId: text("connection_id").references(() => mcpConnections.id, { onDelete: "set null" }),
+    actorType: text("actor_type").notNull(),
+    actorId: text("actor_id").notNull(),
+    operation: text("operation").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    commandDigest: text("command_digest").notNull(),
+    accountCount: integer("account_count").notNull(),
+    accountIdsDigest: text("account_ids_digest").notNull(),
+    outcome: text("outcome").notNull(),
+    reasonCode: text("reason_code").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    oneAttemptIdx: uniqueIndex("organization_mutation_attempts_workspace_operation_key_unique_idx")
+      .on(table.workspaceId, table.operation, table.idempotencyKey),
+    workspaceCreatedIdx: index("organization_mutation_attempts_workspace_created_idx").on(table.workspaceId, table.createdAt),
   }),
 );
 

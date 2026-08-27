@@ -36,6 +36,8 @@ import {
   users,
 } from "../../db/schema.ts";
 import { persistGmailMessages } from "../../providers/gmail/sync.ts";
+import { createOrganization } from "../module.ts";
+import { createSqliteOrganizationRepository } from "../sqlite-repository.ts";
 import type { GmailMessage } from "../../providers/gmail/types.ts";
 import { createRuleRevisionService } from "./service.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
@@ -1122,6 +1124,72 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
     } finally {
       sqlite.close();
     }
+  }, 15_000);
+
+  test("preserves newer unrelated human intent while compensating only the original touched resources", async () => {
+    const { db, sqlite, compiled } = await setup();
+    try {
+      const actor = { id: "workspace-1", type: "human" as const };
+      const capabilitySnapshot = validCapability(db);
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+        },
+      });
+      const ruleSet = db.select().from(organizationRuleSets).where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+      const service = createSqliteRuleChangeSetService(db, {
+        id: (() => { let value = 0; return () => `g2-unrelated-${++value}`; })(),
+      });
+      const applied = service.activate({
+        actor,
+        capabilitySnapshot,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: compiled.rule.id,
+          revisionId: compiled.revision.id,
+          simulationId: simulation.simulationId,
+          accountIds: ["account-1"],
+          maximumThreads: 500,
+          expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+          expectedRuleRevision: compiled.rule.latestRevision,
+          expectedRuleSetRevision: ruleSet.revision,
+          idempotencyKey: "g2-activate-before-unrelated",
+        },
+      });
+
+      const human = createOrganization(createSqliteOrganizationRepository(db));
+      const unrelated = human.apply({
+        scope: { actor, workspaceId: "workspace-1", accountIds: ["account-1"] },
+        command: {
+          id: "g2-unrelated-human-change",
+          idempotencyKey: "g2-unrelated-human-change",
+          expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+          actions: [{ kind: "define_workflow_state", id: "state-unrelated-human", name: "Human follow-up", position: 99 }],
+        },
+      });
+      assert.equal(unrelated.workspaceRevision, applied.workspaceRevisionAfter + 1);
+
+      const reverted = service.revert({
+        actor,
+        capabilitySnapshot,
+        workspaceId: "workspace-1",
+        request: {
+          changeSetId: applied.changeSetId,
+          accountIds: ["account-1"],
+          expectedWorkspaceRevision: unrelated.workspaceRevision,
+          idempotencyKey: "g2-revert-after-unrelated",
+        },
+      });
+      assert.equal(reverted.status, "reverted");
+      assert.equal(db.select().from(organizationWorkflowStates).where(eq(organizationWorkflowStates.id, "state-unrelated-human")).get()?.name, "Human follow-up");
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "g2-unrelated-human-change")).get()?.status, "applied");
+    } finally { sqlite.close(); }
   }, 15_000);
 });
 

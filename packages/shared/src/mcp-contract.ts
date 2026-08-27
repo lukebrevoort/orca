@@ -374,6 +374,8 @@ export type McpGetConnectionStatusOutput = z.infer<typeof mcpGetConnectionStatus
 
 export const mcpToolErrorCodeSchema = z.enum([
   "account_denied",
+  "approval_required",
+  "denial",
   "integration_disabled",
   "invalid_cursor",
   "invalid_token",
@@ -381,6 +383,10 @@ export const mcpToolErrorCodeSchema = z.enum([
   "unauthorized",
   "insufficient_scope",
   "idempotency_conflict",
+  "payload_limit",
+  "rate_limit",
+  "revision_conflict",
+  "simulation_mismatch",
   "internal_error",
 ]);
 export type McpToolErrorCode = z.infer<typeof mcpToolErrorCodeSchema>;

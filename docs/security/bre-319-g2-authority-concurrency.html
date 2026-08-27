@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-319 · G2 Authority &amp; Concurrency Review</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f3f0e8;--ink:#18211d;--muted:#617067;--panel:#fffdf7;--line:#d8d3c6;--code:#e9e5da;--green:#08775a;--red:#b63b32;--amber:#9b6100;--blue:#235f86}
+    @media(prefers-color-scheme:dark){:root{--bg:#101512;--ink:#edf3ed;--muted:#a9b5ac;--panel:#171e1a;--line:#36423a;--code:#202a24;--green:#67dfb8;--red:#ff8e82;--amber:#f2bd63;--blue:#83c7f1}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif}main{max-width:1240px;margin:auto;padding:48px 24px 80px}h1{font:760 clamp(34px,5.5vw,64px)/1.02 ui-serif,Georgia,serif;letter-spacing:-.035em;max-width:980px;margin:8px 0 16px}h2{font-size:22px;margin:46px 0 16px}h3{font-size:16px;margin:0 0 7px}.eyebrow{color:var(--blue);font-weight:850;letter-spacing:.14em;text-transform:uppercase}.lede{font-size:19px;color:var(--muted);max-width:88ch}.verdict{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;background:var(--panel);border:2px solid var(--green);border-radius:18px;padding:21px;margin:30px 0}.stamp{color:var(--green);font:900 25px/1.1 ui-monospace,SFMono-Regular,monospace}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:17px}.metric{font:850 27px/1 ui-monospace,SFMono-Regular,monospace;color:var(--blue)}table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}th,td{text-align:left;vertical-align:top;padding:11px 12px;border-bottom:1px solid var(--line)}th{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}code{background:var(--code);border-radius:5px;padding:1px 4px}pre{background:var(--code);border:1px solid var(--line);border-radius:13px;padding:16px;overflow:auto;white-space:pre-wrap}.pass{color:var(--green);font-weight:850}.deny{color:var(--red);font-weight:800}.blocked{color:var(--amber);font-weight:850}.small{color:var(--muted);font-size:13px}.flow{display:grid;grid-template-columns:repeat(7,minmax(105px,1fr));gap:8px;align-items:stretch}.flow div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}.flow b{display:block;color:var(--blue);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.arrow{display:none}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;font-size:12px}.redgreen td:first-child{font-weight:800}.redgreen .red{color:var(--red)}.redgreen .green{color:var(--green)}@media(max-width:900px){.flow{grid-template-columns:1fr 1fr}.verdict{grid-template-columns:1fr}}@media(max-width:650px){main{padding:28px 14px 60px}.flow{grid-template-columns:1fr}table{display:block;overflow:auto}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">Security gate · BRE-319 · exact base 01262da</div>
+  <h1>Authority holds under replay, concurrency, failure, and exhaustion.</h1>
+  <p class="lede">This local assessment attacks the production MCP → Organization seams on the exact verified BRE-318 commit. It uses deterministic hostile fixtures and real separate SQLite connections; no security plugin, scanner, external cybersecurity workflow, send path, delete path, or provider-write authority was introduced.</p>
+
+  <section class="verdict">
+    <div class="stamp">LOCAL PASS</div>
+    <div><strong>G2 remediation is ready for independent verification.</strong><br>All eight acceptance categories have executable local evidence. <span class="blocked">G3 remains BLOCKED</span> until an independent reviewer reproduces these results and returns PASS.</div>
+  </section>
+
+  <section class="grid">
+    <article class="card"><div class="metric">45 / 45</div><h3>Focused adversarial wave</h3><p>Payload/rate admission, durable migration, bounded failure audit, multi-resource rollback, cross-scope denial, approval replay, two-connection races, and revert isolation.</p></article>
+    <article class="card"><div class="metric">68 / 68</div><h3>BRE-318 regression</h3><p>Live MCP, OAuth, Organization, Context, Rule service, and Simulation suites.</p></article>
+    <article class="card"><div class="metric">711 / 711</div><h3>Full repository suite</h3><p>69 shared, 161 web, and 481 API tests; zero failures.</p></article>
+    <article class="card"><div class="metric">413 · 429</div><h3>Stable exhaustion boundary</h3><p><code>payload_limit</code> and <code>rate_limit</code> reject before dispatch, approval use, idempotency reservation, or mutation.</p></article>
+    <article class="card"><div class="metric">0 partial</div><h3>Atomic failure invariant</h3><p>First, middle, last, revision, and authority failures leave no domain or Change Set action rows.</p></article>
+  </section>
+
+  <h2>One deep admission and transaction path</h2>
+  <section class="flow" aria-label="BRE-319 trusted mutation flow">
+    <div><b>1 · bytes</b>Stream at most 256 KiB before OAuth; authenticated REST Organization routes cap at 512 KiB, with tighter route-specific envelopes.</div>
+    <div><b>2 · identity</b>Verify bearer audience, expiry, scopes, Workspace, connection, client, and Accounts.</div>
+    <div><b>3 · budget</b>Acquire connection + Workspace cost and in-flight lease; reject with typed 429.</div>
+    <div><b>4 · shape</b>Strict Zod contracts bound Accounts, query pages, Simulation history, and mutation arrays.</div>
+    <div><b>5 · authority</b>Reload the persisted grant and live Accounts inside replay and mutation transactions.</div>
+    <div><b>6 · commit</b><code>BEGIN IMMEDIATE</code>; reserve approval/idempotency and compare exact revisions atomically.</div>
+    <div><b>7 · failure</b>Rollback everything, then append one bounded digest-only attempt record outside the failed transaction.</div>
+  </section>
+
+  <h2>Acceptance matrix</h2>
+  <table>
+    <thead><tr><th>#</th><th>Criterion</th><th>Production evidence</th><th>Adversarial evidence</th><th>Disposition</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Credentials fail closed</td><td><code>agentCapabilitySourceFor</code> binds connection, client, audience/resource, expiry, revocation, Workspace, live Accounts, scopes, and operation; mutations and cached replay reload it transactionally.</td><td><code>mcp.test.ts</code>: control-only lifecycle; grant change mid-flight; cached Context replay after revocation. <code>oauth.test.ts</code>: Account scope, revocation, refresh replay, write-scope refusal.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>2</td><td>Workspace / Account isolation</td><td>Approval persistence has a composite <code>(workspace_id, connection_id)</code> FK. Resource reads and writes retain composite Workspace/Account predicates. Denial audit never attributes a foreign connection to another Workspace.</td><td><code>mcp.test.ts</code>: “denies guessed cross-Account resource IDs and replayed cross-Workspace credentials…”; migration rejects a cross-Workspace approval FK.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>3</td><td>Duplicate / reordered requests</td><td>Canonical ordered command digests and Workspace idempotency uniqueness live in the same immediate transaction. A one-use approval is unique per connection + Simulation.</td><td><code>g2-authority-concurrency.test.ts</code>: same key/body yields one identical result; reversed actions conflict. <code>mcp.test.ts</code>: different keys sharing one approval produce at most one Change Set.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>4</td><td>Human / agent concurrency</td><td>WAL + 5 s busy timeout + immediate write transactions serialize the single writer before any stale decision can commit.</td><td><code>g2-authority-concurrency.test.ts</code>: separate Worker connection, human-winner and agent-winner orders, multi-action collision; loser gets typed <code>revision_conflict</code>, never <code>SQLITE_BUSY</code> or partial state.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>5</td><td>Atomic multi-resource failure + durable audit</td><td>Domain rows, Change Set, actions, approval use, and idempotency reservation share one transaction. Failure audit stores only IDs, counts, stable reason, and SHA-256 digests; one row per Workspace/operation/key; maximum 1,000 per Workspace.</td><td><code>mcp.test.ts</code>: injected first/middle/last triggers, each retried twice → zero domain/Change Set rows and exactly one redacted attempt. <code>mutation-attempt-audit.test.ts</code>: exact 1,000-row, tenant-local retention.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>6</td><td>Separately scoped safe revert</td><td><code>revert</code> is checked independently in the live Capability. Compensation compares only original touched Rule, Rule Set, and Thread revisions; the current Workspace revision may include unrelated human intent.</td><td><code>simulation-sqlite.test.ts</code>: apply-only cannot revert; newer touched Thread conflicts atomically; newer unrelated human Workflow State survives compensation.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>7</td><td>Exhaustion bounds + typed rejection</td><td>Pre-auth streaming body cap; route body cap; connection/Workspace cost and in-flight budgets; strict Account/query/cursor/Simulation/mutation bounds. Admission occurs before dispatch.</td><td><code>g2-request-guards.test.ts</code>: declared + streamed 413, byte-preserving acceptance, deterministic 429, connection isolation, fair recovery, and no dispatch on rejection.</td><td class="pass">LOCAL PASS</td></tr>
+      <tr><td>8</td><td>Adversarial evidence and gate control</td><td>The schema verifier requires both new tables; the migration is fresh-install, exact-0032-upgrade, and replay safe. Error vocabulary is public and stable.</td><td>Focused and BRE-318 suites above; exact full-repository gates below. No critical/high local finding remains open.</td><td><span class="pass">G2 LOCAL PASS</span><br><span class="blocked">G3 BLOCKED</span></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Durable approval binding</h2>
+  <p>Agent Rule activation materializes exactly one one-use row inside the activation transaction. It binds <span class="pill">Workspace</span><span class="pill">connection</span><span class="pill">client</span><span class="pill">approver</span><span class="pill">operation</span><span class="pill">sorted Account digest</span><span class="pill">canonical ordered command digest</span><span class="pill">Simulation</span><span class="pill">risk</span><span class="pill">Workspace / Rule / Rule Set / touched revisions</span><span class="pill">expiry</span><span class="pill">consuming idempotency key</span>. Any later failure rolls this row back with the Change Set. Replay must find and exactly match the durable row; a different key cannot consume the same approval.</p>
+
+  <h2>Stable public errors</h2>
+  <table><thead><tr><th>Error</th><th>Meaning</th><th>HTTP / MCP behavior</th></tr></thead><tbody>
+    <tr><td><code>denial</code></td><td>Authority, scope, ownership, or fail-closed persistence denial.</td><td>MCP structured tool error</td></tr>
+    <tr><td><code>approval_required</code></td><td>Missing, expired, mismatched, or already-used durable approval.</td><td>MCP structured tool error</td></tr>
+    <tr><td><code>simulation_mismatch</code></td><td>Approval or activation is not bound to the exact current Simulation/risk.</td><td>MCP structured tool error</td></tr>
+    <tr><td><code>idempotency_conflict</code></td><td>Same key, different canonical ordered request.</td><td>MCP structured tool error</td></tr>
+    <tr><td><code>revision_conflict</code></td><td>Expected Workspace or touched-resource revision lost a race.</td><td>MCP structured tool error; REST authority remains 409</td></tr>
+    <tr><td><code>payload_limit</code></td><td>Request body rejected before authorization or parsing work.</td><td>HTTP 413</td></tr>
+    <tr><td><code>rate_limit</code></td><td>Connection or Workspace cost/in-flight budget exhausted.</td><td>HTTP 429 + <code>Retry-After</code></td></tr>
+  </tbody></table>
+
+  <h2>RED → GREEN record</h2>
+  <table class="redgreen"><thead><tr><th>Probe</th><th>RED</th><th>GREEN</th></tr></thead><tbody>
+    <tr><td>Admission control</td><td class="red">Focused test could not import the missing request-guard seam.</td><td class="green">5/5 guard tests pass through both direct and real MCP handler paths.</td></tr>
+    <tr><td>Unrelated human intent</td><td class="red">Revert rejected any Workspace revision newer than the original apply.</td><td class="green">The guard now accepts a caller-bound current revision and conflicts only if original touched resources changed.</td></tr>
+    <tr><td>Cross-Workspace approval persistence</td><td class="red">Workspace and connection had independent foreign keys.</td><td class="green">Composite Workspace/connection FK rejects mismatched durable approvals; denial audit nulls foreign connection attribution.</td></tr>
+    <tr><td>Concurrent writers</td><td class="red">Deferred transactions left the stale-read → lock-upgrade window exposed.</td><td class="green">Immediate transactions plus WAL/busy timeout make both winner orders deterministic and typed.</td></tr>
+  </tbody></table>
+
+  <h2>Reproduce</h2>
+  <pre>CI=true bun test apps/api/src/agents/g2-request-guards.test.ts \
+  apps/api/src/organization/g2-authority-concurrency.test.ts \
+  apps/api/src/organization/g2-migration.test.ts \
+  apps/api/src/organization/mutation-attempt-audit.test.ts \
+  apps/api/src/agents/mcp.test.ts \
+  apps/api/src/organization/rules/simulation-sqlite.test.ts
+# 45 pass, 0 fail
+
+CI=true bun test apps/api/src/agents/mcp.test.ts \
+  apps/api/src/auth/mcp/oauth.test.ts \
+  apps/api/src/organization/module.test.ts \
+  apps/api/src/organization/contexts/module.test.ts \
+  apps/api/src/organization/rules/service.test.ts \
+  apps/api/src/organization/rules/simulation.test.ts
+# 68 pass, 0 fail
+
+bun run --cwd apps/api db:verify
+CI=true bun run typecheck
+CI=true bun run test
+CI=true bun run build
+CI=true bun run lint
+git diff --check 01262da20657845a9ece938ba9fc13693b50732a...HEAD</pre>
+  <p class="small">Final local results: migration verification PASS; typecheck PASS; full tests 711/711; production build PASS; lint PASS; base-range diff check PASS.</p>
+
+  <h2>Reviewer source map</h2>
+  <table><thead><tr><th>Concern</th><th>Source</th></tr></thead><tbody>
+    <tr><td>Pre-auth body, rate, cost, and in-flight admission</td><td><code>apps/api/src/agents/request-guards.ts</code>, <code>apps/api/src/agents/mcp.ts</code></td></tr>
+    <tr><td>Live persisted grant / Account reload and failure audit adapter</td><td><code>apps/api/src/index.ts</code></td></tr>
+    <tr><td>Atomic approval, replay, activation, compensation</td><td><code>apps/api/src/organization/rules/change-set-sqlite.ts</code></td></tr>
+    <tr><td>Durable redacted denial/failure record</td><td><code>apps/api/src/organization/mutation-attempt-audit.ts</code></td></tr>
+    <tr><td>Writer serialization</td><td><code>apps/api/src/db/client.ts</code></td></tr>
+    <tr><td>Schema and migration</td><td><code>apps/api/src/db/schema.ts</code>, <code>apps/api/drizzle/0033_g2_authority_concurrency.sql</code></td></tr>
+    <tr><td>Public typed error vocabulary</td><td><code>packages/shared/src/mcp-contract.ts</code></td></tr>
+  </tbody></table>
+
+  <h2>Residual risk and independent review focus</h2>
+  <ul>
+    <li>The rate limiter is process-local. A multi-process deployment needs a shared admission backend or deliberate per-process budget division before horizontal scale-out.</li>
+    <li>SQLite remains a single-writer store by design. WAL and immediate transactions produce stable conflict behavior here; production observability should alert on sustained lock wait or 429 pressure.</li>
+    <li>Independent review should repeat the race fixtures under the target CI runner and confirm migration behavior on a copy of representative pre-0033 data.</li>
+    <li>The BRE-318 boundary is unchanged: no send, reply, forward, delete, provider-write, or human-message synthesis tool exists.</li>
+  </ul>
+  <p class="small">Assessment date: 2026-08-26 · Base: <code>01262da20657845a9ece938ba9fc13693b50732a</code> · Security method: source review + deterministic adversarial fixtures + repository tests only.</p>
+</main></body></html>

@@ -71,6 +71,12 @@ import {
   type OrcaMcpTokenVerifier,
 } from "./access-token.ts";
 import type { OrcaAgentAuthorizationContext } from "./authorization.ts";
+import {
+  McpRequestLimiter,
+  boundedMcpRequest,
+  mcpRateLimitResponse,
+  mcpToolRequestCost,
+} from "./request-guards.ts";
 
 export const orcaMcpServerInfo = Object.freeze({
   name: "orca-organization",
@@ -165,6 +171,7 @@ type OrcaMcpHttpOptions = {
   env?: NodeJS.ProcessEnv;
   policy: OrcaAgentBoundaryPolicy;
   verifier?: OrcaMcpTokenVerifier;
+  requestLimiter?: McpRequestLimiter;
 };
 
 function errorResult(code: McpToolErrorCode, message: string) {
@@ -190,12 +197,28 @@ function mapBoundaryError(code: string) {
 
 function mapReadError(error: unknown) {
   if (error instanceof McpReadError) return errorResult(error.code, error.message);
-  if (error && typeof error === "object" && "code" in error
-    && (error.code === "duplicate_idempotency_key" || (error.code === "conflict" && error instanceof Error && /idempotency/i.test(error.message)))) {
-    return errorResult("idempotency_conflict", redactAgentText(error instanceof Error ? error.message : "The idempotency key belongs to a different Organization request", 500));
+  const code = error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : null;
+  const message = redactAgentText(error instanceof Error ? error.message : "The Organization request was denied", 500);
+  if (code === "duplicate_idempotency_key" || code === "idempotency_conflict"
+    || (code === "conflict" && error instanceof Error && /idempotency/i.test(error.message))) {
+    return errorResult("idempotency_conflict", message);
   }
+  if (code === "revision_conflict" || code === "compensation_conflict" || code?.startsWith("SQLITE_BUSY")
+    || error instanceof Error && error.name === "OrganizationRevisionConflictError") {
+    return errorResult("revision_conflict", message);
+  }
+  if (code === "approval_required" || code === "approval_binding_conflict") {
+    return errorResult("approval_required", message);
+  }
+  if (code === "simulation_mismatch" || code === "simulation_binding_conflict") {
+    return errorResult("simulation_mismatch", message);
+  }
+  if (code && /denied|capability|scope|actor|workspace|account/.test(code)) {
+    return errorResult("denial", message);
+  }
+  if (code?.startsWith("SQLITE_")) return errorResult("denial", "The atomic Organization mutation failed closed");
   if (error instanceof Error && ["OrcaRuleChangeSetError", "HistoricalSimulationBindingError", "OrganizationAuthorityError", "OrganizationRevisionConflictError"].includes(error.name)) {
-    return errorResult("internal_error", redactAgentText(error.message, 500));
+    return errorResult("denial", message);
   }
   return errorResult("internal_error", "Orca could not complete this Organization request");
 }
@@ -653,6 +676,7 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
   if (!verifier) throw new Error("The enabled /mcp resource requires a live OAuth token verifier");
   const allowedHostnames = [new URL(policy.resource).hostname];
   const allowedOriginHostnames = allowedBrowserOriginHostnames(env);
+  const requestLimiter = options.requestLimiter ?? new McpRequestLimiter();
   const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(new URL(policy.resource));
   const handler = createMcpHandler(
     (context) => {
@@ -678,8 +702,11 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
       if (rejected) return rejected;
 
       let requiredScopes: string[] = [];
+      const bounded = await boundedMcpRequest(request);
+      if (!bounded.allowed) return bounded.response;
+      request = bounded.request;
       if (request.method === "POST") {
-        const body = await request.clone().json().catch(() => null);
+        const body = bounded.body;
         const name = requestedToolName(body);
         const tool = orcaMcpTools.find((candidate) => candidate.name === name);
         if (tool?.requiredScopes.length === 1) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScopes[0]!)];
@@ -691,7 +718,18 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
       // can misclassify a 401 challenge as AuthInfo in the live Bun process.
       try {
         const authInfo = await verifyBearerToken(authorizationHeader || undefined, bearerOptions);
-        return handler.fetch(request, { authInfo });
+        const authorization = getOrcaAuthorization(authInfo).authorization;
+        const lease = requestLimiter.acquire({
+          connectionId: authorization.connectionId,
+          workspaceId: authorization.userId,
+          cost: mcpToolRequestCost(requestedToolName(bounded.body)),
+        });
+        if (!lease.allowed) return mcpRateLimitResponse(lease.retryAfterSeconds);
+        try {
+          return await handler.fetch(request, { authInfo });
+        } finally {
+          lease.release();
+        }
       } catch (error) {
         return bearerAuthChallengeResponse(error, bearerOptions);
       }

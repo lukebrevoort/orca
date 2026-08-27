@@ -21,6 +21,7 @@ import {
   collectionThreads,
   collections,
   oauthAccounts,
+  mcpOrganizationApprovals,
   organizationChangeActions,
   organizationChangeSets,
   organizationContexts,
@@ -78,6 +79,13 @@ export type RuleChangeSetLiveCapability = {
 
 export type RuleChangeSetCapabilitySource = {
   load(db: Database, input: { workspaceId: string }): RuleChangeSetLiveCapability | null;
+};
+
+export type McpOrganizationApprovalGrant = {
+  connectionId: string;
+  clientId: string;
+  approverUserId: string;
+  expiresAt: Date;
 };
 
 /**
@@ -151,6 +159,52 @@ type ThreadPlan = {
 
 function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`;
+}
+
+function durableApprovalId(input: {
+  grant: McpOrganizationApprovalGrant;
+  workspaceId: string;
+  accountIds: string[];
+  request: ReturnType<typeof orcaRuleActivationRequestSchema.parse>;
+  risk: OrcaRuleRisk;
+}): string {
+  return digest({
+    version: 1,
+    connectionId: input.grant.connectionId,
+    clientId: input.grant.clientId,
+    approverUserId: input.grant.approverUserId,
+    workspaceId: input.workspaceId,
+    accountIds: [...input.accountIds].sort(),
+    operation: "apply",
+    ruleId: input.request.ruleId,
+    revisionId: input.request.revisionId,
+    simulationId: input.request.simulationId,
+    maximumThreads: input.request.maximumThreads,
+    expectedWorkspaceRevision: input.request.expectedWorkspaceRevision,
+    expectedRuleRevision: input.request.expectedRuleRevision,
+    expectedRuleSetRevision: input.request.expectedRuleSetRevision,
+    risk: input.risk,
+  });
+}
+
+function requireApprovalGrant(input: {
+  actor: OrganizationActor;
+  workspaceId: string;
+  grant: McpOrganizationApprovalGrant | undefined;
+  now: Date;
+}): McpOrganizationApprovalGrant | undefined {
+  if (input.actor.type !== "agent") return undefined;
+  const grant = input.grant;
+  if (!grant
+    || !grant.connectionId
+    || grant.clientId !== input.actor.id
+    || grant.approverUserId !== input.workspaceId) {
+    throw new OrcaRuleChangeSetError("approval_required", "A current persisted OAuth approval grant is required");
+  }
+  if (!(grant.expiresAt instanceof Date) || Number.isNaN(grant.expiresAt.getTime()) || grant.expiresAt <= input.now) {
+    throw new OrcaRuleChangeSetError("approval_required", "The persisted OAuth approval grant is expired");
+  }
+  return grant;
 }
 
 function sameRequest(left: unknown, right: unknown): boolean {
@@ -502,9 +556,11 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
       workspaceId: string;
       request: unknown;
       approval?: unknown;
+      approvalGrant?: McpOrganizationApprovalGrant;
     }): OrcaRuleChangeSetResult {
       const request = orcaRuleActivationRequestSchema.parse(input.request);
       const approval = input.actor.type === "agent" ? mcpOrganizationApprovalSchema.parse(input.approval) : undefined;
+      const approvalGrant = requireApprovalGrant({ actor: input.actor, workspaceId: input.workspaceId, grant: input.approvalGrant, now: now() });
       const capabilitySnapshot = organizationCapabilitySnapshotSchema.parse(input.capabilitySnapshot);
       const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
       validateCurrentCapabilityClaim({
@@ -530,6 +586,20 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           operation: "apply",
           idempotencyKey: request.idempotencyKey,
         });
+        if (approvalGrant) {
+          const persistedApproval = db.select().from(mcpOrganizationApprovals).where(and(
+            eq(mcpOrganizationApprovals.connectionId, approvalGrant.connectionId),
+            eq(mcpOrganizationApprovals.simulationId, request.simulationId),
+          )).get();
+          if (!persistedApproval
+            || persistedApproval.clientId !== approvalGrant.clientId
+            || persistedApproval.approverUserId !== approvalGrant.approverUserId
+            || persistedApproval.consumedByIdempotencyKey !== request.idempotencyKey
+            || persistedApproval.commandDigest !== replay.commandDigest
+            || persistedApproval.expiresAt <= now()) {
+            throw new OrcaRuleChangeSetError("approval_required", "The durable approval for this replay is unavailable, mismatched, or expired");
+          }
+        }
         return parseReplay(replay, request, approval);
       }
 
@@ -556,7 +626,20 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         throw new OrcaRuleChangeSetError("simulation_binding_conflict", "Activation requires the exact current successful Simulation");
       }
       if (approval && (approval.simulationId !== preparation.report.simulationId || approval.acknowledgedRisk !== preparation.report.risk)) {
-        throw new OrcaRuleChangeSetError("approval_binding_conflict", "Agent approval must bind the exact successful Simulation and its derived risk");
+        throw new OrcaRuleChangeSetError("simulation_mismatch", "Agent approval must bind the exact successful Simulation and its derived risk");
+      }
+      const approvalId = approvalGrant ? durableApprovalId({
+        grant: approvalGrant,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        request,
+        risk: preparation.report.risk,
+      }) : undefined;
+      if (approvalId) {
+        const consumed = db.select().from(mcpOrganizationApprovals).where(eq(mcpOrganizationApprovals.id, approvalId)).get();
+        if (consumed && consumed.consumedByIdempotencyKey !== request.idempotencyKey) {
+          throw new OrcaRuleChangeSetError("approval_required", "This exact Simulation approval was already consumed by another mutation");
+        }
       }
 
       const workspace = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
@@ -662,6 +745,45 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         if (!transactionAuthority.allowed) throw new OrcaRuleChangeSetError(transactionAuthority.code, transactionAuthority.reason);
 
         const timestamp = now();
+        const transactionApprovalGrant = requireApprovalGrant({
+          actor: input.actor,
+          workspaceId: input.workspaceId,
+          grant: approvalGrant,
+          now: timestamp,
+        });
+        if (transactionApprovalGrant && approvalId) {
+          const existingApproval = executor.select().from(mcpOrganizationApprovals)
+            .where(eq(mcpOrganizationApprovals.id, approvalId)).get();
+          if (existingApproval) {
+            if (existingApproval.consumedByIdempotencyKey !== request.idempotencyKey
+              || existingApproval.commandDigest !== transactionAuthority.executionContext.command.digest) {
+              throw new OrcaRuleChangeSetError("approval_required", "This exact Simulation approval was already consumed by another mutation");
+            }
+          } else {
+            executor.insert(mcpOrganizationApprovals).values({
+              id: approvalId,
+              workspaceId: input.workspaceId,
+              connectionId: transactionApprovalGrant.connectionId,
+              clientId: transactionApprovalGrant.clientId,
+              approverUserId: transactionApprovalGrant.approverUserId,
+              operation: "apply",
+              accountIdsDigest: digest([...request.accountIds].sort()),
+              commandDigest: transactionAuthority.executionContext.command.digest,
+              simulationId: request.simulationId,
+              risk: preparation.report.risk,
+              revisionsJson: canonicalOrganizationJson({
+                workspace: request.expectedWorkspaceRevision,
+                rule: request.expectedRuleRevision,
+                ruleSet: request.expectedRuleSetRevision,
+                resources: expectedResources,
+              }),
+              expiresAt: transactionApprovalGrant.expiresAt,
+              consumedAt: timestamp,
+              consumedByIdempotencyKey: request.idempotencyKey,
+              createdAt: timestamp,
+            }).run();
+          }
+        }
         const inverseThreads: Array<Record<string, unknown>> = [];
         const actionRows: Array<typeof organizationChangeActions.$inferInsert> = [];
         let actionPosition = 0;
@@ -984,7 +1106,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         throw new OrcaRuleChangeSetError("revision_conflict", "Rule revert roots are unavailable");
       }
       if (workspace.revision !== request.expectedWorkspaceRevision
-        || original.workspaceRevisionAfter !== request.expectedWorkspaceRevision) {
+        || original.workspaceRevisionAfter > request.expectedWorkspaceRevision) {
         throw new OrcaRuleChangeSetError("revision_conflict", "The expected Workspace revision is stale");
       }
 
