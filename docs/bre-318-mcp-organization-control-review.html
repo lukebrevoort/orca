@@ -49,13 +49,15 @@
 
   <h2>Architecture and authority mapping</h2>
   <div class="flow" aria-label="Request flow">
-    <div class="card"><strong>OAuth bearer</strong><br>Live user, client, resource, scope, and Account intersection.</div>
+    <div class="card"><strong>OAuth bearer</strong><br>Preserves the persisted MCP connection ID plus live user, client, resource, scope, and Account intersection.</div>
     <div class="card"><strong>Shared Zod edge</strong><br>Actor, Workspace, Accounts, resource family, expected revision, typed target.</div>
     <div class="card"><strong>MCP adapter</strong><br>Exactly describe, query, simulate, apply, revert for Organization.</div>
     <div class="card"><strong>Organization modules</strong><br>Existing authority, compiler, evaluator, Views, Lanes, Facets, Contexts, Collections.</div>
-    <div class="card"><strong>SQLite transaction</strong><br>Rechecks ownership, capability binding, command digest, revisions, idempotency; appends Change Sets.</div>
+    <div class="card"><strong>SQLite transaction</strong><br>Reloads that exact connection grant and Account membership before replay or write, then checks command digest, revisions, and idempotency.</div>
   </div>
-  <p>The explicit <code>OrganizationAgentCapabilitySource</code> is the trust seam. Human callers retain their existing behavior. Agent writes fail closed unless the authenticated adapter injects a live source; Context and Rule revision one-shot anchors carry that source to the transactional adapter for a fresh comparison.</p>
+  <p>The explicit <code>OrganizationAgentCapabilitySource</code> is the trust seam. The bearer verifier carries <code>connectionId</code> and <code>clientId</code> into the authorization context; the source then queries <code>mcp_connections</code>, <code>mcp_connection_accounts</code>, and live owned Accounts, using the active mutation transaction for writes. It verifies the configured issuer/resource, user/Workspace, client/Actor, unexpired matching claim and persisted grant, revocation state, and exact requested Account subset. A control grant derives all five operations; a legacy metadata-read grant derives only describe/query. Lane, Facet/Workflow, View, Collection, Context, Rule revision, activation, and revert all fail before domain writes if their control binding changes. Human callers retain their existing first-party behavior.</p>
+
+  <p><code>organization:control</code> truthfully authorizes all five consented Organization operations. Describe/query also accept the narrower legacy metadata-read grant, while simulate/apply/revert still require control. The tool contract represents this as an any-of scope list so the bearer and boundary layers do not pretend both grants are required.</p>
 
   <h2>Acceptance-criterion matrix</h2>
   <table>
@@ -63,11 +65,11 @@
     <tbody>
       <tr><td>1</td><td class="pass">Pass</td><td><code>agent-contract.ts</code> declares five semantic Organization tools; <code>mcp.ts</code> delegates to the canonical Organization modules.</td><td>MCP tool-list assertion checks the exact five names and annotations.</td></tr>
       <tr><td>2</td><td class="pass">Pass</td><td>Typed apply targets cover Lanes/Policies, Facets/Workflow States, Views, Collections, Contexts, Rule revisions, and Rule Change Sets.</td><td>Fixture lifecycle creates every family, simulates historical mail, then activates one Change Set.</td></tr>
-      <tr><td>3</td><td class="pass">Pass</td><td>Strict shared schemas bind Workspace, Accounts, resource family and expected revision; OAuth client identity becomes the agent Actor; live capability sources are Account-scoped.</td><td>Cross-Account, missing scope, direct agent, stale revision, and strict-schema tests fail closed.</td></tr>
-      <tr><td>4</td><td class="pass">Pass</td><td>Simulation output adds exact winning Rule/revision counts and observed trace reasons while retaining conflicts, risk and representative impacts. Mutation output contains applied/rejected Change Set IDs.</td><td>Lifecycle asserts winner, reason, risk, stored apply ID, and compensating ID.</td></tr>
+      <tr><td>3</td><td class="pass">Pass</td><td>Strict shared schemas bind Workspace, Accounts, resource family and expected revision; the verified persisted connection identity becomes transaction-reloaded agent authority.</td><td>Cross-Account, missing scope, claims-over-grant, revocation, Account removal, grant-scope race, direct agent, stale revision, and strict-schema tests fail closed.</td></tr>
+      <tr><td>4</td><td class="pass">Pass</td><td>Simulation output adds exact winning Rule/revision counts and observed trace reasons while retaining conflicts, risk and representative impacts. Mutation output resolves the persisted Change Set row by canonical idempotency key.</td><td>Lifecycle asserts exact IDs for Lane, Facet, View, Collection, Context, Rule revision, activation, and compensating revert.</td></tr>
       <tr><td>5</td><td class="pass">Pass</td><td>No contract/tool for send, reply, forward, deletion, code execution, or provider mutation; authority forbids mail-send/provider-delete actions.</td><td>Tool catalog and hostile-content M6 compatibility assertions prove absence.</td></tr>
       <tr><td>6</td><td class="pass">Pass</td><td>Rule activation requires exact OAuth-control approval bound to Simulation ID and acknowledged risk; read schemas are strict.</td><td>Missing/stale approval creates zero Change Sets; mutation smuggling into describe is rejected.</td></tr>
-      <tr><td>7</td><td class="pass">Pass</td><td>Canonical idempotency and BRE-317 compensating revert services are reused; approval is stored in immutable command JSON.</td><td>Exact apply retry returns identical structured output; query observes active shared state; revert succeeds.</td></tr>
+      <tr><td>7</td><td class="pass">Pass</td><td>Lane and Facet/Workflow persist canonical request, scope, revision inputs, and successful response beside the immutable Change Set; their replay paths reload live authority before returning stored output. Other families retain their established canonical replay records.</td><td>Exact Lane, Facet/Workflow, Rule activation, and existing family retries return identical structured output without duplicate rows; changed requests fail typed.</td></tr>
       <tr><td>8</td><td class="pass">Pass</td><td>Historical Simulation uses the production compiler/evaluator and fixture-backed persisted mail repository.</td><td>Foundational external-agent lifecycle runs against <code>thread_a_2</code> historical fixture mail.</td></tr>
     </tbody>
   </table>
@@ -92,16 +94,18 @@ CI=true bun run lint</pre>
     <li><code>packages/shared/src/agent-contract.ts</code> — exact tool catalog; separately filtered read-only catalog.</li>
     <li><code>apps/api/src/agents/mcp.ts</code> — OAuth/Account authorization, tool registration, structured results.</li>
     <li><code>apps/api/src/index.ts</code> — thin adapter composition over canonical Organization modules.</li>
-    <li><code>apps/api/src/organization/agent-capability.ts</code> — explicit agent capability seam and discriminated actor guards.</li>
+    <li><code>apps/api/src/agents/access-token.ts</code> and <code>apps/api/src/index.ts</code> — preserved connection identity and persisted-grant resolver.</li>
+    <li><code>apps/api/src/organization/agent-capability.ts</code> — transaction-executor-aware capability seam and discriminated actor guards.</li>
     <li><code>apps/api/src/organization/rules/change-set-sqlite.ts</code> — live MCP capability, durable approval binding, activation/revert.</li>
-    <li><code>apps/api/src/agents/mcp.test.ts</code> — full five-operation fixture lifecycle and adversarial cases.</li>
+    <li><code>apps/api/src/agents/mcp.test.ts</code> — full five-operation fixture lifecycle, exact mutation-family IDs/replays, and grant-race adversarial cases.</li>
     <li><code>apps/api/src/auth/mcp/oauth.test.ts</code> — truthful control consent and Account-scoped grant.</li>
   </ul>
 
   <h2>Independent-verifier focus</h2>
   <ol>
-    <li>Change the OAuth Account grant or Workspace ID and confirm every Organization operation fails before state changes.</li>
-    <li>Replay activation after removing Account ownership or changing the acknowledged risk and confirm zero writes.</li>
+    <li>Revoke the persisted connection, remove its Account row, or drop <code>organization:control</code> between preflight and transaction; confirm zero Organization writes.</li>
+    <li>Run the explicit control-only/read-only tool matrix and confirm control-only reaches all five operations while read-only reaches only describe/query.</li>
+    <li>Replay Lane and Facet/Workflow with the exact request and confirm identical output/one Change Set; change any canonical request, scope, or revision field and confirm a typed conflict.</li>
     <li>Inspect <code>organization_change_sets.command_json</code> to confirm exact approval, Simulation ID, and risk are durable.</li>
     <li>Compare MCP query state after activation/revert with the REST Organization read path.</li>
     <li>Inspect <code>tools/list</code> and ensure apply/revert are non-read-only but non-destructive/idempotent, while the legacy read-only list contains neither.</li>

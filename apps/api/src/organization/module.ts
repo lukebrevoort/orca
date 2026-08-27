@@ -84,11 +84,17 @@ export type OrganizationRepository = {
     resourceRevisions: Record<string, number>;
     reservedIdempotencyKeys: string[];
   };
+  replayFacetWorkflow?(input: {
+    scope: OrganizationReadScope;
+    command: unknown;
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
+  }): FacetWorkflowSnapshot | null;
   applyFacetWorkflow?(input: {
     executionContext: OrganizationExecutionContext;
     authorityTrace: OrganizationAuthorityTrace;
     command: OrganizationCommand;
     actions: readonly OrganizationFacetWorkflowAction[];
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
   }): FacetWorkflowSnapshot;
   collectionsPins?: OrganizationCollectionsPinsRepository;
   contexts?: OrganizationContextsRepository;
@@ -575,6 +581,8 @@ export function createOrganization(repository: OrganizationRepository, dependenc
       if (laneResult.success) {
         if (!repository.lanes) throw new OrganizationOperationDisabledError("apply");
         const applyCommand = laneResult.data;
+        const replay = repository.lanes.replay({ scope: { ...scope, accountIds }, command: applyCommand, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
+        if (replay) return organizationLaneApplyResponseSchema.parse(replay);
         const bound = bindLaneCommand(applyCommand, scope.workspaceId);
         let liveCapability;
         try {
@@ -600,10 +608,19 @@ export function createOrganization(repository: OrganizationRepository, dependenc
           reservedIdempotencyKeys: live.reservedIdempotencyKeys,
         });
         if (!decision.allowed) throw new OrganizationAuthorityError(decision.code, decision.reason);
-        return organizationLaneApplyResponseSchema.parse(repository.lanes.apply({ executionContext: decision.executionContext, authorityTrace: decision.trace, boundCommand: bound.command, command: applyCommand }));
+        return organizationLaneApplyResponseSchema.parse(repository.lanes.apply({ executionContext: decision.executionContext, authorityTrace: decision.trace, boundCommand: bound.command, command: applyCommand, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) }));
       }
       const applyCommand = organizationFacetWorkflowApplySchema.parse(input.command);
       if (!repository.applyFacetWorkflow || !repository.getFacetWorkflowAuthorityState) throw new OrganizationOperationDisabledError("apply");
+      const facetReplay = repository.replayFacetWorkflow?.({ scope: { ...scope, accountIds }, command: applyCommand, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
+      if (facetReplay) return organizationFacetWorkflowApplyResponseSchema.parse({
+        changeSetId: applyCommand.id,
+        workspaceId: scope.workspaceId,
+        workspaceRevision: facetReplay.workspaceRevision,
+        appliedActions: applyCommand.actions.length,
+        facetDefinitions: facetReplay.facetDefinitions,
+        workflowStates: facetReplay.workflowStates,
+      });
       const bound = bindFacetWorkflowCommand(applyCommand);
       let liveCapability;
       try {
@@ -634,8 +651,10 @@ export function createOrganization(repository: OrganizationRepository, dependenc
         authorityTrace: decision.trace,
         command: bound.command,
         actions: applyCommand.actions,
+        ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}),
       });
       return organizationFacetWorkflowApplyResponseSchema.parse({
+        changeSetId: bound.command.id,
         workspaceId: scope.workspaceId,
         workspaceRevision: next.workspaceRevision,
         appliedActions: applyCommand.actions.length,

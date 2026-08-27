@@ -82,7 +82,7 @@ export type AgentBoundaryDecision =
       allowed: true;
       allowedAccountIds: string[];
       exposure: OrcaAgentExposure;
-      requiredScope: OrcaMcpScope;
+      requiredScopes: readonly OrcaMcpScope[];
       toolName: OrcaMcpToolName;
     }
   | {
@@ -187,11 +187,11 @@ export function authorizeAgentToolRequest(
   const tool = orcaMcpTools.find((candidate) => candidate.name === input.toolName);
   if (!tool) return deny("unsupported_tool");
 
-  const supportedScopes = new Set(orcaMcpTools.map((candidate) => candidate.requiredScope));
+  const supportedScopes = new Set(orcaMcpTools.flatMap((candidate) => candidate.requiredScopes));
   if (input.authorization.scopes.some((scope) => !supportedScopes.has(scope))) {
     return deny("scope_escalation");
   }
-  if (!input.authorization.scopes.includes(tool.requiredScope)) return deny("missing_scope");
+  if (!tool.requiredScopes.some((scope) => input.authorization.scopes.includes(scope))) return deny("missing_scope");
 
   const now = (input.now ?? new Date()).getTime();
   const issuedAt = input.authorization.issuedAt.getTime();
@@ -224,7 +224,7 @@ export function authorizeAgentToolRequest(
       ? [input.requestedAccountId]
       : allowedAccountIds,
     exposure: tool.exposure,
-    requiredScope: tool.requiredScope,
+    requiredScopes: tool.requiredScopes,
     toolName: tool.name,
   };
 }

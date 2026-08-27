@@ -380,6 +380,7 @@ export const mcpToolErrorCodeSchema = z.enum([
   "not_found",
   "unauthorized",
   "insufficient_scope",
+  "idempotency_conflict",
   "internal_error",
 ]);
 export type McpToolErrorCode = z.infer<typeof mcpToolErrorCodeSchema>;

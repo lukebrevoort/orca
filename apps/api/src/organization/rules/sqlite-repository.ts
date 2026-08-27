@@ -239,7 +239,7 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
               actor: authorizationBinding.actor,
               workspaceId: authorizationBinding.workspaceId,
               accountIds: boundAccountIds,
-            }) ?? null
+            }, executor) ?? null
           : null;
         const accountsRemainAuthorized = isAgentOrganizationActor(authorizationBinding.actor)
           ? agentCapability !== null

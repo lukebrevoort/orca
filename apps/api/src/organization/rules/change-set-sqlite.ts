@@ -105,33 +105,6 @@ export const sqliteRuleChangeSetCapabilitySource: RuleChangeSetCapabilitySource 
   },
 };
 
-/** Explicit external-agent grant used only by the authenticated MCP adapter. */
-export function createScopedAgentRuleChangeSetCapabilitySource(input: {
-  actor: OrganizationActor & { type: "agent" };
-  accountIds: readonly string[];
-}): RuleChangeSetCapabilitySource {
-  const grantedAccountIds = [...new Set(input.accountIds)].sort();
-  return {
-    load(db, { workspaceId }) {
-      const owned = new Set(db.select({ id: oauthAccounts.id }).from(oauthAccounts)
-        .where(eq(oauthAccounts.userId, workspaceId)).all().map(({ id: accountId }) => accountId));
-      if (grantedAccountIds.length === 0 || grantedAccountIds.some((accountId) => !owned.has(accountId))) return null;
-      return {
-        snapshot: {
-          id: `mcp:rule_change_set:${input.actor.id}:${workspaceId}`,
-          revision: 1,
-          actor: input.actor,
-          scope: { workspaceId, accountIds: grantedAccountIds },
-          operations: ["simulate", "apply", "revert"],
-          resourceFamilies: ["rule", "thread", "lane", "facet", "workflow_state", "collection", "context", "change_set", "trace", "audit"],
-          actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"],
-        },
-        revokedAt: null,
-      };
-    },
-  };
-}
-
 function loadRequiredCapability(source: RuleChangeSetCapabilitySource, db: Database, workspaceId: string): RuleChangeSetLiveCapability {
   const capability = source.load(db, { workspaceId });
   if (!capability) throw new OrcaRuleChangeSetError("capability_missing", "No current live Capability authorizes this Rule Change Set operation");

@@ -31,7 +31,8 @@ export function isAgentOrganizationActor(
  * Organization modules remain human-only unless this source is injected.
  */
 export type OrganizationAgentCapabilitySource = {
-  load(scope: OrganizationAgentScope): OrganizationLiveCapability | null;
+  /** The optional executor lets SQLite adapters re-resolve the grant on their active transaction. */
+  load(scope: OrganizationAgentScope, executor?: unknown): OrganizationLiveCapability | null;
 };
 
 export function requireOrganizationCapability(

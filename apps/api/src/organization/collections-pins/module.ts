@@ -72,14 +72,14 @@ export type OrganizationCollectionsPinsRepository = {
     request: OrganizationCollectionPinApplyRequest;
     changeId: string;
     trustedResourceIds: { primary: string; savedQuery: string | null } | null;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand; agentCapabilitySource?: OrganizationAgentCapabilitySource };
     now: Date;
   }): OrganizationCollectionPinAuditEntry;
   revert(input: {
     scope: OrganizationCollectionPinScope;
     request: OrganizationCollectionPinRevertRequest;
     changeId: string;
-    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand };
+    authorization: { executionContext: OrganizationExecutionContext; trace: OrganizationAuthorityTrace; command: OrganizationCommand; agentCapabilitySource?: OrganizationAgentCapabilitySource };
     now: Date;
   }): OrganizationCollectionPinAuditEntry;
   audit(input: { workspaceId: string; accountIds: string[] }): OrganizationCollectionPinAuditEntry[];
@@ -249,7 +249,7 @@ export function createOrganizationCollectionsPins(
       }
       throw new OrganizationCollectionsPinsAccessError(decision.reason);
     }
-    return { executionContext: decision.executionContext, trace: decision.trace, command: input.command };
+    return { executionContext: decision.executionContext, trace: decision.trace, command: input.command, ...(input.scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) };
   }
 
   function queryAuthorized(scope: OrganizationCollectionPinScope, query: OrganizationCollectionPinQuery) {

@@ -44,6 +44,8 @@ const policy = getOrcaAgentBoundaryPolicy({
 });
 
 const authorization = {
+  connectionId: "connection_a",
+  clientId: "client_a",
   userId: "user_a",
   accountIds: ["account_a"],
   issuer: "https://identity.orca.example",

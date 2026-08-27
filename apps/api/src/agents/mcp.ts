@@ -70,6 +70,7 @@ import {
   getOrcaAuthorization,
   type OrcaMcpTokenVerifier,
 } from "./access-token.ts";
+import type { OrcaAgentAuthorizationContext } from "./authorization.ts";
 
 export const orcaMcpServerInfo = Object.freeze({
   name: "orca-organization",
@@ -92,30 +93,35 @@ export type McpConnectionAccount = {
 export type OrcaMcpDataSource = {
   getCurrentAccountIds(userId: string): Promise<string[]> | string[];
   describeOrganization(input: {
+    authorization: OrcaAgentAuthorizationContext;
     userId: string;
     actor: OrganizationActor & { type: "agent" };
     allowedAccountIds: readonly string[];
     query: McpDescribeOrganizationInput;
   }): Promise<OrganizationDescribeResponse> | OrganizationDescribeResponse;
   queryOrganization(input: {
+    authorization: OrcaAgentAuthorizationContext;
     userId: string;
     actor: OrganizationActor & { type: "agent" };
     allowedAccountIds: readonly string[];
     query: McpQueryOrganizationInput;
   }): Promise<OrganizationQueryResponse> | OrganizationQueryResponse;
   simulateOrganization(input: {
+    authorization: OrcaAgentAuthorizationContext;
     userId: string;
     actor: OrganizationActor & { type: "agent" };
     allowedAccountIds: readonly string[];
     query: McpSimulateOrganizationInput;
   }): Promise<McpSimulateOrganizationOutput> | McpSimulateOrganizationOutput;
   applyOrganization(input: {
+    authorization: OrcaAgentAuthorizationContext;
     userId: string;
     actor: OrganizationActor & { type: "agent" };
     allowedAccountIds: readonly string[];
     query: McpApplyOrganizationInput;
   }): Promise<McpOrganizationMutationOutput> | McpOrganizationMutationOutput;
   revertOrganization(input: {
+    authorization: OrcaAgentAuthorizationContext;
     userId: string;
     actor: OrganizationActor & { type: "agent" };
     allowedAccountIds: readonly string[];
@@ -184,6 +190,10 @@ function mapBoundaryError(code: string) {
 
 function mapReadError(error: unknown) {
   if (error instanceof McpReadError) return errorResult(error.code, error.message);
+  if (error && typeof error === "object" && "code" in error
+    && (error.code === "duplicate_idempotency_key" || (error.code === "conflict" && error instanceof Error && /idempotency/i.test(error.message)))) {
+    return errorResult("idempotency_conflict", redactAgentText(error instanceof Error ? error.message : "The idempotency key belongs to a different Organization request", 500));
+  }
   if (error instanceof Error && ["OrcaRuleChangeSetError", "HistoricalSimulationBindingError", "OrganizationAuthorityError", "OrganizationRevisionConflictError"].includes(error.name)) {
     return errorResult("internal_error", redactAgentText(error.message, 500));
   }
@@ -291,8 +301,10 @@ function createServer(
       const decision = await authorizeOrganization("describe_organization", query);
       if (!("allowedAccountIds" in decision)) return decision;
       try {
-        const userId = getOrcaAuthorization(authInfo).authorization.userId;
+        const authorization = getOrcaAuthorization(authInfo).authorization;
+        const userId = authorization.userId;
         const output = mcpDescribeOrganizationOutputSchema.parse(await dataSource.describeOrganization({
+          authorization,
           userId,
           actor: { id: authInfo.clientId, type: "agent" },
           allowedAccountIds: decision.allowedAccountIds,
@@ -323,8 +335,10 @@ function createServer(
       const decision = await authorizeOrganization("query_organization", query);
       if (!("allowedAccountIds" in decision)) return decision;
       try {
-        const userId = getOrcaAuthorization(authInfo).authorization.userId;
+        const authorization = getOrcaAuthorization(authInfo).authorization;
+        const userId = authorization.userId;
         const raw = await dataSource.queryOrganization({
+          authorization,
           userId,
           actor: { id: authInfo.clientId, type: "agent" },
           allowedAccountIds: decision.allowedAccountIds,
@@ -375,6 +389,7 @@ function createServer(
       try {
         const authorization = getOrcaAuthorization(authInfo).authorization;
         const output = mcpSimulateOrganizationOutputSchema.parse(await dataSource.simulateOrganization({
+          authorization,
           userId: authorization.userId,
           actor: { id: authInfo.clientId, type: "agent" },
           allowedAccountIds: decision.allowedAccountIds,
@@ -400,6 +415,7 @@ function createServer(
       try {
         const authorization = getOrcaAuthorization(authInfo).authorization;
         const output = mcpOrganizationMutationOutputSchema.parse(await dataSource.applyOrganization({
+          authorization,
           userId: authorization.userId,
           actor: { id: authInfo.clientId, type: "agent" },
           allowedAccountIds: decision.allowedAccountIds,
@@ -425,6 +441,7 @@ function createServer(
       try {
         const authorization = getOrcaAuthorization(authInfo).authorization;
         const output = mcpOrganizationMutationOutputSchema.parse(await dataSource.revertOrganization({
+          authorization,
           userId: authorization.userId,
           actor: { id: authInfo.clientId, type: "agent" },
           allowedAccountIds: decision.allowedAccountIds,
@@ -665,7 +682,7 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
         const body = await request.clone().json().catch(() => null);
         const name = requestedToolName(body);
         const tool = orcaMcpTools.find((candidate) => candidate.name === name);
-        if (tool) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScope)];
+        if (tool?.requiredScopes.length === 1) requiredScopes = [getOAuthScopeForResourceScope(tool.requiredScopes[0]!)];
       }
       const bearerOptions = { verifier, requiredScopes, resourceMetadataUrl };
       const [authorizationHeader] = (request.headers.get("authorization") ?? "").split(",");

@@ -86,7 +86,7 @@ import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
-import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, messageDrafts, oauthAccounts, organizationSavedQueries, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
+import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, mcpConnectionAccounts, mcpConnections, messageDrafts, oauthAccounts, organizationChangeSets, organizationSavedQueries, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
 import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
@@ -109,6 +109,7 @@ import { createLinearFeedbackSubmitter } from "./integrations/linear.ts";
 import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agents/boundary.ts";
 import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
 import { createOrcaMcpAccessTokenVerifier, type OrcaMcpTokenVerifier } from "./agents/access-token.ts";
+import type { OrcaAgentAuthorizationContext } from "./agents/authorization.ts";
 import type { AgentEventStore } from "./agents/interfaces.ts";
 import {
   AgentEventNotFoundError,
@@ -143,8 +144,8 @@ import { createSqliteRuleRevisionRepository } from "./organization/rules/sqlite-
 import { createHistoricalRuleSimulationService } from "./organization/rules/simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./organization/rules/simulation-sqlite.ts";
 import {
-  createScopedAgentRuleChangeSetCapabilitySource,
   createSqliteRuleChangeSetService,
+  type RuleChangeSetCapabilitySource,
 } from "./organization/rules/change-set-sqlite.ts";
 import type { OrganizationAgentCapabilitySource } from "./organization/agent-capability.ts";
 import {
@@ -247,28 +248,83 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   const mcpOAuthConfig = options.mcpOAuthConfig ?? getMcpOAuthConfig(options.mcpEnv ?? process.env);
   const agentCapabilitySourceFor = (
     db: Database,
+    authorization: OrcaAgentAuthorizationContext,
     actor: OrganizationActor & { type: "agent" },
     workspaceId: string,
     accountIds: readonly string[],
   ): OrganizationAgentCapabilitySource => ({
-    load(scope) {
+    load(scope, transactionExecutor) {
       if (scope.workspaceId !== workspaceId || scope.actor.id !== actor.id || scope.actor.type !== "agent") return null;
+      if (authorization.connectionId.length === 0
+        || authorization.clientId !== actor.id
+        || authorization.userId !== workspaceId
+        || authorization.issuer !== (mcpPolicy.enabled ? mcpPolicy.issuer : authorization.issuer)
+        || authorization.resource !== (mcpPolicy.enabled ? mcpPolicy.resource : authorization.resource)
+        || authorization.expiresAt <= now()
+        || !authorization.scopes.some((scope) => scope === "orca:organization:control" || scope === "orca:mail.metadata:read")) return null;
       const granted = [...new Set(accountIds)].sort();
       if (JSON.stringify([...scope.accountIds].sort()) !== JSON.stringify(granted)) return null;
-      const owned = new Set(db.select({ id: oauthAccounts.id }).from(oauthAccounts).where(eq(oauthAccounts.userId, workspaceId)).all().map(({ id }) => id));
-      if (granted.length === 0 || granted.some((accountId) => !owned.has(accountId))) return null;
+      if (granted.some((accountId) => !authorization.accountIds.includes(accountId))) return null;
+      type PersistedConnection = { id: string; userId: string; clientId: string; resource: string; scopes: string; revokedAt: Date | null; updatedAt: Date };
+      let connection: PersistedConnection | undefined;
+      let persistedAccountIds: string[];
+      if (transactionExecutor && typeof transactionExecutor === "object" && "query" in transactionExecutor && !("select" in transactionExecutor)) {
+        const sqliteExecutor = transactionExecutor as { query(sql: string): { get(...params: unknown[]): Record<string, unknown> | null; all(...params: unknown[]): Array<Record<string, unknown>> } };
+        const row = sqliteExecutor.query("SELECT id,user_id AS userId,client_id AS clientId,resource,scopes,revoked_at AS revokedAt,updated_at AS updatedAt FROM mcp_connections WHERE id=?").get(authorization.connectionId);
+        connection = row ? {
+          id: String(row.id), userId: String(row.userId), clientId: String(row.clientId), resource: String(row.resource), scopes: String(row.scopes),
+          revokedAt: row.revokedAt === null ? null : new Date(Number(row.revokedAt)), updatedAt: new Date(Number(row.updatedAt)),
+        } : undefined;
+        persistedAccountIds = sqliteExecutor.query("SELECT oa.id AS id FROM mcp_connection_accounts mca JOIN oauth_accounts oa ON oa.id=mca.account_id WHERE mca.connection_id=? AND oa.user_id=? ORDER BY oa.id").all(authorization.connectionId, workspaceId).map((row) => String(row.id));
+      } else {
+        const executor = (transactionExecutor as Database | undefined) ?? db;
+        connection = executor.select({
+          id: mcpConnections.id,
+          userId: mcpConnections.userId,
+          clientId: mcpConnections.clientId,
+          resource: mcpConnections.resource,
+          scopes: mcpConnections.scopes,
+          revokedAt: mcpConnections.revokedAt,
+          updatedAt: mcpConnections.updatedAt,
+        }).from(mcpConnections).where(eq(mcpConnections.id, authorization.connectionId)).get();
+        persistedAccountIds = executor.select({ id: oauthAccounts.id })
+          .from(mcpConnectionAccounts)
+          .innerJoin(oauthAccounts, eq(mcpConnectionAccounts.accountId, oauthAccounts.id))
+          .where(and(eq(mcpConnectionAccounts.connectionId, authorization.connectionId), eq(oauthAccounts.userId, workspaceId)))
+          .all().map(({ id }) => id);
+      }
+      if (!connection
+        || connection.userId !== workspaceId
+        || connection.clientId !== actor.id
+        || connection.resource !== authorization.resource) return null;
+      const persistedScopes = new Set(connection.scopes.split(/\s+/).filter(Boolean));
+      const hasControl = authorization.scopes.includes("orca:organization:control") && persistedScopes.has("organization:control");
+      const hasOrganizationRead = hasControl
+        || (authorization.scopes.includes("orca:mail.metadata:read") && persistedScopes.has("mail:read"));
+      if (!hasOrganizationRead) return null;
+      const persisted = new Set(persistedAccountIds);
+      if (granted.length === 0 || granted.some((accountId) => !persisted.has(accountId))) return null;
       return {
         snapshot: {
-          id: `mcp:organization:${actor.id}:${workspaceId}`,
-          revision: 1,
+          id: `mcp:organization:${connection.id}`,
+          revision: Math.max(1, connection.updatedAt.getTime()),
           actor,
           scope: { workspaceId, accountIds: granted },
-          operations: ["describe", "query", "simulate", "apply", "revert"],
+          operations: hasControl ? ["describe", "query", "simulate", "apply", "revert"] : ["describe", "query"],
           resourceFamilies: ["workspace_schema", "mail", "thread", "lane", "view", "collection", "shortcut", "saved_query", "facet", "context", "workflow_state", "rule", "change_set", "trace", "audit"],
-          actionFamilies: ["organization_read", "organization_structure", "organization_thread", "organization_attention"],
+          actionFamilies: hasControl ? ["organization_read", "organization_structure", "organization_thread", "organization_attention"] : ["organization_read"],
         },
-        revokedAt: null,
+        revokedAt: connection.revokedAt?.toISOString() ?? null,
       };
+    },
+  });
+  const ruleChangeSetCapabilitySourceFor = (
+    source: OrganizationAgentCapabilitySource,
+    actor: OrganizationActor & { type: "agent" },
+    accountIds: readonly string[],
+  ): RuleChangeSetCapabilitySource => ({
+    load(executor, { workspaceId }) {
+      return source.load({ actor, workspaceId, accountIds: [...accountIds] }, executor);
     },
   });
   const mcpDataSource: OrcaMcpDataSource = {
@@ -280,11 +336,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         sqlite.close();
       }
     },
-    describeOrganization({ userId, actor, allowedAccountIds }) {
+    describeOrganization({ authorization, userId, actor, allowedAccountIds }) {
       const { db, sqlite } = dbFactory();
       try {
         const repository = createSqliteOrganizationRepository(db);
-        return createOrganization(repository, { agentCapabilitySource: agentCapabilitySourceFor(db, actor, userId, allowedAccountIds) }).describe({
+        return createOrganization(repository, { agentCapabilitySource: agentCapabilitySourceFor(db, authorization, actor, userId, allowedAccountIds) }).describe({
           scope: { actor, workspaceId: userId, accountIds: [...allowedAccountIds] },
         });
       } catch (error) {
@@ -294,11 +350,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         sqlite.close();
       }
     },
-    queryOrganization({ userId, actor, allowedAccountIds, query }) {
+    queryOrganization({ authorization, userId, actor, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
         const repository = createSqliteOrganizationRepository(db);
-        return createOrganization(repository, { agentCapabilitySource: agentCapabilitySourceFor(db, actor, userId, allowedAccountIds) }).query({
+        return createOrganization(repository, { agentCapabilitySource: agentCapabilitySourceFor(db, authorization, actor, userId, allowedAccountIds) }).query({
           scope: { actor, workspaceId: userId, accountIds: [...allowedAccountIds] },
           query: {
             accountIds: [...query.accountIds],
@@ -322,11 +378,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         sqlite.close();
       }
     },
-    simulateOrganization({ userId, actor, allowedAccountIds, query }) {
+    simulateOrganization({ authorization, userId, actor, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
         const scope = { actor, workspaceId: userId, accountIds: [...allowedAccountIds] };
-        const capability = agentCapabilitySourceFor(db, actor, userId, allowedAccountIds).load(scope);
+        const capability = agentCapabilitySourceFor(db, authorization, actor, userId, allowedAccountIds).load(scope);
         if (!capability) throw new McpReadError("account_denied", "The scoped Organization Capability is unavailable");
         const preparation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).prepare({
           actor,
@@ -366,12 +422,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         };
       } finally { sqlite.close(); }
     },
-    applyOrganization({ userId, actor, allowedAccountIds, query }) {
+    applyOrganization({ authorization, userId, actor, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
         const repository = createSqliteOrganizationRepository(db);
         const scope = { actor, workspaceId: userId, accountIds: [...allowedAccountIds] };
-        const agentCapabilitySource = agentCapabilitySourceFor(db, actor, userId, allowedAccountIds);
+        const agentCapabilitySource = agentCapabilitySourceFor(db, authorization, actor, userId, allowedAccountIds);
         const live = agentCapabilitySource.load(scope);
         if (!live) throw new McpReadError("account_denied", "The scoped Organization Capability is unavailable");
         const organization = createOrganization(repository, { agentCapabilitySource });
@@ -394,7 +450,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           result = createRuleRevisionService(createSqliteRuleRevisionRepository(db), { agentCapabilitySource }).compile({ actor, workspaceId: userId, accountIds: [...allowedAccountIds], request: query.target.request });
           if (result && typeof result === "object" && "ok" in result && result.ok && "revision" in result) risk = (result.revision as { compiled: { risk: typeof risk } }).compiled.risk;
         } else {
-          const capabilitySource = createScopedAgentRuleChangeSetCapabilitySource({ actor, accountIds: allowedAccountIds });
+          const capabilitySource = ruleChangeSetCapabilitySourceFor(agentCapabilitySource, actor, allowedAccountIds);
           const capability = capabilitySource.load(db, { workspaceId: userId });
           if (!capability) throw new McpReadError("account_denied", "The Rule Change Set Capability is unavailable");
           capabilityId = capability.snapshot.id;
@@ -408,15 +464,21 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           risk = (result as { risk: typeof risk }).risk;
         }
         const resultRecord = result && typeof result === "object" ? result as Record<string, unknown> : {};
-        const nestedChange = resultRecord.change && typeof resultRecord.change === "object" ? resultRecord.change as Record<string, unknown> : {};
-        const appliedId = typeof resultRecord.changeSetId === "string" ? resultRecord.changeSetId : typeof nestedChange.id === "string" ? nestedChange.id : null;
-        return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], resourceFamily: query.resourceFamily, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: appliedId ? [appliedId] : [], rejected: [] }, result };
+        const idempotencyKey = query.target.request.idempotencyKey;
+        const persistedChangeSet = db.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, userId),
+          eq(organizationChangeSets.idempotencyKey, idempotencyKey),
+        )).get();
+        const rejected = query.target.kind === "rule_revision" && resultRecord.ok === false;
+        if (!rejected && !persistedChangeSet) throw new Error(`Successful ${query.target.kind} mutation did not persist its Change Set`);
+        return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], resourceFamily: query.resourceFamily, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: persistedChangeSet ? [persistedChangeSet.id] : [], rejected: [] }, result };
       } finally { sqlite.close(); }
     },
-    revertOrganization({ userId, actor, allowedAccountIds, query }) {
+    revertOrganization({ authorization, userId, actor, allowedAccountIds, query }) {
       const { db, sqlite } = dbFactory();
       try {
-        const capabilitySource = createScopedAgentRuleChangeSetCapabilitySource({ actor, accountIds: allowedAccountIds });
+        const agentCapabilitySource = agentCapabilitySourceFor(db, authorization, actor, userId, allowedAccountIds);
+        const capabilitySource = ruleChangeSetCapabilitySourceFor(agentCapabilitySource, actor, allowedAccountIds);
         const capability = capabilitySource.load(db, { workspaceId: userId });
         if (!capability) throw new McpReadError("account_denied", "The Rule Change Set Capability is unavailable");
         const result = createSqliteRuleChangeSetService(db, { capabilitySource }).revert({ actor, capabilitySnapshot: capability.snapshot, workspaceId: userId, request: query.request });

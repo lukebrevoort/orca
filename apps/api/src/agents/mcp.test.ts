@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { afterEach, describe, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { jwtVerify, SignJWT } from "jose";
 import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
@@ -21,7 +22,7 @@ import {
 } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, oauthAccounts, organizationChangeSets, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, oauthAccounts, organizationChangeSets, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createApp } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
 import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
@@ -75,6 +76,8 @@ function createTestTokenVerifier(policy: { issuer: string; resource: string }): 
         const publicScopes = [...new Set(scopes.map((scope) => getOAuthScopeForResourceScope(scope as OrcaMcpScope)))];
         const accountIds = Array.isArray(payload.account_ids) ? payload.account_ids : [];
         const authorization = orcaAgentAuthorizationContextSchema.parse({
+          connectionId: "connection_a",
+          clientId: String(payload.client_id),
           userId: payload.sub,
           accountIds,
           issuer: payload.iss,
@@ -228,6 +231,7 @@ async function callProjectionHandler(
 function createFixture(options: {
   mcpBoundaryPolicy?: { enabled: true; issuer: string; resource: string };
   mcpEnv?: NodeJS.ProcessEnv;
+  beforeMutationTransaction?: (db: ReturnType<typeof createDatabaseClient>["db"]) => void;
 } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-mcp-"));
   tempDirs.push(directory);
@@ -251,6 +255,23 @@ function createFixture(options: {
       lastSyncedAt: new Date("2026-08-19T17:05:00.000Z"), createdAt: new Date(2),
     },
   ]).run();
+  db.insert(mcpOAuthClients).values({
+    id: "https://chatgpt.com/oauth/client.json",
+    name: "ChatGPT or Codex",
+    redirectUris: "[]",
+  }).run();
+  db.insert(mcpConnections).values({
+    id: "connection_a",
+    userId: "user_a",
+    clientId: "https://chatgpt.com/oauth/client.json",
+    resource,
+    scopes: oauthScopes.join(" "),
+  }).run();
+  db.insert(mcpConnectionAccounts).values({
+    id: "connection_account_a",
+    connectionId: "connection_a",
+    accountId: "account_a",
+  }).run();
   db.insert(threads).values([
     { id: "thread_a_1", accountId: "account_a", providerThreadId: "provider-thread-a-1", subject: "Launch review", latestReceivedAt: new Date("2026-08-19T16:00:00.000Z"), messageCount: 1 },
     { id: "thread_a_2", accountId: "account_a", providerThreadId: "provider-thread-a-2", subject: "Build failed", latestReceivedAt: new Date("2026-08-19T15:00:00.000Z"), messageCount: 1 },
@@ -327,7 +348,21 @@ function createFixture(options: {
 
   const policy = options.mcpBoundaryPolicy ?? { enabled: true as const, issuer, resource };
   const app = createApp({
-    dbFactory: () => createDatabaseClient(dbPath),
+    dbFactory: () => {
+      const client = createDatabaseClient(dbPath);
+      if (options.beforeMutationTransaction) {
+        const originalTransaction = client.db.transaction.bind(client.db);
+        let fired = false;
+        client.db.transaction = ((callback, config) => {
+          if (!fired) {
+            fired = true;
+            options.beforeMutationTransaction!(client.db);
+          }
+          return originalTransaction(callback, config);
+        }) as typeof client.db.transaction;
+      }
+      return client;
+    },
     mcpBoundaryPolicy: policy,
     mcpTokenVerifier: createTestTokenVerifier(policy),
     mcpEnv: options.mcpEnv ?? {
@@ -738,10 +773,10 @@ describe("Orca scoped MCP server", () => {
     }
   });
 
-  test("runs the scoped external-agent describe → apply Rule revision → simulate → apply/retry → query → revert flow", async () => {
+  test("runs all five Organization operations with a control-only grant and preserves legacy read-only describe/query", async () => {
     const { app, db, sqlite } = createFixture();
     try {
-      const token = await signToken({ accountIds: ["account_a"] });
+      const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
       const scope = { workspaceId: "user_a", accountIds: ["account_a"] };
       const describe = await callMcp(app, token, "tools/call", {
         name: "describe_organization",
@@ -751,9 +786,7 @@ describe("Orca scoped MCP server", () => {
       assert.deepEqual(described.capabilities.operations, { describe: true, query: true, simulate: true, apply: true, revert: true });
       assert.deepEqual(described.capabilities.authority, { sendMail: false, deleteProviderMail: false });
 
-      const lanes = await callMcp(app, token, "tools/call", {
-        name: "apply_organization",
-        arguments: {
+      const laneArguments = {
           ...scope,
           expectedWorkspaceRevision: 1,
           resourceFamily: "lane",
@@ -761,20 +794,44 @@ describe("Orca scoped MCP server", () => {
             { kind: "define_lane_policy", id: "policy-focus", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
             { kind: "define_lane", id: "lane-focus", name: "Focus", position: 1, defaultPolicyId: "policy-focus" },
           ] } },
-        },
-      });
+        };
+      const lanes = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: laneArguments });
       const lanesBody = await rpcBody(lanes);
       assert.ok(lanesBody.result?.structuredContent, JSON.stringify(lanesBody));
+      assert.deepEqual(lanesBody.result.structuredContent.changeSetIds, { applied: ["mcp-lanes-r1"], rejected: [] });
+      const laneReplay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: laneArguments }));
+      assert.deepEqual(laneReplay.result.structuredContent, lanesBody.result.structuredContent);
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-lanes-r1")).all().length, 1);
+      const laneConflict = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+        ...laneArguments,
+        target: { kind: "lanes", request: { ...laneArguments.target.request, actions: [{ ...laneArguments.target.request.actions[1], name: "Conflicting replay" }] } },
+      } }));
+      assert.equal(laneConflict.result.isError, true);
+      assert.equal(JSON.parse(laneConflict.result.content[0].text).error.code, "idempotency_conflict");
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-lanes-r1")).all().length, 1);
       let structureRevision = lanesBody.result.structuredContent.result.workspaceRevision;
-      const facets = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+      const facetArguments = {
         ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "facet",
         target: { kind: "facets_workflow", request: { id: "mcp-facets-r1", idempotencyKey: "mcp-facets-r1", expectedWorkspaceRevision: structureRevision, actions: [
           { kind: "define_facet", id: "facet-owner", name: "Owner", position: 0, valueType: { kind: "text", maxLength: 200 }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null },
           { kind: "define_workflow_state", id: "state-review", name: "Needs review", position: 0 },
         ] } },
-      } });
+      };
+      const facets = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: facetArguments });
       const facetsBody = await rpcBody(facets);
       assert.ok(facetsBody.result?.structuredContent, JSON.stringify(facetsBody));
+      assert.deepEqual(facetsBody.result.structuredContent.changeSetIds, { applied: ["mcp-facets-r1"], rejected: [] });
+      const facetReplay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: facetArguments }));
+      assert.ok(facetReplay.result?.structuredContent, JSON.stringify(facetReplay));
+      assert.deepEqual(facetReplay.result.structuredContent, facetsBody.result.structuredContent);
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-facets-r1")).all().length, 1);
+      const facetConflict = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+        ...facetArguments,
+        target: { kind: "facets_workflow", request: { ...facetArguments.target.request, actions: [{ ...facetArguments.target.request.actions[0], name: "Conflicting replay" }] } },
+      } }));
+      assert.equal(facetConflict.result.isError, true);
+      assert.equal(JSON.parse(facetConflict.result.content[0].text).error.code, "idempotency_conflict");
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-facets-r1")).all().length, 1);
       structureRevision = facetsBody.result.structuredContent.result.workspaceRevision;
 
       const view = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
@@ -783,6 +840,9 @@ describe("Orca scoped MCP server", () => {
       } });
       const viewBody = await rpcBody(view);
       assert.ok(viewBody.result?.structuredContent, JSON.stringify(viewBody));
+      assert.deepEqual(viewBody.result.structuredContent.changeSetIds, {
+        applied: [db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-view-r1")).get()!.id], rejected: [],
+      });
       assert.equal(viewBody.result.structuredContent.result.name, "Agent review");
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
@@ -792,6 +852,7 @@ describe("Orca scoped MCP server", () => {
       } });
       const collectionBody = await rpcBody(collection);
       assert.ok(collectionBody.result?.structuredContent, JSON.stringify(collectionBody));
+      assert.equal(collectionBody.result.structuredContent.changeSetIds.applied[0], collectionBody.result.structuredContent.result.change.id);
       assert.equal(collectionBody.result.structuredContent.result.state.collections[0].name, "Launch");
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
@@ -801,6 +862,7 @@ describe("Orca scoped MCP server", () => {
       } });
       const contextBody = await rpcBody(context);
       assert.ok(contextBody.result?.structuredContent, JSON.stringify(contextBody));
+      assert.equal(contextBody.result.structuredContent.changeSetIds.applied[0], contextBody.result.structuredContent.result.change.id);
       assert.equal(contextBody.result.structuredContent.result.state.contextTypes[0].name, "Project");
       structureRevision = contextBody.result.structuredContent.result.state.workspaceRevision;
 
@@ -817,6 +879,9 @@ describe("Orca scoped MCP server", () => {
       });
       const compiledBody = await rpcBody(compile);
       assert.ok(compiledBody.result?.structuredContent, JSON.stringify(compiledBody));
+      assert.deepEqual(compiledBody.result.structuredContent.changeSetIds, {
+        applied: [db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-rule-r1")).get()!.id], rejected: [],
+      });
       const compiled = compiledBody.result.structuredContent.result;
       assert.equal(compiled.ok, true);
       assert.equal(compiled.revision.actor.type, "agent");
@@ -901,7 +966,18 @@ describe("Orca scoped MCP server", () => {
       assert.equal(revertedBody.result.structuredContent.result.status, "reverted");
       assert.equal(revertedBody.result.structuredContent.result.revertsChangeSetId, appliedOutput.result.changeSetId);
 
-      const mailOnlyToken = await signToken({ accountIds: ["account_a"], scopes: ["orca:mail.metadata:read", "orca:mail.content:read", "orca:connection-status:read"] });
+      db.update(mcpConnections).set({ scopes: "mail:read", updatedAt: new Date() }).where(eq(mcpConnections.id, "connection_a")).run();
+      const mailOnlyToken = await signToken({ accountIds: ["account_a"], scopes: ["orca:mail.metadata:read"] });
+      const readOnlyDescribe = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
+        name: "describe_organization",
+        arguments: { ...scope, expectedWorkspaceRevision: revertedBody.result.structuredContent.result.workspaceRevisionAfter, resourceFamilies: ["workspace_schema"] },
+      }));
+      assert.ok(readOnlyDescribe.result?.structuredContent, JSON.stringify(readOnlyDescribe));
+      const readOnlyQuery = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
+        name: "query_organization",
+        arguments: { ...scope, expectedWorkspaceRevision: revertedBody.result.structuredContent.result.workspaceRevisionAfter, resourceFamilies: ["mail", "thread"], attention: "all", classification: "all", limit: 1 },
+      }));
+      assert.ok(readOnlyQuery.result?.structuredContent, JSON.stringify(readOnlyQuery));
       const deniedControl = await callMcp(app, mailOnlyToken, "tools/call", { name: "simulate_organization", arguments: { ...scope, expectedWorkspaceRevision: currentWorkspace, resourceFamily: "rule", request: simulationRequest } });
       assert.equal(deniedControl.status, 403);
       const smuggledDescribe = await callMcp(app, token, "tools/call", { name: "describe_organization", arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema"], target: { kind: "rule_revision", request: {} } } });
@@ -909,4 +985,27 @@ describe("Orca scoped MCP server", () => {
       assert.ok(smuggledDescribeBody.error?.code === -32602 || smuggledDescribeBody.result?.isError === true, JSON.stringify(smuggledDescribeBody));
     } finally { sqlite.close(); }
   }, 20_000);
+
+  test("fails closed with zero Organization writes when the persisted grant changes between preflight and the Lane transaction", async () => {
+    const mutations = [
+      (db: ReturnType<typeof createDatabaseClient>["db"]) => db.update(mcpConnections).set({ revokedAt: new Date() }).where(eq(mcpConnections.id, "connection_a")).run(),
+      (db: ReturnType<typeof createDatabaseClient>["db"]) => db.delete(mcpConnectionAccounts).where(eq(mcpConnectionAccounts.connectionId, "connection_a")).run(),
+      (db: ReturnType<typeof createDatabaseClient>["db"]) => db.update(mcpConnections).set({ scopes: "mail:read" }).where(eq(mcpConnections.id, "connection_a")).run(),
+    ];
+    for (const [index, mutateGrant] of mutations.entries()) {
+      const { app, db, sqlite } = createFixture({ beforeMutationTransaction: mutateGrant });
+      try {
+        const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+        const response = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "lane",
+          target: { kind: "lanes", request: { id: `grant-race-${index}`, idempotencyKey: `grant-race-${index}`, expectedWorkspaceRevision: 1, actions: [
+            { kind: "define_lane_policy", id: `grant-policy-${index}`, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
+          ] } },
+        } });
+        const body = await rpcBody(response);
+        assert.equal(body.result.isError, true, JSON.stringify(body));
+        assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, `grant-race-${index}`)).all().length, 0);
+      } finally { sqlite.close(); }
+    }
+  });
 });

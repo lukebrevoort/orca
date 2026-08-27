@@ -284,7 +284,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
       actor: scope.actor,
       workspaceId: scope.workspaceId,
       accountIds: scope.accountIds,
-    }) ?? null;
+    }, db) ?? null;
     if (!liveCapability) {
       throw new OrganizationAuthorityError("account_denied", "The external-agent Context Capability is unavailable or revoked");
     }

@@ -341,70 +341,70 @@ export const orcaMcpTools = Object.freeze([
     name: "describe_organization",
     action: "organization.describe",
     exposure: "organization_schema",
-    requiredScope: "orca:mail.metadata:read",
+    requiredScopes: ["orca:mail.metadata:read", "orca:organization:control"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "query_organization",
     action: "organization.query",
     exposure: "thread_organization",
-    requiredScope: "orca:mail.metadata:read",
+    requiredScopes: ["orca:mail.metadata:read", "orca:organization:control"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "simulate_organization",
     action: "organization.simulate",
     exposure: "organization_simulation",
-    requiredScope: "orca:organization:control",
+    requiredScopes: ["orca:organization:control"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "apply_organization",
     action: "organization.apply",
     exposure: "organization_mutation",
-    requiredScope: "orca:organization:control",
+    requiredScopes: ["orca:organization:control"],
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "revert_organization",
     action: "organization.revert",
     exposure: "organization_mutation",
-    requiredScope: "orca:organization:control",
+    requiredScopes: ["orca:organization:control"],
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "search_mail",
     action: "mail.list",
     exposure: "mail_metadata",
-    requiredScope: "orca:mail.metadata:read",
+    requiredScopes: ["orca:mail.metadata:read"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "get_thread",
     action: "mail.read",
     exposure: "mail_content",
-    requiredScope: "orca:mail.content:read",
+    requiredScopes: ["orca:mail.content:read"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "list_agent_events",
     action: "agent_events.list",
     exposure: "agent_event",
-    requiredScope: "orca:agent-events:read",
+    requiredScopes: ["orca:agent-events:read"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "get_connection_status",
     action: "connection_status.read",
     exposure: "connection_status",
-    requiredScope: "orca:connection-status:read",
+    requiredScopes: ["orca:connection-status:read"],
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ] satisfies ReadonlyArray<{
   name: OrcaMcpToolName;
   action: OrcaAgentAction;
   exposure: OrcaAgentExposure;
-  requiredScope: OrcaMcpScope;
+  requiredScopes: readonly OrcaMcpScope[];
   annotations: { readOnlyHint: boolean; destructiveHint: false; idempotentHint: true; openWorldHint: false };
 }>);
 

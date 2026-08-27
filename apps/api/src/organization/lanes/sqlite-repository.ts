@@ -24,7 +24,7 @@ import {
   organizationWorkspaceStates,
   threads,
 } from "../../db/schema.ts";
-import { digestOrganizationCommand } from "../authority.ts";
+import { canonicalOrganizationJson, digestOrganizationCommand } from "../authority.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
 import {
   applyLaneActions,
@@ -169,11 +169,45 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         reservedIdempotencyKeys: db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, workspaceId)).all().map((row) => row.key),
       };
     },
+    replay(input) {
+      const parsed = parseLaneApply(input.command);
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        if (input.scope.actor.type === "agent") {
+          const live = input.agentCapabilitySource?.load({ ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } }, executor) ?? null;
+          if (!live || live.revokedAt !== null || !live.snapshot.operations.includes("apply")) throw new OrganizationAuthorityError("actor_operation_denied", "The persisted MCP Organization grant no longer authorizes apply");
+        }
+        const row = executor.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, input.scope.workspaceId),
+          eq(organizationChangeSets.idempotencyKey, parsed.idempotencyKey),
+          eq(organizationChangeSets.resourceFamily, "lane"),
+        )).get();
+        if (!row) return null;
+        const stored = JSON.parse(row.commandJson) as { request?: unknown; scope?: unknown; response?: unknown };
+        const replayScope = { actor: input.scope.actor, workspaceId: input.scope.workspaceId, accountIds: [...input.scope.accountIds].sort() };
+        if (canonicalOrganizationJson(stored.request) !== canonicalOrganizationJson(parsed)
+          || canonicalOrganizationJson(stored.scope) !== canonicalOrganizationJson(replayScope)) {
+          throw new OrganizationAuthorityError("duplicate_idempotency_key", "The idempotency key was already used for a different Lane request or scope");
+        }
+        return organizationLaneApplyResponseSchema.parse(stored.response);
+      });
+    },
     apply(input) {
       const parsed = parseLaneApply(input.command);
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
         const workspaceId = input.executionContext.workspaceId;
+        if (input.executionContext.actor.type === "agent") {
+          const liveCapability = input.agentCapabilitySource?.load({
+            actor: input.executionContext.actor as typeof input.executionContext.actor & { type: "agent" },
+            workspaceId,
+            accountIds: input.executionContext.accountIds,
+          }, executor) ?? null;
+          if (!liveCapability || liveCapability.revokedAt !== null
+            || JSON.stringify(liveCapability.snapshot) !== JSON.stringify(input.authorityTrace.capabilitySnapshot)) {
+            throw new OrganizationAuthorityError("actor_operation_denied", "The persisted MCP Organization grant changed before commit");
+          }
+        }
         const lowerCandidatesByThread = new Map<string, LowerPlacementCandidate>();
         const current = loadSnapshot(executor, workspaceId, input.executionContext.accountIds, lowerCandidatesByThread);
         const currentLowerCandidatesByThread = new Map(lowerCandidatesByThread);
@@ -225,6 +259,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
             return placementWithLowerCandidate(placement, lower);
           }),
         };
+        const response = organizationLaneApplyResponseSchema.parse({ changeSetId: input.boundCommand.id, workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: next.placements.filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
 
         transaction.insert(organizationChangeSets).values({
           workspaceId,
@@ -234,7 +269,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           authorityTrace: JSON.stringify(input.authorityTrace),
           resourceFamily: "lane",
           operation: "apply",
-          commandJson: JSON.stringify(parsed),
+          commandJson: JSON.stringify({ request: parsed, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response }),
           workspaceRevisionBefore: current.configuration.workspaceRevision,
           workspaceRevisionAfter: next.configuration.workspaceRevision,
           createdAt: new Date(now),
@@ -317,7 +352,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
         const updated = transaction.update(organizationWorkspaceStates).set({ revision: next.configuration.workspaceRevision, updatedAt: new Date(now) })
           .where(and(eq(organizationWorkspaceStates.workspaceId, workspaceId), eq(organizationWorkspaceStates.revision, current.configuration.workspaceRevision))).returning({ id: organizationWorkspaceStates.workspaceId }).get();
         if (!updated) throw new OrganizationRevisionConflictError(current.configuration.workspaceRevision, current.configuration.workspaceRevision + 1);
-        return organizationLaneApplyResponseSchema.parse({ workspaceId, workspaceRevision: next.configuration.workspaceRevision, appliedActions: parsed.actions.length, laneConfiguration: next.configuration, placements: next.placements.filter((placement) => parsed.actions.some((action) => "threadId" in action && action.accountId === placement.accountId && action.threadId === placement.threadId)) });
+        return response;
       });
     },
   };

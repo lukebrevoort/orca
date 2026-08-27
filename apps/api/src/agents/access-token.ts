@@ -64,6 +64,8 @@ export function createOrcaMcpAccessTokenVerifier(
         const oauthAuthorization = await verifyMcpAccessToken(db, token, { config });
         const scopes = mapOAuthScopesToResourceScopes(oauthAuthorization.scopes);
         const authorization = orcaAgentAuthorizationContextSchema.parse({
+          connectionId: oauthAuthorization.connectionId,
+          clientId: oauthAuthorization.clientId,
           userId: oauthAuthorization.userId,
           accountIds: oauthAuthorization.accountIds,
           issuer: oauthAuthorization.issuer,

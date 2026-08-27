@@ -240,6 +240,15 @@ describe("Orca MCP OAuth 2.1", () => {
     const tokens = await response.json();
     assert.equal(tokens.scope, "organization:control");
     assert.deepEqual(decodeJwt(tokens.access_token).account_ids, ["account_a"]);
+    const persisted = createDatabaseClient(dbPath);
+    try {
+      const connection = persisted.db.select().from(mcpConnections).where(eq(mcpConnections.userId, "user_a")).get()!;
+      persisted.db.update(mcpConnections).set({ scopes: "mail:read" }).where(eq(mcpConnections.id, connection.id)).run();
+      await assert.rejects(
+        verifyMcpAccessToken(persisted.db, tokens.access_token, { config }),
+        (error: unknown) => error instanceof McpTokenError && error.code === "insufficient_scope",
+      );
+    } finally { persisted.sqlite.close(); }
   });
 
   test("registers protected-resource metadata at the full configured resource path", async () => {

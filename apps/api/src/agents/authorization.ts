@@ -4,6 +4,8 @@ import { z } from "zod";
 export const orcaMcpMaximumAccessTokenLifetimeSeconds = 10 * 60;
 
 export const orcaAgentAuthorizationContextSchema = z.object({
+  connectionId: z.string().min(1),
+  clientId: z.string().min(1),
   userId: z.string().min(1),
   accountIds: z.array(z.string().min(1)).min(1),
   issuer: z.string().url(),

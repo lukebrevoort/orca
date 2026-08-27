@@ -607,6 +607,23 @@ function loadAuthorityState(executor: Database, workspaceId: string) {
   };
 }
 
+function verifyPersistedAgentGrant(
+  executor: Database,
+  scope: OrganizationCollectionPinScope,
+  authorization: Parameters<OrganizationCollectionsPinsRepository["apply"]>[0]["authorization"],
+) {
+  if (scope.actor.type !== "agent") return;
+  const live = authorization.agentCapabilitySource?.load({
+    actor: scope.actor as typeof scope.actor & { type: "agent" },
+    workspaceId: scope.workspaceId,
+    accountIds: scope.accountIds,
+  }, executor) ?? null;
+  if (!live || live.revokedAt !== null
+    || JSON.stringify(live.snapshot) !== JSON.stringify(authorization.trace.capabilitySnapshot)) {
+    throw new OrganizationCollectionsPinsAccessError("The persisted MCP Organization grant changed before commit");
+  }
+}
+
 function verifyAndRecordAuthority(
   executor: Database,
   input: {
@@ -617,6 +634,7 @@ function verifyAndRecordAuthority(
     now: Date;
   },
 ) {
+  verifyPersistedAgentGrant(executor, input.scope, input.authorization);
   executor.insert(organizationWorkspaceStates).values({ workspaceId: input.scope.workspaceId }).onConflictDoNothing().run();
   const live = loadAuthorityState(executor, input.scope.workspaceId);
   const expectedWorkspace = input.authorization.executionContext.expectedRevisions.workspace;
@@ -731,6 +749,7 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
       try {
         return db.transaction((transaction) => {
           const executor = transaction as unknown as Database;
+          verifyPersistedAgentGrant(executor, scope, authorization);
           const commandJson = JSON.stringify(request.change);
           const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
             eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),
@@ -775,6 +794,7 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
       try {
         return db.transaction((transaction) => {
           const executor = transaction as unknown as Database;
+          verifyPersistedAgentGrant(executor, scope, authorization);
           const commandJson = JSON.stringify({ revert: request.changeId });
           const duplicate = executor.select().from(organizationCollectionPinAudits).where(and(
             eq(organizationCollectionPinAudits.workspaceId, scope.workspaceId),

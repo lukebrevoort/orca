@@ -57,6 +57,7 @@ export type OrganizationViewMutationAuthorization = {
   trace: OrganizationAuthorityTrace;
   authorizationEnvelopeDigest: string;
   command: OrganizationCommand;
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
 };
 
 export type OrganizationViewMutationPlan = {
@@ -175,7 +176,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       if (["revision_conflict", "duplicate_idempotency_key"].includes(decision.code)) throw new OrganizationViewConflictError(decision.reason);
       throw new OrganizationViewAccessError(decision.reason, "resource_denied");
     }
-    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command };
+    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) };
   }
 
   return {

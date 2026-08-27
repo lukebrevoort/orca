@@ -266,6 +266,17 @@ function verifyAuthorization(sqlite: Database, workspaceId: string, authorizatio
   sqlite.query("INSERT INTO organization_workspace_states (workspace_id,revision,updated_at) VALUES (?,1,?) ON CONFLICT(workspace_id) DO NOTHING").run(workspaceId, Date.now());
   const live = authorityState(sqlite, workspaceId);
   const capability = authorization.trace.capabilitySnapshot;
+  const liveCapability = authorization.executionContext.actor.type === "agent"
+    ? authorization.agentCapabilitySource?.load({
+        actor: authorization.executionContext.actor as typeof authorization.executionContext.actor & { type: "agent" },
+        workspaceId: authorization.executionContext.workspaceId,
+        accountIds: authorization.executionContext.accountIds,
+      }, sqlite) ?? null
+    : { snapshot: capability, revokedAt: null };
+  if (!liveCapability || liveCapability.revokedAt !== null
+    || canonicalOrganizationJson(liveCapability.snapshot) !== canonicalOrganizationJson(capability)) {
+    throw new OrganizationViewAccessError("The persisted MCP Organization grant changed before commit", "resource_denied");
+  }
   const decision = authorizeOrganizationOperation({
     actor: authorization.executionContext.actor,
     capabilitySnapshot: capability,
@@ -276,7 +287,7 @@ function verifyAuthorization(sqlite: Database, workspaceId: string, authorizatio
     idempotencyKey: authorization.executionContext.idempotencyKey,
   }, {
     scope: capability.scope,
-    capability: { snapshot: capability, revokedAt: null },
+    capability: liveCapability,
     workspaceRevision: live.workspaceRevision,
     resourceRevisions: live.resourceRevisions,
     reservedIdempotencyKeys: live.reservedIdempotencyKeys,

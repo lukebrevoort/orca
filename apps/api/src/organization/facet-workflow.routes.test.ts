@@ -84,8 +84,16 @@ describe("Facet and Workflow Organization REST adapter", () => {
       assert.deepEqual(JSON.parse(persistedChangeSet?.authorityTrace ?? "{}").decision, "allowed");
 
       const duplicate = await app.request("/v1/organization/apply", { method: "POST", headers, body: JSON.stringify(initialCommand) });
-      assert.equal(duplicate.status, 409);
-      assert.equal((await duplicate.json()).error.code, "duplicate_idempotency_key");
+      assert.equal(duplicate.status, 200);
+      assert.deepEqual(await duplicate.json(), result);
+      assert.equal(db.select().from(organizationChangeSets).all().length, 1);
+
+      const conflictingReplay = await app.request("/v1/organization/apply", { method: "POST", headers, body: JSON.stringify({
+        ...initialCommand,
+        actions: [{ ...initialCommand.actions[0], name: "Conflicting replay" }],
+      }) });
+      assert.equal(conflictingReplay.status, 409);
+      assert.equal((await conflictingReplay.json()).error.code, "duplicate_idempotency_key");
 
       const duplicateChangeSetId = await app.request("/v1/organization/apply", {
         method: "POST",
