@@ -27,7 +27,7 @@ import {
 import { createApp } from "../../index.ts";
 import { persistGmailMessages } from "../../providers/gmail/sync.ts";
 import type { GmailMessage } from "../../providers/gmail/types.ts";
-import { OrcaThreadCorrectionError, correctOrganizationThread } from "./correction.ts";
+import { OrcaThreadCorrectionError, agentCorrectionCapabilityAdapter, correctOrganizationThread } from "./correction.ts";
 import { createRuleRevisionService } from "./service.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 
@@ -113,6 +113,52 @@ because "A human confirmed the production incident classification."`,
 }
 
 describe("production user.corrected seam", () => {
+  test("revalidates the live agent Capability before returning an exact correction receipt", async () => {
+    const { client, thread, now } = await setup();
+    const fixture = bre320ProductionFailureFixture;
+    try {
+      const actor = { id: "bre320-external-agent", type: "agent" as const };
+      let revokedAt: string | null = null;
+      const snapshot = {
+        id: "bre320-agent-correction-capability", revision: 1, actor,
+        scope: { workspaceId: fixture.workspace.id, accountIds: [fixture.workspace.accountId] },
+        operations: ["apply" as const],
+        resourceFamilies: ["thread" as const, "trace" as const, "change_set" as const, "audit" as const],
+        actionFamilies: ["organization_thread" as const],
+      };
+      const capabilityAdapter = agentCorrectionCapabilityAdapter({
+        actor, workspaceId: fixture.workspace.id, accountId: fixture.workspace.accountId,
+        source: { load: () => ({ snapshot, revokedAt }) },
+      });
+      const workspaceRevision = client.db.select().from(organizationWorkspaceStates).get()!.revision;
+      const threadRevision = client.db.select().from(organizationThreadStates).where(and(
+        eq(organizationThreadStates.workspaceId, fixture.workspace.id), eq(organizationThreadStates.accountId, fixture.workspace.accountId), eq(organizationThreadStates.threadId, thread.id),
+      )).get()?.revision ?? null;
+      const request = {
+        accountId: fixture.workspace.accountId, threadId: thread.id,
+        expectedWorkspaceRevision: workspaceRevision, expectedThreadRevision: threadRevision,
+        idempotencyKey: `${fixture.correction.idempotencyKey}:agent`, reason: fixture.correction.reason,
+      };
+      const first = correctOrganizationThread(client.db, {
+        actor, workspaceId: fixture.workspace.id, request, capabilityAdapter, now,
+      });
+      const traceCount = client.db.select().from(organizationEvaluationTraces).all().length;
+      const receiptCount = client.db.select().from(organizationCorrectionReceipts).all().length;
+      revokedAt = now.toISOString();
+      assert.throws(() => correctOrganizationThread(client.db, {
+        actor, workspaceId: fixture.workspace.id, request, capabilityAdapter, now,
+      }), (error: unknown) => error instanceof OrcaThreadCorrectionError && error.code === "capability_denied");
+      assert.equal(client.db.select().from(organizationEvaluationTraces).all().length, traceCount);
+      assert.equal(client.db.select().from(organizationCorrectionReceipts).all().length, receiptCount);
+      revokedAt = null;
+      assert.deepEqual(correctOrganizationThread(client.db, {
+        actor, workspaceId: fixture.workspace.id, request, capabilityAdapter, now,
+      }), first);
+    } finally {
+      client.sqlite.close();
+    }
+  });
+
   test("persists one complete correction Trace and audited projection, replays exactly, and exposes the authenticated REST seam", async () => {
     const { client, path, session, thread, compiled, now } = await setup();
     const fixture = bre320ProductionFailureFixture;

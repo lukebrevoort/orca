@@ -92,6 +92,12 @@ export function correctOrganizationThread(db: Database, input: {
   const receiptIdentity = { workspaceId: input.workspaceId, actor: input.actor, idempotencyKey: request.idempotencyKey };
   const receiptId = `correction:${digestCorrection(receiptIdentity).slice("sha256:".length)}`;
   const eventId = `user.corrected:${receiptId.slice("correction:".length)}`;
+  const adapter = input.capabilityAdapter ?? (input.actor.type === "human"
+    ? humanCorrectionCapabilityAdapter(input.actor, input.workspaceId, request.accountId)
+    : null);
+  if (!adapter) {
+    throw new OrcaThreadCorrectionError("capability_denied", "Agent correction requires a live Organization Capability adapter");
+  }
 
   return db.transaction((transaction) => {
     const executor = transaction as unknown as Database;
@@ -104,6 +110,9 @@ export function correctOrganizationThread(db: Database, input: {
     if (existing) {
       if (existing.commandDigest !== commandDigest) {
         throw new OrcaThreadCorrectionError("idempotency_conflict", "This correction idempotency key is already bound to a different exact request");
+      }
+      if (input.actor.type === "agent") {
+        adapter.live({ workspaceId: input.workspaceId, accountId: request.accountId, executor });
       }
       return orcaThreadCorrectionResponseSchema.parse(JSON.parse(existing.responseJson));
     }
@@ -129,12 +138,6 @@ export function correctOrganizationThread(db: Database, input: {
       .orderBy(desc(emails.receivedAt), desc(emails.id)).get();
     if (!message) throw new OrcaThreadCorrectionError("thread_not_found", "The corrected Thread has no evaluable message");
 
-    const adapter = input.capabilityAdapter ?? (input.actor.type === "human"
-      ? humanCorrectionCapabilityAdapter(input.actor, input.workspaceId, request.accountId)
-      : null);
-    if (!adapter) {
-      throw new OrcaThreadCorrectionError("capability_denied", "Agent correction requires a live Organization Capability adapter");
-    }
     const context = loadLiveEvaluationInput(executor, { accountId: request.accountId, messageId: message.id, eventKind: "user.corrected" }, adapter);
     if (!context) throw new OrcaThreadCorrectionError("thread_not_found", "The corrected Thread could not be loaded for evaluation");
     const occurredAt = (input.now ?? new Date()).toISOString();
