@@ -16,10 +16,10 @@
 
   <section><div class="label">Release identity</div><h2>Exact inputs and boundaries</h2><div class="facts">
     <div class="fact"><span>Review 71 correction base</span><strong><code>2d60259cc5581970dffc8d80ab9f36e6b227366f</code></strong></div>
-    <div class="fact"><span>Corrective code + visual evidence</span><strong><code>ee6092eadfe880848a65d85322e8e9b5363f0983</code></strong></div>
+    <div class="fact"><span>Official-base merge commit</span><strong><code>075ea314e68457eb3d91d2e6f0883c55f3eec27f</code></strong></div>
     <div class="fact"><span>Canonical fixture</span><strong><code>bre320ProductionFailureFixture</code></strong></div>
     <div class="fact"><span>Fixture Workspace</span><strong><code>bre320-workspace / bre320-account</code></strong></div>
-  </div><p class="small">Exact ancestry: independently verified BRE-319 base <code>2b3bfa16a87b32201bd620022a92a7d600aa150d</code> → verified BRE-318 <code>c798c26adfbf610bf0d5e6a6a815c0da9bafefad</code> + BRE-319 <code>9befd380a8cc8dcb67d2779cb894d69db01bc7be</code> (combined release <code>e27726634b49f32b12d58f582649813496d4a485</code>) → stacked BRE-320 candidate <code>2d60259cc5581970dffc8d80ab9f36e6b227366f</code> → Review 71 correction <code>ee6092eadfe880848a65d85322e8e9b5363f0983</code> → this manifest commit. A verifier pins the exact artifact-bearing candidate with <code>git rev-parse HEAD</code>.</p><p class="boundary"><strong>No send. No reply/forward. No provider delete. No arbitrary code.</strong>MCP discovery and authority evidence keep both provider-send and provider-delete false. The approved semantic surface remains bounded to Organization describe/query/simulate/apply/revert/correct.</p></section>
+  </div><p class="small">Exact ancestry: independently verified BRE-319 base <code>2b3bfa16a87b32201bd620022a92a7d600aa150d</code> → verified BRE-318 <code>c798c26adfbf610bf0d5e6a6a815c0da9bafefad</code> + BRE-319 <code>9befd380a8cc8dcb67d2779cb894d69db01bc7be</code> → official combined release <code>e27726634b49f32b12d58f582649813496d4a485</code> → stacked BRE-320 candidate <code>2d60259cc5581970dffc8d80ab9f36e6b227366f</code> → Review 71 correction <code>ee6092eadfe880848a65d85322e8e9b5363f0983</code> → official-base ancestry merge <code>075ea314e68457eb3d91d2e6f0883c55f3eec27f</code> → this manifest commit. A verifier pins the exact artifact-bearing candidate with <code>git rev-parse HEAD</code>.</p><p class="boundary"><strong>No send. No reply/forward. No provider delete. No arbitrary code.</strong>MCP discovery and authority evidence keep both provider-send and provider-delete false. The approved semantic surface remains bounded to Organization describe/query/simulate/apply/revert/correct.</p></section>
 
   <section><div class="label">Criterion → reproducible evidence</div><h2>Acceptance manifest</h2><div class="criteria">
     <article class="criterion"><span>01 · external-agent journey</span><h3 class="pass">Fixture-backed, real MCP</h3><p><code>apps/api/src/agents/mcp.test.ts</code> · “runs the canonical fixture journey…” describes, searches historical mail, creates Lane + Policy + View + Collection + Facet + Context + Workflow State + Rule, simulates, approves, applies, queries, reverts, and corrects.</p></article>
@@ -29,7 +29,7 @@
     <article class="criterion"><span>05 · correction and compensation</span><h3 class="pass">REST · UI · MCP</h3><p><code>correction.test.ts</code> proves immutable <code>user.corrected</code> Trace, audited projection, exact replay, and authenticated REST. MCP calls <code>thread_correction</code>. Reader UI exposes Record correction beside Manual Override and Safety Lock.</p></article>
     <article class="criterion"><span>06 · targeted visual integration</span><h3 class="pass">Orca direction retained</h3><p>Only Organization review, reader Lane/Why/correction, operational states, and audit presentation changed. Inbox, reader, composer, and Zen structures remain intact; full build/regression command below detects drift.</p></article>
     <article class="criterion"><span>07 · responsive state evidence</span><h3 class="pass">Light/dark · 1440/1024</h3><p>Twenty checked-in captures cover ready, hover, focus, selected, loading, unavailable, no-access, offline, conflict, transaction failure, active, reverted, and rejected Trace fetch with retry. Every non-success state exposes one truthful next action while withholding success evidence and mutation controls. Agent-browser axe: 0 violations for the release panel and Thread drawer.</p></article>
-    <article class="criterion"><span>08 · release gates</span><h3 class="pass">All implementation-side gates pass</h3><p>Focused Organization/MCP/evaluator/UI: 108/108. Language, authority, isolation, migration, and BRE-318/319 regressions: 95/95. Full workspace: 732/732. Typecheck, build, lint, 43-table DB lifecycle verifier, and both exact-root and correction-base diff checks pass.</p></article>
+    <article class="criterion"><span>08 · release gates</span><h3 class="pass">All implementation-side gates pass</h3><p>Focused Organization/MCP/evaluator/UI: 108/108. Language, authority, isolation, migration, and BRE-318/319 regressions: 95/95. Full workspace: 732/732. Typecheck, build, lint, 43-table DB lifecycle verifier, official-base ancestry assertion, and exact official/root/correction-base diff checks pass.</p></article>
     <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pending">G3 PENDING exact final SHA</h3><p>G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>. Final verifier must report no unresolved critical/high and explicitly confirm send/delete authority absent.</p></article>
     <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder. <a href="artifacts/bre-320/release-evidence-manifest-light-1440.png">Open the full-page 1440 capture.</a></p></article>
   </div></section>
@@ -64,6 +64,7 @@
 
   <section><div class="label">Exact commands</div><h2>Release gate replay</h2><pre>ROOT_BASE=2b3bfa16a87b32201bd620022a92a7d600aa150d
 CORRECTION_BASE=2d60259cc5581970dffc8d80ab9f36e6b227366f
+OFFICIAL_BASE=e27726634b49f32b12d58f582649813496d4a485
 
 # Canonical journeys and focused UI
 bun test apps/api/src/agents/mcp.test.ts --test-name-pattern "canonical fixture journey"
@@ -82,6 +83,8 @@ CI=true bun run build
 CI=true bun run lint
 git diff --check "$ROOT_BASE"...HEAD
 git diff --check "$CORRECTION_BASE"...HEAD
+git merge-base --is-ancestor "$OFFICIAL_BASE" HEAD
+git diff --check "$OFFICIAL_BASE"...HEAD
 test -z "$(git status --porcelain)"</pre>
     <table><thead><tr><th>Gate</th><th>Expected assertion</th><th>Evidence record</th></tr></thead><tbody>
       <tr><td>Canonical MCP</td><td>Fixture’s 3 historical messages found; 2 failed historical + 1 later live Thread in weekly View; exact Rule revision/reason; apply/revert/correct replay.</td><td><code>mcp.test.ts</code> named test</td></tr>
