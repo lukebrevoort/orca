@@ -39,40 +39,43 @@ export function recordOrganizationMutationAttempt(input: {
   error: unknown;
   now?: Date;
   id?: string;
+  afterRetainedSelectionForTest?: () => void;
 }): void {
   const request = "target" in input.query ? input.query.target.request : input.query.request;
   const reasonCode = stableMutationFailureCode(input.error);
   input.db.transaction((tx) => {
-  const ownedConnection = tx.select({ id: mcpConnections.id }).from(mcpConnections).where(and(
-    eq(mcpConnections.id, input.connectionId), eq(mcpConnections.userId, input.workspaceId),
-  )).get();
-  tx.insert(organizationMutationAttempts).values({
-    id: input.id ?? randomUUID(),
-    workspaceId: input.workspaceId,
-    connectionId: ownedConnection?.id ?? null,
-    actorType: input.actor.type,
-    actorId: input.actor.id.slice(0, 500),
-    operation: input.operation,
-    idempotencyKey: request.idempotencyKey,
-    commandDigest: digest({ operation: input.operation, query: input.query }),
-    accountCount: input.query.accountIds.length,
-    accountIdsDigest: digest([...input.query.accountIds].sort()),
-    outcome: outcomeFor(reasonCode),
-    reasonCode,
-    createdAt: input.now ?? new Date(),
-  }).onConflictDoNothing().run();
+    const ownedConnection = tx.select({ id: mcpConnections.id }).from(mcpConnections).where(and(
+      eq(mcpConnections.id, input.connectionId),
+      eq(mcpConnections.userId, input.workspaceId),
+    )).get();
+    tx.insert(organizationMutationAttempts).values({
+      id: input.id ?? randomUUID(),
+      workspaceId: input.workspaceId,
+      connectionId: ownedConnection?.id ?? null,
+      actorType: input.actor.type,
+      actorId: input.actor.id.slice(0, 500),
+      operation: input.operation,
+      idempotencyKey: request.idempotencyKey,
+      commandDigest: digest({ operation: input.operation, query: input.query }),
+      accountCount: input.query.accountIds.length,
+      accountIdsDigest: digest([...input.query.accountIds].sort()),
+      outcome: outcomeFor(reasonCode),
+      reasonCode,
+      createdAt: input.now ?? new Date(),
+    }).onConflictDoNothing().run();
 
-  const retained = tx.select({ id: organizationMutationAttempts.id })
-    .from(organizationMutationAttempts)
-    .where(eq(organizationMutationAttempts.workspaceId, input.workspaceId))
-    .orderBy(desc(organizationMutationAttempts.createdAt), desc(organizationMutationAttempts.id))
-    .limit(maximumMutationAttemptAuditRowsPerWorkspace)
-    .all().map(({ id }) => id);
-  if (retained.length === maximumMutationAttemptAuditRowsPerWorkspace) {
-    tx.delete(organizationMutationAttempts).where(and(
-      eq(organizationMutationAttempts.workspaceId, input.workspaceId),
-      notInArray(organizationMutationAttempts.id, retained),
-    )).run();
-  }
-  });
+    const retained = tx.select({ id: organizationMutationAttempts.id })
+      .from(organizationMutationAttempts)
+      .where(eq(organizationMutationAttempts.workspaceId, input.workspaceId))
+      .orderBy(desc(organizationMutationAttempts.createdAt), desc(organizationMutationAttempts.id))
+      .limit(maximumMutationAttemptAuditRowsPerWorkspace)
+      .all().map(({ id }) => id);
+    input.afterRetainedSelectionForTest?.();
+    if (retained.length === maximumMutationAttemptAuditRowsPerWorkspace) {
+      tx.delete(organizationMutationAttempts).where(and(
+        eq(organizationMutationAttempts.workspaceId, input.workspaceId),
+        notInArray(organizationMutationAttempts.id, retained),
+      )).run();
+    }
+  }, { behavior: "immediate" });
 }

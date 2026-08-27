@@ -53,7 +53,10 @@ export class McpRequestLimiter {
   readonly #maximumWorkspaceInFlight: number;
   readonly #connections = new Map<string, LimitKeyState>();
   readonly #workspaces = new Map<string, LimitKeyState>();
-  #sweepCounter = 0;
+  #connectionSweepCursor: MapIterator<[string, LimitKeyState]> | null = null;
+  #workspaceSweepCursor: MapIterator<[string, LimitKeyState]> | null = null;
+  #lastAcquireSweepVisits = 0;
+  #maximumAcquireSweepVisits = 0;
 
   constructor(options: McpRequestLimiterOptions = {}) {
     this.#now = options.now ?? Date.now;
@@ -64,11 +67,30 @@ export class McpRequestLimiter {
     this.#maximumWorkspaceInFlight = options.maximumWorkspaceInFlight ?? mcpRequestLimits.maximumWorkspaceInFlight;
   }
 
-  #state(map: Map<string, LimitKeyState>, key: string, now: number): LimitKeyState {
-    if (++this.#sweepCounter % 64 === 0) {
-      let scanned = 0;
-      for (const [entryKey, entry] of map) { if (scanned++ >= 64) break; if (entryKey !== key && entry.inFlight === 0 && now - entry.windowStartedAt >= this.#windowMilliseconds) map.delete(entryKey); }
+  #sweep(
+    map: Map<string, LimitKeyState>,
+    cursor: MapIterator<[string, LimitKeyState]> | null,
+    currentKey: string,
+    now: number,
+  ): { cursor: MapIterator<[string, LimitKeyState]> | null; visits: number } {
+    let iterator = cursor ?? map.entries();
+    let visits = 0;
+    while (visits < 8) {
+      const next = iterator.next();
+      if (next.done) {
+        iterator = map.entries();
+        break;
+      }
+      visits += 1;
+      const [entryKey, entry] = next.value;
+      if (entryKey !== currentKey && entry.inFlight === 0 && now - entry.windowStartedAt >= this.#windowMilliseconds) {
+        map.delete(entryKey);
+      }
     }
+    return { cursor: iterator, visits };
+  }
+
+  #state(map: Map<string, LimitKeyState>, key: string, now: number): LimitKeyState {
     let state = map.get(key);
     if (!state) {
       state = { windowStartedAt: now, cost: 0, inFlight: 0 };
@@ -85,6 +107,12 @@ export class McpRequestLimiter {
 
   acquire(input: { connectionId: string; workspaceId: string; cost: number }): McpRequestLease {
     const now = this.#now();
+    const connectionSweep = this.#sweep(this.#connections, this.#connectionSweepCursor, input.connectionId, now);
+    this.#connectionSweepCursor = connectionSweep.cursor;
+    const workspaceSweep = this.#sweep(this.#workspaces, this.#workspaceSweepCursor, input.workspaceId, now);
+    this.#workspaceSweepCursor = workspaceSweep.cursor;
+    this.#lastAcquireSweepVisits = connectionSweep.visits + workspaceSweep.visits;
+    this.#maximumAcquireSweepVisits = Math.max(this.#maximumAcquireSweepVisits, this.#lastAcquireSweepVisits);
     const connection = this.#state(this.#connections, input.connectionId, now);
     const workspace = this.#state(this.#workspaces, input.workspaceId, now);
     const retryAfterSeconds = Math.max(1, Math.ceil(Math.max(
@@ -119,7 +147,19 @@ export class McpRequestLimiter {
     };
   }
 
-  getStateSizes(): { connections: number; workspaces: number } { return { connections: this.#connections.size, workspaces: this.#workspaces.size }; }
+  getStateObservability(): {
+    connections: number;
+    workspaces: number;
+    lastAcquireSweepVisits: number;
+    maximumAcquireSweepVisits: number;
+  } {
+    return {
+      connections: this.#connections.size,
+      workspaces: this.#workspaces.size,
+      lastAcquireSweepVisits: this.#lastAcquireSweepVisits,
+      maximumAcquireSweepVisits: this.#maximumAcquireSweepVisits,
+    };
+  }
 }
 
 export function mcpToolRequestCost(name: string | null): number {
