@@ -125,6 +125,8 @@ describe("BRE-319 MCP exhaustion guards", () => {
     if (active.allowed) active.release();
     if (blocked.allowed) blocked.release();
     now = 40;
+    for (let i = 0; i < 128; i++) limiter.acquire({ connectionId: `sweep-${i}`, workspaceId: `sweep-${i}`, cost: 1 });
+    assert.ok(limiter.getStateSizes().connections < 2_100);
     assert.equal(limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 }).allowed, true);
   });
 

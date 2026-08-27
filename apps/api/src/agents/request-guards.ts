@@ -53,6 +53,7 @@ export class McpRequestLimiter {
   readonly #maximumWorkspaceInFlight: number;
   readonly #connections = new Map<string, LimitKeyState>();
   readonly #workspaces = new Map<string, LimitKeyState>();
+  #sweepCounter = 0;
 
   constructor(options: McpRequestLimiterOptions = {}) {
     this.#now = options.now ?? Date.now;
@@ -64,8 +65,9 @@ export class McpRequestLimiter {
   }
 
   #state(map: Map<string, LimitKeyState>, key: string, now: number): LimitKeyState {
-    for (const [entryKey, entry] of map) {
-      if (entryKey !== key && entry.inFlight === 0 && now - entry.windowStartedAt >= this.#windowMilliseconds) map.delete(entryKey);
+    if (++this.#sweepCounter % 64 === 0) {
+      let scanned = 0;
+      for (const [entryKey, entry] of map) { if (scanned++ >= 64) break; if (entryKey !== key && entry.inFlight === 0 && now - entry.windowStartedAt >= this.#windowMilliseconds) map.delete(entryKey); }
     }
     let state = map.get(key);
     if (!state) {
@@ -116,6 +118,8 @@ export class McpRequestLimiter {
       },
     };
   }
+
+  getStateSizes(): { connections: number; workspaces: number } { return { connections: this.#connections.size, workspaces: this.#workspaces.size }; }
 }
 
 export function mcpToolRequestCost(name: string | null): number {
