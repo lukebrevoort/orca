@@ -11,11 +11,11 @@
 <body><main>
   <header class="hero">
     <div><div class="eyebrow">Orca · BRE-320 · M8 acceptance release</div><h1>Organization that a human can trust.</h1><p>Reproducible evidence for the canonical production-failure journey: historical mail, later live mail, weekly-review visibility, exact Rule explanations, human correction, Safety Lock, audited activation, and compensating revert.</p></div>
-    <aside class="verdict"><span class="label">Release disposition</span><strong class="pass">Implementation gates · PASS</strong><span class="pending">G3 · PENDING independent exact-SHA verdict</span><p class="small">Never replace the G3 marker with PASS until a verifier reviews the final commit.</p></aside>
+    <aside class="verdict"><span class="label">Release disposition</span><strong class="pass">Implementation gates · PASS</strong><span class="pass">G3 · PASS at exact code/merge SHA</span><p class="small"><a href="/api/v1/agents/agt_1e48bba0ef60/media/bre-320-pr151-g3-final-pass-2026-08-27-06-43-41-229.html">Independent verifier report</a> · no unresolved findings · send, delete, and provider-write authority absent.</p></aside>
   </header>
 
   <section><div class="label">Release identity</div><h2>Exact inputs and boundaries</h2><div class="facts">
-    <div class="fact"><span>Review 71 correction base</span><strong><code>2d60259cc5581970dffc8d80ab9f36e6b227366f</code></strong></div>
+    <div class="fact"><span>Independently verified code/merge</span><strong><code>772bfb5e0df59e7a6ddf3af241254006470648d0</code></strong></div>
     <div class="fact"><span>Official-base merge commit</span><strong><code>075ea314e68457eb3d91d2e6f0883c55f3eec27f</code></strong></div>
     <div class="fact"><span>Canonical fixture</span><strong><code>bre320ProductionFailureFixture</code></strong></div>
     <div class="fact"><span>Fixture Workspace</span><strong><code>bre320-workspace / bre320-account</code></strong></div>
@@ -30,8 +30,8 @@
     <article class="criterion"><span>06 · targeted visual integration</span><h3 class="pass">Orca direction retained</h3><p>Only Organization review, reader Lane/Why/correction, operational states, and audit presentation changed. Inbox, reader, composer, and Zen structures remain intact; full build/regression command below detects drift.</p></article>
     <article class="criterion"><span>07 · responsive state evidence</span><h3 class="pass">Light/dark · 1440/1024</h3><p>Twenty checked-in captures cover ready, hover, focus, selected, loading, unavailable, no-access, offline, conflict, transaction failure, active, reverted, and rejected Trace fetch with retry. Every non-success state exposes one truthful next action while withholding success evidence and mutation controls. Agent-browser axe: 0 violations for the release panel and Thread drawer.</p></article>
     <article class="criterion"><span>08 · release gates</span><h3 class="pass">All implementation-side gates pass</h3><p>Focused Organization/MCP/evaluator/UI: 108/108. Language, authority, isolation, migration, and BRE-318/319 regressions: 95/95. Full workspace: 732/732. Typecheck, build, lint, 43-table DB lifecycle verifier, official-base ancestry assertion, and exact official/root/correction-base diff checks pass.</p></article>
-    <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pending">G3 PENDING exact final SHA</h3><p>G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>. Final verifier must report no unresolved critical/high and explicitly confirm send/delete authority absent.</p></article>
-    <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder. <a href="artifacts/bre-320/release-evidence-manifest-light-1440.png">Open the full-page 1440 capture.</a></p></article>
+    <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pass">G3 PASS · exact code/merge SHA 772bfb5</h3><p><a href="/api/v1/agents/agt_1e48bba0ef60/media/bre-320-pr151-g3-final-pass-2026-08-27-06-43-41-229.html">Independent G3 final PASS report</a>: no unresolved findings and no send, delete, or provider-write authority. G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>.</p></article>
+    <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and independently verified G3 verdict. <a href="artifacts/bre-320/release-evidence-manifest-light-1440.png">Open the full-page 1440 capture.</a></p></article>
   </div></section>
 
   <section><div class="label">Operational state matrix</div><h2>One honest state at a time</h2><div class="state-grid">
@@ -96,7 +96,7 @@ test -z "$(git status --porcelain)"</pre>
       <tr><td>DB verifier</td><td>43 required tables; clean upgrade; stacked 0026→latest; two idempotent migration replays; reset; Workspace isolation; FK clean.</td><td><code>apps/api/src/db/verify.ts</code></td></tr>
       <tr><td>Browser</td><td>0 axe violations on release review and Thread drawer; captures visually inspected; labels remain readable in both themes.</td><td><code>docs/artifacts/bre-320/*.png</code></td></tr>
       <tr><td>Authority boundary</td><td>Discovery truthful per REST/MCP operation; agent capability loaded live; send/delete false; control absent from read-only grant.</td><td><code>module.test.ts</code> + MCP canonical test</td></tr>
-      <tr><td>Independent G3</td><td>No unresolved critical/high; exact final SHA; send/delete absent.</td><td class="pending">PENDING</td></tr>
+      <tr><td>Independent G3</td><td>PASS at exact code/merge SHA <code>772bfb5e0df59e7a6ddf3af241254006470648d0</code>; no unresolved findings; send, delete, and provider-write authority absent.</td><td class="pass"><a href="/api/v1/agents/agt_1e48bba0ef60/media/bre-320-pr151-g3-final-pass-2026-08-27-06-43-41-229.html">FINAL PASS report</a></td></tr>
     </tbody></table>
   </section>
 
