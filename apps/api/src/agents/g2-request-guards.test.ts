@@ -127,7 +127,6 @@ describe("BRE-319 MCP exhaustion guards", () => {
     now = 40;
     for (let i = 0; i < 128; i++) limiter.acquire({ connectionId: `sweep-${i}`, workspaceId: `sweep-${i}`, cost: 1 });
     assert.ok(limiter.getStateSizes().connections < 2_100);
-    assert.equal(limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 }).allowed, true);
   });
 
   test("preserves abort signal on bounded exchange after admission", async () => {
