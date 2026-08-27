@@ -31,7 +31,7 @@
     <article class="criterion"><span>07 · responsive state evidence</span><h3 class="pass">Light/dark · 1440/1024</h3><p>Checked-in captures cover ready, hover, focus, selected, disabled/loading, unavailable, no-access, offline, conflict, transaction failure, active, and reverted. Agent-browser axe: 0 violations for the release panel and Thread drawer.</p></article>
     <article class="criterion"><span>08 · release gates</span><h3>Pending final upstream integration replay</h3><p>Commands below cover typecheck, complete tests, build, lint, DB verifier, migration stack/replay/reset/isolation, language, MCP, BRE-318/319 regressions, and diff check.</p></article>
     <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pending">G3 PENDING exact final SHA</h3><p>G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>. Final verifier must report no unresolved critical/high and explicitly confirm send/delete authority absent.</p></article>
-    <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder.</p></article>
+    <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder. <a href="artifacts/bre-320/release-evidence-manifest-light-1440.png">Open the full-page 1440 capture.</a></p></article>
   </div></section>
 
   <section><div class="label">Operational state matrix</div><h2>One honest state at a time</h2><div class="state-grid">
@@ -52,6 +52,14 @@
     <figure><a href="artifacts/bre-320/thread-correction-light-1440.png"><img src="artifacts/bre-320/thread-correction-light-1440.png" alt="Thread reader correction beside Safety Lock and Manual Override" /></a><figcaption>Reader · Manual Override, Safety Lock, production correction, provider boundary.</figcaption></figure>
     <figure><a href="artifacts/bre-320/thread-safety-correction-light-1440.png"><img src="artifacts/bre-320/thread-safety-correction-light-1440.png" alt="Safety Lock active with correction audit evidence" /></a><figcaption>Safety Lock active · correction records <code>user.corrected</code> and keeps exact winner evidence.</figcaption></figure>
   </div></section>
+
+  <section><div class="label">Control-state inventory</div><h2>Readable labels in every interaction state</h2><div class="gallery">
+    <figure><a href="artifacts/bre-320/organization-active-light-1440.png"><img src="artifacts/bre-320/organization-active-light-1440.png" alt="Default light Organization release panel at 1440 pixels" /></a><figcaption>Default · light · 1440 · complete review shell and labeled actions.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/state-ready-light-1440.png"><img src="artifacts/bre-320/state-ready-light-1440.png" alt="Ready operational state in light theme" /></a><figcaption>Ready · light · 1440 · neutral pre-transaction state.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/control-hover-dark-1024.png"><img src="artifacts/bre-320/control-hover-dark-1024.png" alt="Review revert control hovered in dark theme" /></a><figcaption>Hover · dark · 1024 · label remains readable.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/control-focus-dark-1024.png"><img src="artifacts/bre-320/control-focus-dark-1024.png" alt="Review revert control keyboard focused in dark theme" /></a><figcaption>Keyboard focus · dark · 1024 · visible focus ring and label.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/control-disabled-loading-dark-1024.png"><img src="artifacts/bre-320/control-disabled-loading-dark-1024.png" alt="Disabled review control during loading in dark theme" /></a><figcaption>Disabled + loading · dark · 1024 · unavailable action stays legible.</figcaption></figure>
+  </div><p class="small">Selected/pressed evidence is the Active Tune treatment in the operational-state matrix above. Every checked-in PNG under <code>docs/artifacts/bre-320/</code> is now linked by this artifact.</p></section>
 
   <section><div class="label">Exact commands</div><h2>Release gate replay</h2><pre>BASE=2b3bfa16a87b32201bd620022a92a7d600aa150d
 
