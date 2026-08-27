@@ -45,6 +45,7 @@ import {
   orcaRuleRevertRequestSchema,
 } from "./orca-simulation.ts";
 import { orcaRuleCompileRequestSchema, orcaRuleRiskSchema } from "./orca-language.ts";
+import { orcaThreadCorrectionRequestSchema } from "./orca-correction.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().datetime({ offset: false });
@@ -131,6 +132,7 @@ const mcpApplyTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("collection"), request: organizationCollectionPinApplyRequestSchema }).strict(),
   z.object({ kind: z.literal("context"), request: organizationContextApplyRequestSchema }).strict(),
   z.object({ kind: z.literal("rule_revision"), request: orcaRuleCompileRequestSchema }).strict(),
+  z.object({ kind: z.literal("thread_correction"), request: orcaThreadCorrectionRequestSchema }).strict(),
   z.object({
     kind: z.literal("rule_change_set"),
     request: orcaRuleActivationRequestSchema,
@@ -157,7 +159,8 @@ export const mcpApplyOrganizationInputSchema = mcpOrganizationScopeSchema.extend
     : value.target.kind === "facets_workflow" ? "facet"
       : value.target.kind.startsWith("view_") ? "view"
         : value.target.kind === "collection" ? "collection"
-          : value.target.kind === "context" ? "context" : "rule";
+          : value.target.kind === "context" ? "context"
+            : value.target.kind === "thread_correction" ? "thread" : "rule";
   if (value.resourceFamily !== expectedFamily) context.addIssue({ code: "custom", path: ["resourceFamily"], message: "Resource family does not match the typed apply target" });
 });
 export type McpApplyOrganizationInput = z.infer<typeof mcpApplyOrganizationInputSchema>;

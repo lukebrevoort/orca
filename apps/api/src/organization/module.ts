@@ -162,15 +162,27 @@ const facetSupport = Object.freeze({
 });
 
 function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope, agentCapabilitySource?: OrganizationAgentCapabilitySource) {
+  const agentActor = scope.actor.type === "agent" ? { ...scope.actor, type: "agent" as const } : null;
+  const agentCapability = agentActor
+    ? agentCapabilitySource?.load({ actor: agentActor, workspaceId: scope.workspaceId, accountIds: scope.accountIds })?.snapshot ?? null
+    : null;
+  const can = (operation: "describe" | "query" | "simulate" | "apply" | "revert") => agentCapability?.operations.includes(operation) ?? false;
+  const human = scope.actor.type === "human";
+  const mcp = scope.actor.type === "agent";
+  const structureApplyAvailable = Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes);
   return {
     operations: {
       describe: true as const,
       query: true as const,
-      simulate: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
-      apply: (scope.actor.type === "human" || (scope.actor.type === "agent" && Boolean(agentCapabilitySource))) && Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes),
-      revert: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
+      simulate: human || can("simulate"),
+      apply: (human || can("apply")) && structureApplyAvailable,
+      revert: human || can("revert"),
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
+    surfaces: {
+      rest: { describe: human, query: human, simulate: human, apply: human && structureApplyAvailable, revert: human, correct: human },
+      mcp: { describe: mcp && can("describe"), query: mcp && can("query"), simulate: mcp && can("simulate"), apply: mcp && can("apply"), revert: mcp && can("revert"), correct: mcp && can("apply") },
+    },
   };
 }
 

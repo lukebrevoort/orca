@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BRE-320 · M8 G3 release evidence</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f2f7f4;--paper:#fff;--ink:#10231e;--muted:#5d6f69;--line:#ccd9d4;--accent:#087c68;--warn:#aa5d13;--code:#e9f1ee}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,sans-serif}main{width:min(1180px,calc(100% - 32px));margin:auto;padding:48px 0 80px}header.hero{display:grid;grid-template-columns:1.4fr .6fr;gap:28px;padding:34px;border:1px solid var(--line);border-radius:24px;background:var(--paper);box-shadow:0 24px 70px #23423912}h1,h2,h3{font-family:Georgia,serif;font-weight:500}h1{margin:5px 0 14px;font-size:clamp(38px,6vw,72px);line-height:.96}.eyebrow,.label{color:var(--accent);font:800 11px/1.2 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}.hero p{max-width:760px;color:var(--muted)}.verdict{align-self:start;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--bg)}.verdict strong{display:block;margin:7px 0;font-size:22px}.pending{color:var(--warn)}section{margin-top:28px;padding:26px;border:1px solid var(--line);border-radius:20px;background:var(--paper)}h2{margin:4px 0 18px;font-size:30px}.facts,.criteria,.state-grid,.gallery{display:grid;gap:12px}.facts{grid-template-columns:repeat(4,1fr)}.fact,.criterion,.state{padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--bg)}.fact span,.criterion span,.state span{display:block;color:var(--muted);font-size:12px}.fact strong{display:block;margin-top:5px;overflow-wrap:anywhere}.criteria{grid-template-columns:repeat(2,1fr)}.criterion h3{margin:4px 0 8px;font:750 15px/1.35 ui-sans-serif,system-ui}.criterion p{margin:4px 0;color:var(--muted);font-size:13px}.criterion code{font-size:11px}.pass{color:var(--accent);font-weight:800}.state-grid{grid-template-columns:repeat(3,1fr)}.state img,.gallery img{display:block;width:100%;margin-top:9px;border:1px solid var(--line);border-radius:9px;background:#fff}.gallery{grid-template-columns:repeat(2,1fr)}.gallery figure{margin:0}.gallery figcaption{padding:8px 2px;color:var(--muted);font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase}code,pre{font-family:ui-monospace,SFMono-Regular,monospace}code{padding:2px 5px;border-radius:5px;background:var(--code)}pre{overflow:auto;padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--code);font-size:12px;white-space:pre-wrap}.boundary{border-color:#73ac9e;background:#eaf5f1}.boundary strong{display:block;font-size:20px}.checks li{margin:8px 0}.small{color:var(--muted);font-size:12px}@media(prefers-color-scheme:dark){:root{--bg:#07110e;--paper:#0d1714;--ink:#f0f5f2;--muted:#a4b2ad;--line:#2b3a35;--accent:#62d5be;--warn:#ffb36b;--code:#14231e}.boundary{background:#102b23}}@media(max-width:780px){header.hero,.facts,.criteria,.state-grid,.gallery{grid-template-columns:1fr}main{width:min(100% - 20px,1180px);padding-top:16px}section,header.hero{padding:18px}}
+  </style>
+</head>
+<body><main>
+  <header class="hero">
+    <div><div class="eyebrow">Orca · BRE-320 · M8 acceptance release</div><h1>Organization that a human can trust.</h1><p>Reproducible evidence for the canonical production-failure journey: historical mail, later live mail, weekly-review visibility, exact Rule explanations, human correction, Safety Lock, audited activation, and compensating revert.</p></div>
+    <aside class="verdict"><span class="label">Release disposition</span><strong>Implementation gates · pending final replay</strong><span class="pending">G3 · PENDING independent exact-SHA verdict</span><p class="small">Never replace this marker with PASS until a verifier reviews the final commit.</p></aside>
+  </header>
+
+  <section><div class="label">Release identity</div><h2>Exact inputs and boundaries</h2><div class="facts">
+    <div class="fact"><span>Verified base</span><strong><code>2b3bfa16a87b32201bd620022a92a7d600aa150d</code></strong></div>
+    <div class="fact"><span>Implementation commit</span><strong><code>IMPLEMENTATION_SHA_PENDING</code></strong></div>
+    <div class="fact"><span>Canonical fixture</span><strong><code>bre320ProductionFailureFixture</code></strong></div>
+    <div class="fact"><span>Fixture Workspace</span><strong><code>bre320-workspace / bre320-account</code></strong></div>
+  </div><p class="boundary"><strong>No send. No reply/forward. No provider delete. No arbitrary code.</strong>MCP discovery and authority evidence keep both provider-send and provider-delete false. The approved semantic surface remains bounded to Organization describe/query/simulate/apply/revert/correct.</p></section>
+
+  <section><div class="label">Criterion → reproducible evidence</div><h2>Acceptance manifest</h2><div class="criteria">
+    <article class="criterion"><span>01 · external-agent journey</span><h3 class="pass">Fixture-backed, real MCP</h3><p><code>apps/api/src/agents/mcp.test.ts</code> · “runs the canonical fixture journey…” describes, searches historical mail, creates Lane + Policy + View + Collection + Facet + Context + Workflow State + Rule, simulates, approves, applies, queries, reverts, and corrects.</p></article>
+    <article class="criterion"><span>02 · complete human review</span><h3 class="pass">All bounded representative Threads</h3><p><code>desktop-switch.interaction.test.tsx</code> · “renders the deterministic full review…” verifies counts, both Threads, candidates, winners/losers, conflict links, risk, actions, inverse, revisions, authority, and audit. See review screenshots below.</p></article>
+    <article class="criterion"><span>03 · historical + live</span><h3 class="pass">One evaluator and projection path</h3><p>The MCP journey activates historical failed Threads, then calls <code>persistGmailMessages</code> for <code>bre320-thread-production-live</code> and asserts the same winning Rule revision and exact reason.</p></article>
+    <article class="criterion"><span>04 · Lane + weekly View</span><h3 class="pass">Production remains primary</h3><p>The real View results assert checkout + webhook + later payments failure membership while every Thread’s primary Lane remains <code>bre320-lane-production</code>.</p></article>
+    <article class="criterion"><span>05 · correction and compensation</span><h3 class="pass">REST · UI · MCP</h3><p><code>correction.test.ts</code> proves immutable <code>user.corrected</code> Trace, audited projection, exact replay, and authenticated REST. MCP calls <code>thread_correction</code>. Reader UI exposes Record correction beside Manual Override and Safety Lock.</p></article>
+    <article class="criterion"><span>06 · targeted visual integration</span><h3 class="pass">Orca direction retained</h3><p>Only Organization review, reader Lane/Why/correction, operational states, and audit presentation changed. Inbox, reader, composer, and Zen structures remain intact; full build/regression command below detects drift.</p></article>
+    <article class="criterion"><span>07 · responsive state evidence</span><h3 class="pass">Light/dark · 1440/1024</h3><p>Checked-in captures cover ready, hover, focus, selected, disabled/loading, unavailable, no-access, offline, conflict, transaction failure, active, and reverted. Agent-browser axe: 0 violations for the release panel and Thread drawer.</p></article>
+    <article class="criterion"><span>08 · release gates</span><h3>Pending final upstream integration replay</h3><p>Commands below cover typecheck, complete tests, build, lint, DB verifier, migration stack/replay/reset/isolation, language, MCP, BRE-318/319 regressions, and diff check.</p></article>
+    <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pending">G3 PENDING exact final SHA</h3><p>G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>. Final verifier must report no unresolved critical/high and explicitly confirm send/delete authority absent.</p></article>
+    <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder.</p></article>
+  </div></section>
+
+  <section><div class="label">Operational state matrix</div><h2>One honest state at a time</h2><div class="state-grid">
+    <div class="state"><span>All labels · selected Active · light 1440</span><a href="artifacts/bre-320/state-matrix-active-light-1440.png"><img src="artifacts/bre-320/state-matrix-active-light-1440.png" alt="All operational state labels with Active selected" /></a></div>
+    <div class="state"><span>Unavailable · light 1440</span><a href="artifacts/bre-320/state-unavailable-light-1440.png"><img src="artifacts/bre-320/state-unavailable-light-1440.png" alt="Unavailable state" /></a></div>
+    <div class="state"><span>Conflict · light 1440</span><a href="artifacts/bre-320/state-conflict-light-1440.png"><img src="artifacts/bre-320/state-conflict-light-1440.png" alt="Conflict state" /></a></div>
+    <div class="state"><span>No access · dark 1024</span><a href="artifacts/bre-320/state-no-access-dark-1024.png"><img src="artifacts/bre-320/state-no-access-dark-1024.png" alt="No-access state" /></a></div>
+    <div class="state"><span>Transaction failure · dark 1024</span><a href="artifacts/bre-320/state-transaction-failure-dark-1024.png"><img src="artifacts/bre-320/state-transaction-failure-dark-1024.png" alt="Transaction-failure state" /></a></div>
+    <div class="state"><span>Loading · dark 1024</span><a href="artifacts/bre-320/state-loading-dark-1024.png"><img src="artifacts/bre-320/state-loading-dark-1024.png" alt="Loading state" /></a></div>
+    <div class="state"><span>Offline · light 1024</span><a href="artifacts/bre-320/state-offline-light-1024.png"><img src="artifacts/bre-320/state-offline-light-1024.png" alt="Offline state" /></a></div>
+    <div class="state"><span>Active · dark 1024</span><a href="artifacts/bre-320/state-active-dark-1024.png"><img src="artifacts/bre-320/state-active-dark-1024.png" alt="Active state" /></a></div>
+    <div class="state"><span>Reverted · light 1024</span><a href="artifacts/bre-320/state-reverted-light-1024.png"><img src="artifacts/bre-320/state-reverted-light-1024.png" alt="Reverted state" /></a></div>
+  </div></section>
+
+  <section><div class="label">Human review and reader evidence</div><h2>Readable decisions, not aggregate theater</h2><div class="gallery">
+    <figure><a href="artifacts/bre-320/organization-active-light-1440-review.png"><img src="artifacts/bre-320/organization-active-light-1440-review.png" alt="Light Organization review showing both representative Threads and ordered audit" /></a><figcaption>Light · 1440 · both bounded Threads, exact winners/losers, authority, and ordered audit.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/organization-active-dark-1024-review.png"><img src="artifacts/bre-320/organization-active-dark-1024-review.png" alt="Dark 1024 representative Thread review" /></a><figcaption>Dark · 1024 · readable candidate precedence and authority.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/thread-correction-light-1440.png"><img src="artifacts/bre-320/thread-correction-light-1440.png" alt="Thread reader correction beside Safety Lock and Manual Override" /></a><figcaption>Reader · Manual Override, Safety Lock, production correction, provider boundary.</figcaption></figure>
+    <figure><a href="artifacts/bre-320/thread-safety-correction-light-1440.png"><img src="artifacts/bre-320/thread-safety-correction-light-1440.png" alt="Safety Lock active with correction audit evidence" /></a><figcaption>Safety Lock active · correction records <code>user.corrected</code> and keeps exact winner evidence.</figcaption></figure>
+  </div></section>
+
+  <section><div class="label">Exact commands</div><h2>Release gate replay</h2><pre>BASE=2b3bfa16a87b32201bd620022a92a7d600aa150d
+
+# Canonical journeys and focused UI
+bun test apps/api/src/agents/mcp.test.ts --test-name-pattern "canonical fixture journey"
+bun test apps/api/src/organization/rules/correction.test.ts
+bun test apps/api/src/organization/rules/simulation-sqlite.test.ts --test-name-pattern "historical production-failure REST lifecycle"
+bun test apps/web/src/desktop-switch.interaction.test.tsx apps/web/src/organization-trace.test.tsx apps/web/src/organization-lanes.test.tsx
+
+# Language, migration/reset, account isolation, and stacked regressions
+bun test apps/api/src/organization/rules/compiler.test.ts apps/api/src/organization/rules/evaluator.test.ts apps/api/src/organization/rules/evaluation-integration.test.ts apps/api/src/organization/rules/migration.test.ts apps/api/src/organization/rules/evaluation-migration.test.ts apps/api/src/organization/rules/ordering-migration.test.ts apps/api/src/organization/g2-migration.test.ts
+bun run --cwd apps/api db:verify
+
+# Required complete gates
+CI=true bun run typecheck
+CI=true bun run test
+CI=true bun run build
+CI=true bun run lint
+git diff --check "$BASE"...HEAD
+test -z "$(git status --porcelain)"</pre>
+    <table><thead><tr><th>Gate</th><th>Expected assertion</th><th>Evidence record</th></tr></thead><tbody>
+      <tr><td>Canonical MCP</td><td>Fixture’s 3 historical messages found; 2 failed historical + 1 later live Thread in weekly View; exact Rule revision/reason; apply/revert/correct replay.</td><td><code>mcp.test.ts</code> named test</td></tr>
+      <tr><td>Correction</td><td>One immutable Trace and one audited projection; exact duplicate response; REST 200/401 boundary.</td><td><code>correction.test.ts</code></td></tr>
+      <tr><td>DB verifier</td><td>43 required tables; clean upgrade; stacked 0026→latest; two idempotent migration replays; reset; Workspace isolation; FK clean.</td><td><code>apps/api/src/db/verify.ts</code></td></tr>
+      <tr><td>Browser</td><td>0 axe violations on release review and Thread drawer; captures visually inspected; labels remain readable in both themes.</td><td><code>docs/artifacts/bre-320/*.png</code></td></tr>
+      <tr><td>Authority boundary</td><td>Discovery truthful per REST/MCP operation; agent capability loaded live; send/delete false; control absent from read-only grant.</td><td><code>module.test.ts</code> + MCP canonical test</td></tr>
+      <tr><td>Independent G3</td><td>No unresolved critical/high; exact final SHA; send/delete absent.</td><td class="pending">PENDING</td></tr>
+    </tbody></table>
+  </section>
+
+  <section><div class="label">Reproduce visual fixtures</div><h2>Agent-browser only</h2><pre>/opt/homebrew/bin/agent-browser skills get core --full
+bun run dev:web -- --host 127.0.0.1
+/opt/homebrew/bin/agent-browser open 'http://127.0.0.1:5173/dev/inbox?destination=organization&amp;bre320Evidence=active'
+/opt/homebrew/bin/agent-browser set viewport 1440 1000
+/opt/homebrew/bin/agent-browser set media light
+/opt/homebrew/bin/agent-browser a11y --selector '.bre320-release-evidence' --json
+
+# Substitute any state below:
+# ready | loading | unavailable | no_access | offline |
+# transaction_failure | conflict | active | reverted</pre><p class="small">The query fixture is development-only, reads the checked-in deterministic Trace, and renders the production review component. It never mutates provider mail or server state.</p></section>
+</main></body></html>

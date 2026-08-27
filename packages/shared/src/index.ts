@@ -21,6 +21,18 @@ export {
   agentContractUpdatedFixture,
 } from "./agent-contract-fixtures.ts";
 
+export { bre320ProductionFailureFixture } from "./bre-320-fixture.ts";
+export type { Bre320ProductionFailureFixture } from "./bre-320-fixture.ts";
+
+export {
+  orcaThreadCorrectionRequestSchema,
+  orcaThreadCorrectionResponseSchema,
+} from "./orca-correction.ts";
+export type {
+  OrcaThreadCorrectionRequest,
+  OrcaThreadCorrectionResponse,
+} from "./orca-correction.ts";
+
 export {
   redactedSchedulingReplyBriefFixture,
   schedulingReplyBriefFixture,

@@ -110,7 +110,7 @@ function referencedCatalogIds(ruleSet: ReturnType<typeof activeRuleSet>): {
   return ids;
 }
 
-export function loadLiveEvaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: "message.received" | "thread.updated" }, capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability): OrcaEvaluationInput | null {
+export function loadLiveEvaluationInput(db: Database, input: { accountId: string; messageId: string; eventKind: "message.received" | "thread.updated" | "user.corrected" }, capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability): OrcaEvaluationInput | null {
   const account = db.select().from(oauthAccounts).where(eq(oauthAccounts.id, input.accountId)).get();
   const message = db.select().from(emails).where(and(eq(emails.accountId, input.accountId), eq(emails.id, input.messageId))).get();
   if (!account || !message) return null;
@@ -172,10 +172,18 @@ export function loadLiveEvaluationInput(db: Database, input: { accountId: string
       accountId: input.accountId,
       threadId: thread.id,
       messageId: message.id,
-    } : {
+    } : input.eventKind === "thread.updated" ? {
       id: `${input.eventKind}:${message.id}`,
       kind: input.eventKind,
       cause: "provider",
+      occurredAt: receivedAt,
+      workspaceId: account.userId,
+      accountId: input.accountId,
+      threadId: thread.id,
+    } : {
+      id: `${input.eventKind}:${message.id}`,
+      kind: input.eventKind,
+      cause: "user",
       occurredAt: receivedAt,
       workspaceId: account.userId,
       accountId: input.accountId,
@@ -228,15 +236,15 @@ export function evaluateAndPersistLiveContext(
   db: Database,
   context: OrcaEvaluationInput,
   capabilityAdapter: OrganizationSystemCapabilityAdapter = gmailSyncOrganizationCapability,
+  options?: { alreadyInTransaction?: boolean; onPersist?: (executor: Database, trace: OrcaEvaluationTrace) => void },
 ): OrcaEvaluationTrace {
   const result = evaluateOrcaRules(context);
   // Exhaustion is reportable in memory but is never durable evaluation
   // evidence: persisting either the fallback projection or its Trace would
   // make a partial evaluator outcome indistinguishable from a complete one.
   if (result.trace.budget.exhausted) return result.trace;
-  db.transaction((transaction) => {
-    const executor = transaction as unknown as Database;
-    applyAuthorizedEvaluationProjection(executor, context, result, capabilityAdapter);
+  const persist = (executor: Database) => {
+    applyAuthorizedEvaluationProjection(executor, context, result, capabilityAdapter, { alreadyInTransaction: true });
     executor.insert(organizationEvaluationTraces).values({
       workspaceId: context.thread.workspaceId,
       id: result.trace.id,
@@ -250,7 +258,10 @@ export function evaluateAndPersistLiveContext(
       logicalTime: new Date(context.logicalTime),
       createdAt: new Date(context.logicalTime),
     }).run();
-  });
+    options?.onPersist?.(executor, result.trace);
+  };
+  if (options?.alreadyInTransaction) persist(db);
+  else db.transaction((transaction) => persist(transaction as unknown as Database));
   return result.trace;
 }
 

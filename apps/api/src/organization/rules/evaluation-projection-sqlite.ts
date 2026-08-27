@@ -54,6 +54,7 @@ export function applyAuthorizedEvaluationProjection(
   input: OrcaEvaluationInput,
   result: OrcaEvaluationResult,
   capabilityAdapter: OrganizationSystemCapabilityAdapter,
+  options?: { alreadyInTransaction?: boolean },
 ): void {
   const laneWinner = result.trace.winners.find((winner) => winner.slot === "lane");
   const applyLowerLane = laneWinner?.precedence !== "safety_lock";
@@ -76,8 +77,7 @@ export function applyAuthorizedEvaluationProjection(
   const idempotencyKey = `evaluation:${result.trace.event.id}:projection`;
   const claimedCapability = input.capabilities;
 
-  db.transaction((transaction) => {
-    const executor = transaction as unknown as Database;
+  const project = (executor: Database) => {
     const workspace = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.thread.workspaceId)).get();
     const threadState = executor.select().from(organizationThreadStates).where(and(
       eq(organizationThreadStates.workspaceId, input.thread.workspaceId),
@@ -87,7 +87,7 @@ export function applyAuthorizedEvaluationProjection(
     const ownedAccount = executor.select({ id: oauthAccounts.id }).from(oauthAccounts).where(and(
       eq(oauthAccounts.userId, input.thread.workspaceId), eq(oauthAccounts.id, input.thread.accountId),
     )).get();
-    const liveCapability = capabilityAdapter.live({ workspaceId: input.thread.workspaceId, accountId: input.thread.accountId });
+    const liveCapability = capabilityAdapter.live({ workspaceId: input.thread.workspaceId, accountId: input.thread.accountId, executor });
     const reservedIdempotencyKey = executor.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets)
       .where(and(eq(organizationChangeSets.workspaceId, input.thread.workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get();
     const liveResourceRevisions = threadState ? { [resourceId]: threadState.revision } : {};
@@ -259,5 +259,7 @@ export function applyAuthorizedEvaluationProjection(
       beforeJson: row.before === null ? null : JSON.stringify(row.before),
       afterJson: row.after === null ? null : JSON.stringify(row.after),
     }))).run();
-  });
+  };
+  if (options?.alreadyInTransaction) project(db);
+  else db.transaction((transaction) => project(transaction as unknown as Database));
 }

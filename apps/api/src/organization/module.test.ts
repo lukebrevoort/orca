@@ -156,11 +156,15 @@ describe("Organization module contract", () => {
     assert.deepEqual(result.capabilities.operations, {
       describe: true,
       query: true,
-      simulate: false,
+      simulate: true,
       apply: false,
-      revert: false,
+      revert: true,
     });
     assert.deepEqual(result.capabilities.authority, { sendMail: false, deleteProviderMail: false });
+    assert.deepEqual(result.capabilities.surfaces, {
+      rest: { describe: true, query: true, simulate: true, apply: false, revert: true, correct: true },
+      mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false },
+    });
     assert.deepEqual(result.accountIds, ["account_a", "account_b"]);
     assert.equal(JSON.stringify(result).includes("gmail"), false);
   });
@@ -436,7 +440,7 @@ describe("Organization module contract", () => {
     assert.equal(listCalls, 1);
   });
 
-  test("keeps unimplemented simulate and revert operations explicitly disabled", () => {
+  test("discovers implemented simulate, revert, and correction per REST/MCP surface without send or delete authority", () => {
     const organization = createOrganization(repository);
 
     for (const operation of ["simulate", "revert"] as const) {

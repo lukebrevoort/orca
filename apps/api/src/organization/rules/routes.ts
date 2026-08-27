@@ -13,6 +13,10 @@ import {
   sqliteRuleChangeSetCapabilitySource,
 } from "./change-set-sqlite.ts";
 import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
+import {
+  OrcaThreadCorrectionError,
+  correctOrganizationThread,
+} from "./correction.ts";
 import { HistoricalSimulationBindingError, createHistoricalRuleSimulationService } from "./simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./simulation-sqlite.ts";
 import {
@@ -160,6 +164,32 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
         if (error instanceof HistoricalSimulationBindingError) return c.json({ error: { code: error.code, message: error.message } }, 409);
         if (error instanceof Error && /Account scope is not owned/.test(error.message)) return c.json({ error: { code: "account_denied", message: error.message } }, 403);
         if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid historical Simulation request" } }, 400);
+        throw error;
+      }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.post("/v1/organization/threads/:threadId/correct", requireAuth({ dbFactory }), async (c) => {
+    const client = dbFactory();
+    try {
+      let request: unknown;
+      try { request = await c.req.json(); } catch { return c.json({ error: { code: "validation_error", message: "Correction requires a valid JSON request" } }, 400); }
+      if (typeof request === "object" && request !== null && "threadId" in request && request.threadId !== c.req.param("threadId")) {
+        return c.json({ error: { code: "validation_error", message: "Path and correction Thread IDs must match" } }, 400);
+      }
+      try {
+        const workspaceId = c.get("auth").userId;
+        return c.json(correctOrganizationThread(client.db, {
+          actor: { id: workspaceId, type: "human" }, workspaceId, request,
+        }));
+      } catch (error) {
+        if (error instanceof OrcaThreadCorrectionError) {
+          const status = error.code === "thread_not_found" ? 404
+            : error.code === "revision_conflict" || error.code === "idempotency_conflict" ? 409
+              : error.code === "evaluation_exhausted" ? 503 : 403;
+          return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Thread correction request" } }, 400);
         throw error;
       }
     } finally { client.sqlite.close(); }

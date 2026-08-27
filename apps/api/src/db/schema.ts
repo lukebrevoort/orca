@@ -1452,6 +1452,26 @@ export const organizationMutationAttempts = sqliteTable(
   }),
 );
 
+/** Exact, actor-bound idempotency receipts for production user.corrected evaluation. */
+export const organizationCorrectionReceipts = sqliteTable(
+  "organization_correction_receipts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    actorType: text("actor_type").notNull(),
+    actorId: text("actor_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    commandDigest: text("command_digest").notNull(),
+    responseJson: text("response_json").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    actorKeyUniqueIdx: uniqueIndex("organization_correction_receipts_actor_key_unique_idx")
+      .on(table.workspaceId, table.actorType, table.actorId, table.idempotencyKey),
+    workspaceCreatedIdx: index("organization_correction_receipts_workspace_created_idx").on(table.workspaceId, table.createdAt),
+  }),
+);
+
 export const mcpAccessTokens = sqliteTable(
   "mcp_access_tokens",
   {

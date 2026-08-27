@@ -577,6 +577,32 @@
 .rule-lifecycle dd { margin: 4px 0 0; color: var(--desktop-ink); font: 650 13px/16px var(--desktop-sans); }
 .rule-lifecycle p { color: var(--desktop-muted); font-size: 10px; line-height: 16px; }
 .rule-lifecycle-thread,.rule-lifecycle-evidence { padding-top: 10px; border-top: 1px solid var(--desktop-border); }
+.rule-lifecycle-operation { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-surface-hover); color: var(--desktop-ink) !important; }
+.rule-lifecycle-operation-no_access .rule-lifecycle-operation,.rule-lifecycle-operation-conflict .rule-lifecycle-operation,.rule-lifecycle-operation-transaction_failure .rule-lifecycle-operation { border-color: color-mix(in srgb,var(--desktop-warning) 55%,var(--desktop-border)); }
+.rule-lifecycle-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.rule-lifecycle-section-heading span { color: var(--desktop-muted); font: 800 9px/12px var(--desktop-mono); letter-spacing: .8px; text-transform: uppercase; }
+.rule-lifecycle-section-heading strong { color: var(--desktop-ink); font: 700 10px/14px var(--desktop-mono); }
+.rule-lifecycle-review,.rule-lifecycle-conflicts,.rule-lifecycle-audit { margin: 12px 0; padding: 12px; border: 1px solid var(--desktop-border); border-radius: 12px; background: var(--desktop-surface); }
+.rule-lifecycle-review details,.rule-lifecycle-audit details { margin-top: 7px; border-top: 1px solid var(--desktop-border); }
+.rule-lifecycle-review summary,.rule-lifecycle-audit summary { display: flex; cursor: pointer; flex-direction: column; gap: 2px; padding: 10px 0; color: var(--desktop-ink); font-size: 11px; font-weight: 750; }
+.rule-lifecycle-review summary:focus-visible,.rule-lifecycle-audit summary:focus-visible { outline: 2px solid var(--desktop-accent); outline-offset: 3px; }
+.rule-lifecycle-review summary small { color: var(--desktop-muted); font: 650 8px/12px var(--desktop-mono); overflow-wrap: anywhere; }
+.rule-lifecycle-trace-review { padding: 0 10px 5px; border-left: 2px solid var(--desktop-accent); }
+.rule-lifecycle-conflicts p { margin: 6px 0; overflow-wrap: anywhere; }
+.rule-lifecycle-audit ol { margin: 0; padding: 0; list-style: none; }
+.rule-lifecycle-audit li { display: grid; gap: 3px; padding: 9px 0; border-top: 1px solid var(--desktop-border); }
+.rule-lifecycle-audit li span { color: var(--desktop-accent); font: 750 8px/11px var(--desktop-mono); text-transform: uppercase; }
+.rule-lifecycle-audit li strong { font-size: 10px; overflow-wrap: anywhere; }
+.rule-lifecycle-audit li small { color: var(--desktop-muted); font: 500 9px/14px var(--desktop-mono); overflow-wrap: anywhere; }
+.rule-lifecycle-audit pre { max-height: 220px; margin: 0 0 8px; padding: 10px; overflow: auto; border-radius: 9px; background: var(--desktop-paper); color: var(--desktop-ink); font: 500 9px/14px var(--desktop-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.bre320-release-evidence { margin: 18px 26px 0; padding: 18px; border: 1px solid var(--desktop-border-strong); border-radius: 16px; background: var(--desktop-paper); color: var(--desktop-ink); }
+.bre320-release-evidence > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bre320-release-evidence > header span { color: var(--desktop-accent); font: 800 9px/12px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
+.bre320-release-evidence > header strong { color: var(--desktop-muted); font: 700 9px/13px var(--desktop-mono); }
+.bre320-state-matrix { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
+.bre320-state-matrix span { padding: 6px 9px; border: 1px solid var(--desktop-border); border-radius: 999px; background: var(--desktop-surface); color: var(--desktop-muted); font: 750 8px/11px var(--desktop-mono); text-transform: uppercase; }
+.bre320-state-matrix span[aria-current="true"] { border-color: var(--desktop-border-strong); background: var(--desktop-surface-hover); color: var(--desktop-ink); box-shadow: inset 0 -2px var(--desktop-accent); }
+.bre320-release-evidence .rule-lifecycle { margin-bottom: 0; }
 .rule-lifecycle > button,.rule-lifecycle .trace-revert-actions button { min-height: 38px; padding: 0 13px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-surface-hover); color: var(--desktop-ink); font-size: 10px; font-weight: 750; }
 .rule-lifecycle > button:hover,.rule-lifecycle > button:focus-visible,.rule-lifecycle .trace-revert-actions button:hover,.rule-lifecycle .trace-revert-actions button:focus-visible { border-color: var(--desktop-accent); color: var(--desktop-ink); }
 .rule-lifecycle > button:disabled,.rule-lifecycle .trace-revert-actions button:disabled { border-color: var(--desktop-border); background: var(--desktop-surface-hover); color: var(--desktop-faint); opacity: .72; }

@@ -4,13 +4,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { afterEach, describe, test } from "bun:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { serve } from "@hono/node-server";
 import { jwtVerify, SignJWT } from "jose";
 import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   propagatedAgentEventSchema,
+  bre320ProductionFailureFixture,
   organizationFallbackPlacementFixture,
   organizationLaneConfigurationFixture,
   type AgentEventListPage,
@@ -28,6 +29,10 @@ import { createApp } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
 import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
 import { getOAuthScopeForResourceScope, mapOAuthScopesToResourceScopes, type OrcaMcpTokenVerifier } from "./access-token.ts";
+import { persistGmailMessages } from "../providers/gmail/sync.ts";
+import type { GmailMessage } from "../providers/gmail/types.ts";
+import { createOrganizationViews } from "../organization/views/module.ts";
+import { createSqliteOrganizationViewsRepository } from "../organization/views/sqlite-repository.ts";
 
 const issuer = "https://identity.orca.test";
 const resource = "https://api.orca.test/mcp";
@@ -149,6 +154,10 @@ const organizationDescribeFixture: OrganizationDescribeResponse = {
   capabilities: {
     operations: { describe: true, query: true, simulate: false, apply: false, revert: false },
     authority: { sendMail: false, deleteProviderMail: false },
+    surfaces: {
+      rest: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false },
+      mcp: { describe: true, query: true, simulate: false, apply: false, revert: false, correct: false },
+    },
   },
 };
 
@@ -800,18 +809,41 @@ describe("Orca scoped MCP server", () => {
     }
   });
 
-  test("runs all five Organization operations with a control-only grant and preserves legacy read-only describe/query", async () => {
+  test("runs the canonical fixture journey with mail-metadata plus Organization control and preserves read-only describe/query", async () => {
     const { app, db, sqlite } = createFixture();
     try {
-      const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+      const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control", "orca:mail.metadata:read"] });
       const scope = { workspaceId: "user_a", accountIds: ["account_a"] };
+      db.insert(threads).values(bre320ProductionFailureFixture.historicalThreads.map((item) => ({
+        id: item.id, accountId: "account_a", providerThreadId: item.providerThreadId, subject: item.subject,
+        latestReceivedAt: new Date(item.receivedAt), messageCount: 1,
+      }))).run();
+      db.insert(emails).values(bre320ProductionFailureFixture.historicalThreads.map((item) => ({
+        id: item.messageId, accountId: "account_a", threadId: item.id, providerMessageId: item.providerMessageId,
+        fromAddress: "alerts@deploy.example", fromName: "Deploy System", subject: item.subject,
+        snippet: item.subject, bodyText: `Production fixture · ${item.subject}`, receivedAt: new Date(item.receivedAt),
+        humanSignal: 2, humanClassification: "automated_or_bulk" as const,
+        humanClassificationReasons: JSON.stringify(["auto_submitted_header"]), humanClassifierVersion: "m5-v1",
+      }))).run();
       const describe = await callMcp(app, token, "tools/call", {
         name: "describe_organization",
         arguments: { ...scope, expectedWorkspaceRevision: 1, resourceFamilies: ["workspace_schema", "mail", "thread", "lane", "view", "collection", "facet", "context", "workflow_state", "rule", "change_set", "trace"] },
       });
       const described = (await rpcBody(describe)).result.structuredContent;
       assert.deepEqual(described.capabilities.operations, { describe: true, query: true, simulate: true, apply: true, revert: true });
+      assert.deepEqual(described.capabilities.surfaces, {
+        rest: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false },
+        mcp: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true },
+      });
       assert.deepEqual(described.capabilities.authority, { sendMail: false, deleteProviderMail: false });
+      const historicalMail = await rpcBody(await callMcp(app, token, "tools/call", {
+        name: "search_mail",
+        arguments: { classification: "all", attention: "all", query: "Production", limit: 20 },
+      }));
+      assert.ok(historicalMail.result?.structuredContent, JSON.stringify(historicalMail));
+      assert.deepEqual(new Set(historicalMail.result.structuredContent.messages
+        .filter((message: { id: string }) => message.id.startsWith("bre320-"))
+        .map((message: { threadId: string }) => message.threadId)), new Set(bre320ProductionFailureFixture.historicalThreads.map((item) => item.id)));
 
       const laneArguments = {
           ...scope,
@@ -820,6 +852,8 @@ describe("Orca scoped MCP server", () => {
           target: { kind: "lanes", request: { id: "mcp-lanes-r1", idempotencyKey: "mcp-lanes-r1", expectedWorkspaceRevision: 1, actions: [
             { kind: "define_lane_policy", id: "policy-focus", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
             { kind: "define_lane", id: "lane-focus", name: "Focus", position: 1, defaultPolicyId: "policy-focus" },
+            { kind: "define_lane_policy", id: bre320ProductionFailureFixture.lanePolicy.id, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
+            { kind: "define_lane", id: bre320ProductionFailureFixture.lanes.production.id, name: bre320ProductionFailureFixture.lanes.production.name, position: 2, defaultPolicyId: bre320ProductionFailureFixture.lanePolicy.id },
           ] } },
         };
       const lanes = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: laneArguments });
@@ -840,8 +874,8 @@ describe("Orca scoped MCP server", () => {
       const facetArguments = {
         ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "facet",
         target: { kind: "facets_workflow", request: { id: "mcp-facets-r1", idempotencyKey: "mcp-facets-r1", expectedWorkspaceRevision: structureRevision, actions: [
-          { kind: "define_facet", id: "facet-owner", name: "Owner", position: 0, valueType: { kind: "text", maxLength: 200 }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null },
-          { kind: "define_workflow_state", id: "state-review", name: "Needs review", position: 0 },
+          { kind: "define_facet", id: bre320ProductionFailureFixture.facet.id, name: bre320ProductionFailureFixture.facet.name, position: 0, valueType: { kind: "text", maxLength: 200 }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null },
+          { kind: "define_workflow_state", id: bre320ProductionFailureFixture.workflow.id, name: bre320ProductionFailureFixture.workflow.name, position: 0 },
         ] } },
       };
       const facets = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: facetArguments });
@@ -863,24 +897,24 @@ describe("Orca scoped MCP server", () => {
 
       const view = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
         ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "view",
-        target: { kind: "view_create", request: { idempotencyKey: "mcp-view-r1", expectedWorkspaceRevision: structureRevision, name: "Agent review", description: "Fixture View", color: "#0b9b84", position: 0, definition: { revision: 1, accountIds: ["account_a"] } } },
+        target: { kind: "view_create", request: { idempotencyKey: "mcp-view-r1", expectedWorkspaceRevision: structureRevision, name: bre320ProductionFailureFixture.view.name, description: bre320ProductionFailureFixture.view.description, color: bre320ProductionFailureFixture.view.color, position: 0, definition: { revision: 1, accountIds: ["account_a"], laneIds: [bre320ProductionFailureFixture.lanes.production.id] } } },
       } });
       const viewBody = await rpcBody(view);
       assert.ok(viewBody.result?.structuredContent, JSON.stringify(viewBody));
       assert.deepEqual(viewBody.result.structuredContent.changeSetIds, {
         applied: [db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "mcp-view-r1")).get()!.id], rejected: [],
       });
-      assert.equal(viewBody.result.structuredContent.result.name, "Agent review");
+      assert.equal(viewBody.result.structuredContent.result.name, bre320ProductionFailureFixture.view.name);
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
       const collection = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
         ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "collection",
-        target: { kind: "collection", request: { idempotencyKey: "mcp-collection-r1", change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: "Launch", color: "#336699" } } } },
+        target: { kind: "collection", request: { idempotencyKey: "mcp-collection-r1", change: { kind: "collection", action: "create", accountId: "account_a", collection: { name: bre320ProductionFailureFixture.collection.name, color: bre320ProductionFailureFixture.collection.color } } } },
       } });
       const collectionBody = await rpcBody(collection);
       assert.ok(collectionBody.result?.structuredContent, JSON.stringify(collectionBody));
       assert.equal(collectionBody.result.structuredContent.changeSetIds.applied[0], collectionBody.result.structuredContent.result.change.id);
-      assert.equal(collectionBody.result.structuredContent.result.state.collections[0].name, "Launch");
+      assert.equal(collectionBody.result.structuredContent.result.state.collections[0].name, bre320ProductionFailureFixture.collection.name);
       structureRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
 
       const context = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
@@ -892,9 +926,22 @@ describe("Orca scoped MCP server", () => {
       assert.equal(contextBody.result.structuredContent.changeSetIds.applied[0], contextBody.result.structuredContent.result.change.id);
       assert.equal(contextBody.result.structuredContent.result.state.contextTypes[0].name, "Project");
       structureRevision = contextBody.result.structuredContent.result.state.workspaceRevision;
+      const projectType = contextBody.result.structuredContent.result.state.contextTypes[0];
+      const relationship = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "context",
+        target: { kind: "context", request: { idempotencyKey: "mcp-context-relationship-r1", expectedWorkspaceRevision: structureRevision, actions: [{ kind: "create_relationship_type", contextTypeId: projectType.id, name: bre320ProductionFailureFixture.context.relationshipName, inverseName: "contains", direction: "thread_to_context", position: 0, maximumPerThread: 20 }] } },
+      } }));
+      assert.ok(relationship.result?.structuredContent, JSON.stringify(relationship));
+      structureRevision = relationship.result.structuredContent.result.state.workspaceRevision;
+      const contextInstance = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+        ...scope, expectedWorkspaceRevision: structureRevision, resourceFamily: "context",
+        target: { kind: "context", request: { idempotencyKey: "mcp-context-instance-r1", expectedWorkspaceRevision: structureRevision, actions: [{ kind: "create_context", contextTypeId: projectType.id, name: bre320ProductionFailureFixture.context.name }] } },
+      } }));
+      assert.ok(contextInstance.result?.structuredContent, JSON.stringify(contextInstance));
+      structureRevision = contextInstance.result.structuredContent.result.state.workspaceRevision;
 
       const laneWorkspaceRevision = structureRevision;
-      const source = `orca 1\nrule "Fixture failures"\nevent message.received\nwhen subject contains "failed"\naction route lane "Focus"\nbecause "Fixture-backed failures need deterministic review"`;
+      const source = bre320ProductionFailureFixture.rule.source;
       const compile = await callMcp(app, token, "tools/call", {
         name: "apply_organization",
         arguments: {
@@ -914,8 +961,9 @@ describe("Orca scoped MCP server", () => {
       assert.equal(compiled.revision.actor.type, "agent");
       assert.match(compiled.revision.actor.id, /chatgpt\.com/);
 
-      db.insert(organizationThreadStates).values({ workspaceId: "user_a", accountId: "account_a", threadId: "thread_a_2", revision: 1 }).run();
-
+      db.insert(organizationThreadStates).values(bre320ProductionFailureFixture.historicalThreads.map((item) => ({
+        workspaceId: "user_a", accountId: "account_a", threadId: item.id, revision: 1,
+      }))).run();
       const currentWorkspace = db.select().from(organizationWorkspaceStates).get()!.revision;
       const simulationRequest = {
         ruleId: compiled.rule.id,
@@ -934,7 +982,9 @@ describe("Orca scoped MCP server", () => {
       assert.equal(simulated.state, "simulated");
       assert.equal(simulated.risk, "low");
       assert.ok(simulated.winningRules.some((winner: { ruleId: string }) => winner.ruleId === compiled.rule.id));
-      assert.ok(simulated.observedReasons.some((reason: { threadId: string; reason: string }) => reason.threadId === "thread_a_2" && reason.reason.length > 0));
+      for (const historical of bre320ProductionFailureFixture.historicalThreads.filter((item) => item.subject.includes("failed"))) {
+        assert.ok(simulated.observedReasons.some((reason: { threadId: string; reason: string }) => reason.threadId === historical.id && reason.reason === bre320ProductionFailureFixture.rule.reason));
+      }
 
       const ruleSetRevision = db.select().from(organizationRuleSets).get()!.revision;
       const activationRequest = {
@@ -1010,29 +1060,94 @@ describe("Orca scoped MCP server", () => {
 
       const organized = await callMcp(app, token, "tools/call", {
         name: "query_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, resourceFamilies: ["mail", "thread", "lane", "rule", "trace"], threadId: "thread_a_2", attention: "all", classification: "all", limit: 1 },
+        arguments: { ...scope, expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, resourceFamilies: ["mail", "thread", "lane", "rule", "trace"], threadId: bre320ProductionFailureFixture.historicalThreads[0].id, attention: "all", classification: "all", limit: 1 },
       });
       const organizedBody = await rpcBody(organized);
       assert.equal(organizedBody.result.structuredContent.threads[0].organization.lanePlacement.evidence.winningSource, "rule_revision");
+      assert.equal(organizedBody.result.structuredContent.threads[0].organization.lanePlacement.primaryLaneId, bre320ProductionFailureFixture.lanes.production.id);
+      assert.equal(organizedBody.result.structuredContent.threads[0].organization.lanePlacement.evidence.sourceId, compiled.revision.id);
+      assert.equal(organizedBody.result.structuredContent.threads[0].organization.lanePlacement.evidence.reason, "A production failure stays operationally visible and joins the weekly review.");
+
+      const live = bre320ProductionFailureFixture.liveThread;
+      const liveMessage: GmailMessage = {
+        id: live.providerMessageId, threadId: live.providerThreadId, internalDate: String(Date.parse(live.receivedAt)), labelIds: ["INBOX"], snippet: live.subject,
+        payload: { mimeType: "text/plain", headers: [
+          { name: "From", value: "Deploy System <alerts@deploy.example>" },
+          { name: "To", value: "User A <a@example.com>" },
+          { name: "Subject", value: live.subject },
+        ], body: { data: Buffer.from("Payments are returning 500 responses.").toString("base64url") } },
+      };
+      await persistGmailMessages(db, { accountId: "account_a", accountEmail: "a@example.com", gmailMessages: [liveMessage], labelList: [], now: new Date(live.receivedAt), propagationTrigger: "sync" });
+      const liveThread = db.select().from(threads).where(and(eq(threads.accountId, "account_a"), eq(threads.providerThreadId, live.providerThreadId))).get()!;
+      const postLiveWorkspaceRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
+      const liveQuery = await rpcBody(await callMcp(app, token, "tools/call", { name: "query_organization", arguments: {
+        ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, resourceFamilies: ["mail", "thread", "lane", "rule", "trace"], threadId: liveThread.id, attention: "all", classification: "all", limit: 1,
+      } }));
+      assert.equal(liveQuery.result.structuredContent.threads[0].organization.lanePlacement.primaryLaneId, bre320ProductionFailureFixture.lanes.production.id);
+      assert.equal(liveQuery.result.structuredContent.threads[0].organization.lanePlacement.evidence.sourceId, compiled.revision.id);
+      assert.equal(liveQuery.result.structuredContent.threads[0].organization.lanePlacement.evidence.reason, "A production failure stays operationally visible and joins the weekly review.");
+      const weeklyReview = createOrganizationViews(createSqliteOrganizationViewsRepository(sqlite)).results({
+        scope: { workspaceId: "user_a", accountIds: ["account_a"], actor: { id: "user_a", type: "human" } },
+        viewId: viewBody.result.structuredContent.result.id,
+        query: { limit: 100 },
+      });
+      assert.deepEqual(new Set(weeklyReview.items.map((item) => item.threadId)), new Set([
+        bre320ProductionFailureFixture.historicalThreads[0].id,
+        bre320ProductionFailureFixture.historicalThreads[1].id,
+        liveThread.id,
+      ]));
 
       const reverted = await callMcp(app, token, "tools/call", {
         name: "revert_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, resourceFamily: "change_set", request: { changeSetId: appliedOutput.result.changeSetId, accountIds: ["account_a"], expectedWorkspaceRevision: appliedOutput.result.workspaceRevisionAfter, idempotencyKey: "mcp-revert-r1" } },
+        arguments: { ...scope, expectedWorkspaceRevision: postLiveWorkspaceRevision, resourceFamily: "change_set", request: { changeSetId: appliedOutput.result.changeSetId, accountIds: ["account_a"], expectedWorkspaceRevision: postLiveWorkspaceRevision, idempotencyKey: "mcp-revert-r1" } },
       });
       const revertedBody = await rpcBody(reverted);
       assert.equal(revertedBody.result.structuredContent.result.status, "reverted");
       assert.equal(revertedBody.result.structuredContent.result.revertsChangeSetId, appliedOutput.result.changeSetId);
 
+      const correctionWorkspaceRevision = revertedBody.result.structuredContent.result.workspaceRevisionAfter;
+      const correctionThreadRevision = db.select().from(organizationThreadStates).where(and(
+        eq(organizationThreadStates.workspaceId, "user_a"), eq(organizationThreadStates.accountId, "account_a"), eq(organizationThreadStates.threadId, bre320ProductionFailureFixture.historicalThreads[0].id),
+      )).get()?.revision ?? null;
+      const correctionArguments = {
+        ...scope,
+        expectedWorkspaceRevision: correctionWorkspaceRevision,
+        resourceFamily: "thread",
+        target: {
+          kind: "thread_correction",
+          request: {
+            accountId: "account_a", threadId: bre320ProductionFailureFixture.historicalThreads[0].id,
+            expectedWorkspaceRevision: correctionWorkspaceRevision,
+            expectedThreadRevision: correctionThreadRevision,
+            idempotencyKey: "mcp-user-corrected-r1",
+            reason: "The human confirmed this production-failure review classification.",
+          },
+        },
+      };
+      const correction = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: correctionArguments }));
+      assert.ok(correction.result?.structuredContent, JSON.stringify(correction));
+      assert.equal(correction.result.structuredContent.result.eventKind, "user.corrected");
+      assert.equal(correction.result.structuredContent.result.trace.event.cause, "user");
+      assert.equal(correction.result.structuredContent.result.actor.type, "agent");
+      assert.equal(correction.result.structuredContent.changeSetIds.applied.length, 1);
+      const correctionReplay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: correctionArguments }));
+      assert.deepEqual(correctionReplay.result.structuredContent, correction.result.structuredContent);
+
       db.update(mcpConnections).set({ scopes: "mail:read", updatedAt: new Date() }).where(eq(mcpConnections.id, "connection_a")).run();
       const mailOnlyToken = await signToken({ accountIds: ["account_a"], scopes: ["orca:mail.metadata:read"] });
+      const postCorrectionWorkspaceRevision = db.select().from(organizationWorkspaceStates).get()!.revision;
       const readOnlyDescribe = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
         name: "describe_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: revertedBody.result.structuredContent.result.workspaceRevisionAfter, resourceFamilies: ["workspace_schema"] },
+        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision, resourceFamilies: ["workspace_schema"] },
       }));
       assert.ok(readOnlyDescribe.result?.structuredContent, JSON.stringify(readOnlyDescribe));
+      assert.deepEqual(readOnlyDescribe.result.structuredContent.capabilities.surfaces, {
+        rest: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false },
+        mcp: { describe: true, query: true, simulate: false, apply: false, revert: false, correct: false },
+      });
       const readOnlyQuery = await rpcBody(await callMcp(app, mailOnlyToken, "tools/call", {
         name: "query_organization",
-        arguments: { ...scope, expectedWorkspaceRevision: revertedBody.result.structuredContent.result.workspaceRevisionAfter, resourceFamilies: ["mail", "thread"], attention: "all", classification: "all", limit: 1 },
+        arguments: { ...scope, expectedWorkspaceRevision: postCorrectionWorkspaceRevision, resourceFamilies: ["mail", "thread"], attention: "all", classification: "all", limit: 1 },
       }));
       assert.ok(readOnlyQuery.result?.structuredContent, JSON.stringify(readOnlyQuery));
       const deniedControl = await callMcp(app, mailOnlyToken, "tools/call", { name: "simulate_organization", arguments: { ...scope, expectedWorkspaceRevision: currentWorkspace, resourceFamily: "rule", request: simulationRequest } });
