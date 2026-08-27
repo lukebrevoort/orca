@@ -42,11 +42,11 @@ export function recordOrganizationMutationAttempt(input: {
 }): void {
   const request = "target" in input.query ? input.query.target.request : input.query.request;
   const reasonCode = stableMutationFailureCode(input.error);
-  const ownedConnection = input.db.select({ id: mcpConnections.id }).from(mcpConnections).where(and(
-    eq(mcpConnections.id, input.connectionId),
-    eq(mcpConnections.userId, input.workspaceId),
+  input.db.transaction((tx) => {
+  const ownedConnection = tx.select({ id: mcpConnections.id }).from(mcpConnections).where(and(
+    eq(mcpConnections.id, input.connectionId), eq(mcpConnections.userId, input.workspaceId),
   )).get();
-  input.db.insert(organizationMutationAttempts).values({
+  tx.insert(organizationMutationAttempts).values({
     id: input.id ?? randomUUID(),
     workspaceId: input.workspaceId,
     connectionId: ownedConnection?.id ?? null,
@@ -62,16 +62,17 @@ export function recordOrganizationMutationAttempt(input: {
     createdAt: input.now ?? new Date(),
   }).onConflictDoNothing().run();
 
-  const retained = input.db.select({ id: organizationMutationAttempts.id })
+  const retained = tx.select({ id: organizationMutationAttempts.id })
     .from(organizationMutationAttempts)
     .where(eq(organizationMutationAttempts.workspaceId, input.workspaceId))
     .orderBy(desc(organizationMutationAttempts.createdAt), desc(organizationMutationAttempts.id))
     .limit(maximumMutationAttemptAuditRowsPerWorkspace)
     .all().map(({ id }) => id);
   if (retained.length === maximumMutationAttemptAuditRowsPerWorkspace) {
-    input.db.delete(organizationMutationAttempts).where(and(
+    tx.delete(organizationMutationAttempts).where(and(
       eq(organizationMutationAttempts.workspaceId, input.workspaceId),
       notInArray(organizationMutationAttempts.id, retained),
     )).run();
   }
+  });
 }

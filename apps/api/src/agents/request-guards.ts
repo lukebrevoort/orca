@@ -64,6 +64,9 @@ export class McpRequestLimiter {
   }
 
   #state(map: Map<string, LimitKeyState>, key: string, now: number): LimitKeyState {
+    for (const [entryKey, entry] of map) {
+      if (entryKey !== key && entry.inFlight === 0 && now - entry.windowStartedAt >= this.#windowMilliseconds) map.delete(entryKey);
+    }
     let state = map.get(key);
     if (!state) {
       state = { windowStartedAt: now, cost: 0, inFlight: 0 };
@@ -188,6 +191,7 @@ export async function boundedMcpRequest(request: Request): Promise<BoundedMcpReq
     headers,
     body: bytes,
     redirect: request.redirect,
+    signal: request.signal,
   });
   let body: unknown = null;
   try {
