@@ -74,6 +74,7 @@ import type { OrcaAgentAuthorizationContext } from "./authorization.ts";
 import {
   McpRequestLimiter,
   boundedMcpRequest,
+  mcpInvalidRequestResponse,
   mcpRateLimitResponse,
   mcpToolRequestCost,
 } from "./request-guards.ts";
@@ -704,6 +705,9 @@ export function createOrcaMcpHttpHandler(options: OrcaMcpHttpOptions) {
       let requiredScopes: string[] = [];
       const bounded = await boundedMcpRequest(request);
       if (!bounded.allowed) return bounded.response;
+      if (Array.isArray(bounded.body)) {
+        return mcpInvalidRequestResponse("Orca MCP accepts one JSON-RPC request per bounded HTTP request; batches are not supported");
+      }
       request = bounded.request;
       if (request.method === "POST") {
         const body = bounded.body;

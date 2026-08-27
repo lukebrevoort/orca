@@ -329,6 +329,118 @@ function authorizeReplay(input: {
   )) {
     denyReplay("invalid_change_set", "The legacy Change Set authority requirements are inconsistent");
   }
+  return trace;
+}
+
+function validateDurableApplyReplay(input: {
+  executor: Database;
+  row: typeof organizationChangeSets.$inferSelect;
+  request: ReturnType<typeof orcaRuleActivationRequestSchema.parse>;
+  approval: McpOrganizationApproval | undefined;
+  approvalGrant: McpOrganizationApprovalGrant | undefined;
+  trace: ReturnType<typeof organizationAuthorityTraceSchema.parse>;
+  now: Date;
+  workspaceId: string;
+}) {
+  if (!input.approvalGrant) return;
+  if (!input.approval) denyReplay("approval_required", "The exact durable approval for this replay is unavailable");
+  const expectedId = durableApprovalId({
+    grant: input.approvalGrant,
+    workspaceId: input.workspaceId,
+    accountIds: input.request.accountIds,
+    request: input.request,
+    risk: input.approval.acknowledgedRisk,
+  });
+  const persisted = input.executor.select().from(mcpOrganizationApprovals)
+    .where(eq(mcpOrganizationApprovals.id, expectedId)).get();
+  const expectedRevisions = canonicalOrganizationJson({
+    workspace: input.request.expectedWorkspaceRevision,
+    rule: input.request.expectedRuleRevision,
+    ruleSet: input.request.expectedRuleSetRevision,
+    resources: input.trace.expectedRevisions.resources,
+  });
+  if (!persisted
+    || persisted.workspaceId !== input.workspaceId
+    || persisted.connectionId !== input.approvalGrant.connectionId
+    || persisted.clientId !== input.approvalGrant.clientId
+    || persisted.approverUserId !== input.approvalGrant.approverUserId
+    || persisted.operation !== "apply"
+    || persisted.accountIdsDigest !== digest([...input.request.accountIds].sort())
+    || persisted.commandDigest !== input.row.commandDigest
+    || persisted.simulationId !== input.request.simulationId
+    || persisted.risk !== input.approval.acknowledgedRisk
+    || persisted.revisionsJson !== expectedRevisions
+    || persisted.expiresAt <= input.now
+    || persisted.consumedAt > input.now
+    || persisted.consumedByIdempotencyKey !== input.request.idempotencyKey) {
+    denyReplay("approval_required", "The durable approval for this replay is unavailable, mismatched, expired, or already consumed elsewhere");
+  }
+}
+
+function replayApplyWithinTransaction(input: {
+  executor: Database;
+  row: typeof organizationChangeSets.$inferSelect;
+  actor: OrganizationActor;
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  capabilitySource: RuleChangeSetCapabilitySource;
+  workspaceId: string;
+  request: ReturnType<typeof orcaRuleActivationRequestSchema.parse>;
+  approval: McpOrganizationApproval | undefined;
+  approvalGrant: McpOrganizationApprovalGrant | undefined;
+  now: Date;
+}): OrcaRuleChangeSetResult {
+  const liveCapability = loadRequiredCapability(input.capabilitySource, input.executor, input.workspaceId);
+  validateCurrentCapabilityClaim({
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    liveCapability,
+    workspaceId: input.workspaceId,
+    accountIds: input.request.accountIds,
+    operation: "apply",
+  });
+  const trace = authorizeReplay({
+    row: input.row,
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    liveCapability,
+    workspaceId: input.workspaceId,
+    accountIds: input.request.accountIds,
+    operation: "apply",
+    idempotencyKey: input.request.idempotencyKey,
+  });
+  validateDurableApplyReplay({ ...input, trace });
+  return parseReplay(input.row, input.request, input.approval);
+}
+
+function replayRevertWithinTransaction(input: {
+  executor: Database;
+  row: typeof organizationChangeSets.$inferSelect;
+  actor: OrganizationActor;
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  capabilitySource: RuleChangeSetCapabilitySource;
+  workspaceId: string;
+  request: ReturnType<typeof orcaRuleRevertRequestSchema.parse>;
+}): OrcaRuleChangeSetResult {
+  const liveCapability = loadRequiredCapability(input.capabilitySource, input.executor, input.workspaceId);
+  validateCurrentCapabilityClaim({
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    liveCapability,
+    workspaceId: input.workspaceId,
+    accountIds: input.request.accountIds,
+    operation: "revert",
+  });
+  authorizeReplay({
+    row: input.row,
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    liveCapability,
+    workspaceId: input.workspaceId,
+    accountIds: input.request.accountIds,
+    operation: "revert",
+    idempotencyKey: input.request.idempotencyKey,
+  });
+  return parseReplay(input.row, input.request);
 }
 
 function proposedWinners(trace: OrcaEvaluationTrace, revisionId: string) {
@@ -576,31 +688,18 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
       )).get();
       if (replay) {
-        authorizeReplay({
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          liveCapability,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "apply",
-          idempotencyKey: request.idempotencyKey,
-        });
-        if (approvalGrant) {
-          const persistedApproval = db.select().from(mcpOrganizationApprovals).where(and(
-            eq(mcpOrganizationApprovals.connectionId, approvalGrant.connectionId),
-            eq(mcpOrganizationApprovals.simulationId, request.simulationId),
+        return db.transaction((transaction) => {
+          const executor = transaction as unknown as Database;
+          const currentReplay = executor.select().from(organizationChangeSets).where(and(
+            eq(organizationChangeSets.workspaceId, input.workspaceId),
+            eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
           )).get();
-          if (!persistedApproval
-            || persistedApproval.clientId !== approvalGrant.clientId
-            || persistedApproval.approverUserId !== approvalGrant.approverUserId
-            || persistedApproval.consumedByIdempotencyKey !== request.idempotencyKey
-            || persistedApproval.commandDigest !== replay.commandDigest
-            || persistedApproval.expiresAt <= now()) {
-            throw new OrcaRuleChangeSetError("approval_required", "The durable approval for this replay is unavailable, mismatched, or expired");
-          }
-        }
-        return parseReplay(replay, request, approval);
+          if (!currentReplay) throw new OrcaRuleChangeSetError("revision_conflict", "The cached Change Set changed before replay authorization");
+          return replayApplyWithinTransaction({
+            executor, row: currentReplay, actor: input.actor, capabilitySnapshot, capabilitySource,
+            workspaceId: input.workspaceId, request, approval, approvalGrant, now: now(),
+          });
+        }, { behavior: "immediate" });
       }
 
       const revisionRow = db.select().from(organizationRuleRevisions).where(and(
@@ -700,7 +799,10 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           eq(organizationChangeSets.workspaceId, input.workspaceId),
           eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
         )).get();
-        if (duplicate) return parseReplay(duplicate, request, approval);
+        if (duplicate) return replayApplyWithinTransaction({
+          executor, row: duplicate, actor: input.actor, capabilitySnapshot, capabilitySource,
+          workspaceId: input.workspaceId, request, approval, approvalGrant, now: now(),
+        });
 
         const currentWorkspace = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
         const currentRule = executor.select().from(organizationRules).where(and(
@@ -1065,17 +1167,18 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
       )).get();
       if (replay) {
-        authorizeReplay({
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          liveCapability,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "revert",
-          idempotencyKey: request.idempotencyKey,
-        });
-        return parseReplay(replay, request);
+        return db.transaction((transaction) => {
+          const executor = transaction as unknown as Database;
+          const currentReplay = executor.select().from(organizationChangeSets).where(and(
+            eq(organizationChangeSets.workspaceId, input.workspaceId),
+            eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
+          )).get();
+          if (!currentReplay) throw new OrcaRuleChangeSetError("revision_conflict", "The cached Change Set changed before replay authorization");
+          return replayRevertWithinTransaction({
+            executor, row: currentReplay, actor: input.actor, capabilitySnapshot, capabilitySource,
+            workspaceId: input.workspaceId, request,
+          });
+        }, { behavior: "immediate" });
       }
 
       const original = db.select().from(organizationChangeSets).where(and(
@@ -1169,7 +1272,10 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           eq(organizationChangeSets.workspaceId, input.workspaceId),
           eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
         )).get();
-        if (duplicate) return parseReplay(duplicate, request);
+        if (duplicate) return replayRevertWithinTransaction({
+          executor, row: duplicate, actor: input.actor, capabilitySnapshot, capabilitySource,
+          workspaceId: input.workspaceId, request,
+        });
 
         const currentOriginal = executor.select().from(organizationChangeSets).where(and(
           eq(organizationChangeSets.workspaceId, input.workspaceId),

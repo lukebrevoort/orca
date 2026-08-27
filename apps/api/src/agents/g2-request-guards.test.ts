@@ -89,12 +89,34 @@ describe("BRE-319 MCP exhaustion guards", () => {
     if (recovered.allowed) recovered.release();
   });
 
+  test("releases an in-flight lease after a rate-window rollover without poisoning later windows", () => {
+    let now = 1_000;
+    const limiter = new McpRequestLimiter({
+      now: () => now,
+      windowMilliseconds: 1_000,
+      maximumConnectionCost: 10,
+      maximumWorkspaceCost: 10,
+      maximumConnectionInFlight: 1,
+      maximumWorkspaceInFlight: 1,
+    });
+    const first = limiter.acquire({ connectionId: "connection", workspaceId: "workspace", cost: 1 });
+    assert.equal(first.allowed, true);
+    now = 2_001;
+    assert.equal(limiter.acquire({ connectionId: "connection", workspaceId: "workspace", cost: 1 }).allowed, false);
+    if (first.allowed) first.release();
+    now = 3_002;
+    const recovered = limiter.acquire({ connectionId: "connection", workspaceId: "workspace", cost: 1 });
+    assert.equal(recovered.allowed, true, "release must decrement the current key state after rollover");
+    if (recovered.allowed) recovered.release();
+  });
+
   test("exports every stable BRE-319 denial and exhaustion error code", () => {
     for (const code of [
       "denial",
       "approval_required",
       "simulation_mismatch",
       "idempotency_conflict",
+      "invalid_request",
       "revision_conflict",
       "payload_limit",
       "rate_limit",
@@ -172,5 +194,72 @@ describe("BRE-319 MCP exhaustion guards", () => {
     assert.equal(rateLimited.status, 429);
     assert.equal((await rateLimited.json()).error.code, "rate_limit");
     assert.equal(verifierCalls, 2);
+  });
+
+  test("rejects JSON-RPC batches before authorization or partial tool execution", async () => {
+    const issuer = "https://identity.orca.test";
+    const resource = "https://api.orca.test/mcp";
+    let verifierCalls = 0;
+    let dispatchCalls = 0;
+    const unavailable = () => { throw new Error("unexpected tool dispatch"); };
+    const emptyCounts = {
+      attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 },
+      classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 },
+    };
+    const handler = createOrcaMcpHttpHandler({
+      dataSource: {
+        getCurrentAccountIds: () => ["account"],
+        describeOrganization: unavailable,
+        queryOrganization: unavailable,
+        simulateOrganization: unavailable,
+        applyOrganization: unavailable,
+        revertOrganization: unavailable,
+        searchMail: () => {
+          dispatchCalls += 1;
+          return { messages: [], counts: emptyCounts, nextCursor: null };
+        },
+        getThread: unavailable,
+        listAgentEvents: unavailable,
+        getConnectionStatus: unavailable,
+        sourceUrl: () => resource,
+      },
+      policy: { enabled: true, issuer, resource },
+      requestLimiter: new McpRequestLimiter({ maximumConnectionCost: 2, maximumWorkspaceCost: 2 }),
+      verifier: {
+        async verifyAccessToken(token) {
+          verifierCalls += 1;
+          return {
+            token,
+            clientId: "client",
+            scopes: ["mail:read"],
+            expiresAt: Math.floor(Date.now() / 1_000) + 600,
+            resource: new URL(resource),
+            extra: {
+              orcaAuthorization: orcaAgentAuthorizationContextSchema.parse({
+                connectionId: "connection", clientId: "client", userId: "workspace", accountIds: ["account"],
+                issuer, resource, scopes: ["orca:mail.metadata:read"], issuedAt: new Date(), expiresAt: new Date(Date.now() + 600_000),
+              }),
+              grantRevokedAt: null,
+            },
+          };
+        },
+      },
+    });
+    const request = (id: number) => ({
+      jsonrpc: "2.0", id, method: "tools/call",
+      params: { name: "search_mail", arguments: { accountId: "account", limit: 1 } },
+    });
+    const response = await handler.fetch(new Request(resource, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer bounded-token", host: "api.orca.test",
+        accept: "application/json, text/event-stream", "content-type": "application/json",
+      },
+      body: JSON.stringify([request(1), request(2)]),
+    }));
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.code, "invalid_request");
+    assert.equal(verifierCalls, 0);
+    assert.equal(dispatchCalls, 0);
   });
 });

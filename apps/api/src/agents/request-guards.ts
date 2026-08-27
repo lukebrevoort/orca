@@ -65,9 +65,15 @@ export class McpRequestLimiter {
 
   #state(map: Map<string, LimitKeyState>, key: string, now: number): LimitKeyState {
     let state = map.get(key);
-    if (!state || now - state.windowStartedAt >= this.#windowMilliseconds) {
-      state = { windowStartedAt: now, cost: 0, inFlight: state?.inFlight ?? 0 };
+    if (!state) {
+      state = { windowStartedAt: now, cost: 0, inFlight: 0 };
       map.set(key, state);
+    } else if (now - state.windowStartedAt >= this.#windowMilliseconds) {
+      // Preserve object identity because active leases close over this state.
+      // Replacing it would make release() decrement an orphan while the map
+      // retained a permanently nonzero in-flight count.
+      state.windowStartedAt = now;
+      state.cost = 0;
     }
     return state;
   }
@@ -124,14 +130,18 @@ export function mcpToolRequestCost(name: string | null): number {
   return name && name in costs ? costs[name as OrcaMcpToolName] : 1;
 }
 
-function typedLimitResponse(code: "payload_limit" | "rate_limit", message: string, status: 413 | 429, retryAfterSeconds?: number): Response {
+function typedBoundaryResponse(code: "invalid_request" | "payload_limit" | "rate_limit", message: string, status: 400 | 413 | 429, retryAfterSeconds?: number): Response {
   const headers = new Headers({ "content-type": "application/json; charset=UTF-8" });
   if (retryAfterSeconds !== undefined) headers.set("retry-after", String(retryAfterSeconds));
   return new Response(JSON.stringify(mcpToolErrorSchema.parse({ error: { code, message } })), { status, headers });
 }
 
 export function mcpRateLimitResponse(retryAfterSeconds: number): Response {
-  return typedLimitResponse("rate_limit", "The bounded Orca MCP request budget is exhausted; retry after the advertised interval", 429, retryAfterSeconds);
+  return typedBoundaryResponse("rate_limit", "The bounded Orca MCP request budget is exhausted; retry after the advertised interval", 429, retryAfterSeconds);
+}
+
+export function mcpInvalidRequestResponse(message: string): Response {
+  return typedBoundaryResponse("invalid_request", message, 400);
 }
 
 export type BoundedMcpRequest =
@@ -148,7 +158,7 @@ export async function boundedMcpRequest(request: Request): Promise<BoundedMcpReq
     const length = Number(declared);
     if (Number.isFinite(length) && length > mcpRequestLimits.maximumBodyBytes) {
       await request.body.cancel().catch(() => undefined);
-      return { allowed: false, response: typedLimitResponse("payload_limit", "The Orca MCP request body exceeds the 256 KiB limit", 413) };
+      return { allowed: false, response: typedBoundaryResponse("payload_limit", "The Orca MCP request body exceeds the 256 KiB limit", 413) };
     }
   }
 
@@ -161,7 +171,7 @@ export async function boundedMcpRequest(request: Request): Promise<BoundedMcpReq
     length += value.byteLength;
     if (length > mcpRequestLimits.maximumBodyBytes) {
       await reader.cancel().catch(() => undefined);
-      return { allowed: false, response: typedLimitResponse("payload_limit", "The Orca MCP request body exceeds the 256 KiB limit", 413) };
+      return { allowed: false, response: typedBoundaryResponse("payload_limit", "The Orca MCP request body exceeds the 256 KiB limit", 413) };
     }
     chunks.push(value);
   }

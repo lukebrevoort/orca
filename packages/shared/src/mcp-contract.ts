@@ -378,6 +378,7 @@ export const mcpToolErrorCodeSchema = z.enum([
   "denial",
   "integration_disabled",
   "invalid_cursor",
+  "invalid_request",
   "invalid_token",
   "not_found",
   "unauthorized",

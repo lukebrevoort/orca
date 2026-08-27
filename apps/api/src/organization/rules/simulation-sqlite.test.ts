@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
 import { and, eq, sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createSession } from "../../auth/session-store.ts";
@@ -13,6 +14,9 @@ import {
   emails,
   collectionThreads,
   collections,
+  mcpConnections,
+  mcpOAuthClients,
+  mcpOrganizationApprovals,
   oauthAccounts,
   organizationChangeActions,
   organizationChangeSets,
@@ -43,10 +47,19 @@ import { createRuleRevisionService } from "./service.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 import { createHistoricalRuleSimulationService } from "./simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./simulation-sqlite.ts";
-import { bre317ActionSupport, createSqliteRuleChangeSetService, sqliteRuleChangeSetCapabilitySource } from "./change-set-sqlite.ts";
+import {
+  bre317ActionSupport,
+  createSqliteRuleChangeSetService,
+  sqliteRuleChangeSetCapabilitySource,
+  type RuleChangeSetCapabilitySource,
+} from "./change-set-sqlite.ts";
 
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
+const replayCapabilityStates = sqliteTable("g2_replay_capability_state", {
+  workspaceId: text("workspace_id").primaryKey(),
+  revoked: integer("revoked").notNull(),
+});
 
 afterEach(() => {
   while (directories.length) rmSync(directories.pop()!, { recursive: true, force: true });
@@ -172,6 +185,65 @@ function snapshot(db: Awaited<ReturnType<typeof setup>>["db"]) {
 
 function validCapability(db: Awaited<ReturnType<typeof setup>>["db"]) {
   return sqliteRuleChangeSetCapabilitySource.load(db, { workspaceId: "workspace-1" })!.snapshot;
+}
+
+function prepareActivation(fixture: Awaited<ReturnType<typeof setup>>, idempotencyKey: string) {
+  const actor = { id: "workspace-1", type: "human" as const };
+  const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(fixture.db)).simulate({
+    actor,
+    workspaceId: "workspace-1",
+    request: {
+      ruleId: fixture.compiled.rule.id,
+      revisionId: fixture.compiled.revision.id,
+      workspaceSchemaRevision: fixture.compiled.revision.compiled.workspaceSchemaRevision,
+      accountIds: ["account-1"],
+      maximumThreads: 500,
+    },
+  });
+  const ruleSet = fixture.db.select().from(organizationRuleSets)
+    .where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+  return {
+    actor,
+    request: {
+      ruleId: fixture.compiled.rule.id,
+      revisionId: fixture.compiled.revision.id,
+      simulationId: simulation.simulationId,
+      accountIds: ["account-1"],
+      maximumThreads: 500,
+      expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+      expectedRuleRevision: fixture.compiled.rule.latestRevision,
+      expectedRuleSetRevision: ruleSet.revision,
+      idempotencyKey,
+    },
+  };
+}
+
+function installReplayCapabilityMarker(fixture: Awaited<ReturnType<typeof setup>>) {
+  fixture.sqlite.exec(`
+    CREATE TABLE g2_replay_capability_state (workspace_id TEXT PRIMARY KEY, revoked INTEGER NOT NULL);
+    INSERT INTO g2_replay_capability_state (workspace_id, revoked) VALUES ('workspace-1', 0);
+  `);
+  const other = createDatabaseClient(fixture.path);
+  const source = (revokeAfterFirstLoad: boolean): RuleChangeSetCapabilitySource => {
+    let loads = 0;
+    return {
+      load(executor, input) {
+        const row = executor.select({ revoked: replayCapabilityStates.revoked }).from(replayCapabilityStates)
+          .where(eq(replayCapabilityStates.workspaceId, input.workspaceId)).get();
+        const capability = sqliteRuleChangeSetCapabilitySource.load(executor, input);
+        loads += 1;
+        if (revokeAfterFirstLoad && loads === 1) {
+          other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'");
+        }
+        return capability ? { ...capability, revokedAt: row?.revoked ? "2026-08-26T12:01:00.000Z" : null } : null;
+      },
+    };
+  };
+  return {
+    other,
+    source,
+    revoke() { other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'"); },
+  };
 }
 
 describe("BRE-317 SQLite historical Simulation adapter", () => {
@@ -1190,6 +1262,180 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
       assert.equal(db.select().from(organizationWorkflowStates).where(eq(organizationWorkflowStates.id, "state-unrelated-human")).get()?.name, "Human follow-up");
       assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, "g2-unrelated-human-change")).get()?.status, "applied");
     } finally { sqlite.close(); }
+  }, 15_000);
+});
+
+describe("BRE-319 cached Change Set replay authority", () => {
+  test("denies an outer apply replay when a separate connection revokes authority after preflight", async () => {
+    const fixture = await setup();
+    const marker = installReplayCapabilityMarker(fixture);
+    try {
+      const input = prepareActivation(fixture, "g2-outer-apply-replay");
+      const capabilitySnapshot = validCapability(fixture.db);
+      const applied = createSqliteRuleChangeSetService(fixture.db).activate({
+        ...input, capabilitySnapshot, workspaceId: "workspace-1",
+      });
+      assert.throws(() => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: marker.source(true) }).activate({
+        ...input, capabilitySnapshot, workspaceId: "workspace-1",
+      }), /live Capability has been revoked/);
+      assert.equal(fixture.db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey)).all().length, 1);
+      assert.equal(applied.operation, "apply");
+    } finally {
+      marker.other.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 15_000);
+
+  test("denies an outer revert replay when a separate connection revokes authority after preflight", async () => {
+    const fixture = await setup();
+    const marker = installReplayCapabilityMarker(fixture);
+    try {
+      const activation = prepareActivation(fixture, "g2-outer-revert-original");
+      const capabilitySnapshot = validCapability(fixture.db);
+      const service = createSqliteRuleChangeSetService(fixture.db);
+      const applied = service.activate({ ...activation, capabilitySnapshot, workspaceId: "workspace-1" });
+      const request = {
+        changeSetId: applied.changeSetId,
+        accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+        idempotencyKey: "g2-outer-revert-replay",
+      };
+      const reverted = service.revert({ actor: activation.actor, capabilitySnapshot, workspaceId: "workspace-1", request });
+      assert.throws(() => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: marker.source(true) }).revert({
+        actor: activation.actor, capabilitySnapshot, workspaceId: "workspace-1", request,
+      }), /live Capability has been revoked/);
+      assert.equal(fixture.db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, request.idempotencyKey)).all().length, 1);
+      assert.equal(reverted.operation, "revert");
+    } finally {
+      marker.other.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 15_000);
+
+  test("denies an inner apply duplicate committed by a separate connection after the outer replay miss", async () => {
+    const fixture = await setup();
+    const marker = installReplayCapabilityMarker(fixture);
+    try {
+      const input = prepareActivation(fixture, "g2-inner-apply-replay");
+      const capabilitySnapshot = validCapability(fixture.db);
+      const winner = createSqliteRuleChangeSetService(marker.other.db);
+      const originalTransaction = fixture.db.transaction.bind(fixture.db);
+      let raced = false;
+      fixture.db.transaction = ((callback, config) => {
+        if (!raced) {
+          raced = true;
+          winner.activate({ ...input, capabilitySnapshot: validCapability(marker.other.db), workspaceId: "workspace-1" });
+          marker.revoke();
+        }
+        return originalTransaction(callback, config);
+      }) as typeof fixture.db.transaction;
+      assert.throws(() => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: marker.source(false) }).activate({
+        ...input, capabilitySnapshot, workspaceId: "workspace-1",
+      }), /live Capability has been revoked/);
+      assert.equal(raced, true);
+      assert.equal(fixture.db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey)).all().length, 1);
+    } finally {
+      marker.other.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 15_000);
+
+  test("denies an inner agent replay when another connection owns the winner's durable approval", async () => {
+    const fixture = await setup();
+    const other = createDatabaseClient(fixture.path);
+    try {
+      const input = prepareActivation(fixture, "g2-inner-approval-connection-replay");
+      const actor = { id: "g2-agent-client", type: "agent" as const };
+      const humanCapability = validCapability(fixture.db);
+      const capabilitySnapshot = { ...humanCapability, id: "g2-agent-capability", actor };
+      const capabilitySource: RuleChangeSetCapabilitySource = {
+        load: () => ({ snapshot: capabilitySnapshot, revokedAt: null }),
+      };
+      fixture.db.insert(mcpOAuthClients).values({ id: actor.id, name: "G2 client", redirectUris: "[]" }).run();
+      fixture.db.insert(mcpConnections).values([
+        { id: "g2-connection-a", userId: "workspace-1", clientId: actor.id, resource: "https://api.orca.test/mcp", scopes: "organization:control" },
+        { id: "g2-connection-b", userId: "workspace-1", clientId: actor.id, resource: "https://api.orca.test/mcp", scopes: "organization:control" },
+      ]).run();
+      const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(fixture.db)).prepare({
+        actor,
+        workspaceId: "workspace-1",
+        request: {
+          ruleId: input.request.ruleId,
+          revisionId: input.request.revisionId,
+          workspaceSchemaRevision: fixture.compiled.revision.compiled.workspaceSchemaRevision,
+          accountIds: input.request.accountIds,
+          maximumThreads: input.request.maximumThreads,
+        },
+      }).report;
+      const approval = {
+        source: "oauth_organization_control_grant" as const,
+        simulationId: input.request.simulationId,
+        acknowledgedRisk: simulation.risk,
+      };
+      const approvalGrant = {
+        connectionId: "g2-connection-a",
+        clientId: actor.id,
+        approverUserId: "workspace-1",
+        expiresAt: new Date(Date.now() + 600_000),
+      };
+      const originalTransaction = fixture.db.transaction.bind(fixture.db);
+      let raced = false;
+      fixture.db.transaction = ((callback, config) => {
+        if (!raced) {
+          raced = true;
+          createSqliteRuleChangeSetService(other.db, { capabilitySource }).activate({
+            actor, capabilitySnapshot, workspaceId: "workspace-1", request: input.request, approval, approvalGrant,
+          });
+          other.db.update(mcpOrganizationApprovals).set({ connectionId: "g2-connection-b" }).run();
+        }
+        return originalTransaction(callback, config);
+      }) as typeof fixture.db.transaction;
+      assert.throws(() => createSqliteRuleChangeSetService(fixture.db, { capabilitySource }).activate({
+        actor, capabilitySnapshot, workspaceId: "workspace-1", request: input.request, approval, approvalGrant,
+      }), (error: unknown) => error instanceof Error && "code" in error && error.code === "approval_required");
+      assert.equal(raced, true);
+      assert.equal(fixture.db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey)).all().length, 1);
+    } finally {
+      other.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 15_000);
+
+  test("denies an inner revert duplicate committed by a separate connection after the outer replay miss", async () => {
+    const fixture = await setup();
+    const marker = installReplayCapabilityMarker(fixture);
+    try {
+      const activation = prepareActivation(fixture, "g2-inner-revert-original");
+      const capabilitySnapshot = validCapability(fixture.db);
+      const applied = createSqliteRuleChangeSetService(fixture.db).activate({
+        ...activation, capabilitySnapshot, workspaceId: "workspace-1",
+      });
+      const request = {
+        changeSetId: applied.changeSetId,
+        accountIds: ["account-1"],
+        expectedWorkspaceRevision: applied.workspaceRevisionAfter,
+        idempotencyKey: "g2-inner-revert-replay",
+      };
+      const winner = createSqliteRuleChangeSetService(marker.other.db);
+      const originalTransaction = fixture.db.transaction.bind(fixture.db);
+      let raced = false;
+      fixture.db.transaction = ((callback, config) => {
+        if (!raced) {
+          raced = true;
+          winner.revert({ actor: activation.actor, capabilitySnapshot: validCapability(marker.other.db), workspaceId: "workspace-1", request });
+          marker.revoke();
+        }
+        return originalTransaction(callback, config);
+      }) as typeof fixture.db.transaction;
+      assert.throws(() => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: marker.source(false) }).revert({
+        actor: activation.actor, capabilitySnapshot, workspaceId: "workspace-1", request,
+      }), /live Capability has been revoked/);
+      assert.equal(raced, true);
+      assert.equal(fixture.db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, request.idempotencyKey)).all().length, 1);
+    } finally {
+      marker.other.sqlite.close();
+      fixture.sqlite.close();
+    }
   }, 15_000);
 });
 
