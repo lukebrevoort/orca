@@ -28,7 +28,7 @@ import {
   type WorkspaceThread,
   type WorkspaceThreadMessage,
 } from "@orca/shared";
-import { authorizeOrganizationOperation } from "./authority.ts";
+import { authorizeOrganizationOperation, canonicalOrganizationJson } from "./authority.ts";
 import { digestFacetWorkflowActions, validateFacetFilters, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 import {
   createOrganizationCollectionsPins,
@@ -40,7 +40,7 @@ import {
   type OrganizationContextsRepository,
 } from "./contexts/module.ts";
 import { digestLaneActions, fallbackPlacement, type OrganizationLaneSnapshot, type OrganizationLanesRepository } from "./lanes/module.ts";
-import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
+import { isAgentOrganizationActor, requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 export type OrganizationAttentionRule = {
   scope: "address" | "domain";
@@ -162,13 +162,40 @@ const facetSupport = Object.freeze({
 });
 
 function capabilitiesFor(repository: OrganizationRepository, scope: OrganizationReadScope, agentCapabilitySource?: OrganizationAgentCapabilitySource) {
+  const agentScope = isAgentOrganizationActor(scope.actor)
+    ? { actor: scope.actor, workspaceId: scope.workspaceId, accountIds: scope.accountIds }
+    : null;
+  const live = agentScope
+    ? agentCapabilitySource?.load(agentScope) ?? null
+    : null;
+  const snapshot = live?.revokedAt === null
+    && live.snapshot.actor.type === "agent"
+    && live.snapshot.actor.id === scope.actor.id
+    && live.snapshot.scope.workspaceId === scope.workspaceId
+    && canonicalOrganizationJson([...live.snapshot.scope.accountIds].sort()) === canonicalOrganizationJson([...scope.accountIds].sort())
+    ? live.snapshot
+    : null;
+  const grants = (
+    operation: OrganizationCapabilitySnapshot["operations"][number],
+    resourceFamilies: OrganizationCapabilitySnapshot["resourceFamilies"][number][],
+  ) => Boolean(snapshot?.operations.includes(operation)
+    && snapshot.actionFamilies.includes("organization_structure")
+    && resourceFamilies.some((family) => snapshot.resourceFamilies.includes(family)));
+  const supportedApplyFamilies: OrganizationCapabilitySnapshot["resourceFamilies"][number][] = [
+    ...(repository.lanes ? ["lane" as const, "thread" as const] : []),
+    ...(repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState ? ["facet" as const, "workflow_state" as const, "thread" as const] : []),
+    ...(repository.collectionsPins ? ["collection" as const, "shortcut" as const, "saved_query" as const] : []),
+    ...(repository.contexts ? ["context" as const] : []),
+  ];
   return {
     operations: {
       describe: true as const,
       query: true as const,
-      simulate: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
-      apply: (scope.actor.type === "human" || (scope.actor.type === "agent" && Boolean(agentCapabilitySource))) && Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes),
-      revert: scope.actor.type === "agent" && Boolean(agentCapabilitySource),
+      simulate: scope.actor.type === "agent" && grants("simulate", ["rule"]),
+      apply: scope.actor.type === "human"
+        ? Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes)
+        : supportedApplyFamilies.length > 0 && grants("apply", supportedApplyFamilies),
+      revert: scope.actor.type === "agent" && grants("revert", ["rule", "change_set"]),
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
   };

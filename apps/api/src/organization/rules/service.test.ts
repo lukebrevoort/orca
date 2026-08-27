@@ -39,7 +39,8 @@ type PersistedRuleRevision = {
 function setup(options: { agentCapabilitySource?: OrganizationAgentCapabilitySource; tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput; tamperReorder?: (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => RuleReorderInput } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-bre-314-service-"));
   directories.push(directory);
-  const client = createDatabaseClient(join(directory, "rules.sqlite"));
+  const path = join(directory, "rules.sqlite");
+  const client = createDatabaseClient(path);
   migrate(client.db, { migrationsFolder: migrations });
   client.db.insert(users).values([{ id: "owner", email: "owner@example.com" }, { id: "private", email: "private@example.com" }]).run();
   client.db.insert(oauthAccounts).values([
@@ -69,7 +70,7 @@ function setup(options: { agentCapabilitySource?: OrganizationAgentCapabilitySou
     id: (() => { let value = 0; return () => `id-${++value}`; })(),
     ...(options.agentCapabilitySource ? { agentCapabilitySource: options.agentCapabilitySource } : {}),
   });
-  return { ...client, repository, service };
+  return { ...client, path, repository, service };
 }
 
 afterEach(() => {
@@ -138,6 +139,43 @@ describe("Rule Revision service", () => {
       assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_rule_revisions").get() as { count: number }).count, 0);
     } finally { sqlite.close(); }
   });
+
+  test("rejects a Rule revision transaction duplicate committed by another Actor and Capability", () => {
+    const firstActor = { id: "first-client", type: "agent" as const };
+    const secondActor = { id: "second-client", type: "agent" as const };
+    const capability = (actor: typeof firstActor, id: string): OrganizationCapabilitySnapshot => ({
+      id, revision: 1, actor, scope: { workspaceId: "owner", accountIds: ["owner-account"] },
+      operations: ["query", "apply"], resourceFamilies: ["rule", "audit", "change_set"],
+      actionFamilies: ["organization_read", "organization_structure"],
+    });
+    const firstCapability = capability(firstActor, "first-grant");
+    const secondCapability = capability(secondActor, "second-grant");
+    const first = setup({ agentCapabilitySource: { load: () => ({ snapshot: firstCapability, revokedAt: null }) } });
+    const competing = createDatabaseClient(first.path);
+    try {
+      const secondRepository = createSqliteRuleRevisionRepository(competing.db);
+      const secondService = createRuleRevisionService(secondRepository, {
+        agentCapabilitySource: { load: () => ({ snapshot: secondCapability, revokedAt: null }) },
+        now: () => new Date("2026-08-25T12:00:00.000Z"), id: () => "second-change",
+      });
+      const request = { ruleId: "raced-rule", idempotencyKey: "rule-actor-race", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() };
+      const append = first.repository.append.bind(first.repository);
+      let interleaved = false;
+      first.repository.append = (input) => {
+        if (!interleaved) {
+          interleaved = true;
+          secondService.compile({ actor: secondActor, workspaceId: "owner", accountIds: ["owner-account"], request });
+        }
+        return append(input);
+      };
+      assert.throws(
+        () => first.service.compile({ actor: firstActor, workspaceId: "owner", accountIds: ["owner-account"], request }),
+        (error: unknown) => error instanceof RuleAuthorityError && error.code === "account_denied",
+      );
+      assert.equal(interleaved, true);
+      assert.equal((first.sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE idempotency_key=?").get(request.idempotencyKey) as { count: number }).count, 1);
+    } finally { competing.sqlite.close(); first.sqlite.close(); }
+  }, 20_000);
 
   test("paginates a large immutable history with a canonical Rule/head-bound keyset cursor", () => {
     const { service, sqlite } = setup();

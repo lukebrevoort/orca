@@ -57,16 +57,13 @@ const mcpOrganizationScopeSchema = z.object({
   expectedWorkspaceRevision: z.number().int().positive(),
 }).strict();
 
-export const mcpDescribeOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
-  resourceFamilies: z.array(organizationResourceFamilySchema).min(1).max(20),
-}).strict();
+export const mcpDescribeOrganizationInputSchema = mcpOrganizationScopeSchema;
 export type McpDescribeOrganizationInput = z.infer<typeof mcpDescribeOrganizationInputSchema>;
 
 export const mcpDescribeOrganizationOutputSchema = organizationDescribeResponseSchema;
 export type McpDescribeOrganizationOutput = z.infer<typeof mcpDescribeOrganizationOutputSchema>;
 
 export const mcpQueryOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
-  resourceFamilies: z.array(organizationResourceFamilySchema).min(1).max(20),
   threadId: nonEmptyStringSchema.optional(),
   attention: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
   classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
@@ -137,9 +134,12 @@ const mcpApplyTargetSchema = z.discriminatedUnion("kind", [
     approval: mcpOrganizationApprovalSchema,
   }).strict(),
 ]);
+const mcpApplyTargetKindSchema = z.enum([
+  "lanes", "facets_workflow", "view_create", "view_update", "collection", "context", "rule_revision", "rule_change_set",
+]);
 
 export const mcpApplyOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
-  resourceFamily: organizationResourceFamilySchema,
+  targetKind: mcpApplyTargetKindSchema,
   target: mcpApplyTargetSchema,
 }).strict().superRefine((value, context) => {
   const request = value.target.request as { expectedWorkspaceRevision?: number; workspaceSchemaRevision?: number; accountIds?: string[]; simulationId?: string };
@@ -153,12 +153,7 @@ export const mcpApplyOrganizationInputSchema = mcpOrganizationScopeSchema.extend
   if (value.target.kind === "rule_change_set" && value.target.approval.simulationId !== value.target.request.simulationId) {
     context.addIssue({ code: "custom", path: ["target", "approval", "simulationId"], message: "Approval must bind the exact Simulation" });
   }
-  const expectedFamily = value.target.kind === "lanes" ? "lane"
-    : value.target.kind === "facets_workflow" ? "facet"
-      : value.target.kind.startsWith("view_") ? "view"
-        : value.target.kind === "collection" ? "collection"
-          : value.target.kind === "context" ? "context" : "rule";
-  if (value.resourceFamily !== expectedFamily) context.addIssue({ code: "custom", path: ["resourceFamily"], message: "Resource family does not match the typed apply target" });
+  if (value.targetKind !== value.target.kind) context.addIssue({ code: "custom", path: ["targetKind"], message: "Target kind does not match the typed apply target" });
 });
 export type McpApplyOrganizationInput = z.infer<typeof mcpApplyOrganizationInputSchema>;
 
@@ -166,7 +161,10 @@ export const mcpOrganizationMutationOutputSchema = z.object({
   operation: z.enum(["apply", "revert"]),
   workspaceId: nonEmptyStringSchema,
   accountIds: z.array(nonEmptyStringSchema).min(1).max(20),
-  resourceFamily: organizationResourceFamilySchema,
+  targetKind: mcpApplyTargetKindSchema,
+  resourceFamilies: z.array(organizationResourceFamilySchema).min(1).max(20).superRefine((values, context) => {
+    if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Authority resource families must be unique" });
+  }),
   actor: organizationActorSchema,
   capabilityId: nonEmptyStringSchema,
   expectedWorkspaceRevision: z.number().int().positive(),
@@ -177,7 +175,7 @@ export const mcpOrganizationMutationOutputSchema = z.object({
 export type McpOrganizationMutationOutput = z.infer<typeof mcpOrganizationMutationOutputSchema>;
 
 export const mcpRevertOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
-  resourceFamily: z.literal("change_set"),
+  targetKind: z.literal("rule_change_set"),
   request: orcaRuleRevertRequestSchema,
 }).strict().superRefine((value, context) => {
   if (value.request.expectedWorkspaceRevision !== value.expectedWorkspaceRevision) {

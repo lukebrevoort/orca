@@ -292,7 +292,7 @@ function createServer(
     "describe_organization",
     {
       title: "Describe Orca organization",
-      description: "Inspect the provider-neutral Workspace Schema, authorized Accounts, and enabled Organization capabilities before querying Threads. This read-only slice cannot simulate, apply, revert, send, or delete mail.",
+      description: "Inspect the provider-neutral Workspace Schema, authorized Accounts, and live grant-derived Organization capabilities before querying Threads. This operation is read-only and never sends or deletes mail.",
       inputSchema: mcpDescribeOrganizationInputSchema,
       outputSchema: mcpDescribeOrganizationOutputSchema,
       annotations: toolConfig("describe_organization").annotations,
