@@ -11,15 +11,15 @@
 <body><main>
   <header class="hero">
     <div><div class="eyebrow">Orca · BRE-320 · M8 acceptance release</div><h1>Organization that a human can trust.</h1><p>Reproducible evidence for the canonical production-failure journey: historical mail, later live mail, weekly-review visibility, exact Rule explanations, human correction, Safety Lock, audited activation, and compensating revert.</p></div>
-    <aside class="verdict"><span class="label">Release disposition</span><strong>Implementation gates · pending final replay</strong><span class="pending">G3 · PENDING independent exact-SHA verdict</span><p class="small">Never replace this marker with PASS until a verifier reviews the final commit.</p></aside>
+    <aside class="verdict"><span class="label">Release disposition</span><strong class="pass">Implementation gates · PASS</strong><span class="pending">G3 · PENDING independent exact-SHA verdict</span><p class="small">Never replace the G3 marker with PASS until a verifier reviews the final commit.</p></aside>
   </header>
 
   <section><div class="label">Release identity</div><h2>Exact inputs and boundaries</h2><div class="facts">
     <div class="fact"><span>Verified base</span><strong><code>2b3bfa16a87b32201bd620022a92a7d600aa150d</code></strong></div>
-    <div class="fact"><span>Implementation commit</span><strong><code>IMPLEMENTATION_SHA_PENDING</code></strong></div>
+    <div class="fact"><span>Implementation commit</span><strong><code>436ee2f519d925dc3173c0e8abd2fc8554186826</code></strong></div>
     <div class="fact"><span>Canonical fixture</span><strong><code>bre320ProductionFailureFixture</code></strong></div>
     <div class="fact"><span>Fixture Workspace</span><strong><code>bre320-workspace / bre320-account</code></strong></div>
-  </div><p class="boundary"><strong>No send. No reply/forward. No provider delete. No arbitrary code.</strong>MCP discovery and authority evidence keep both provider-send and provider-delete false. The approved semantic surface remains bounded to Organization describe/query/simulate/apply/revert/correct.</p></section>
+  </div><p class="small">Verified stack integrated: BRE-318 <code>c798c26adfbf610bf0d5e6a6a815c0da9bafefad</code> and BRE-319 <code>9befd380a8cc8dcb67d2779cb894d69db01bc7be</code>; conflict resolution cross-checked against combined release <code>e27726634b49f32b12d58f582649813496d4a485</code>.</p><p class="boundary"><strong>No send. No reply/forward. No provider delete. No arbitrary code.</strong>MCP discovery and authority evidence keep both provider-send and provider-delete false. The approved semantic surface remains bounded to Organization describe/query/simulate/apply/revert/correct.</p></section>
 
   <section><div class="label">Criterion → reproducible evidence</div><h2>Acceptance manifest</h2><div class="criteria">
     <article class="criterion"><span>01 · external-agent journey</span><h3 class="pass">Fixture-backed, real MCP</h3><p><code>apps/api/src/agents/mcp.test.ts</code> · “runs the canonical fixture journey…” describes, searches historical mail, creates Lane + Policy + View + Collection + Facet + Context + Workflow State + Rule, simulates, approves, applies, queries, reverts, and corrects.</p></article>
@@ -29,7 +29,7 @@
     <article class="criterion"><span>05 · correction and compensation</span><h3 class="pass">REST · UI · MCP</h3><p><code>correction.test.ts</code> proves immutable <code>user.corrected</code> Trace, audited projection, exact replay, and authenticated REST. MCP calls <code>thread_correction</code>. Reader UI exposes Record correction beside Manual Override and Safety Lock.</p></article>
     <article class="criterion"><span>06 · targeted visual integration</span><h3 class="pass">Orca direction retained</h3><p>Only Organization review, reader Lane/Why/correction, operational states, and audit presentation changed. Inbox, reader, composer, and Zen structures remain intact; full build/regression command below detects drift.</p></article>
     <article class="criterion"><span>07 · responsive state evidence</span><h3 class="pass">Light/dark · 1440/1024</h3><p>Checked-in captures cover ready, hover, focus, selected, disabled/loading, unavailable, no-access, offline, conflict, transaction failure, active, and reverted. Agent-browser axe: 0 violations for the release panel and Thread drawer.</p></article>
-    <article class="criterion"><span>08 · release gates</span><h3>Pending final upstream integration replay</h3><p>Commands below cover typecheck, complete tests, build, lint, DB verifier, migration stack/replay/reset/isolation, language, MCP, BRE-318/319 regressions, and diff check.</p></article>
+    <article class="criterion"><span>08 · release gates</span><h3 class="pass">All implementation-side gates pass</h3><p>Focused Organization/MCP/evaluator/UI: 105/105. Language, authority, isolation, migration, and BRE-318/319 regressions: 95/95. Full workspace: 729/729. Typecheck, build, lint, 43-table DB lifecycle verifier, and exact-base diff check pass.</p></article>
     <article class="criterion"><span>09 · independent adversarial review</span><h3 class="pending">G3 PENDING exact final SHA</h3><p>G2 reference: <a href="security/bre-319-g2-authority-concurrency.html">BRE-319 G2 authority/concurrency report</a>. Final verifier must report no unresolved critical/high and explicitly confirm send/delete authority absent.</p></article>
     <article class="criterion"><span>10 · release manifest</span><h3 class="pass">This on-device artifact</h3><p>Every assertion links to a file, test name, screenshot, command, fixture identity, base SHA, expected outcome, G2 reference, and explicit G3 placeholder. <a href="artifacts/bre-320/release-evidence-manifest-light-1440.png">Open the full-page 1440 capture.</a></p></article>
   </div></section>
@@ -70,7 +70,7 @@ bun test apps/api/src/organization/rules/simulation-sqlite.test.ts --test-name-p
 bun test apps/web/src/desktop-switch.interaction.test.tsx apps/web/src/organization-trace.test.tsx apps/web/src/organization-lanes.test.tsx
 
 # Language, migration/reset, account isolation, and stacked regressions
-bun test apps/api/src/organization/rules/compiler.test.ts apps/api/src/organization/rules/evaluator.test.ts apps/api/src/organization/rules/evaluation-integration.test.ts apps/api/src/organization/rules/migration.test.ts apps/api/src/organization/rules/evaluation-migration.test.ts apps/api/src/organization/rules/ordering-migration.test.ts apps/api/src/organization/g2-migration.test.ts
+bun test packages/shared/src/orca-language.test.ts apps/api/src/organization/authority.test.ts apps/api/src/organization/module.test.ts apps/api/src/organization/replay-authorization.test.ts apps/api/src/organization/rules/compiler.test.ts apps/api/src/organization/rules/evaluator.test.ts apps/api/src/organization/rules/evaluation-integration.test.ts apps/api/src/organization/rules/migration.test.ts apps/api/src/organization/rules/evaluation-migration.test.ts apps/api/src/organization/rules/ordering-migration.test.ts apps/api/src/organization/g2-migration.test.ts
 bun run --cwd apps/api db:verify
 
 # Required complete gates
@@ -83,6 +83,10 @@ test -z "$(git status --porcelain)"</pre>
     <table><thead><tr><th>Gate</th><th>Expected assertion</th><th>Evidence record</th></tr></thead><tbody>
       <tr><td>Canonical MCP</td><td>Fixture’s 3 historical messages found; 2 failed historical + 1 later live Thread in weekly View; exact Rule revision/reason; apply/revert/correct replay.</td><td><code>mcp.test.ts</code> named test</td></tr>
       <tr><td>Correction</td><td>One immutable Trace and one audited projection; exact duplicate response; REST 200/401 boundary.</td><td><code>correction.test.ts</code></td></tr>
+      <tr><td>Focused release</td><td>105/105 PASS across canonical MCP, Organization discovery/replay, evaluator, correction, and complete review UI.</td><td><code>147 expect() calls</code></td></tr>
+      <tr><td>Language + isolation + stack</td><td>95/95 PASS across Orca language, live authority, Account isolation, BRE-318 replay authorization, evaluator, and migrations.</td><td><code>293 expect() calls</code></td></tr>
+      <tr><td>Full workspace</td><td>729/729 PASS: shared 69, web 162, API 498.</td><td><code>CI=true bun run test</code></td></tr>
+      <tr><td>Static + production</td><td>Typecheck, build, and lint exit 0 across shared/API/web; Vite production build completes.</td><td><code>CI=true bun run {typecheck,build,lint}</code></td></tr>
       <tr><td>DB verifier</td><td>43 required tables; clean upgrade; stacked 0026→latest; two idempotent migration replays; reset; Workspace isolation; FK clean.</td><td><code>apps/api/src/db/verify.ts</code></td></tr>
       <tr><td>Browser</td><td>0 axe violations on release review and Thread drawer; captures visually inspected; labels remain readable in both themes.</td><td><code>docs/artifacts/bre-320/*.png</code></td></tr>
       <tr><td>Authority boundary</td><td>Discovery truthful per REST/MCP operation; agent capability loaded live; send/delete false; control absent from read-only grant.</td><td><code>module.test.ts</code> + MCP canonical test</td></tr>
