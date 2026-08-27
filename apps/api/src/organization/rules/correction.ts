@@ -19,7 +19,7 @@ import {
   organizationWorkspaceStates,
   threads,
 } from "../../db/schema.ts";
-import type { OrganizationAgentCapabilitySource } from "../agent-capability.ts";
+import { loadAuthorizedOrganizationAgentCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 import { canonicalOrganizationJson } from "../authority.ts";
 import type { OrganizationSystemCapabilityAdapter } from "../system-capability.ts";
 import { evaluateAndPersistLiveContext, loadLiveEvaluationInput } from "./evaluation-sqlite.ts";
@@ -64,12 +64,13 @@ export function agentCorrectionCapabilityAdapter(input: {
 }): OrganizationSystemCapabilityAdapter {
   const scope = { actor: input.actor, workspaceId: input.workspaceId, accountIds: [input.accountId] };
   const load = (executor?: unknown) => {
-    const live = input.source.load(scope, executor);
-    if (!live || live.revokedAt !== null
-      || !live.snapshot.operations.includes("apply")
-      || !live.snapshot.resourceFamilies.includes("thread")
+    const live = loadAuthorizedOrganizationAgentCapability(scope, input.source, executor, {
+      operation: "apply", resourceFamily: "thread", actionFamily: "organization_thread",
+    });
+    if (!live
       || !live.snapshot.resourceFamilies.includes("trace")
-      || !live.snapshot.actionFamilies.includes("organization_thread")) {
+      || !live.snapshot.resourceFamilies.includes("change_set")
+      || !live.snapshot.resourceFamilies.includes("audit")) {
       throw new OrcaThreadCorrectionError("capability_denied", "The live Organization correction Capability is unavailable");
     }
     return live;
