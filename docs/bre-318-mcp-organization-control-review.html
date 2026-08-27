@@ -69,13 +69,15 @@
       <tr><td>4</td><td class="pass">Pass</td><td>Simulation output adds exact winning Rule/revision counts and observed trace reasons while retaining conflicts, risk and representative impacts. Mutation output resolves the persisted Change Set row and its authority trace by canonical idempotency key.</td><td>Lifecycle asserts exact IDs and exact trace-derived resource families for apply and compensating revert.</td></tr>
       <tr><td>5</td><td class="pass">Pass</td><td>No contract/tool for send, reply, forward, deletion, code execution, or provider mutation; authority forbids mail-send/provider-delete actions.</td><td>Tool catalog and hostile-content M6 compatibility assertions prove absence.</td></tr>
       <tr><td>6</td><td class="pass">Pass</td><td>Rule activation requires exact OAuth-control approval bound to Simulation ID and acknowledged risk; read schemas are strict.</td><td>Missing/stale approval creates zero Change Sets; mutation smuggling into describe is rejected.</td></tr>
-      <tr><td>7</td><td class="pass">Pass</td><td>Every agent replay path reloads the explicit persisted grant and validates cached Actor, scope, and Capability evidence before returning output. Normal and transaction-raced duplicate branches for View, Collection/Pin, Rule revision, and Rule Change Set use the active SQLite executor; activation/revert use one executor-aware validator.</td><td>Exact authorized retries remain identical and write-free; source removal, revocation, downgrade, Account removal, and Actor/Workspace/Account/Capability mismatch fail closed. Deterministic two-connection fixtures cover View revocation plus Collection/Pin and Rule-revision cross-Actor commits.</td></tr>
+      <tr><td>7</td><td class="pass">Pass</td><td>Rule Change Set activation and revert put the normal cached lookup, live persisted-Capability reload, stored Actor/full-Capability/operation/command/approval binding, and return decision inside one SQLite transaction. Their transaction-raced duplicate branches reuse that same executor-aware validator. View, Collection/Pin, Context, and Rule-revision replay boundaries retain their separately tested implementations.</td><td><code>serializes persisted grant revocation behind a normal cached activation replay</code> and <code>serializes persisted grant revocation behind a normal cached revert replay</code> use separate SQLite connections and a post-discovery barrier: the competing revocation serializes behind the replay, then the first post-revocation request denies. Existing authority matrices prove identical/write-free exact retries and fail-closed source removal, revocation/downgrade, Account removal, Actor/scope/Capability, command, and approval mismatches.</td></tr>
       <tr><td>8</td><td class="pass">Pass</td><td>Historical Simulation uses the production compiler/evaluator and fixture-backed persisted mail repository.</td><td>Foundational external-agent lifecycle runs against <code>thread_a_2</code> historical fixture mail.</td></tr>
     </tbody>
   </table>
 
   <h2>Reproduce</h2>
   <p>Run from the repository root with Bun 1.3+:</p>
+  <pre>CI=true bun test apps/api/src/organization/rules/simulation-sqlite.test.ts apps/api/src/agents/mcp.test.ts apps/api/src/organization/replay-authorization.test.ts apps/api/src/organization/rules/service.test.ts</pre>
+  <p>The focused command above covers the Rule Change Set normal and inner duplicate returns, the MCP lifecycle, and the adjacent replay-authorization implementations. Run the broader acceptance and repository checks below afterward.</p>
   <pre>CI=true bun test apps/api/src/agents/mcp.test.ts \
   apps/api/src/auth/mcp/oauth.test.ts \
   apps/api/src/organization/module.test.ts \
@@ -96,7 +98,8 @@ CI=true bun run lint</pre>
     <li><code>apps/api/src/index.ts</code> — thin adapter composition over canonical Organization modules.</li>
     <li><code>apps/api/src/agents/access-token.ts</code> and <code>apps/api/src/index.ts</code> — preserved connection identity and persisted-grant resolver.</li>
     <li><code>apps/api/src/organization/agent-capability.ts</code> — transaction-executor-aware capability seam and discriminated actor guards.</li>
-    <li><code>apps/api/src/organization/rules/change-set-sqlite.ts</code> — live MCP capability, durable approval binding, activation/revert.</li>
+    <li><code>apps/api/src/organization/rules/change-set-sqlite.ts</code> — shared executor-aware replay lookup/validator, live MCP capability, durable approval binding, activation/revert.</li>
+    <li><code>apps/api/src/organization/rules/simulation-sqlite.test.ts</code> — exact normal activation/revert cached-replay revocation barriers plus authority, idempotency, and zero-write matrices.</li>
     <li><code>apps/api/src/organization/replay-authorization.test.ts</code> and <code>apps/api/src/agents/mcp.test.ts</code> — direct replay authority matrices plus an MCP bearer-preflight-to-transaction revocation race.</li>
     <li><code>apps/api/src/auth/mcp/oauth.test.ts</code> — truthful control consent and Account-scoped grant.</li>
   </ul>

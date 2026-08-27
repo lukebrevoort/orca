@@ -448,10 +448,9 @@ function replayRevertWithinTransaction(input: {
   return parseReplay(input.row, input.request);
 }
 
-function replayWithCurrentAuthority(input: {
+function findReplayWithCurrentAuthority(input: {
   source: RuleChangeSetCapabilitySource;
   executor: Database;
-  row: typeof organizationChangeSets.$inferSelect;
   actor: OrganizationActor;
   capabilitySnapshot: OrganizationCapabilitySnapshot;
   workspaceId: string;
@@ -460,7 +459,12 @@ function replayWithCurrentAuthority(input: {
   idempotencyKey: string;
   request: unknown;
   approval?: McpOrganizationApproval;
-}): OrcaRuleChangeSetResult {
+}): OrcaRuleChangeSetResult | undefined {
+  const row = input.executor.select().from(organizationChangeSets).where(and(
+    eq(organizationChangeSets.workspaceId, input.workspaceId),
+    eq(organizationChangeSets.idempotencyKey, input.idempotencyKey),
+  )).get();
+  if (!row) return undefined;
   const liveCapability = loadRequiredCapability(input.source, input.executor, input.workspaceId);
   validateCurrentCapabilityClaim({
     actor: input.actor,
@@ -470,8 +474,8 @@ function replayWithCurrentAuthority(input: {
     accountIds: input.accountIds,
     operation: input.operation,
   });
-  authorizeReplay({ ...input, liveCapability });
-  return parseReplay(input.row, input.request, input.approval);
+  authorizeReplay({ ...input, row, liveCapability });
+  return parseReplay(row, input.request, input.approval);
 }
 
 function proposedWinners(trace: OrcaEvaluationTrace, revisionId: string) {
@@ -714,24 +718,20 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         accountIds: request.accountIds,
         operation: "apply",
       });
-      const replay = db.select().from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, input.workspaceId),
-        eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-      )).get();
+      const replay = db.transaction((transaction) => findReplayWithCurrentAuthority({
+        source: capabilitySource,
+        executor: transaction as unknown as Database,
+        actor: input.actor,
+        capabilitySnapshot,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "apply",
+        idempotencyKey: request.idempotencyKey,
+        request,
+        ...(approval ? { approval } : {}),
+      }));
       if (replay) {
-        return replayWithCurrentAuthority({
-          source: capabilitySource,
-          executor: db,
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "apply",
-          idempotencyKey: request.idempotencyKey,
-          request,
-          ...(approval ? { approval } : {}),
-        });
+        return replay;
       }
 
       const revisionRow = db.select().from(organizationRuleRevisions).where(and(
@@ -827,15 +827,12 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
 
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const duplicate = executor.select().from(organizationChangeSets).where(and(
-          eq(organizationChangeSets.workspaceId, input.workspaceId),
-          eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) return replayWithCurrentAuthority({
-          source: capabilitySource, executor, row: duplicate, actor: input.actor, capabilitySnapshot,
+        const duplicate = findReplayWithCurrentAuthority({
+          source: capabilitySource, executor, actor: input.actor, capabilitySnapshot,
           workspaceId: input.workspaceId, accountIds: request.accountIds, operation: "apply",
           idempotencyKey: request.idempotencyKey, request, ...(approval ? { approval } : {}),
         });
+        if (duplicate) return duplicate;
 
         const currentWorkspace = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
         const currentRule = executor.select().from(organizationRules).where(and(
@@ -1195,23 +1192,19 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         accountIds: request.accountIds,
         operation: "revert",
       });
-      const replay = db.select().from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, input.workspaceId),
-        eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-      )).get();
+      const replay = db.transaction((transaction) => findReplayWithCurrentAuthority({
+        source: capabilitySource,
+        executor: transaction as unknown as Database,
+        actor: input.actor,
+        capabilitySnapshot,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "revert",
+        idempotencyKey: request.idempotencyKey,
+        request,
+      }));
       if (replay) {
-        return replayWithCurrentAuthority({
-          source: capabilitySource,
-          executor: db,
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "revert",
-          idempotencyKey: request.idempotencyKey,
-          request,
-        });
+        return replay;
       }
 
       const original = db.select().from(organizationChangeSets).where(and(
@@ -1301,15 +1294,12 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
 
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const duplicate = executor.select().from(organizationChangeSets).where(and(
-          eq(organizationChangeSets.workspaceId, input.workspaceId),
-          eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) return replayWithCurrentAuthority({
-          source: capabilitySource, executor, row: duplicate, actor: input.actor, capabilitySnapshot,
+        const duplicate = findReplayWithCurrentAuthority({
+          source: capabilitySource, executor, actor: input.actor, capabilitySnapshot,
           workspaceId: input.workspaceId, accountIds: request.accountIds, operation: "revert",
           idempotencyKey: request.idempotencyKey, request,
         });
+        if (duplicate) return duplicate;
 
         const currentOriginal = executor.select().from(organizationChangeSets).where(and(
           eq(organizationChangeSets.workspaceId, input.workspaceId),
