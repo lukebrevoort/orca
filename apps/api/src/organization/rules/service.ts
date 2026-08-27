@@ -193,7 +193,7 @@ export type RuleRevisionRepository = {
     resourceRevisions: Record<string, number>;
     idempotencyKeyReserved: boolean;
   };
-  getIdempotent(workspaceId: string, idempotencyKey: string): {
+  replayCompile(input: { actor: OrganizationActor; workspaceId: string; accountIds: string[]; request: OrcaRuleCompileRequest; agentCapabilitySource?: OrganizationAgentCapabilitySource }): {
     request: OrcaRuleCompileRequest;
     response: OrcaRuleCompileResponse & { ok: true };
   } | null;
@@ -260,7 +260,7 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
     compile(input: { actor: OrganizationActor; workspaceId: string; accountIds?: string[]; request: unknown }): OrcaRuleCompileResponse {
       const request = orcaRuleCompileRequestSchema.parse(input.request);
       if (isAgentOrganizationActor(input.actor)) liveCapability(input.actor, input.workspaceId, input.accountIds ?? []);
-      const replay = repository.getIdempotent(input.workspaceId, request.idempotencyKey);
+      const replay = repository.replayCompile({ actor: input.actor, workspaceId: input.workspaceId, accountIds: input.accountIds ?? [], request, ...(isAgentOrganizationActor(input.actor) && options.agentCapabilitySource ? { agentCapabilitySource: options.agentCapabilitySource } : {}) });
       if (replay) {
         if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(request)) throw new RuleIdempotencyConflictError();
         return replay.response;
@@ -387,12 +387,12 @@ export function createRuleRevisionService(repository: RuleRevisionRepository, op
     },
     reorder(input: { actor: OrganizationActor; workspaceId: string; request: unknown }): OrcaRuleOrderResponse {
       const request = orcaRuleReorderRequestSchema.parse(input.request);
+      if (input.actor.type !== "human") throw new RuleAuthorityError("actor_operation_denied", "Rule reorder requires an authenticated human session");
       const replay = repository.getIdempotentReorder(input.workspaceId, request.idempotencyKey);
       if (replay) {
         if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(request)) throw new RuleIdempotencyConflictError("Idempotency key was already used for a different Rule reorder");
         return replay.response;
       }
-      if (input.actor.type !== "human") throw new RuleAuthorityError("actor_operation_denied", "Rule reorder requires an authenticated human session");
       const current = repository.getOrder(input.workspaceId);
       if (request.expectedRuleSetRevision !== current.revision) throw new RuleSetRevisionConflictError(request.expectedRuleSetRevision, current.revision);
       const byId = new Map(current.items.map((item) => [item.id, item]));

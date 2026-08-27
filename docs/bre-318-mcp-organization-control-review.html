@@ -69,7 +69,7 @@
       <tr><td>4</td><td class="pass">Pass</td><td>Simulation output adds exact winning Rule/revision counts and observed trace reasons while retaining conflicts, risk and representative impacts. Mutation output resolves the persisted Change Set row by canonical idempotency key.</td><td>Lifecycle asserts exact IDs for Lane, Facet, View, Collection, Context, Rule revision, activation, and compensating revert.</td></tr>
       <tr><td>5</td><td class="pass">Pass</td><td>No contract/tool for send, reply, forward, deletion, code execution, or provider mutation; authority forbids mail-send/provider-delete actions.</td><td>Tool catalog and hostile-content M6 compatibility assertions prove absence.</td></tr>
       <tr><td>6</td><td class="pass">Pass</td><td>Rule activation requires exact OAuth-control approval bound to Simulation ID and acknowledged risk; read schemas are strict.</td><td>Missing/stale approval creates zero Change Sets; mutation smuggling into describe is rejected.</td></tr>
-      <tr><td>7</td><td class="pass">Pass</td><td>Lane and Facet/Workflow persist canonical request, scope, revision inputs, and successful response beside the immutable Change Set; their replay paths reload live authority before returning stored output. Other families retain their established canonical replay records.</td><td>Exact Lane, Facet/Workflow, Rule activation, and existing family retries return identical structured output without duplicate rows; changed requests fail typed.</td></tr>
+      <tr><td>7</td><td class="pass">Pass</td><td>Every agent replay path reloads the explicit persisted grant before returning cached output. View, Collection/Pin, Context, Lane, Facet/Workflow, and Rule revision replay lookup performs that reload through the active SQLite transaction executor; Rule Change Set activation/revert validates live authority before replay.</td><td>Exact authorized retries return identical structured output without duplicate rows; source removal, revocation, downgrade, Account removal, and actor/Workspace/Account mismatch fail closed; changed requests remain typed conflicts.</td></tr>
       <tr><td>8</td><td class="pass">Pass</td><td>Historical Simulation uses the production compiler/evaluator and fixture-backed persisted mail repository.</td><td>Foundational external-agent lifecycle runs against <code>thread_a_2</code> historical fixture mail.</td></tr>
     </tbody>
   </table>
@@ -97,7 +97,7 @@ CI=true bun run lint</pre>
     <li><code>apps/api/src/agents/access-token.ts</code> and <code>apps/api/src/index.ts</code> — preserved connection identity and persisted-grant resolver.</li>
     <li><code>apps/api/src/organization/agent-capability.ts</code> — transaction-executor-aware capability seam and discriminated actor guards.</li>
     <li><code>apps/api/src/organization/rules/change-set-sqlite.ts</code> — live MCP capability, durable approval binding, activation/revert.</li>
-    <li><code>apps/api/src/agents/mcp.test.ts</code> — full five-operation fixture lifecycle, exact mutation-family IDs/replays, and grant-race adversarial cases.</li>
+    <li><code>apps/api/src/organization/replay-authorization.test.ts</code> and <code>apps/api/src/agents/mcp.test.ts</code> — direct replay authority matrices plus an MCP bearer-preflight-to-transaction revocation race.</li>
     <li><code>apps/api/src/auth/mcp/oauth.test.ts</code> — truthful control consent and Account-scoped grant.</li>
   </ul>
 

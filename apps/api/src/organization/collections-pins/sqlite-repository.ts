@@ -33,7 +33,8 @@ import {
   bindOrganizationCollectionPinRevertCommand,
   type OrganizationCollectionsPinsRepository,
 } from "./module.ts";
-import { digestOrganizationCommand } from "../authority.ts";
+import { canonicalOrganizationJson, digestOrganizationCommand } from "../authority.ts";
+import { loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 type CollectionRecord = typeof collections.$inferSelect;
@@ -713,12 +714,31 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
     getAuthorityState(workspaceId) {
       return loadAuthorityState(db, workspaceId);
     },
-    getIdempotentChange(workspaceId, idempotencyKey) {
-      const record = db.select().from(organizationCollectionPinAudits).where(and(
-        eq(organizationCollectionPinAudits.workspaceId, workspaceId),
-        eq(organizationCollectionPinAudits.idempotencyKey, idempotencyKey),
-      )).get();
-      return record ? { change: mapAudit(record), command: parseJson(record.commandJson) } : null;
+    replay(input) {
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        const record = executor.select().from(organizationCollectionPinAudits).where(and(
+          eq(organizationCollectionPinAudits.workspaceId, input.scope.workspaceId),
+          eq(organizationCollectionPinAudits.idempotencyKey, input.idempotencyKey),
+        )).get();
+        if (!record) return null;
+        if (input.scope.actor.type === "agent") {
+          const agentScope = { ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } };
+          const resourceFamily = record.changeKind === "pin" ? "shortcut" : record.changeKind === "saved_query" ? "saved_query" : "collection";
+          if (!loadAuthorizedOrganizationAgentCapability(
+            agentScope, input.agentCapabilitySource, executor,
+            { operation: input.operation, resourceFamily, actionFamily: "organization_structure" },
+          )) throw new OrganizationCollectionsPinsAccessError("The persisted MCP Organization grant no longer authorizes this Collection/Pin operation");
+          const changeSet = executor.select({ authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+            eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.id, record.id),
+          )).get();
+          if (!changeSet || !organizationReplayAuthorityMatches(agentScope, JSON.parse(changeSet.authorityTrace))) throw new OrganizationCollectionsPinsAccessError("The cached Collection/Pin mutation belongs to a different Organization authority");
+        }
+        const change = mapAudit(record);
+        if (!input.scope.accountIds.includes(change.accountId)) throw new OrganizationCollectionsPinsAccessError();
+        if (change.operation !== input.operation || canonicalOrganizationJson(parseJson(record.commandJson)) !== canonicalOrganizationJson(input.command)) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+        return change;
+      });
     },
     getRevertAuthorityTargets(workspaceId, changeId) {
       return loadRevertAuthorityTargets(db, workspaceId, changeId);

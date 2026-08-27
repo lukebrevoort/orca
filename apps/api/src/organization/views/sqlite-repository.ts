@@ -19,6 +19,7 @@ import {
 
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
+import { loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
 import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
@@ -256,10 +257,10 @@ function authorityState(sqlite: Database, workspaceId: string) {
 }
 
 function idempotentMutation(sqlite: Database, workspaceId: string, idempotencyKey: string) {
-  const row = sqlite.query("SELECT command_json FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=? AND resource_family='view'").get(workspaceId, idempotencyKey) as { command_json: string } | null;
+  const row = sqlite.query("SELECT command_json,authority_trace FROM organization_change_sets WHERE workspace_id=? AND idempotency_key=? AND resource_family='view'").get(workspaceId, idempotencyKey) as { command_json: string; authority_trace: string } | null;
   if (!row) return null;
   const parsed = JSON.parse(row.command_json) as { request: unknown; response: unknown };
-  return parsed;
+  return { ...parsed, authorityTrace: JSON.parse(row.authority_trace) as unknown };
 }
 
 function verifyAuthorization(sqlite: Database, workspaceId: string, authorization: OrganizationViewMutationAuthorization) {
@@ -395,7 +396,20 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     get,
     getWorkspaceRevision(workspaceId) { return workspaceRevision(sqlite, workspaceId); },
     getAuthorityState(workspaceId) { return authorityState(sqlite, workspaceId); },
-    getIdempotentMutation(workspaceId, idempotencyKey) { return idempotentMutation(sqlite, workspaceId, idempotencyKey); },
+    replay(input) {
+      return sqlite.transaction(() => {
+        const executor = sqlite;
+        const agentScope = input.scope.actor.type === "agent" ? { ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } } : null;
+        if (agentScope && !loadAuthorizedOrganizationAgentCapability(
+          agentScope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "view", actionFamily: "organization_structure" },
+        )) throw new OrganizationViewAccessError("The persisted MCP Organization grant no longer authorizes View apply", "resource_denied");
+        const existing = idempotentMutation(executor, input.scope.workspaceId, input.idempotencyKey);
+        if (!existing) return null;
+        if (agentScope && !organizationReplayAuthorityMatches(agentScope, existing.authorityTrace)) throw new OrganizationViewAccessError("The cached View mutation belongs to a different Organization authority", "resource_denied");
+        if (canonicalOrganizationJson(existing.request) !== canonicalOrganizationJson(input.boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
+        return { response: existing.response };
+      })();
+    },
     create({ workspaceId, viewId, request, boundRequest, plan, authorization, now }) {
       const timestamp = now.getTime();
       return authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {

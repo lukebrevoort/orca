@@ -1008,4 +1008,28 @@ describe("Orca scoped MCP server", () => {
       } finally { sqlite.close(); }
     }
   });
+
+  test("fails a cached Context replay when persisted authority is revoked after bearer preflight but before replay lookup", async () => {
+    const idempotencyKey = "context-replay-grant-race";
+    const { app, db, sqlite } = createFixture({
+      beforeMutationTransaction(executor) {
+        const existing = executor.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, idempotencyKey)).get();
+        if (existing) executor.update(mcpConnections).set({ revokedAt: new Date() }).where(eq(mcpConnections.id, "connection_a")).run();
+      },
+    });
+    try {
+      const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+      const arguments_ = {
+        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, resourceFamily: "context",
+        target: { kind: "context", request: { idempotencyKey, expectedWorkspaceRevision: 1, actions: [{ kind: "create_context_type", name: "Replay race", position: 0 }] } },
+      };
+      const first = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: arguments_ }));
+      assert.ok(first.result?.structuredContent, JSON.stringify(first));
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, idempotencyKey)).all().length, 1);
+
+      const replay = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: arguments_ }));
+      assert.equal(replay.result.isError, true, JSON.stringify(replay));
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, idempotencyKey)).all().length, 1);
+    } finally { sqlite.close(); }
+  });
 });

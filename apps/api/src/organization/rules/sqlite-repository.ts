@@ -32,7 +32,7 @@ import {
 } from "../../db/schema.ts";
 import type { OrcaWorkspaceSnapshot } from "./compiler.ts";
 import { canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
-import { isAgentOrganizationActor } from "../agent-capability.ts";
+import { isAgentOrganizationActor, loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
 import {
   consumeRuleAuthorizationAnchor,
   digestRuleOrder,
@@ -150,19 +150,25 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         idempotencyKeyReserved: Boolean(reserved),
       };
     },
-    getIdempotent(workspaceId, idempotencyKey) {
-      const row = db.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, workspaceId),
-        eq(organizationChangeSets.idempotencyKey, idempotencyKey),
-        eq(organizationChangeSets.resourceFamily, "rule"),
-      )).get();
-      if (!row) return null;
-      const stored = JSON.parse(row.commandJson) as { request: unknown; response: unknown };
-      const parsedRequest = orcaRuleCompileRequestSchema.safeParse(stored.request);
-      if (!parsedRequest.success) return null;
-      const response = orcaRuleCompileResponseSchema.parse(stored.response);
-      if (!response.ok) throw new Error("Persisted Rule idempotency evidence must contain a successful response");
-      return { request: parsedRequest.data, response };
+    replayCompile(input) {
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        const row = executor.select({ commandJson: organizationChangeSets.commandJson, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, input.workspaceId), eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey), eq(organizationChangeSets.resourceFamily, "rule"),
+        )).get();
+        if (!row) return null;
+        if (isAgentOrganizationActor(input.actor)) {
+          const scope = { actor: input.actor, workspaceId: input.workspaceId, accountIds: input.accountIds };
+          if (!loadAuthorizedOrganizationAgentCapability(scope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "rule", actionFamily: "organization_structure" })) throw new RuleAuthorityError("missing_operation_capability", "The persisted MCP Organization grant no longer authorizes Rule apply");
+          if (!organizationReplayAuthorityMatches(scope, JSON.parse(row.authorityTrace))) throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
+        }
+        const stored = JSON.parse(row.commandJson) as { request: unknown; response: unknown };
+        const parsedRequest = orcaRuleCompileRequestSchema.safeParse(stored.request);
+        if (!parsedRequest.success) return null;
+        const response = orcaRuleCompileResponseSchema.parse(stored.response);
+        if (!response.ok) throw new Error("Persisted Rule idempotency evidence must contain a successful response");
+        return { request: parsedRequest.data, response };
+      });
     },
     getOrder,
     getIdempotentReorder(workspaceId, idempotencyKey) {

@@ -57,10 +57,13 @@ export type OrganizationCollectionsPinsRepository = {
     resourceRevisions: Record<string, number>;
     reservedIdempotencyKeys: string[];
   };
-  getIdempotentChange(workspaceId: string, idempotencyKey: string): {
-    change: OrganizationCollectionPinAuditEntry;
+  replay(input: {
+    scope: OrganizationCollectionPinScope;
+    idempotencyKey: string;
+    operation: "apply" | "revert";
     command: unknown;
-  } | null;
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
+  }): OrganizationCollectionPinAuditEntry | null;
   getRevertAuthorityTargets(workspaceId: string, changeId: string): Array<{
     changeKind: OrganizationCollectionPinAuditEntry["changeKind"];
     resourceId: string;
@@ -267,13 +270,7 @@ export function createOrganizationCollectionsPins(
     operation: "apply" | "revert",
     command: unknown,
   ) {
-    const existing = repository.getIdempotentChange(scope.workspaceId, idempotencyKey);
-    if (!existing) return null;
-    if (!scope.accountIds.includes(existing.change.accountId)) throw new OrganizationCollectionsPinsAccessError();
-    if (existing.change.operation !== operation || canonicalJson(existing.command) !== canonicalJson(command)) {
-      throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
-    }
-    return existing.change;
+    return repository.replay({ scope, idempotencyKey, operation, command, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
   }
 
   return {

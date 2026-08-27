@@ -86,7 +86,7 @@ export type OrganizationContextsRepository = {
     resourceRevisions: Record<string, number>;
     reservedIdempotencyKeys: string[];
   };
-  getIdempotentChange(workspaceId: string, idempotencyKey: string): {
+  replay(input: { scope: OrganizationContextScope; idempotencyKey: string; request: unknown; operation: "apply" | "revert"; agentCapabilitySource?: OrganizationAgentCapabilitySource }): {
     request: OrganizationContextApplyRequest | { revert: OrganizationContextRevertRequest };
     change: OrganizationContextChangeSummary;
   } | null;
@@ -474,7 +474,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
     apply(input: { scope: unknown; request: unknown }): OrganizationContextMutationResponse {
       const { scope } = authorize(repository, input.scope);
       const request = organizationContextApplyRequestSchema.parse(input.request);
-      const replay = repository.getIdempotentChange(scope.workspaceId, request.idempotencyKey);
+      const replay = repository.replay({ scope, idempotencyKey: request.idempotencyKey, request, operation: "apply", ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
       if (replay) {
         if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson(request)) throw new OrganizationContextsConflictError("Idempotency key was already used for a different Context change");
         return organizationContextMutationResponseSchema.parse({ change: replay.change, state: queryAuthorized(scope, organizationContextQuerySchema.parse({ includeRetired: true })) });
@@ -492,7 +492,7 @@ export function createOrganizationContexts(repository: OrganizationContextsRepos
     revert(input: { scope: unknown; request: unknown }): OrganizationContextMutationResponse {
       const { scope } = authorize(repository, input.scope);
       const request = organizationContextRevertRequestSchema.parse(input.request);
-      const replay = repository.getIdempotentChange(scope.workspaceId, request.idempotencyKey);
+      const replay = repository.replay({ scope, idempotencyKey: request.idempotencyKey, request: { revert: request }, operation: "revert", ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
       if (replay) {
         if (canonicalOrganizationJson(replay.request) !== canonicalOrganizationJson({ revert: request })) throw new OrganizationContextsConflictError("Idempotency key was already used for a different Context change");
         return organizationContextMutationResponseSchema.parse({ change: replay.change, state: queryAuthorized(scope, organizationContextQuerySchema.parse({ includeRetired: true })) });

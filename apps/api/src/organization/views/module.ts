@@ -70,7 +70,7 @@ export type OrganizationViewsRepository = {
   get(workspaceId: string, viewId: string): OrganizationView | null;
   getWorkspaceRevision(workspaceId: string): number;
   getAuthorityState(workspaceId: string): { workspaceRevision: number; resourceRevisions: Record<string, number>; reservedIdempotencyKeys: string[] };
-  getIdempotentMutation(workspaceId: string, idempotencyKey: string): { request: unknown; response: unknown } | null;
+  replay(input: { scope: OrganizationViewScope; idempotencyKey: string; boundRequest: unknown; agentCapabilitySource?: OrganizationAgentCapabilitySource }): { response: unknown } | null;
   create(input: { workspaceId: string; viewId: string; request: OrganizationViewCreateRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView;
   update(input: { workspaceId: string; viewId: string; request: OrganizationViewUpdateRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView;
   reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView[];
@@ -142,10 +142,8 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
   const now = dependencies.now ?? (() => new Date());
 
   function replay(scope: OrganizationViewScope, idempotencyKey: string, boundRequest: unknown) {
-    const existing = repository.getIdempotentMutation(scope.workspaceId, idempotencyKey);
-    if (!existing) return { found: false as const, response: null };
-    if (canonicalOrganizationJson(existing.request) !== canonicalOrganizationJson(boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
-    return { found: true as const, response: existing.response };
+    const existing = repository.replay({ scope, idempotencyKey, boundRequest, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
+    return existing === null ? { found: false as const, response: null } : { found: true as const, response: existing.response };
   }
 
   function authorizeBound(scope: OrganizationViewScope, request: { idempotencyKey: string; expectedWorkspaceRevision: number }, command: OrganizationCommand, expectedResources: Record<string, number>): OrganizationViewMutationAuthorization {
