@@ -126,6 +126,12 @@ describe("production user.corrected seam", () => {
         expectedWorkspaceRevision: workspaceRevision, expectedThreadRevision: threadRevision,
         idempotencyKey: fixture.correction.idempotencyKey, reason: fixture.correction.reason,
       };
+      const traceCountBeforeDeniedAgent = client.db.select().from(organizationEvaluationTraces).all().length;
+      assert.throws(() => correctOrganizationThread(client.db, {
+        actor: { id: "external-agent-without-live-grant", type: "agent" }, workspaceId: fixture.workspace.id, request, now,
+      }), (error: unknown) => error instanceof OrcaThreadCorrectionError && error.code === "capability_denied");
+      assert.equal(client.db.select().from(organizationEvaluationTraces).all().length, traceCountBeforeDeniedAgent);
+      assert.equal(client.db.select().from(organizationCorrectionReceipts).all().length, 0);
       const first = correctOrganizationThread(client.db, {
         actor: { id: fixture.workspace.id, type: "human" }, workspaceId: fixture.workspace.id, request, now,
       });

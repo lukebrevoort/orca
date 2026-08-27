@@ -25,7 +25,8 @@ import type { OrganizationSystemCapabilityAdapter } from "../system-capability.t
 import { evaluateAndPersistLiveContext, loadLiveEvaluationInput } from "./evaluation-sqlite.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
-type CorrectionActor = OrganizationActor & { type: "human" | "agent" };
+type CorrectionActor = { id: OrganizationActor["id"]; type: "human" } | { id: OrganizationActor["id"]; type: "agent" };
+type HumanCorrectionActor = Extract<CorrectionActor, { type: "human" }>;
 
 export class OrcaThreadCorrectionError extends Error {
   constructor(readonly code: "account_denied" | "thread_not_found" | "revision_conflict" | "capability_denied" | "idempotency_conflict" | "evaluation_exhausted", message: string) {
@@ -38,7 +39,7 @@ function digestCorrection(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`;
 }
 
-function humanSnapshot(actor: CorrectionActor, workspaceId: string, accountId: string): OrganizationCapabilitySnapshot {
+function humanSnapshot(actor: HumanCorrectionActor, workspaceId: string, accountId: string): OrganizationCapabilitySnapshot {
   return {
     id: `first_party:correction:${actor.id}`,
     revision: 1,
@@ -50,7 +51,7 @@ function humanSnapshot(actor: CorrectionActor, workspaceId: string, accountId: s
   };
 }
 
-export function humanCorrectionCapabilityAdapter(actor: CorrectionActor, workspaceId: string, accountId: string): OrganizationSystemCapabilityAdapter {
+export function humanCorrectionCapabilityAdapter(actor: HumanCorrectionActor, workspaceId: string, accountId: string): OrganizationSystemCapabilityAdapter {
   const snapshot = humanSnapshot(actor, workspaceId, accountId);
   return { snapshot: () => snapshot, live: () => ({ snapshot, revokedAt: null }) };
 }
@@ -128,7 +129,12 @@ export function correctOrganizationThread(db: Database, input: {
       .orderBy(desc(emails.receivedAt), desc(emails.id)).get();
     if (!message) throw new OrcaThreadCorrectionError("thread_not_found", "The corrected Thread has no evaluable message");
 
-    const adapter = input.capabilityAdapter ?? humanCorrectionCapabilityAdapter(input.actor, input.workspaceId, request.accountId);
+    const adapter = input.capabilityAdapter ?? (input.actor.type === "human"
+      ? humanCorrectionCapabilityAdapter(input.actor, input.workspaceId, request.accountId)
+      : null);
+    if (!adapter) {
+      throw new OrcaThreadCorrectionError("capability_denied", "Agent correction requires a live Organization Capability adapter");
+    }
     const context = loadLiveEvaluationInput(executor, { accountId: request.accountId, messageId: message.id, eventKind: "user.corrected" }, adapter);
     if (!context) throw new OrcaThreadCorrectionError("thread_not_found", "The corrected Thread could not be loaded for evaluation");
     const occurredAt = (input.now ?? new Date()).toISOString();
