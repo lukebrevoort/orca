@@ -625,6 +625,25 @@ function verifyPersistedAgentGrant(
   }
 }
 
+function verifyDuplicateAuthority(
+  executor: Database,
+  scope: OrganizationCollectionPinScope,
+  authorization: Parameters<OrganizationCollectionsPinsRepository["apply"]>[0]["authorization"],
+  changeId: string,
+) {
+  if (scope.actor.type !== "agent") return;
+  const agentScope = { ...scope, actor: scope.actor as typeof scope.actor & { type: "agent" } };
+  const live = authorization.agentCapabilitySource?.load(agentScope, executor) ?? null;
+  const stored = executor.select({ authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+    eq(organizationChangeSets.workspaceId, scope.workspaceId),
+    eq(organizationChangeSets.id, changeId),
+  )).get();
+  if (!live || live.revokedAt !== null || !stored
+    || !organizationReplayAuthorityMatches(agentScope, JSON.parse(stored.authorityTrace), live.snapshot)) {
+    throw new OrganizationCollectionsPinsAccessError("The cached Collection/Pin mutation belongs to a different Organization authority");
+  }
+}
+
 function verifyAndRecordAuthority(
   executor: Database,
   input: {
@@ -725,14 +744,15 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
         if (input.scope.actor.type === "agent") {
           const agentScope = { ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } };
           const resourceFamily = record.changeKind === "pin" ? "shortcut" : record.changeKind === "saved_query" ? "saved_query" : "collection";
-          if (!loadAuthorizedOrganizationAgentCapability(
+          const live = loadAuthorizedOrganizationAgentCapability(
             agentScope, input.agentCapabilitySource, executor,
             { operation: input.operation, resourceFamily, actionFamily: "organization_structure" },
-          )) throw new OrganizationCollectionsPinsAccessError("The persisted MCP Organization grant no longer authorizes this Collection/Pin operation");
+          );
+          if (!live) throw new OrganizationCollectionsPinsAccessError("The persisted MCP Organization grant no longer authorizes this Collection/Pin operation");
           const changeSet = executor.select({ authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
             eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.id, record.id),
           )).get();
-          if (!changeSet || !organizationReplayAuthorityMatches(agentScope, JSON.parse(changeSet.authorityTrace))) throw new OrganizationCollectionsPinsAccessError("The cached Collection/Pin mutation belongs to a different Organization authority");
+          if (!changeSet || !organizationReplayAuthorityMatches(agentScope, JSON.parse(changeSet.authorityTrace), live.snapshot)) throw new OrganizationCollectionsPinsAccessError("The cached Collection/Pin mutation belongs to a different Organization authority");
         }
         const change = mapAudit(record);
         if (!input.scope.accountIds.includes(change.accountId)) throw new OrganizationCollectionsPinsAccessError();
@@ -777,6 +797,7 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
           )).get();
           if (duplicate) {
             if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+            verifyDuplicateAuthority(executor, scope, authorization, duplicate.id);
             return mapAudit(duplicate);
           }
           const workspaceRevision = verifyAndRecordAuthority(executor, {
@@ -822,6 +843,7 @@ export function createSqliteOrganizationCollectionsPinsRepository(db: Database):
           )).get();
           if (duplicate) {
             if (duplicate.commandJson !== commandJson) throw new OrganizationCollectionsPinsConflictError("Idempotency key was already used for a different Organization change");
+            verifyDuplicateAuthority(executor, scope, authorization, duplicate.id);
             return mapAudit(duplicate);
           }
           const workspaceRevision = verifyAndRecordAuthority(executor, {

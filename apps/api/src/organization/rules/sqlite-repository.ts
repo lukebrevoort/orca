@@ -159,8 +159,9 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         if (!row) return null;
         if (isAgentOrganizationActor(input.actor)) {
           const scope = { actor: input.actor, workspaceId: input.workspaceId, accountIds: input.accountIds };
-          if (!loadAuthorizedOrganizationAgentCapability(scope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "rule", actionFamily: "organization_structure" })) throw new RuleAuthorityError("missing_operation_capability", "The persisted MCP Organization grant no longer authorizes Rule apply");
-          if (!organizationReplayAuthorityMatches(scope, JSON.parse(row.authorityTrace))) throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
+          const live = loadAuthorizedOrganizationAgentCapability(scope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "rule", actionFamily: "organization_structure" });
+          if (!live) throw new RuleAuthorityError("missing_operation_capability", "The persisted MCP Organization grant no longer authorizes Rule apply");
+          if (!organizationReplayAuthorityMatches(scope, JSON.parse(row.authorityTrace), live.snapshot)) throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
         }
         const stored = JSON.parse(row.commandJson) as { request: unknown; response: unknown };
         const parsedRequest = orcaRuleCompileRequestSchema.safeParse(stored.request);
@@ -261,11 +262,17 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
           || !accountsRemainAuthorized) {
           throw new RuleAuthorityError("account_denied", "The Rule authorization scope is not currently owned");
         }
-        const duplicate = executor.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
+        const duplicate = executor.select({ commandJson: organizationChangeSets.commandJson, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
           eq(organizationChangeSets.workspaceId, input.rule.workspaceId),
           eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey),
         )).get();
         if (duplicate) {
+          if (isAgentOrganizationActor(authorizationBinding.actor)) {
+            const replayScope = { actor: authorizationBinding.actor, workspaceId: authorizationBinding.workspaceId, accountIds: boundAccountIds };
+            if (!agentCapability || !organizationReplayAuthorityMatches(replayScope, JSON.parse(duplicate.authorityTrace), agentCapability.snapshot)) {
+              throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
+            }
+          }
           const stored = JSON.parse(duplicate.commandJson) as { request?: unknown; response?: unknown };
           if (canonicalOrganizationJson(stored.request) !== canonicalOrganizationJson(input.request)) throw new RuleIdempotencyConflictError();
           const response = orcaRuleCompileResponseSchema.parse(stored.response);

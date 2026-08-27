@@ -14,6 +14,7 @@ import {
   emails,
   collectionThreads,
   collections,
+  mcpConnectionAccounts,
   mcpConnections,
   mcpOAuthClients,
   mcpOrganizationApprovals,
@@ -244,6 +245,124 @@ function installReplayCapabilityMarker(fixture: Awaited<ReturnType<typeof setup>
     source,
     revoke() { other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'"); },
   };
+}
+
+function persistedAgentGrant(db: Awaited<ReturnType<typeof setup>>["db"]) {
+  const actor = { id: "bre-318-replay-agent", type: "agent" as const };
+  const snapshot = { ...validCapability(db), id: "bre-318-persisted-grant", actor };
+  db.insert(mcpOAuthClients).values({
+    id: actor.id,
+    name: "BRE-318 replay agent",
+    redirectUris: "[]",
+  }).run();
+  db.insert(mcpConnections).values({
+    id: snapshot.id,
+    userId: "workspace-1",
+    clientId: actor.id,
+    resource: "https://orca.test/mcp",
+    scopes: "organization:control",
+  }).run();
+  db.insert(mcpConnectionAccounts).values({
+    id: "bre-318-persisted-grant-account",
+    connectionId: snapshot.id,
+    accountId: "account-1",
+  }).run();
+  const source: RuleChangeSetCapabilitySource = {
+    load(executor, { workspaceId }) {
+      const connection = executor.select({ revokedAt: mcpConnections.revokedAt }).from(mcpConnections)
+        .where(and(eq(mcpConnections.id, snapshot.id), eq(mcpConnections.userId, workspaceId))).get();
+      const account = executor.select({ id: mcpConnectionAccounts.accountId }).from(mcpConnectionAccounts)
+        .where(and(
+          eq(mcpConnectionAccounts.connectionId, snapshot.id),
+          eq(mcpConnectionAccounts.accountId, "account-1"),
+        )).get();
+      if (!connection || !account) return null;
+      return { snapshot, revokedAt: connection.revokedAt?.toISOString() ?? null };
+    },
+  };
+  return { actor, snapshot, source };
+}
+
+function persistedRevocationBarrier(input: {
+  source: RuleChangeSetCapabilitySource;
+  competingDb: Awaited<ReturnType<typeof setup>>["db"];
+  idempotencyKey: string;
+  connectionId: string;
+}) {
+  const state = { loads: 0, cachedRowObserved: false, revocationCommitted: false, serializationObserved: false };
+  const source: RuleChangeSetCapabilitySource = {
+    load(executor, request) {
+      const live = input.source.load(executor, request);
+      state.loads += 1;
+      if (state.loads === 2) {
+        state.cachedRowObserved = Boolean(executor.select({ id: organizationChangeSets.id }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, request.workspaceId),
+          eq(organizationChangeSets.idempotencyKey, input.idempotencyKey),
+        )).get());
+        try {
+          input.competingDb.update(mcpConnections).set({ revokedAt: new Date("2026-08-26T12:00:02.000Z") })
+            .where(eq(mcpConnections.id, input.connectionId)).run();
+          state.revocationCommitted = true;
+        } catch (error) {
+          if (!(error instanceof Error)
+            || (!("code" in error && error.code === "SQLITE_BUSY") && !/database is locked/i.test(error.message))) throw error;
+          state.serializationObserved = true;
+        }
+      }
+      return live;
+    },
+  };
+  return { source, state };
+}
+
+async function preparePersistedAgentActivation(idempotencyKey: string) {
+  const fixture = await setup();
+  const { db, compiled } = fixture;
+  const grant = persistedAgentGrant(db);
+  const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(db)).simulate({
+    actor: grant.actor,
+    workspaceId: "workspace-1",
+    request: {
+      ruleId: compiled.rule.id,
+      revisionId: compiled.revision.id,
+      workspaceSchemaRevision: compiled.revision.compiled.workspaceSchemaRevision,
+      accountIds: ["account-1"],
+      maximumThreads: 500,
+    },
+  });
+  const ruleSet = db.select().from(organizationRuleSets)
+    .where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+  const request = {
+    ruleId: compiled.rule.id,
+    revisionId: compiled.revision.id,
+    simulationId: simulation.simulationId,
+    accountIds: ["account-1"],
+    maximumThreads: 500,
+    expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+    expectedRuleRevision: compiled.rule.latestRevision,
+    expectedRuleSetRevision: ruleSet.revision,
+    idempotencyKey,
+  };
+  const approval = {
+    source: "oauth_organization_control_grant" as const,
+    simulationId: simulation.simulationId,
+    acknowledgedRisk: simulation.risk,
+  };
+  const approvalGrant = {
+    connectionId: grant.snapshot.id,
+    clientId: grant.actor.id,
+    approverUserId: "workspace-1",
+    expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+  };
+  const applied = createSqliteRuleChangeSetService(db, { capabilitySource: grant.source }).activate({
+    actor: grant.actor,
+    capabilitySnapshot: grant.snapshot,
+    workspaceId: "workspace-1",
+    request,
+    approval,
+    approvalGrant,
+  });
+  return { ...fixture, grant, request, approval, approvalGrant, applied };
 }
 
 describe("BRE-317 SQLite historical Simulation adapter", () => {
@@ -591,6 +710,57 @@ action link context "Project" "Orca"`);
     }
   }, 15_000);
 
+  test("serializes persisted grant revocation behind a normal cached activation replay", async () => {
+    const fixture = await preparePersistedAgentActivation("activate-normal-replay-revocation-barrier");
+    const competing = createDatabaseClient(fixture.path);
+    try {
+      const barrier = persistedRevocationBarrier({
+        source: fixture.grant.source,
+        competingDb: competing.db,
+        idempotencyKey: fixture.request.idempotencyKey,
+        connectionId: fixture.grant.snapshot.id,
+      });
+      const beforeReplay = snapshot(fixture.db);
+      const replay = createSqliteRuleChangeSetService(fixture.db, { capabilitySource: barrier.source }).activate({
+        actor: fixture.grant.actor,
+        capabilitySnapshot: fixture.grant.snapshot,
+        workspaceId: "workspace-1",
+        request: fixture.request,
+        approval: fixture.approval,
+        approvalGrant: fixture.approvalGrant,
+      });
+
+      assert.deepEqual(replay, fixture.applied, "an exact authorized replay remains byte-identical");
+      assert.equal(barrier.state.loads, 2, "the barrier must run on the replay's transaction-side live reload");
+      assert.equal(barrier.state.cachedRowObserved, true, "the competing revocation starts only after cached replay discovery");
+      assert.equal(
+        barrier.state.revocationCommitted,
+        false,
+        "must not return cached activation output after a competing persisted grant revocation commits",
+      );
+      assert.equal(barrier.state.serializationObserved, true, "the replay transaction must exclude the competing grant write");
+      assert.deepEqual(snapshot(fixture.db), beforeReplay, "the serialized replay remains write-free");
+
+      competing.db.update(mcpConnections).set({ revokedAt: new Date("2026-08-26T12:00:03.000Z") })
+        .where(eq(mcpConnections.id, fixture.grant.snapshot.id)).run();
+      assert.throws(
+        () => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: fixture.grant.source }).activate({
+          actor: fixture.grant.actor,
+          capabilitySnapshot: fixture.grant.snapshot,
+          workspaceId: "workspace-1",
+          request: fixture.request,
+          approval: fixture.approval,
+          approvalGrant: fixture.approvalGrant,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_revoked",
+      );
+      assert.deepEqual(snapshot(fixture.db), beforeReplay, "post-revocation denial must not write or expose lifecycle output");
+    } finally {
+      competing.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 30_000);
+
   test("denies an exact activation replay when the authoritative Capability was removed after commit", async () => {
     const { db, sqlite, compiled } = await setup();
     try {
@@ -684,6 +854,16 @@ action link context "Project" "Orca"`);
       }), applied);
       assert.deepEqual(snapshot(db), afterApply, "an authorized exact replay must remain write-free");
 
+      const otherActor = { id: "other-client", type: "human" as const };
+      const otherCapability = { ...structuredClone(capabilitySnapshot), id: "other-capability", actor: otherActor };
+      assert.throws(
+        () => createSqliteRuleChangeSetService(db, { capabilitySource: { load: () => ({ snapshot: otherCapability, revokedAt: null }) } }).activate({
+          actor: otherActor, capabilitySnapshot: otherCapability, workspaceId: "workspace-1", request,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "invalid_change_set",
+      );
+      assert.deepEqual(snapshot(db), afterApply, "a different Actor and Capability must not receive cached lifecycle evidence");
+
       const wrongActor = { ...capabilitySnapshot, actor: { id: "attacker", type: "human" as const } };
       const wrongAudience = { ...capabilitySnapshot, actor: { id: actor.id, type: "agent" as const } };
       const wrongWorkspace = { ...capabilitySnapshot, scope: { ...capabilitySnapshot.scope, workspaceId: "workspace-2" } };
@@ -691,6 +871,7 @@ action link context "Project" "Orca"`);
       const wrongOperation = { ...capabilitySnapshot, operations: capabilitySnapshot.operations.filter((operation) => operation !== "apply") };
       const wrongResource = { ...capabilitySnapshot, resourceFamilies: capabilitySnapshot.resourceFamilies.filter((family) => family !== "rule") };
       const wrongActionRisk = { ...capabilitySnapshot, actionFamilies: capabilitySnapshot.actionFamilies.filter((family) => family !== "organization_structure") };
+      const differentCapabilityIdentity = { ...capabilitySnapshot, id: "different-live-capability" };
       const variants = [
         ["revoked", capabilitySnapshot, { snapshot: capabilitySnapshot, revokedAt: "2026-08-26T12:00:00.000Z" }, "capability_revoked"],
         ["stale", capabilitySnapshot, { snapshot: { ...capabilitySnapshot, revision: capabilitySnapshot.revision + 1 }, revokedAt: null }, "capability_stale"],
@@ -701,6 +882,7 @@ action link context "Project" "Orca"`);
         ["wrong operation", wrongOperation, { snapshot: wrongOperation, revokedAt: null }, "missing_operation_capability"],
         ["wrong resource scope", wrongResource, { snapshot: wrongResource, revokedAt: null }, "resource_family_denied"],
         ["wrong action/risk scope", wrongActionRisk, { snapshot: wrongActionRisk, revokedAt: null }, "action_family_denied"],
+        ["different Capability identity", differentCapabilityIdentity, { snapshot: differentCapabilityIdentity, revokedAt: null }, "invalid_change_set"],
       ] as const;
       for (const [name, claimed, live, code] of variants) {
         assert.throws(
@@ -979,6 +1161,65 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
       sqlite.close();
     }
   }, 15_000);
+
+  test("serializes persisted grant revocation behind a normal cached revert replay", async () => {
+    const fixture = await preparePersistedAgentActivation("activate-before-normal-revert-replay-barrier");
+    const competing = createDatabaseClient(fixture.path);
+    try {
+      const request = {
+        changeSetId: fixture.applied.changeSetId,
+        accountIds: ["account-1"],
+        expectedWorkspaceRevision: fixture.applied.workspaceRevisionAfter,
+        idempotencyKey: "revert-normal-replay-revocation-barrier",
+      };
+      const reverted = createSqliteRuleChangeSetService(fixture.db, { capabilitySource: fixture.grant.source }).revert({
+        actor: fixture.grant.actor,
+        capabilitySnapshot: fixture.grant.snapshot,
+        workspaceId: "workspace-1",
+        request,
+      });
+      const barrier = persistedRevocationBarrier({
+        source: fixture.grant.source,
+        competingDb: competing.db,
+        idempotencyKey: request.idempotencyKey,
+        connectionId: fixture.grant.snapshot.id,
+      });
+      const beforeReplay = snapshot(fixture.db);
+      const replay = createSqliteRuleChangeSetService(fixture.db, { capabilitySource: barrier.source }).revert({
+        actor: fixture.grant.actor,
+        capabilitySnapshot: fixture.grant.snapshot,
+        workspaceId: "workspace-1",
+        request,
+      });
+
+      assert.deepEqual(replay, reverted, "an exact authorized revert replay remains byte-identical");
+      assert.equal(barrier.state.loads, 2, "the barrier must run on the replay's transaction-side live reload");
+      assert.equal(barrier.state.cachedRowObserved, true, "the competing revocation starts only after cached replay discovery");
+      assert.equal(
+        barrier.state.revocationCommitted,
+        false,
+        "must not return cached revert output after a competing persisted grant revocation commits",
+      );
+      assert.equal(barrier.state.serializationObserved, true, "the replay transaction must exclude the competing grant write");
+      assert.deepEqual(snapshot(fixture.db), beforeReplay, "the serialized revert replay remains write-free");
+
+      competing.db.update(mcpConnections).set({ revokedAt: new Date("2026-08-26T12:00:03.000Z") })
+        .where(eq(mcpConnections.id, fixture.grant.snapshot.id)).run();
+      assert.throws(
+        () => createSqliteRuleChangeSetService(fixture.db, { capabilitySource: fixture.grant.source }).revert({
+          actor: fixture.grant.actor,
+          capabilitySnapshot: fixture.grant.snapshot,
+          workspaceId: "workspace-1",
+          request,
+        }),
+        (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_revoked",
+      );
+      assert.deepEqual(snapshot(fixture.db), beforeReplay, "post-revocation denial must not write or expose revert output");
+    } finally {
+      competing.sqlite.close();
+      fixture.sqlite.close();
+    }
+  }, 30_000);
 
   test("revalidates every revert replay Capability dimension before returning stored lifecycle evidence", async () => {
     const { db, sqlite, compiled } = await setup();

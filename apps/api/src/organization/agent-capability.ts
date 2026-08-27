@@ -2,6 +2,7 @@ import type {
   OrganizationActor,
   OrganizationCapabilitySnapshot,
 } from "@orca/shared";
+import { canonicalOrganizationJson } from "./authority.ts";
 
 export type OrganizationAgentScope = {
   actor: OrganizationActor & { type: "agent" };
@@ -58,14 +59,24 @@ export function loadAuthorizedOrganizationAgentCapability(
   return live;
 }
 
-export function organizationReplayAuthorityMatches(scope: OrganizationAgentScope, authorityTrace: unknown): boolean {
+export function organizationReplayAuthorityMatches(
+  scope: OrganizationAgentScope,
+  authorityTrace: unknown,
+  capabilitySnapshot?: OrganizationCapabilitySnapshot,
+): boolean {
   if (typeof authorityTrace !== "object" || authorityTrace === null) return false;
-  const trace = authorityTrace as { actor?: unknown; scope?: { workspaceId?: unknown; accountIds?: unknown } };
+  const trace = authorityTrace as {
+    actor?: unknown;
+    scope?: { workspaceId?: unknown; accountIds?: unknown };
+    capabilitySnapshot?: unknown;
+  };
   const actor = trace.actor as { id?: unknown; type?: unknown } | undefined;
   return actor?.id === scope.actor.id && actor.type === scope.actor.type
     && trace.scope?.workspaceId === scope.workspaceId
     && Array.isArray(trace.scope.accountIds)
-    && JSON.stringify([...trace.scope.accountIds].sort()) === JSON.stringify([...scope.accountIds].sort());
+    && JSON.stringify([...trace.scope.accountIds].sort()) === JSON.stringify([...scope.accountIds].sort())
+    && (capabilitySnapshot === undefined
+      || canonicalOrganizationJson(trace.capabilitySnapshot) === canonicalOrganizationJson(capabilitySnapshot));
 }
 
 export function requireOrganizationCapability(
