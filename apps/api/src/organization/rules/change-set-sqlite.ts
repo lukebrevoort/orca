@@ -448,34 +448,54 @@ function replayRevertWithinTransaction(input: {
   return parseReplay(input.row, input.request);
 }
 
-function findReplayWithCurrentAuthority(input: {
+type ReplayWithCurrentAuthorityInput = {
   source: RuleChangeSetCapabilitySource;
   executor: Database;
   actor: OrganizationActor;
   capabilitySnapshot: OrganizationCapabilitySnapshot;
   workspaceId: string;
   accountIds: string[];
-  operation: "apply" | "revert";
   idempotencyKey: string;
-  request: unknown;
-  approval?: McpOrganizationApproval;
-}): OrcaRuleChangeSetResult | undefined {
+} & ({
+  operation: "apply";
+  request: ReturnType<typeof orcaRuleActivationRequestSchema.parse>;
+  approval: McpOrganizationApproval | undefined;
+  approvalGrant: McpOrganizationApprovalGrant | undefined;
+  now: Date;
+} | {
+  operation: "revert";
+  request: ReturnType<typeof orcaRuleRevertRequestSchema.parse>;
+});
+
+function findReplayWithCurrentAuthority(input: ReplayWithCurrentAuthorityInput): OrcaRuleChangeSetResult | undefined {
   const row = input.executor.select().from(organizationChangeSets).where(and(
     eq(organizationChangeSets.workspaceId, input.workspaceId),
     eq(organizationChangeSets.idempotencyKey, input.idempotencyKey),
   )).get();
   if (!row) return undefined;
-  const liveCapability = loadRequiredCapability(input.source, input.executor, input.workspaceId);
-  validateCurrentCapabilityClaim({
+  if (input.operation === "apply") {
+    return replayApplyWithinTransaction({
+      executor: input.executor,
+      row,
+      actor: input.actor,
+      capabilitySnapshot: input.capabilitySnapshot,
+      capabilitySource: input.source,
+      workspaceId: input.workspaceId,
+      request: input.request,
+      approval: input.approval,
+      approvalGrant: input.approvalGrant,
+      now: input.now,
+    });
+  }
+  return replayRevertWithinTransaction({
+    executor: input.executor,
+    row,
     actor: input.actor,
     capabilitySnapshot: input.capabilitySnapshot,
-    liveCapability,
+    capabilitySource: input.source,
     workspaceId: input.workspaceId,
-    accountIds: input.accountIds,
-    operation: input.operation,
+    request: input.request,
   });
-  authorizeReplay({ ...input, row, liveCapability });
-  return parseReplay(row, input.request, input.approval);
 }
 
 function proposedWinners(trace: OrcaEvaluationTrace, revisionId: string) {
@@ -728,8 +748,10 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         operation: "apply",
         idempotencyKey: request.idempotencyKey,
         request,
-        ...(approval ? { approval } : {}),
-      }));
+        approval,
+        approvalGrant,
+        now: now(),
+      }), { behavior: "immediate" });
       if (replay) {
         return replay;
       }
@@ -830,7 +852,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         const duplicate = findReplayWithCurrentAuthority({
           source: capabilitySource, executor, actor: input.actor, capabilitySnapshot,
           workspaceId: input.workspaceId, accountIds: request.accountIds, operation: "apply",
-          idempotencyKey: request.idempotencyKey, request, ...(approval ? { approval } : {}),
+          idempotencyKey: request.idempotencyKey, request, approval, approvalGrant, now: now(),
         });
         if (duplicate) return duplicate;
 
@@ -1202,7 +1224,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         operation: "revert",
         idempotencyKey: request.idempotencyKey,
         request,
-      }));
+      }), { behavior: "immediate" });
       if (replay) {
         return replay;
       }

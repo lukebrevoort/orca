@@ -289,14 +289,21 @@ async function preparePersistedAgentActivation(idempotencyKey: string) {
     simulationId: simulation.simulationId,
     acknowledgedRisk: simulation.risk,
   };
+  const approvalGrant = {
+    connectionId: grant.snapshot.id,
+    clientId: grant.actor.id,
+    approverUserId: "workspace-1",
+    expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+  };
   const applied = createSqliteRuleChangeSetService(db, { capabilitySource: grant.source }).activate({
     actor: grant.actor,
     capabilitySnapshot: grant.snapshot,
     workspaceId: "workspace-1",
     request,
     approval,
+    approvalGrant,
   });
-  return { ...fixture, grant, request, approval, applied };
+  return { ...fixture, grant, request, approval, approvalGrant, applied };
 }
 
 function prepareActivation(fixture: Awaited<ReturnType<typeof setup>>, idempotencyKey: string) {
@@ -720,6 +727,7 @@ action link context "Project" "Orca"`);
         workspaceId: "workspace-1",
         request: fixture.request,
         approval: fixture.approval,
+        approvalGrant: fixture.approvalGrant,
       });
 
       assert.deepEqual(replay, fixture.applied, "an exact authorized replay remains byte-identical");
@@ -742,6 +750,7 @@ action link context "Project" "Orca"`);
           workspaceId: "workspace-1",
           request: fixture.request,
           approval: fixture.approval,
+          approvalGrant: fixture.approvalGrant,
         }),
         (error: unknown) => error instanceof Error && "code" in error && error.code === "capability_revoked",
       );
