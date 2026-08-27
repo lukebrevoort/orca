@@ -82,16 +82,75 @@ describe("BRE-319 bounded mutation-attempt audit", () => {
     }
   });
 
-  test("two database connections retain both newest concurrent attempts under the 1,000-row cap", async () => {
+  test("serializes two Worker retention attempts so both newest IDs survive and both oldest IDs are pruned", async () => {
     const directory = mkdtempSync(join(tmpdir(), "orca-g2-attempt-race-"));
     const path = join(directory, "audit.sqlite");
-    const first = createDatabaseClient(path); const second = createDatabaseClient(path);
+    const client = createDatabaseClient(path);
+    const workers: Worker[] = [];
+    const retentionBarrier = new SharedArrayBuffer(4);
+    const waitForWorker = (worker: Worker, kind: "started" | "retained" | "complete") => new Promise<void>((resolve, reject) => {
+      const onMessage = (event: MessageEvent<{ kind: string; message?: string }>) => {
+        if (event.data.kind === "error") {
+          worker.removeEventListener("message", onMessage);
+          reject(new Error(event.data.message ?? "audit worker failed"));
+        } else if (event.data.kind === kind) {
+          worker.removeEventListener("message", onMessage);
+          resolve();
+        }
+      };
+      worker.addEventListener("message", onMessage);
+      worker.addEventListener("error", reject, { once: true });
+    });
     try {
-      migrate(first.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
-      first.sqlite.exec("INSERT INTO users (id,email) VALUES ('workspace','owner@example.com'); INSERT INTO mcp_oauth_clients (id,name,redirect_uris) VALUES ('client','Client','[]'); INSERT INTO mcp_connections (id,user_id,client_id,resource,scopes) VALUES ('connection','workspace','client','https://api.orca.test/mcp','organization:control');");
-      await Promise.all([1, 2].map((n) => Promise.resolve().then(() => recordOrganizationMutationAttempt({ db: n === 1 ? first.db : second.db, workspaceId: "workspace", connectionId: "connection", actor: { id: `client-${n}`, type: "agent" }, operation: "apply", query: { accountIds: ["account"], target: { request: { idempotencyKey: `k-${n}`, actions: [] } } } as unknown as McpApplyOrganizationInput, error: Object.assign(new Error("race"), { code: "revision_conflict" }), id: `race-${n}`, now: new Date(10_000 + n) }))));
-      const rows = first.db.select().from(organizationMutationAttempts).all().filter((r) => r.workspaceId === "workspace");
-      assert.equal(rows.length, 2); assert.equal(rows.some((r) => r.id === "race-1"), true); assert.equal(rows.some((r) => r.id === "race-2"), true);
-    } finally { first.sqlite.close(); second.sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
+      migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../../drizzle") });
+      client.sqlite.exec(`
+        INSERT INTO users (id,email) VALUES ('workspace','owner@example.com');
+        INSERT INTO mcp_oauth_clients (id,name,redirect_uris) VALUES ('client','Client','[]');
+        INSERT INTO mcp_connections (id,user_id,client_id,resource,scopes)
+          VALUES ('connection','workspace','client','https://api.orca.test/mcp','organization:control');
+        WITH RECURSIVE sequence(value) AS (
+          VALUES(1) UNION ALL SELECT value + 1 FROM sequence WHERE value < 1000
+        )
+        INSERT INTO organization_mutation_attempts (
+          id,workspace_id,connection_id,actor_type,actor_id,operation,idempotency_key,
+          command_digest,account_count,account_ids_digest,outcome,reason_code,created_at
+        ) SELECT
+          printf('old-%04d',value),'workspace','connection','agent','client','apply',printf('old-key-%04d',value),
+          'sha256:redacted',1,'sha256:redacted','failed','revision_conflict',value
+        FROM sequence;
+      `);
+
+      const first = new Worker(new URL("./mutation-attempt-audit-worker.ts", import.meta.url).href, { type: "module" });
+      workers.push(first);
+      const firstRetained = waitForWorker(first, "retained");
+      const firstComplete = waitForWorker(first, "complete");
+      first.postMessage({ databasePath: path, attemptNumber: 1, retentionBarrier });
+      await firstRetained;
+
+      const second = new Worker(new URL("./mutation-attempt-audit-worker.ts", import.meta.url).href, { type: "module" });
+      workers.push(second);
+      const secondStarted = waitForWorker(second, "started");
+      const secondComplete = waitForWorker(second, "complete");
+      second.postMessage({ databasePath: path, attemptNumber: 2 });
+      await secondStarted;
+      Atomics.store(new Int32Array(retentionBarrier), 0, 1);
+      Atomics.notify(new Int32Array(retentionBarrier), 0);
+      await Promise.all([firstComplete, secondComplete]);
+
+      const rows = client.db.select().from(organizationMutationAttempts).all()
+        .filter((row) => row.workspaceId === "workspace");
+      const ids = new Set(rows.map((row) => row.id));
+      assert.equal(rows.length, maximumMutationAttemptAuditRowsPerWorkspace);
+      assert.equal(ids.has("new-attempt-1"), true);
+      assert.equal(ids.has("new-attempt-2"), true);
+      assert.equal(ids.has("old-0001"), false);
+      assert.equal(ids.has("old-0002"), false);
+    } finally {
+      Atomics.store(new Int32Array(retentionBarrier), 0, 1);
+      Atomics.notify(new Int32Array(retentionBarrier), 0);
+      for (const worker of workers) worker.terminate();
+      client.sqlite.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

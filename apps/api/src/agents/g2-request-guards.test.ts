@@ -110,33 +110,169 @@ describe("BRE-319 MCP exhaustion guards", () => {
     if (recovered.allowed) recovered.release();
   });
 
-  test("evicts many expired zero-in-flight keys while preserving active lease accounting", () => {
+  test("evicts expired connection and Workspace keys within a bounded sweep while preserving an old active lease", () => {
     let now = 0;
-    const limiter = new McpRequestLimiter({ now: () => now, windowMilliseconds: 10, maximumConnectionInFlight: 2, maximumWorkspaceInFlight: 2 });
-    for (let i = 0; i < 2_000; i++) {
+    const limiter = new McpRequestLimiter({
+      now: () => now,
+      windowMilliseconds: 10,
+      maximumConnectionCost: 10_000,
+      maximumWorkspaceCost: 10_000,
+      maximumConnectionInFlight: 1,
+      maximumWorkspaceInFlight: 1,
+    });
+    for (let i = 0; i < 256; i++) {
       const lease = limiter.acquire({ connectionId: `c-${i}`, workspaceId: `w-${i}`, cost: 1 });
+      assert.equal(lease.allowed, true);
       if (lease.allowed) lease.release();
     }
-    now = 20;
     const active = limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 });
     assert.equal(active.allowed, true);
-    const blocked = limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 });
-    assert.equal(blocked.allowed, true);
+
+    now = 20;
+    for (let i = 0; i < 80; i++) {
+      const lease = limiter.acquire({ connectionId: `sweep-c-${i}`, workspaceId: `sweep-w-${i}`, cost: 1 });
+      assert.equal(lease.allowed, true);
+      if (lease.allowed) lease.release();
+    }
+    assert.deepEqual(limiter.getStateObservability(), {
+      connections: 81,
+      workspaces: 81,
+      lastAcquireSweepVisits: 16,
+      maximumAcquireSweepVisits: 16,
+    });
+    assert.deepEqual(limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 }), {
+      allowed: false,
+      retryAfterSeconds: 1,
+      reason: "connection_in_flight",
+    });
     if (active.allowed) active.release();
-    if (blocked.allowed) blocked.release();
-    now = 40;
-    for (let i = 0; i < 128; i++) limiter.acquire({ connectionId: `sweep-${i}`, workspaceId: `sweep-${i}`, cost: 1 });
-    assert.ok(limiter.getStateSizes().connections < 2_200);
+    const recovered = limiter.acquire({ connectionId: "active", workspaceId: "active-w", cost: 1 });
+    assert.equal(recovered.allowed, true);
+    if (recovered.allowed) recovered.release();
   });
 
-  test("preserves abort signal on bounded exchange after admission", async () => {
+  test("releases an admitted MCP lease when the live HTTP exchange is aborted inside a deferred tool", async () => {
+    const issuer = "https://identity.orca.test";
+    const resource = "https://api.orca.test/mcp";
+    let enterDeferred!: () => void;
+    const enteredDeferred = new Promise<void>((resolve) => { enterDeferred = resolve; });
+    let releaseDeferred!: () => void;
+    const deferredWork = new Promise<void>((resolve) => { releaseDeferred = resolve; });
+    let searchCalls = 0;
+    const unavailable = () => { throw new Error("unexpected tool dispatch"); };
+    const dataSource: OrcaMcpDataSource = {
+      getCurrentAccountIds: () => ["account"],
+      describeOrganization: unavailable,
+      queryOrganization: unavailable,
+      simulateOrganization: unavailable,
+      applyOrganization: unavailable,
+      revertOrganization: unavailable,
+      async searchMail() {
+        searchCalls += 1;
+        if (searchCalls === 1) {
+          enterDeferred();
+          await deferredWork;
+        }
+        return {
+          messages: [],
+          counts: {
+            attention: { focus: 0, normal: 0, quiet: 0, hidden: 0, all: 0 },
+            classification: { likely_human: 0, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 0 },
+          },
+          nextCursor: null,
+        };
+      },
+      getThread: unavailable,
+      listAgentEvents: unavailable,
+      getConnectionStatus: unavailable,
+      sourceUrl: () => resource,
+    };
+    const handler = createOrcaMcpHttpHandler({
+      dataSource,
+      policy: { enabled: true, issuer, resource },
+      requestLimiter: new McpRequestLimiter({
+        maximumConnectionCost: 100,
+        maximumWorkspaceCost: 100,
+        maximumConnectionInFlight: 1,
+        maximumWorkspaceInFlight: 1,
+      }),
+      verifier: {
+        async verifyAccessToken(token) {
+          return {
+            token,
+            clientId: "client",
+            scopes: ["mail:read"],
+            expiresAt: Math.floor(Date.now() / 1_000) + 600,
+            resource: new URL(resource),
+            extra: {
+              orcaAuthorization: orcaAgentAuthorizationContextSchema.parse({
+                connectionId: "connection",
+                clientId: "client",
+                userId: "workspace",
+                accountIds: ["account"],
+                issuer,
+                resource,
+                scopes: ["orca:mail.metadata:read"],
+                issuedAt: new Date(),
+                expiresAt: new Date(Date.now() + 600_000),
+              }),
+              grantRevokedAt: null,
+            },
+          };
+        },
+      },
+    });
+    const headers = {
+      authorization: "Bearer admitted-token",
+      host: "api.orca.test",
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      "mcp-protocol-version": "2026-07-28",
+      "mcp-method": "tools/call",
+      "mcp-name": "search_mail",
+    };
+    const body = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "search_mail",
+        arguments: { accountId: "account", limit: 1 },
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {},
+        },
+      },
+    });
     const controller = new AbortController();
-    const guarded = await boundedMcpRequest(new Request("https://orca.example/mcp", { method: "POST", body: "{}", signal: controller.signal }));
-    assert.equal(guarded.allowed, true);
-    if (!guarded.allowed) return;
-    assert.equal(guarded.request.signal.aborted, false);
-    controller.abort();
-    assert.equal(guarded.request.signal.aborted, true);
+    const firstExchange = handler.fetch(new Request(resource, { method: "POST", headers, body, signal: controller.signal }));
+    let firstSettled = false;
+    const observedFirstExchange = firstExchange.then(
+      (response) => { firstSettled = true; return response; },
+      (error: unknown) => { firstSettled = true; return error; },
+    );
+
+    try {
+      await enteredDeferred;
+      controller.abort();
+      await new Promise<void>((resolve) => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => {
+          channel.port1.close();
+          channel.port2.close();
+          resolve();
+        };
+        channel.port2.postMessage(null);
+      });
+      assert.equal(firstSettled, true, "aborting the admitted HTTP exchange must settle it before deferred tool work completes");
+
+      const second = await handler.fetch(new Request(resource, { method: "POST", headers, body: body.replace('"id":1', '"id":2') }));
+      assert.equal(second.status, 200, "the aborted exchange must release its only in-flight connection lease");
+      assert.equal(searchCalls, 2);
+    } finally {
+      releaseDeferred();
+      await observedFirstExchange;
+    }
   });
 
   test("exports every stable BRE-319 denial and exhaustion error code", () => {
@@ -218,7 +354,9 @@ describe("BRE-319 MCP exhaustion guards", () => {
     assert.equal(verifierCalls, 0);
 
     const rpc = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
-    assert.equal((await handler.fetch(new Request(resource, { method: "POST", headers, body: rpc }))).status, 200);
+    const admitted = await handler.fetch(new Request(resource, { method: "POST", headers, body: rpc }));
+    assert.equal(admitted.status, 200);
+    await admitted.text();
     const rateLimited = await handler.fetch(new Request(resource, { method: "POST", headers, body: rpc }));
     assert.equal(rateLimited.status, 429);
     assert.equal((await rateLimited.json()).error.code, "rate_limit");
