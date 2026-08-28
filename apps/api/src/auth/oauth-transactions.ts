@@ -4,7 +4,7 @@ import type { MailProvider } from "@orca/shared";
 import { and, count, eq, gt, gte, isNull, lt } from "drizzle-orm";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { oauthTransactions } from "../db/schema.ts";
+import { oauthTransactions, sessions } from "../db/schema.ts";
 import { createSessionToken, getSessionCookieOptions, verifySessionToken } from "./jwt.ts";
 import { getSessionFromToken } from "./session-store.ts";
 
@@ -156,6 +156,19 @@ export class DatabaseOAuthTransactionStore implements OAuthTransactionStore {
           gt(oauthTransactions.expiresAt, consumedAt),
         )).get();
         if (!record) return null;
+
+        // Login attempts are bound to the separate, signed short-lived attempt
+        // cookie. Connect and upgrade transactions must still have the exact
+        // live durable session at the instant the state is consumed.
+        if (record.intent !== "login") {
+          const liveSession = tx.select({ id: sessions.id }).from(sessions).where(and(
+            eq(sessions.id, binding.sessionId),
+            eq(sessions.userId, binding.userId),
+            isNull(sessions.invalidatedAt),
+            gt(sessions.expiresAt, consumedAt),
+          )).get();
+          if (!liveSession) return null;
+        }
 
         const consumed = tx.update(oauthTransactions)
           .set({ consumedAt, codeVerifier: null })

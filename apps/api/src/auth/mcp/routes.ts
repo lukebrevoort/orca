@@ -126,10 +126,41 @@ function oauthError(c: McpContext, status: 400 | 401 | 413 | 429 | 500, error: s
 }
 
 async function readBoundedBody(c: McpContext, maximumBytes: number) {
-  const contentLength = Number(c.req.header("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > maximumBytes) return null;
-  const text = await c.req.text();
-  return new TextEncoder().encode(text).byteLength <= maximumBytes ? text : null;
+  const contentLengthHeader = c.req.header("content-length");
+  if (contentLengthHeader !== undefined) {
+    const contentLength = Number(contentLengthHeader);
+    if (!Number.isSafeInteger(contentLength) || contentLength < 0 || contentLength > maximumBytes) return null;
+  }
+
+  const body = c.req.raw.body;
+  if (!body) return "";
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maximumBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 async function readBoundedForm(c: McpContext, maximumBytes: number) {

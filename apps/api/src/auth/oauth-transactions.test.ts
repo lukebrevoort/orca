@@ -99,6 +99,51 @@ describe("provider OAuth transactions", () => {
       inspection.sqlite.close();
     }
   });
+
+  test("consumes connect state only while the exact durable session remains live", async () => {
+    const { dbFactory, cleanup } = migratedDatabase();
+    cleanups.push(cleanup);
+    const store = new DatabaseOAuthTransactionStore(dbFactory);
+    const binding = { sessionId: "session-connect", userId: "user-connect" };
+    const setup = dbFactory();
+    try {
+      setup.db.insert(users).values({ id: binding.userId, email: "connect@example.com" }).run();
+      setup.db.insert(sessions).values({
+        id: binding.sessionId,
+        userId: binding.userId,
+        expiresAt: new Date(Date.now() + 60_000),
+      }).run();
+    } finally {
+      setup.sqlite.close();
+    }
+
+    const started = await store.begin({
+      provider: "gmail",
+      intent: "connect",
+      ...binding,
+      returnTo: null,
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+
+    const invalidated = dbFactory();
+    try {
+      invalidated.db.update(sessions)
+        .set({ invalidatedAt: new Date() })
+        .where(eq(sessions.id, binding.sessionId))
+        .run();
+    } finally {
+      invalidated.sqlite.close();
+    }
+
+    expect(await store.consume(started.state, "gmail", binding)).toBeNull();
+    const inspection = dbFactory();
+    try {
+      expect(inspection.db.select().from(oauthTransactions).get()?.consumedAt).toBeNull();
+    } finally {
+      inspection.sqlite.close();
+    }
+  });
 });
 
 function migratedDatabase() {
