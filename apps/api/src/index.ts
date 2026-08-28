@@ -23,6 +23,7 @@ import {
   type McpGetThreadInput,
   type McpListAgentEventsInput,
   type McpSearchMailInput,
+  type OutboundAttachment,
   type ThreadDetail,
   agentEventLifecycleStateSchema,
   agentEventListPageSchema,
@@ -51,6 +52,8 @@ import {
   mailAccountPageSchema,
   mailAccountSchema,
   messageDraftSchema,
+  outboundAttachmentSchema,
+  MAX_OUTBOUND_ATTACHMENT_BYTES,
   legacyPinFilterFromOrganizationSavedQueryDefinition,
   normalizeOrganizationSavedQueryDefinition,
   organizationSavedQueryDefinitionFromLegacyPinFilter,
@@ -140,6 +143,7 @@ import {
 } from "./organization/collections-pins/module.ts";
 
 export const DRAFT_REQUEST_MAX_BYTES = 36 * 1024 * 1024;
+export const API_REQUEST_MAX_BYTES = 40 * 1024 * 1024;
 export const MAX_DRAFTS_PER_USER = 100;
 export const MAX_DRAFT_STORAGE_BYTES_PER_USER = 100 * 1024 * 1024;
 
@@ -153,6 +157,8 @@ const draftRequestBodyLimit = bodyLimit({
     },
   }, 413),
 });
+
+const LEGACY_DRAFT_ATTACHMENT_ERROR = "One or more legacy attachments must be reattached or removed before this draft can be sent.";
 
 class DraftQuotaError extends Error {}
 
@@ -177,6 +183,7 @@ type CreateAppOptions = {
   calendarOAuthConfig?: GoogleCalendarOAuthConfig;
   calendarFetch?: CalendarFetch;
   replyBriefAvailability?: (input: { userId: string; request: ReplyBriefInvocationRequest; thread: ThreadDetail }) => Promise<CalendarAvailabilityResponse | null>;
+  apiRequestMaxBytes?: number;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -233,6 +240,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   const draftMirrorJobs = new Set<string>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
+  const apiRequestBodyLimit = bodyLimit({
+    maxSize: options.apiRequestMaxBytes ?? API_REQUEST_MAX_BYTES,
+    onError: (c) => c.json({
+      error: {
+        code: "request_too_large",
+        message: "API request bodies must be 40 MB or smaller",
+        retryable: false,
+      },
+    }, 413),
+  });
 
   app.use(
     "*",
@@ -240,6 +257,10 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       origin: [serverConfig.webOrigin],
     }),
   );
+
+  // Establish a streaming admission limit before any /v1 route can buffer or
+  // parse a request body. Individual routes may enforce smaller limits.
+  app.use("/v1/*", apiRequestBodyLimit);
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
   registerOrganizationContextRoutes(app, { dbFactory });
@@ -1693,6 +1714,17 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (draft.deliveryStatus !== "draft") {
         return c.json({ error: { code: "ambiguous_delivery", message: "A draft that has begun delivery cannot be edited", retryable: false } }, 409);
       }
+      const storedAttachments = readStoredDraftAttachments(draft.attachments);
+      if (storedAttachments.requiresReattachment
+        && (update.attachments === undefined || update.attachments.some((attachment) => !attachment.contentBase64))) {
+        return c.json({
+          error: {
+            code: "provider_rejected",
+            message: LEGACY_DRAFT_ATTACHMENT_ERROR,
+            retryable: false,
+          },
+        }, 409);
+      }
       const current = toMessageDraft(draft);
       const content = createMessageDraftSchema.parse({
         to: update.to ?? current.to,
@@ -1803,6 +1835,15 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           eq(messageDrafts.deliveryStatus, "draft"),
         )).get();
         if (!draft) return;
+        const storedAttachments = readStoredDraftAttachments(draft.attachments);
+        if (storedAttachments.requiresReattachment) {
+          db.update(messageDrafts).set({
+            providerSyncStatus: "failed",
+            providerSyncError: LEGACY_DRAFT_ATTACHMENT_ERROR,
+            updatedAt: now(),
+          }).where(and(eq(messageDrafts.id, draft.id), eq(messageDrafts.revision, revision))).run();
+          return;
+        }
         const content = createMessageDraftSchema.parse({
           to: parseDraftJson(draft.toRecipients, []),
           cc: parseDraftJson(draft.ccRecipients, []),
@@ -1810,7 +1851,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           subject: draft.subject,
           body: { text: draft.bodyText, html: draft.bodyHtml },
           context: parseDraftJson(draft.context, null),
-          attachments: parseDraftJson(draft.attachments, []),
+          attachments: storedAttachments.attachments,
         });
         const account = getAccountById(db, draft.accountId);
         if (!account) return;
@@ -1881,7 +1922,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!capabilitiesFor(account).send) {
         return c.json({ error: { code: "missing_capability", message: `The connected ${providerDisplayName(account.provider)} account has read-only access and cannot deliver mail`, retryable: false } }, 501);
       }
-      if (toMessageDraft(draft).attachments.some((attachment) => !attachment.contentBase64)) {
+      const storedAttachments = readStoredDraftAttachments(draft.attachments);
+      if (storedAttachments.requiresReattachment
+        || storedAttachments.attachments.some((attachment) => !attachment.contentBase64)) {
         return c.json({ error: { code: "provider_rejected", message: "Attachments must finish uploading before this message can be delivered", retryable: false } }, 409);
       }
       const reserved = db.update(messageDrafts).set({ deliveryStatus: "sending", sendIdempotencyKey: command.idempotencyKey, updatedAt: now() })
@@ -2506,6 +2549,7 @@ function hasMeaningfulDraftContent(input: ReturnType<typeof createMessageDraftSc
 }
 
 function toMessageDraft(draft: MessageDraftRecord): ReturnType<typeof messageDraftSchema.parse> {
+  const storedAttachments = readStoredDraftAttachments(draft.attachments);
   return messageDraftSchema.parse({
     id: draft.id,
     accountId: draft.accountId,
@@ -2515,17 +2559,68 @@ function toMessageDraft(draft: MessageDraftRecord): ReturnType<typeof messageDra
     subject: draft.subject,
     body: { text: draft.bodyText, html: draft.bodyHtml },
     context: parseDraftJson(draft.context, null),
-    attachments: parseDraftJson(draft.attachments, []),
+    attachments: storedAttachments.attachments,
     revision: draft.revision,
     deliveryStatus: draft.deliveryStatus,
-    providerSyncStatus: draft.providerSyncStatus,
-    providerSyncError: draft.providerSyncError,
+    providerSyncStatus: storedAttachments.requiresReattachment ? "failed" : draft.providerSyncStatus,
+    providerSyncError: storedAttachments.requiresReattachment
+      ? LEGACY_DRAFT_ATTACHMENT_ERROR
+      : draft.providerSyncError,
     providerDraftId: draft.providerDraftId,
     providerMessageId: draft.providerMessageId,
     providerThreadId: draft.providerThreadId,
     createdAt: draft.createdAt.toISOString(),
     updatedAt: draft.updatedAt.toISOString(),
   });
+}
+
+function readStoredDraftAttachments(value: string | null): {
+  attachments: OutboundAttachment[];
+  requiresReattachment: boolean;
+} {
+  if (!value) return { attachments: [], requiresReattachment: false };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return { attachments: [legacyAttachmentPlaceholder(0)], requiresReattachment: true };
+  }
+  if (!Array.isArray(parsed)) return { attachments: [legacyAttachmentPlaceholder(0)], requiresReattachment: true };
+
+  const attachments: OutboundAttachment[] = [];
+  let requiresReattachment = false;
+  let declaredBytes = 0;
+  for (const [index, candidate] of parsed.slice(0, 25).entries()) {
+    const valid = outboundAttachmentSchema.safeParse(candidate);
+    if (valid.success) {
+      attachments.push(valid.data);
+      declaredBytes += valid.data.size;
+      continue;
+    }
+    const inert = candidate && typeof candidate === "object"
+      ? outboundAttachmentSchema.safeParse({ ...candidate, contentBase64: null })
+      : null;
+    if (inert?.success) {
+      attachments.push(inert.data);
+      declaredBytes += inert.data.size;
+    } else {
+      attachments.push(legacyAttachmentPlaceholder(index));
+    }
+    requiresReattachment = true;
+  }
+  if (parsed.length > 25) requiresReattachment = true;
+  if (declaredBytes > MAX_OUTBOUND_ATTACHMENT_BYTES) requiresReattachment = true;
+  return { attachments, requiresReattachment };
+}
+
+function legacyAttachmentPlaceholder(index: number): OutboundAttachment {
+  return {
+    id: `legacy-unreadable-${index}`,
+    filename: "Unreadable legacy attachment",
+    mimeType: "application/octet-stream",
+    size: 1,
+    contentBase64: null,
+  };
 }
 
 function parseDraftJson(value: string | null, fallback: unknown) {

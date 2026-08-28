@@ -383,7 +383,7 @@ export function canonicalBase64DecodedByteLength(value: string): number | null {
   return (value.length / 4) * 3 - padding;
 }
 
-const outboundAttachmentSchema = z.object({
+export const outboundAttachmentSchema = z.object({
   id: nonEmptyStringSchema,
   filename: z.string().trim().min(1).max(255),
   mimeType: z.string().trim().max(255).regex(/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/),
@@ -465,7 +465,7 @@ export const messageDraftSchema = outboundContentSchema.extend({
   providerThreadId: z.string().nullable(),
   createdAt: isoDateTimeStringSchema,
   updatedAt: isoDateTimeStringSchema,
-}).strict().superRefine(addAttachmentLimitIssue);
+}).strict();
 export type MessageDraft = z.infer<typeof messageDraftSchema>;
 
 export const createMessageDraftSchema = outboundContentSchema.extend({
