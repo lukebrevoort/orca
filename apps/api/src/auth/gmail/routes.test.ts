@@ -94,6 +94,11 @@ describe("Gmail auth routes", () => {
     const initialClient = createDatabaseClient(dbPath);
     migrate(initialClient.db, { migrationsFolder: resolve(import.meta.dir, "../../../drizzle") });
     initialClient.db.insert(users).values({ id: "user_1", email: "owner@example.com" }).run();
+    initialClient.db.insert(sessions).values({
+      id: "session_1",
+      userId: "user_1",
+      expiresAt: new Date(Date.now() + 60_000),
+    }).run();
     initialClient.sqlite.close();
 
     let identity = 0;

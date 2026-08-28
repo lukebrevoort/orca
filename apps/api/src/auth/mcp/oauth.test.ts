@@ -364,6 +364,34 @@ describe("Orca MCP OAuth 2.1", () => {
     assert.equal(oversized.status, 413);
   });
 
+  test("cancels streamed OAuth bodies as soon as their actual bytes exceed the limit", async () => {
+    const app = createApp({
+      dbFactory: () => createDatabaseClient(dbPath),
+      mcpOAuthConfig: config,
+    });
+    let canceled = false;
+    let emitted = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        emitted += 1;
+        controller.enqueue(new Uint8Array(8 * 1024).fill(65));
+      },
+      cancel() {
+        canceled = true;
+      },
+    });
+    const response = await app.request(new Request("http://localhost/oauth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" }));
+
+    assert.equal(response.status, 413);
+    assert.equal(canceled, true);
+    assert.ok(emitted >= 3);
+  });
+
   test("retains consumed refresh tokens for replay detection, then garbage-collects them", async () => {
     const app = createApp({ dbFactory: () => createDatabaseClient(dbPath), mcpOAuthConfig: config });
     const client = await registerClient(app);
