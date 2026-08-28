@@ -22,7 +22,8 @@ import {
 } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, oauthAccounts, organizationChangeSets, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
 import { createOrcaMcpHttpHandler, type OrcaMcpDataSource } from "./mcp.ts";
@@ -417,6 +418,32 @@ describe("Orca scoped MCP server", () => {
       const allowedOrigin = await callMcp(app, token, "tools/list", {}, { origin: "https://chatgpt.com" });
       assert.equal(allowedOrigin.status, 200);
     } finally {
+      sqlite.close();
+    }
+  });
+
+  test("authenticates then rejects oversized Organization route bodies with typed 413 before route dispatch", async () => {
+    const { app, db, sqlite } = createFixture();
+    const previousSessionSecret = process.env.SESSION_SECRET;
+    const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
+    try {
+      process.env.SESSION_SECRET = "bre-319-route-limit-session-secret";
+      process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 31).toString("base64");
+      const session = await createSession(db, "user_a");
+      const response = await app.request("/v1/organization/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: `orca_session=${session.token}` },
+        body: JSON.stringify({ source: "x".repeat(512 * 1_024) }),
+      });
+      assert.equal(response.status, 413);
+      assert.deepEqual(await response.json(), {
+        error: { code: "payload_limit", message: "The Organization request body exceeds the 512 KiB limit" },
+      });
+    } finally {
+      if (previousSessionSecret === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previousSessionSecret;
+      if (previousTokenEncryptionKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY;
+      else process.env.TOKEN_ENCRYPTION_KEY = previousTokenEncryptionKey;
       sqlite.close();
     }
   });
@@ -952,6 +979,36 @@ describe("Orca scoped MCP server", () => {
       assert.equal(appliedOutput.actor.type, "agent");
       const storedApply = db.select().from(organizationChangeSets).all().find((row) => row.id === appliedOutput.result.changeSetId)!;
       assert.deepEqual(JSON.parse(storedApply.commandJson).approval, applyArguments.target.approval);
+      const durableApproval = db.select().from(mcpOrganizationApprovals).get()!;
+      assert.equal(durableApproval.connectionId, "connection_a");
+      assert.equal(durableApproval.clientId, appliedOutput.actor.id);
+      assert.equal(durableApproval.approverUserId, "user_a");
+      assert.equal(durableApproval.operation, "apply");
+      assert.equal(durableApproval.commandDigest, storedApply.commandDigest);
+      assert.equal(durableApproval.simulationId, simulated.simulationId);
+      assert.equal(durableApproval.risk, simulated.risk);
+      assert.equal(durableApproval.consumedByIdempotencyKey, activationRequest.idempotencyKey);
+      assert.ok(durableApproval.expiresAt > durableApproval.consumedAt);
+      assert.deepEqual(JSON.parse(durableApproval.revisionsJson).workspace, activationRequest.expectedWorkspaceRevision);
+      assert.doesNotMatch(JSON.stringify(durableApproval), /Bearer|provider-access|provider-refresh|Production failures/);
+
+      const competingApprovalUse = await rpcBody(await callMcp(app, token, "tools/call", {
+        name: "apply_organization",
+        arguments: {
+          ...applyArguments,
+          target: {
+            ...applyArguments.target,
+            request: { ...activationRequest, idempotencyKey: "mcp-activate-competing-key" },
+          },
+        },
+      }));
+      assert.equal(competingApprovalUse.result.isError, true, JSON.stringify(competingApprovalUse));
+      assert.ok(["approval_required", "simulation_mismatch", "revision_conflict"].includes(
+        JSON.parse(competingApprovalUse.result.content[0].text).error.code,
+      ));
+      assert.equal(db.select().from(mcpOrganizationApprovals).all().length, 1);
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.operation, "apply")).all()
+        .filter((row) => row.simulationId === simulated.simulationId).length, 1);
 
       const replay = await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: applyArguments });
       assert.deepEqual((await rpcBody(replay)).result.structuredContent, appliedOutput);
@@ -1015,8 +1072,45 @@ describe("Orca scoped MCP server", () => {
         const body = await rpcBody(response);
         assert.equal(body.result.isError, true, JSON.stringify(body));
         assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.id, `grant-race-${index}`)).all().length, 0);
+        const attempts = db.select().from(organizationMutationAttempts).where(eq(organizationMutationAttempts.idempotencyKey, `grant-race-${index}`)).all();
+        assert.equal(attempts.length, 1);
+        assert.match(attempts[0]!.reasonCode, /actor_operation_denied|capability|denied/);
       } finally { sqlite.close(); }
     }
+  });
+
+  test("denies guessed cross-Account resource IDs and replayed cross-Workspace credentials through the real MCP mutation seam", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+      const crossAccountKey = "g2-cross-account-resource";
+      const crossAccount = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: {
+        workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "collection",
+        target: { kind: "collection", request: {
+          idempotencyKey: crossAccountKey,
+          change: { kind: "collection", action: "create", accountId: "account_b", collection: { name: "Guessed", color: "#336699" } },
+        } },
+      } }));
+      assert.equal(crossAccount.result.isError, true, JSON.stringify(crossAccount));
+      assert.equal(JSON.parse(crossAccount.result.content[0].text).error.code, "denial");
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, crossAccountKey)).all().length, 0);
+
+      const crossWorkspaceKey = "g2-cross-workspace-credential";
+      const replayedCredential = await signToken({ userId: "user_b", accountIds: ["account_b"], scopes: ["orca:organization:control"] });
+      const crossWorkspace = await rpcBody(await callMcp(app, replayedCredential, "tools/call", { name: "apply_organization", arguments: {
+        workspaceId: "user_b", accountIds: ["account_b"], expectedWorkspaceRevision: 1, targetKind: "lanes",
+        target: { kind: "lanes", request: { id: crossWorkspaceKey, idempotencyKey: crossWorkspaceKey, expectedWorkspaceRevision: 1, actions: [
+          { kind: "define_lane_policy", id: "cross-workspace-policy", visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
+        ] } },
+      } }));
+      assert.equal(crossWorkspace.result.isError, true, JSON.stringify(crossWorkspace));
+      assert.equal(JSON.parse(crossWorkspace.result.content[0].text).error.code, "account_denied");
+      assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, crossWorkspaceKey)).all().length, 0);
+      assert.equal(db.select().from(organizationMutationAttempts).where(eq(organizationMutationAttempts.idempotencyKey, crossAccountKey)).all().length, 1);
+      const crossWorkspaceAttempts = db.select().from(organizationMutationAttempts).where(eq(organizationMutationAttempts.idempotencyKey, crossWorkspaceKey)).all();
+      assert.equal(crossWorkspaceAttempts.length, 1);
+      assert.equal(crossWorkspaceAttempts[0]?.connectionId, null, "a replayed connection must not be attributed across Workspaces");
+    } finally { sqlite.close(); }
   });
 
   test("fails a cached Context replay when persisted authority is revoked after bearer preflight but before replay lookup", async () => {
@@ -1041,5 +1135,49 @@ describe("Orca scoped MCP server", () => {
       assert.equal(replay.result.isError, true, JSON.stringify(replay));
       assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, idempotencyKey)).all().length, 1);
     } finally { sqlite.close(); }
+  });
+
+  test("rolls back first/middle/last multi-resource failures and appends one bounded redacted attempt each", async () => {
+    for (const phase of ["first", "middle", "last"] as const) {
+      const idempotencyKey = `g2-atomic-${phase}`;
+      const policyId = `g2-policy-${phase}`;
+      const laneId = `g2-lane-${phase}`;
+      const { app, db, sqlite } = createFixture({
+        beforeMutationTransaction(executor) {
+          const trigger = phase === "first"
+            ? `BEFORE INSERT ON organization_change_sets WHEN NEW.idempotency_key = '${idempotencyKey}'`
+            : phase === "middle"
+              ? `BEFORE INSERT ON organization_lane_policies WHEN NEW.id = '${policyId}'`
+              : `BEFORE INSERT ON organization_lanes WHEN NEW.id = '${laneId}'`;
+          executor.$client.exec(`CREATE TRIGGER IF NOT EXISTS bre319_fail_${phase} ${trigger}
+            BEGIN SELECT RAISE(ABORT, 'g2 injected failure'); END`);
+        },
+      });
+      try {
+        const token = await signToken({ accountIds: ["account_a"], scopes: ["orca:organization:control"] });
+        const request = {
+          workspaceId: "user_a", accountIds: ["account_a"], expectedWorkspaceRevision: 1, targetKind: "lanes",
+          target: { kind: "lanes", request: { id: idempotencyKey, idempotencyKey, expectedWorkspaceRevision: 1, actions: [
+            { kind: "define_lane_policy", id: policyId, visibility: "prominent", interruption: "badge", review: "continuous", retention: { mode: "keep", days: null } },
+            { kind: "define_lane", id: laneId, name: "Must roll back", position: 1, defaultPolicyId: policyId },
+          ] } },
+        };
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const body = await rpcBody(await callMcp(app, token, "tools/call", { name: "apply_organization", arguments: request }));
+          assert.equal(body.result.isError, true, JSON.stringify(body));
+        }
+        assert.equal(db.select().from(organizationLanePolicies).where(eq(organizationLanePolicies.id, policyId)).all().length, 0, phase);
+        assert.equal(db.select().from(organizationLanes).where(eq(organizationLanes.id, laneId)).all().length, 0, phase);
+        assert.equal(db.select().from(organizationChangeSets).where(eq(organizationChangeSets.idempotencyKey, idempotencyKey)).all().length, 0, phase);
+        const attempts = db.select().from(organizationMutationAttempts).where(eq(organizationMutationAttempts.idempotencyKey, idempotencyKey)).all();
+        assert.equal(attempts.length, 1, phase);
+        assert.equal(attempts[0]!.workspaceId, "user_a");
+        assert.equal(attempts[0]!.connectionId, "connection_a");
+        assert.equal(attempts[0]!.operation, "apply");
+        assert.match(attempts[0]!.commandDigest, /^sha256:[0-9a-f]{64}$/);
+        assert.match(attempts[0]!.accountIdsDigest, /^sha256:[0-9a-f]{64}$/);
+        assert.doesNotMatch(JSON.stringify(attempts), /Bearer|provider-access|provider-refresh|Must roll back|g2 injected failure/);
+      } finally { sqlite.close(); }
+    }
   });
 });

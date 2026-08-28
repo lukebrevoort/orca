@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
@@ -111,6 +112,7 @@ import { getOrcaAgentBoundaryPolicy, type OrcaAgentBoundaryPolicy } from "./agen
 import { createOrcaMcpHttpHandler, McpReadError, type OrcaMcpDataSource } from "./agents/mcp.ts";
 import { createOrcaMcpAccessTokenVerifier, type OrcaMcpTokenVerifier } from "./agents/access-token.ts";
 import type { OrcaAgentAuthorizationContext } from "./agents/authorization.ts";
+import { organizationRouteLimits } from "./agents/request-guards.ts";
 import type { AgentEventStore } from "./agents/interfaces.ts";
 import {
   AgentEventNotFoundError,
@@ -146,8 +148,10 @@ import { createHistoricalRuleSimulationService } from "./organization/rules/simu
 import { createSqliteHistoricalRuleSimulationRepository } from "./organization/rules/simulation-sqlite.ts";
 import {
   createSqliteRuleChangeSetService,
+  type McpOrganizationApprovalGrant,
   type RuleChangeSetCapabilitySource,
 } from "./organization/rules/change-set-sqlite.ts";
+import { recordOrganizationMutationAttempt } from "./organization/mutation-attempt-audit.ts";
 import type { OrganizationAgentCapabilitySource } from "./organization/agent-capability.ts";
 import {
   OrganizationCollectionsPinsAccessError,
@@ -239,6 +243,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       origin: [serverConfig.webOrigin],
     }),
   );
+
+  app.use("/v1/organization/*", requireAuth({ dbFactory }));
+  app.use("/v1/organization/*", bodyLimit({
+    maxSize: organizationRouteLimits.maximumBodyBytes,
+    onError: (c) => c.json({ error: { code: "payload_limit", message: "The Organization request body exceeds the 512 KiB limit" } }, 413),
+  }));
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
   registerOrganizationContextRoutes(app, { dbFactory });
@@ -461,6 +471,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             workspaceId: userId,
             request: query.target.request,
             approval: query.target.approval,
+            approvalGrant: {
+              connectionId: authorization.connectionId,
+              clientId: authorization.clientId,
+              approverUserId: authorization.userId,
+              expiresAt: authorization.expiresAt,
+            } satisfies McpOrganizationApprovalGrant,
           });
           risk = (result as { risk: typeof risk }).risk;
         }
@@ -476,6 +492,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           ? organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies
           : ["rule" as const];
         return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], targetKind: query.targetKind, resourceFamilies, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: persistedChangeSet ? [persistedChangeSet.id] : [], rejected: [] }, result };
+      } catch (error) {
+        recordOrganizationMutationAttempt({
+          db,
+          workspaceId: userId,
+          connectionId: authorization.connectionId,
+          actor,
+          operation: "apply",
+          query,
+          error,
+          now: now(),
+        });
+        throw error;
       } finally { sqlite.close(); }
     },
     revertOrganization({ authorization, userId, actor, allowedAccountIds, query }) {
@@ -492,6 +520,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!persistedChangeSet) throw new Error("Successful Rule Change Set revert did not persist authority evidence");
         const resourceFamilies = organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies;
         return { operation: "revert" as const, workspaceId: userId, accountIds: [...allowedAccountIds], targetKind: query.targetKind, resourceFamilies, actor, capabilityId: capability.snapshot.id, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk: result.risk, changeSetIds: { applied: [result.changeSetId], rejected: [] }, result };
+      } catch (error) {
+        recordOrganizationMutationAttempt({
+          db,
+          workspaceId: userId,
+          connectionId: authorization.connectionId,
+          actor,
+          operation: "revert",
+          query,
+          error,
+          now: now(),
+        });
+        throw error;
       } finally { sqlite.close(); }
     },
     searchMail({ userId, allowedAccountIds, query }) {

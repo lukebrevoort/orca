@@ -26,8 +26,10 @@ const requiredTables = [
   "mcp_authorization_codes",
   "mcp_connections",
   "mcp_connection_accounts",
+  "mcp_organization_approvals",
   "mcp_access_tokens",
   "mcp_refresh_tokens",
+  "organization_mutation_attempts",
 ];
 
 const { db, sqlite } = createDatabaseClient(databasePath);

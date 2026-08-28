@@ -29,6 +29,9 @@ export function requireAuth(
   options: RequireAuthOptions = {},
 ): MiddlewareHandler<{ Variables: AuthVariables }> {
   return async (c, next) => {
+    // Shared route groups may authenticate once before bounded body admission.
+    // Route-local guards remain safe and free of duplicate database work.
+    if (c.get("auth")) return next();
     const sessionToken = getCookie(c, sessionCookieName);
 
     if (!sessionToken) {
