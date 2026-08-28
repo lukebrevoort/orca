@@ -254,6 +254,7 @@ export const organizationRuleRevisions = sqliteTable(
     source: text("source").notNull(),
     sourceDigest: text("source_digest").notNull(),
     compiledJson: text("compiled_json").notNull(),
+    compilationWorkspaceJson: text("compilation_workspace_json"),
     requiredCapabilities: text("required_capabilities").notNull(),
     risk: text("risk").notNull(),
     actorId: text("actor_id").notNull(),

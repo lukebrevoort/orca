@@ -1,12 +1,21 @@
 import {
+  classifyOrcaActions,
+  orcaCompiledRuleRevisionSchema,
+  orcaEvaluatorLimits,
+  orcaEvaluationEventSchema,
+  orcaEvaluationWorkspaceSchema,
   orcaEvaluationResultSchema,
+  validateOrcaCompiledRevisionSemantics,
   type OrcaCompiledAction,
   type OrcaCompiledPredicateExpression,
   type OrcaCompiledRuleRevision,
   type OrcaEvaluationEventKind,
+  type OrcaEvaluationEvent,
   type OrcaEvaluationPrecedence,
   type OrcaEvaluationResult,
   type OrcaEvaluationTrace,
+  type OrcaEvaluationWorkspace,
+  type OrcaWorkspaceSnapshot,
   type OrganizationActor,
   type OrganizationCapabilitySnapshot,
   type ThreadLanePlacement,
@@ -17,16 +26,7 @@ type RequiredCapability = OrcaCompiledRuleRevision["requiredCapabilities"][numbe
 type Candidate = OrcaEvaluationTrace["candidates"][number];
 type Loser = OrcaEvaluationTrace["losers"][number];
 
-export type OrcaEvaluationEvent = {
-  id: string;
-  kind: OrcaEvaluationEventKind;
-  cause: "provider" | "internal" | "scheduler" | "user" | "evaluator";
-  occurredAt: string;
-  workspaceId: string;
-  accountId?: string;
-  threadId: string;
-  messageId?: string;
-};
+export type { OrcaEvaluationEvent } from "@orca/shared";
 
 export type OrcaEvaluationThreadSnapshot = {
   workspaceId: string;
@@ -46,25 +46,15 @@ export type OrcaEvaluationThreadSnapshot = {
   organizationRevision: number | null;
 };
 
-export type OrcaEvaluationWorkspaceSchema = {
-  workspaceId: string;
-  revision: number;
-  fallbackLaneId: string;
-  lanes: readonly { id: string; name: string; defaultPolicyId: string }[];
-  lanePolicies: readonly {
-    id: string;
-    interruption: "notify" | "badge" | "quiet";
-    review: "continuous" | "daily" | "weekly" | "manual";
-    retention: { mode: "keep"; days: null } | { mode: "review_after"; days: number };
-  }[];
-  facets: readonly { id: string; cardinality: "single" | "multi" }[];
-};
+export type OrcaEvaluationWorkspaceSchema = OrcaEvaluationWorkspace;
 
 export type OrcaActiveRuleRevision = {
   ruleId: string;
   revisionId: string;
   revision: number;
   order: number;
+  /** Bounded authoritative resource definitions captured at compilation. */
+  compilationWorkspace?: OrcaWorkspaceSnapshot;
   compiled: OrcaCompiledRuleRevision;
 };
 
@@ -99,6 +89,10 @@ const precedenceRank: Record<OrcaEvaluationPrecedence, number> = {
   workspace_fallback: 5,
 };
 
+function compareText(left: string, right: string): number {
+  return left === right ? 0 : left < right ? -1 : 1;
+}
+
 function actionSlot(action: OrcaCompiledAction): string {
   switch (action.kind) {
     case "route_lane": return "lane";
@@ -118,18 +112,14 @@ function actionSlot(action: OrcaCompiledAction): string {
 }
 
 function requiredCapabilities(action: OrcaCompiledAction): RequiredCapability[] {
-  if (action.kind === "propose_provider_deletion") return ["provider_delete"];
-  if (action.kind === "notify" || action.kind === "suppress_interruption" || action.kind === "schedule_review") {
-    return ["organization_attention"];
-  }
-  return ["organization_thread"];
+  return classifyOrcaActions([action]).requiredCapabilities;
 }
 
 function compareCandidate(left: Candidate, right: Candidate): number {
   return precedenceRank[left.precedence] - precedenceRank[right.precedence]
     || left.ruleOrder - right.ruleOrder
     || left.actionOrder - right.actionOrder
-    || left.candidateId.localeCompare(right.candidateId);
+    || compareText(left.candidateId, right.candidateId);
 }
 
 function compareResolvedAction(left: Candidate, right: Candidate): number {
@@ -142,7 +132,7 @@ function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === "object") {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareText(left, right))
       .map(([key, item]) => [key, canonical(item)]));
   }
   return value;
@@ -153,7 +143,17 @@ export function serializeOrcaEvaluation(result: OrcaEvaluationResult): string {
   return JSON.stringify(canonical(result));
 }
 
-function assertEvaluationContext(input: OrcaEvaluationInput): void {
+function assertEvaluationContext(input: OrcaEvaluationInput): {
+  activeRevisionCount: number;
+  budgets: Required<OrcaEvaluationBudgets>;
+  revisions: readonly OrcaActiveRuleRevision[];
+  ruleRevisionLimitExceeded: boolean;
+} {
+  if (!orcaEvaluationEventSchema.safeParse(input.event).success) {
+    throw new OrcaEvaluationInputError("Event provenance must match the strict immutable Event contract");
+  }
+  const workspace = orcaEvaluationWorkspaceSchema.safeParse(input.workspaceSchema);
+  if (!workspace.success) throw new OrcaEvaluationInputError("Workspace Schema snapshot failed strict runtime validation");
   const workspaceIds = [input.event.workspaceId, input.thread.workspaceId, input.workspaceSchema.workspaceId, input.capabilities.scope.workspaceId];
   if (workspaceIds.some((id) => id !== workspaceIds[0])) throw new OrcaEvaluationInputError("Evaluation Context Workspace identities must agree");
   if (input.event.threadId !== input.thread.id) throw new OrcaEvaluationInputError("Event and Thread snapshot identities must agree");
@@ -168,6 +168,41 @@ function assertEvaluationContext(input: OrcaEvaluationInput): void {
   for (const [name, value] of Object.entries(input.budgets)) {
     if (value !== undefined && (!Number.isInteger(value) || value < 1)) throw new OrcaEvaluationInputError(`${name} must be a positive integer`);
   }
+  const budgets = {
+    maximumRuleRevisions: Math.min(input.budgets.maximumRuleRevisions, orcaEvaluatorLimits.maximumRuleRevisions),
+    maximumPredicateSteps: Math.min(input.budgets.maximumPredicateSteps, orcaEvaluatorLimits.maximumPredicateSteps),
+    maximumCandidates: Math.min(input.budgets.maximumCandidates, orcaEvaluatorLimits.maximumCandidates),
+    maximumPredicateDepth: Math.min(input.budgets.maximumPredicateDepth ?? orcaEvaluatorLimits.maximumPredicateDepth, orcaEvaluatorLimits.maximumPredicateDepth),
+  };
+  // Count is inspected before any per-item schema work. Only the bounded
+  // prefix is ever parsed or sorted, even when an untrusted caller supplies a
+  // much larger raw collection.
+  const revisions = input.ruleSet.revisions.slice(0, budgets.maximumRuleRevisions);
+  for (const revision of revisions) {
+    const compiled = orcaCompiledRuleRevisionSchema.safeParse(revision.compiled);
+    if (!compiled.success) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed typed IR classification validation`);
+    }
+    const compilationWorkspace = revision.compilationWorkspace
+      ?? (compiled.data.workspaceSchemaRevision === workspace.data.revision ? workspace.data : null);
+    if (!compilationWorkspace) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} lacks its authoritative compilation-time Workspace Schema snapshot`);
+    }
+    const compilationIssues = validateOrcaCompiledRevisionSemantics(compiled.data, compilationWorkspace, { revisionBinding: "exact" });
+    if (compilationIssues.length > 0) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed compilation Workspace Schema semantic binding: ${compilationIssues[0]!.message}`);
+    }
+    const currentIssues = validateOrcaCompiledRevisionSemantics(compiled.data, workspace.data, { revisionBinding: "current" });
+    if (currentIssues.length > 0) {
+      throw new OrcaEvaluationInputError(`Rule Revision ${revision.revisionId} failed current Workspace Schema semantic binding: ${currentIssues[0]!.message}`);
+    }
+  }
+  return {
+    activeRevisionCount,
+    budgets,
+    revisions,
+    ruleRevisionLimitExceeded: activeRevisionCount > budgets.maximumRuleRevisions,
+  };
 }
 
 function observedField(input: OrcaEvaluationInput, field: string): { present: boolean; value?: Scalar } {
@@ -207,8 +242,9 @@ function lanePolicyAction(policy: OrcaEvaluationWorkspaceSchema["lanePolicies"][
  * candidate through the single global precedence law.
  */
 export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationResult {
-  assertEvaluationContext(input);
-  const maximumPredicateDepth = input.budgets.maximumPredicateDepth ?? 16;
+  const validated = assertEvaluationContext(input);
+  const { budgets, activeRevisionCount, ruleRevisionLimitExceeded } = validated;
+  const maximumPredicateDepth = budgets.maximumPredicateDepth;
   const usage = { ruleRevisions: 0, predicateSteps: 0, candidates: 0, exhausted: false };
   const observed = new Map<string, { field: string; present: boolean; value?: Scalar }>();
   const predicateResults: OrcaEvaluationTrace["predicateResults"] = [];
@@ -216,9 +252,11 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
   const candidates: Candidate[] = [];
 
   const addCandidate = (candidate: Omit<Candidate, "candidateId"> & { candidateId: string }) => {
+    if (usage.exhausted) return false;
+    if (usage.candidates >= budgets.maximumCandidates) { usage.exhausted = true; return false; }
     usage.candidates += 1;
-    if (usage.candidates > input.budgets.maximumCandidates) { usage.exhausted = true; return; }
     candidates.push(candidate);
+    return true;
   };
 
   const placement = input.thread.lanePlacement;
@@ -251,20 +289,25 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
     reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.", authorized: true,
   });
 
-  const orderedRevisions = [...input.ruleSet.revisions].sort((left, right) => left.order - right.order
-    || left.ruleId.localeCompare(right.ruleId) || left.revision - right.revision || left.revisionId.localeCompare(right.revisionId));
-  const activeRevisionCount = input.ruleSet.activeRevisionCount ?? orderedRevisions.length;
-  if (activeRevisionCount > input.budgets.maximumRuleRevisions) usage.exhausted = true;
+  const orderedRevisions = [...validated.revisions].sort((left, right) => left.order - right.order
+    || compareText(left.ruleId, right.ruleId) || left.revision - right.revision || compareText(left.revisionId, right.revisionId));
+  if (ruleRevisionLimitExceeded) usage.exhausted = true;
 
-  for (const rule of orderedRevisions.slice(0, input.budgets.maximumRuleRevisions)) {
+  for (const rule of orderedRevisions) {
     usage.ruleRevisions += 1;
-    const eventLoopBlocked = input.event.cause === "evaluator";
-    const eventMatched = !eventLoopBlocked && rule.compiled.event.kind === input.event.kind;
+    const eventMatched = rule.compiled.event.kind === input.event.kind;
+    if (ruleRevisionLimitExceeded) {
+      considered.push({
+        ruleId: rule.ruleId, revisionId: rule.revisionId, revision: rule.revision, order: rule.order,
+        eventMatched, predicateMatched: false, authorized: false, reason: "budget_exhausted",
+      });
+      continue;
+    }
     if (!eventMatched) {
       considered.push({
         ruleId: rule.ruleId, revisionId: rule.revisionId, revision: rule.revision, order: rule.order,
         eventMatched: false, predicateMatched: false, authorized: false,
-        reason: eventLoopBlocked ? "event_loop_blocked" : "event_not_matched",
+        reason: "event_not_matched",
       });
       continue;
     }
@@ -282,8 +325,9 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
     const memo = new Map<string, boolean>();
     const active = new Set<string>();
     const evaluateExpression = (expression: OrcaCompiledPredicateExpression, label: string, depth: number): boolean => {
+      if (usage.exhausted) return false;
+      if (depth > maximumPredicateDepth || usage.predicateSteps >= budgets.maximumPredicateSteps) { usage.exhausted = true; return false; }
       usage.predicateSteps += 1;
-      if (usage.predicateSteps > input.budgets.maximumPredicateSteps || depth > maximumPredicateDepth) { usage.exhausted = true; return false; }
       const observedFields: string[] = [];
       let result = false;
       if (expression.kind === "reference") {
@@ -352,12 +396,13 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       eventMatched: true, predicateMatched, authorized: predicateMatched && ruleAuthorized,
       reason: usage.exhausted ? "budget_exhausted" : predicateMatched ? "matched" : "predicate_not_matched",
     });
+    if (usage.exhausted) break;
     if (!predicateMatched) continue;
     for (const [actionOrder, action] of rule.compiled.actions.entries()) {
       const missingCapabilities = requiredCapabilities(action).filter((capability) => !granted.has(capability));
       const collectionAccountDenied = (action.kind === "add_collection" || action.kind === "remove_collection")
         && action.accountId !== input.thread.accountId;
-      addCandidate({
+      const added = addCandidate({
         candidateId: `rule:${rule.ruleId}:${rule.revisionId}:${actionOrder}`,
         action, slot: actionSlot(action), precedence: "rule_revision", ruleOrder: rule.order, actionOrder,
         actor: input.actor, reason: rule.compiled.because, authorized: missingCapabilities.length === 0 && !collectionAccountDenied,
@@ -365,6 +410,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
         ...(collectionAccountDenied ? { authorityDenialCode: "account_denied" as const } : {}),
         ...(missingCapabilities.length ? { missingCapabilities } : {}),
       });
+      if (!added) break;
     }
     if (usage.exhausted) break;
   }
@@ -446,7 +492,7 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       actor: input.actor,
       capabilities: input.capabilities,
       consideredRevisions: considered,
-      observedValues: [...observed.values()].sort((left, right) => left.field.localeCompare(right.field)),
+      observedValues: [...observed.values()].sort((left, right) => compareText(left.field, right.field)),
       predicateResults,
       candidates,
       winners,
@@ -454,9 +500,10 @@ export function evaluateOrcaRules(input: OrcaEvaluationInput): OrcaEvaluationRes
       lowerLanePlacement,
       reason,
       budget: {
-        maximumRuleRevisions: input.budgets.maximumRuleRevisions,
-        maximumPredicateSteps: input.budgets.maximumPredicateSteps,
-        maximumCandidates: input.budgets.maximumCandidates,
+        status: usage.exhausted ? "exhausted" : "complete",
+        maximumRuleRevisions: budgets.maximumRuleRevisions,
+        maximumPredicateSteps: budgets.maximumPredicateSteps,
+        maximumCandidates: budgets.maximumCandidates,
         maximumPredicateDepth,
         ...usage,
       },

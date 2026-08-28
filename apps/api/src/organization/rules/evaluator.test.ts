@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { classifyOrcaActions, orcaEvaluatorLimits } from "@orca/shared";
 
-import { evaluateOrcaRules, serializeOrcaEvaluation, type OrcaEvaluationInput } from "./evaluator.ts";
+import { OrcaEvaluationInputError, evaluateOrcaRules, serializeOrcaEvaluation, type OrcaEvaluationInput } from "./evaluator.ts";
 
 const compiled = (input: {
   name: string;
@@ -8,18 +10,21 @@ const compiled = (input: {
   actions: OrcaEvaluationInput["ruleSet"]["revisions"][number]["compiled"]["actions"];
   capabilities?: OrcaEvaluationInput["ruleSet"]["revisions"][number]["compiled"]["requiredCapabilities"];
   because: string;
-}) => ({
-  languageVersion: 1 as const,
-  workspaceId: "workspace-1",
-  workspaceSchemaRevision: 7,
-  name: input.name,
-  event: { kind: "message.received" as const },
-  predicates: input.predicates ?? [{ name: null, expression: { kind: "compare" as const, field: "subject", operator: "contains" as const, value: "failed", valueType: "text" as const, optional: true, missingBehavior: "false" as const } }],
-  actions: input.actions,
-  because: input.because,
-  requiredCapabilities: input.capabilities ?? ["organization_thread" as const],
-  risk: "low" as const,
-});
+}) => {
+  const classification = classifyOrcaActions(input.actions);
+  return {
+    languageVersion: 1 as const,
+    workspaceId: "workspace-1",
+    workspaceSchemaRevision: 7,
+    name: input.name,
+    event: { kind: "message.received" as const },
+    predicates: input.predicates ?? [{ name: null, expression: { kind: "compare" as const, field: "subject", operator: "contains" as const, value: "failed", valueType: "text" as const, optional: true, missingBehavior: "false" as const } }],
+    actions: input.actions,
+    because: input.because,
+    requiredCapabilities: input.capabilities ?? classification.requiredCapabilities,
+    risk: classification.risk,
+  };
+};
 
 function evaluationInput(): OrcaEvaluationInput {
   return {
@@ -76,7 +81,20 @@ function evaluationInput(): OrcaEvaluationInput {
         { id: "policy-focus", interruption: "notify", review: "continuous", retention: { mode: "keep", days: null } },
         { id: "policy-default", interruption: "badge", review: "daily", retention: { mode: "keep", days: null } },
       ],
-      facets: [{ id: "facet-urgency", cardinality: "single" }],
+      workflowStates: [{ id: "state-review", name: "Needs review" }],
+      facets: [{
+        id: "facet-urgency",
+        name: "Urgency",
+        valueType: { kind: "enum", options: [{ id: "urgent", label: "Urgent", position: 0, retiredAt: null }] },
+        cardinality: "single",
+        optional: true,
+      }],
+      collections: [
+        { id: "collection-launch", name: "Launch", accountId: "account-1" },
+        { id: "collection-failures", name: "Failures", accountId: "account-1" },
+      ],
+      contextTypes: [{ id: "context-type-project", name: "Project" }],
+      contexts: [{ id: "context-orca", name: "Orca", contextTypeId: "context-type-project" }],
     },
     ruleSet: {
       id: "rule-set-1",
@@ -137,24 +155,73 @@ function evaluationInput(): OrcaEvaluationInput {
   };
 }
 
+function boundedRevision(index: number): OrcaEvaluationInput["ruleSet"]["revisions"][number] {
+  return {
+    ruleId: `bounded-rule-${String(index).padStart(4, "0")}`,
+    revisionId: `bounded-revision-${String(index).padStart(4, "0")}`,
+    revision: 1,
+    order: index,
+    compiled: compiled({
+      name: `Bounded Rule ${index}`,
+      actions: [{ kind: "route_lane", laneId: "lane-focus" }],
+      because: `Independent bounded fixture ${index}`,
+    }),
+  };
+}
+
 describe("evaluateOrcaRules", () => {
   test("matches each canonical Event family without allowing evaluator-origin recursion", () => {
-    for (const event of ["message.received", "thread.updated", "schedule.reached", "user.corrected"] as const) {
+    const eventBase = {
+      id: "event-1",
+      occurredAt: "2026-08-26T12:00:00.000Z",
+      workspaceId: "workspace-1",
+      accountId: "account-1",
+      threadId: "thread-1",
+    };
+    const authoritativeEvents: OrcaEvaluationInput["event"][] = [
+      { ...eventBase, kind: "message.received", cause: "provider", messageId: "message-1" },
+      { ...eventBase, kind: "thread.updated", cause: "provider" },
+      { ...eventBase, kind: "thread.updated", cause: "internal" },
+      { ...eventBase, kind: "schedule.reached", cause: "scheduler" },
+      { ...eventBase, kind: "user.corrected", cause: "user" },
+    ];
+    for (const event of authoritativeEvents) {
       const input = evaluationInput();
-      input.event.kind = event;
-      input.ruleSet.revisions[0]!.compiled.event.kind = event;
+      input.event = event;
+      input.ruleSet.revisions[0]!.compiled.event.kind = event.kind;
 
       const result = evaluateOrcaRules(input);
 
-      expect(result.trace.event.kind).toBe(event);
+      expect(result.trace.event.kind).toBe(event.kind);
       expect(result.trace.consideredRevisions[0]).toMatchObject({ eventMatched: true, predicateMatched: true });
     }
 
     const recursive = evaluationInput();
-    recursive.event.kind = "thread.updated";
-    recursive.event.cause = "evaluator";
+    recursive.event = { ...eventBase, kind: "thread.updated", cause: "evaluator" } as unknown as OrcaEvaluationInput["event"];
     recursive.ruleSet.revisions[0]!.compiled.event.kind = "thread.updated";
-    expect(evaluateOrcaRules(recursive).trace.consideredRevisions[0]?.reason).toBe("event_loop_blocked");
+    expect(() => evaluateOrcaRules(recursive)).toThrow(OrcaEvaluationInputError);
+  });
+
+  test("rejects Event kind, cause, subject, and crafted provenance mismatches before Rule matching", () => {
+    const base = evaluationInput().event;
+    const invalidEvents: unknown[] = [
+      { ...base, kind: "message.received", cause: "user" },
+      { ...base, kind: "schedule.reached", cause: "provider", messageId: undefined },
+      { ...base, kind: "user.corrected", cause: "provider", messageId: undefined },
+      { ...base, kind: "thread.updated", cause: "scheduler", messageId: undefined },
+      { ...base, kind: "message.received", accountId: undefined },
+      { ...base, kind: "message.received", messageId: undefined },
+      { ...base, kind: "thread.updated", cause: "internal" },
+      { ...base, kind: "schedule.reached", cause: "scheduler" },
+      { ...base, kind: "user.corrected", cause: "user" },
+      { ...base, kind: "message.received", source: "caller:forged" },
+    ];
+
+    for (const event of invalidEvents) {
+      const input = evaluationInput();
+      input.event = event as OrcaEvaluationInput["event"];
+      expect(() => evaluateOrcaRules(input)).toThrow(OrcaEvaluationInputError);
+    }
   });
 
   test("combines compatible Actions, selects exact exclusive winners, and returns a complete deterministic Trace", () => {
@@ -186,8 +253,31 @@ describe("evaluateOrcaRules", () => {
     expect(first.trace.actor).toEqual(input.actor);
     expect(first.trace.capabilities).toEqual(input.capabilities);
     expect(first.trace.reason).toBe("A failed deploy blocks work");
-    expect(first.trace.budget.exhausted).toBe(false);
+    expect(first.trace.budget).toEqual({
+      status: "complete",
+      maximumRuleRevisions: 50,
+      maximumPredicateSteps: 500,
+      maximumCandidates: 200,
+      maximumPredicateDepth: 16,
+      ruleRevisions: 2,
+      predicateSteps: 4,
+      candidates: 10,
+      exhausted: false,
+    });
     expect(serializeOrcaEvaluation(first)).toBe(serializeOrcaEvaluation(second));
+  });
+
+  test("produces one byte-stable semantic result and Trace for equivalent fresh invocation order", () => {
+    const input = evaluationInput();
+    const reordered = structuredClone(input);
+    reordered.ruleSet.revisions = [...reordered.ruleSet.revisions].reverse();
+
+    const firstBytes = serializeOrcaEvaluation(evaluateOrcaRules(structuredClone(input)));
+    const reorderedBytes = serializeOrcaEvaluation(evaluateOrcaRules(reordered));
+    const digest = createHash("sha256").update(firstBytes).digest("hex");
+
+    expect(reorderedBytes).toBe(firstBytes);
+    expect(digest).toBe("491a9ae8a2e66079e2cad0edecbdb39498dbee652bfc36be16ab781f9e38062c");
   });
 
   test("reports the authoritative Safety Lock reason when it wins over a Manual Override and matching Rule", () => {
@@ -391,6 +481,7 @@ describe("evaluateOrcaRules", () => {
     ];
     input.ruleSet.revisions[1]!.compiled.actions = [{ kind: "propose_provider_deletion" }];
     input.ruleSet.revisions[1]!.compiled.requiredCapabilities = ["provider_delete"];
+    input.ruleSet.revisions[1]!.compiled.risk = "destructive";
 
     const result = evaluateOrcaRules(input);
 
@@ -398,11 +489,29 @@ describe("evaluateOrcaRules", () => {
     expect(result.trace.consideredRevisions[0]?.predicateMatched).toBe(false);
     expect(result.actions).not.toContainEqual({ kind: "propose_provider_deletion" });
     expect(result.trace.losers).toContainEqual(expect.objectContaining({ authorized: false, reason: "capability_denied" }));
+
+    const attentionOnly = evaluationInput();
+    attentionOnly.capabilities.actionFamilies = ["organization_attention"];
+    attentionOnly.ruleSet.revisions = [{
+      ruleId: "rule-attention",
+      revisionId: "revision-attention",
+      revision: 1,
+      order: 0,
+      compiled: compiled({
+        name: "Attention needs Thread authority",
+        actions: [{ kind: "notify", urgency: "immediate" }],
+        because: "Attention remains attached to a Thread",
+      }),
+    }];
+    const attentionResult = evaluateOrcaRules(attentionOnly);
+    expect(attentionResult.trace.candidates.find((candidate) => candidate.candidateId === "rule:rule-attention:revision-attention:0"))
+      .toMatchObject({ authorized: false, missingCapabilities: ["organization_thread"] });
   });
 
   test("denies Collection add and remove candidates bound to a different Account", () => {
     for (const kind of ["add_collection", "remove_collection"] as const) {
       const input = evaluationInput();
+      input.workspaceSchema.collections.push({ id: "collection-foreign", name: "Foreign", accountId: "account-2" });
       input.ruleSet.revisions = [{
         ruleId: `rule-${kind}`,
         revisionId: `revision-${kind}`,
@@ -428,16 +537,71 @@ describe("evaluateOrcaRules", () => {
 
   test("resists evaluator-origin event loops and stops fan-out graphs at explicit deterministic budgets", () => {
     const loop = evaluationInput();
-    loop.event.cause = "evaluator";
-    expect(evaluateOrcaRules(loop).trace.consideredRevisions.every((item) => item.reason === "event_loop_blocked")).toBe(true);
+    loop.event = { ...loop.event, kind: "thread.updated", cause: "evaluator" } as unknown as OrcaEvaluationInput["event"];
+    expect(() => evaluateOrcaRules(loop)).toThrow(OrcaEvaluationInputError);
 
     const bounded = evaluationInput();
     bounded.budgets.maximumPredicateSteps = 2;
     const result = evaluateOrcaRules(bounded);
+    expect(result.trace.budget.status).toBe("exhausted");
+    expect(result.trace.budget.predicateSteps).toBe(2);
     expect(result.trace.budget.exhausted).toBe(true);
     expect(result.trace.reason).toBe("No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.");
     expect(result.actions.some((action) => action.kind === "route_lane" && action.laneId === "lane-fallback")).toBe(true);
     expect(result.trace.lowerLanePlacement).toMatchObject({ laneId: "lane-fallback", placementSource: "workspace_fallback" });
+  });
+
+  test("caps caller-requested evaluator budgets at the authoritative shared maxima", () => {
+    const input = evaluationInput();
+    input.ruleSet.revisions = Array.from({ length: 101 }, (_, index) => boundedRevision(index));
+    input.budgets = {
+      maximumRuleRevisions: 101,
+      maximumPredicateSteps: 20_001,
+      maximumCandidates: 10_001,
+      maximumPredicateDepth: 17,
+    };
+
+    const result = evaluateOrcaRules(input);
+
+    expect(result.trace.budget).toMatchObject({
+      status: "exhausted",
+      maximumRuleRevisions: orcaEvaluatorLimits.maximumRuleRevisions,
+      maximumPredicateSteps: orcaEvaluatorLimits.maximumPredicateSteps,
+      maximumCandidates: orcaEvaluatorLimits.maximumCandidates,
+      maximumPredicateDepth: orcaEvaluatorLimits.maximumPredicateDepth,
+      ruleRevisions: orcaEvaluatorLimits.maximumRuleRevisions,
+      exhausted: true,
+    });
+    expect(result.trace.ruleSet.activeRevisionCount).toBe(101);
+    expect(result.trace.consideredRevisions).toHaveLength(100);
+  });
+
+  test("preflights large Rule collections without observing entries beyond the authoritative boundary", () => {
+    const input = evaluationInput();
+    const prefix = Array.from({ length: orcaEvaluatorLimits.maximumRuleRevisions }, (_, index) => boundedRevision(index));
+    const raw = [...prefix, ...Array.from({ length: 5_000 - prefix.length }, () => null)] as unknown as OrcaEvaluationInput["ruleSet"]["revisions"];
+    let observedPastBoundary = false;
+    input.ruleSet.revisions = new Proxy(raw, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) >= orcaEvaluatorLimits.maximumRuleRevisions) {
+          observedPastBoundary = true;
+          throw new Error("Evaluator observed an untrusted Rule beyond its authoritative boundary");
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    input.budgets.maximumRuleRevisions = 5_000;
+
+    const result = evaluateOrcaRules(input);
+
+    expect(observedPastBoundary).toBe(false);
+    expect(result.trace.budget).toMatchObject({
+      status: "exhausted",
+      maximumRuleRevisions: 100,
+      ruleRevisions: 100,
+      exhausted: true,
+    });
+    expect(result.trace.consideredRevisions).toHaveLength(100);
   });
 
   test("does not project an earlier matching Rule after a later Rule exhausts the evaluation budget", () => {
@@ -456,5 +620,72 @@ describe("evaluateOrcaRules", () => {
       actor: { id: "system:workspace-fallback", type: "system" },
       reason: "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
     });
+  });
+
+  test("caps high-fan-out Action evaluation at the exact candidate budget", () => {
+    const input = evaluationInput();
+    input.budgets.maximumCandidates = 3;
+    input.workspaceSchema.collections.push(...Array.from({ length: 5 }, (_, index) => ({
+      id: `collection-${index}`, name: `Collection ${index}`, accountId: "account-1",
+    })));
+    input.ruleSet.revisions = [{
+      ruleId: "rule-wide",
+      revisionId: "rule-wide-r1",
+      revision: 1,
+      order: 1,
+      compiled: compiled({
+        name: "Wide Action fan-out",
+        actions: Array.from({ length: 5 }, (_, index) => ({
+          kind: "add_collection" as const,
+          accountId: "account-1",
+          collectionId: `collection-${index}`,
+        })),
+        because: "Candidate work is explicitly bounded",
+      }),
+    }];
+
+    const result = evaluateOrcaRules(input);
+
+    expect(result.trace.budget).toMatchObject({ status: "exhausted", candidates: 3, exhausted: true });
+    expect(result.trace.candidates).toHaveLength(3);
+    expect(result.trace.winners.every((winner) => winner.precedence !== "rule_revision")).toBe(true);
+  });
+
+  test("fails closed on crafted Event provenance and compiled classification metadata", () => {
+    const downgraded = evaluationInput();
+    downgraded.ruleSet.revisions[0]!.compiled.actions = [{ kind: "propose_provider_deletion" }];
+    downgraded.ruleSet.revisions[0]!.compiled.requiredCapabilities = ["organization_thread"];
+    downgraded.ruleSet.revisions[0]!.compiled.risk = "low";
+    expect(() => evaluateOrcaRules(downgraded)).toThrow(OrcaEvaluationInputError);
+
+    const craftedEvent = evaluationInput();
+    (craftedEvent.event as OrcaEvaluationInput["event"] & { source: string }).source = "rule:forged-event-source";
+    expect(() => evaluateOrcaRules(craftedEvent)).toThrow(OrcaEvaluationInputError);
+  });
+
+  test("re-binds compiled Actions to the exact Workspace Schema snapshot before candidate generation", () => {
+    const cases: Array<[string, (input: OrcaEvaluationInput) => void]> = [
+      ["forged Lane", (input) => { input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "route_lane", laneId: "lane-forged" }]; }],
+      ["enum type mismatch", (input) => { input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "set_facet", facetId: "facet-urgency", value: 7 }]; }],
+      ["required Facet unset", (input) => {
+        input.workspaceSchema.facets = [{ ...input.workspaceSchema.facets[0]!, optional: false }];
+        input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "unset_facet", facetId: "facet-urgency" }];
+      }],
+      ["missing Workflow State", (input) => { input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "set_workflow_state", stateId: "state-missing" }]; }],
+      ["missing Collection", (input) => { input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "add_collection", accountId: "account-1", collectionId: "collection-missing" }]; }],
+      ["mismatched Context family", (input) => { input.ruleSet.revisions[0]!.compiled.actions = [{ kind: "link_context", contextTypeId: "context-type-missing", contextId: "context-orca" }]; }],
+      ["Workspace Schema revision mismatch", (input) => { input.ruleSet.revisions[0]!.compiled.workspaceSchemaRevision = 6; }],
+    ];
+
+    for (const [, mutate] of cases) {
+      const input = evaluationInput();
+      input.ruleSet.revisions = [input.ruleSet.revisions[0]!];
+      mutate(input);
+      const actionClassification = classifyOrcaActions(input.ruleSet.revisions[0]!.compiled.actions);
+      input.ruleSet.revisions[0]!.compiled.requiredCapabilities = actionClassification.requiredCapabilities;
+      input.ruleSet.revisions[0]!.compiled.risk = actionClassification.risk;
+
+      expect(() => evaluateOrcaRules(input)).toThrow(OrcaEvaluationInputError);
+    }
   });
 });

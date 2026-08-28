@@ -1,17 +1,18 @@
 import { createHash } from "node:crypto";
 
-import { z } from "zod";
-
-import type {
-  FacetDefinition,
-  FacetFilter,
-  FacetScalarValue,
-  FacetValueType,
-  OrganizationFacetWorkflowAction,
-  ThreadFacetValue,
-  ThreadWorkflowState,
-  WorkflowStateDefinition,
+import {
+  validateFacetScalarValue,
+  type FacetDefinition,
+  type FacetFilter,
+  type FacetScalarValue,
+  type FacetValueType,
+  type OrganizationFacetWorkflowAction,
+  type ThreadFacetValue,
+  type ThreadWorkflowState,
+  type WorkflowStateDefinition,
 } from "@orca/shared";
+
+export { validateFacetScalarValue } from "@orca/shared";
 
 export type FacetWorkflowThreadSnapshot = {
   accountId: string;
@@ -75,52 +76,6 @@ export function digestFacetWorkflowActions(actions: readonly OrganizationFacetWo
 
 function cloneSnapshot(snapshot: FacetWorkflowSnapshot): FacetWorkflowSnapshot {
   return structuredClone(snapshot);
-}
-
-function isValidDuration(value: string): boolean {
-  // ISO 8601 duration with at least one component; weeks are deliberately
-  // supported while ambiguous free-form durations are rejected.
-  return /^P(?=\d|T\d)(?:\d+(?:\.\d+)?Y)?(?:\d+(?:\.\d+)?M)?(?:\d+(?:\.\d+)?W)?(?:\d+(?:\.\d+)?D)?(?:T(?=\d)(?:\d+(?:\.\d+)?H)?(?:\d+(?:\.\d+)?M)?(?:\d+(?:\.\d+)?S)?)?$/.test(value);
-}
-
-function isValidDomain(value: string): boolean {
-  if (value.length > 253 || value !== value.toLocaleLowerCase() || !value.includes(".")) return false;
-  return value.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
-}
-
-/** Authoritative scalar contract for every Facet value producer and consumer. */
-export function validateFacetScalarValue(type: FacetValueType, value: FacetScalarValue): string | null {
-  switch (type.kind) {
-    case "text":
-      return typeof value === "string" && value.length <= type.maxLength ? null : `must be text of at most ${type.maxLength} characters`;
-    case "number":
-      if (typeof value !== "number") return "must be a finite number";
-      if (type.integer && !Number.isInteger(value)) return "must be an integer";
-      if (type.minimum !== undefined && value < type.minimum) return `must be at least ${type.minimum}`;
-      if (type.maximum !== undefined && value > type.maximum) return `must be at most ${type.maximum}`;
-      return null;
-    case "boolean":
-      return typeof value === "boolean" ? null : "must be a Boolean";
-    case "datetime":
-      return typeof value === "string" && z.string().datetime({ offset: true }).safeParse(value).success
-        ? null
-        : "must be an ISO 8601 date/time with an explicit offset";
-    case "duration":
-      return typeof value === "string" && isValidDuration(value) ? null : "must be an ISO 8601 duration such as PT45M";
-    case "email": {
-      if (typeof value !== "string") return "must be an email address";
-      const candidate = type.allowDisplayName ? (/^.*<([^<>]+)>$/.exec(value)?.[1] ?? value) : value;
-      return z.string().email().safeParse(candidate).success ? null : "must be a valid email address";
-    }
-    case "domain":
-      return typeof value === "string" && isValidDomain(value) ? null : "must be a lowercase domain without a URL scheme or path";
-    case "enum": {
-      if (typeof value !== "string") return "must reference an enum option ID";
-      const option = type.options.find((candidate) => candidate.id === value);
-      if (!option) return "must reference an existing enum option ID";
-      return option.retiredAt === null ? null : "must not reference a retired enum option";
-    }
-  }
 }
 
 function validateFacetValue(

@@ -1,8 +1,10 @@
 import {
+  classifyOrcaActions,
   orcaCompiledRuleRevisionSchema,
   orcaCompilerLimits,
   orcaEventKindSchema,
   type FacetValueType,
+  type OrcaCompileBudget,
   type OrcaCompileInput,
   type OrcaCompileResult,
   type OrcaCompiledAction,
@@ -19,6 +21,7 @@ import { validateFacetScalarValue } from "../facet-workflow.ts";
 export { orcaCompilerLimits };
 export type {
   OrcaCompileInput,
+  OrcaCompileBudget,
   OrcaCompileResult,
   OrcaCompiledAction,
   OrcaCompiledPredicateExpression,
@@ -37,6 +40,24 @@ type ComparisonOperator = Extract<OrcaCompiledPredicateExpression, { kind: "comp
 type LocatedLine = { text: string; trimmed: string; line: number; offset: number };
 type UnresolvedPredicate = { name: string | null; expression: string; location: LocatedLine };
 
+function compilerBudget(usage: OrcaCompileBudget["usage"]): OrcaCompileBudget {
+  const exhausted: OrcaCompileBudget["exhausted"] = [];
+  if (usage.sourceBytes > orcaCompilerLimits.maximumSourceBytes) exhausted.push("source_bytes");
+  if (usage.lines > orcaCompilerLimits.maximumLines) exhausted.push("lines");
+  if (usage.maximumLineBytes > orcaCompilerLimits.maximumLineBytes) exhausted.push("line_bytes");
+  if (usage.tokens > orcaCompilerLimits.maximumTokens) exhausted.push("tokens");
+  if (usage.astNodes > orcaCompilerLimits.maximumAstNodes) exhausted.push("ast_nodes");
+  if (usage.expressionDepth > orcaCompilerLimits.maximumExpressionDepth) exhausted.push("expression_depth");
+  if (usage.predicates > orcaCompilerLimits.maximumPredicates) exhausted.push("predicates");
+  if (usage.actions > orcaCompilerLimits.maximumActions) exhausted.push("actions");
+  return {
+    status: exhausted.length ? "exhausted" : "complete",
+    exhausted,
+    limits: orcaCompilerLimits,
+    usage,
+  };
+}
+
 const fields: Record<string, { type: ScalarKind; optional: boolean }> = {
   subject: { type: "text", optional: true },
   "sender.domain": { type: "domain", optional: true },
@@ -54,6 +75,27 @@ function locatedLines(source: string): LocatedLine[] {
     offset += text.length + 1;
     return line;
   });
+}
+
+function containsUnsafeSourceCharacter(source: string): boolean {
+  if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFEFF]/u.test(source)) return true;
+  let quoted = false;
+  let escaped = false;
+  for (const character of source) {
+    if (quoted && escaped) { escaped = false; continue; }
+    if (quoted && character === "\\") { escaped = true; continue; }
+    if (character === '"') { quoted = !quoted; continue; }
+    if (!quoted && character.codePointAt(0)! > 0x7f && /\p{White_Space}/u.test(character)) return true;
+  }
+  for (let index = 0; index < source.length; index += 1) {
+    const value = source.charCodeAt(index);
+    if (value >= 0xd800 && value <= 0xdbff) {
+      const next = source.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+      index += 1;
+    } else if (value >= 0xdc00 && value <= 0xdfff) return true;
+  }
+  return false;
 }
 
 function span(line: LocatedLine, start = line.text.search(/\S|$/), length = Math.max(1, line.text.trim().length)): OrcaSourceSpan {
@@ -100,7 +142,7 @@ function parseComparisonOperator(source: string): ComparisonOperator | null {
 }
 
 function sameName(left: string, right: string) {
-  return left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
+  return left.normalize("NFC").toLowerCase() === right.normalize("NFC").toLowerCase();
 }
 
 function resolveNamed<T extends { id: string; name: string }>(items: T[], name: string): T | "ambiguous" | undefined {
@@ -395,16 +437,49 @@ function compileAction(line: LocatedLine, workspace: OrcaWorkspaceSnapshot, diag
 
 export function compileOrcaRule(input: OrcaCompileInput): OrcaCompileResult {
   const { source, workspace } = input;
+  const encoder = new TextEncoder();
+  const byteLength = source.length > orcaCompilerLimits.maximumSourceBytes
+    ? orcaCompilerLimits.maximumSourceBytes + 1
+    : encoder.encode(source).length;
+  if (byteLength > orcaCompilerLimits.maximumSourceBytes) {
+    const preview = source.slice(0, orcaCompilerLimits.maximumLineBytes);
+    const firstLine: LocatedLine = { text: preview, trimmed: preview.trim(), line: 1, offset: 0 };
+    const usage: OrcaCompileBudget["usage"] = {
+      sourceBytes: byteLength,
+      lines: 0,
+      maximumLineBytes: 0,
+      tokens: 0,
+      astNodes: 0,
+      expressionDepth: 0,
+      predicates: 0,
+      actions: 0,
+    };
+    return {
+      ok: false,
+      diagnostics: [diagnostic(firstLine, "limits", "source_too_large", `Source exceeds ${orcaCompilerLimits.maximumSourceBytes} bytes.`)],
+      budget: compilerBudget(usage),
+    };
+  }
   const lines = locatedLines(source);
   const diagnostics: OrcaDiagnostic[] = [];
-  const byteLength = new TextEncoder().encode(source).length;
-  if (byteLength > orcaCompilerLimits.maximumSourceBytes) diagnostics.push(diagnostic(lines[0]!, "limits", "source_too_large", `Source exceeds ${orcaCompilerLimits.maximumSourceBytes} bytes.`));
   if (lines.length > orcaCompilerLimits.maximumLines) diagnostics.push(diagnostic(lines[orcaCompilerLimits.maximumLines] ?? lines[0]!, "limits", "too_many_lines", `Source exceeds ${orcaCompilerLimits.maximumLines} lines.`));
-  const longLine = lines.find((line) => new TextEncoder().encode(line.text).length > orcaCompilerLimits.maximumLineBytes);
+  const longLine = lines.find((line) => encoder.encode(line.text).length > orcaCompilerLimits.maximumLineBytes);
   if (longLine) diagnostics.push(diagnostic(longLine, "limits", "line_too_large", `A source line exceeds ${orcaCompilerLimits.maximumLineBytes} bytes.`));
   const tokenCount = source.match(/"(?:[^"\\]|\\.)*"|[A-Za-z_][A-Za-z0-9_.]*|\S/g)?.length ?? 0;
+  const initialBudgetUsage: OrcaCompileBudget["usage"] = {
+    sourceBytes: byteLength,
+    lines: lines.length,
+    maximumLineBytes: lines.reduce((maximum, line) => Math.max(maximum, encoder.encode(line.text).length), 0),
+    tokens: tokenCount,
+    astNodes: 0,
+    expressionDepth: 0,
+    predicates: 0,
+    actions: 0,
+  };
   if (tokenCount > orcaCompilerLimits.maximumTokens) diagnostics.push(diagnostic(lines[0]!, "limits", "too_many_tokens", `Source exceeds ${orcaCompilerLimits.maximumTokens} tokens.`));
-  if (diagnostics.length) return { ok: false, diagnostics };
+  const unsafeLine = lines.find((line) => containsUnsafeSourceCharacter(line.text));
+  if (unsafeLine) diagnostics.push(diagnostic(unsafeLine, "parse", "invalid_source_character", "Source contains a control, bidirectional override, byte-order mark, or unpaired surrogate that Orca v1 does not accept."));
+  if (diagnostics.length) return { ok: false, diagnostics, budget: compilerBudget(initialBudgetUsage) };
 
   let version: number | null = null;
   let name: string | null = null;
@@ -459,16 +534,17 @@ export function compileOrcaRule(input: OrcaCompileInput): OrcaCompileResult {
   }
   const compiledPredicates = predicates.map((predicate) => ({ name: predicate.name, expression: compileExpression(predicate, workspace, definitions, diagnostics) }));
   const actions = actionLines.map((line) => compileAction(line, workspace, diagnostics));
-  if (diagnostics.length || compiledPredicates.some((item) => !item.expression) || actions.some((action) => !action)) return { ok: false, diagnostics };
+  const budget = compilerBudget({
+    ...initialBudgetUsage,
+    astNodes: astNodeCount,
+    expressionDepth: Math.max(predicates.length ? 1 : 0, ...[...predicateDepths.values()].filter(Number.isFinite)),
+    predicates: predicates.length,
+    actions: actionLines.length,
+  });
+  if (diagnostics.length || compiledPredicates.some((item) => !item.expression) || actions.some((action) => !action)) return { ok: false, diagnostics, budget };
   const finalPredicates = compiledPredicates.filter((item): item is OrcaCompiledRuleRevision["predicates"][number] => item.expression !== null);
   const finalActions = actions.filter((action): action is OrcaCompiledAction => action !== null);
-  const requiredCapabilities = new Set<OrcaCompiledRuleRevision["requiredCapabilities"][number]>();
-  if (finalActions.some((action) => action.kind !== "propose_provider_deletion")) requiredCapabilities.add("organization_thread");
-  if (finalActions.some((action) => ["notify", "suppress_interruption", "schedule_review"].includes(action.kind))) requiredCapabilities.add("organization_attention");
-  if (finalActions.some((action) => action.kind === "propose_provider_deletion")) requiredCapabilities.add("provider_delete");
-  const risk = finalActions.some((action) => action.kind === "propose_provider_deletion") ? "destructive"
-    : finalActions.some((action) => action.kind === "propose_retention") ? "high"
-    : finalActions.some((action) => ["notify", "suppress_interruption", "schedule_review"].includes(action.kind)) ? "medium" : "low";
+  const { requiredCapabilities, risk } = classifyOrcaActions(finalActions);
   const revision = orcaCompiledRuleRevisionSchema.parse({
     languageVersion: 1,
     workspaceId: workspace.workspaceId,
@@ -478,8 +554,8 @@ export function compileOrcaRule(input: OrcaCompileInput): OrcaCompileResult {
     predicates: finalPredicates,
     actions: finalActions,
     because: because!,
-    requiredCapabilities: [...requiredCapabilities].sort(),
+    requiredCapabilities,
     risk,
   } satisfies OrcaCompiledRuleRevision);
-  return { ok: true, diagnostics: [], revision };
+  return { ok: true, diagnostics: [], revision, budget };
 }
