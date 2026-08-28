@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   organizationDescribeResponseSchema,
   organizationFallbackPlacementFixture,
@@ -68,40 +68,51 @@ function applyDemoActions(configuration: OrganizationLaneConfiguration, actions:
   return next;
 }
 
-export function OrganizationLaneWorkspace({ demoMode = false }: { demoMode?: boolean }) {
+export function OrganizationLaneWorkspace({ demoMode = false, onWorkspaceMutation, refreshToken = 0 }: { demoMode?: boolean; onWorkspaceMutation?: () => void; refreshToken?: number }) {
   const [configuration, setConfiguration] = useState<OrganizationLaneConfiguration | null>(demoMode ? organizationLaneConfigurationFixture : null);
   const [state, setState] = useState<LoadState>(demoMode ? "ready" : "loading");
   const [error, setError] = useState<string | null>(null);
   const [newLaneName, setNewLaneName] = useState("");
   const [selectedLaneId, setSelectedLaneId] = useState<string | null>(demoMode ? organizationLaneConfigurationFixture.lanes[0]!.id : null);
+  const loadRequest = useRef(0);
+  const mutationRequest = useRef(0);
 
   useEffect(() => {
     if (demoMode) return;
     const controller = new AbortController();
+    const requestId = ++loadRequest.current;
+    mutationRequest.current += 1;
+    setState("loading"); setError(null);
     void readJson("/v1/organization/describe", { signal: controller.signal }).then((body) => {
+      if (controller.signal.aborted || requestId !== loadRequest.current) return;
       const parsed = organizationDescribeResponseSchema.parse(body);
       setConfiguration(parsed.laneConfiguration);
-      setSelectedLaneId(parsed.laneConfiguration.lanes.find((lane) => !lane.retiredAt)?.id ?? null);
+      setSelectedLaneId((current) => parsed.laneConfiguration.lanes.some((lane) => lane.id === current && !lane.retiredAt) ? current : parsed.laneConfiguration.lanes.find((lane) => !lane.retiredAt)?.id ?? null);
       setState("ready");
-    }).catch((reason) => { if (!controller.signal.aborted) { setError(reason instanceof Error ? reason.message : "Lanes are unavailable"); setState("error"); } });
+    }).catch((reason) => { if (!controller.signal.aborted && requestId === loadRequest.current) { setError(reason instanceof Error ? reason.message : "Lanes are unavailable"); setState("error"); } });
     return () => controller.abort();
-  }, [demoMode]);
+  }, [demoMode, refreshToken]);
 
   const selectedLane = configuration?.lanes.find((lane) => lane.id === selectedLaneId) ?? null;
   const selectedPolicy = configuration?.policies.find((policy) => policy.id === selectedLane?.defaultPolicyId) ?? null;
 
   async function apply(actions: OrganizationLaneAction[]) {
     if (!configuration || state === "saving") return;
+    const requestId = ++mutationRequest.current;
     setState("saving"); setError(null);
     try {
       if (demoMode) {
         setConfiguration(applyDemoActions(configuration, actions));
       } else {
         const body = await readJson("/v1/organization/apply", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: nextId(), idempotencyKey: `web:lanes:${nextId()}`, expectedWorkspaceRevision: configuration.workspaceRevision, actions }) });
-        setConfiguration(organizationLaneApplyResponseSchema.parse(body).laneConfiguration);
+        const parsed = organizationLaneApplyResponseSchema.parse(body);
+        if (requestId !== mutationRequest.current) return;
+        setConfiguration(parsed.laneConfiguration);
       }
+      if (requestId !== mutationRequest.current) return;
       setState("ready");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Nothing changed"); setState("error"); }
+      if (!demoMode) onWorkspaceMutation?.();
+    } catch (reason) { if (requestId === mutationRequest.current) { setError(reason instanceof Error ? reason.message : "Nothing changed"); setState("error"); } }
   }
 
   async function createLane() {

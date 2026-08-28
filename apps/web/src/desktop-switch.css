@@ -521,12 +521,30 @@
 .glass-box { display: grid; grid-template-columns: 1fr 20px 1fr 20px 1fr; align-items: stretch; gap: 8px; }
 .glass-box > i { align-self: center; color: var(--desktop-faint); font-style: normal; text-align: center; }
 .glass-box label,.tide-table { display: block; padding: 12px; border: 1px solid var(--desktop-border); border-radius: 12px; background: var(--desktop-paper); }
-.glass-box label > span,.tide-table > span { display: block; margin-bottom: 8px; color: var(--desktop-accent); font: 800 9px/10px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
+.glass-box label > span,.tide-table header span { display: block; margin-bottom: 8px; color: var(--desktop-accent); font: 800 9px/10px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
 .glass-box textarea,.tide-table textarea { width: 100%; resize: vertical; border: 0; outline: 0; background: transparent; color: var(--desktop-ink); font: 600 11px/17px var(--desktop-sans); }
 .glass-box textarea { min-height: 78px; }
 .glass-box .glass-because { grid-column: 1 / -1; }
 .glass-box .glass-because textarea { min-height: 42px; }
-.tide-table textarea { min-height: 340px; font-family: var(--desktop-mono); line-height: 20px; }
+.tide-table header { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--desktop-border); }
+.tide-table header p { max-width: 580px; margin: 0; color: var(--desktop-muted); font-size: 10px; line-height: 16px; }
+.tide-table header > strong { flex: 0 0 auto; padding: 5px 8px; border: 1px solid var(--desktop-border); border-radius: 999px; background: var(--desktop-surface-hover); color: var(--desktop-ink); font: 750 9px/1 var(--desktop-mono); }
+.tide-table textarea { min-height: 340px; padding: 14px 2px; font-family: var(--desktop-mono); line-height: 20px; }
+.tide-table textarea[aria-invalid="true"] { box-shadow: inset 3px 0 var(--desktop-danger); }
+.tide-table footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid var(--desktop-border); }
+.tide-table footer p { margin: 0; color: var(--desktop-muted); font-size: 9px; line-height: 15px; }
+.tide-table footer button,.tide-diagnostics button { min-height: 38px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-surface); color: var(--desktop-ink); font-size: 10px; font-weight: 750; }
+.tide-table footer button { flex: 0 0 auto; padding: 0 13px; border-color: var(--desktop-accent); }
+.tide-table footer button:hover:not(:disabled),.tide-diagnostics button:hover { background: var(--desktop-surface-hover); }
+.tide-table footer button:disabled { border-color: var(--desktop-border); background: var(--desktop-surface-hover); color: var(--desktop-muted); opacity: .72; }
+.tide-table-status { margin: 12px 0 0; color: var(--desktop-muted); font-size: 10px; }
+.tide-table-compiled .tide-table-status { color: var(--desktop-accent); }
+.tide-table-error .tide-table-status { color: var(--desktop-danger); }
+.tide-diagnostics { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+.tide-diagnostics button { width: 100%; height: auto; display: grid; grid-template-columns: 125px minmax(0,1fr); gap: 4px 12px; padding: 10px 12px; border-color: color-mix(in srgb,var(--desktop-danger) 58%,var(--desktop-border)); text-align: left; }
+.tide-diagnostics strong { color: var(--desktop-danger); font: 750 9px/15px var(--desktop-mono); }
+.tide-diagnostics span { font-size: 10px; line-height: 15px; }
+.tide-diagnostics small { grid-column: 2; color: var(--desktop-muted); font-size: 9px; line-height: 14px; }
 .organization-status { margin: 14px 0 0; padding: 11px 12px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-paper); color: var(--desktop-muted); font-size: 10px; }
 .organization-status-ready { border-color: color-mix(in srgb,var(--desktop-accent) 55%,var(--desktop-border)); color: var(--desktop-accent); }
 .organization-status-stale { border-color: color-mix(in srgb,var(--desktop-warning) 55%,var(--desktop-border)); color: var(--desktop-warning); }
