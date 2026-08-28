@@ -210,13 +210,34 @@ export const organizationRules = sqliteTable(
     name: text("name").notNull(),
     latestRevision: integer("latest_revision").notNull(),
     activeRevisionId: text("active_revision_id"),
+    position: integer("position").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
   },
   (table) => ({
     primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
     workspaceUpdatedIdx: index("organization_rules_workspace_updated_idx").on(table.workspaceId, table.updatedAt, table.id),
+    workspacePositionUniqueIdx: uniqueIndex("organization_rules_workspace_position_unique_idx").on(table.workspaceId, table.position),
     latestRevisionCheck: check("organization_rules_latest_revision_check", sql`${table.latestRevision} >= 1`),
+    positionCheck: check("organization_rules_position_check", sql`${table.position} >= 0`),
+  }),
+);
+
+/** Workspace-owned revision root for the canonical, gap-free Rule Set order. */
+export const organizationRuleSets = sqliteTable(
+  "organization_rule_sets",
+  {
+    workspaceId: text("workspace_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(1),
+    orderDigest: text("order_digest").notNull(),
+    ruleCount: integer("rule_count").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    revisionCheck: check("organization_rule_sets_revision_check", sql`${table.revision} >= 1`),
+    countCheck: check("organization_rule_sets_count_check", sql`${table.ruleCount} >= 0`),
+    digestCheck: check("organization_rule_sets_digest_check", sql`${table.orderDigest} GLOB 'order-v1:[0-9a-f]*' AND length(${table.orderDigest}) = 73`),
   }),
 );
 
@@ -253,6 +274,41 @@ export const organizationRuleRevisions = sqliteTable(
     languageCheck: check("organization_rule_revisions_language_check", sql`${table.languageVersion} = 1`),
     riskCheck: check("organization_rule_revisions_risk_check", sql`${table.risk} IN ('low','medium','high','destructive')`),
     actorTypeCheck: check("organization_rule_revisions_actor_type_check", sql`${table.actorType} IN ('human','agent','system')`),
+  }),
+);
+
+/** Immutable deterministic Rule evaluation evidence for one Event and Thread. */
+export const organizationEvaluationTraces = sqliteTable(
+  "organization_evaluation_traces",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    id: text("id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    eventId: text("event_id").notNull(),
+    eventKind: text("event_kind").notNull(),
+    ruleSetRevision: integer("rule_set_revision").notNull(),
+    traceJson: text("trace_json").notNull(),
+    actionsJson: text("actions_json").notNull(),
+    logicalTime: integer("logical_time", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_evaluation_traces_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_evaluation_traces_account_thread_fk",
+    }).onDelete("cascade"),
+    eventUniqueIdx: uniqueIndex("organization_evaluation_traces_event_unique_idx").on(table.workspaceId, table.eventId),
+    threadLatestIdx: index("organization_evaluation_traces_thread_latest_idx").on(table.workspaceId, table.accountId, table.threadId, table.logicalTime, table.id),
+    eventKindCheck: check("organization_evaluation_traces_event_kind_check", sql`${table.eventKind} IN ('message.received','thread.updated','schedule.reached','user.corrected')`),
+    ruleSetRevisionCheck: check("organization_evaluation_traces_rule_set_revision_check", sql`${table.ruleSetRevision} >= 1`),
   }),
 );
 

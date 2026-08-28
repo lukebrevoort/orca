@@ -55,7 +55,7 @@ function compileSuccess(source: string, revision: number, workspaceSchemaRevisio
   const createdAt = "2026-08-26T12:00:00.000Z";
   return {
     ok: true as const,
-    rule: { id: "rule-production-failures", workspaceId: "workspace-demo", name: "Production failures", latestRevision: revision, activeRevisionId: null, createdAt, updatedAt: createdAt },
+    rule: { id: "rule-production-failures", workspaceId: "workspace-demo", name: "Production failures", latestRevision: revision, activeRevisionId: null, position: 0, createdAt, updatedAt: createdAt },
     revision: {
       id: `rule-revision-${revision}`, ruleId: "rule-production-failures", workspaceId: "workspace-demo", revision, source,
       sourceDigest: `sha256:${String(revision).repeat(64)}`,

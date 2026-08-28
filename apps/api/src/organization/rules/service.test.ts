@@ -20,6 +20,7 @@ import {
 const migrations = resolve(import.meta.dir, "../../../drizzle");
 const directories: string[] = [];
 type RuleAppendInput = Parameters<RuleRevisionRepository["append"]>[0];
+type RuleReorderInput = Parameters<RuleRevisionRepository["reorder"]>[0];
 type PersistedRuleRevision = {
   workspace_schema_revision: number;
   language_version: number;
@@ -33,7 +34,7 @@ type PersistedRuleRevision = {
   created_at: number;
 };
 
-function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput } = {}) {
+function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput; tamperReorder?: (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => RuleReorderInput } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-bre-314-service-"));
   directories.push(directory);
   const client = createDatabaseClient(join(directory, "rules.sqlite"));
@@ -51,6 +52,14 @@ function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: 
       tampered.authorizationAnchor = input.authorizationAnchor;
       if (options.tamperAuthorization) tampered.executionContext.actor.id = "forged-actor";
       return append(options.tamperAppend?.(tampered) ?? tampered);
+    };
+  }
+  if (options.tamperReorder) {
+    const reorder = repository.reorder.bind(repository);
+    repository.reorder = (input) => {
+      const tampered = structuredClone(input);
+      tampered.authorizationAnchor = input.authorizationAnchor;
+      return reorder(options.tamperReorder!(tampered, client.sqlite));
     };
   }
   const service = createRuleRevisionService(repository, {
@@ -94,8 +103,8 @@ describe("Rule Revision service", () => {
           );
         }
         sqlite.query("UPDATE organization_rules SET latest_revision = 120 WHERE workspace_id = ? AND id = ?").run("owner", created.rule.id);
-        sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision,active_revision_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
-          .run("owner", "other-growth-rule", "Other", 1, null, Number(persisted.created_at), Number(persisted.created_at));
+        sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision,active_revision_id,position,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+          .run("owner", "other-growth-rule", "Other", 1, null, 1, Number(persisted.created_at), Number(persisted.created_at));
         insert.run(
           "owner", "other-growth-revision", "other-growth-rule", 1,
           persisted.workspace_schema_revision, persisted.language_version, persisted.source,
@@ -167,7 +176,7 @@ describe("Rule Revision service", () => {
 
       const authority = repository.getAuthorityState("owner", { ruleId: created.rule.id, idempotencyKey: "constant-work-edit" });
       assert.equal(authority.idempotencyKeyReserved, false);
-      assert.deepEqual(authority.resourceRevisions, { [`rule:${created.rule.id}`]: 300 });
+      assert.deepEqual(authority.resourceRevisions, { [`rule:${created.rule.id}`]: 300, "rule_order:owner": 2 });
       assert.equal(repository.getAuthorityState("owner", { ruleId: created.rule.id, idempotencyKey: "unrelated-key-999" }).idempotencyKeyReserved, true);
 
       const edited = service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
@@ -433,6 +442,71 @@ because "Ordered predicates and actions stay bound"`;
       assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_rule_revisions").get() as { count: number }).count, 2);
     } finally { sqlite.close(); }
   });
+
+  test("fails closed on stale Workspace, Rule Set, direct Rule, collateral snapshot, and reorder tamper", () => {
+    const cases: Array<[string, (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => void]> = [
+      ["workspace race", (_input, sqlite) => { sqlite.query("UPDATE organization_workspace_states SET revision=revision+1 WHERE workspace_id='owner'").run(); }],
+      ["Rule Set race", (_input, sqlite) => { sqlite.query("UPDATE organization_rule_sets SET revision=revision+1 WHERE workspace_id='owner'").run(); }],
+      ["direct Rule race", (input, sqlite) => { sqlite.query("UPDATE organization_rules SET latest_revision=latest_revision+1 WHERE workspace_id='owner' AND id=?").run(input.request.items[0]!.id); }],
+      ["collateral position race", (input, sqlite) => { const collateral = input.plan.expected.items.find(({ id }) => id !== input.request.items[0]!.id)!; sqlite.query("UPDATE organization_rules SET position=99 WHERE workspace_id='owner' AND id=?").run(collateral.id); }],
+      ["mid-flight create", (_input, sqlite) => { sqlite.query("INSERT INTO organization_rules(workspace_id,id,name,latest_revision,position) VALUES ('owner','mid-flight','Mid flight',1,3)").run(); }],
+      ["command tamper", (input) => { input.command.intents[0]!.changes!.ruleCount = 99; }],
+      ["envelope tamper", (input) => { input.executionContext.actor.id = "private"; }],
+      ["target digest tamper", (input) => { (input.plan as { targetOrderDigest: string }).targetOrderDigest = `order-v1:${"0".repeat(64)}`; }],
+      ["collateral snapshot tamper", (input) => { input.plan.expected.items[1]!.revision += 1; }],
+    ];
+    for (const [name, mutate] of cases) {
+      let afterRace: unknown;
+      const state = (sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => ({
+        workspace: sqlite.query("SELECT * FROM organization_workspace_states WHERE workspace_id='owner'").get(),
+        root: sqlite.query("SELECT * FROM organization_rule_sets WHERE workspace_id='owner'").get(),
+        rules: sqlite.query("SELECT id,position,latest_revision FROM organization_rules WHERE workspace_id='owner' ORDER BY id").all(),
+        changes: sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE workspace_id='owner'").get(),
+        actions: sqlite.query("SELECT COUNT(*) count FROM organization_change_actions WHERE workspace_id='owner'").get(),
+        traces: sqlite.query("SELECT COUNT(*) count FROM organization_evaluation_traces WHERE workspace_id='owner'").get(),
+      });
+      const { service, sqlite } = setup({ tamperReorder(input, database) { mutate(input, database); afterRace = state(database); return input; } });
+      try {
+        for (let index = 0; index < 3; index += 1) {
+          const created = service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
+            ruleId: `race-rule-${index}`, idempotencyKey: `race-create-${index}`, expectedRuleRevision: null, workspaceSchemaRevision: index + 1, source: source("Everything else", `Race ${index}`),
+          } });
+          assert.equal(created.ok, true);
+        }
+        assert.throws(() => service.reorder({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
+          idempotencyKey: `race-reorder-${name}`, expectedWorkspaceRevision: 4, expectedRuleSetRevision: 4,
+          items: [{ id: "race-rule-2", position: 0, expectedRevision: 1 }],
+        } }), (error: unknown) => error instanceof Error, name);
+        assert.deepEqual(state(sqlite), afterRace, name);
+      } finally { sqlite.close(); }
+    }
+  }, 30_000);
+
+  test("keeps 101-Rule create and reorder authority/audit evidence below 100 intents and actions", () => {
+    const { service, sqlite } = setup();
+    try {
+      for (let index = 0; index < 101; index += 1) {
+        const created = service.compile({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
+          ruleId: `growth-order-${String(index).padStart(3, "0")}`, idempotencyKey: `growth-order-create-${index}`, expectedRuleRevision: null,
+          workspaceSchemaRevision: index + 1, source: source("Everything else", `Growth ${index}`),
+        } });
+        assert.equal(created.ok, true);
+      }
+      const createChange = sqlite.query("SELECT id,authority_trace FROM organization_change_sets WHERE workspace_id='owner' AND idempotency_key='growth-order-create-100'").get() as { id: string; authority_trace: string };
+      assert.equal((JSON.parse(createChange.authority_trace) as { requestedResourceIds: string[] }).requestedResourceIds.length, 2);
+      assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_change_actions WHERE workspace_id='owner' AND change_id=?").get(createChange.id) as { count: number }).count, 2);
+
+      const reordered = service.reorder({ actor: { id: "owner", type: "human" }, workspaceId: "owner", request: {
+        idempotencyKey: "growth-order-reorder", expectedWorkspaceRevision: 102, expectedRuleSetRevision: 102,
+        items: [{ id: "growth-order-100", position: 0, expectedRevision: 1 }],
+      } });
+      assert.equal(reordered.items.length, 101);
+      assert.equal(reordered.items[0]?.id, "growth-order-100");
+      const reorderChange = sqlite.query("SELECT id,authority_trace FROM organization_change_sets WHERE workspace_id='owner' AND idempotency_key='growth-order-reorder'").get() as { id: string; authority_trace: string };
+      assert.equal((JSON.parse(reorderChange.authority_trace) as { requestedResourceIds: string[] }).requestedResourceIds.length, 1);
+      assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_change_actions WHERE workspace_id='owner' AND change_id=?").get(reorderChange.id) as { count: number }).count, 1);
+    } finally { sqlite.close(); }
+  }, 30_000);
 
   test("does not persist failed compilation and rejects stale or cross-workspace edits", () => {
     const { service, sqlite } = setup();

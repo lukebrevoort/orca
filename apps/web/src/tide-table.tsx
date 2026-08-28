@@ -48,7 +48,7 @@ export function createTidePreviewRequest(): TideRequest {
     const createdAt = "2026-08-26T12:00:00.000Z";
     return Response.json({
       ok: true,
-      rule: { id: ruleId, workspaceId: "preview-workspace", name: "Production failures", latestRevision: revision, activeRevisionId: null, createdAt, updatedAt: createdAt },
+      rule: { id: ruleId, workspaceId: "preview-workspace", name: "Production failures", latestRevision: revision, activeRevisionId: null, position: 0, createdAt, updatedAt: createdAt },
       revision: {
         id: `preview-rule-revision-${revision}`, ruleId, workspaceId: "preview-workspace", revision, source: payload.source,
         sourceDigest: `sha256:${"0".repeat(64)}`,

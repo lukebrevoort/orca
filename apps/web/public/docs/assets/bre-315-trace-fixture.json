@@ -1,0 +1,438 @@
+{
+  "trace": {
+    "id": "evaluation:event-safety:rules-1:7",
+    "event": {
+      "id": "event-safety",
+      "kind": "message.received",
+      "cause": "provider",
+      "occurredAt": "2026-08-26T12:00:00.000Z",
+      "workspaceId": "workspace-1",
+      "accountId": "account-1",
+      "threadId": "thread-1",
+      "messageId": "message-1"
+    },
+    "workspaceSchemaRevision": 7,
+    "ruleSet": {
+      "id": "rules-1",
+      "revision": 7,
+      "activeRevisionCount": 1
+    },
+    "logicalTime": "2026-08-26T12:00:00.000Z",
+    "actor": {
+      "id": "system:gmail-sync",
+      "type": "system"
+    },
+    "capabilities": {
+      "id": "sync-capabilities",
+      "revision": 1,
+      "actor": {
+        "id": "system:gmail-sync",
+        "type": "system"
+      },
+      "scope": {
+        "workspaceId": "workspace-1",
+        "accountIds": [
+          "account-1"
+        ]
+      },
+      "operations": [
+        "apply"
+      ],
+      "resourceFamilies": [
+        "thread",
+        "lane",
+        "workflow_state",
+        "trace"
+      ],
+      "actionFamilies": [
+        "organization_thread",
+        "organization_attention"
+      ]
+    },
+    "consideredRevisions": [
+      {
+        "ruleId": "rule-production",
+        "revisionId": "rule-production-r2",
+        "revision": 2,
+        "order": 0,
+        "eventMatched": true,
+        "predicateMatched": true,
+        "authorized": true,
+        "reason": "matched"
+      }
+    ],
+    "observedValues": [
+      {
+        "field": "facet:facet-ticket",
+        "present": false
+      },
+      {
+        "field": "sender.domain",
+        "present": true,
+        "value": "vercel.com"
+      },
+      {
+        "field": "subject",
+        "present": true,
+        "value": "Production deploy failed"
+      }
+    ],
+    "predicateResults": [
+      {
+        "revisionId": "rule-production-r2",
+        "predicate": "from_vercel",
+        "kind": "compare",
+        "result": true,
+        "observedFields": [
+          "sender.domain"
+        ]
+      },
+      {
+        "revisionId": "rule-production-r2",
+        "predicate": "failed",
+        "kind": "compare",
+        "result": true,
+        "observedFields": [
+          "subject"
+        ]
+      },
+      {
+        "revisionId": "rule-production-r2",
+        "predicate": "ticket_present",
+        "kind": "exists",
+        "result": false,
+        "observedFields": [
+          "facet:facet-ticket"
+        ]
+      },
+      {
+        "revisionId": "rule-production-r2",
+        "predicate": "when:3",
+        "kind": "all",
+        "result": true,
+        "observedFields": []
+      }
+    ],
+    "candidates": [
+      {
+        "candidateId": "safety-lock:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-focus"
+        },
+        "slot": "lane",
+        "precedence": "safety_lock",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "human-safety",
+          "type": "human"
+        },
+        "reason": "Hold the incident in Focus",
+        "authorized": true
+      },
+      {
+        "candidateId": "manual-override:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-fallback"
+        },
+        "slot": "lane",
+        "precedence": "manual_override",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "human-manual",
+          "type": "human"
+        },
+        "reason": "Move after unlock",
+        "authorized": true
+      },
+      {
+        "candidateId": "workspace-fallback:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-fallback"
+        },
+        "slot": "lane",
+        "precedence": "workspace_fallback",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:workspace-fallback",
+          "type": "system"
+        },
+        "reason": "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+        "authorized": true
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:0",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-focus"
+        },
+        "slot": "lane",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": true,
+        "revisionId": "rule-production-r2"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:1",
+        "action": {
+          "kind": "set_workflow_state",
+          "stateId": "state-review"
+        },
+        "slot": "workflow_state",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 1,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": true,
+        "revisionId": "rule-production-r2"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:2",
+        "action": {
+          "kind": "notify",
+          "urgency": "immediate"
+        },
+        "slot": "attention",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 2,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": true,
+        "revisionId": "rule-production-r2"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:3",
+        "action": {
+          "kind": "propose_provider_deletion"
+        },
+        "slot": "provider_deletion",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 3,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": false,
+        "revisionId": "rule-production-r2",
+        "missingCapabilities": [
+          "provider_delete"
+        ]
+      },
+      {
+        "candidateId": "lane-policy:policy-focus:attention",
+        "action": {
+          "kind": "notify",
+          "urgency": "immediate"
+        },
+        "slot": "attention",
+        "precedence": "lane_policy",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:lane-policy:policy-focus",
+          "type": "system"
+        },
+        "reason": "Lane Policy policy-focus supplies the default interruption behavior for Lane lane-focus.",
+        "authorized": true
+      }
+    ],
+    "winners": [
+      {
+        "candidateId": "safety-lock:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-focus"
+        },
+        "slot": "lane",
+        "precedence": "safety_lock",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "human-safety",
+          "type": "human"
+        },
+        "reason": "Hold the incident in Focus",
+        "authorized": true
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:1",
+        "action": {
+          "kind": "set_workflow_state",
+          "stateId": "state-review"
+        },
+        "slot": "workflow_state",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 1,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": true,
+        "revisionId": "rule-production-r2"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:2",
+        "action": {
+          "kind": "notify",
+          "urgency": "immediate"
+        },
+        "slot": "attention",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 2,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "A failed deploy blocks work",
+        "authorized": true,
+        "revisionId": "rule-production-r2"
+      }
+    ],
+    "losers": [
+      {
+        "candidateId": "manual-override:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-fallback"
+        },
+        "slot": "lane",
+        "precedence": "manual_override",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "human-manual",
+          "type": "human"
+        },
+        "reason": "higher_precedence_candidate",
+        "authorized": true,
+        "candidateReason": "Move after unlock",
+        "winnerCandidateId": "safety-lock:lane"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:0",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-focus"
+        },
+        "slot": "lane",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "higher_precedence_candidate",
+        "authorized": true,
+        "revisionId": "rule-production-r2",
+        "candidateReason": "A failed deploy blocks work",
+        "winnerCandidateId": "safety-lock:lane"
+      },
+      {
+        "candidateId": "rule:rule-production:rule-production-r2:3",
+        "action": {
+          "kind": "propose_provider_deletion"
+        },
+        "slot": "provider_deletion",
+        "precedence": "rule_revision",
+        "ruleOrder": 0,
+        "actionOrder": 3,
+        "actor": {
+          "id": "system:gmail-sync",
+          "type": "system"
+        },
+        "reason": "capability_denied",
+        "authorized": false,
+        "revisionId": "rule-production-r2",
+        "missingCapabilities": [
+          "provider_delete"
+        ],
+        "candidateReason": "A failed deploy blocks work"
+      },
+      {
+        "candidateId": "lane-policy:policy-focus:attention",
+        "action": {
+          "kind": "notify",
+          "urgency": "immediate"
+        },
+        "slot": "attention",
+        "precedence": "lane_policy",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:lane-policy:policy-focus",
+          "type": "system"
+        },
+        "reason": "higher_precedence_candidate",
+        "authorized": true,
+        "candidateReason": "Lane Policy policy-focus supplies the default interruption behavior for Lane lane-focus.",
+        "winnerCandidateId": "rule:rule-production:rule-production-r2:2"
+      },
+      {
+        "candidateId": "workspace-fallback:lane",
+        "action": {
+          "kind": "route_lane",
+          "laneId": "lane-fallback"
+        },
+        "slot": "lane",
+        "precedence": "workspace_fallback",
+        "ruleOrder": 0,
+        "actionOrder": 0,
+        "actor": {
+          "id": "system:workspace-fallback",
+          "type": "system"
+        },
+        "reason": "higher_precedence_candidate",
+        "authorized": true,
+        "candidateReason": "No higher-precedence outcome selected a Lane, so the configured Workspace Fallback Lane won.",
+        "winnerCandidateId": "safety-lock:lane"
+      }
+    ],
+    "lowerLanePlacement": {
+      "candidateId": "rule:rule-production:rule-production-r2:0",
+      "laneId": "lane-focus",
+      "placementSource": "rule_revision",
+      "sourceId": "rule-production-r2",
+      "actor": {
+        "id": "system:gmail-sync",
+        "type": "system"
+      },
+      "reason": "A failed deploy blocks work"
+    },
+    "reason": "Hold the incident in Focus",
+    "budget": {
+      "maximumRuleRevisions": 100,
+      "maximumPredicateSteps": 2000,
+      "maximumCandidates": 1000,
+      "maximumPredicateDepth": 16,
+      "ruleRevisions": 1,
+      "predicateSteps": 4,
+      "candidates": 8,
+      "exhausted": false
+    }
+  }
+}

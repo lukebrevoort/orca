@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { orcaCompiledRuleRevisionSchema } from "@orca/shared";
+import {
+  orcaCompiledRuleRevisionSchema,
+  orcaCompileResultSchema,
+  type OrcaCompiler,
+} from "@orca/shared";
 
 import { compileOrcaRule, type OrcaWorkspaceSnapshot } from "./compiler.ts";
+
+const sharedCompiler: OrcaCompiler = compileOrcaRule;
 
 const workspace: OrcaWorkspaceSnapshot = {
   workspaceId: "workspace-1",
@@ -15,12 +21,42 @@ const workspace: OrcaWorkspaceSnapshot = {
     cardinality: "single",
     optional: true,
   }],
-  collections: [{ id: "collection-launch", name: "Launch" }],
+  collections: [{ id: "collection-launch", accountId: "account-1", name: "Launch" }],
   contextTypes: [{ id: "context-type-project", name: "Project" }],
   contexts: [{ id: "context-orca", contextTypeId: "context-type-project", name: "Orca" }],
 };
 
 describe("compileOrcaRule", () => {
+  test("satisfies the shared compiler interface on success and failure", () => {
+    const success = sharedCompiler({
+      workspace,
+      source: `orca 1\nrule "Shared interface"\nevent thread.updated\nwhen subject contains "status"\naction add collection "Launch"\nbecause "Compiler drift must fail at the shared seam"`,
+    });
+    const failure = sharedCompiler({ source: "not orca", workspace });
+
+    expect(orcaCompileResultSchema.parse(success)).toEqual(success);
+    expect(orcaCompileResultSchema.parse(failure)).toEqual(failure);
+  });
+
+  test("authors the same four canonical Event families accepted by evaluation Trace", () => {
+    for (const event of ["message.received", "thread.updated", "schedule.reached", "user.corrected"] as const) {
+      const result = compileOrcaRule({
+        workspace,
+        source: `orca 1
+rule "${event} rule"
+event ${event}
+when subject contains "status"
+action route lane "Focus"
+because "The canonical Event family is authorable"`,
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(`${event}: ${JSON.stringify(result.diagnostics)}`);
+      expect(result.revision.event.kind).toBe(event);
+      expect(orcaCompiledRuleRevisionSchema.parse(result.revision)).toEqual(result.revision);
+    }
+  });
+
   test("compiles one Event, reusable predicates, and ordered actions to stable IDs", () => {
     const source = `orca 1
 rule "Production failures"
@@ -49,6 +85,7 @@ because "A failed deploy blocks work"`;
     ]);
     expect(result.revision.actions[0]).toMatchObject({ laneId: "lane-focus" });
     expect(result.revision.actions[2]).toMatchObject({ facetId: "facet-urgency", value: "urgent" });
+    expect(result.revision.actions[3]).toEqual({ kind: "add_collection", accountId: "account-1", collectionId: "collection-launch" });
     expect(result.revision.actions[4]).toMatchObject({ contextTypeId: "context-type-project", contextId: "context-orca" });
     expect(result.revision.requiredCapabilities).toEqual(["organization_attention", "organization_thread"]);
     expect(result.revision.risk).toBe("medium");

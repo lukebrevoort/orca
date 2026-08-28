@@ -33,6 +33,7 @@ describe("TideTableEditor", () => {
       name: "Production failures",
       latestRevision: revision,
       activeRevisionId: null,
+      position: 0,
       createdAt: "2026-08-26T12:00:00.000Z",
       updatedAt: `2026-08-26T12:0${revision}:00.000Z`,
     },

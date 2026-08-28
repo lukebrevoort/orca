@@ -81,15 +81,16 @@ Missing optional values never equal ordinary values. A comparison against missin
 
 ### Action
 
-An Action proposes intent; it does not directly mutate state. Initial action families:
+An Action is typed evaluation output. Organization actions may project through the existing authoritative SQLite seam; attention, retention, and deletion actions remain proposal-only evidence in BRE-315. Initial action families:
 
 | Family | Actions | Conflict behavior |
 |---|---|---|
 | Primary organization | Route to Lane; set Workflow State | Exclusive slot; one winner |
 | Typed knowledge | Set or unset Facet; link or unlink Context | One winner per single-value Facet; additive for multi-value Facets and links |
 | Membership | Add or remove Collection membership | Compatible actions combine; explicit conflicts use precedence |
-| Attention | Notify; schedule review; suppress interruption | Resolves to one effective attention policy |
-| Safety | Add a user-approved retention or deletion proposal | Requires separate destructive Capability and explicit risk acknowledgement |
+| Attention | Notify; schedule review; suppress interruption | Resolves to one effective proposal; persists in Trace/actions JSON and does not notify or create a reminder |
+| Retention | Propose keep or review-after retention | Persists in Trace/actions JSON; no retention projection exists |
+| Provider deletion | Propose provider deletion | Persists as a typed candidate; requires `provider_delete` to win and never deletes provider mail |
 
 The initial language cannot send mail, delete provider mail, execute network requests, or run arbitrary JavaScript, Python, or shell code.
 
@@ -171,7 +172,7 @@ Names resolve to stable IDs during compilation. Renaming a Lane, Facet, Context,
 
 ## Accepted decisions before syntax design
 
-1. `thread.updated` remains an internal reevaluation Event in version one. A future public Event must name the changed fields and the cause.
+1. `thread.updated` is the stable wire value for same-Thread live reevaluation and is authorable alongside `message.received`, `schedule.reached`, and `user.corrected`. Parser adapters may translate a legacy internal name only at their input edge; compiled Rule Revisions and Traces always store `thread.updated`.
 2. Rule priority is an explicit ordered position inside the Rule Set. System precedence strata remain reserved above that order.
 3. Each Rule Revision has exactly one Event pattern. This is one Event **kind**, not one Event occurrence: the Rule can evaluate every matching occurrence, use many Predicates, and propose many Actions. A separate Event kind uses a separate Rule.
 4. Version one supports reusable, pure, named, parameterless Predicates. It does not support general functions or recursion.

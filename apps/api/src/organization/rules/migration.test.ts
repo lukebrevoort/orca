@@ -18,13 +18,13 @@ describe("BRE-314 Rule Revision migration", () => {
       migrate(client.db, { migrationsFolder: migrations });
       const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
       const journalWithLaterMigration = [...journal.entries, {
-        idx: 29,
+        idx: 31,
         version: "7",
-        when: 1787702400002,
-        tag: "0029_future_migration",
+        when: 1787702400003,
+        tag: "0031_future_migration",
         breakpoints: true,
       }];
-      const stackedChain = [26, 27, 28].map((idx) => {
+      const stackedChain = [26, 27, 28, 29].map((idx) => {
         const entry = journalWithLaterMigration.find((candidate) => candidate.idx === idx);
         assert.ok(entry, `missing migration journal entry ${idx}`);
         return { idx: entry.idx, tag: entry.tag };
@@ -33,6 +33,7 @@ describe("BRE-314 Rule Revision migration", () => {
         { idx: 26, tag: "0026_organization_lanes" },
         { idx: 27, tag: "0027_organization_live_views" },
         { idx: 28, tag: "0028_orca_rule_revisions" },
+        { idx: 29, tag: "0029_orca_rule_evaluations" },
       ]);
       assert.deepEqual(journalWithLaterMigration.find((entry) => entry.idx === 28), {
         idx: 28,
@@ -41,9 +42,16 @@ describe("BRE-314 Rule Revision migration", () => {
         tag: "0028_orca_rule_revisions",
         breakpoints: true,
       });
+      assert.deepEqual(journalWithLaterMigration.find((entry) => entry.idx === 29), {
+        idx: 29,
+        version: "7",
+        when: 1787702400002,
+        tag: "0029_orca_rule_evaluations",
+        breakpoints: true,
+      });
 
       client.db.insert(users).values({ id: "workspace-1", email: "owner@example.com" }).run();
-      client.sqlite.query(`INSERT INTO organization_rules (workspace_id,id,name,latest_revision) VALUES ('workspace-1','rule-1','Focus failures',1)`).run();
+      client.sqlite.query(`INSERT INTO organization_rules (workspace_id,id,name,latest_revision,position) VALUES ('workspace-1','rule-1','Focus failures',1,0)`).run();
       client.sqlite.query(`INSERT INTO organization_rule_revisions (
         workspace_id,id,rule_id,revision,workspace_schema_revision,language_version,source,source_digest,compiled_json,required_capabilities,risk,actor_id,actor_type
       ) VALUES (
@@ -112,7 +120,7 @@ describe("BRE-314 Rule Revision migration", () => {
         const workspaceState = client.sqlite.query("SELECT revision FROM organization_workspace_states WHERE workspace_id = 'workspace-1'").get() as { revision: number };
         assert.equal(workspaceState.revision, 7);
 
-        client.sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision) VALUES ('workspace-1','rule-1','Focus failures',1)").run();
+        client.sqlite.query("INSERT INTO organization_rules (workspace_id,id,name,latest_revision,position) VALUES ('workspace-1','rule-1','Focus failures',1,0)").run();
         assert.throws(() => client.sqlite.query(`INSERT INTO organization_rule_revisions (
           workspace_id,id,rule_id,revision,workspace_schema_revision,language_version,source,source_digest,compiled_json,required_capabilities,risk,actor_id,actor_type
         ) VALUES (

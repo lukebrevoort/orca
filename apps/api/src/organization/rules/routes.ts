@@ -1,15 +1,20 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import { orcaLanguageTextLimits } from "@orca/shared";
+import { eq } from "drizzle-orm";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
+import { oauthAccounts } from "../../db/schema.ts";
+import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
 import {
   RuleAuthorityError,
   RuleIdempotencyConflictError,
   RuleRevisionConflictError,
   RuleRevisionCursorError,
   RuleRevisionCursorStaleError,
+  RuleSetRevisionConflictError,
+  RuleOrderValidationError,
   WorkspaceSchemaConflictError,
   createRuleRevisionService,
 } from "./service.ts";
@@ -100,6 +105,28 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
     } finally { client.sqlite.close(); }
   });
 
+  app.post("/v1/organization/rules/reorder", requireAuth({ dbFactory }), async (c) => {
+    const client = dbFactory();
+    try {
+      let request: unknown;
+      try { request = await c.req.json(); } catch { return c.json({ error: { code: "validation_error", message: "Rule reorder requires a valid JSON request" } }, 400); }
+      try {
+        return c.json(createRuleRevisionService(createSqliteRuleRevisionRepository(client.db)).reorder({
+          actor: { id: c.get("auth").userId, type: "human" }, workspaceId: c.get("auth").userId, request,
+        }));
+      } catch (error) {
+        if (error instanceof WorkspaceSchemaConflictError) return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, 409);
+        if (error instanceof RuleSetRevisionConflictError) return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, 409);
+        if (error instanceof RuleRevisionConflictError) return c.json({ error: { code: error.code, message: error.message, expectedRevision: error.expectedRevision, actualRevision: error.actualRevision } }, error.actualRevision === null ? 404 : 409);
+        if (error instanceof RuleIdempotencyConflictError) return c.json({ error: { code: error.code, message: error.message } }, 409);
+        if (error instanceof RuleOrderValidationError) return c.json({ error: { code: error.code, message: error.message } }, 400);
+        if (error instanceof RuleAuthorityError) return c.json({ error: { code: error.code, message: error.message } }, error.code === "revision_conflict" ? 409 : 403);
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule reorder request", issues: "issues" in error ? error.issues : [] } }, 400);
+        throw error;
+      }
+    } finally { client.sqlite.close(); }
+  });
+
   app.get("/v1/organization/rules/:ruleId", requireAuth({ dbFactory }), (c) => {
     const client = dbFactory();
     try {
@@ -119,6 +146,21 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
         if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule revision history query" } }, 400);
         throw error;
       }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.get("/v1/organization/evaluations/latest", requireAuth({ dbFactory }), (c) => {
+    const client = dbFactory();
+    try {
+      const workspaceId = c.get("auth").userId;
+      const accountId = c.req.query("accountId")?.trim() || undefined;
+      const threadId = c.req.query("threadId")?.trim() || undefined;
+      if (accountId) {
+        const owned = client.db.select({ id: oauthAccounts.id }).from(oauthAccounts)
+          .where(eq(oauthAccounts.userId, workspaceId)).all().some((account) => account.id === accountId);
+        if (!owned) return c.json({ error: { code: "account_denied", message: "Account is outside this Workspace" } }, 403);
+      }
+      return c.json({ trace: getLatestOrcaEvaluationTrace(client.db, { workspaceId, ...(accountId ? { accountId } : {}), ...(threadId ? { threadId } : {}) }) });
     } finally { client.sqlite.close(); }
   });
 }
