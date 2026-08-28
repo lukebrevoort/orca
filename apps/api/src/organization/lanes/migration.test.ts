@@ -17,7 +17,7 @@ describe("BRE-311 Lane migration", () => {
     try {
       migrate(client.db, { migrationsFolder: migrations });
       const journal = JSON.parse(readFileSync(join(migrations, "meta/_journal.json"), "utf8")) as { entries: Array<{ idx: number; tag: string }> };
-      assert.deepEqual(journal.entries.at(-1), { idx: 26, version: "7", when: 1787695200000, tag: "0026_organization_lanes", breakpoints: true });
+      assert.deepEqual(journal.entries.find((entry) => entry.idx === 26), { idx: 26, version: "7", when: 1787695200000, tag: "0026_organization_lanes", breakpoints: true });
       client.db.insert(users).values([{ id: "owner", email: "owner@example.com" }, { id: "private", email: "private@example.com" }]).run();
       client.db.insert(oauthAccounts).values([
         { id: "account_owner", userId: "owner", provider: "gmail", providerEmail: "owner@example.com", providerId: "owner" },

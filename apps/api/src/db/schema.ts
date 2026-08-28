@@ -156,6 +156,11 @@ export const threads = sqliteTable(
       table.accountId,
       table.latestReceivedAt,
     ),
+    viewOrderIdx: index("threads_view_order_idx").on(
+      sql`COALESCE(${table.latestReceivedAt},${table.createdAt}) DESC`,
+      table.accountId,
+      table.id,
+    ),
     accountIdIdUniqueIdx: uniqueIndex("threads_account_id_id_unique_idx").on(table.accountId, table.id),
   }),
 );
@@ -170,6 +175,29 @@ export const organizationWorkspaceStates = sqliteTable(
   },
   (table) => ({
     revisionCheck: check("organization_workspace_states_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+/** BRE-313 persists only a live View definition; Thread membership is always evaluated from current Organization state. */
+export const organizationViews = sqliteTable(
+  "organization_views",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    color: text("color").notNull(),
+    position: integer("position").notNull(),
+    definition: text("definition").notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePositionUniqueIdx: uniqueIndex("organization_views_workspace_position_unique_idx").on(table.workspaceId, table.position),
+    revisionCheck: check("organization_views_revision_check", sql`${table.revision} >= 1`),
+    positionCheck: check("organization_views_position_check", sql`${table.position} >= 0`),
   }),
 );
 

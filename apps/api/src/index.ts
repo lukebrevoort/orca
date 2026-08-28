@@ -132,6 +132,7 @@ import { createSqliteOrganizationRepository } from "./organization/sqlite-reposi
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
 import { registerOrganizationContextRoutes } from "./organization/contexts/routes.ts";
+import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
 import {
   OrganizationCollectionsPinsAccessError,
@@ -226,6 +227,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
   registerOrganizationContextRoutes(app, { dbFactory });
+  registerOrganizationViewRoutes(app, { dbFactory });
 
   const mcpPolicy = options.mcpBoundaryPolicy ?? getOrcaAgentBoundaryPolicy(options.mcpEnv);
   const mcpOAuthConfig = options.mcpOAuthConfig ?? getMcpOAuthConfig(options.mcpEnv ?? process.env);

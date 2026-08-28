@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "rea
 import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
+import { OrganizationViewsWorkspace } from "./organization-views";
 
 export { DesktopDrawer } from "./desktop-drawer";
 
@@ -290,6 +291,7 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
   function activate() { if (!interactivePreview || simulation !== "ready") return; setActiveRevision((value) => value + 1); setSimulation("idle"); setStatus("Preview state changed for this local session. No revision was authorized, persisted, or audited."); setTraceTab("trace"); setTraceOpen(true); }
   function revert() { if (!interactivePreview) return; setActiveRevision((value) => value + 1); setRevertReview(false); setStatus("Local preview state restored. No server history or production behavior changed."); }
   return <section className="organization-studio" aria-labelledby="organization-title">
+    <OrganizationViewsWorkspace demoMode={interactivePreview} />
     <OrganizationLaneWorkspace demoMode={interactivePreview} />
     <header className="organization-heading"><div><span>{interactivePreview ? `Organization UI preview · session ${activeRevision}` : "Organization · read-only"}</span><h1 id="organization-title">Production failures</h1><p>{interactivePreview ? "Local interaction preview for Focus · nothing is persisted" : "Workspace describe/query is available; mutation authority is not"}</p></div><div><button disabled={!interactivePreview} onClick={() => setTraceOpen(true)} type="button">{interactivePreview ? "Preview changes" : "History unavailable"}</button><button className="organization-primary" disabled={!interactivePreview} onClick={updateDraft} type="button">New rule</button></div></header>
     <div className="organization-grid"><section className="organization-editor"><nav aria-label="Rule authoring mode"><button aria-pressed={mode === "glass"} onClick={() => setMode("glass")} type="button">Glass Box</button><button aria-pressed={mode === "tide"} onClick={() => setMode("tide")} type="button">Tide Table</button></nav>
