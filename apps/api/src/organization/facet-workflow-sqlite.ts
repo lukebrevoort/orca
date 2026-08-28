@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
+  organizationFacetWorkflowApplySchema,
   facetCardinalitySchema,
   facetDefinitionSchema,
   facetValueTypeSchema,
@@ -24,9 +25,10 @@ import {
   organizationWorkspaceStates,
   threads,
 } from "../db/schema.ts";
-import { digestOrganizationCommand } from "./authority.ts";
+import { canonicalOrganizationJson, digestOrganizationCommand } from "./authority.ts";
 import { applyFacetWorkflowActions, digestFacetWorkflowActions, type FacetWorkflowSnapshot } from "./facet-workflow.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "./module.ts";
+import type { OrganizationAgentCapabilitySource } from "./agent-capability.ts";
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
 
@@ -125,16 +127,56 @@ export function createSqliteFacetWorkflowRepository(db: Database) {
       };
     },
 
+    replayFacetWorkflow(input: {
+      scope: { actor: OrganizationExecutionContext["actor"]; workspaceId: string; accountIds: string[] };
+      command: unknown;
+      agentCapabilitySource?: OrganizationAgentCapabilitySource;
+    }) {
+      const parsed = organizationFacetWorkflowApplySchema.parse(input.command);
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        if (input.scope.actor.type === "agent") {
+          const live = input.agentCapabilitySource?.load({ ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } }, executor) ?? null;
+          if (!live || live.revokedAt !== null || !live.snapshot.operations.includes("apply")) throw new OrganizationAuthorityError("actor_operation_denied", "The persisted MCP Organization grant no longer authorizes apply");
+        }
+        const row = executor.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, input.scope.workspaceId),
+          eq(organizationChangeSets.idempotencyKey, parsed.idempotencyKey),
+          eq(organizationChangeSets.resourceFamily, "facet_workflow"),
+        )).get();
+        if (!row) return null;
+        const stored = JSON.parse(row.commandJson) as { request?: unknown; scope?: unknown; response?: unknown };
+        const replayScope = { actor: input.scope.actor, workspaceId: input.scope.workspaceId, accountIds: [...input.scope.accountIds].sort() };
+        if (canonicalOrganizationJson(stored.request) !== canonicalOrganizationJson(parsed)
+          || canonicalOrganizationJson(stored.scope) !== canonicalOrganizationJson(replayScope)) {
+          throw new OrganizationAuthorityError("duplicate_idempotency_key", "The idempotency key was already used for a different Facet/Workflow request or scope");
+        }
+        return stored.response as FacetWorkflowSnapshot;
+      });
+    },
+
     applyFacetWorkflow(input: {
       executionContext: OrganizationExecutionContext;
       authorityTrace: OrganizationAuthorityTrace;
       command: OrganizationCommand;
       actions: readonly OrganizationFacetWorkflowAction[];
+      agentCapabilitySource?: OrganizationAgentCapabilitySource;
     }) {
       return db.transaction((transaction) => {
         const workspaceId = input.executionContext.workspaceId;
         transaction.insert(organizationWorkspaceStates).values({ workspaceId }).onConflictDoNothing().run();
         const executor = transaction as unknown as Database;
+        if (input.executionContext.actor.type === "agent") {
+          const liveCapability = input.agentCapabilitySource?.load({
+            actor: input.executionContext.actor as typeof input.executionContext.actor & { type: "agent" },
+            workspaceId: input.executionContext.workspaceId,
+            accountIds: input.executionContext.accountIds,
+          }, executor) ?? null;
+          if (!liveCapability || liveCapability.revokedAt !== null
+            || JSON.stringify(liveCapability.snapshot) !== JSON.stringify(input.authorityTrace.capabilitySnapshot)) {
+            throw new OrganizationAuthorityError("actor_operation_denied", "The persisted MCP Organization grant changed before commit");
+          }
+        }
         const current = loadSnapshot(executor, workspaceId);
         const expectedWorkspaceRevision = input.executionContext.expectedRevisions.workspace;
         if (expectedWorkspaceRevision === null || current.workspaceRevision !== expectedWorkspaceRevision) {
@@ -179,6 +221,11 @@ export function createSqliteFacetWorkflowRepository(db: Database) {
           idempotencyKey,
           commandDigest: input.executionContext.command.digest,
           authorityTrace: JSON.stringify(input.authorityTrace),
+          resourceFamily: "facet_workflow",
+          operation: "apply",
+          commandJson: JSON.stringify({ request: { id: input.command.id, idempotencyKey, expectedWorkspaceRevision, actions: input.actions }, scope: { actor: input.executionContext.actor, workspaceId, accountIds: [...input.executionContext.accountIds].sort() }, response: next }),
+          workspaceRevisionBefore: current.workspaceRevision,
+          workspaceRevisionAfter: next.workspaceRevision,
           createdAt: new Date(now),
         }).run();
 

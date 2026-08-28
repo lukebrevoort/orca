@@ -4,6 +4,7 @@ import {
   organizationCapabilitySnapshotSchema,
   organizationCommandSchema,
   organizationAuthorityTraceSchema,
+  mcpOrganizationApprovalSchema,
   orcaRuleActivationRequestSchema,
   orcaRuleRevertRequestSchema,
   type OrcaEvaluationTrace,
@@ -12,6 +13,7 @@ import {
   type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrcaRuleRisk,
+  type McpOrganizationApproval,
 } from "@orca/shared";
 
 import type { createDatabaseClient } from "../../db/client.ts";
@@ -155,9 +157,9 @@ function sameRequest(left: unknown, right: unknown): boolean {
   return canonicalOrganizationJson(left) === canonicalOrganizationJson(right);
 }
 
-function parseReplay(row: typeof organizationChangeSets.$inferSelect, request: unknown): OrcaRuleChangeSetResult {
-  const stored = JSON.parse(row.commandJson) as { request?: unknown; response?: OrcaRuleChangeSetResult };
-  if (!stored.response || !sameRequest(stored.request, request)) {
+function parseReplay(row: typeof organizationChangeSets.$inferSelect, request: unknown, approval?: McpOrganizationApproval): OrcaRuleChangeSetResult {
+  const stored = JSON.parse(row.commandJson) as { request?: unknown; response?: OrcaRuleChangeSetResult; approval?: unknown };
+  if (!stored.response || !sameRequest(stored.request, request) || (approval !== undefined && !sameRequest(stored.approval, approval))) {
     throw new OrcaRuleChangeSetError("duplicate_idempotency_key", "The idempotency key belongs to a different Change Set request");
   }
   return stored.response;
@@ -265,6 +267,11 @@ function authorizeReplay(input: {
     reservedIdempotencyKeys: [],
   });
   if (!decision.allowed) denyReplay(decision.code, decision.reason);
+  if (canonicalOrganizationJson(trace.actor) !== canonicalOrganizationJson(input.actor)
+    || canonicalOrganizationJson(trace.capabilitySnapshot) !== canonicalOrganizationJson(input.capabilitySnapshot)
+    || canonicalOrganizationJson(trace.capabilitySnapshot) !== canonicalOrganizationJson(input.liveCapability.snapshot)) {
+    denyReplay("invalid_change_set", "The stored Change Set belongs to a different Actor or Capability identity");
+  }
   if (!storedCommand && (
     !sameValues(decision.trace.requestedResourceFamilies, trace.requestedResourceFamilies)
     || !sameValues(decision.trace.requestedActionFamilies, trace.requestedActionFamilies)
@@ -273,6 +280,36 @@ function authorizeReplay(input: {
   )) {
     denyReplay("invalid_change_set", "The legacy Change Set authority requirements are inconsistent");
   }
+}
+
+function findReplayWithCurrentAuthority(input: {
+  source: RuleChangeSetCapabilitySource;
+  executor: Database;
+  actor: OrganizationActor;
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  workspaceId: string;
+  accountIds: string[];
+  operation: "apply" | "revert";
+  idempotencyKey: string;
+  request: unknown;
+  approval?: McpOrganizationApproval;
+}): OrcaRuleChangeSetResult | undefined {
+  const row = input.executor.select().from(organizationChangeSets).where(and(
+    eq(organizationChangeSets.workspaceId, input.workspaceId),
+    eq(organizationChangeSets.idempotencyKey, input.idempotencyKey),
+  )).get();
+  if (!row) return undefined;
+  const liveCapability = loadRequiredCapability(input.source, input.executor, input.workspaceId);
+  validateCurrentCapabilityClaim({
+    actor: input.actor,
+    capabilitySnapshot: input.capabilitySnapshot,
+    liveCapability,
+    workspaceId: input.workspaceId,
+    accountIds: input.accountIds,
+    operation: input.operation,
+  });
+  authorizeReplay({ ...input, row, liveCapability });
+  return parseReplay(row, input.request, input.approval);
 }
 
 function proposedWinners(trace: OrcaEvaluationTrace, revisionId: string) {
@@ -499,8 +536,10 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
       capabilitySnapshot: OrganizationCapabilitySnapshot | unknown;
       workspaceId: string;
       request: unknown;
+      approval?: unknown;
     }): OrcaRuleChangeSetResult {
       const request = orcaRuleActivationRequestSchema.parse(input.request);
+      const approval = input.actor.type === "agent" ? mcpOrganizationApprovalSchema.parse(input.approval) : undefined;
       const capabilitySnapshot = organizationCapabilitySnapshotSchema.parse(input.capabilitySnapshot);
       const liveCapability = loadRequiredCapability(capabilitySource, db, input.workspaceId);
       validateCurrentCapabilityClaim({
@@ -511,22 +550,20 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         accountIds: request.accountIds,
         operation: "apply",
       });
-      const replay = db.select().from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, input.workspaceId),
-        eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-      )).get();
+      const replay = db.transaction((transaction) => findReplayWithCurrentAuthority({
+        source: capabilitySource,
+        executor: transaction as unknown as Database,
+        actor: input.actor,
+        capabilitySnapshot,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "apply",
+        idempotencyKey: request.idempotencyKey,
+        request,
+        ...(approval ? { approval } : {}),
+      }));
       if (replay) {
-        authorizeReplay({
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          liveCapability,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "apply",
-          idempotencyKey: request.idempotencyKey,
-        });
-        return parseReplay(replay, request);
+        return replay;
       }
 
       const revisionRow = db.select().from(organizationRuleRevisions).where(and(
@@ -550,6 +587,9 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         || preparation.report.state !== "simulated"
         || preparation.report.binding.workspaceRevision !== request.expectedWorkspaceRevision) {
         throw new OrcaRuleChangeSetError("simulation_binding_conflict", "Activation requires the exact current successful Simulation");
+      }
+      if (approval && (approval.simulationId !== preparation.report.simulationId || approval.acknowledgedRisk !== preparation.report.risk)) {
+        throw new OrcaRuleChangeSetError("approval_binding_conflict", "Agent approval must bind the exact successful Simulation and its derived risk");
       }
 
       const workspace = db.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
@@ -606,11 +646,12 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
 
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const duplicate = executor.select().from(organizationChangeSets).where(and(
-          eq(organizationChangeSets.workspaceId, input.workspaceId),
-          eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) return parseReplay(duplicate, request);
+        const duplicate = findReplayWithCurrentAuthority({
+          source: capabilitySource, executor, actor: input.actor, capabilitySnapshot,
+          workspaceId: input.workspaceId, accountIds: request.accountIds, operation: "apply",
+          idempotencyKey: request.idempotencyKey, request, ...(approval ? { approval } : {}),
+        });
+        if (duplicate) return duplicate;
 
         const currentWorkspace = executor.select().from(organizationWorkspaceStates).where(eq(organizationWorkspaceStates.workspaceId, input.workspaceId)).get();
         const currentRule = executor.select().from(organizationRules).where(and(
@@ -893,7 +934,7 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
           authorityTrace: JSON.stringify(transactionAuthority.trace),
           resourceFamily: "rule",
           operation: "apply",
-          commandJson: JSON.stringify({ request, response, command }),
+          commandJson: JSON.stringify({ request, response, command, ...(approval ? { approval } : {}) }),
           revertsChangeId: null,
           simulationId: request.simulationId,
           risk: preparation.report.risk,
@@ -931,22 +972,19 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
         accountIds: request.accountIds,
         operation: "revert",
       });
-      const replay = db.select().from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, input.workspaceId),
-        eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-      )).get();
+      const replay = db.transaction((transaction) => findReplayWithCurrentAuthority({
+        source: capabilitySource,
+        executor: transaction as unknown as Database,
+        actor: input.actor,
+        capabilitySnapshot,
+        workspaceId: input.workspaceId,
+        accountIds: request.accountIds,
+        operation: "revert",
+        idempotencyKey: request.idempotencyKey,
+        request,
+      }));
       if (replay) {
-        authorizeReplay({
-          row: replay,
-          actor: input.actor,
-          capabilitySnapshot,
-          liveCapability,
-          workspaceId: input.workspaceId,
-          accountIds: request.accountIds,
-          operation: "revert",
-          idempotencyKey: request.idempotencyKey,
-        });
-        return parseReplay(replay, request);
+        return replay;
       }
 
       const original = db.select().from(organizationChangeSets).where(and(
@@ -1036,11 +1074,12 @@ export function createSqliteRuleChangeSetService(db: Database, options: {
 
       return db.transaction((transaction) => {
         const executor = transaction as unknown as Database;
-        const duplicate = executor.select().from(organizationChangeSets).where(and(
-          eq(organizationChangeSets.workspaceId, input.workspaceId),
-          eq(organizationChangeSets.idempotencyKey, request.idempotencyKey),
-        )).get();
-        if (duplicate) return parseReplay(duplicate, request);
+        const duplicate = findReplayWithCurrentAuthority({
+          source: capabilitySource, executor, actor: input.actor, capabilitySnapshot,
+          workspaceId: input.workspaceId, accountIds: request.accountIds, operation: "revert",
+          idempotencyKey: request.idempotencyKey, request,
+        });
+        if (duplicate) return duplicate;
 
         const currentOriginal = executor.select().from(organizationChangeSets).where(and(
           eq(organizationChangeSets.workspaceId, input.workspaceId),

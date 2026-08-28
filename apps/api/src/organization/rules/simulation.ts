@@ -76,7 +76,7 @@ function stableIncrement(map: Map<string, number>, key: string): void {
 }
 
 export function createHistoricalRuleSimulationService(repository: HistoricalRuleSimulationRepository) {
-  const prepare = (input: { actor: OrganizationActor; workspaceId: string; request: unknown }): HistoricalRuleSimulationPreparation => {
+  const prepare = (input: { actor: OrganizationActor; workspaceId: string; request: unknown; capabilitySnapshot?: OrganizationCapabilitySnapshot }): HistoricalRuleSimulationPreparation => {
       const request = orcaHistoricalSimulationRequestSchema.parse(input.request);
       const currentWorkspace = repository.loadWorkspaceSnapshot(input.workspaceId);
       const currentRuleSetRevision = repository.loadRuleSetRevision(input.workspaceId);
@@ -113,7 +113,13 @@ export function createHistoricalRuleSimulationService(repository: HistoricalRule
 
       const requestedAccounts = [...request.accountIds].sort();
       const accountSet = new Set(requestedAccounts);
-      const capability = simulationCapability(input.actor, input.workspaceId, requestedAccounts);
+      const capability = input.capabilitySnapshot ?? simulationCapability(input.actor, input.workspaceId, requestedAccounts);
+      if (capability.actor.id !== input.actor.id || capability.actor.type !== input.actor.type
+        || capability.scope.workspaceId !== input.workspaceId
+        || requestedAccounts.some((accountId) => !capability.scope.accountIds.includes(accountId))
+        || !capability.operations.includes("simulate")) {
+        throw new HistoricalSimulationBindingError("Simulation Capability does not authorize the exact Actor, Workspace, Account, and operation scope");
+      }
       const historical = repository.listHistoricalEvaluationInputs(
         input.workspaceId,
         requestedAccounts,
@@ -268,7 +274,7 @@ export function createHistoricalRuleSimulationService(repository: HistoricalRule
       };
   };
   return {
-    simulate(input: { actor: OrganizationActor; workspaceId: string; request: unknown }): OrcaHistoricalSimulationResponse {
+    simulate(input: { actor: OrganizationActor; workspaceId: string; request: unknown; capabilitySnapshot?: OrganizationCapabilitySnapshot }): OrcaHistoricalSimulationResponse {
       return prepare(input).report;
     },
     prepare,

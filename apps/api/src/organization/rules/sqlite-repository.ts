@@ -32,6 +32,7 @@ import {
 } from "../../db/schema.ts";
 import type { OrcaWorkspaceSnapshot } from "./compiler.ts";
 import { canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
+import { isAgentOrganizationActor, loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
 import {
   consumeRuleAuthorizationAnchor,
   digestRuleOrder,
@@ -149,19 +150,26 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         idempotencyKeyReserved: Boolean(reserved),
       };
     },
-    getIdempotent(workspaceId, idempotencyKey) {
-      const row = db.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
-        eq(organizationChangeSets.workspaceId, workspaceId),
-        eq(organizationChangeSets.idempotencyKey, idempotencyKey),
-        eq(organizationChangeSets.resourceFamily, "rule"),
-      )).get();
-      if (!row) return null;
-      const stored = JSON.parse(row.commandJson) as { request: unknown; response: unknown };
-      const parsedRequest = orcaRuleCompileRequestSchema.safeParse(stored.request);
-      if (!parsedRequest.success) return null;
-      const response = orcaRuleCompileResponseSchema.parse(stored.response);
-      if (!response.ok) throw new Error("Persisted Rule idempotency evidence must contain a successful response");
-      return { request: parsedRequest.data, response };
+    replayCompile(input) {
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        const row = executor.select({ commandJson: organizationChangeSets.commandJson, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+          eq(organizationChangeSets.workspaceId, input.workspaceId), eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey), eq(organizationChangeSets.resourceFamily, "rule"),
+        )).get();
+        if (!row) return null;
+        if (isAgentOrganizationActor(input.actor)) {
+          const scope = { actor: input.actor, workspaceId: input.workspaceId, accountIds: input.accountIds };
+          const live = loadAuthorizedOrganizationAgentCapability(scope, input.agentCapabilitySource, executor, { operation: "apply", resourceFamily: "rule", actionFamily: "organization_structure" });
+          if (!live) throw new RuleAuthorityError("missing_operation_capability", "The persisted MCP Organization grant no longer authorizes Rule apply");
+          if (!organizationReplayAuthorityMatches(scope, JSON.parse(row.authorityTrace), live.snapshot)) throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
+        }
+        const stored = JSON.parse(row.commandJson) as { request: unknown; response: unknown };
+        const parsedRequest = orcaRuleCompileRequestSchema.safeParse(stored.request);
+        if (!parsedRequest.success) return null;
+        const response = orcaRuleCompileResponseSchema.parse(stored.response);
+        if (!response.ok) throw new Error("Persisted Rule idempotency evidence must contain a successful response");
+        return { request: parsedRequest.data, response };
+      });
     },
     getOrder,
     getIdempotentReorder(workspaceId, idempotencyKey) {
@@ -232,19 +240,39 @@ export function createSqliteRuleRevisionRepository(db: Database): RuleRevisionRe
         }
         const liveAccountIds = executor.select({ id: oauthAccounts.id }).from(oauthAccounts)
           .where(eq(oauthAccounts.userId, input.rule.workspaceId)).all().map((row) => row.id).sort();
+        const boundAccountIds = [...authorizationBinding.accountIds].sort();
+        const agentCapability = isAgentOrganizationActor(authorizationBinding.actor)
+          ? authorizationBinding.agentCapabilitySource?.load({
+              actor: authorizationBinding.actor,
+              workspaceId: authorizationBinding.workspaceId,
+              accountIds: boundAccountIds,
+            }, executor) ?? null
+          : null;
+        const accountsRemainAuthorized = isAgentOrganizationActor(authorizationBinding.actor)
+          ? agentCapability !== null
+            && agentCapability.revokedAt === null
+            && boundAccountIds.every((accountId) => liveAccountIds.includes(accountId))
+            && canonicalOrganizationJson(agentCapability.snapshot) === canonicalOrganizationJson(envelope.trace.capabilitySnapshot)
+          : canonicalOrganizationJson(liveAccountIds) === canonicalOrganizationJson(boundAccountIds);
         if (input.revision.actor.id !== authorizationBinding.actor.id
           || input.revision.actor.type !== authorizationBinding.actor.type
           || input.revision.workspaceId !== input.rule.workspaceId
           || input.revision.ruleId !== input.rule.id
           || input.revision.compiled.workspaceId !== input.rule.workspaceId
-          || canonicalOrganizationJson(liveAccountIds) !== canonicalOrganizationJson([...authorizationBinding.accountIds].sort())) {
+          || !accountsRemainAuthorized) {
           throw new RuleAuthorityError("account_denied", "The Rule authorization scope is not currently owned");
         }
-        const duplicate = executor.select({ commandJson: organizationChangeSets.commandJson }).from(organizationChangeSets).where(and(
+        const duplicate = executor.select({ commandJson: organizationChangeSets.commandJson, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
           eq(organizationChangeSets.workspaceId, input.rule.workspaceId),
           eq(organizationChangeSets.idempotencyKey, input.request.idempotencyKey),
         )).get();
         if (duplicate) {
+          if (isAgentOrganizationActor(authorizationBinding.actor)) {
+            const replayScope = { actor: authorizationBinding.actor, workspaceId: authorizationBinding.workspaceId, accountIds: boundAccountIds };
+            if (!agentCapability || !organizationReplayAuthorityMatches(replayScope, JSON.parse(duplicate.authorityTrace), agentCapability.snapshot)) {
+              throw new RuleAuthorityError("account_denied", "The cached Rule revision belongs to a different Organization authority");
+            }
+          }
           const stored = JSON.parse(duplicate.commandJson) as { request?: unknown; response?: unknown };
           if (canonicalOrganizationJson(stored.request) !== canonicalOrganizationJson(input.request)) throw new RuleIdempotencyConflictError();
           const response = orcaRuleCompileResponseSchema.parse(stored.response);

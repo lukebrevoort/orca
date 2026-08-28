@@ -44,6 +44,7 @@ import {
   digestOrganizationCommand,
 } from "../authority.ts";
 import { OrganizationAuthorityError, OrganizationRevisionConflictError } from "../module.ts";
+import { isAgentOrganizationActor, isHumanOrganizationActor, loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
 import {
   OrganizationContextsAccessError,
   OrganizationContextsConflictError,
@@ -265,10 +266,28 @@ function assertAuthorizedEnvelope(db: Database, input: {
   }
   const current = loadSnapshot(db, scope.workspaceId);
   const liveAccountIds = new Set(current.accountIds);
-  if (scope.actor.type !== "human"
-    || scope.actor.id !== scope.workspaceId
-    || scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
+  if (scope.accountIds.some((accountId) => !liveAccountIds.has(accountId))) {
     throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+  }
+  let liveCapability;
+  if (isHumanOrganizationActor(scope.actor)) {
+    if (scope.actor.id !== scope.workspaceId) {
+      throw new OrganizationAuthorityError("account_denied", "The Context authorization scope is not currently owned");
+    }
+    liveCapability = { snapshot: organizationContextsCapability(scope), revokedAt: null };
+  } else {
+    if (!isAgentOrganizationActor(scope.actor)) {
+      throw new OrganizationAuthorityError("account_denied", "Only an authenticated human or external agent can authorize Context writes");
+    }
+    const source = input.anchoredAuthorization.agentCapabilitySource;
+    liveCapability = source?.load({
+      actor: scope.actor,
+      workspaceId: scope.workspaceId,
+      accountIds: scope.accountIds,
+    }, db) ?? null;
+    if (!liveCapability) {
+      throw new OrganizationAuthorityError("account_denied", "The external-agent Context Capability is unavailable or revoked");
+    }
   }
   const resourceRevisions = organizationContextResourceRevisions(current);
   const expectedResources = Object.fromEntries(command.intents.flatMap((intent) => {
@@ -276,7 +295,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
     const revision = resourceRevisions[intent.resourceId];
     return revision === undefined ? [] : [[intent.resourceId, revision]];
   }));
-  const capability = organizationContextsCapability(scope);
+  const capability = liveCapability.snapshot;
   const reservedIdempotencyKeys = db.select({ key: organizationChangeSets.idempotencyKey })
     .from(organizationChangeSets)
     .where(eq(organizationChangeSets.workspaceId, scope.workspaceId))
@@ -292,7 +311,7 @@ function assertAuthorizedEnvelope(db: Database, input: {
     idempotencyKey: request.idempotencyKey,
   }, {
     scope: capability.scope,
-    capability: { snapshot: capability, revokedAt: null },
+    capability: liveCapability,
     workspaceRevision: current.workspaceRevision,
     resourceRevisions,
     reservedIdempotencyKeys,
@@ -530,12 +549,23 @@ export function createSqliteOrganizationContextsRepository(db: Database): Organi
         reservedIdempotencyKeys: db.select({ key: organizationChangeSets.idempotencyKey }).from(organizationChangeSets).where(eq(organizationChangeSets.workspaceId, workspaceId)).all().map((row) => row.key),
       };
     },
-    getIdempotentChange(workspaceId, idempotencyKey) {
-      const row = db.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, workspaceId), eq(organizationChangeSets.idempotencyKey, idempotencyKey))).get();
-      if (!row || row.resourceFamily !== "context") return null;
-      const command = parseCommandJson(row.commandJson);
-      const request = command.request ?? (command.revert ? { revert: command.revert } : null);
-      return request ? { request, change: summary(db, row) } : null;
+    replay(input) {
+      return db.transaction((transaction) => {
+        const executor = transaction as unknown as Database;
+        const row = executor.select().from(organizationChangeSets).where(and(eq(organizationChangeSets.workspaceId, input.scope.workspaceId), eq(organizationChangeSets.idempotencyKey, input.idempotencyKey))).get();
+        if (!row || row.resourceFamily !== "context") return null;
+        const agentScope = input.scope.actor.type === "agent" ? { ...input.scope, actor: input.scope.actor as typeof input.scope.actor & { type: "agent" } } : null;
+        if (agentScope && !loadAuthorizedOrganizationAgentCapability(
+          agentScope, input.agentCapabilitySource, executor,
+          { operation: input.operation, resourceFamily: "context", actionFamily: "organization_structure" },
+        )) throw new OrganizationContextsAccessError("The persisted MCP Organization grant no longer authorizes this Context operation");
+        if (agentScope && !organizationReplayAuthorityMatches(agentScope, JSON.parse(row.authorityTrace))) throw new OrganizationContextsAccessError("The cached Context mutation belongs to a different Organization authority");
+        const command = parseCommandJson(row.commandJson);
+        const request = command.request ?? (command.revert ? { revert: command.revert } : null);
+        if (!request) return null;
+        if (canonicalOrganizationJson(request) !== canonicalOrganizationJson(input.request)) throw new OrganizationContextsConflictError("Idempotency key was already used for a different Context change");
+        return { request, change: summary(executor, row) };
+      });
     },
     apply(input) {
       const anchoredAuthorization = consumeOrganizationContextAuthorizationAnchor(input.authorization.authorizationAnchor);

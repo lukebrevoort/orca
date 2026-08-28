@@ -195,6 +195,7 @@ export const organizationLaneApplySchema = z.object({
 export type OrganizationLaneApply = z.infer<typeof organizationLaneApplySchema>;
 
 export const organizationLaneApplyResponseSchema = z.object({
+  changeSetId: identifierSchema,
   workspaceId: identifierSchema,
   workspaceRevision: revisionSchema,
   appliedActions: z.number().int().positive(),

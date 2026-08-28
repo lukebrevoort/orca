@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "bun:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import type { OrganizationCapabilitySnapshot } from "@orca/shared";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, users } from "../../db/schema.ts";
+import type { OrganizationAgentCapabilitySource, OrganizationLiveCapability } from "../agent-capability.ts";
 import { createSqliteRuleRevisionRepository } from "./sqlite-repository.ts";
 import {
   RuleAuthorityError,
@@ -34,10 +36,11 @@ type PersistedRuleRevision = {
   created_at: number;
 };
 
-function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput; tamperReorder?: (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => RuleReorderInput } = {}) {
+function setup(options: { agentCapabilitySource?: OrganizationAgentCapabilitySource; tamperAuthorization?: boolean; tamperAppend?: (input: RuleAppendInput) => RuleAppendInput; tamperReorder?: (input: RuleReorderInput, sqlite: ReturnType<typeof createDatabaseClient>["sqlite"]) => RuleReorderInput } = {}) {
   const directory = mkdtempSync(join(tmpdir(), "orca-bre-314-service-"));
   directories.push(directory);
-  const client = createDatabaseClient(join(directory, "rules.sqlite"));
+  const path = join(directory, "rules.sqlite");
+  const client = createDatabaseClient(path);
   migrate(client.db, { migrationsFolder: migrations });
   client.db.insert(users).values([{ id: "owner", email: "owner@example.com" }, { id: "private", email: "private@example.com" }]).run();
   client.db.insert(oauthAccounts).values([
@@ -65,8 +68,9 @@ function setup(options: { tamperAuthorization?: boolean; tamperAppend?: (input: 
   const service = createRuleRevisionService(repository, {
     now: () => new Date("2026-08-25T12:00:00.000Z"),
     id: (() => { let value = 0; return () => `id-${++value}`; })(),
+    ...(options.agentCapabilitySource ? { agentCapabilitySource: options.agentCapabilitySource } : {}),
   });
-  return { ...client, repository, service };
+  return { ...client, path, repository, service };
 }
 
 afterEach(() => {
@@ -81,6 +85,98 @@ action route lane "${lane}"
 because "Launch mail stays visible"`;
 
 describe("Rule Revision service", () => {
+  test("reauthorizes exact agent Rule replays transactionally and rejects agent reorder replays", () => {
+    const actor = { id: "external-client", type: "agent" as const };
+    const baseline: OrganizationCapabilitySnapshot = {
+      id: "persisted-rule-grant", revision: 1, actor,
+      scope: { workspaceId: "owner", accountIds: ["owner-account"] },
+      operations: ["query", "apply"],
+      resourceFamilies: ["rule", "audit", "change_set"],
+      actionFamilies: ["organization_read", "organization_structure"],
+    };
+    let live: OrganizationLiveCapability | null = { snapshot: baseline, revokedAt: null };
+    let transactionLoads = 0;
+    const agentCapabilitySource: OrganizationAgentCapabilitySource = { load(_scope, executor) { if (executor) transactionLoads += 1; return live; } };
+    const { service, repository, sqlite } = setup({ agentCapabilitySource });
+    const request = { ruleId: "agent-rule", idempotencyKey: "agent-rule-replay", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() };
+    try {
+      const first = service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request });
+      assert.deepEqual(service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request }), first);
+      assert.equal((sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE idempotency_key=?").get(request.idempotencyKey) as { count: number }).count, 1);
+      assert.throws(() => createRuleRevisionService(repository).compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request }), RuleAuthorityError);
+      assert.throws(() => service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request: { ...request, source: source("Everything else", "Conflict") } }), (error: unknown) => error instanceof Error && (error as { code?: string }).code === "duplicate_idempotency_key");
+      const denials: Array<[string, () => void]> = [
+        ["revoked", () => { live = { snapshot: structuredClone(baseline), revokedAt: "2026-08-26T00:00:00.000Z" }; }],
+        ["downgraded", () => { const snapshot = structuredClone(baseline); snapshot.operations = ["query"]; live = { snapshot, revokedAt: null }; }],
+        ["account removed", () => { live = null; }],
+      ];
+      for (const [name, deny] of denials) { live = { snapshot: structuredClone(baseline), revokedAt: null }; deny(); assert.throws(() => service.compile({ actor, workspaceId: "owner", accountIds: ["owner-account"], request }), RuleAuthorityError, name); }
+      assert.ok(transactionLoads >= 2);
+
+      live = { snapshot: structuredClone(baseline), revokedAt: null };
+      const human = { id: "owner", type: "human" as const };
+      const humanSetup = setup();
+      try {
+        const created = humanSetup.service.compile({ actor: human, workspaceId: "owner", request: { ruleId: "ordered-rule", idempotencyKey: "ordered-create", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() } });
+        assert.ok(created.ok);
+        const reorderRequest = { idempotencyKey: "ordered-replay", expectedWorkspaceRevision: 2, expectedRuleSetRevision: 2, items: [{ id: "ordered-rule", position: 0, expectedRevision: 1 }] };
+        const ordered = humanSetup.service.reorder({ actor: human, workspaceId: "owner", request: reorderRequest });
+        assert.deepEqual(humanSetup.service.reorder({ actor: human, workspaceId: "owner", request: reorderRequest }), ordered);
+        assert.throws(() => humanSetup.service.reorder({ actor, workspaceId: "owner", request: reorderRequest }), (error: unknown) => error instanceof RuleAuthorityError && error.code === "actor_operation_denied");
+      } finally { humanSetup.sqlite.close(); }
+    } finally { sqlite.close(); }
+  }, 15_000);
+
+  test("denies a direct external-agent compile without an explicit Capability source", () => {
+    const { service, sqlite } = setup();
+    try {
+      assert.throws(() => service.compile({ actor: { id: "external-client", type: "agent" }, workspaceId: "owner", accountIds: ["owner-account"], request: {
+        idempotencyKey: "direct-agent-denied",
+        expectedRuleRevision: null,
+        workspaceSchemaRevision: 1,
+        source: source(),
+      } }), (error: unknown) => error instanceof RuleAuthorityError && error.code === "missing_operation_capability");
+      assert.equal((sqlite.query("SELECT COUNT(*) AS count FROM organization_rule_revisions").get() as { count: number }).count, 0);
+    } finally { sqlite.close(); }
+  });
+
+  test("rejects a Rule revision transaction duplicate committed by another Actor and Capability", () => {
+    const firstActor = { id: "first-client", type: "agent" as const };
+    const secondActor = { id: "second-client", type: "agent" as const };
+    const capability = (actor: typeof firstActor, id: string): OrganizationCapabilitySnapshot => ({
+      id, revision: 1, actor, scope: { workspaceId: "owner", accountIds: ["owner-account"] },
+      operations: ["query", "apply"], resourceFamilies: ["rule", "audit", "change_set"],
+      actionFamilies: ["organization_read", "organization_structure"],
+    });
+    const firstCapability = capability(firstActor, "first-grant");
+    const secondCapability = capability(secondActor, "second-grant");
+    const first = setup({ agentCapabilitySource: { load: () => ({ snapshot: firstCapability, revokedAt: null }) } });
+    const competing = createDatabaseClient(first.path);
+    try {
+      const secondRepository = createSqliteRuleRevisionRepository(competing.db);
+      const secondService = createRuleRevisionService(secondRepository, {
+        agentCapabilitySource: { load: () => ({ snapshot: secondCapability, revokedAt: null }) },
+        now: () => new Date("2026-08-25T12:00:00.000Z"), id: () => "second-change",
+      });
+      const request = { ruleId: "raced-rule", idempotencyKey: "rule-actor-race", expectedRuleRevision: null, workspaceSchemaRevision: 1, source: source() };
+      const append = first.repository.append.bind(first.repository);
+      let interleaved = false;
+      first.repository.append = (input) => {
+        if (!interleaved) {
+          interleaved = true;
+          secondService.compile({ actor: secondActor, workspaceId: "owner", accountIds: ["owner-account"], request });
+        }
+        return append(input);
+      };
+      assert.throws(
+        () => first.service.compile({ actor: firstActor, workspaceId: "owner", accountIds: ["owner-account"], request }),
+        (error: unknown) => error instanceof RuleAuthorityError && error.code === "account_denied",
+      );
+      assert.equal(interleaved, true);
+      assert.equal((first.sqlite.query("SELECT COUNT(*) count FROM organization_change_sets WHERE idempotency_key=?").get(request.idempotencyKey) as { count: number }).count, 1);
+    } finally { competing.sqlite.close(); first.sqlite.close(); }
+  }, 20_000);
+
   test("paginates a large immutable history with a canonical Rule/head-bound keyset cursor", () => {
     const { service, sqlite } = setup();
     try {

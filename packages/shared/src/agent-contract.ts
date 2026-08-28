@@ -294,12 +294,16 @@ export const orcaMcpScopeSchema = z.enum([
   "orca:mail.content:read",
   "orca:agent-events:read",
   "orca:connection-status:read",
+  "orca:organization:control",
 ]);
 export type OrcaMcpScope = z.infer<typeof orcaMcpScopeSchema>;
 
 export const orcaAgentActionSchema = z.enum([
   "organization.describe",
   "organization.query",
+  "organization.simulate",
+  "organization.apply",
+  "organization.revert",
   "mail.list",
   "mail.read",
   "agent_events.list",
@@ -310,6 +314,8 @@ export type OrcaAgentAction = z.infer<typeof orcaAgentActionSchema>;
 export const orcaAgentExposureSchema = z.enum([
   "organization_schema",
   "thread_organization",
+  "organization_simulation",
+  "organization_mutation",
   "mail_metadata",
   "mail_content",
   "agent_event",
@@ -320,6 +326,9 @@ export type OrcaAgentExposure = z.infer<typeof orcaAgentExposureSchema>;
 export const orcaMcpToolNameSchema = z.enum([
   "describe_organization",
   "query_organization",
+  "simulate_organization",
+  "apply_organization",
+  "revert_organization",
   "search_mail",
   "get_thread",
   "list_agent_events",
@@ -327,53 +336,77 @@ export const orcaMcpToolNameSchema = z.enum([
 ]);
 export type OrcaMcpToolName = z.infer<typeof orcaMcpToolNameSchema>;
 
-export const orcaMcpReadOnlyTools = Object.freeze([
+export const orcaMcpTools = Object.freeze([
   {
     name: "describe_organization",
     action: "organization.describe",
     exposure: "organization_schema",
-    requiredScope: "orca:mail.metadata:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:mail.metadata:read", "orca:organization:control"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "query_organization",
     action: "organization.query",
     exposure: "thread_organization",
-    requiredScope: "orca:mail.metadata:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:mail.metadata:read", "orca:organization:control"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "simulate_organization",
+    action: "organization.simulate",
+    exposure: "organization_simulation",
+    requiredScopes: ["orca:organization:control"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "apply_organization",
+    action: "organization.apply",
+    exposure: "organization_mutation",
+    requiredScopes: ["orca:organization:control"],
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "revert_organization",
+    action: "organization.revert",
+    exposure: "organization_mutation",
+    requiredScopes: ["orca:organization:control"],
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "search_mail",
     action: "mail.list",
     exposure: "mail_metadata",
-    requiredScope: "orca:mail.metadata:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:mail.metadata:read"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "get_thread",
     action: "mail.read",
     exposure: "mail_content",
-    requiredScope: "orca:mail.content:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:mail.content:read"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "list_agent_events",
     action: "agent_events.list",
     exposure: "agent_event",
-    requiredScope: "orca:agent-events:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:agent-events:read"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "get_connection_status",
     action: "connection_status.read",
     exposure: "connection_status",
-    requiredScope: "orca:connection-status:read",
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    requiredScopes: ["orca:connection-status:read"],
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ] satisfies ReadonlyArray<{
   name: OrcaMcpToolName;
   action: OrcaAgentAction;
   exposure: OrcaAgentExposure;
-  requiredScope: OrcaMcpScope;
-  annotations: { readOnlyHint: true; destructiveHint: false; openWorldHint: false };
+  requiredScopes: readonly OrcaMcpScope[];
+  annotations: { readOnlyHint: boolean; destructiveHint: false; idempotentHint: true; openWorldHint: false };
 }>);
+
+/** Legacy/read-audit surface: this list is intentionally and provably read-only. */
+export const orcaMcpReadOnlyTools = Object.freeze(orcaMcpTools.filter((tool) => tool.annotations.readOnlyHint));

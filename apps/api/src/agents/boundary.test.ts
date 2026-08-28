@@ -35,6 +35,8 @@ function authorization(
   overrides: Partial<OrcaAgentAuthorizationContext> = {},
 ): OrcaAgentAuthorizationContext {
   return {
+    connectionId: "connection_1",
+    clientId: "client_1",
     userId: "user_1",
     accountIds: ["account_1", "account_stale"],
     issuer,
@@ -120,12 +122,27 @@ describe("Orca agent boundary configuration", () => {
 });
 
 describe("Orca agent boundary authorization", () => {
+  test("authorizes the Organization tool matrix for control-only and legacy read-only grants", () => {
+    const organizationTools = ["describe_organization", "query_organization", "simulate_organization", "apply_organization", "revert_organization"] as const;
+    const controlOnly = authorization({ scopes: ["orca:organization:control"] });
+    assert.deepEqual(organizationTools.map((toolName) => authorizeAgentToolRequest(enabledPolicy, {
+      authorization: controlOnly,
+      currentAccountIds: ["account_1"], expectedUserId: "user_1", now: new Date("2026-08-19T17:55:00.000Z"), toolName,
+    }).allowed), [true, true, true, true, true]);
+
+    const readOnly = authorization({ scopes: ["orca:mail.metadata:read"] });
+    assert.deepEqual(organizationTools.map((toolName) => authorizeAgentToolRequest(enabledPolicy, {
+      authorization: readOnly,
+      currentAccountIds: ["account_1"], expectedUserId: "user_1", now: new Date("2026-08-19T17:55:00.000Z"), toolName,
+    }).allowed), [true, true, false, false, false]);
+  });
+
   test("authorizes a contract read tool with the live account intersection", () => {
     assert.deepEqual(authorizeAgentToolRequest(enabledPolicy, request()), {
       allowed: true,
       allowedAccountIds: ["account_1"],
       exposure: "mail_metadata",
-      requiredScope: "orca:mail.metadata:read",
+      requiredScopes: ["orca:mail.metadata:read"],
       toolName: "search_mail",
     });
   });

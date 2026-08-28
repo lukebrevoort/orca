@@ -19,6 +19,7 @@ import {
   type OrganizationViewUpdateRequest,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
+import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
 export class OrganizationViewAccessError extends Error {
   readonly code: "account_denied" | "resource_denied";
@@ -56,6 +57,7 @@ export type OrganizationViewMutationAuthorization = {
   trace: OrganizationAuthorityTrace;
   authorizationEnvelopeDigest: string;
   command: OrganizationCommand;
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
 };
 
 export type OrganizationViewMutationPlan = {
@@ -68,7 +70,7 @@ export type OrganizationViewsRepository = {
   get(workspaceId: string, viewId: string): OrganizationView | null;
   getWorkspaceRevision(workspaceId: string): number;
   getAuthorityState(workspaceId: string): { workspaceRevision: number; resourceRevisions: Record<string, number>; reservedIdempotencyKeys: string[] };
-  getIdempotentMutation(workspaceId: string, idempotencyKey: string): { request: unknown; response: unknown } | null;
+  replay(input: { scope: OrganizationViewScope; idempotencyKey: string; boundRequest: unknown; agentCapabilitySource?: OrganizationAgentCapabilitySource }): { response: unknown } | null;
   create(input: { workspaceId: string; viewId: string; request: OrganizationViewCreateRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView;
   update(input: { workspaceId: string; viewId: string; request: OrganizationViewUpdateRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView;
   reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView[];
@@ -134,21 +136,24 @@ function firstPartyViewsCapability(scope: OrganizationViewScope): OrganizationCa
   };
 }
 
-export function createOrganizationViews(repository: OrganizationViewsRepository, dependencies: { newViewId?: () => string; newChangeId?: () => string; now?: () => Date } = {}) {
+export function createOrganizationViews(repository: OrganizationViewsRepository, dependencies: { newViewId?: () => string; newChangeId?: () => string; now?: () => Date; agentCapabilitySource?: OrganizationAgentCapabilitySource } = {}) {
   const newViewId = dependencies.newViewId ?? (() => `view_${crypto.randomUUID()}`);
   const newChangeId = dependencies.newChangeId ?? (() => `change_${crypto.randomUUID()}`);
   const now = dependencies.now ?? (() => new Date());
 
   function replay(scope: OrganizationViewScope, idempotencyKey: string, boundRequest: unknown) {
-    const existing = repository.getIdempotentMutation(scope.workspaceId, idempotencyKey);
-    if (!existing) return { found: false as const, response: null };
-    if (canonicalOrganizationJson(existing.request) !== canonicalOrganizationJson(boundRequest)) throw new OrganizationViewConflictError("The idempotency key was already used for a different View command");
-    return { found: true as const, response: existing.response };
+    const existing = repository.replay({ scope, idempotencyKey, boundRequest, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) });
+    return existing === null ? { found: false as const, response: null } : { found: true as const, response: existing.response };
   }
 
   function authorizeBound(scope: OrganizationViewScope, request: { idempotencyKey: string; expectedWorkspaceRevision: number }, command: OrganizationCommand, expectedResources: Record<string, number>): OrganizationViewMutationAuthorization {
-    if (scope.actor.type !== "human") throw new OrganizationViewAccessError("View writes require an authenticated human session", "resource_denied");
-    const capability = firstPartyViewsCapability(scope);
+    let liveCapability;
+    try {
+      liveCapability = requireOrganizationCapability(scope, (actor) => firstPartyViewsCapability({ ...scope, actor }), dependencies.agentCapabilitySource);
+    } catch (error) {
+      throw new OrganizationViewAccessError(error instanceof Error ? error.message : "View Actor is not authorized", "resource_denied");
+    }
+    const capability = liveCapability.snapshot;
     const live = repository.getAuthorityState(scope.workspaceId);
     const decision = authorizeOrganizationOperation({
       actor: scope.actor,
@@ -160,7 +165,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       idempotencyKey: request.idempotencyKey,
     }, {
       scope: capability.scope,
-      capability: { snapshot: capability, revokedAt: null },
+      capability: liveCapability,
       workspaceRevision: live.workspaceRevision,
       resourceRevisions: live.resourceRevisions,
       reservedIdempotencyKeys: live.reservedIdempotencyKeys,
@@ -169,7 +174,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       if (["revision_conflict", "duplicate_idempotency_key"].includes(decision.code)) throw new OrganizationViewConflictError(decision.reason);
       throw new OrganizationViewAccessError(decision.reason, "resource_denied");
     }
-    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command };
+    return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) };
   }
 
   return {

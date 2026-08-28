@@ -44,6 +44,8 @@ const policy = getOrcaAgentBoundaryPolicy({
 });
 
 const authorization = {
+  connectionId: "connection_a",
+  clientId: "client_a",
   userId: "user_a",
   accountIds: ["account_a"],
   issuer: "https://identity.orca.example",
@@ -165,6 +167,7 @@ describe("BRE-269 prompt-injection and provider-write safety", () => {
     assert.deepEqual(orcaMcpReadOnlyTools.map((tool) => tool.name), [
       "describe_organization",
       "query_organization",
+      "simulate_organization",
       "search_mail",
       "get_thread",
       "list_agent_events",

@@ -13,6 +13,7 @@ import {
   type OrganizationLaneConfiguration,
   type ThreadLanePlacement,
 } from "@orca/shared";
+import type { OrganizationAgentCapabilitySource } from "../agent-capability.ts";
 
 export type OrganizationLaneSnapshot = {
   configuration: OrganizationLaneConfiguration;
@@ -197,11 +198,17 @@ export function applyLaneActions(
 export type OrganizationLanesRepository = {
   getSnapshot(workspaceId: string, accountIds: readonly string[]): OrganizationLaneSnapshot;
   getAuthorityState(workspaceId: string): { workspaceRevision: number; resourceRevisions: Record<string, number>; reservedIdempotencyKeys: string[] };
+  replay(input: {
+    scope: { actor: OrganizationActor; workspaceId: string; accountIds: string[] };
+    command: unknown;
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
+  }): OrganizationLaneApplyResponse | null;
   apply(input: {
     executionContext: OrganizationExecutionContext;
     authorityTrace: OrganizationAuthorityTrace;
     boundCommand: OrganizationCommand;
     command: unknown;
+    agentCapabilitySource?: OrganizationAgentCapabilitySource;
   }): OrganizationLaneApplyResponse;
 };
 

@@ -26,20 +26,44 @@ import {
   organizationQueryResponseSchema,
 } from "./organization-workspace.ts";
 import { organizationContextFilterSchema } from "./organization-contexts.ts";
+import {
+  organizationActorSchema,
+  organizationResourceFamilySchema,
+} from "./organization-contract.ts";
+import { organizationLaneApplySchema } from "./organization-lanes.ts";
+import { organizationFacetWorkflowApplySchema } from "./organization-facets.ts";
+import {
+  organizationViewCreateRequestSchema,
+  organizationViewUpdateRequestSchema,
+} from "./organization-views.ts";
+import { organizationCollectionPinApplyRequestSchema } from "./organization-collections-pins.ts";
+import { organizationContextApplyRequestSchema } from "./organization-contexts.ts";
+import {
+  orcaHistoricalSimulationRequestSchema,
+  orcaHistoricalSimulationResponseSchema,
+  orcaRuleActivationRequestSchema,
+  orcaRuleRevertRequestSchema,
+} from "./orca-simulation.ts";
+import { orcaRuleCompileRequestSchema, orcaRuleRiskSchema } from "./orca-language.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().datetime({ offset: false });
 
-export const mcpDescribeOrganizationInputSchema = z.object({
-  accountId: nonEmptyStringSchema.optional(),
+const mcpOrganizationScopeSchema = z.object({
+  workspaceId: nonEmptyStringSchema,
+  accountIds: z.array(nonEmptyStringSchema).min(1).max(20).superRefine((values, context) => {
+    if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Account IDs must be unique" });
+  }),
+  expectedWorkspaceRevision: z.number().int().positive(),
 }).strict();
+
+export const mcpDescribeOrganizationInputSchema = mcpOrganizationScopeSchema;
 export type McpDescribeOrganizationInput = z.infer<typeof mcpDescribeOrganizationInputSchema>;
 
 export const mcpDescribeOrganizationOutputSchema = organizationDescribeResponseSchema;
 export type McpDescribeOrganizationOutput = z.infer<typeof mcpDescribeOrganizationOutputSchema>;
 
-export const mcpQueryOrganizationInputSchema = z.object({
-  accountId: nonEmptyStringSchema.optional(),
+export const mcpQueryOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
   threadId: nonEmptyStringSchema.optional(),
   attention: z.enum(["focus", "normal", "quiet", "hidden", "all"]).optional(),
   classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
@@ -59,6 +83,109 @@ export type McpQueryOrganizationInput = z.infer<typeof mcpQueryOrganizationInput
 
 export const mcpQueryOrganizationOutputSchema = organizationQueryResponseSchema;
 export type McpQueryOrganizationOutput = z.infer<typeof mcpQueryOrganizationOutputSchema>;
+
+export const mcpSimulateOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
+  resourceFamily: z.literal("rule"),
+  request: orcaHistoricalSimulationRequestSchema,
+}).strict().superRefine((value, context) => {
+  if (JSON.stringify([...value.request.accountIds].sort()) !== JSON.stringify([...value.accountIds].sort())) {
+    context.addIssue({ code: "custom", path: ["request", "accountIds"], message: "Simulation Account scope must exactly match the tool scope" });
+  }
+});
+export type McpSimulateOrganizationInput = z.infer<typeof mcpSimulateOrganizationInputSchema>;
+
+const mcpSimulationWinnerSchema = z.object({
+  ruleId: nonEmptyStringSchema,
+  revisionId: nonEmptyStringSchema,
+  wins: z.number().int().positive(),
+}).strict();
+const mcpObservedReasonSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  threadId: nonEmptyStringSchema,
+  traceId: nonEmptyStringSchema,
+  reason: nonEmptyStringSchema,
+  winningRuleIds: z.array(nonEmptyStringSchema),
+  observedFields: z.array(nonEmptyStringSchema),
+}).strict();
+export const mcpSimulateOrganizationOutputSchema = orcaHistoricalSimulationResponseSchema.extend({
+  winningRules: z.array(mcpSimulationWinnerSchema).max(5_000),
+  observedReasons: z.array(mcpObservedReasonSchema).max(20),
+}).strict();
+export type McpSimulateOrganizationOutput = z.infer<typeof mcpSimulateOrganizationOutputSchema>;
+
+export const mcpOrganizationApprovalSchema = z.object({
+  source: z.literal("oauth_organization_control_grant"),
+  simulationId: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  acknowledgedRisk: orcaRuleRiskSchema,
+}).strict();
+export type McpOrganizationApproval = z.infer<typeof mcpOrganizationApprovalSchema>;
+
+const mcpApplyTargetSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("lanes"), request: organizationLaneApplySchema }).strict(),
+  z.object({ kind: z.literal("facets_workflow"), request: organizationFacetWorkflowApplySchema }).strict(),
+  z.object({ kind: z.literal("view_create"), request: organizationViewCreateRequestSchema }).strict(),
+  z.object({ kind: z.literal("view_update"), viewId: nonEmptyStringSchema, request: organizationViewUpdateRequestSchema }).strict(),
+  z.object({ kind: z.literal("collection"), request: organizationCollectionPinApplyRequestSchema }).strict(),
+  z.object({ kind: z.literal("context"), request: organizationContextApplyRequestSchema }).strict(),
+  z.object({ kind: z.literal("rule_revision"), request: orcaRuleCompileRequestSchema }).strict(),
+  z.object({
+    kind: z.literal("rule_change_set"),
+    request: orcaRuleActivationRequestSchema,
+    approval: mcpOrganizationApprovalSchema,
+  }).strict(),
+]);
+const mcpApplyTargetKindSchema = z.enum([
+  "lanes", "facets_workflow", "view_create", "view_update", "collection", "context", "rule_revision", "rule_change_set",
+]);
+
+export const mcpApplyOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
+  targetKind: mcpApplyTargetKindSchema,
+  target: mcpApplyTargetSchema,
+}).strict().superRefine((value, context) => {
+  const request = value.target.request as { expectedWorkspaceRevision?: number; workspaceSchemaRevision?: number; accountIds?: string[]; simulationId?: string };
+  const expected = request.expectedWorkspaceRevision ?? request.workspaceSchemaRevision;
+  if (expected !== undefined && expected !== value.expectedWorkspaceRevision) {
+    context.addIssue({ code: "custom", path: ["target", "request"], message: "Apply request must bind the tool's expected Workspace revision" });
+  }
+  if (request.accountIds && JSON.stringify([...request.accountIds].sort()) !== JSON.stringify([...value.accountIds].sort())) {
+    context.addIssue({ code: "custom", path: ["target", "request", "accountIds"], message: "Apply Account scope must exactly match the tool scope" });
+  }
+  if (value.target.kind === "rule_change_set" && value.target.approval.simulationId !== value.target.request.simulationId) {
+    context.addIssue({ code: "custom", path: ["target", "approval", "simulationId"], message: "Approval must bind the exact Simulation" });
+  }
+  if (value.targetKind !== value.target.kind) context.addIssue({ code: "custom", path: ["targetKind"], message: "Target kind does not match the typed apply target" });
+});
+export type McpApplyOrganizationInput = z.infer<typeof mcpApplyOrganizationInputSchema>;
+
+export const mcpOrganizationMutationOutputSchema = z.object({
+  operation: z.enum(["apply", "revert"]),
+  workspaceId: nonEmptyStringSchema,
+  accountIds: z.array(nonEmptyStringSchema).min(1).max(20),
+  targetKind: mcpApplyTargetKindSchema,
+  resourceFamilies: z.array(organizationResourceFamilySchema).min(1).max(20).superRefine((values, context) => {
+    if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "Authority resource families must be unique" });
+  }),
+  actor: organizationActorSchema,
+  capabilityId: nonEmptyStringSchema,
+  expectedWorkspaceRevision: z.number().int().positive(),
+  risk: orcaRuleRiskSchema.nullable(),
+  changeSetIds: z.object({ applied: z.array(nonEmptyStringSchema), rejected: z.array(nonEmptyStringSchema) }).strict(),
+  result: z.unknown(),
+}).strict();
+export type McpOrganizationMutationOutput = z.infer<typeof mcpOrganizationMutationOutputSchema>;
+
+export const mcpRevertOrganizationInputSchema = mcpOrganizationScopeSchema.extend({
+  targetKind: z.literal("rule_change_set"),
+  request: orcaRuleRevertRequestSchema,
+}).strict().superRefine((value, context) => {
+  if (value.request.expectedWorkspaceRevision !== value.expectedWorkspaceRevision) {
+    context.addIssue({ code: "custom", path: ["request", "expectedWorkspaceRevision"], message: "Revert must bind the tool's expected Workspace revision" });
+  }
+  if (JSON.stringify([...value.request.accountIds].sort()) !== JSON.stringify([...value.accountIds].sort())) {
+    context.addIssue({ code: "custom", path: ["request", "accountIds"], message: "Revert Account scope must exactly match the tool scope" });
+  }
+});
+export type McpRevertOrganizationInput = z.infer<typeof mcpRevertOrganizationInputSchema>;
 
 const mcpHumanClassificationOverrideSchema = z.object({
   id: nonEmptyStringSchema,
@@ -251,6 +378,7 @@ export const mcpToolErrorCodeSchema = z.enum([
   "not_found",
   "unauthorized",
   "insufficient_scope",
+  "idempotency_conflict",
   "internal_error",
 ]);
 export type McpToolErrorCode = z.infer<typeof mcpToolErrorCodeSchema>;

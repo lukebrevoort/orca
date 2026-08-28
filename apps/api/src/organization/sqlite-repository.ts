@@ -152,6 +152,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
     lanes,
     getFacetWorkflowSnapshot: facetWorkflow.getFacetWorkflowSnapshot,
     getFacetWorkflowAuthorityState: facetWorkflow.getFacetWorkflowAuthorityState,
+    replayFacetWorkflow: facetWorkflow.replayFacetWorkflow,
     readOrganizationSnapshot(workspaceId, accountIds, filter) {
       return db.transaction((transaction) => {
         const repository = createSqliteOrganizationRepository(transaction as unknown as Database);

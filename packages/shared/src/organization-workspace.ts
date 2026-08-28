@@ -82,9 +82,9 @@ export const organizationCapabilitiesSchema = z.object({
   operations: z.object({
     describe: z.literal(true),
     query: z.literal(true),
-    simulate: z.literal(false),
+    simulate: z.boolean(),
     apply: z.boolean(),
-    revert: z.literal(false),
+    revert: z.boolean(),
   }).strict(),
   authority: z.object({
     sendMail: z.literal(false),

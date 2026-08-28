@@ -26,6 +26,7 @@ const resourceScopesByOAuthScope = {
     "orca:connection-status:read",
   ],
   "agent_events:read": ["orca:agent-events:read"],
+  "organization:control": ["orca:organization:control"],
 } as const satisfies Record<McpOAuthScope, readonly OrcaMcpScope[]>;
 
 function invalidToken(message = "The access token is invalid or expired"): never {
@@ -63,6 +64,8 @@ export function createOrcaMcpAccessTokenVerifier(
         const oauthAuthorization = await verifyMcpAccessToken(db, token, { config });
         const scopes = mapOAuthScopesToResourceScopes(oauthAuthorization.scopes);
         const authorization = orcaAgentAuthorizationContextSchema.parse({
+          connectionId: oauthAuthorization.connectionId,
+          clientId: oauthAuthorization.clientId,
           userId: oauthAuthorization.userId,
           accountIds: oauthAuthorization.accountIds,
           issuer: oauthAuthorization.issuer,

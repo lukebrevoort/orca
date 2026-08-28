@@ -243,6 +243,7 @@ export const organizationFacetWorkflowApplySchema = z.object({
 export type OrganizationFacetWorkflowApply = z.infer<typeof organizationFacetWorkflowApplySchema>;
 
 export const organizationFacetWorkflowApplyResponseSchema = z.object({
+  changeSetId: identifierSchema,
   workspaceId: identifierSchema,
   workspaceRevision: z.number().int().positive(),
   appliedActions: z.number().int().positive(),

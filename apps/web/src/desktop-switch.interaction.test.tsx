@@ -221,7 +221,7 @@ describe("OrganizationStudio integration", () => {
         mutationRevisions.push({ kind: "lane", expected: payload.expectedWorkspaceRevision });
         if (payload.expectedWorkspaceRevision !== workspaceRevision) return Response.json({ error: { message: `stale Lane r${payload.expectedWorkspaceRevision}; current r${workspaceRevision}` } }, { status: 409 });
         workspaceRevision += 1;
-        return Response.json({ workspaceId: "workspace-demo", workspaceRevision, appliedActions: payload.actions.length, laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision, fallbackLaneId: "lane_focus" }, placements: [] });
+        return Response.json({ changeSetId: "change-lane-fallback", workspaceId: "workspace-demo", workspaceRevision, appliedActions: payload.actions.length, laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision, fallbackLaneId: "lane_focus" }, placements: [] });
       }
       throw new Error(`Unexpected request ${method} ${path}`);
     }) as typeof fetch;
