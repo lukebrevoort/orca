@@ -317,8 +317,10 @@ describe("Orca API", () => {
       const writer = await createSession(db, "draft_user");
       const other = await createSession(db, "other_user");
       let reserveDraftId: string | null = null;
+      const testApiRequestMaxBytes = 40 * 1024;
       const testApp = createApp({
         dbFactory: () => createDatabaseClient(dbPath),
+        apiRequestMaxBytes: testApiRequestMaxBytes,
         now: () => {
           if (reserveDraftId) {
             const draftId = reserveDraftId;
@@ -375,6 +377,30 @@ describe("Orca API", () => {
       assert.equal(boundedBeforeParsing.status, 413);
       assert.equal((await boundedBeforeParsing.json()).error.code, "request_too_large");
 
+      const globallyBoundedBeforeParsing = await testApp.request("/v1/preferences", {
+        method: "PATCH",
+        headers: { ...headers, "content-length": String(testApiRequestMaxBytes + 1) },
+        body: "{not-json",
+      });
+      assert.equal(globallyBoundedBeforeParsing.status, 413);
+      assert.equal((await globallyBoundedBeforeParsing.json()).error.code, "request_too_large");
+
+      let apiBodyChunks = 0;
+      const streamedApiBody = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          apiBodyChunks += 1;
+          controller.enqueue(new Uint8Array(5 * 1024));
+        },
+      });
+      const streamedApiLimit = await testApp.request(new Request("http://localhost/v1/preferences", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: streamedApiBody,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }));
+      assert.equal(streamedApiLimit.status, 413);
+      assert.ok(apiBodyChunks <= 10);
+
       const malformedBase64 = await testApp.request("/v1/drafts", {
         method: "POST", headers,
         body: JSON.stringify({ subject: "Malformed attachment", attachments: [{ id: "file_bad", filename: "bad.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8" }] }),
@@ -403,6 +429,85 @@ describe("Orca API", () => {
         body: JSON.stringify({ subject: "Canonical attachment", attachments: [{ id: "file_ok", filename: "hello.txt", mimeType: "text/plain", size: 5, contentBase64: "aGVsbG8=" }] }),
       });
       assert.equal(canonicalAttachment.status, 201);
+      const canonicalDraft = await canonicalAttachment.json();
+
+      const legacyAttachmentJson = JSON.stringify([{
+        id: "legacy_attachment",
+        filename: "legacy.txt",
+        mimeType: "text/plain",
+        size: 4,
+        contentBase64: "aGVsbG8=",
+      }]);
+      db.update(messageDrafts).set({ attachments: legacyAttachmentJson })
+        .where(eq(messageDrafts.id, canonicalDraft.id)).run();
+      const legacyDraftResponse = await testApp.request(`/v1/drafts/${canonicalDraft.id}`, { headers });
+      assert.equal(legacyDraftResponse.status, 200);
+      const legacyDraft = await legacyDraftResponse.json();
+      assert.deepEqual(legacyDraft.attachments, [{
+        id: "legacy_attachment",
+        filename: "legacy.txt",
+        mimeType: "text/plain",
+        size: 4,
+        contentBase64: null,
+      }]);
+      assert.equal(legacyDraft.providerSyncStatus, "failed");
+      assert.match(legacyDraft.providerSyncError, /reattached/i);
+
+      const listedLegacyDraft = (await (await testApp.request("/v1/drafts", { headers })).json())
+        .find((draft: { id: string }) => draft.id === canonicalDraft.id);
+      assert.equal(listedLegacyDraft.providerSyncStatus, "failed");
+
+      const unrelatedLegacyUpdate = await testApp.request(`/v1/drafts/${canonicalDraft.id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          revision: canonicalDraft.revision,
+          subject: "Must preserve legacy warning",
+          attachments: legacyDraft.attachments,
+        }),
+      });
+      assert.equal(unrelatedLegacyUpdate.status, 409);
+      assert.equal(db.select().from(messageDrafts).where(eq(messageDrafts.id, canonicalDraft.id)).get()!.attachments, legacyAttachmentJson);
+
+      db.update(oauthAccounts).set({ scope: "https://www.googleapis.com/auth/gmail.compose" })
+        .where(eq(oauthAccounts.id, "draft_account")).run();
+      const blockedLegacySend = await testApp.request(`/v1/drafts/${canonicalDraft.id}/send`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ revision: canonicalDraft.revision, idempotencyKey: "legacy-send-blocked-123" }),
+      });
+      assert.equal(blockedLegacySend.status, 409);
+      assert.equal(db.select().from(messageDrafts).where(eq(messageDrafts.id, canonicalDraft.id)).get()!.sendIdempotencyKey, null);
+      db.update(oauthAccounts).set({ scope: null }).where(eq(oauthAccounts.id, "draft_account")).run();
+
+      db.update(messageDrafts).set({ providerSyncStatus: "pending", providerSyncError: null })
+        .where(eq(messageDrafts.id, canonicalDraft.id)).run();
+      assert.equal((await testApp.request(`/v1/drafts/${canonicalDraft.id}`, { headers })).status, 200);
+      await waitFor(() => db.select().from(messageDrafts).where(eq(messageDrafts.id, canonicalDraft.id)).get()?.providerSyncStatus === "failed");
+
+      db.update(messageDrafts).set({ attachments: "{not-json" }).where(eq(messageDrafts.id, canonicalDraft.id)).run();
+      const malformedLegacyDraft = await (await testApp.request(`/v1/drafts/${canonicalDraft.id}`, { headers })).json();
+      assert.deepEqual(malformedLegacyDraft.attachments, [{
+        id: "legacy-unreadable-0",
+        filename: "Unreadable legacy attachment",
+        mimeType: "application/octet-stream",
+        size: 1,
+        contentBase64: null,
+      }]);
+      assert.equal(malformedLegacyDraft.providerSyncStatus, "failed");
+
+      db.update(messageDrafts).set({
+        attachments: JSON.stringify([20, 20].map((size, index) => ({
+          id: `legacy_aggregate_${index}`,
+          filename: `${index}.bin`,
+          mimeType: "application/octet-stream",
+          size: size * 1024 * 1024,
+          contentBase64: null,
+        }))),
+      }).where(eq(messageDrafts.id, canonicalDraft.id)).run();
+      const aggregateLegacyDraft = await (await testApp.request(`/v1/drafts/${canonicalDraft.id}`, { headers })).json();
+      assert.equal(aggregateLegacyDraft.attachments.length, 2);
+      assert.equal(aggregateLegacyDraft.providerSyncStatus, "failed");
 
       const canonicalPaddedAttachments = await testApp.request("/v1/drafts", {
         method: "POST", headers,

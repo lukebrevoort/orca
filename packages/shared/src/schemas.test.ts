@@ -268,5 +268,14 @@ describe("shared API schemas", () => {
       subject: "Too large",
       attachments: [{ ...valid, size: 25 * 1024 * 1024 + 1, contentBase64: null }],
     }).success, false);
+
+    const aggregateTooLarge = [0, 1].map((index) => ({
+      ...valid,
+      id: `aggregate-${index}`,
+      size: 20 * 1024 * 1024,
+      contentBase64: null,
+    }));
+    assert.equal(createMessageDraftSchema.safeParse({ subject: "Aggregate too large", attachments: aggregateTooLarge }).success, false);
+    assert.equal(updateMessageDraftSchema.safeParse({ revision: 0, attachments: aggregateTooLarge }).success, false);
   });
 });

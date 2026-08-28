@@ -277,6 +277,8 @@ export {
   mailProviderSchema,
   meResponseSchema,
   messageDraftSchema,
+  outboundAttachmentSchema,
+  MAX_OUTBOUND_ATTACHMENT_BYTES,
   normalizedLabelPageSchema,
   normalizedLabelSchema,
   normalizedMessagePageSchema,
