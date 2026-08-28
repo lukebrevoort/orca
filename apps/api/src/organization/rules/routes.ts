@@ -1,12 +1,20 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import { orcaLanguageTextLimits } from "@orca/shared";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts } from "../../db/schema.ts";
+import { oauthAccounts, organizationChangeActions, organizationChangeSets } from "../../db/schema.ts";
+import {
+  OrcaRuleChangeSetError,
+  OrcaRuleCompensationConflictError,
+  createSqliteRuleChangeSetService,
+  sqliteRuleChangeSetCapabilitySource,
+} from "./change-set-sqlite.ts";
 import { getLatestOrcaEvaluationTrace } from "./evaluation-sqlite.ts";
+import { HistoricalSimulationBindingError, createHistoricalRuleSimulationService } from "./simulation.ts";
+import { createSqliteHistoricalRuleSimulationRepository } from "./simulation-sqlite.ts";
 import {
   RuleAuthorityError,
   RuleIdempotencyConflictError,
@@ -80,6 +88,12 @@ const ruleCompileBodyLimit: MiddlewareHandler<{ Variables: AuthVariables }> = as
 export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { dbFactory?: typeof createDatabaseClient } = {}) {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
 
+  const capabilityFor = (db: ReturnType<typeof createDatabaseClient>["db"], workspaceId: string) => {
+    const capability = sqliteRuleChangeSetCapabilitySource.load(db, { workspaceId });
+    if (!capability) throw new OrcaRuleChangeSetError("capability_missing", "No current live Capability authorizes Rule Change Sets");
+    return capability.snapshot;
+  };
+
   app.post("/v1/organization/rules/compile", requireAuth({ dbFactory }), ruleCompileBodyLimit, async (c) => {
     const client = dbFactory();
     try {
@@ -124,6 +138,135 @@ export function registerOrganizationRuleRoutes(app: OrganizationApp, options: { 
         if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule reorder request", issues: "issues" in error ? error.issues : [] } }, 400);
         throw error;
       }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.post("/v1/organization/rules/:ruleId/simulate", requireAuth({ dbFactory }), async (c) => {
+    const client = dbFactory();
+    try {
+      let request: unknown;
+      try { request = await c.req.json(); } catch { return c.json({ error: { code: "validation_error", message: "Simulation requires a valid JSON request" } }, 400); }
+      if (typeof request === "object" && request !== null && "ruleId" in request && request.ruleId !== c.req.param("ruleId")) {
+        return c.json({ error: { code: "validation_error", message: "Path and Simulation Rule IDs must match" } }, 400);
+      }
+      try {
+        const workspaceId = c.get("auth").userId;
+        return c.json(createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(client.db)).simulate({
+          actor: { id: workspaceId, type: "human" },
+          workspaceId,
+          request,
+        }));
+      } catch (error) {
+        if (error instanceof HistoricalSimulationBindingError) return c.json({ error: { code: error.code, message: error.message } }, 409);
+        if (error instanceof Error && /Account scope is not owned/.test(error.message)) return c.json({ error: { code: "account_denied", message: error.message } }, 403);
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid historical Simulation request" } }, 400);
+        throw error;
+      }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.post("/v1/organization/rules/:ruleId/activate", requireAuth({ dbFactory }), async (c) => {
+    const client = dbFactory();
+    try {
+      let request: unknown;
+      try { request = await c.req.json(); } catch { return c.json({ error: { code: "validation_error", message: "Activation requires a valid JSON request" } }, 400); }
+      if (typeof request === "object" && request !== null && "ruleId" in request && request.ruleId !== c.req.param("ruleId")) {
+        return c.json({ error: { code: "validation_error", message: "Path and Activation Rule IDs must match" } }, 400);
+      }
+      try {
+        const workspaceId = c.get("auth").userId;
+        const capabilitySnapshot = capabilityFor(client.db, workspaceId);
+        return c.json(createSqliteRuleChangeSetService(client.db).activate({
+          actor: capabilitySnapshot.actor,
+          capabilitySnapshot,
+          workspaceId,
+          request,
+        }));
+      } catch (error) {
+        if (error instanceof OrcaRuleChangeSetError) {
+          const status = error.code === "simulation_binding_conflict" || error.code === "revision_conflict" || error.code === "duplicate_idempotency_key" ? 409
+            : error.code === "change_set_not_found" ? 404
+              : error.code.endsWith("denied") || error.code.includes("capability") ? 403 : 400;
+          return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule activation request" } }, 400);
+        throw error;
+      }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.post("/v1/organization/change-sets/:changeSetId/revert", requireAuth({ dbFactory }), async (c) => {
+    const client = dbFactory();
+    try {
+      let request: unknown;
+      try { request = await c.req.json(); } catch { return c.json({ error: { code: "validation_error", message: "Revert requires a valid JSON request" } }, 400); }
+      if (typeof request === "object" && request !== null && "changeSetId" in request && request.changeSetId !== c.req.param("changeSetId")) {
+        return c.json({ error: { code: "validation_error", message: "Path and Revert Change Set IDs must match" } }, 400);
+      }
+      try {
+        const workspaceId = c.get("auth").userId;
+        const capabilitySnapshot = capabilityFor(client.db, workspaceId);
+        return c.json(createSqliteRuleChangeSetService(client.db).revert({
+          actor: capabilitySnapshot.actor,
+          capabilitySnapshot,
+          workspaceId,
+          request,
+        }));
+      } catch (error) {
+        if (error instanceof OrcaRuleCompensationConflictError) {
+          return c.json({ error: { code: error.code, message: error.message, conflicts: error.conflicts } }, 409);
+        }
+        if (error instanceof OrcaRuleChangeSetError) {
+          const status = error.code === "change_set_not_found" ? 404
+            : error.code === "revision_conflict" || error.code === "change_set_already_reverted" || error.code === "duplicate_idempotency_key" ? 409
+              : error.code.endsWith("denied") || error.code.includes("capability") ? 403 : 400;
+          return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
+        if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid Rule revert request" } }, 400);
+        throw error;
+      }
+    } finally { client.sqlite.close(); }
+  });
+
+  app.get("/v1/organization/change-sets/:changeSetId", requireAuth({ dbFactory }), (c) => {
+    const client = dbFactory();
+    try {
+      const workspaceId = c.get("auth").userId;
+      const changeSet = client.db.select().from(organizationChangeSets).where(and(
+        eq(organizationChangeSets.workspaceId, workspaceId),
+        eq(organizationChangeSets.id, c.req.param("changeSetId")),
+      )).get();
+      if (!changeSet) return c.json({ error: { code: "not_found", message: "Change Set is unavailable in this Workspace" } }, 404);
+      const actions = client.db.select().from(organizationChangeActions).where(and(
+        eq(organizationChangeActions.workspaceId, workspaceId),
+        eq(organizationChangeActions.changeId, changeSet.id),
+      )).orderBy(asc(organizationChangeActions.position)).all();
+      return c.json({
+        changeSet: {
+          id: changeSet.id,
+          operation: changeSet.operation,
+          status: changeSet.status,
+          simulationId: changeSet.simulationId,
+          risk: changeSet.risk,
+          revertsChangeId: changeSet.revertsChangeId,
+          revertedByChangeId: changeSet.revertedByChangeId,
+          workspaceRevisionBefore: changeSet.workspaceRevisionBefore,
+          workspaceRevisionAfter: changeSet.workspaceRevisionAfter,
+          authorityTrace: JSON.parse(changeSet.authorityTrace),
+          createdAt: changeSet.createdAt.toISOString(),
+        },
+        trace: JSON.parse(changeSet.traceJson),
+        actions: actions.map((action) => ({
+          position: action.position,
+          kind: action.actionKind,
+          resourceFamily: action.resourceFamily,
+          resourceId: action.resourceId,
+          before: action.beforeJson ? JSON.parse(action.beforeJson) : null,
+          after: action.afterJson ? JSON.parse(action.afterJson) : null,
+        })),
+        inverse: JSON.parse(changeSet.inverseJson),
+        resultingRevisions: JSON.parse(changeSet.resultingRevisionsJson),
+      });
     } finally { client.sqlite.close(); }
   });
 

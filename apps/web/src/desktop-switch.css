@@ -564,6 +564,22 @@
 .organization-status { margin: 14px 0 0; padding: 11px 12px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-paper); color: var(--desktop-muted); font-size: 10px; }
 .organization-status-ready { border-color: color-mix(in srgb,var(--desktop-accent) 55%,var(--desktop-border)); color: var(--desktop-accent); }
 .organization-status-stale { border-color: color-mix(in srgb,var(--desktop-warning) 55%,var(--desktop-border)); color: var(--desktop-warning); }
+.rule-lifecycle { margin-top: 16px; padding: 15px; border: 1px solid var(--desktop-border); border-radius: 14px; background: var(--desktop-paper); color: var(--desktop-ink); }
+.rule-lifecycle-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.rule-lifecycle-heading span { color: var(--desktop-muted); font: 800 9px/12px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
+.rule-lifecycle-heading strong { padding: 5px 8px; border: 1px solid var(--desktop-border-strong); border-radius: 999px; background: var(--desktop-surface-hover); color: var(--desktop-ink); font: 800 9px/12px var(--desktop-mono); letter-spacing: .7px; text-transform: uppercase; }
+.rule-lifecycle-simulated .rule-lifecycle-heading strong,.rule-lifecycle-active .rule-lifecycle-heading strong { border-color: color-mix(in srgb,var(--desktop-accent) 55%,var(--desktop-border)); color: var(--desktop-accent); }
+.rule-lifecycle-conflicted .rule-lifecycle-heading strong { border-color: color-mix(in srgb,var(--desktop-warning) 55%,var(--desktop-border)); color: var(--desktop-warning); }
+.rule-lifecycle-reverted .rule-lifecycle-heading strong { border-style: dashed; color: var(--desktop-muted); }
+.rule-lifecycle dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 0 0 12px; }
+.rule-lifecycle dl div { padding: 9px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-surface); }
+.rule-lifecycle dt { color: var(--desktop-muted); font-size: 9px; }
+.rule-lifecycle dd { margin: 4px 0 0; color: var(--desktop-ink); font: 650 13px/16px var(--desktop-sans); }
+.rule-lifecycle p { color: var(--desktop-muted); font-size: 10px; line-height: 16px; }
+.rule-lifecycle-thread,.rule-lifecycle-evidence { padding-top: 10px; border-top: 1px solid var(--desktop-border); }
+.rule-lifecycle > button,.rule-lifecycle .trace-revert-actions button { min-height: 38px; padding: 0 13px; border: 1px solid var(--desktop-border); border-radius: 10px; background: var(--desktop-surface-hover); color: var(--desktop-ink); font-size: 10px; font-weight: 750; }
+.rule-lifecycle > button:hover,.rule-lifecycle > button:focus-visible,.rule-lifecycle .trace-revert-actions button:hover,.rule-lifecycle .trace-revert-actions button:focus-visible { border-color: var(--desktop-accent); color: var(--desktop-ink); }
+.rule-lifecycle > button:disabled,.rule-lifecycle .trace-revert-actions button:disabled { border-color: var(--desktop-border); background: var(--desktop-surface-hover); color: var(--desktop-faint); opacity: .72; }
 .simulation-card { padding: 18px; }
 .simulation-card h2 { margin: 8px 0 16px; font: 500 26px/28px var(--desktop-serif); }
 .simulation-card dl { margin: 0 0 16px; }

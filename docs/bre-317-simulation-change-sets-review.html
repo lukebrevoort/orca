@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-317 · Simulation and atomic Change Sets reviewer guide</title>
+  <style>
+    :root{color-scheme:light dark;--paper:#f4f7f3;--card:#fff;--ink:#17342d;--muted:#60756f;--line:#cbd8d3;--accent:#087b68;--warn:#a36b14}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,sans-serif}main{width:min(1120px,calc(100% - 32px));margin:32px auto 80px}.eyebrow{color:var(--accent);font:800 11px/1.2 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}h1{max-width:850px;margin:.35rem 0;font:600 clamp(34px,6vw,64px)/1.02 Georgia,serif;letter-spacing:-.04em}h2{margin:0 0 14px;font:600 26px/1.1 Georgia,serif}.lede{max-width:760px;color:var(--muted);font-size:18px}.pending{display:inline-block;padding:8px 12px;border:1px solid var(--warn);border-radius:99px;color:var(--warn);font-weight:800}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:24px}.card{padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.wide{grid-column:1/-1}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center}.step{min-height:110px;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}.step strong{display:block;margin:5px 0}.step small{color:var(--muted)}.arrow{text-align:center;color:var(--accent);font-size:24px}.invariants{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.invariants div{padding:12px;border-left:3px solid var(--accent);background:var(--paper)}code{font-family:ui-monospace,SFMono-Regular,monospace}pre{overflow:auto;padding:14px;border:1px solid var(--line);border-radius:12px;background:#10251f;color:#d8eee7;font-size:12px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--muted);font-size:11px;text-transform:uppercase}ol,ul{padding-left:20px}.shots{display:grid;grid-template-columns:1fr 1fr;gap:12px}.shots img{width:100%;border:1px solid var(--line);border-radius:12px}.shots figcaption{margin-top:6px;color:var(--muted);font-size:12px}@media(max-width:800px){.grid,.shots,.invariants{grid-template-columns:1fr}.wide{grid-column:auto}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}@media(prefers-color-scheme:dark){:root{--paper:#07100e;--card:#0d1714;--ink:#e2eee9;--muted:#93aaa3;--line:#294039;--accent:#55cdb4;--warn:#efb75e}}
+  </style>
+</head>
+<body><main>
+  <p class="eyebrow">BRE-317 · reviewer handoff</p>
+  <h1>Historical Simulation, atomic Change Sets, activation, and revert</h1>
+  <p class="lede">One production semantics path now carries an immutable Rule revision from mutation-free historical analysis through authorized activation, complete explanation, and a compensating revert.</p>
+  <p class="pending">REVERIFY — independent gate fixes are implemented; fresh independent verification is still required. This guide is evidence, not self-certification.</p>
+
+  <div class="grid">
+    <section class="card wide"><h2>State model</h2><div class="flow">
+      <div class="step"><span class="eyebrow">Proposed</span><strong>Compiled revision</strong><small>Production parser and type checker; immutable IR and Workspace Schema snapshot.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Simulated</span><strong>Historical result</strong><small>Production evaluator, precedence, conflict resolver, counts, Threads, risk, and attention.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Active</span><strong>Atomic apply</strong><small>Exact Simulation binding, authority, scope, idempotency, and revisions rechecked in one transaction.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Explained</span><strong>Complete evidence</strong><small>Trace, ordered actions, risk, inverse state, authority Trace, and resulting revisions.</small></div><div class="arrow">→</div>
+      <div class="step"><span class="eyebrow">Reverted</span><strong>Compensation</strong><small>New Change Set restores projections with monotonic revisions; original audit remains.</small></div>
+    </div></section>
+
+    <section class="card wide"><h2>Architecture</h2><div class="invariants">
+      <div><strong>Shared contract</strong><br><code>orca-simulation.ts</code> binds Rule revision, source digest, Workspace Schema/current revision, Rule Set revision, Accounts, and history bound.</div>
+      <div><strong>Read path</strong><br>SQLite history adapter → production compiler rebind → production evaluator/conflict resolution → deterministic report digest. No mutation callback exists.</div>
+      <div><strong>Write path</strong><br>Authoritative G0 Capability lookup → transaction recheck → Rule/Lane/Facet/Workflow/Collection/Context/Thread projections + immutable Change Set/actions, or rollback all.</div>
+    </div></section>
+
+    <section class="card"><h2>Security invariants</h2><ul>
+      <li>The caller presents an immutable Capability claim, but never supplies the live side of the authority decision. Apply and revert resolve the exact current first-party Capability from persisted Workspace/Account ownership.</li>
+      <li>Capability identity, revision, actor, audience, Workspace, Accounts, operation, resource families, action families, and risk scope are compared against that authoritative snapshot.</li>
+      <li>The authoritative Capability is resolved again inside the SQLite transaction, closing preflight-to-commit revocation and replacement races.</li>
+      <li>Every exact activation and revert replay re-resolves current authority and revalidates Actor, audience, Workspace, Account, operation, resource, action, and risk requirements before stored lifecycle evidence is returned.</li>
+      <li>Every requested Account must be both owned and granted.</li>
+      <li>Activation accepts only the exact successful Simulation digest for the same compiled Rule, Workspace, Rule Set, and history bound.</li>
+      <li>Workspace, Rule, Rule Set, and affected Thread revisions are checked before and inside the transaction.</li>
+      <li>Idempotency replay requires a canonical byte-equivalent request.</li>
+      <li>Simulation asserts unchanged row counts and state; hostile apply/revert paths assert zero writes.</li>
+      <li>Revert refuses newer state and returns resource-specific expected/actual revisions.</li>
+    </ul></section>
+
+    <section class="card"><h2>Production-failure walkthrough</h2><ol>
+      <li>Compile the supplied “Production failures” Orca rule in Tide Table. Its winning projected actions route to “Focus” and set Workflow State “Needs review”; notification remains proposal-only evidence.</li>
+      <li>Select <strong>Simulate history</strong>; inspect evaluated/affected counts, Lane and Workflow deltas, representative Thread, risk, conflicts, and attention estimate.</li>
+      <li>Only a successful, current result enables <strong>Activate Change Set</strong>.</li>
+      <li>Inspect the Change Set explanation: complete Trace, ordered actions, inverse evidence, and resulting revisions.</li>
+      <li>Select <strong>Review revert</strong>, then apply the compensating revert. Confirm the original record is marked reverted and the compensation is appended.</li>
+      <li>To review conflict behavior, mutate an affected Thread revision before revert; verify the exact conflict and zero projection/audit writes.</li>
+    </ol></section>
+
+    <section class="card wide"><h2>RED → GREEN evidence</h2><table><thead><tr><th>Slice</th><th>RED proof</th><th>GREEN proof</th></tr></thead><tbody>
+      <tr><td>Shared contracts</td><td>Missing <code>orca-simulation</code> module.</td><td>4/4 shared contract tests.</td></tr>
+      <tr><td>Production Simulation</td><td>Missing Simulation service; later exact Workspace revision mismatch and a missing source-digest rejection exposed binding/provenance semantics.</td><td>3/3 semantic tests plus mutation-free SQLite test.</td></tr>
+      <tr><td>Atomic activation</td><td>Focused SQLite activation expectations failed before the Change Set service.</td><td>3/3 SQLite Simulation/activation tests, including stale, denial, isolation, and injected rollback.</td></tr>
+      <tr><td>Capability trust blocker</td><td><code>attacker-self-asserted-capability</code>, revision 999 activated successfully: <code>AssertionError: Missing expected exception</code>.</td><td>Forged, missing, revoked, stale, wrong actor/audience/Workspace/Account/operation/resource/action/risk variants deny with zero writes; apply and revert re-resolve authority inside the transaction.</td></tr>
+      <tr><td>Idempotent replay authority blocker</td><td>After a valid commit, exact activation and revert replays still returned stored lifecycle responses after the authoritative Capability was removed: <code>AssertionError: Missing expected exception</code>.</td><td>Apply and revert replays independently revalidate current non-revoked authority before parsing stored responses; valid and legacy replays remain write-free, collisions remain byte-exact, and unauthorized collisions fail closed on authority.</td></tr>
+      <tr><td>Action completeness blocker</td><td>A winning <code>set_workflow_state</code> reported one affected Thread, but the authoritative Workflow projection remained absent.</td><td>Workflow, Collection, and Context winners now have ordered apply evidence, inverse state, Thread revision updates, replay, rollback, conflict, and compensating revert coverage. An exhaustive action-support map prevents evaluator/apply drift; unknown winners fail before writes.</td></tr>
+      <tr><td>Persisted inverse compatibility</td><td>A pre-fix Lane/Facet Change Set failed revert with <code>invalid_change_set</code> after the new evidence fields were introduced.</td><td>Absent Workflow/Collection/Context inverse fields retain legacy “not managed by this Change Set” semantics, so already-active pre-fix Change Sets remain revertible without disturbing those projections.</td></tr>
+      <tr><td>Compensating revert</td><td><code>service.revert is not a function</code> (0 pass / 2 fail).</td><td>2/2 revert tests: compensation/replay and newer-state conflict.</td></tr>
+      <tr><td>REST lifecycle</td><td>Unknown lifecycle route returned a non-JSON 404.</td><td>1/1 authenticated simulate → apply → explain → revert.</td></tr>
+      <tr><td>Glass Box / Tide</td><td>No <code>data-lifecycle-state="proposed"</code> after compile.</td><td>1/1 UI flow covers proposed, conflicted, simulated, active, and reverted.</td></tr>
+    </tbody></table></section>
+
+    <section class="card wide"><h2>Exact verification commands and counts</h2><pre>CI=true bun test packages/shared/src/orca-simulation.test.ts \
+  apps/api/src/organization/rules/simulation.test.ts \
+  apps/api/src/organization/rules/simulation-sqlite.test.ts \
+  apps/api/src/organization/rules/routes.test.ts \
+  apps/web/src/desktop-switch.interaction.test.tsx \
+  apps/web/src/tide-table.test.tsx \
+  apps/web/src/organization-trace.test.tsx
+# 42 pass, 0 fail
+
+CI=true bun --filter @orca/shared test  # 69 pass, 0 fail
+CI=true bun --filter @orca/web test     # 161 pass, 0 fail
+CI=true bun --filter @orca/api test     # 456 pass, 0 fail
+# Full total: 686 pass, 0 fail
+
+bun run typecheck
+bun run build
+bun run lint
+
+bun /tmp/bre317-migration-check.ts
+# journal order, fresh, 0031 upgrade, replay, integrity, FK, indexes: PASS
+
+git diff --check</pre></section>
+
+    <section class="card wide"><h2>Authenticated production-adapter evidence</h2><div class="shots">
+      <figure><img src="artifacts/bre-317/organization-proposed-light.png" alt="Authenticated Orca Light proposed Rule revision"><figcaption>PROPOSED · immutable Rule revision compiled through the authenticated Organization route.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-simulation-light.png" alt="Authenticated Orca Light historical Simulation with Workflow action"><figcaption>SIMULATED · one affected historical Thread, with “Focus” and “Needs review” visible in the real rule source.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-change-set-dark.png" alt="Authenticated Orca Black active Change Set with ordered actions"><figcaption>ACTIVE · three ordered audit actions from the production apply route; Rule revision 2 is active.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-reverted-light.png" alt="Authenticated Orca Light reverted Change Set"><figcaption>REVERTED · production compensating Change Set appended and original audit history preserved.</figcaption></figure>
+      <figure><img src="artifacts/bre-317/organization-conflict-dark.png" alt="Authenticated Orca Black conflicted compensating revert"><figcaption>CONFLICTED · a newer authoritative Thread revision (4 → 5) blocked the production revert without partial compensation.</figcaption></figure>
+    </div><p>These are not interactive-preview fixtures. They were captured headlessly from the real authenticated REST/UI lifecycle against an isolated SQLite database created by the production migration runner and seeded with a representative Gmail row. No external Gmail request was needed. <code>/opt/homebrew/bin/agent-browser</code> loaded its full core skill; the browser, API, and Vite sessions were closed after capture.</p></section>
+
+    <section class="card wide"><h2>Reviewer decision points</h2><ul>
+      <li>Confirm the representative Thread cap of 20 and activation history bound of 5,000 are appropriate for first release.</li>
+      <li>Residual risk: historical evaluation currently uses the latest persisted message per Thread, bounded by received time; it does not replay every message event in a Thread.</li>
+      <li>Residual verification status: the previously confirmed blockers and the remaining replay-authority gate are fixed locally, but the status remains <strong>REVERIFY</strong> until the independent verifier reruns at the new commit.</li>
+    </ul></section>
+  </div>
+</main></body></html>

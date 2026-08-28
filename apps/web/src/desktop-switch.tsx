@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
-import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace } from "./organization-views";
-import { createTidePreviewRequest, TideTableEditor } from "./tide-table";
+import { createTidePreviewRequest, TideTableEditor, type TideCompileSuccess } from "./tide-table";
 
 export { DesktopDrawer } from "./desktop-drawer";
 
@@ -266,6 +266,36 @@ export function moveSpaceOrder(order: string[], draggedId: string, targetId: str
 
 type OrganizationMode = "glass" | "tide";
 type SimulationState = "idle" | "running" | "ready" | "stale";
+type RuleLifecycleState = "proposed" | "simulated" | "active" | "conflicted" | "reverted";
+type LifecycleBinding = TideCompileSuccess & { accountIds: string[] };
+type LifecycleChangeSet = {
+  changeSetId: string;
+  status: "active" | "reverted" | "conflicted";
+  operation: "apply" | "revert";
+  ruleId: string;
+  revisionId: string;
+  simulationId: string;
+  revertsChangeSetId: string | null;
+  workspaceRevisionBefore: number;
+  workspaceRevisionAfter: number;
+  ruleSetRevisionAfter: number;
+  traceCount: number;
+  risk: string;
+  conflicts: Array<{ resourceId: string; expectedRevision: number; actualRevision: number | null }>;
+};
+type LifecycleExplanation = { trace: unknown[]; actions: unknown[]; resultingRevisions: Record<string, unknown> };
+
+function isLifecycleChangeSet(value: unknown): value is LifecycleChangeSet {
+  return typeof value === "object" && value !== null
+    && "changeSetId" in value && typeof value.changeSetId === "string"
+    && "workspaceRevisionAfter" in value && typeof value.workspaceRevisionAfter === "number";
+}
+
+function lifecycleErrorMessage(value: unknown, fallback: string): string {
+  if (typeof value !== "object" || value === null || !("error" in value)) return fallback;
+  const error = value.error;
+  return typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : fallback;
+}
 
 function evaluationActionLabel(action: OrcaCompiledAction): string {
   switch (action.kind) {
@@ -394,6 +424,39 @@ function CompleteTraceDrawer({ onClose, trace }: { onClose: () => void; trace: O
   </DesktopDrawer>;
 }
 
+function RuleLifecycleSummary({ state, simulation, changeSet, explanation, busy, revertReview, onSimulate, onActivate, onReviewRevert, onCancelRevert, onRevert }: {
+  state: RuleLifecycleState;
+  simulation: OrcaHistoricalSimulationResponse | null;
+  changeSet: LifecycleChangeSet | null;
+  explanation: LifecycleExplanation | null;
+  busy: boolean;
+  revertReview: boolean;
+  onSimulate: () => void;
+  onActivate: () => void;
+  onReviewRevert: () => void;
+  onCancelRevert: () => void;
+  onRevert: () => void;
+}) {
+  return <div className={`rule-lifecycle rule-lifecycle-${state}`} data-lifecycle-state={state}>
+    <div className="rule-lifecycle-heading"><span>Atomic Change Set</span><strong>{state}</strong></div>
+    {simulation ? <dl>
+      <div><dt>Historical Threads</dt><dd>{simulation.counts.evaluatedThreads.toLocaleString()}</dd></div>
+      <div><dt>Affected</dt><dd>{simulation.counts.affectedThreads.toLocaleString()}</dd></div>
+      <div><dt>Conflicts</dt><dd>{simulation.counts.conflicts.toLocaleString()}</dd></div>
+      <div><dt>Risk</dt><dd>{simulation.risk}</dd></div>
+      <div><dt>Attention</dt><dd>{simulation.attentionImpact.estimatedMinutesSaved} min</dd></div>
+      <div><dt>Binding</dt><dd>Workspace r{simulation.binding.workspaceRevision}</dd></div>
+    </dl> : <p>Immutable Rule revision ready for mutation-free historical Simulation.</p>}
+    {simulation?.representativeThreads[0] ? <p className="rule-lifecycle-thread">Representative · {simulation.representativeThreads[0].subject}</p> : null}
+    {explanation ? <p className="rule-lifecycle-evidence">{explanation.trace.length} complete Trace{explanation.trace.length === 1 ? "" : "s"} · {explanation.actions.length} ordered audit actions</p> : null}
+    {state === "reverted" ? <p className="rule-lifecycle-evidence">Audit history preserved · compensating Change Set {changeSet?.changeSetId}</p> : null}
+    {state === "proposed" || state === "conflicted" ? <button disabled={busy} onClick={onSimulate} type="button">{busy ? "Simulating…" : "Simulate history"}</button> : null}
+    {state === "simulated" ? <button className="organization-primary" disabled={busy} onClick={onActivate} type="button">{busy ? "Activating…" : "Activate Change Set"}</button> : null}
+    {state === "active" && !revertReview ? <button disabled={busy} onClick={onReviewRevert} type="button">Review revert</button> : null}
+    {state === "active" && revertReview ? <div className="trace-revert-actions"><button disabled={busy} onClick={onCancelRevert} type="button">Cancel</button><button className="trace-revert-apply" disabled={busy} onClick={onRevert} type="button">{busy ? "Reverting…" : "Apply compensating revert"}</button></div> : null}
+  </div>;
+}
+
 export function OrganizationStudio({ interactivePreview = false }: { interactivePreview?: boolean }) {
   const [mode, setMode] = useState<OrganizationMode>("glass");
   const [simulation, setSimulation] = useState<SimulationState>("idle");
@@ -404,6 +467,12 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
   const [organizationInvalidation, setOrganizationInvalidation] = useState(0);
   const [liveTrace, setLiveTrace] = useState<OrcaEvaluationTrace | null>(null);
   const [traceState, setTraceState] = useState<"loading" | "ready" | "empty" | "error">(interactivePreview ? "empty" : "loading");
+  const [lifecycleBinding, setLifecycleBinding] = useState<LifecycleBinding | null>(null);
+  const [lifecycleState, setLifecycleState] = useState<RuleLifecycleState>("proposed");
+  const [historicalSimulation, setHistoricalSimulation] = useState<OrcaHistoricalSimulationResponse | null>(null);
+  const [lifecycleChangeSet, setLifecycleChangeSet] = useState<LifecycleChangeSet | null>(null);
+  const [lifecycleExplanation, setLifecycleExplanation] = useState<LifecycleExplanation | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [status, setStatus] = useState(interactivePreview
     ? "UI preview · local session only. No rule, provider mail, or audit record is changed or persisted."
     : "Loading the latest complete Trace…");
@@ -445,6 +514,124 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
       });
     return () => controller.abort();
   }, [interactivePreview]);
+  async function handleCompiled(success: TideCompileSuccess) {
+    invalidateOrganization();
+    if (interactivePreview) return;
+    setLifecycleBusy(true);
+    try {
+      const response = await fetch("/v1/organization/describe", { credentials: "include" });
+      if (!response.ok) throw new Error("The current Account scope is unavailable.");
+      const body = await response.json() as { accountIds?: unknown };
+      if (!Array.isArray(body.accountIds) || !body.accountIds.length || body.accountIds.some((item) => typeof item !== "string")) {
+        throw new Error("The current Account scope is unavailable.");
+      }
+      setLifecycleBinding({ ...success, accountIds: body.accountIds as string[] });
+      setHistoricalSimulation(null);
+      setLifecycleChangeSet(null);
+      setLifecycleExplanation(null);
+      setLifecycleState("proposed");
+      setStatus(`Proposed immutable Rule revision ${success.ruleRevision}. Simulate historical production mail before activation.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "The compiled Rule could not be prepared for Simulation.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+  async function runHistoricalSimulation() {
+    if (!lifecycleBinding) return;
+    setLifecycleBusy(true);
+    setStatus("Running mutation-free historical Simulation with production semantics…");
+    try {
+      const response = await fetch(`/v1/organization/rules/${encodeURIComponent(lifecycleBinding.ruleId)}/simulate`, {
+        method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ruleId: lifecycleBinding.ruleId,
+          revisionId: lifecycleBinding.revisionId,
+          workspaceSchemaRevision: lifecycleBinding.workspaceSchemaRevision,
+          accountIds: lifecycleBinding.accountIds,
+          maximumThreads: 500,
+        }),
+      });
+      const body = await response.json().catch(() => null) as unknown;
+      if (!response.ok) throw new Error(typeof body === "object" && body !== null && "error" in body ? String((body as { error?: { message?: unknown } }).error?.message ?? "Simulation failed") : "Simulation failed");
+      const parsed = orcaHistoricalSimulationResponseSchema.parse(body);
+      setHistoricalSimulation(parsed);
+      setLifecycleState(parsed.state);
+      setStatus(parsed.state === "simulated"
+        ? `Simulation ${parsed.simulationId} is bound to Workspace r${parsed.binding.workspaceRevision}; activation is now eligible.`
+        : `${parsed.counts.conflicts} conflict${parsed.counts.conflicts === 1 ? "" : "s"} must be resolved before activation.`);
+    } catch (error) {
+      setLifecycleState("conflicted");
+      setStatus(error instanceof Error ? error.message : "Historical Simulation failed closed.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+  async function activateLifecycle() {
+    if (!lifecycleBinding || !historicalSimulation || historicalSimulation.state !== "simulated") return;
+    setLifecycleBusy(true);
+    setStatus("Authorizing and atomically committing the simulated Change Set…");
+    try {
+      const response = await fetch(`/v1/organization/rules/${encodeURIComponent(lifecycleBinding.ruleId)}/activate`, {
+        method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ruleId: lifecycleBinding.ruleId,
+          revisionId: lifecycleBinding.revisionId,
+          simulationId: historicalSimulation.simulationId,
+          accountIds: lifecycleBinding.accountIds,
+          maximumThreads: historicalSimulation.scope.maximumThreads,
+          expectedWorkspaceRevision: historicalSimulation.binding.workspaceRevision,
+          expectedRuleRevision: historicalSimulation.binding.ruleRevision,
+          expectedRuleSetRevision: historicalSimulation.binding.ruleSetRevision,
+          idempotencyKey: `rule-activate:${crypto.randomUUID()}`,
+        }),
+      });
+      const body = await response.json().catch(() => null) as unknown;
+      if (!response.ok || !isLifecycleChangeSet(body)) throw new Error(lifecycleErrorMessage(body, "Activation failed"));
+      setLifecycleChangeSet(body);
+      setLifecycleState("active");
+      setRevertReview(false);
+      const explanationResponse = await fetch(`/v1/organization/change-sets/${encodeURIComponent(body.changeSetId)}`, { credentials: "include" });
+      const explanation = explanationResponse.ok ? await explanationResponse.json() as LifecycleExplanation : null;
+      setLifecycleExplanation(explanation);
+      setStatus(`Active Change Set ${body.changeSetId} committed atomically at Workspace r${body.workspaceRevisionAfter}.`);
+      invalidateOrganization();
+    } catch (error) {
+      setLifecycleState("conflicted");
+      setStatus(error instanceof Error ? error.message : "Activation failed closed with no partial write.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
+  async function revertLifecycle() {
+    if (!lifecycleBinding || !lifecycleChangeSet || lifecycleState !== "active") return;
+    setLifecycleBusy(true);
+    setStatus("Checking newer state and applying a compensating Change Set…");
+    try {
+      const response = await fetch(`/v1/organization/change-sets/${encodeURIComponent(lifecycleChangeSet.changeSetId)}/revert`, {
+        method: "POST", credentials: "include", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          changeSetId: lifecycleChangeSet.changeSetId,
+          accountIds: lifecycleBinding.accountIds,
+          expectedWorkspaceRevision: lifecycleChangeSet.workspaceRevisionAfter,
+          idempotencyKey: `rule-revert:${crypto.randomUUID()}`,
+        }),
+      });
+      const body = await response.json().catch(() => null) as unknown;
+      if (!response.ok || !isLifecycleChangeSet(body)) throw new Error(lifecycleErrorMessage(body, "Revert conflicted"));
+      setLifecycleChangeSet(body);
+      setLifecycleState("reverted");
+      setRevertReview(false);
+      setStatus(`Compensating Change Set ${body.changeSetId} applied. Audit history preserved at Workspace r${body.workspaceRevisionAfter}.`);
+      invalidateOrganization();
+    } catch (error) {
+      setLifecycleState("conflicted");
+      setRevertReview(false);
+      setStatus(error instanceof Error ? error.message : "Newer state conflicts with this compensation.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
   function updateDraft() {
     if (!interactivePreview) return;
     setSimulation("stale");
@@ -463,10 +650,11 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
     <OrganizationLaneWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationInvalidation} />
     <header className="organization-heading"><div><span>{interactivePreview ? `Organization UI preview · session ${activeRevision}` : displayTrace ? `Live evaluation · Rule Set ${displayTrace.ruleSet.revision}` : "Organization · deterministic evaluation"}</span><h1 id="organization-title">{displayTrace ? traceTitle(displayTrace) : "Production failures"}</h1><p>{interactivePreview ? "Local interaction preview for Focus · nothing is persisted" : displayTrace ? `${displayTrace.event.kind} · Thread ${displayTrace.event.threadId} · ${new Date(displayTrace.logicalTime).toLocaleString()}` : traceState === "loading" ? "Loading the latest complete Trace…" : traceState === "error" ? "The latest Trace could not be read" : "No Rule evaluation has been recorded yet"}</p></div><div><button className="organization-trace-trigger" disabled={!interactivePreview && !displayTrace} onClick={() => setTraceOpen(true)} type="button">{interactivePreview ? "Preview changes" : "Open complete Trace"}</button><button className="organization-primary" disabled={!interactivePreview} onClick={updateDraft} type="button">{interactivePreview ? "New rule" : "Use Tide Table"}</button></div></header>
     <div className="organization-grid"><section className="organization-editor"><nav aria-label="Rule authoring mode"><button aria-pressed={mode === "glass"} onClick={() => setMode("glass")} type="button">Glass Box</button><button aria-pressed={mode === "tide"} onClick={() => setMode("tide")} type="button">Tide Table</button></nav>
-      {mode === "glass" ? displayTrace ? <div className="glass-box glass-live-trace"><article><span>When</span><strong>{displayTrace.event.kind}</strong><small>{displayTrace.event.cause} Event · {displayTrace.event.id}</small></article><i>→</i><article><span>If</span><ul>{displayTrace.observedValues.map((value) => <li key={value.field}>{observedValueLabel(value)}</li>)}</ul><small>{displayTrace.predicateResults.filter((result) => result.result).length} Predicate results were true</small></article><i>→</i><article><span>Then</span><ul>{displayTrace.winners.map((winner) => <li key={winner.candidateId}>{evaluationActionLabel(winner.action)}</li>)}</ul><small>{displayTrace.losers.length} lower candidate{displayTrace.losers.length === 1 ? "" : "s"} preserved in Trace</small></article><article className="glass-because"><span>Because</span><strong>{tracePrimaryWinner(displayTrace)?.reason ?? displayTrace.reason}</strong><small>{(tracePrimaryWinner(displayTrace)?.actor ?? displayTrace.actor).type} Actor · {(tracePrimaryWinner(displayTrace)?.actor ?? displayTrace.actor).id}</small></article></div> : <div className={`glass-trace-state glass-trace-state-${traceState}`} role="status"><span>{traceState === "loading" ? "Reading Trace" : traceState === "error" ? "Trace unavailable" : "No evaluation yet"}</span><strong>{traceState === "loading" ? "Following the latest message.received path…" : traceState === "error" ? "Orca kept the interface honest: no causal claim is shown without its Trace." : "A complete When → If → Then → Because explanation will appear after the first evaluation."}</strong></div> : <TideTableEditor onCompiled={invalidateOrganization} previewMode={interactivePreview} request={interactivePreview ? previewTideRequest : undefined} />}
+      {mode === "glass" ? displayTrace ? <div className="glass-box glass-live-trace"><article><span>When</span><strong>{displayTrace.event.kind}</strong><small>{displayTrace.event.cause} Event · {displayTrace.event.id}</small></article><i>→</i><article><span>If</span><ul>{displayTrace.observedValues.map((value) => <li key={value.field}>{observedValueLabel(value)}</li>)}</ul><small>{displayTrace.predicateResults.filter((result) => result.result).length} Predicate results were true</small></article><i>→</i><article><span>Then</span><ul>{displayTrace.winners.map((winner) => <li key={winner.candidateId}>{evaluationActionLabel(winner.action)}</li>)}</ul><small>{displayTrace.losers.length} lower candidate{displayTrace.losers.length === 1 ? "" : "s"} preserved in Trace</small></article><article className="glass-because"><span>Because</span><strong>{tracePrimaryWinner(displayTrace)?.reason ?? displayTrace.reason}</strong><small>{(tracePrimaryWinner(displayTrace)?.actor ?? displayTrace.actor).type} Actor · {(tracePrimaryWinner(displayTrace)?.actor ?? displayTrace.actor).id}</small></article></div> : <div className={`glass-trace-state glass-trace-state-${traceState}`} role="status"><span>{traceState === "loading" ? "Reading Trace" : traceState === "error" ? "Trace unavailable" : "No evaluation yet"}</span><strong>{traceState === "loading" ? "Following the latest message.received path…" : traceState === "error" ? "Orca kept the interface honest: no causal claim is shown without its Trace." : "A complete When → If → Then → Because explanation will appear after the first evaluation."}</strong></div> : <TideTableEditor onCompiled={(success) => void handleCompiled(success)} previewMode={interactivePreview} request={interactivePreview ? previewTideRequest : undefined} />}
+      {!interactivePreview && lifecycleBinding ? <RuleLifecycleSummary state={lifecycleState} simulation={historicalSimulation} changeSet={lifecycleChangeSet} explanation={lifecycleExplanation} busy={lifecycleBusy} revertReview={revertReview} onSimulate={() => void runHistoricalSimulation()} onActivate={() => void activateLifecycle()} onReviewRevert={() => setRevertReview(true)} onCancelRevert={() => setRevertReview(false)} onRevert={() => void revertLifecycle()} /> : null}
       <p aria-live="polite" className={`organization-status organization-status-${interactivePreview ? simulation : traceState}`}>{status}</p>
     </section><aside className="simulation-card" aria-busy={simulation === "running" || undefined}><span>{interactivePreview ? "Local sample preview" : displayTrace ? "Latest evaluation" : "Trace status"}</span><h2>{interactivePreview ? simulation === "running" ? "Generating sample…" : simulation === "stale" ? "Sample is outdated" : "Preview impact" : displayTrace ? "Resolved deterministically" : traceState === "loading" ? "Reading evidence…" : "No complete Trace"}</h2><dl>{displayTrace ? <><div><dt>Rules considered</dt><dd>{displayTrace.consideredRevisions.length}</dd></div><div><dt>Candidates</dt><dd>{displayTrace.candidates.length}</dd></div><div><dt>Winners</dt><dd>{displayTrace.winners.length}</dd></div><div><dt>Losers</dt><dd>{displayTrace.losers.length}</dd></div><div><dt>Budget</dt><dd>{displayTrace.budget.exhausted ? "Exhausted" : "Within bounds"}</dd></div><div><dt>Authority</dt><dd>{displayTrace.capabilities.id}</dd></div></> : <><div><dt>Sample messages</dt><dd>{simulation === "ready" ? "2,418" : "—"}</dd></div><div><dt>Would move to Focus</dt><dd>{simulation === "ready" ? "14" : "—"}</dd></div><div><dt>Would notify</dt><dd>{simulation === "ready" ? "3" : "—"}</dd></div><div><dt>Would hide</dt><dd>{simulation === "ready" ? "0" : "—"}</dd></div><div><dt>Sample risk</dt><dd>{simulation === "ready" ? "Low" : "Not calculated"}</dd></div><div><dt>Authority</dt><dd>Not checked</dd></div></>}</dl>{displayTrace ? <button className="organization-trace-trigger" onClick={() => setTraceOpen(true)} type="button">Inspect candidates</button> : <><button disabled={!interactivePreview || simulation === "running"} onClick={runSimulation} type="button">{simulation === "running" ? "Generating…" : simulation === "stale" ? "Preview again" : "Preview sample"}</button><button className="organization-primary" disabled={!interactivePreview || simulation !== "ready"} onClick={activate} type="button">Change preview state</button></>}</aside></div>
     {traceOpen && displayTrace ? <CompleteTraceDrawer onClose={() => setTraceOpen(false)} trace={displayTrace} /> : null}
-    {traceOpen && interactivePreview ? <DesktopDrawer ariaLabel="Local preview changes" className="trace-drawer" onClose={() => setTraceOpen(false)}><header><div><span>{traceTab === "trace" ? "UI explanation preview" : "Local session changes"}</span><h2>{traceTab === "trace" ? "Preview" : "Session"}</h2></div><button aria-label="Close preview changes" onClick={() => setTraceOpen(false)} type="button">×</button></header><div className="trace-tabs"><button aria-pressed={traceTab === "trace"} onClick={() => setTraceTab("trace")} type="button">Explanation</button><button aria-pressed={traceTab === "audit"} onClick={() => setTraceTab("audit")} type="button">Session changes</button></div>{traceTab === "trace" ? <ol><li><span>Sample only</span><strong>No server trace was requested.</strong></li><li><span>Authority</span><strong>Not checked.</strong></li><li className="trace-winner"><span>Preview rule</span><strong>Production failures · local state {activeRevision}.</strong></li><li><span>Persistence</span><strong>Reloading clears this preview.</strong></li></ol> : <ol className="audit-log"><li><span>Local state {activeRevision}</span><strong>Changed in this browser session</strong></li><li><span>Sample preview</span><strong>Illustrative counts · no production query</strong></li><li><span>Audit record</span><strong>None created</strong></li><li><span>Provider mail</span><strong>Not changed</strong></li></ol>}<section><span>Preview restore</span><h3>{revertReview ? `Restore local state ${Math.max(1, activeRevision - 1)}?` : "Changes only this local preview"}</h3><p>{revertReview ? "This updates local component state only. It does not create, rewrite, or preserve any server revision." : "The Organization API does not currently expose revert. This control exists only to review the intended interaction."}</p>{revertReview ? <div className="trace-revert-actions"><button onClick={() => setRevertReview(false)} type="button">Cancel</button><button className="trace-revert-apply" onClick={revert} type="button">Restore local preview</button></div> : <button onClick={() => setRevertReview(true)} type="button">Review local restore</button>}</section></DesktopDrawer> : null}
+    {traceOpen && interactivePreview ? <DesktopDrawer ariaLabel="Local preview changes" className="trace-drawer" onClose={() => setTraceOpen(false)}><header><div><span>{traceTab === "trace" ? "UI explanation preview" : "Local session changes"}</span><h2>{traceTab === "trace" ? "Preview" : "Session"}</h2></div><button aria-label="Close preview changes" onClick={() => setTraceOpen(false)} type="button">×</button></header><div className="trace-tabs"><button aria-pressed={traceTab === "trace"} onClick={() => setTraceTab("trace")} type="button">Explanation</button><button aria-pressed={traceTab === "audit"} onClick={() => setTraceTab("audit")} type="button">Session changes</button></div>{traceTab === "trace" ? <ol><li><span>Sample only</span><strong>No server trace was requested.</strong></li><li><span>Authority</span><strong>Not checked.</strong></li><li className="trace-winner"><span>Preview rule</span><strong>Production failures · local state {activeRevision}.</strong></li><li><span>Persistence</span><strong>Reloading clears this preview.</strong></li></ol> : <ol className="audit-log"><li><span>Local state {activeRevision}</span><strong>Changed in this browser session</strong></li><li><span>Sample preview</span><strong>Illustrative counts · no production query</strong></li><li><span>Audit record</span><strong>None created</strong></li><li><span>Provider mail</span><strong>Not changed</strong></li></ol>}<section><span>Preview restore</span><h3>{revertReview ? `Restore local state ${Math.max(1, activeRevision - 1)}?` : "Changes only this local preview"}</h3><p>{revertReview ? "This updates local component state only. It does not create, rewrite, or preserve any server revision." : "This local preview skips the server. Production revert creates an audited compensating Change Set and reports newer-state conflicts."}</p>{revertReview ? <div className="trace-revert-actions"><button onClick={() => setRevertReview(false)} type="button">Cancel</button><button className="trace-revert-apply" onClick={revert} type="button">Restore local preview</button></div> : <button onClick={() => setRevertReview(true)} type="button">Review local restore</button>}</section></DesktopDrawer> : null}
   </section>;
 }

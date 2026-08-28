@@ -22,7 +22,9 @@ type CompileIntent = {
 
 export type TideCompileSuccess = {
   ruleId: string;
+  revisionId: string;
   ruleRevision: number;
+  workspaceSchemaRevision: number;
   workspaceRevision: number;
 };
 
@@ -176,7 +178,13 @@ export function TideTableEditor({ onCompiled, previewMode = false, request = def
       busyGeneration.current = null;
       const identity = { id: parsed.data.rule.id, revision: parsed.data.rule.latestRevision };
       rememberIdentity(identity);
-      onCompiled?.({ ruleId: identity.id, ruleRevision: identity.revision, workspaceRevision: parsed.data.revision.compiled.workspaceSchemaRevision + 1 });
+      onCompiled?.({
+        ruleId: identity.id,
+        revisionId: parsed.data.revision.id,
+        ruleRevision: identity.revision,
+        workspaceSchemaRevision: parsed.data.revision.compiled.workspaceSchemaRevision,
+        workspaceRevision: parsed.data.revision.compiled.workspaceSchemaRevision + 1,
+      });
       if (intent.generation !== generationRef.current && await continueQueued(identity)) return;
       if (intent.generation !== generationRef.current) {
         setState("editing");
