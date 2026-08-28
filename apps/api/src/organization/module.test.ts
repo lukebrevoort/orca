@@ -142,16 +142,16 @@ const ownerScope = {
 };
 
 describe("Organization module contract", () => {
-  test("describes the revision-3 schema without advertising an uninstalled apply adapter", () => {
+  test("describes the revision-4 schema without advertising an uninstalled apply adapter", () => {
     const organization = createOrganization(repository);
 
     const result = organization.describe({ scope: ownerScope });
 
     assert.deepEqual(result.workspaceSchema, {
-      revision: 3,
+      revision: 4,
       aggregate: "thread",
-      resources: ["account", "thread", "facet", "workflow_state", "context", "context_relationship"],
-      filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship"],
+      resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"],
+      filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"],
     });
     assert.deepEqual(result.capabilities.operations, {
       describe: true,

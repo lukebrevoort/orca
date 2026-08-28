@@ -173,6 +173,123 @@ export const organizationWorkspaceStates = sqliteTable(
   }),
 );
 
+export const organizationLanePolicies = sqliteTable(
+  "organization_lane_policies",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    visibility: text("visibility").notNull(),
+    interruption: text("interruption").notNull(),
+    review: text("review").notNull(),
+    retentionMode: text("retention_mode").notNull(),
+    retentionDays: integer("retention_days"),
+    providerDeletion: integer("provider_deletion", { mode: "boolean" }).notNull().default(false),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    revisionCheck: check("organization_lane_policies_revision_check", sql`${table.revision} >= 1`),
+    providerDeletionCheck: check("organization_lane_policies_provider_delete_check", sql`${table.providerDeletion} = 0`),
+  }),
+);
+
+export const organizationLanes = sqliteTable(
+  "organization_lanes",
+  {
+    workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    defaultPolicyId: text("default_policy_id").notNull(),
+    retiredAt: integer("retired_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.id] }),
+    workspacePolicyForeignKey: foreignKey({
+      columns: [table.workspaceId, table.defaultPolicyId],
+      foreignColumns: [organizationLanePolicies.workspaceId, organizationLanePolicies.id],
+      name: "organization_lanes_workspace_policy_fk",
+    }),
+    workspacePositionUniqueIdx: uniqueIndex("organization_lanes_workspace_position_unique_idx").on(table.workspaceId, table.position),
+    revisionCheck: check("organization_lanes_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationWorkspaceLaneSettings = sqliteTable(
+  "organization_workspace_lane_settings",
+  {
+    workspaceId: text("workspace_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    fallbackLaneId: text("fallback_lane_id").notNull(),
+    revision: integer("revision").notNull().default(1),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    fallbackForeignKey: foreignKey({
+      columns: [table.workspaceId, table.fallbackLaneId],
+      foreignColumns: [organizationLanes.workspaceId, organizationLanes.id],
+      name: "organization_workspace_lane_settings_fallback_fk",
+    }),
+    revisionCheck: check("organization_workspace_lane_settings_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+export const organizationThreadLaneStates = sqliteTable(
+  "organization_thread_lane_states",
+  {
+    workspaceId: text("workspace_id").notNull(),
+    accountId: text("account_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    primaryLaneId: text("primary_lane_id").notNull(),
+    placementSource: text("placement_source").notNull().default("workspace_fallback"),
+    sourceId: text("source_id").notNull(),
+    actorId: text("actor_id").notNull().default("system:workspace-fallback"),
+    actorType: text("actor_type").notNull().default("system"),
+    reason: text("reason").notNull(),
+    manualOverrideLaneId: text("manual_override_lane_id"),
+    manualOverrideActorId: text("manual_override_actor_id"),
+    manualOverrideActorType: text("manual_override_actor_type"),
+    manualOverrideReason: text("manual_override_reason"),
+    manualOverrideAt: integer("manual_override_at", { mode: "timestamp_ms" }),
+    safetyLocked: integer("safety_locked", { mode: "boolean" }).notNull().default(false),
+    safetyLockActorId: text("safety_lock_actor_id"),
+    safetyLockActorType: text("safety_lock_actor_type"),
+    safetyLockReason: text("safety_lock_reason"),
+    safetyLockUpdatedAt: integer("safety_lock_updated_at", { mode: "timestamp_ms" }),
+    revision: integer("revision").notNull().default(1),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    primaryKey: primaryKey({ columns: [table.workspaceId, table.accountId, table.threadId] }),
+    workspaceAccountForeignKey: foreignKey({
+      columns: [table.workspaceId, table.accountId],
+      foreignColumns: [oauthAccounts.userId, oauthAccounts.id],
+      name: "organization_thread_lane_states_workspace_account_fk",
+    }).onDelete("cascade"),
+    accountThreadForeignKey: foreignKey({
+      columns: [table.accountId, table.threadId],
+      foreignColumns: [threads.accountId, threads.id],
+      name: "organization_thread_lane_states_account_thread_fk",
+    }).onDelete("cascade"),
+    primaryLaneForeignKey: foreignKey({
+      columns: [table.workspaceId, table.primaryLaneId],
+      foreignColumns: [organizationLanes.workspaceId, organizationLanes.id],
+      name: "organization_thread_lane_states_primary_lane_fk",
+    }),
+    manualOverrideLaneForeignKey: foreignKey({
+      columns: [table.workspaceId, table.manualOverrideLaneId],
+      foreignColumns: [organizationLanes.workspaceId, organizationLanes.id],
+      name: "organization_thread_lane_states_manual_override_lane_fk",
+    }),
+    laneIdx: index("organization_thread_lane_states_lane_idx").on(table.workspaceId, table.primaryLaneId, table.accountId),
+    revisionCheck: check("organization_thread_lane_states_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
 export const organizationFacets = sqliteTable(
   "organization_facets",
   {

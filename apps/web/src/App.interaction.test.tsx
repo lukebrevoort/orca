@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act } from "react";
+import { StrictMode, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
@@ -140,12 +140,13 @@ function restoreDom() {
   browserWindow.close();
 }
 
-async function renderApp(preferences: ReaderPreferences = defaultReaderPreferences) {
+async function renderApp(preferences: ReaderPreferences = defaultReaderPreferences, strict = false) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
+  const app = <InboxApp demoMode preferences={preferences} theme="light" setTheme={() => {}} />;
   await act(async () => {
-    root!.render(<InboxApp demoMode preferences={preferences} theme="light" setTheme={() => {}} />);
+    root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
   return container;
 }
@@ -423,16 +424,78 @@ describe("Desktop evidence and navigation", () => {
 
     const row = messageRow("Mom");
     await act(async () => { row.click(); });
-    const readerTrigger = browserWindow.document.querySelector("button.reader-why-here") as unknown as HTMLButtonElement;
+    const readerTrigger = browserWindow.document.querySelector("button.thread-lane-why") as unknown as HTMLButtonElement;
     readerTrigger.setAttribute("data-focus-origin", "reader-evidence");
     readerTrigger.focus();
     await act(async () => { readerTrigger.click(); });
-    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).not.toBeNull();
+    const placementDialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]');
+    expect(placementDialog).not.toBeNull();
+    expect(placementDialog?.textContent).toContain("Winning source");
+    expect(placementDialog?.textContent).toContain("workspace fallback");
+    expect(placementDialog?.textContent).toContain("Precedence level");
+    expect(placementDialog?.textContent).toContain("Actor");
+    expect(placementDialog?.textContent).toContain("Reason");
     await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
     await act(async () => { flushAnimationFrames(); });
     expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
-    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Reader placement evidence"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]')).toBeNull();
     expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("reader-evidence");
+  });
+
+  test("applies a Manual Override and Safety Lock from the current Thread experience", async () => {
+    await renderApp();
+    await openMessage("Mom");
+    const trigger = browserWindow.document.querySelector("button.thread-lane-trigger") as unknown as HTMLButtonElement;
+    await act(async () => { trigger.click(); });
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
+    expect(dialog).not.toBeNull();
+    const focus = [...dialog.querySelectorAll(".thread-lane-options button")].find((button) => button.textContent?.includes("Focus")) as unknown as HTMLButtonElement;
+    await act(async () => { focus.click(); });
+    expect(trigger.textContent).toContain("Focus");
+    expect(focus.getAttribute("aria-pressed")).toBe("true");
+    const lock = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Lock placement") as unknown as HTMLButtonElement;
+    await act(async () => { lock.click(); });
+    expect(dialog.textContent).toContain("Locked by you");
+    expect([...dialog.querySelectorAll(".thread-lane-options button")].every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+    const close = dialog.querySelector('header button[aria-label="Close"]') as unknown as HTMLButtonElement;
+    await act(async () => { close.click(); });
+    const why = browserWindow.document.querySelector("button.thread-lane-why") as unknown as HTMLButtonElement;
+    await act(async () => { why.click(); });
+    const evidence = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread placement evidence"]');
+    expect(evidence?.textContent).toContain("manual override");
+    expect(evidence?.textContent).toContain("2 manual override");
+    expect(evidence?.textContent).toContain("demo-human");
+    expect(evidence?.textContent).toContain("Safety Lock active");
+  });
+
+  test("contains Lane drawer focus in both directions and restores the trigger after Escape", async () => {
+    await renderApp(defaultReaderPreferences, true);
+    await openMessage("Mom");
+    const trigger = browserWindow.document.querySelector("button.thread-lane-trigger") as unknown as HTMLButtonElement;
+    trigger.focus();
+
+    await act(async () => { trigger.click(); });
+    await act(async () => { flushAnimationFrames(); });
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
+    expect(dialog).not.toBeNull();
+    const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')];
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    first.setAttribute("data-focus-boundary", "first");
+    last.setAttribute("data-focus-boundary", "last");
+    trigger.setAttribute("data-focus-origin", "lane-trigger");
+
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-boundary")).toBe("first");
+    last.focus();
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })); });
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-boundary")).toBe("first");
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true })); });
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-boundary")).toBe("last");
+
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
+    await act(async () => { flushAnimationFrames(); });
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]')).toBeNull();
+    expect(browserWindow.document.activeElement?.getAttribute("data-focus-origin")).toBe("lane-trigger");
   });
 
   test("writes stable destinations and follows browser history", async () => {

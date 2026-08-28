@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type SyncStatus } from "@orca/shared";
+import { DesktopDrawer } from "./desktop-drawer";
+import { OrganizationLaneWorkspace } from "./organization-lanes";
+
+export { DesktopDrawer } from "./desktop-drawer";
 
 export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}`;
 
@@ -258,41 +262,6 @@ export function moveSpaceOrder(order: string[], draggedId: string, targetId: str
   return next;
 }
 
-export function DesktopDrawer({ ariaLabel, children, className = "", onClose }: { ariaLabel: string; children: ReactNode; className?: string; onClose: () => void }) {
-  const drawerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const drawer = drawerRef.current;
-    const focusableSelector = 'button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
-    drawer?.querySelector<HTMLElement>(focusableSelector)?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab" || !drawer) return;
-      const focusable = [...drawer.querySelectorAll<HTMLElement>(focusableSelector)];
-      if (!focusable.length) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown, true);
-      window.requestAnimationFrame(() => previous?.focus());
-    };
-  }, [onClose]);
-  return <div className="desktop-transient-layer" role="presentation">
-    <button aria-label={`Close ${ariaLabel}`} className="desktop-transient-backdrop" onClick={onClose} tabIndex={-1} type="button" />
-    <aside aria-label={ariaLabel} aria-modal="true" className={className} ref={drawerRef} role="dialog">{children}</aside>
-  </div>;
-}
-
 type OrganizationMode = "glass" | "tide";
 type SimulationState = "idle" | "running" | "ready" | "stale";
 
@@ -321,6 +290,7 @@ export function OrganizationStudio({ interactivePreview = false }: { interactive
   function activate() { if (!interactivePreview || simulation !== "ready") return; setActiveRevision((value) => value + 1); setSimulation("idle"); setStatus("Preview state changed for this local session. No revision was authorized, persisted, or audited."); setTraceTab("trace"); setTraceOpen(true); }
   function revert() { if (!interactivePreview) return; setActiveRevision((value) => value + 1); setRevertReview(false); setStatus("Local preview state restored. No server history or production behavior changed."); }
   return <section className="organization-studio" aria-labelledby="organization-title">
+    <OrganizationLaneWorkspace demoMode={interactivePreview} />
     <header className="organization-heading"><div><span>{interactivePreview ? `Organization UI preview · session ${activeRevision}` : "Organization · read-only"}</span><h1 id="organization-title">Production failures</h1><p>{interactivePreview ? "Local interaction preview for Focus · nothing is persisted" : "Workspace describe/query is available; mutation authority is not"}</p></div><div><button disabled={!interactivePreview} onClick={() => setTraceOpen(true)} type="button">{interactivePreview ? "Preview changes" : "History unavailable"}</button><button className="organization-primary" disabled={!interactivePreview} onClick={updateDraft} type="button">New rule</button></div></header>
     <div className="organization-grid"><section className="organization-editor"><nav aria-label="Rule authoring mode"><button aria-pressed={mode === "glass"} onClick={() => setMode("glass")} type="button">Glass Box</button><button aria-pressed={mode === "tide"} onClick={() => setMode("tide")} type="button">Tide Table</button></nav>
       {mode === "glass" ? <div className="glass-box"><label><span>When</span><textarea aria-label="When" defaultValue="A thread receives a new message" onChange={updateDraft} readOnly={!interactivePreview}/></label><i>→</i><label><span>If</span><textarea aria-label="If" defaultValue={'Sender is Vercel and subject contains “failed”'} onChange={updateDraft} readOnly={!interactivePreview}/></label><i>→</i><label><span>Then</span><textarea aria-label="Then" defaultValue="Move to Focus and notify immediately" onChange={updateDraft} readOnly={!interactivePreview}/></label><label className="glass-because"><span>Because</span><textarea aria-label="Because" defaultValue="A failed deploy blocks work and needs a human response" onChange={updateDraft} readOnly={!interactivePreview}/></label></div> : <label className="tide-table"><span>Advanced authoring · typed Orca language</span><textarea aria-label="Tide Table rule source" defaultValue={'rule production_failures on thread.message_received\n\nwhen sender.domain == "vercel.com"\n  and subject contains "failed"\n\nthen move thread to space("Focus")\n  notify immediately\n\nbecause "A failed deploy blocks work"\n\nauthority workspace.organization\nsafety never_hide'} onChange={updateDraft} readOnly={!interactivePreview}/></label>}

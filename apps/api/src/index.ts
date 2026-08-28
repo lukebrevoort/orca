@@ -132,6 +132,7 @@ import { createSqliteOrganizationRepository } from "./organization/sqlite-reposi
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
 import { registerOrganizationContextRoutes } from "./organization/contexts/routes.ts";
+import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
 import {
   OrganizationCollectionsPinsAccessError,
   OrganizationCollectionsPinsConflictError,
@@ -499,6 +500,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               }],
             } : {}),
             ...(c.req.query("workflowStateId") ? { workflowStateIds: [c.req.query("workflowStateId")] } : {}),
+            ...(c.req.query("laneId") ? { laneIds: [c.req.query("laneId")] } : {}),
             ...(contextId && contextTypeId && contextRelationshipTypeId ? { contextFilters: [{ context: { contextId, contextTypeId }, relationshipTypeId: contextRelationshipTypeId, ...(contextDirection ? { direction: contextDirection } : {}) }] } : {}),
             ...(limit ? { limit: Number(limit) } : {}),
             ...(c.req.query("cursor") ? { cursor: c.req.query("cursor") } : {}),
@@ -549,6 +551,12 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             : error.code === "invalid_request" || error.code === "idempotency_key_required" || error.code === "expected_revision_required" ? 400
               : 403;
           return c.json({ error: { code: error.code, message: error.message } }, status);
+        }
+        if (error instanceof OrganizationLaneValidationError) {
+          return c.json({ error: { code: error.code, message: error.message } }, 400);
+        }
+        if (error instanceof OrganizationSafetyLockError) {
+          return c.json({ error: { code: error.code, message: error.message } }, 409);
         }
         if (error instanceof Error && error.name === "ZodError") {
           const issues = "issues" in error ? error.issues : [];

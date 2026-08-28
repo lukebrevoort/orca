@@ -97,6 +97,8 @@ export * from "./organization-collections-pins.ts";
 export * from "./organization-collections-pins-fixtures.ts";
 export * from "./organization-contexts.ts";
 export * from "./organization-contexts-fixtures.ts";
+export * from "./organization-lanes.ts";
+export * from "./organization-lanes-fixtures.ts";
 
 export {
   organizationCapabilitiesSchema,
