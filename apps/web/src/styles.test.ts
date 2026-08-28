@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
 
 const styles = await Bun.file(new URL("./styles.css", import.meta.url)).text();
+const desktopStyles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
+const organizationLaneStyles = await Bun.file(new URL("./organization-lanes.css", import.meta.url)).text();
 
 function cssRuleWithDeclaration(selector: string, declaration: string) {
   const start = styles.lastIndexOf(`${selector} { ${declaration}`);
@@ -85,6 +87,27 @@ describe("long message subjects", () => {
     expect(styles).toContain("padding-right: 340px;");
     expect(styles).toContain("padding-bottom: 54px;");
     expect(styles).toContain("@media (max-width: 360px)");
+  });
+});
+
+describe("M8 desktop presentation regressions", () => {
+  test("gives Later its own non-overlapping action rail", () => {
+    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-row { padding-right: 430px; }");
+    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-evidence-button { right: 298px;");
+    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .message-row-wrap > .sender-attention-control { right: 254px;");
+    expect(desktopStyles).toContain(".desktop-shell .inbox-view-later .later-row-actions { right: 12px;");
+    expect(desktopStyles).toContain("width: 230px;");
+    expect(desktopStyles).toContain("@media (max-width: 1100px) and (min-width: 761px)");
+  });
+
+  test("keeps the reader return control inside the reader surface", () => {
+    expect(desktopStyles).toContain(".desktop-shell .message-reader { position: relative; }");
+    expect(desktopStyles).toContain(".desktop-shell .reader-nav { left: 28px; position: absolute; top: 28px;");
+  });
+
+  test("uses a light theme scrim and preserves a darker Black scrim", () => {
+    expect(organizationLaneStyles).toContain("background: color-mix(in srgb, var(--desktop-paper) 72%, transparent);");
+    expect(organizationLaneStyles).toContain(':root[data-theme="dark"] .thread-lane-backdrop { background: rgba(0, 0, 0, .56); }');
   });
 });
 

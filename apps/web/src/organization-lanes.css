@@ -28,3 +28,8 @@
 :root[data-theme="dark"] .lane-card-selected,:root[data-theme="dark"] .thread-lane-options button[aria-pressed="true"],:root[data-theme="dark"] .thread-safety-lock button[aria-pressed="true"] { background:var(--desktop-surface-hover); border-color:var(--desktop-border-strong); color:var(--desktop-ink); box-shadow:inset 3px 0 var(--desktop-accent); }
 @media(max-width:1100px){.lane-workspace-grid{grid-template-columns:1fr}.lane-policy-panel{position:static}.lane-card{grid-template-columns:1fr}.lane-card-actions{padding:0 8px 6px}.lane-workspace>header{align-items:start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.thread-lane-drawer{animation:none}}
+
+/* M8 review repair: wash out the reading surface in Light; reserve the deep
+   scrim for Black. The drawer itself stays fully opaque in either theme. */
+.thread-lane-backdrop { background: color-mix(in srgb, var(--desktop-paper) 72%, transparent); }
+:root[data-theme="dark"] .thread-lane-backdrop { background: rgba(0, 0, 0, .56); }
