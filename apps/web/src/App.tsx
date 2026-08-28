@@ -1050,6 +1050,12 @@ export function InboxApp({
     : {});
   const [organizationOpen, setOrganizationOpen] = useState(false);
   const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("destination") === "organization");
+  const bre320EvidenceState = useMemo(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") return null;
+    const requested = new URLSearchParams(window.location.search).get("bre320Evidence");
+    const states = ["ready", "loading", "unavailable", "no_access", "offline", "transaction_failure", "conflict", "active", "reverted"] as const;
+    return states.find((state) => state === requested) ?? null;
+  }, []);
   const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
@@ -2535,7 +2541,7 @@ export function InboxApp({
             theme={theme}
             title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
-          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}

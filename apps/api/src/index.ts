@@ -147,6 +147,10 @@ import { createSqliteRuleRevisionRepository } from "./organization/rules/sqlite-
 import { createHistoricalRuleSimulationService } from "./organization/rules/simulation.ts";
 import { createSqliteHistoricalRuleSimulationRepository } from "./organization/rules/simulation-sqlite.ts";
 import {
+  agentCorrectionCapabilityAdapter,
+  correctOrganizationThread,
+} from "./organization/rules/correction.ts";
+import {
   createSqliteRuleChangeSetService,
   type McpOrganizationApprovalGrant,
   type RuleChangeSetCapabilitySource,
@@ -460,6 +464,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         } else if (query.target.kind === "rule_revision") {
           result = createRuleRevisionService(createSqliteRuleRevisionRepository(db), { agentCapabilitySource }).compile({ actor, workspaceId: userId, accountIds: [...allowedAccountIds], request: query.target.request });
           if (result && typeof result === "object" && "ok" in result && result.ok && "revision" in result) risk = (result.revision as { compiled: { risk: typeof risk } }).compiled.risk;
+        } else if (query.target.kind === "thread_correction") {
+          const capabilityAdapter = agentCorrectionCapabilityAdapter({
+            actor, workspaceId: userId, accountId: query.target.request.accountId, source: agentCapabilitySource,
+          });
+          result = correctOrganizationThread(db, {
+            actor, workspaceId: userId, request: query.target.request, capabilityAdapter, now: now(),
+          });
+          risk = "low";
         } else {
           const capabilitySource = ruleChangeSetCapabilitySourceFor(agentCapabilitySource, actor, allowedAccountIds);
           const capability = capabilitySource.load(db, { workspaceId: userId });
@@ -482,15 +494,22 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
         const resultRecord = result && typeof result === "object" ? result as Record<string, unknown> : {};
         const idempotencyKey = query.target.request.idempotencyKey;
-        const persistedChangeSet = db.select({ id: organizationChangeSets.id, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
-          eq(organizationChangeSets.workspaceId, userId),
-          eq(organizationChangeSets.idempotencyKey, idempotencyKey),
-        )).get();
+        const correctionChangeSetId = query.target.kind === "thread_correction" && resultRecord.changeSetId !== null
+          ? String(resultRecord.changeSetId) : null;
+        const persistedChangeSet = correctionChangeSetId
+          ? db.select({ id: organizationChangeSets.id, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+            eq(organizationChangeSets.workspaceId, userId), eq(organizationChangeSets.id, correctionChangeSetId),
+          )).get()
+          : db.select({ id: organizationChangeSets.id, authorityTrace: organizationChangeSets.authorityTrace }).from(organizationChangeSets).where(and(
+            eq(organizationChangeSets.workspaceId, userId), eq(organizationChangeSets.idempotencyKey, idempotencyKey),
+          )).get();
         const rejected = query.target.kind === "rule_revision" && resultRecord.ok === false;
-        if (!rejected && !persistedChangeSet) throw new Error(`Successful ${query.target.kind} mutation did not persist its Change Set`);
-        const resourceFamilies = persistedChangeSet
-          ? organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies
-          : ["rule" as const];
+        if (!rejected && !persistedChangeSet && query.target.kind !== "thread_correction") throw new Error(`Successful ${query.target.kind} mutation did not persist its Change Set`);
+        const resourceFamilies = query.target.kind === "thread_correction"
+          ? ["thread" as const, "trace" as const, "change_set" as const, "audit" as const]
+          : persistedChangeSet
+            ? organizationAuthorityTraceSchema.parse(JSON.parse(persistedChangeSet.authorityTrace)).requestedResourceFamilies
+            : ["rule" as const];
         return { operation: "apply" as const, workspaceId: userId, accountIds: [...allowedAccountIds], targetKind: query.targetKind, resourceFamilies, actor, capabilityId, expectedWorkspaceRevision: query.expectedWorkspaceRevision, risk, changeSetIds: { applied: persistedChangeSet ? [persistedChangeSet.id] : [], rejected: [] }, result };
       } catch (error) {
         recordOrganizationMutationAttempt({

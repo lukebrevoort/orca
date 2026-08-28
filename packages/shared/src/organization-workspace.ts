@@ -90,6 +90,14 @@ export const organizationCapabilitiesSchema = z.object({
     sendMail: z.literal(false),
     deleteProviderMail: z.literal(false),
   }).strict(),
+  surfaces: z.object({
+    rest: z.object({
+      describe: z.boolean(), query: z.boolean(), simulate: z.boolean(), apply: z.boolean(), revert: z.boolean(), correct: z.boolean(),
+    }).strict(),
+    mcp: z.object({
+      describe: z.boolean(), query: z.boolean(), simulate: z.boolean(), apply: z.boolean(), revert: z.boolean(), correct: z.boolean(),
+    }).strict(),
+  }).strict(),
 }).strict();
 export type OrganizationCapabilities = z.infer<typeof organizationCapabilitiesSchema>;
 

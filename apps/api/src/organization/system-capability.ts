@@ -2,7 +2,7 @@ import type { OrganizationCapabilitySnapshot } from "@orca/shared";
 
 export type OrganizationSystemCapabilityAdapter = {
   snapshot(input: { workspaceId: string; accountId: string }): OrganizationCapabilitySnapshot;
-  live(input: { workspaceId: string; accountId: string }): {
+  live(input: { workspaceId: string; accountId: string; executor?: unknown }): {
     snapshot: OrganizationCapabilitySnapshot;
     revokedAt: string | null;
   };

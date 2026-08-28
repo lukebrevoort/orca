@@ -134,6 +134,7 @@ export function createHistoricalRuleSimulationService(repository: HistoricalRule
       const facetCounts = new Map<string, number>();
       const losingRuleCounts = new Map<string, number>();
       const representativeThreads: OrcaHistoricalSimulationResponse["representativeThreads"] = [];
+      const reviews: NonNullable<OrcaHistoricalSimulationResponse["reviews"]> = [];
       const conflicts: OrcaHistoricalSimulationResponse["conflicts"] = [];
       let affectedThreads = 0;
       let candidateActions = 0;
@@ -221,6 +222,11 @@ export function createHistoricalRuleSimulationService(repository: HistoricalRule
             conflictCount: threadConflicts.length,
             traceId: result.trace.id,
           });
+          reviews.push({
+            accountId: context.thread.accountId,
+            threadId: context.thread.id,
+            trace: result.trace,
+          });
         }
       }
 
@@ -269,7 +275,7 @@ export function createHistoricalRuleSimulationService(repository: HistoricalRule
       };
       const simulationId = `sha256:${createHash("sha256").update(canonicalOrganizationJson(unsigned)).digest("hex")}`;
       return {
-        report: orcaHistoricalSimulationResponseSchema.parse({ simulationId, ...unsigned }),
+        report: orcaHistoricalSimulationResponseSchema.parse({ simulationId, ...unsigned, reviews }),
         evaluations,
       };
   };

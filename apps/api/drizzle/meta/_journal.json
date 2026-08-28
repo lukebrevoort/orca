@@ -239,6 +239,13 @@
       "when": 1787756400000,
       "tag": "0033_g2_authority_concurrency",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1787760000000,
+      "tag": "0034_user_correction_receipts",
+      "breakpoints": true
     }
   ]
 }

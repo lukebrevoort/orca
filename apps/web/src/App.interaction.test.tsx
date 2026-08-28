@@ -449,6 +449,7 @@ describe("Desktop evidence and navigation", () => {
     await act(async () => { trigger.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
     expect(dialog).not.toBeNull();
+    expect(dialog.parentElement?.parentElement?.tagName).toBe("BODY");
     const focus = [...dialog.querySelectorAll(".thread-lane-options button")].find((button) => button.textContent?.includes("Focus")) as unknown as HTMLButtonElement;
     await act(async () => { focus.click(); });
     expect(trigger.textContent).toContain("Focus");

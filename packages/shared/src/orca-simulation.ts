@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { orcaRuleRiskSchema } from "./orca-language.ts";
+import { orcaEvaluationTraceSchema, orcaRuleRiskSchema } from "./orca-language.ts";
 
 const identifierSchema = z.string().trim().min(1).max(200);
 const digestSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
@@ -66,6 +66,11 @@ export const orcaHistoricalSimulationResponseSchema = z.object({
     conflictCount: z.number().int().nonnegative(),
     traceId: identifierSchema,
   }).strict()).max(20),
+  reviews: z.array(z.object({
+    accountId: identifierSchema,
+    threadId: identifierSchema,
+    trace: orcaEvaluationTraceSchema,
+  }).strict()).max(20).optional(),
   conflicts: z.array(z.object({
     accountId: identifierSchema,
     threadId: identifierSchema,

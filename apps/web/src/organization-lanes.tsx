@@ -5,6 +5,7 @@ import {
   organizationLaneApplyResponseSchema,
   organizationLaneConfigurationFixture,
   organizationQueryResponseSchema,
+  orcaThreadCorrectionResponseSchema,
   type Lane,
   type LanePolicy,
   type OrganizationLaneAction,
@@ -176,6 +177,7 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
   const [state, setState] = useState<LoadState>(demoMode ? "ready" : "loading");
   const [drawer, setDrawer] = useState<"controls" | "evidence" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [correctionEvidence, setCorrectionEvidence] = useState<string | null>(null);
 
   useEffect(() => {
     if (demoMode) { setPlacement(demoPlacement(accountId, threadId)); return; }
@@ -206,6 +208,38 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Nothing changed"); setState("error"); }
   }
 
+  async function correct() {
+    if (!configuration || !placement || state === "saving") return;
+    setState("saving"); setError(null); setCorrectionEvidence(null);
+    try {
+      if (demoMode) {
+        setCorrectionEvidence(`user.corrected · demo Trace · ${placement.evidence.sourceId} remains the exact winner`);
+      } else {
+        const idempotencyKey = `web:thread-correction:${nextId()}`;
+        const result = orcaThreadCorrectionResponseSchema.parse(await readJson(`/v1/organization/threads/${encodeURIComponent(threadId)}/correct`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            accountId,
+            threadId,
+            expectedWorkspaceRevision: configuration.workspaceRevision,
+            expectedThreadRevision: placement.revision,
+            idempotencyKey,
+            reason: "Human recorded a correction from the Thread reader and requested deterministic re-evaluation.",
+          }),
+        }));
+        const refreshed = organizationQueryResponseSchema.parse(await readJson(`/v1/organization/query?accountId=${encodeURIComponent(accountId)}&threadId=${encodeURIComponent(threadId)}&attention=all&classification=all&limit=1`));
+        const thread = refreshed.threads[0];
+        if (!thread) throw new Error("Corrected Thread placement is unavailable");
+        setConfiguration(refreshed.laneConfiguration);
+        setPlacement(thread.organization.lanePlacement);
+        const laneWinner = result.trace.winners.find((winner) => winner.slot === "lane") ?? result.trace.winners[0];
+        setCorrectionEvidence(`${result.eventKind} · Trace ${result.trace.id} · winner ${laneWinner?.candidateId ?? "no projected change"}`);
+      }
+      setState("ready");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Correction was not recorded"); setState("error"); }
+  }
+
   return <div className="thread-lane-controls">
     <button aria-expanded={drawer === "controls"} className="thread-lane-trigger" disabled={!placement} onClick={() => setDrawer("controls")} type="button"><span>Lane</span><strong>{lane?.name ?? (state === "loading" ? "Loading…" : "Unavailable")}</strong></button>
     <button aria-expanded={drawer === "evidence"} className="thread-lane-why" disabled={!placement} onClick={() => setDrawer("evidence")} type="button">Why is this here?</button>
@@ -215,6 +249,7 @@ export function ThreadLaneControls({ accountId, threadId, demoMode = false }: { 
         <div className="thread-lane-options" role="group" aria-label="Manual Override Lane">{configuration.lanes.filter((item) => !item.retiredAt).map((item) => <button aria-pressed={placement.primaryLaneId === item.id} disabled={state === "saving" || placement.safetyLock.locked} key={item.id} onClick={() => void apply({ kind: "set_thread_manual_override", accountId, threadId, laneId: item.id, reason: `Human selected ${item.name} from the Thread reader.`, expectedThreadRevision: placement.revision })} type="button"><span>{item.name}</span><small>{item.id === configuration.fallbackLaneId ? "Workspace Fallback" : "Manual Override"}</small></button>)}</div>
         <button className="thread-clear-override" disabled={state === "saving" || placement.safetyLock.locked || !placement.manualOverride} onClick={() => void apply({ kind: "set_thread_manual_override", accountId, threadId, laneId: null, reason: "Human cleared the Manual Override from the Thread reader.", expectedThreadRevision: placement.revision })} type="button">Clear Manual Override</button>
         <section className="thread-safety-lock"><div><span>Safety Lock</span><strong>{placement.safetyLock.locked ? "Locked by you" : "Changes allowed"}</strong><p>Prevents Orca rules and Manual Overrides from changing this Thread’s Lane until you unlock it.</p></div><button aria-pressed={placement.safetyLock.locked} disabled={state === "saving"} onClick={() => void apply({ kind: "set_thread_safety_lock", accountId, threadId, locked: !placement.safetyLock.locked, reason: placement.safetyLock.locked ? "Human unlocked the Thread after review." : "Human protected this Thread placement from organizational changes.", expectedThreadRevision: placement.revision })} type="button">{placement.safetyLock.locked ? "Unlock" : "Lock placement"}</button></section>
+        <section className="thread-correction"><div><span>Production correction</span><strong>Record user.corrected</strong><p>Re-evaluates through the same Rule, precedence, Safety Lock, projection, Trace, and audit path. It never sends or deletes provider mail.</p></div><button disabled={state === "saving"} onClick={() => void correct()} type="button">{state === "saving" ? "Recording…" : "Record correction"}</button>{correctionEvidence ? <p role="status">{correctionEvidence}</p> : null}</section>
       </> : placement ? <div className="thread-evidence-grid"><section><span>Winning source</span><h3>{placement.evidence.winningSource.replaceAll("_", " ")}</h3><p>Source identity · {placement.evidence.sourceId}</p></section><section><span>Precedence level</span><h3>{placement.evidence.precedenceLevel.replaceAll("_", " ")}</h3><p>Safety Lock → Manual Override → Rule → Lane Policy → Workspace Fallback.</p></section><section><span>Actor</span><h3>{placement.evidence.actor.type} · {placement.evidence.actor.id}</h3><p>The accountable identity behind the winning decision.</p></section><section><span>Reason</span><h3>{placement.evidence.reason}</h3><p>Primary Lane · {lane?.name ?? placement.primaryLaneId}</p></section>{placement.safetyLock.locked ? <section className="thread-evidence-lock"><span>Safety Lock active</span><h3>{placement.safetyLock.reason}</h3><p>{placement.safetyLock.actor?.type} · {placement.safetyLock.actor?.id}</p></section> : null}</div> : null}
       <footer><span>Account scope · {accountId.slice(0, 12)}</span><strong>Provider mail is never moved or deleted.</strong></footer>
     </DesktopDrawer> : null}

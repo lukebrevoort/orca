@@ -45,6 +45,7 @@ import {
   orcaRuleRevertRequestSchema,
 } from "./orca-simulation.ts";
 import { orcaRuleCompileRequestSchema, orcaRuleRiskSchema } from "./orca-language.ts";
+import { orcaThreadCorrectionRequestSchema } from "./orca-correction.ts";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
 const isoDateTimeStringSchema = z.string().datetime({ offset: false });
@@ -128,6 +129,7 @@ const mcpApplyTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("collection"), request: organizationCollectionPinApplyRequestSchema }).strict(),
   z.object({ kind: z.literal("context"), request: organizationContextApplyRequestSchema }).strict(),
   z.object({ kind: z.literal("rule_revision"), request: orcaRuleCompileRequestSchema }).strict(),
+  z.object({ kind: z.literal("thread_correction"), request: orcaThreadCorrectionRequestSchema }).strict(),
   z.object({
     kind: z.literal("rule_change_set"),
     request: orcaRuleActivationRequestSchema,
@@ -135,7 +137,7 @@ const mcpApplyTargetSchema = z.discriminatedUnion("kind", [
   }).strict(),
 ]);
 const mcpApplyTargetKindSchema = z.enum([
-  "lanes", "facets_workflow", "view_create", "view_update", "collection", "context", "rule_revision", "rule_change_set",
+  "lanes", "facets_workflow", "view_create", "view_update", "collection", "context", "rule_revision", "thread_correction", "rule_change_set",
 ]);
 
 export const mcpApplyOrganizationInputSchema = mcpOrganizationScopeSchema.extend({

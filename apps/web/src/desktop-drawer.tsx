@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 const focusableSelector = 'button:not([disabled]),a[href],input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -10,7 +11,7 @@ export function DesktopDrawer({ ariaLabel, backdropClassName = "desktop-transien
   layerClassName?: string;
   onClose: () => void;
 }) {
-  const drawerRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const restoreFrameRef = useRef<number | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -57,8 +58,9 @@ export function DesktopDrawer({ ariaLabel, backdropClassName = "desktop-transien
     };
   }, [onClose]);
 
-  return <div className={layerClassName} role="presentation">
+  const layer = <div className={layerClassName} role="presentation">
     <button aria-label={`Close ${ariaLabel}`} className={backdropClassName} onClick={onClose} tabIndex={-1} type="button" />
-    <aside aria-label={ariaLabel} aria-modal="true" className={className} ref={drawerRef} role="dialog">{children}</aside>
+    <div aria-label={ariaLabel} aria-modal="true" className={className} ref={drawerRef} role="dialog">{children}</div>
   </div>;
+  return typeof document === "undefined" ? layer : createPortal(layer, document.body);
 }

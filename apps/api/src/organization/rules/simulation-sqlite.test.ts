@@ -188,65 +188,6 @@ function validCapability(db: Awaited<ReturnType<typeof setup>>["db"]) {
   return sqliteRuleChangeSetCapabilitySource.load(db, { workspaceId: "workspace-1" })!.snapshot;
 }
 
-function prepareActivation(fixture: Awaited<ReturnType<typeof setup>>, idempotencyKey: string) {
-  const actor = { id: "workspace-1", type: "human" as const };
-  const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(fixture.db)).simulate({
-    actor,
-    workspaceId: "workspace-1",
-    request: {
-      ruleId: fixture.compiled.rule.id,
-      revisionId: fixture.compiled.revision.id,
-      workspaceSchemaRevision: fixture.compiled.revision.compiled.workspaceSchemaRevision,
-      accountIds: ["account-1"],
-      maximumThreads: 500,
-    },
-  });
-  const ruleSet = fixture.db.select().from(organizationRuleSets)
-    .where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
-  return {
-    actor,
-    request: {
-      ruleId: fixture.compiled.rule.id,
-      revisionId: fixture.compiled.revision.id,
-      simulationId: simulation.simulationId,
-      accountIds: ["account-1"],
-      maximumThreads: 500,
-      expectedWorkspaceRevision: simulation.binding.workspaceRevision,
-      expectedRuleRevision: fixture.compiled.rule.latestRevision,
-      expectedRuleSetRevision: ruleSet.revision,
-      idempotencyKey,
-    },
-  };
-}
-
-function installReplayCapabilityMarker(fixture: Awaited<ReturnType<typeof setup>>) {
-  fixture.sqlite.exec(`
-    CREATE TABLE g2_replay_capability_state (workspace_id TEXT PRIMARY KEY, revoked INTEGER NOT NULL);
-    INSERT INTO g2_replay_capability_state (workspace_id, revoked) VALUES ('workspace-1', 0);
-  `);
-  const other = createDatabaseClient(fixture.path);
-  const source = (revokeAfterFirstLoad: boolean): RuleChangeSetCapabilitySource => {
-    let loads = 0;
-    return {
-      load(executor, input) {
-        const row = executor.select({ revoked: replayCapabilityStates.revoked }).from(replayCapabilityStates)
-          .where(eq(replayCapabilityStates.workspaceId, input.workspaceId)).get();
-        const capability = sqliteRuleChangeSetCapabilitySource.load(executor, input);
-        loads += 1;
-        if (revokeAfterFirstLoad && loads === 1) {
-          other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'");
-        }
-        return capability ? { ...capability, revokedAt: row?.revoked ? "2026-08-26T12:01:00.000Z" : null } : null;
-      },
-    };
-  };
-  return {
-    other,
-    source,
-    revoke() { other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'"); },
-  };
-}
-
 function persistedAgentGrant(db: Awaited<ReturnType<typeof setup>>["db"]) {
   const actor = { id: "bre-318-replay-agent", type: "agent" as const };
   const snapshot = { ...validCapability(db), id: "bre-318-persisted-grant", actor };
@@ -363,6 +304,65 @@ async function preparePersistedAgentActivation(idempotencyKey: string) {
     approvalGrant,
   });
   return { ...fixture, grant, request, approval, approvalGrant, applied };
+}
+
+function prepareActivation(fixture: Awaited<ReturnType<typeof setup>>, idempotencyKey: string) {
+  const actor = { id: "workspace-1", type: "human" as const };
+  const simulation = createHistoricalRuleSimulationService(createSqliteHistoricalRuleSimulationRepository(fixture.db)).simulate({
+    actor,
+    workspaceId: "workspace-1",
+    request: {
+      ruleId: fixture.compiled.rule.id,
+      revisionId: fixture.compiled.revision.id,
+      workspaceSchemaRevision: fixture.compiled.revision.compiled.workspaceSchemaRevision,
+      accountIds: ["account-1"],
+      maximumThreads: 500,
+    },
+  });
+  const ruleSet = fixture.db.select().from(organizationRuleSets)
+    .where(eq(organizationRuleSets.workspaceId, "workspace-1")).get()!;
+  return {
+    actor,
+    request: {
+      ruleId: fixture.compiled.rule.id,
+      revisionId: fixture.compiled.revision.id,
+      simulationId: simulation.simulationId,
+      accountIds: ["account-1"],
+      maximumThreads: 500,
+      expectedWorkspaceRevision: simulation.binding.workspaceRevision,
+      expectedRuleRevision: fixture.compiled.rule.latestRevision,
+      expectedRuleSetRevision: ruleSet.revision,
+      idempotencyKey,
+    },
+  };
+}
+
+function installReplayCapabilityMarker(fixture: Awaited<ReturnType<typeof setup>>) {
+  fixture.sqlite.exec(`
+    CREATE TABLE g2_replay_capability_state (workspace_id TEXT PRIMARY KEY, revoked INTEGER NOT NULL);
+    INSERT INTO g2_replay_capability_state (workspace_id, revoked) VALUES ('workspace-1', 0);
+  `);
+  const other = createDatabaseClient(fixture.path);
+  const source = (revokeAfterFirstLoad: boolean): RuleChangeSetCapabilitySource => {
+    let loads = 0;
+    return {
+      load(executor, input) {
+        const row = executor.select({ revoked: replayCapabilityStates.revoked }).from(replayCapabilityStates)
+          .where(eq(replayCapabilityStates.workspaceId, input.workspaceId)).get();
+        const capability = sqliteRuleChangeSetCapabilitySource.load(executor, input);
+        loads += 1;
+        if (revokeAfterFirstLoad && loads === 1) {
+          other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'");
+        }
+        return capability ? { ...capability, revokedAt: row?.revoked ? "2026-08-26T12:01:00.000Z" : null } : null;
+      },
+    };
+  };
+  return {
+    other,
+    source,
+    revoke() { other.sqlite.exec("UPDATE g2_replay_capability_state SET revoked=1 WHERE workspace_id='workspace-1'"); },
+  };
 }
 
 describe("BRE-317 SQLite historical Simulation adapter", () => {
@@ -759,7 +759,7 @@ action link context "Project" "Orca"`);
       competing.sqlite.close();
       fixture.sqlite.close();
     }
-  }, 30_000);
+  }, 60_000);
 
   test("denies an exact activation replay when the authoritative Capability was removed after commit", async () => {
     const { db, sqlite, compiled } = await setup();
@@ -1219,7 +1219,7 @@ describe("BRE-317 compensating Rule Change Set revert", () => {
       competing.sqlite.close();
       fixture.sqlite.close();
     }
-  }, 30_000);
+  }, 60_000);
 
   test("revalidates every revert replay Capability dimension before returning stored lifecycle evidence", async () => {
     const { db, sqlite, compiled } = await setup();

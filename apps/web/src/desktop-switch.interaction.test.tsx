@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture } from "@orca/shared";
+import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
+import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
 import { OrganizationStudio } from "./desktop-switch";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLTextAreaElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -11,6 +13,7 @@ const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOw
 const originalFetch = globalThis.fetch;
 let browserWindow: InstanceType<typeof Window>;
 let root: Root | null;
+const reviewTrace = evaluateOrcaRules(reviewerEvaluationInput()).trace;
 
 beforeEach(() => {
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox?destination=organization" });
@@ -76,7 +79,14 @@ function describeResponse(workspaceRevision: number) {
     workspaceId: "workspace-demo",
     accountIds: ["account-demo"],
     workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
-    capabilities: { operations: { describe: true, query: true, simulate: false, apply: true, revert: false }, authority: { sendMail: false, deleteProviderMail: false } },
+    capabilities: {
+      operations: { describe: true, query: true, simulate: true, apply: true, revert: true },
+      surfaces: {
+        rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true },
+        mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false },
+      },
+      authority: { sendMail: false, deleteProviderMail: false },
+    },
     workspaceRevision,
     facetDefinitions: [],
     workflowStates: [],
@@ -110,7 +120,14 @@ describe("OrganizationStudio integration", () => {
         counts: { evaluatedThreads: 2418, affectedThreads: 14, candidateActions: 17, conflicts: simulationCalls === 1 ? 1 : 0 },
         laneChanges: [{ fromLaneId: "lane-everything", toLaneId: "lane-focus", count: 14 }],
         facetChanges: [],
-        representativeThreads: [{ accountId: "account-demo", threadId: "thread-failure", subject: "Production checkout failed", lane: { before: "lane-everything", after: "lane-focus" }, facets: [], conflictCount: 0, traceId: "trace-failure" }],
+        representativeThreads: [
+          { accountId: "account-demo", threadId: "thread-failure", subject: "Production checkout failed", lane: { before: "lane-everything", after: "lane-focus" }, facets: [], conflictCount: simulationCalls === 1 ? 1 : 0, traceId: reviewTrace.id },
+          { accountId: "account-demo", threadId: "thread-live-failure", subject: "Later production deploy failed", lane: { before: "lane-everything", after: "lane-focus" }, facets: [], conflictCount: 0, traceId: reviewTrace.id },
+        ],
+        reviews: [
+          { accountId: "account-demo", threadId: "thread-failure", trace: reviewTrace },
+          { accountId: "account-demo", threadId: "thread-live-failure", trace: { ...structuredClone(reviewTrace), id: "evaluation:live-review", event: { ...structuredClone(reviewTrace.event), id: "event-live-review", threadId: "thread-live-failure" } } },
+        ],
         conflicts: simulationCalls === 1 ? [{ accountId: "account-demo", threadId: "thread-failure", slot: "lane", winningCandidateId: "candidate-manual", losingCandidateIds: ["candidate-rule"] }] : [], losingRules: [], risk: "medium",
         attentionImpact: { notifications: 3, interruptionsSuppressed: 0, estimatedMinutesSaved: 6 },
       });
@@ -120,9 +137,14 @@ describe("OrganizationStudio integration", () => {
         revertsChangeSetId: null, workspaceRevisionBefore: 8, workspaceRevisionAfter: 9, ruleSetRevisionAfter: 2, traceCount: 1, risk: "medium", conflicts: [],
       });
       if (url === "/v1/organization/change-sets/change-active") return Response.json({
-        changeSet: { id: "change-active", operation: "apply", status: "active", risk: "medium", workspaceRevisionBefore: 8, workspaceRevisionAfter: 9 },
-        trace: [{ id: "trace-failure" }], actions: [{ position: 0, kind: "activate_rule_revision", resourceFamily: "rule", resourceId: "rule-production-failures" }],
+        changeSet: { id: "change-active", operation: "apply", status: "active", simulationId, risk: "medium", revertsChangeId: null, revertedByChangeId: null, workspaceRevisionBefore: 8, workspaceRevisionAfter: 9, authorityTrace: { decision: "approved", actor: "human-demo" }, createdAt: "2026-08-26T12:05:00.000Z" },
+        trace: [reviewTrace], actions: [{ position: 0, kind: "activate_rule_revision", resourceFamily: "rule", resourceId: "rule-production-failures", before: null, after: { revisionId: "rule-revision-1" } }],
         inverse: { threads: [{ threadId: "thread-failure" }] }, resultingRevisions: { workspace: 9 },
+      });
+      if (url === "/v1/organization/change-sets/change-revert") return Response.json({
+        changeSet: { id: "change-revert", operation: "revert", status: "active", simulationId, risk: "medium", revertsChangeId: "change-active", revertedByChangeId: null, workspaceRevisionBefore: 9, workspaceRevisionAfter: 10, authorityTrace: { decision: "approved", actor: "human-demo" }, createdAt: "2026-08-26T12:06:00.000Z" },
+        trace: [reviewTrace], actions: [{ position: 0, kind: "restore_thread", resourceFamily: "thread", resourceId: "thread-failure", before: { lane: "lane-focus" }, after: { lane: "lane-everything" } }],
+        inverse: { reapply: "change-active" }, resultingRevisions: { workspace: 10 },
       });
       if (url === "/v1/organization/change-sets/change-active/revert") return Response.json({
         changeSetId: "change-revert", status: "reverted", operation: "revert", ruleId: "rule-production-failures", revisionId: "rule-revision-1", simulationId,
@@ -146,16 +168,25 @@ describe("OrganizationStudio integration", () => {
     await click(button(container, "Simulate history"));
     await flush(); await flush();
     expect(container.querySelector('[data-lifecycle-state="conflicted"]')).not.toBeNull();
+    expect(container.querySelector('[data-operation-state="conflict"]')).not.toBeNull();
+    expect(container.textContent).toContain("candidate-manual");
 
     await click(button(container, "Simulate history"));
     await flush(); await flush();
     expect(container.querySelector('[data-lifecycle-state="simulated"]')).not.toBeNull();
     expect(container.textContent).toContain("2,418");
+    expect(container.textContent).toContain("Production checkout failed");
+    expect(container.textContent).toContain("Later production deploy failed");
+    expect(container.textContent).toContain("Exact winner");
+    expect(container.textContent).toContain("Losers");
 
     await click(button(container, "Activate Change Set"));
     await flush(); await flush();
     expect(container.querySelector('[data-lifecycle-state="active"]')).not.toBeNull();
     expect(container.textContent).toContain("1 complete Trace");
+    expect(container.textContent).toContain("activate_rule_revision");
+    expect(container.textContent).toContain("Authority & approval evidence");
+    expect(container.textContent).toContain("Resulting revisions");
 
     await click(button(container, "Review revert"));
     await click(button(container, "Apply compensating revert"));
@@ -185,6 +216,121 @@ describe("OrganizationStudio integration", () => {
     expect(requests).toEqual([]);
     expect(container.textContent).toContain("Local demo revision 1 compiled");
     expect(container.textContent).toContain("Not persisted or activated");
+  });
+
+  test("renders the deterministic active review and every distinct operational-state label", async () => {
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path === "/docs/assets/bre-315-trace-fixture.json") return Response.json({ trace: reviewTrace });
+      throw new Error(`Unexpected evidence request ${path}`);
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
+    await flush(); await flush();
+
+    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
+    for (const label of ["ready", "loading", "unavailable", "no access", "offline", "transaction failure", "conflict", "active", "reverted"]) {
+      expect(container.querySelector(".bre320-state-matrix")?.textContent).toContain(label);
+    }
+    expect(container.textContent).toContain("Production checkout failed");
+    expect(container.textContent).toContain("Production payments failed");
+    expect(container.textContent).toContain("Exact winner");
+    expect(container.textContent).toContain("Ordered actions & audit");
+    expect(container.textContent).toContain("activate_rule_revision");
+    expect(container.textContent).toContain("Provider send · absent");
+    expect(container.textContent).toContain("Provider delete · absent");
+  });
+
+  test("keeps every non-success release state free of applied evidence and mutation controls", async () => {
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path === "/docs/assets/bre-315-trace-fixture.json") return Response.json({ trace: reviewTrace });
+      throw new Error(`Unexpected evidence request ${path}`);
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    const states = [
+      ["no_access", "Ask a Workspace owner for Organization control access."],
+      ["unavailable", "Retry after Organization operations become available."],
+      ["offline", "Reconnect, then retry from the preserved proposal."],
+      ["transaction_failure", "Review the failure, then retry the atomic transaction."],
+    ] as const;
+    for (const [state, nextAction] of states) {
+      await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState={state} />));
+      await flush(); await flush();
+      const evidence = container.querySelector(`[data-operation-state="${state}"]`)!;
+      expect(evidence.querySelector("[data-next-action]")?.textContent).toBe(`Next action · ${nextAction}`);
+      expect(evidence.querySelector('[aria-label="Applied Change Set audit"]')).toBeNull();
+      expect(evidence.querySelectorAll("button")).toHaveLength(0);
+      expect(evidence.textContent).not.toContain("Activate Change Set");
+      expect(evidence.textContent).not.toContain("Ordered actions & audit");
+      expect(evidence.textContent).not.toContain("Change Set bre320-change-set-apply");
+    }
+  });
+
+  test("turns trace-fixture HTTP and network failures into retryable unavailable and error states", async () => {
+    let attempts = 0;
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path !== "/docs/assets/bre-315-trace-fixture.json") throw new Error(`Unexpected evidence request ${path}`);
+      attempts += 1;
+      if (attempts === 1) return Response.json({ error: { code: "upstream_unavailable" } }, { status: 503 });
+      if (attempts === 2) throw new TypeError("Network request failed");
+      return Response.json({ trace: reviewTrace });
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
+    await flush(); await flush();
+    const unavailable = container.querySelector('[data-evidence-load-state="unavailable"]')!;
+    expect(unavailable.textContent).toContain("Review evidence unavailable");
+    expect(unavailable.textContent).toContain("Trace fixture request failed (503)");
+    expect(unavailable.textContent).toContain("No simulated or applied claim is shown");
+
+    await click(button(container, "Retry review evidence"));
+    await flush(); await flush();
+    const error = container.querySelector('[data-evidence-load-state="error"]')!;
+    expect(error.textContent).toContain("Review evidence failed");
+    expect(error.textContent).toContain("Network request failed");
+    expect(error.textContent).toContain("No simulated or applied claim is shown");
+
+    await click(button(container, "Retry review evidence"));
+    await flush(); await flush();
+    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Applied Change Set audit"]')).not.toBeNull();
+    expect(attempts).toBe(3);
+  });
+
+  test("treats an aborted trace-fixture fetch as lifecycle cleanup rather than an evidence error", async () => {
+    let aborted = false;
+    globalThis.fetch = ((request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path !== "/docs/assets/bre-315-trace-fixture.json") return Promise.reject(new Error(`Unexpected evidence request ${path}`));
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          aborted = true;
+          reject(new DOMException("The operation was aborted", "AbortError"));
+        }, { once: true });
+      });
+    }) as typeof fetch;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+
+    await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
+    expect(container.querySelector('[data-evidence-load-state="loading"]')).not.toBeNull();
+    await act(async () => root!.render(<OrganizationStudio interactivePreview />));
+    await flush();
+
+    expect(aborted).toBe(true);
+    expect(container.querySelector('[data-evidence-load-state="error"]')).toBeNull();
+    expect(container.textContent).not.toContain("Review evidence failed");
   });
 
   test("rebinds Views and Lanes after Rule compilation and every sibling Workspace mutation", async () => {

@@ -56,7 +56,9 @@ describe("Organization REST read adapter", () => {
       const description = await describeResponse.json();
       assert.deepEqual(description.accountIds, ["account_a", "account_b"]);
       assert.equal(description.workspaceSchema.aggregate, "thread");
-      assert.equal(description.capabilities.operations.simulate, false);
+      assert.deepEqual(description.capabilities.operations, { describe: true, query: true, simulate: true, apply: true, revert: true });
+      assert.deepEqual(description.capabilities.surfaces.rest, { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true });
+      assert.deepEqual(description.capabilities.surfaces.mcp, { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false });
       assert.deepEqual(description.facetSupport.valueTypes, ["text", "number", "boolean", "datetime", "duration", "email", "domain", "enum"]);
       assert.deepEqual(description.facetSupport.workflowStateIndependentOf, ["lane", "subject_matter"]);
       assert.equal(description.laneConfiguration.lanes.length, 1);

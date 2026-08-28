@@ -187,17 +187,30 @@ function capabilitiesFor(repository: OrganizationRepository, scope: Organization
     ...(repository.collectionsPins ? ["collection" as const, "shortcut" as const, "saved_query" as const] : []),
     ...(repository.contexts ? ["context" as const] : []),
   ];
+  const human = scope.actor.type === "human";
+  const mcp = scope.actor.type === "agent";
+  const structureApplyAvailable = Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes);
+  const canDescribe = Boolean(snapshot?.operations.includes("describe"));
+  const canQuery = Boolean(snapshot?.operations.includes("query"));
+  const canSimulate = grants("simulate", ["rule"]);
+  const canApply = supportedApplyFamilies.length > 0 && grants("apply", supportedApplyFamilies);
+  const canRevert = grants("revert", ["rule", "change_set"]);
+  const canCorrect = Boolean(snapshot?.operations.includes("apply")
+    && snapshot.actionFamilies.includes("organization_thread")
+    && ["thread", "trace", "change_set", "audit"].every((family) => snapshot.resourceFamilies.includes(family as OrganizationCapabilitySnapshot["resourceFamilies"][number])));
   return {
     operations: {
       describe: true as const,
       query: true as const,
-      simulate: scope.actor.type === "agent" && grants("simulate", ["rule"]),
-      apply: scope.actor.type === "human"
-        ? Boolean((repository.applyFacetWorkflow && repository.getFacetWorkflowAuthorityState) || repository.lanes)
-        : supportedApplyFamilies.length > 0 && grants("apply", supportedApplyFamilies),
-      revert: scope.actor.type === "agent" && grants("revert", ["rule", "change_set"]),
+      simulate: human || canSimulate,
+      apply: human ? structureApplyAvailable : canApply,
+      revert: human || canRevert,
     },
     authority: { sendMail: false as const, deleteProviderMail: false as const },
+    surfaces: {
+      rest: { describe: human, query: human, simulate: human, apply: human && structureApplyAvailable, revert: human, correct: human },
+      mcp: { describe: mcp && canDescribe, query: mcp && canQuery, simulate: mcp && canSimulate, apply: mcp && canApply, revert: mcp && canRevert, correct: mcp && canCorrect },
+    },
   };
 }
 
