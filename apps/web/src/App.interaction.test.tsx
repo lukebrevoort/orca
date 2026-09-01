@@ -407,6 +407,24 @@ describe("Desktop evidence and navigation", () => {
     restoreDom();
   });
 
+  test("exposes one named primary navigation landmark and a concise inbox status", async () => {
+    await renderApp();
+
+    const primary = browserWindow.document.querySelector('nav[aria-label="Primary"]');
+    expect(primary).not.toBeNull();
+    expect(browserWindow.document.querySelector('aside[aria-label="Primary"]')).toBeNull();
+    expect(primary?.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+
+    const inbox = browserWindow.document.querySelector(".inbox-body");
+    expect(inbox?.hasAttribute("aria-live")).toBe(false);
+    expect(inbox?.getAttribute("aria-busy")).toBeNull();
+
+    const status = browserWindow.document.querySelector('.inbox-result-status[role="status"]');
+    expect(status?.getAttribute("aria-live")).toBe("polite");
+    expect(status?.textContent).toMatch(/^\d+ messages shown\.$/);
+    expect(status?.textContent).not.toContain("Dinner on Sunday?");
+  });
+
   test("keeps evidence modal, closes the top layer with Escape, and restores trigger focus", async () => {
     await renderApp();
     const rowEvidence = browserWindow.document.querySelector("button.message-evidence-button") as unknown as HTMLButtonElement;
@@ -523,12 +541,12 @@ describe("Desktop evidence and navigation", () => {
     const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Signals"))!;
     const hide = [...signalsRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
     await act(async () => { hide.click(); });
-    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
 
     await act(async () => { root!.unmount(); });
     root = null;
     await renderApp();
-    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
   });
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
@@ -570,7 +588,7 @@ describe("Drafts mailbox", () => {
   test("opens the saved drafts view and reopens a selected draft", async () => {
     await renderApp();
 
-    const draftsButton = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+    const draftsButton = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
     expect(draftsButton).toBeDefined();
 
@@ -677,7 +695,7 @@ describe("Drafts mailbox", () => {
 
   test("moves between user-owned workflow spaces without reviving classification tabs", async () => {
     await renderApp();
-    const primary = browserWindow.document.querySelector('aside[aria-label="Primary"]');
+    const primary = browserWindow.document.querySelector('nav[aria-label="Primary"]');
     expect(primary).not.toBeNull();
     expect(browserWindow.document.querySelector('[aria-label="Inbox classification views"]')).toBeNull();
 
@@ -728,7 +746,7 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
     expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
 
-    const signals = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+    const signals = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement;
     await act(async () => { signals.click(); });
 
@@ -740,7 +758,7 @@ describe("Pin navigation and bulk sender actions", () => {
   test("opens a pinned thread from outside its current signal view", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     await act(async () => {
@@ -786,6 +804,8 @@ describe("Pin navigation and bulk sender actions", () => {
       buttonByName("Select Mom: Dinner on Sunday?").click();
       buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
     });
+    expect(buttonByName("Deselect Mom: Dinner on Sunday?").getAttribute("aria-pressed")).toBe("true");
+    expect(buttonByName("Deselect Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("true");
     const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
     await act(async () => {
       quiet.click();
@@ -861,7 +881,7 @@ describe("Inbox reader viewport restoration", () => {
   test("opens a propagated event source and returns to the same signal position", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const pane = inboxPane();
@@ -897,7 +917,7 @@ describe("Inbox reader viewport restoration", () => {
   test("reveals and restores a quieted local signal without changing its source mail", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
@@ -911,7 +931,7 @@ describe("Inbox reader viewport restoration", () => {
     });
     expect(quieted?.textContent).toContain("Seen");
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("All Mail")) as unknown as HTMLButtonElement).click();
     });
     expect(messageRow("Figma Billing")).not.toBeNull();
@@ -920,7 +940,7 @@ describe("Inbox reader viewport restoration", () => {
   test("keeps broad mutes explicitly reversible before restoring the event", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;

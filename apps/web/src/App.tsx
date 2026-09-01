@@ -4049,6 +4049,16 @@ function InboxView({
     return displayMessages.map((message) => getStreamSectionLabel(message.receivedAt, now));
   }, [displayMessages]);
   const unreadCount = displayMessages.filter((message) => message.unread).length;
+  const inboxBusy = status === "loading" || (status === "syncing" && messages.length === 0) || isLoadingMoreMessages;
+  const inboxResultStatus = status === "loading"
+    ? "Loading inbox."
+    : status === "syncing" && messages.length === 0
+      ? "Syncing Gmail."
+      : status === "error"
+        ? "Inbox unavailable."
+        : isLoadingMoreMessages
+          ? "Loading more messages."
+          : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} shown.`;
   const dateLabel = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
   useEffect(() => {
     if (collection) return;
@@ -4317,6 +4327,7 @@ function InboxView({
               <span>Changes apply to future mail from each sender.</span>
             </div>
             <button
+              aria-pressed={displayMessages.length > 0 && selectedMessages.length === displayMessages.length}
               className="bulk-select-all"
               onClick={() => setSelectedMessageIds(selectedMessages.length === displayMessages.length ? new Set() : new Set(displayMessages.map((message) => message.id)))}
               type="button"
@@ -4332,7 +4343,8 @@ function InboxView({
           </section>
         ) : null}
 
-        <section className="inbox-body" aria-live="polite">
+        <p aria-atomic="true" aria-live="polite" className="inbox-result-status visually-hidden" role="status">{inboxResultStatus}</p>
+        <section aria-busy={inboxBusy || undefined} className="inbox-body">
         {viewMode === "signals" && !searchQuery.trim() && !personFilter && !selectionMode ? (
           <AgentEventTimeline
             accountLabels={account ? { [account.id]: account.email } : {}}

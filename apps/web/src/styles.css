@@ -5082,7 +5082,7 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
 .label-migration-option:last-child { border-bottom: 0; }
 .label-migration-option:hover, .label-migration-option-selected { background: transparent; color: var(--orca-ink); }
 .label-migration-check { border-radius: 50%; }
-.label-migration-option-selected .label-migration-check { background: var(--orca-accent); border-color: var(--orca-accent); color: #fff; }
+.label-migration-option-selected .label-migration-check { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
 .label-migration-option > span:last-child { align-items: center; display: flex; justify-content: space-between; }
 .label-migration-option small { margin: 0; }
 .label-migration-actions { background: var(--orca-paper); border: 0; border-radius: 0 0 22px 22px; margin: 0 -22px; padding: 16px 22px; }

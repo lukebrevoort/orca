@@ -7,7 +7,7 @@
 .view-action { min-height: 36px; padding: 0 12px; border: 1px solid var(--desktop-border); border-radius: 9px; background: var(--desktop-surface); color: var(--desktop-ink); font: 750 9px/1 var(--desktop-sans); }
 .view-action:hover { border-color: var(--desktop-border-strong); background: var(--desktop-surface-hover); color: var(--desktop-ink); }
 .view-action:focus-visible,.view-chip:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 2px; }
-.view-action:disabled { border-color: var(--desktop-border); background: var(--desktop-surface-hover); color: var(--desktop-muted); opacity: .65; cursor: not-allowed; }
+.view-action:disabled { border-color: var(--desktop-border); background: var(--desktop-control-disabled-surface); color: var(--desktop-control-disabled-ink); cursor: not-allowed; }
 .view-new { border-color: var(--desktop-accent); color: var(--desktop-accent); }
 .view-danger { border-color: color-mix(in srgb,var(--desktop-danger) 55%,var(--desktop-border)); color: var(--desktop-danger); }
 .view-danger:hover,.view-danger:focus-visible { border-color: var(--desktop-danger); background: color-mix(in srgb,var(--desktop-danger) 9%,var(--desktop-surface)); color: var(--desktop-danger); }
@@ -42,7 +42,7 @@
 .view-icon-action { width: 25px; height: 24px; display: grid; place-items: center; padding: 0; border: 1px solid var(--desktop-border); border-radius: 7px; background: var(--desktop-surface); color: var(--desktop-ink); font: 800 11px/1 var(--desktop-mono); }
 .view-icon-action:hover { border-color: var(--desktop-border-strong); background: var(--desktop-surface-hover); color: var(--desktop-ink); }
 .view-icon-action:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 2px; }
-.view-icon-action:disabled { border-color: var(--desktop-border); background: var(--desktop-surface-hover); color: var(--desktop-muted); opacity: .55; cursor: not-allowed; }
+.view-icon-action:disabled { border-color: var(--desktop-border); background: var(--desktop-control-disabled-surface); color: var(--desktop-control-disabled-ink); cursor: not-allowed; }
 .view-results { min-height: 186px; padding: 16px; border: 1px solid var(--desktop-border); border-radius: 14px; background: var(--desktop-paper); }
 .view-results > header { display: flex; align-items: start; justify-content: space-between; gap: 14px; padding-bottom: 12px; }
 .view-results > header h3 { margin: 5px 0 3px; font: 500 24px/26px var(--desktop-serif); }

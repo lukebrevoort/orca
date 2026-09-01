@@ -62,7 +62,7 @@ export function AppSidebar({ account, active, inboxCount, draftCount, spaces, th
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
-  return <aside aria-label="Primary" className="desktop-sidebar">
+  return <nav aria-label="Primary" className="desktop-sidebar">
     <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
     <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} type="button">
       <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
@@ -87,7 +87,7 @@ export function AppSidebar({ account, active, inboxCount, draftCount, spaces, th
     <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
       <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
     </button>
-  </aside>;
+  </nav>;
 }
 
 export function WorkspaceHeader({ health, query, title, theme, onQueryChange, onQuerySubmit, onThemeChange }: {
