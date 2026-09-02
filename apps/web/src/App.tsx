@@ -541,6 +541,105 @@ export async function revokeAllAgentConnections() {
   return response.json() as Promise<{ revoked: number }>;
 }
 
+type SettingsReadStatus = "loading" | "ready" | "error";
+type SettingsReadResource = "preferences" | "accounts" | "agents" | "sync";
+type SettingsReadIssue = {
+  kind: "offline" | "auth" | "no-access" | "server";
+  title: string;
+  detail: string;
+  preserved: string;
+  effect: string;
+  actionLabel: string;
+  actionHref?: string;
+};
+
+const settingsReadCopy: Record<SettingsReadResource, {
+  serverTitle: string;
+  offlineTitle: string;
+  noAccessTitle: string;
+  retryLabel: string;
+  preserved: string;
+  effect: string;
+  accessHref: string;
+  accessLabel: string;
+}> = {
+  preferences: {
+    serverTitle: "Account choices are temporarily unavailable",
+    offlineTitle: "Account choices are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read account choices",
+    retryLabel: "Try loading account choices again",
+    preserved: "Nothing on your account was changed. Device-only reading choices still work.",
+    effect: "Account writing and reminder choices stay locked until Orca loads their saved values.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review account access",
+  },
+  accounts: {
+    serverTitle: "Connected accounts are temporarily unavailable",
+    offlineTitle: "Connected accounts are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read connected accounts",
+    retryLabel: "Try loading connected accounts again",
+    preserved: "Any account details already shown remain in place; no provider connection was changed.",
+    effect: "Connection details may be incomplete until this section loads again.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review provider access",
+  },
+  agents: {
+    serverTitle: "Agent connections are temporarily unavailable",
+    offlineTitle: "Agent connections are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read agent connections",
+    retryLabel: "Try loading agent connections again",
+    preserved: "Existing ChatGPT and Codex permissions were not changed.",
+    effect: "This list may be incomplete; revocation remains unavailable until access is restored.",
+    accessHref: "/docs/bre-267-validation.html",
+    accessLabel: "Review connection setup",
+  },
+  sync: {
+    serverTitle: "Sync status is temporarily unavailable",
+    offlineTitle: "Sync status is unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read provider sync status",
+    retryLabel: "Try loading sync status again",
+    preserved: "Connected-account details remain visible and no mail was removed.",
+    effect: "Orca cannot confirm current provider health until this status loads again.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review provider access",
+  },
+};
+
+function isSettingsSessionExpired(error: unknown) {
+  return error instanceof ApiRequestError && (error.status === 401 || error.code === "unauthorized");
+}
+
+function buildSettingsReadIssue(resource: SettingsReadResource, error: unknown): SettingsReadIssue {
+  const copy = settingsReadCopy[resource];
+  const detail = getErrorMessage(error);
+  if (isSettingsSessionExpired(error)) {
+    return {
+      kind: "auth",
+      title: "Your Orca session expired",
+      detail: "Sign in again before Orca can safely load this account-scoped information.",
+      preserved: copy.preserved,
+      effect: copy.effect,
+      actionLabel: "Sign in again",
+      actionHref: "/login?returnTo=%2Fsettings",
+    };
+  }
+  if (error instanceof ApiRequestError && error.status === 403) {
+    return {
+      kind: "no-access",
+      title: copy.noAccessTitle,
+      detail,
+      preserved: copy.preserved,
+      effect: copy.effect,
+      actionLabel: copy.accessLabel,
+      actionHref: copy.accessHref,
+    };
+  }
+  if (error instanceof TypeError || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+    return { kind: "offline", title: copy.offlineTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
+  }
+  return { kind: "server", title: copy.serverTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
+}
+
 export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
   preferences: ReaderPreferences;
   setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
@@ -550,73 +649,178 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   demoMode?: boolean;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const [accountPreferences, setAccountPreferences] = useState<UserPreferences>(defaultAccountPreferences);
-  const [accountStatus, setAccountStatus] = useState<"loading" | "ready" | "saving" | "error">(demoMode ? "ready" : "loading");
-  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountPreferences, setAccountPreferences] = useState<UserPreferences | null>(demoMode ? defaultAccountPreferences : null);
+  const [accountLoadStatus, setAccountLoadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [accountLoadError, setAccountLoadError] = useState<unknown>(null);
+  const [accountSaveStatus, setAccountSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [accountSaveError, setAccountSaveError] = useState<unknown>(null);
+  const [accountSaveNotice, setAccountSaveNotice] = useState<string | null>(null);
+  const [accountDirty, setAccountDirty] = useState(false);
+  const accountEditVersionRef = useRef(0);
+  const accountLoadRequestRef = useRef(0);
+  const accountSaveRequestRef = useRef(0);
+  const accountLoadControllerRef = useRef<AbortController | null>(null);
   const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
-  const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
-  const [connectedAccountsError, setConnectedAccountsError] = useState<string | null>(null);
+  const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [connectedAccountsError, setConnectedAccountsError] = useState<unknown>(null);
+  const connectedAccountsRequestRef = useRef(0);
+  const connectedAccountsControllerRef = useRef<AbortController | null>(null);
   const [settingsSyncStatus, setSettingsSyncStatus] = useState<SyncStatus | null>(null);
+  const [settingsSyncReadStatus, setSettingsSyncReadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [settingsSyncError, setSettingsSyncError] = useState<unknown>(null);
+  const settingsSyncRequestRef = useRef(0);
+  const settingsSyncControllerRef = useRef<AbortController | null>(null);
   const [outlookAuthorizationStatus, setOutlookAuthorizationStatus] = useState<OAuthConnectStatus>("idle");
   const [outlookAuthorizationError, setOutlookAuthorizationError] = useState<string | null>(null);
   const [agentConnections, setAgentConnections] = useState<McpConnection[]>(demoMode ? demoAgentConnections : []);
   const [agentConnectionsStatus, setAgentConnectionsStatus] = useState<"loading" | "ready" | "disabled" | "error">(demoMode ? "ready" : "loading");
-  const [agentConnectionsError, setAgentConnectionsError] = useState<string | null>(null);
+  const [agentConnectionsError, setAgentConnectionsError] = useState<unknown>(null);
+  const agentConnectionsRequestRef = useRef(0);
+  const agentConnectionsControllerRef = useRef<AbortController | null>(null);
   const [revokingAgentConnection, setRevokingAgentConnection] = useState<string | "all" | null>(null);
-  const [saved, setSaved] = useState(false);
   const returnStatus = readOAuthReturnStatus();
 
   useEffect(() => { titleRef.current?.focus(); }, []);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/preferences", userPreferencesSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setAccountPreferences(value); setAccountStatus("ready"); } })
-      .catch((error) => { if (!controller.signal.aborted) { setAccountStatus("error"); setAccountError(getErrorMessage(error)); } });
-    return () => controller.abort();
+    void loadAccountPreferences();
+    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/mcp/connections", mcpConnectionPageSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setAgentConnections(value.items); setAgentConnectionsStatus("ready"); } })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof ApiRequestError && error.status === 404) setAgentConnectionsStatus("disabled");
-        else { setAgentConnectionsStatus("error"); setAgentConnectionsError(getErrorMessage(error)); }
-      });
-    return () => controller.abort();
-  }, [demoMode]);
-  useEffect(() => {
-    if (demoMode) {
-      setConnectedAccounts([demoAccount]);
-      setConnectedAccountsStatus("ready");
-      setConnectedAccountsError(null);
-      return;
-    }
-    const controller = new AbortController();
-    fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setConnectedAccounts(value.items); setConnectedAccountsStatus("ready"); } })
-      .catch((error) => { if (!controller.signal.aborted) { setConnectedAccountsStatus("error"); setConnectedAccountsError(getErrorMessage(error)); } });
-    return () => controller.abort();
+    void loadAgentConnections();
+    return () => { agentConnectionsControllerRef.current?.abort(); agentConnectionsRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/sync/status", syncStatusSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) setSettingsSyncStatus(value); })
-      .catch(() => { if (!controller.signal.aborted) setSettingsSyncStatus(null); });
-    return () => controller.abort();
+    void loadConnectedAccounts();
+    return () => { connectedAccountsControllerRef.current?.abort(); connectedAccountsRequestRef.current += 1; };
+  }, [demoMode]);
+  useEffect(() => {
+    if (demoMode) return;
+    void loadSettingsSyncStatus();
+    return () => { settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1; };
   }, [demoMode]);
 
+  async function loadAccountPreferences() {
+    if (demoMode) return;
+    const requestId = ++accountLoadRequestRef.current;
+    accountLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    accountLoadControllerRef.current = controller;
+    setAccountLoadStatus("loading");
+    setAccountLoadError(null);
+    try {
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
+      setAccountPreferences(value);
+      accountEditVersionRef.current = 0;
+      setAccountDirty(false);
+      setAccountLoadStatus("ready");
+      setAccountSaveStatus("idle");
+      setAccountSaveError(null);
+      setAccountSaveNotice(null);
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
+      setAccountLoadStatus("error");
+      setAccountLoadError(error);
+    }
+  }
+  async function loadConnectedAccounts() {
+    if (demoMode) return;
+    const requestId = ++connectedAccountsRequestRef.current;
+    connectedAccountsControllerRef.current?.abort();
+    const controller = new AbortController();
+    connectedAccountsControllerRef.current = controller;
+    setConnectedAccountsStatus("loading");
+    setConnectedAccountsError(null);
+    try {
+      const value = await fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== connectedAccountsRequestRef.current) return;
+      setConnectedAccounts(value.items);
+      setConnectedAccountsStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== connectedAccountsRequestRef.current) return;
+      setConnectedAccountsStatus("error");
+      setConnectedAccountsError(error);
+    }
+  }
+  async function loadAgentConnections() {
+    if (demoMode) return;
+    const requestId = ++agentConnectionsRequestRef.current;
+    agentConnectionsControllerRef.current?.abort();
+    const controller = new AbortController();
+    agentConnectionsControllerRef.current = controller;
+    setAgentConnectionsStatus("loading");
+    setAgentConnectionsError(null);
+    try {
+      const value = await fetchJson("/v1/mcp/connections", mcpConnectionPageSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== agentConnectionsRequestRef.current) return;
+      setAgentConnections(value.items);
+      setAgentConnectionsStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== agentConnectionsRequestRef.current) return;
+      if (error instanceof ApiRequestError && error.status === 404) setAgentConnectionsStatus("disabled");
+      else { setAgentConnectionsStatus("error"); setAgentConnectionsError(error); }
+    }
+  }
+  async function loadSettingsSyncStatus() {
+    if (demoMode) return;
+    const requestId = ++settingsSyncRequestRef.current;
+    settingsSyncControllerRef.current?.abort();
+    const controller = new AbortController();
+    settingsSyncControllerRef.current = controller;
+    setSettingsSyncReadStatus("loading");
+    setSettingsSyncError(null);
+    try {
+      const value = await fetchJson("/v1/sync/status", syncStatusSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== settingsSyncRequestRef.current) return;
+      setSettingsSyncStatus(value);
+      setSettingsSyncReadStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== settingsSyncRequestRef.current) return;
+      setSettingsSyncReadStatus("error");
+      setSettingsSyncError(error);
+    }
+  }
+
   const updateReader = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => setPreferences((current) => ({ ...current, [key]: value }));
-  const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => { setSaved(false); setAccountPreferences((current) => ({ ...current, [key]: value })); };
+  const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => {
+    if (accountLoadStatus !== "ready") return;
+    accountEditVersionRef.current += 1;
+    setAccountDirty(true);
+    setAccountSaveStatus((current) => current === "error" ? current : "idle");
+    setAccountSaveError((current) => accountSaveStatus === "error" ? current : null);
+    setAccountSaveNotice(null);
+    setAccountPreferences((current) => current ? { ...current, [key]: value } : current);
+  };
   async function saveAccountPreferences() {
-    if (accountPreferences.signature.length > 10_000) { setAccountError("Your signature must be 10,000 characters or fewer."); return; }
-    if (demoMode) { setSaved(true); return; }
-    setAccountStatus("saving"); setAccountError(null);
-    try { setAccountPreferences(await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(accountPreferences) })); setSaved(true); setAccountStatus("ready"); }
-    catch (error) { setAccountError(`Could not save your preferences. ${getErrorMessage(error)}`); setAccountStatus("error"); }
+    if (accountLoadStatus !== "ready" || !accountPreferences || accountSaveStatus === "saving" || !accountDirty) return;
+    if (accountPreferences.signature.length > 10_000) { setAccountSaveError(new Error("Your signature must be 10,000 characters or fewer.")); setAccountSaveStatus("error"); return; }
+    const requestId = ++accountSaveRequestRef.current;
+    const editVersion = accountEditVersionRef.current;
+    const payload = accountPreferences;
+    if (demoMode) { setAccountDirty(false); setAccountSaveStatus("saved"); return; }
+    setAccountSaveStatus("saving");
+    setAccountSaveError(null);
+    setAccountSaveNotice(null);
+    try {
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      if (requestId !== accountSaveRequestRef.current) return;
+      if (editVersion === accountEditVersionRef.current) {
+        setAccountPreferences(value);
+        setAccountDirty(false);
+        setAccountSaveStatus("saved");
+      } else {
+        setAccountDirty(true);
+        setAccountSaveStatus("idle");
+        setAccountSaveNotice("Your earlier account choices were saved. Newer edits are still here and need saving.");
+      }
+    } catch (error) {
+      if (requestId !== accountSaveRequestRef.current) return;
+      setAccountSaveError(error);
+      setAccountSaveStatus("error");
+    }
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
@@ -644,6 +848,12 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const profileAccount = connectedAccounts[0] ?? null;
   const activeAgentConnections = agentConnections.filter((connection) => !connection.revokedAt);
+  const displayedAccountPreferences = accountPreferences ?? defaultAccountPreferences;
+  const accountFieldsDisabled = accountLoadStatus !== "ready";
+  const accountLoadIssue = accountLoadStatus === "error" ? buildSettingsReadIssue("preferences", accountLoadError) : null;
+  const connectedAccountsIssue = connectedAccountsStatus === "error" ? buildSettingsReadIssue("accounts", connectedAccountsError) : null;
+  const agentConnectionsIssue = agentConnectionsStatus === "error" ? buildSettingsReadIssue("agents", agentConnectionsError) : null;
+  const syncStatusIssue = settingsSyncReadStatus === "error" ? buildSettingsReadIssue("sync", settingsSyncError) : null;
   const [settingsQuery, setSettingsQuery] = useState("");
   const settingsSpaces: WorkflowSpace[] = [
     { id: "focus", label: "Focus", description: "protected attention" },
@@ -655,8 +865,8 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     displayName: profileAccount?.displayName ?? profileAccount?.email ?? "Orca workspace",
     email: profileAccount?.email ?? "",
     accountCount: connectedAccounts.length,
-    health: (connectedAccountsStatus === "loading" ? "syncing" : connectedAccountsStatus === "error" ? "attention" : !settingsSyncStatus ? "unknown" : settingsSyncStatus.accounts.some((item) => item.state === "syncing") ? "syncing" : settingsSyncStatus.accounts.some((item) => item.state === "auth_needed" || item.state === "error") ? "attention" : "synced") as "synced" | "syncing" | "attention" | "unknown",
-    detail: demoMode ? "Preview route · account status unavailable" : !settingsSyncStatus ? "Account status unavailable" : undefined,
+    health: (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" ? "syncing" : connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" ? "attention" : !settingsSyncStatus ? "unknown" : settingsSyncStatus.accounts.some((item) => item.state === "syncing") ? "syncing" : settingsSyncStatus.accounts.some((item) => item.state === "auth_needed" || item.state === "error") ? "attention" : "synced") as "synced" | "syncing" | "attention" | "unknown",
+    detail: demoMode ? "Preview route · account status unavailable" : settingsSyncReadStatus === "error" ? "Sync status needs attention" : !settingsSyncStatus ? "Account status unavailable" : undefined,
   };
   function navigateFromSettings(destination: DesktopDestination) {
     if (destination === "settings") return;
@@ -684,18 +894,29 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
-        <SettingsSection id="writing" title="Writing" note="Account + device"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /><label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>Start every new draft in the distraction-free editor.</small></span></label></SettingsSection>
-        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="writing" title="Writing" note="Account + device">
+          <div aria-busy={accountLoadStatus === "loading" ? "true" : undefined}>
+            {accountLoadStatus === "loading" ? <p className="settings-account-status" role="status">Loading saved account choices before editing is enabled…</p> : null}
+            {accountLoadIssue ? <SettingsOperationalState issue={accountLoadIssue} onRetry={() => void loadAccountPreferences()} /> : null}
+            <label className="settings-field"><span>Default signature</span><textarea disabled={accountFieldsDisabled} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={displayedAccountPreferences.signature} /></label>
+            <PreferenceChoice disabled={accountFieldsDisabled} label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={displayedAccountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} />
+            <PreferenceChoice disabled={accountFieldsDisabled} label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={displayedAccountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} />
+            <label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>This device choice stays available even if account choices cannot load.</small></span></label>
+          </div>
+        </SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
           <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
           <div aria-live="polite" className="settings-account-list">
             {connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking connected accounts…</p> : null}
-            {connectedAccountsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load connected accounts. {connectedAccountsError}</p> : null}
+            {connectedAccountsIssue ? <SettingsOperationalState issue={connectedAccountsIssue} onRetry={() => void loadConnectedAccounts()} /> : null}
             {connectedAccountsStatus === "ready" && connectedAccounts.length === 0 ? <p className="settings-account-status">No mail provider is connected yet.</p> : null}
-            {connectedAccountsStatus === "ready" ? connectedAccounts.map((account) => <div className="settings-account-row" key={account.id}>
+            {connectedAccounts.map((account) => <div className="settings-account-row" key={account.id}>
               <div><span className="settings-account-provider">{mailProviderLabel(account.provider)}</span><strong>{account.email}</strong></div>
               <span className="settings-account-capability">{account.capabilities.read ? "Read-only" : "Needs attention"}</span>
-            </div>) : null}
+            </div>)}
+            {settingsSyncReadStatus === "loading" ? <p className="settings-account-status">Checking provider sync status…</p> : null}
+            {syncStatusIssue ? <SettingsOperationalState issue={syncStatusIssue} onRetry={() => void loadSettingsSyncStatus()} /> : null}
           </div>
           <div className="settings-outlook-connect">
             <div><strong>Add Microsoft Outlook</strong><span>Read-only Mail.Read access. Outlook mail will appear after the Outlook sync step is enabled.</span></div>
@@ -710,20 +931,23 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           <p className="settings-section-copy">ChatGPT and Codex can connect to Orca through a scoped OAuth link. These connections never receive your provider tokens or an OpenAI API key.</p>
           {agentConnectionsStatus === "loading" ? <p className="settings-account-status">Checking agent connections…</p> : null}
           {agentConnectionsStatus === "disabled" ? <p className="settings-account-status">Agent connections are not enabled for this Orca environment.</p> : null}
-          {agentConnectionsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load agent connections. {agentConnectionsError}</p> : null}
+          {agentConnectionsIssue ? <SettingsOperationalState issue={agentConnectionsIssue} onRetry={() => void loadAgentConnections()} /> : null}
           {agentConnectionsStatus === "ready" && agentConnections.length === 0 ? <p className="settings-account-status">No ChatGPT or Codex connection has access to this workspace.</p> : null}
-          {agentConnectionsStatus === "ready" && agentConnections.length > 0 ? <div className="agent-connection-list">
+          {agentConnections.length > 0 ? <div className="agent-connection-list">
             {agentConnections.map((connection) => <article className="agent-connection-row" data-revoked={connection.revokedAt ? "true" : "false"} key={connection.id}>
               <div className="agent-connection-main"><span className="agent-connection-status">{connection.revokedAt ? "Revoked" : "Active"}</span><strong>{connection.clientName}</strong><small>{connection.accounts.length > 0 ? connection.accounts.map((account) => account.email).join(", ") : "No connected mail accounts"}</small></div>
               <div className="agent-connection-detail"><span>{connection.scopes.map((scope) => scope === "mail:read" ? "Mail read" : "Agent events read").join(" · ")}</span><small>{connection.revokedAt ? `Revoked ${formatAgentConnectionTime(connection.revokedAt)}` : `Last used ${formatAgentConnectionTime(connection.lastUsedAt)}`}</small></div>
               {!connection.revokedAt ? <button className="agent-connection-revoke" disabled={revokingAgentConnection !== null} onClick={() => void revokeConnection(connection)} type="button">{revokingAgentConnection === connection.id ? "Revoking…" : "Revoke connection"}</button> : null}
             </article>)}
           </div> : null}
-          {agentConnectionsError && agentConnectionsStatus === "ready" ? <p className="settings-account-status settings-account-status-error" role="alert">{agentConnectionsError}</p> : null}
+          {agentConnectionsError && agentConnectionsStatus === "ready" ? <p className="settings-account-status settings-account-status-error" role="alert">{getErrorMessage(agentConnectionsError)}</p> : null}
           <div className="agent-connection-actions"><a className="settings-row-link" href="/docs/bre-267-validation.html">Connection setup & security →</a><button className="agent-connection-revoke-all" disabled={activeAgentConnections.length === 0 || revokingAgentConnection !== null} onClick={() => void revokeAllConnections()} type="button">{revokingAgentConnection === "all" ? "Revoking all…" : "Revoke all agent connections"}</button></div>
         </SettingsSection>
         <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores normalized mail locally and only requests the read-first permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google or Microsoft prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a><a className="settings-row-link" href="https://myaccount.microsoft.com/organizations">Manage Microsoft provider access →</a></SettingsSection>
-        <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
+        <footer className="settings-save-bar" aria-live="polite" data-status={accountSaveStatus}>
+          {accountSaveStatus === "error" ? <p role="alert">Could not save your preferences. {getErrorMessage(accountSaveError)} Your account choices are still here; device-only reading choices were not affected. {isSettingsSessionExpired(accountSaveError) ? <a href="/login?returnTo=%2Fsettings">Sign in again</a> : <button onClick={() => void saveAccountPreferences()} type="button">Try saving again</button>}</p> : accountSaveNotice ? <p>{accountSaveNotice}</p> : <p>{accountSaveStatus === "saved" ? "Account preferences saved." : accountLoadStatus !== "ready" ? "Account choices stay locked until Orca safely loads their saved values. Device-only reading choices remain available." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}
+          <button className="settings-save-button" disabled={accountLoadStatus !== "ready" || accountSaveStatus === "saving" || !accountDirty} onClick={() => void saveAccountPreferences()} type="button">{accountSaveStatus === "saving" ? "Saving…" : accountSaveStatus === "saved" ? "Saved" : "Save account choices"}</button>
+        </footer>
       </section>
     </div>
   </section>
@@ -732,6 +956,13 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
 }
 
 function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
+
+function SettingsOperationalState({ issue, onRetry }: { issue: SettingsReadIssue; onRetry: () => void }) {
+  return <div className="settings-operational-state" data-kind={issue.kind} role="alert">
+    <div className="settings-operational-copy"><strong>{issue.title}</strong><span>{issue.detail}</span><small><b>Preserved:</b> {issue.preserved}</small><small><b>Affected:</b> {issue.effect}</small></div>
+    {issue.actionHref ? <a className="settings-recovery-action" href={issue.actionHref}>{issue.actionLabel}</a> : <button className="settings-recovery-action" onClick={onRetry} type="button">{issue.actionLabel}</button>}
+  </div>;
+}
 
 export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme }: {
   preferences: ReaderPreferences;
@@ -779,8 +1010,8 @@ export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme
   );
 }
 
-function PreferenceChoice({ label, hint, name, value, onChange, options }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }> }) {
-  return <fieldset className="preference-group"><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
+function PreferenceChoice({ label, hint, name, value, onChange, options, disabled = false }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; disabled?: boolean }) {
+  return <fieldset className="preference-group" disabled={disabled}><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} disabled={disabled} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
 }
 
 const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {

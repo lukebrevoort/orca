@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { StrictMode, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { useComposeDraft } from "./compose-workspace";
-import type { MessageDraft } from "@orca/shared";
+import type { MessageDraft, UserPreferences } from "@orca/shared";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -257,6 +257,227 @@ async function waitFor(milliseconds: number) {
     await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
   });
 }
+
+async function renderSettingsHome(theme: "light" | "dark" = "light") {
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => {
+    root!.render(<SettingsHome preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />);
+  });
+  return container;
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
+function apiError(status: number, code: string, message: string) {
+  return jsonResponse({ error: { code, message } }, status);
+}
+
+const loadedPreferences: UserPreferences = {
+  signature: "Warmly, Luke",
+  composeFormat: "rich",
+  replyBehavior: "reply_all",
+  notifyByDefault: true,
+};
+
+function settingsButton(label: string) {
+  const button = [...browserWindow.document.querySelectorAll("button")]
+    .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+  if (!button) throw new Error(`Could not find Settings button: ${label}`);
+  return button;
+}
+
+describe("Settings recovery", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    globalThis.fetch = originalFetch;
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("retries the canonical preference read without ever PATCHing fallback values", async () => {
+    let preferenceReads = 0;
+    const requests: Array<{ url: string; method: string }> = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      requests.push({ url, method });
+      if (url === "/v1/preferences") {
+        preferenceReads += 1;
+        return preferenceReads === 1
+          ? apiError(503, "temporarily_unavailable", "Preferences are temporarily unavailable")
+          : jsonResponse(loadedPreferences);
+      }
+      if (url === "/v1/accounts") return jsonResponse({ items: [], nextCursor: null });
+      if (url === "/v1/mcp/connections") return jsonResponse({ items: [] });
+      if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
+      throw new Error(`Unexpected request: ${method} ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome();
+    await waitFor(0);
+
+    const signature = browserWindow.document.querySelector(".settings-field textarea") as unknown as HTMLTextAreaElement;
+    const accountRadios = [...browserWindow.document.querySelectorAll('input[name="compose-format"], input[name="reply-behavior"]')] as unknown as HTMLInputElement[];
+    expect(signature.disabled).toBe(true);
+    expect(accountRadios.every((input) => input.disabled)).toBe(true);
+    expect(settingsButton("Save account choices").disabled).toBe(true);
+    expect(browserWindow.document.body.textContent).toContain("Nothing on your account was changed");
+
+    await act(async () => {
+      settingsButton("Try loading account choices again").click();
+    });
+    await waitFor(0);
+
+    expect(signature.disabled).toBe(false);
+    expect(settingsButton("Save account choices").disabled).toBe(true);
+    expect(requests.filter((request) => request.url === "/v1/preferences" && request.method === "PATCH")).toHaveLength(0);
+    expect(preferenceReads).toBe(2);
+  });
+
+  test("preserves newer edits across slow saves, failed saves, and PATCH retry", async () => {
+    let patchCount = 0;
+    let resolveFirstPatch!: (response: Response) => void;
+    const patchBodies: UserPreferences[] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/v1/preferences" && (init?.method ?? "GET") === "GET") return jsonResponse(loadedPreferences);
+      if (url === "/v1/preferences" && init?.method === "PATCH") {
+        patchCount += 1;
+        const body = JSON.parse(String(init.body)) as UserPreferences;
+        patchBodies.push(body);
+        if (patchCount === 1) return new Promise<Response>((resolve) => { resolveFirstPatch = resolve; });
+        if (patchCount === 2) return apiError(503, "temporarily_unavailable", "Save service unavailable");
+        return jsonResponse(body);
+      }
+      if (url === "/v1/accounts") return jsonResponse({ items: [], nextCursor: null });
+      if (url === "/v1/mcp/connections") return jsonResponse({ items: [] });
+      if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome();
+    await waitFor(0);
+    const signature = browserWindow.document.querySelector(".settings-field textarea") as unknown as HTMLTextAreaElement;
+    const plainFormat = browserWindow.document.querySelector('input[name="compose-format"][value="plain"]') as unknown as HTMLInputElement;
+    const richFormat = browserWindow.document.querySelector('input[name="compose-format"][value="rich"]') as unknown as HTMLInputElement;
+    const reply = browserWindow.document.querySelector('input[name="reply-behavior"][value="reply"]') as unknown as HTMLInputElement;
+
+    await act(async () => {
+      plainFormat.click();
+    });
+    expect(settingsButton("Save account choices").disabled).toBe(false);
+    await act(async () => {
+      settingsButton("Save account choices").click();
+    });
+    expect(signature.disabled).toBe(false);
+    expect(settingsButton("Saving…").disabled).toBe(true);
+
+    await act(async () => {
+      reply.click();
+    });
+    await act(async () => {
+      resolveFirstPatch(jsonResponse({ ...loadedPreferences, signature: "First edit" }));
+    });
+    await waitFor(0);
+
+    expect(reply.checked).toBe(true);
+    expect(browserWindow.document.body.textContent).toContain("Newer edits are still here");
+    expect(settingsButton("Save account choices").disabled).toBe(false);
+
+    await act(async () => {
+      settingsButton("Save account choices").click();
+    });
+    await waitFor(0);
+    expect(browserWindow.document.body.textContent).toContain("Your account choices are still here");
+
+    await act(async () => {
+      richFormat.click();
+    });
+    await act(async () => {
+      settingsButton("Try saving again").click();
+    });
+    await waitFor(0);
+
+    expect(patchBodies.map((body) => `${body.composeFormat}:${body.replyBehavior}`)).toEqual(["plain:reply_all", "plain:reply", "rich:reply"]);
+    expect(richFormat.checked).toBe(true);
+    expect(browserWindow.document.body.textContent).toContain("Account preferences saved");
+  });
+
+  test("gives session, account, agent, and sync read failures scoped recovery", async () => {
+    let accountReads = 0;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/v1/preferences") return apiError(401, "unauthorized", "Session expired");
+      if (url === "/v1/accounts") {
+        accountReads += 1;
+        return accountReads === 1
+          ? apiError(500, "internal_error", "Account service failed")
+          : jsonResponse({ items: [], nextCursor: null });
+      }
+      if (url === "/v1/mcp/connections") return apiError(403, "forbidden", "Agent access denied");
+      if (url === "/v1/sync/status") throw new TypeError("Failed to fetch");
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome("dark");
+    await waitFor(0);
+
+    expect(browserWindow.document.body.textContent).toContain("Your Orca session expired");
+    expect(browserWindow.document.querySelector('a[href^="/login"]')?.textContent).toContain("Sign in again");
+    expect(browserWindow.document.body.textContent).toContain("Connected accounts are temporarily unavailable");
+    expect(browserWindow.document.body.textContent).toContain("Orca cannot read agent connections");
+    expect(browserWindow.document.body.textContent).toContain("Sync status is unavailable while Orca is offline");
+
+    await act(async () => {
+      settingsButton("Try loading connected accounts again").click();
+    });
+    await waitFor(0);
+    expect(accountReads).toBe(2);
+    expect(browserWindow.document.body.textContent).toContain("No mail provider is connected yet");
+  });
+
+  test("keeps edited account choices local when the session expires during save", async () => {
+    let preferencePatches = 0;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/v1/preferences" && (init?.method ?? "GET") === "GET") return jsonResponse(loadedPreferences);
+      if (url === "/v1/preferences" && init?.method === "PATCH") {
+        preferencePatches += 1;
+        return apiError(401, "unauthorized", "Session expired");
+      }
+      if (url === "/v1/accounts") return jsonResponse({ items: [], nextCursor: null });
+      if (url === "/v1/mcp/connections") return jsonResponse({ items: [] });
+      if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome();
+    await waitFor(0);
+    const plainFormat = browserWindow.document.querySelector('input[name="compose-format"][value="plain"]') as unknown as HTMLInputElement;
+    await act(async () => { plainFormat.click(); });
+    await act(async () => { settingsButton("Save account choices").click(); });
+    await waitFor(0);
+
+    expect(plainFormat.checked).toBe(true);
+    expect(browserWindow.document.body.textContent).toContain("Your account choices are still here");
+    expect(browserWindow.document.querySelector('.settings-save-bar a[href^="/login"]')?.textContent).toBe("Sign in again");
+    expect(preferencePatches).toBe(1);
+  });
+});
 
 describe("Write shortcut", () => {
   beforeEach(() => {

@@ -386,6 +386,17 @@ textarea {
 .settings-account-capability { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); flex: none; font-size: 10px; font-weight: 750; padding: 7px 9px; }
 .settings-account-status { color: var(--orca-muted); font-size: 13px; line-height: 1.5; margin: 0; }
 .settings-account-status-error, .settings-outlook-error { color: var(--orca-danger); }
+.settings-operational-state { align-items: start; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-left: 3px solid var(--orca-danger); border-radius: 14px; display: grid; gap: 14px; grid-template-columns: minmax(0,1fr) auto; margin: 12px 0 18px; padding: 14px; }
+.settings-operational-state[data-kind="offline"] { border-left-color: var(--orca-muted); }
+.settings-operational-state[data-kind="auth"], .settings-operational-state[data-kind="no-access"] { border-left-color: var(--orca-accent); }
+.settings-operational-copy { display: grid; gap: 5px; }
+.settings-operational-copy > strong { color: var(--orca-ink); font-size: 13px; }
+.settings-operational-copy > span { color: var(--orca-muted); font-size: 12px; line-height: 1.45; }
+.settings-operational-copy > small { color: var(--orca-muted); font-size: 11px; line-height: 1.45; }
+.settings-operational-copy > small b { color: var(--orca-ink); }
+.settings-recovery-action { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; display: inline-flex; font-size: 11px; font-weight: 750; justify-content: center; min-height: 36px; padding: 8px 12px; text-decoration: none; }
+.settings-recovery-action:hover { background: var(--orca-surface); border-color: var(--orca-accent); color: var(--orca-ink); }
+.settings-recovery-action:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
 .settings-outlook-connect { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 14px; display: flex; gap: 18px; justify-content: space-between; margin-top: 14px; padding: 14px; }
 .settings-outlook-connect > div { display: grid; gap: 4px; min-width: 0; }
 .settings-outlook-connect strong { font-size: 13px; }
@@ -398,7 +409,8 @@ textarea {
 .settings-section .preference-group { padding: 17px 0; }.settings-section .preference-group:first-child { padding-top: 0; }.settings-section .preference-group:last-child { border-bottom: 0; padding-bottom: 0; }
 .settings-capability { margin-top: 18px; }
 .settings-save-bar { align-items: center; background: var(--orca-blur-tint); border: 1px solid var(--orca-border); border-radius: 14px; display: flex; gap: 18px; justify-content: space-between; margin-top: 24px; padding: 13px 14px; transition: background-color var(--orca-motion-medium) var(--orca-ease-enter), border-color var(--orca-motion-medium) var(--orca-ease-enter), box-shadow var(--orca-motion-medium) var(--orca-ease-enter), transform var(--orca-motion-medium) var(--orca-ease-enter); }
-.settings-save-bar p { color: var(--orca-muted); font-size: 12px; line-height: 1.45; margin: 0; }.settings-save-bar p[role="alert"] { color: var(--orca-danger); }.settings-save-bar p button { background: transparent; border: 0; color: inherit; cursor: pointer; font-weight: 750; padding: 0; text-decoration: underline; }
+.settings-save-bar p { color: var(--orca-muted); font-size: 12px; line-height: 1.45; margin: 0; }.settings-save-bar p[role="alert"] { color: var(--orca-danger); }.settings-save-bar p button, .settings-save-bar p a { background: transparent; border: 0; color: inherit; cursor: pointer; font-weight: 750; padding: 0; text-decoration: underline; }
+.settings-save-bar p button:focus-visible, .settings-save-bar p a:focus-visible { border-radius: 3px; outline: 2px solid var(--orca-accent); outline-offset: 3px; }
 .settings-save-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; flex: none; font-size: 12px; font-weight: 750; padding: 10px 14px; }.settings-save-button:hover:not(:disabled) { box-shadow: 0 5px 16px color-mix(in srgb, var(--orca-ink) 9%, transparent); transform: translateY(-1px); }.settings-save-button:disabled { cursor: wait; opacity: .62; }
 .settings-save-bar[data-status="saving"] .settings-save-button { animation: settings-saving-pulse 900ms ease-in-out infinite; }
 .settings-save-bar[data-status="saved"] { animation: settings-save-success 520ms var(--orca-ease-enter) both; background: color-mix(in srgb, var(--orca-accent) 10%, var(--orca-blur-tint)); border-color: color-mix(in srgb, var(--orca-accent) 38%, var(--orca-border)); }
@@ -477,6 +489,8 @@ textarea {
 .preference-option:active span { transform: translateY(0) scale(.97); }
 .preference-option-selected span { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orca-accent) 28%, transparent); }
 .preference-option input:focus-visible + span { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.preference-group:disabled .preference-option { cursor: not-allowed; }
+.preference-group:disabled .preference-option span { background: var(--orca-surface); border-color: var(--orca-border); color: var(--orca-muted); opacity: .72; transform: none; }
 .preference-switch { align-items: start; clear: both; cursor: pointer; display: grid; gap: 12px; grid-template-columns: auto 1fr; }
 .preference-switch input { accent-color: var(--orca-accent); height: 18px; margin: 2px 0 0; transition: box-shadow var(--orca-motion-fast) var(--orca-ease-enter), transform var(--orca-motion-fast) var(--orca-ease-enter); width: 18px; }
 .preference-switch:hover input { transform: scale(1.08); }
