@@ -543,6 +543,7 @@ export async function revokeAllAgentConnections() {
 
 type SettingsReadStatus = "loading" | "ready" | "error";
 type SettingsReadResource = "preferences" | "accounts" | "agents" | "sync";
+type SettingsRequestError = Error | null;
 type SettingsReadIssue = {
   kind: "offline" | "auth" | "no-access" | "server";
   title: string;
@@ -653,7 +654,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const [accountLoadStatus, setAccountLoadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
   const [accountLoadError, setAccountLoadError] = useState<unknown>(null);
   const [accountSaveStatus, setAccountSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [accountSaveError, setAccountSaveError] = useState<unknown>(null);
+  const [accountSaveError, setAccountSaveError] = useState<SettingsRequestError>(null);
   const [accountSaveNotice, setAccountSaveNotice] = useState<string | null>(null);
   const [accountDirty, setAccountDirty] = useState(false);
   const accountEditVersionRef = useRef(0);
@@ -790,7 +791,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     accountEditVersionRef.current += 1;
     setAccountDirty(true);
     setAccountSaveStatus((current) => current === "error" ? current : "idle");
-    setAccountSaveError((current) => accountSaveStatus === "error" ? current : null);
+    setAccountSaveError((current: SettingsRequestError) => accountSaveStatus === "error" ? current : null);
     setAccountSaveNotice(null);
     setAccountPreferences((current) => current ? { ...current, [key]: value } : current);
   };
@@ -818,7 +819,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       }
     } catch (error) {
       if (requestId !== accountSaveRequestRef.current) return;
-      setAccountSaveError(error);
+      setAccountSaveError(error instanceof Error ? error : new Error(getErrorMessage(error)));
       setAccountSaveStatus("error");
     }
   }

@@ -254,6 +254,11 @@ async function openZen() {
 
 async function waitFor(milliseconds: number) {
   await act(async () => {
+    if (milliseconds === 0) {
+      await Promise.resolve();
+      await Promise.resolve();
+      return;
+    }
     await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
   });
 }
@@ -476,6 +481,80 @@ describe("Settings recovery", () => {
     expect(browserWindow.document.body.textContent).toContain("Your account choices are still here");
     expect(browserWindow.document.querySelector('.settings-save-bar a[href^="/login"]')?.textContent).toBe("Sign in again");
     expect(preferencePatches).toBe(1);
+  });
+
+  test("retries agent connections and sync status without reloading other Settings reads", async () => {
+    let preferenceReads = 0;
+    let accountReads = 0;
+    let agentReads = 0;
+    let syncReads = 0;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/v1/preferences") { preferenceReads += 1; return jsonResponse(loadedPreferences); }
+      if (url === "/v1/accounts") { accountReads += 1; return jsonResponse({ items: [], nextCursor: null }); }
+      if (url === "/v1/mcp/connections") {
+        agentReads += 1;
+        return agentReads === 1 ? apiError(503, "temporarily_unavailable", "Agent service unavailable") : jsonResponse({ items: [] });
+      }
+      if (url === "/v1/sync/status") {
+        syncReads += 1;
+        return syncReads === 1 ? apiError(503, "temporarily_unavailable", "Sync service unavailable") : jsonResponse({ accounts: [] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome();
+    await waitFor(0);
+    expect(browserWindow.document.body.textContent).toContain("Agent connections are temporarily unavailable");
+    expect(browserWindow.document.body.textContent).toContain("Sync status is temporarily unavailable");
+
+    await act(async () => { settingsButton("Try loading agent connections again").click(); });
+    await waitFor(0);
+    expect(browserWindow.document.body.textContent).toContain("No ChatGPT or Codex connection has access to this workspace");
+    expect(agentReads).toBe(2);
+    expect(syncReads).toBe(1);
+
+    await act(async () => { settingsButton("Try loading sync status again").click(); });
+    await waitFor(0);
+    expect(syncReads).toBe(2);
+    expect(preferenceReads).toBe(1);
+    expect(accountReads).toBe(1);
+  });
+
+  test("ignores a stale canonical GET after a newer preference read has completed", async () => {
+    let preferenceReads = 0;
+    let resolveStaleRead!: (response: Response) => void;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url === "/v1/preferences") {
+        preferenceReads += 1;
+        if (preferenceReads === 1) return apiError(503, "temporarily_unavailable", "Preferences are temporarily unavailable");
+        if (preferenceReads === 2) return new Promise<Response>((resolve) => { resolveStaleRead = resolve; });
+        return jsonResponse({ ...loadedPreferences, signature: "Newest canonical value" });
+      }
+      if (url === "/v1/accounts") return jsonResponse({ items: [], nextCursor: null });
+      if (url === "/v1/mcp/connections") return jsonResponse({ items: [] });
+      if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderSettingsHome();
+    await waitFor(0);
+    const retry = settingsButton("Try loading account choices again");
+    await act(async () => {
+      retry.click();
+      retry.click();
+    });
+    await waitFor(0);
+    const signature = browserWindow.document.querySelector(".settings-field textarea") as unknown as HTMLTextAreaElement;
+    expect(preferenceReads).toBe(3);
+    expect(signature.value).toBe("Newest canonical value");
+
+    await act(async () => {
+      resolveStaleRead(jsonResponse({ ...loadedPreferences, signature: "Stale canonical value" }));
+    });
+    await waitFor(0);
+    expect(signature.value).toBe("Newest canonical value");
   });
 });
 
