@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { StrictMode, act } from "react";
+import { StrictMode, act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
-import { useComposeDraft } from "./compose-workspace";
+import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import type { MessageDraft, UserPreferences } from "@orca/shared";
 
 type FrameCallback = (timestamp: number) => void;
@@ -213,6 +213,67 @@ function createTestMessageDraft(id: string, subject: string): MessageDraft {
   };
 }
 
+function ComposeValidationHarness({
+  initialDraft,
+  contacts = [],
+  variant = "panel",
+  onSend,
+}: {
+  initialDraft: ComposeDraft;
+  contacts?: Array<{ name: string | null; email: string }>;
+  variant?: "panel" | "reply";
+  onSend: (draft: ComposeDraft) => void;
+}) {
+  const [draft, setDraft] = useState(initialDraft);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  return <ComposeWorkspace
+    canSend
+    contacts={contacts}
+    controller={{
+      draft,
+      saveStatus: "saved",
+      hasContent: true,
+      updateDraft(update) {
+        setDraft((current) => {
+          const next = { ...current, ...update };
+          draftRef.current = next;
+          return next;
+        });
+      },
+      attachFiles: () => ({ accepted: [], rejected: [] }),
+      removeAttachment() {},
+      discardDraft() {},
+      async sendDraft(deliveryFields?: Partial<ComposeDraftFields>) {
+        const sentDraft = { ...draftRef.current, ...deliveryFields };
+        onSend(sentDraft);
+        return { draftId: sentDraft.id, status: "sent", providerMessageId: "demo-sent", providerThreadId: null, error: null };
+      },
+    }}
+    variant={variant}
+  />;
+}
+
+async function renderComposeValidationHarness(props: Parameters<typeof ComposeValidationHarness>[0]) {
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => {
+    root!.render(<ComposeValidationHarness {...props} />);
+  });
+  return container;
+}
+
+async function enterInput(input: HTMLInputElement, value: string) {
+  await act(async () => {
+    input.focus();
+    const previous = input.value;
+    input.value = value;
+    (input as unknown as { _valueTracker?: { setValue: (tracked: string) => void } })._valueTracker?.setValue(previous);
+    input.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }) as unknown as Event);
+  });
+}
+
 async function openMessage(sender: string) {
   await act(async () => {
     messageRow(sender).click();
@@ -287,6 +348,143 @@ const loadedPreferences: UserPreferences = {
   replyBehavior: "reply_all",
   notifyByDefault: true,
 };
+
+describe("Compose delivery validation", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("rejects a pending matching suggestion and keeps the invalid To input focused", async () => {
+    const sent: ComposeDraft[] = [];
+    const draft = {
+      ...createEmptyComposeDraft("account"),
+      to: [{ name: "Dana", email: "dana@example.com" }],
+      body: "Keep this draft intact.",
+    };
+    await renderComposeValidationHarness({
+      initialDraft: draft,
+      contacts: [{ name: "Maya Chen", email: "maya@example.com" }],
+      onSend: (value) => sent.push(value),
+    });
+    const input = browserWindow.document.querySelector('[aria-label="Add To recipient"]') as unknown as HTMLInputElement;
+    await enterInput(input, "maya");
+    expect(browserWindow.document.querySelector('[role="option"]')?.textContent ?? "").toContain("Maya Chen");
+
+    const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+    expect(send.getAttribute("aria-disabled")).toBe("true");
+    await act(async () => {
+      send.click();
+    });
+
+    expect(sent).toHaveLength(0);
+    expect(input.value).toBe("maya");
+    expect(browserWindow.document.activeElement === (input as unknown)).toBe(true);
+    expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain("Choose a suggestion or enter a complete email address");
+    expect(browserWindow.document.querySelector('[aria-label="Message body"]')?.textContent).toContain("Keep this draft intact.");
+  });
+
+  test("never drops a malformed token from otherwise valid visible recipient input", async () => {
+    const sent: ComposeDraft[] = [];
+    const draft = {
+      ...createEmptyComposeDraft("account"),
+      to: [{ name: "Maya", email: "maya@example.com" }],
+      body: "The details are attached below.",
+    };
+    await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+    const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+      .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+    await act(async () => carbonToggle.click());
+    const bcc = browserWindow.document.querySelector('[aria-label="Add Bcc recipient"]') as unknown as HTMLInputElement;
+    await enterInput(bcc, "anika@example.com, unfinished-address");
+
+    const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+    await act(async () => send.click());
+
+    expect(sent).toHaveLength(0);
+    expect(bcc.value).toBe("anika@example.com, unfinished-address");
+    expect(browserWindow.document.activeElement === (bcc as unknown)).toBe(true);
+    expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain("unfinished-address");
+  });
+
+  test("commits valid pending To, Cc, and Bcc input into the exact delivery payload", async () => {
+    const sent: ComposeDraft[] = [];
+    const draft = { ...createEmptyComposeDraft("account"), body: "A complete note." };
+    await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+    const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+      .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+    await act(async () => carbonToggle.click());
+    const to = browserWindow.document.querySelector('[aria-label="Add To recipient"]') as unknown as HTMLInputElement;
+    const cc = browserWindow.document.querySelector('[aria-label="Add Cc recipient"]') as unknown as HTMLInputElement;
+    const bcc = browserWindow.document.querySelector('[aria-label="Add Bcc recipient"]') as unknown as HTMLInputElement;
+    await enterInput(to, "maya@example.com");
+    await enterInput(cc, "Dana <dana@example.com>");
+    await enterInput(bcc, "anika@example.com");
+
+    await act(async () => {
+      (browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement).click();
+      await Promise.resolve();
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.to).toEqual([{ name: null, email: "maya@example.com" }]);
+    expect(sent[0]?.cc).toEqual([{ name: "Dana", email: "dana@example.com" }]);
+    expect(sent[0]?.bcc).toEqual([{ name: null, email: "anika@example.com" }]);
+  });
+
+  test("blocks an empty reply, explains the policy, and returns focus to the message body", async () => {
+    const sent: ComposeDraft[] = [];
+    const draft = {
+      ...createEmptyComposeDraft("account"),
+      to: [{ name: "Maya", email: "maya@example.com" }],
+      subject: "Re: Launch notes",
+    };
+    await renderComposeValidationHarness({ initialDraft: draft, variant: "reply", onSend: (value) => sent.push(value) });
+    const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+    expect(send.getAttribute("aria-disabled")).toBe("true");
+    expect(send.getAttribute("aria-describedby")).not.toBeNull();
+    expect(browserWindow.document.getElementById(send.getAttribute("aria-describedby")!)?.textContent).toContain("Write a reply or add an attachment");
+
+    await act(async () => send.click());
+
+    expect(sent).toHaveLength(0);
+    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Message body");
+    expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain("Your reply is still here");
+  });
+
+  test("allows an attachment-only reply and labels that delivery policy before sending", async () => {
+    const sent: ComposeDraft[] = [];
+    const file = new browserWindow.File(["notes"], "notes.txt", { type: "text/plain" }) as unknown as File;
+    const draft = {
+      ...createEmptyComposeDraft("account"),
+      to: [{ name: "Maya", email: "maya@example.com" }],
+      subject: "Re: Launch notes",
+      attachments: [{ id: "notes", filename: "notes.txt", mimeType: "text/plain", size: 5, file, previewUrl: null }],
+    };
+    await renderComposeValidationHarness({ initialDraft: draft, variant: "reply", onSend: (value) => sent.push(value) });
+    const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+    expect(send.getAttribute("aria-disabled")).toBeNull();
+    expect(browserWindow.document.querySelector(".compose-delivery-empty")?.textContent).toBe("Attachment-only reply");
+
+    await act(async () => {
+      send.click();
+      await Promise.resolve();
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toBe("");
+    expect(sent[0]?.attachments).toHaveLength(1);
+  });
+});
 
 function settingsButton(label: string) {
   const button = [...browserWindow.document.querySelectorAll("button")]

@@ -67,6 +67,12 @@ describe("compose panel surfaces", () => {
     expect(cssRuleWithDeclaration(".panel-body", "background: var(--orca-paper)")).toContain("background: var(--orca-paper)");
     expect(styles).toContain("backdrop-filter: blur(2px) saturate(.92)");
   });
+
+  test("keeps blocked delivery and invalid message states labeled in both themes", () => {
+    expect(styles).toContain("/* BRE-356: validation stays readable in both semantic theme palettes. */");
+    expect(styles).toContain('.compose-writing-area[aria-invalid="true"] { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--orca-danger) 72%, var(--orca-border)); }');
+    expect(styles).toContain('.compose-send[aria-disabled="true"], .compose-send[aria-disabled="true"]:not(:disabled) { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);');
+  });
 });
 
 describe("Zen canvas surface", () => {
