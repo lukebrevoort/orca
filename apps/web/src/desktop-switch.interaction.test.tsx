@@ -6,7 +6,8 @@ import { Window } from "happy-dom";
 import { organizationLaneConfigurationFixture, organizationViewsFixture } from "@orca/shared";
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
-import { OrganizationStudio } from "./desktop-switch";
+import { AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { TopLayerProvider } from "./top-layer";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLTextAreaElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
@@ -93,6 +94,88 @@ function describeResponse(workspaceRevision: number) {
     laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision },
   };
 }
+
+describe("AppSidebar mobile navigation", () => {
+  test("keeps every destination, account, Compose, and space management keyboard reachable", async () => {
+    const destinations: DesktopDestination[] = [];
+    let composeCalls = 0;
+    let manageCalls = 0;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><AppSidebar
+      account={{ displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" }}
+      active="quiet"
+      draftCount={3}
+      inboxCount={12}
+      onCompose={() => { composeCalls += 1; }}
+      onManageSpaces={() => { manageCalls += 1; }}
+      onNavigate={(destination) => { destinations.push(destination); }}
+      spaces={[
+        { id: "focus", label: "Focus", description: "protected attention", count: 2 },
+        { id: "signals", label: "Signals", description: "important changes", count: 4 },
+        { id: "quiet", label: "Quiet", description: "low interruption", count: 1 },
+        { id: "later", label: "Later", description: "held intentionally", count: 3 },
+        { id: "launch", label: "Orca launch", description: "custom collection", custom: true, count: 5 },
+      ]}
+      theme="dark"
+    /></TopLayerProvider>));
+
+    const mobile = container.querySelector('nav[aria-label="Mobile primary"]') as unknown as HTMLElement;
+    expect(mobile).not.toBeNull();
+    expect(button(mobile, "Compose").getAttribute("aria-keyshortcuts")).toBe("c");
+    await click(button(mobile, "Compose"));
+    expect(composeCalls).toBe(1);
+
+    const more = [...mobile.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === "More") as unknown as HTMLButtonElement;
+    more.focus();
+    await click(more);
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Navigation menu"]') as unknown as HTMLElement;
+    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca destinations"]') as unknown as HTMLElement;
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.closest("#orca-top-layer-root")).not.toBeNull();
+    expect(container.inert).toBe(true);
+    expect(menu).not.toBeNull();
+    const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
+    const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
+    const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Organization", "Settings", "Account · Maya Chen"]);
+    expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
+    expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
+
+    menu.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowDown" }) as unknown as Event);
+    expect(browserWindow.document.activeElement?.textContent).toContain("Later");
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" })); });
+    await flush();
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+
+    const expected = new Map<string, DesktopDestination>([
+      ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "organization"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+    ]);
+    for (const [label, destination] of expected) {
+      await click(more);
+      const openMenu = browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement;
+      const item = findItem(openMenu, label);
+      expect(item, label).toBeDefined();
+      await click(item!);
+      expect(destinations.at(-1)).toBe(destination);
+    }
+
+    await click(more);
+    const manage = findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Manage spaces")!;
+    manage.focus();
+    await click(manage);
+    expect(manageCalls).toBe(1);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
+    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
+    await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
+    await flush();
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+  });
+});
 
 describe("OrganizationStudio integration", () => {
   test("shows proposed, simulated, active, and reverted Rule states across Tide Table and Glass Box", async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
@@ -35,6 +35,8 @@ const icons = {
   organization: <><path d="m10 2.8 7 3.7v7L10 17.2 3 13.5v-7z"/><path d="M6.5 8.3h7M6.5 11.7h7"/></>,
   settings: <><circle cx="10" cy="10" r="3"/><path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2"/></>,
   all: <><circle cx="10" cy="10" r="7"/><path d="M6 10h8M10 6v8"/></>,
+  compose: <><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></>,
+  more: <><circle cx="5" cy="10" r="1"/><circle cx="10" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></>,
 };
 
 function NavIcon({ name }: { name: keyof typeof icons }) {
@@ -47,6 +49,12 @@ function WaveMark() {
 
 function SidebarItem({ active, count, icon, label, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
+    {icon}<span>{label}</span>{count !== undefined ? <small>{count}</small> : null}
+  </button>;
+}
+
+function MobileMenuItem({ active = false, count, icon, label, onClick }: { active?: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
+  return <button aria-current={active ? "page" : undefined} className="desktop-mobile-menu-item" onClick={onClick} role="menuitem" type="button">
     {icon}<span>{label}</span>{count !== undefined ? <small>{count}</small> : null}
   </button>;
 }
@@ -64,31 +72,113 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
   onNavigate: (destination: DesktopDestination) => void;
 }) {
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const visibleSpaces = spaces.filter((space) => !space.hidden);
+  const activeSpace = spaces.find((space) => active === (space.custom ? `space:${space.id}` : space.id));
+  const mobileMenuOwnsCurrentDestination = active !== "inbox" && active !== "drafts";
+
+  function navigateFromMobileMenu(destination: DesktopDestination) {
+    setMobileMenuOpen(false);
+    onNavigate(destination);
+  }
+
+  function moveMobileMenuFocus(event: ReactKeyboardEvent<HTMLElement>) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not([disabled])')];
+    if (!items.length) return;
+    event.preventDefault();
+    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? items.length - 1
+      : event.key === "ArrowUp" ? (current <= 0 ? items.length - 1 : current - 1)
+      : (current + 1) % items.length;
+    items[next]?.focus();
+  }
+
   return <aside aria-label="Primary" className="desktop-sidebar">
-    <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
-    <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
-      <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
-    </button>
-    <p className="desktop-sidebar-label">Anchors</p>
-    <SidebarItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => onNavigate("inbox")} />
-    <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
-    <div className="desktop-sidebar-section-head"><span>My spaces</span><button onClick={onManageSpaces} type="button">Manage</button></div>
-    {spaces.filter((space) => !space.hidden).map((space) => <SidebarItem
-      active={active === (space.custom ? `space:${space.id}` : space.id)}
-      count={space.count}
-      icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
-      key={space.id}
-      label={space.label}
-      onClick={() => onNavigate(space.custom ? `space:${space.id}` : space.id as DesktopDestination)}
-    />)}
-    <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
-    <p className="desktop-sidebar-label">Workspace</p>
-    <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("organization")} />
-    <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
-    <div className="desktop-sidebar-spacer"/>
-    <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
-      <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
-    </button>
+    <div className="desktop-sidebar-content">
+      <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
+      <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
+        <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
+      </button>
+      <p className="desktop-sidebar-label">Anchors</p>
+      <SidebarItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => onNavigate("inbox")} />
+      <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
+      <div className="desktop-sidebar-section-head"><span>My spaces</span><button onClick={onManageSpaces} type="button">Manage</button></div>
+      {visibleSpaces.map((space) => <SidebarItem
+        active={active === (space.custom ? `space:${space.id}` : space.id)}
+        count={space.count}
+        icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
+        key={space.id}
+        label={space.label}
+        onClick={() => onNavigate(space.custom ? `space:${space.id}` : space.id as DesktopDestination)}
+      />)}
+      <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
+      <p className="desktop-sidebar-label">Workspace</p>
+      <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("organization")} />
+      <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
+      <div className="desktop-sidebar-spacer"/>
+      <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
+        <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
+      </button>
+    </div>
+    <nav aria-label="Mobile primary" className="desktop-mobile-navigation">
+      {mobileMenuOpen ? <TopLayer
+        ariaLabel="Navigation menu"
+        as="section"
+        backdropAriaLabel="Close navigation menu"
+        backdropClassName="desktop-mobile-menu-backdrop"
+        className="desktop-mobile-menu"
+        initialFocusSelector={'[aria-current="page"]'}
+        layerClassName="desktop-mobile-menu-layer"
+        onClose={() => setMobileMenuOpen(false)}
+        returnFocusRef={mobileMenuTriggerRef}
+        surfaceProps={{ id: "desktop-mobile-navigation-dialog" }}
+      >
+        <header><div><span>Orca workspace</span><h2>All destinations</h2></div><button aria-label="Close navigation menu" className="desktop-mobile-menu-close" onClick={() => setMobileMenuOpen(false)} type="button">×</button></header>
+        <div aria-label="All Orca destinations" className="desktop-mobile-menu-list" id="desktop-mobile-navigation-menu" onKeyDown={moveMobileMenuFocus} role="menu">
+          <div aria-label="Mail" role="group">
+            <p aria-hidden="true" className="desktop-mobile-menu-label">Mail</p>
+            <MobileMenuItem active={active === "inbox"} count={inboxCount} icon={<NavIcon name="inbox" />} label="Inbox" onClick={() => navigateFromMobileMenu("inbox")} />
+            <MobileMenuItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => navigateFromMobileMenu("drafts")} />
+            <MobileMenuItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => navigateFromMobileMenu("all")} />
+          </div>
+          <div aria-label="My spaces" role="group">
+            <p aria-hidden="true" className="desktop-mobile-menu-label">My spaces</p>
+            {visibleSpaces.map((space) => <MobileMenuItem
+              active={active === (space.custom ? `space:${space.id}` : space.id)}
+              count={space.count}
+              icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
+              key={space.id}
+              label={space.label}
+              onClick={() => navigateFromMobileMenu(space.custom ? `space:${space.id}` : space.id as DesktopDestination)}
+            />)}
+            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="Manage spaces" onClick={onManageSpaces} />
+          </div>
+          <div aria-label="Workspace" role="group">
+            <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
+            <MobileMenuItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("organization")} />
+            <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
+            <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
+          </div>
+        </div>
+      </TopLayer> : null}
+      <button aria-keyshortcuts="c" className="desktop-mobile-nav-item desktop-mobile-compose" onClick={onCompose} type="button"><NavIcon name="compose"/><span>Compose</span></button>
+      <button aria-current={active === "inbox" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("inbox")} type="button"><NavIcon name="inbox"/><span>Inbox</span></button>
+      <button aria-current={active === "drafts" ? "page" : undefined} className="desktop-mobile-nav-item" onClick={() => onNavigate("drafts")} type="button"><NavIcon name="drafts"/><span>Drafts</span></button>
+      <button
+        aria-controls="desktop-mobile-navigation-dialog"
+        aria-expanded={mobileMenuOpen}
+        aria-haspopup="dialog"
+        aria-label={`Open all destinations${activeSpace ? `. Current destination: ${activeSpace.label}` : mobileMenuOwnsCurrentDestination ? `. Current destination: ${active === "all" ? "All Mail" : active.charAt(0).toUpperCase() + active.slice(1)}` : ""}`}
+        className="desktop-mobile-nav-item desktop-mobile-more"
+        data-has-current={mobileMenuOwnsCurrentDestination || undefined}
+        onClick={() => setMobileMenuOpen((current) => !current)}
+        ref={mobileMenuTriggerRef}
+        type="button"
+      ><NavIcon name="more"/><span>More</span></button>
+    </nav>
   </aside>;
 }
 
