@@ -57,6 +57,20 @@ function createMessage(id: string): GmailMessage {
   };
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function waitFor(predicate: () => boolean, timeoutMs = 2_000) {
+  const deadline = performance.now() + timeoutMs;
+  while (!predicate()) {
+    if (performance.now() >= deadline) throw new Error("Timed out waiting for asynchronous Gmail sync");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 afterEach(() => {
   delete process.env.SESSION_SECRET;
   delete process.env.TOKEN_ENCRYPTION_KEY;
@@ -70,11 +84,15 @@ describe("Gmail push routes", () => {
   test("accepts a verified Pub/Sub push and runs history sync without a user session", async () => {
     setAuthEnv();
     const { db, sqlite } = createMigratedClient();
+    const historyGate = deferred();
     const gmailClient: GmailClient = {
       async getMessage(_token, id) { return createMessage(id); },
       async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
       async listLabels() { return [{ id: "INBOX", name: "Inbox" }]; },
-      async listHistory() { return { messageIds: ["push-message"], deletedMessageIds: [], nextCursor: null, historyId: "11" }; },
+      async listHistory() {
+        await historyGate.promise;
+        return { messageIds: ["push-message"], deletedMessageIds: [], nextCursor: null, historyId: "11" };
+      },
     };
 
     try {
@@ -101,6 +119,7 @@ describe("Gmail push routes", () => {
         gmailPushConfig: pushConfig,
       });
       const data = Buffer.from(JSON.stringify({ emailAddress: "LUKE@EXAMPLE.COM", historyId: "11" })).toString("base64url");
+      const requestStartedAt = performance.now();
       const response = await testApp.request("/v1/webhooks/gmail?token=push-secret", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -108,8 +127,25 @@ describe("Gmail push routes", () => {
       });
 
       assert.equal(response.status, 204);
+      assert.ok(performance.now() - requestStartedAt < 250, "valid push is acknowledged before provider fetch completes");
+      assert.equal((sqlite.query("select count(*) as count from gmail_sync_jobs where account_id = 'acct_1'").get() as { count: number }).count, 1);
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "10");
+      historyGate.resolve();
+      await waitFor(() => (sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id === "11");
       assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "11");
       assert.equal((sqlite.query("select count(*) as count from emails").get() as { count: number }).count, 1);
+      const metrics = sqlite.query("select message_count, provider_fetch_ms, db_prepare_count, db_write_ms, freshness_ms from gmail_sync_runs where account_id = 'acct_1'").get() as {
+        message_count: number;
+        provider_fetch_ms: number;
+        db_prepare_count: number;
+        db_write_ms: number;
+        freshness_ms: number;
+      };
+      assert.equal(metrics.message_count, 1);
+      assert.ok(metrics.provider_fetch_ms >= 0);
+      assert.ok(metrics.db_prepare_count > 0);
+      assert.ok(metrics.db_write_ms >= 0);
+      assert.ok(metrics.freshness_ms >= 0);
     } finally {
       sqlite.close();
     }

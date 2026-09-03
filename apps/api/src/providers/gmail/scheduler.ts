@@ -4,13 +4,8 @@ import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts } from "../../db/schema.ts";
 import { createGmailClient, type GmailClient } from "./client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./push-config.ts";
-import { backfillGmailAccount, ensureGmailWatch } from "./push.ts";
-import {
-  getGmailAccount,
-  syncGmailAccountPage,
-  withGmailSyncLock,
-  type GmailSyncResult,
-} from "./sync.ts";
+import type { GmailSyncCoordinator } from "./sync-coordinator.ts";
+import { createDefaultGmailSyncCoordinator } from "./sync-runtime.ts";
 
 type DatabaseFactory = typeof createDatabaseClient;
 
@@ -31,12 +26,20 @@ export async function runGmailPeriodicSync(options: {
   config?: GmailPushConfig;
   now?: () => Date;
   logger?: Pick<Console, "error" | "warn">;
+  coordinator?: GmailSyncCoordinator;
 } = {}): Promise<GmailPeriodicSyncResult> {
   const dbFactory = options.dbFactory ?? createDatabaseClient;
   const gmailClient = options.gmailClient ?? createGmailClient();
   const config = options.config ?? loadGmailPushConfig();
   const now = options.now ?? (() => new Date());
   const logger = options.logger ?? console;
+  const coordinator = options.coordinator ?? createDefaultGmailSyncCoordinator({
+    dbFactory,
+    gmailClient,
+    config,
+    now,
+    logger,
+  });
   const { db, sqlite } = dbFactory();
   const results: GmailPeriodicSyncAccountResult[] = [];
 
@@ -48,68 +51,15 @@ export async function runGmailPeriodicSync(options: {
       .all();
 
     for (const account of accounts) {
-      const result = await withGmailSyncLock(account.id, async () => {
-        const accountNow = now();
-        let pages = 0;
-        try {
-          const current = getGmailAccount(db, account.id);
-          const wasLegacyAccount = !current.syncHistoryId;
-          const shouldEnsureWatch = Boolean(config.topicName && config.verificationToken) && (
-            !current.syncHistoryId ||
-            !current.watchExpirationAt ||
-            current.watchExpirationAt <= new Date(accountNow.getTime() + config.watchRenewalWindowMs) ||
-            current.watchTopic !== config.topicName
-          );
-
-          if (shouldEnsureWatch) {
-            try {
-              await ensureGmailWatch(db, {
-                accountId: account.id,
-                gmailClient,
-                config,
-                now: accountNow,
-              });
-            } catch (error) {
-              const message = error instanceof Error ? error.message : "Unknown Gmail watch setup failure";
-              logger.warn("Gmail push watch setup failed; continuing periodic fallback", {
-                accountId: account.id,
-                error: message,
-              });
-            }
-          }
-
-          const afterWatch = getGmailAccount(db, account.id);
-          const watchEstablishedForLegacyAccount = wasLegacyAccount && Boolean(afterWatch.syncHistoryId);
-
-          // A newly connected account, and an account first seen before Gmail
-          // history push was enabled, are deliberately backfilled from the
-          // beginning after the watch cursor is established. That ordering
-          // keeps messages arriving during the backfill recoverable via history
-          // and repairs legacy accounts whose cached checkpoint predates push.
-          if (
-            (!afterWatch.lastSyncedAt && !afterWatch.syncCursor) ||
-            watchEstablishedForLegacyAccount
-          ) {
-            const backfill = await backfillGmailAccount(db, {
-              accountId: account.id,
-              gmailClient,
-              now: accountNow,
-              pageSize: config.backfillPageSize,
-              maxPages: config.backfillMaxPages,
-            });
-            pages = backfill.pages;
-          } else {
-            pages = await syncIncrementalPages(db, account.id, gmailClient, accountNow, config.backfillPageSize, config.backfillMaxPages);
-          }
-
-          return { accountId: account.id, ok: true, pages, error: null };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Unknown Gmail periodic sync failure";
-          logger.warn("Gmail periodic sync failed", { accountId: account.id, error: message });
-          return { accountId: account.id, ok: false, pages, error: message };
-        }
-      });
-      results.push(result);
+      coordinator.enqueue({ accountId: account.id, source: "fallback", freshnessAt: now() });
+      const drained = await coordinator.drainAccount(account.id);
+      if (drained.error) {
+        const message = drained.error instanceof Error ? drained.error.message : "Unknown Gmail periodic sync failure";
+        logger.warn("Gmail periodic sync failed", { accountId: account.id, error: message });
+        results.push({ accountId: account.id, ok: false, pages: Number(drained.result?.pageCount ?? 0), error: message });
+      } else {
+        results.push({ accountId: account.id, ok: true, pages: Number(drained.result?.pageCount ?? 0), error: null });
+      }
     }
   } finally {
     sqlite.close();
@@ -124,6 +74,7 @@ export function startGmailSyncScheduler(options: {
   config?: GmailPushConfig;
   now?: () => Date;
   logger?: Pick<Console, "error" | "warn">;
+  coordinator?: GmailSyncCoordinator;
 } = {}): { stop: () => void; runNow: () => Promise<GmailPeriodicSyncResult> } {
   const config = options.config ?? loadGmailPushConfig();
   let stopped = false;
@@ -151,26 +102,4 @@ export function startGmailSyncScheduler(options: {
     },
     runNow,
   };
-}
-
-async function syncIncrementalPages(
-  db: ReturnType<typeof createDatabaseClient>["db"],
-  accountId: string,
-  gmailClient: GmailClient,
-  now: Date,
-  pageSize: number,
-  maxPages: number,
-): Promise<number> {
-  let pages = 0;
-  let result: GmailSyncResult;
-  do {
-    result = await syncGmailAccountPage(db, {
-      accountId,
-      gmailClient,
-      now,
-      pageSize,
-    });
-    pages += 1;
-  } while (result.nextCursor && pages < maxPages);
-  return pages;
 }

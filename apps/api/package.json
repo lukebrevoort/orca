@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "bun test",
     "test:smoke": "bun test src/smoke.test.ts",
+    "benchmark:gmail-sync": "bun src/providers/gmail/sync-benchmark.ts",
     "lint": "tsc -p tsconfig.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env src/db/migrate.ts",

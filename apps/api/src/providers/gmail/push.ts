@@ -17,14 +17,18 @@ import {
   getGmailProviderTokens,
   persistGmailMessages,
   syncGmailAccountPage,
+  type GmailSyncMetricsRecorder,
 } from "./sync.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./push-config.ts";
+import type { GmailSyncLeaseGuard } from "./sync-coordinator.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
+type DatabaseExecutor = Pick<DatabaseClient, "insert" | "select" | "update">;
 
 export type GmailPushNotification = {
   emailAddress: string;
   historyId: string;
+  publishedAt?: Date;
 };
 
 export type GmailWatchResult = {
@@ -41,6 +45,8 @@ export type GmailBackfillOptions = {
   pageSize?: number;
   maxPages?: number;
   propagation?: DeterministicPropagationRuntimeOptions;
+  leaseGuard?: GmailSyncLeaseGuard;
+  metrics?: GmailSyncMetricsRecorder;
 };
 
 export type GmailBackfillResult = {
@@ -86,6 +92,8 @@ export async function watchGmailAccount(
     gmailClient?: GmailClient;
     config?: GmailPushConfig;
     now?: Date;
+    leaseGuard?: GmailSyncLeaseGuard;
+    metrics?: GmailSyncMetricsRecorder;
   },
 ): Promise<GmailWatchResult> {
   const now = input.now ?? new Date();
@@ -111,7 +119,9 @@ export async function watchGmailAccount(
 
   let response;
   try {
+    const providerStartedAt = performance.now();
     response = await gmailClient.watch(tokenRecord.accessToken, config.topicName);
+    input.metrics?.recordProviderFetch(performance.now() - providerStartedAt);
   } catch (error) {
     throw mapGmailPushError(error);
   }
@@ -136,6 +146,8 @@ export async function watchGmailAccount(
       gmailClient,
       config,
       now,
+      leaseGuard: input.leaseGuard,
+      metrics: input.metrics,
     });
   }
 
@@ -144,16 +156,19 @@ export async function watchGmailAccount(
     ? accountAfterDrain.syncHistoryId
     : historyId;
 
-  db
-    .update(oauthAccounts)
-    .set({
-      syncHistoryId: nextHistoryId,
-      watchExpirationAt: expirationAt,
-      watchTopic: config.topicName,
-      updatedAt: now,
-    })
-    .where(eq(oauthAccounts.id, account.id))
-    .run();
+  const dbWriteStartedAt = performance.now();
+  const persistWatch = (executor: DatabaseExecutor) => {
+    input.leaseGuard?.assert(executor);
+    executor.update(oauthAccounts).set({
+        syncHistoryId: nextHistoryId,
+        watchExpirationAt: expirationAt,
+        watchTopic: config.topicName,
+        updatedAt: now,
+      }).where(eq(oauthAccounts.id, account.id)).run();
+  };
+  if (input.leaseGuard) db.transaction((tx) => persistWatch(tx));
+  else persistWatch(db);
+  input.metrics?.recordDbWrite(performance.now() - dbWriteStartedAt);
 
   return {
     accountId: account.id,
@@ -171,6 +186,8 @@ export async function ensureGmailWatch(
     config?: GmailPushConfig;
     now?: Date;
     force?: boolean;
+    leaseGuard?: GmailSyncLeaseGuard;
+    metrics?: GmailSyncMetricsRecorder;
   },
 ): Promise<GmailWatchResult | null> {
   const config = input.config ?? loadGmailPushConfig();
@@ -221,6 +238,8 @@ export async function backfillGmailAccount(
       now,
       pageSize,
       propagation: input.propagation,
+      leaseGuard: input.leaseGuard,
+      metrics: input.metrics,
     });
     pages += 1;
     emailCount += result.emailCount;
@@ -252,6 +271,8 @@ export async function syncGmailAccountHistory(
     pageSize?: number;
     maxPages?: number;
     propagation?: DeterministicPropagationRuntimeOptions;
+    leaseGuard?: GmailSyncLeaseGuard;
+    metrics?: GmailSyncMetricsRecorder;
   },
 ): Promise<GmailHistorySyncResult> {
   const now = input.now ?? new Date();
@@ -276,10 +297,12 @@ export async function syncGmailAccountHistory(
           pageSize: input.pageSize ?? input.config?.backfillPageSize,
           maxPages: input.maxPages ?? input.config?.backfillMaxPages,
           propagation: input.propagation,
+          leaseGuard: input.leaseGuard,
+          metrics: input.metrics,
         })
       : null;
     const nextHistoryId = account.syncHistoryId ?? input.historyId;
-    updateHistoryCursor(db, account.id, nextHistoryId, now);
+    updateHistoryCursor(db, account.id, nextHistoryId, now, input.leaseGuard, input.metrics);
     return {
       accountId: account.id,
       historyId: nextHistoryId,
@@ -307,12 +330,14 @@ export async function syncGmailAccountHistory(
 
   try {
     do {
+      const providerStartedAt = performance.now();
       const page = await gmailClient.listHistory({
         accessToken: tokenRecord.accessToken,
         startHistoryId: account.syncHistoryId,
         cursor,
         pageSize: historyPageSize,
       });
+      input.metrics?.recordProviderFetch(performance.now() - providerStartedAt);
       pages += 1;
       for (const messageId of page.messageIds) {
         messageIds.add(messageId);
@@ -337,8 +362,10 @@ export async function syncGmailAccountHistory(
         pageSize: input.pageSize ?? input.config?.backfillPageSize,
         maxPages: input.maxPages ?? input.config?.backfillMaxPages,
         propagation: input.propagation,
+        leaseGuard: input.leaseGuard,
+        metrics: input.metrics,
       });
-      updateHistoryCursor(db, account.id, input.historyId, now);
+      updateHistoryCursor(db, account.id, input.historyId, now, input.leaseGuard, input.metrics);
       return {
         accountId: account.id,
         historyId: input.historyId,
@@ -366,6 +393,7 @@ export async function syncGmailAccountHistory(
   if (messageIds.size > 0) {
     let fetched: { messages: GmailMessage[]; missingMessageIds: string[] };
     try {
+      const providerStartedAt = performance.now();
       fetched = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, [...messageIds]);
       for (const messageId of fetched.missingMessageIds) {
         messageIds.delete(messageId);
@@ -373,6 +401,7 @@ export async function syncGmailAccountHistory(
       }
       if (fetched.messages.length > 0) {
         const labelList = await gmailClient.listLabels(tokenRecord.accessToken);
+        input.metrics?.recordProviderFetch(performance.now() - providerStartedAt);
         persisted = await persistGmailMessages(db, {
           accountId: account.id,
           accountEmail: account.providerEmail,
@@ -381,6 +410,8 @@ export async function syncGmailAccountHistory(
           now,
           propagationTrigger: "push",
           propagationOptions: input.propagation,
+          leaseGuard: input.leaseGuard,
+          metrics: input.metrics,
         });
       }
     } catch (error) {
@@ -389,10 +420,10 @@ export async function syncGmailAccountHistory(
   }
 
   if (deletedMessageIds.size > 0) {
-    deletedEmailCount = deleteGmailMessages(db, account.id, [...deletedMessageIds], now);
+    deletedEmailCount = deleteGmailMessages(db, account.id, [...deletedMessageIds], now, input.leaseGuard, input.metrics);
   }
 
-  updateHistoryCursor(db, account.id, historyId, now);
+  updateHistoryCursor(db, account.id, historyId, now, input.leaseGuard, input.metrics);
 
   return {
     accountId: account.id,
@@ -427,7 +458,10 @@ export function parseGmailPubSubNotification(body: unknown): GmailPushNotificati
     return null;
   }
 
-  return { emailAddress, historyId };
+  const publishTime = typeof body.message.publishTime === "string" ? new Date(body.message.publishTime) : null;
+  return publishTime && Number.isFinite(publishTime.getTime())
+    ? { emailAddress, historyId, publishedAt: publishTime }
+    : { emailAddress, historyId };
 }
 
 export function verifyGmailPushToken(request: Request, config: GmailPushConfig): boolean {
@@ -445,8 +479,18 @@ export function verifyGmailPushToken(request: Request, config: GmailPushConfig):
   return candidates.some((candidate) => safeEqual(candidate, config.verificationToken!));
 }
 
-function updateHistoryCursor(db: DatabaseClient, accountId: string, historyId: string, now: Date) {
-  const current = db
+function updateHistoryCursor(
+  db: DatabaseClient,
+  accountId: string,
+  historyId: string,
+  now: Date,
+  leaseGuard?: GmailSyncLeaseGuard,
+  metrics?: GmailSyncMetricsRecorder,
+) {
+  const dbWriteStartedAt = performance.now();
+  const update = (executor: DatabaseExecutor) => {
+    leaseGuard?.assert(executor);
+    const current = executor
     .select({ syncHistoryId: oauthAccounts.syncHistoryId })
     .from(oauthAccounts)
     .where(eq(oauthAccounts.id, accountId))
@@ -455,7 +499,7 @@ function updateHistoryCursor(db: DatabaseClient, accountId: string, historyId: s
     ? current.syncHistoryId
     : historyId;
 
-  db
+    executor
     .update(oauthAccounts)
     // A successful History drain is a freshness checkpoint even when Gmail
     // returned no changed messages. Keep status and mailbox revision aligned
@@ -463,9 +507,20 @@ function updateHistoryCursor(db: DatabaseClient, accountId: string, historyId: s
     .set({ syncHistoryId: nextHistoryId, lastSyncedAt: now, updatedAt: now })
     .where(eq(oauthAccounts.id, accountId))
     .run();
+  };
+  if (leaseGuard) db.transaction((tx) => update(tx));
+  else update(db);
+  metrics?.recordDbWrite(performance.now() - dbWriteStartedAt);
 }
 
-function deleteGmailMessages(db: DatabaseClient, accountId: string, providerMessageIds: string[], now: Date): number {
+function deleteGmailMessages(
+  db: DatabaseClient,
+  accountId: string,
+  providerMessageIds: string[],
+  now: Date,
+  leaseGuard?: GmailSyncLeaseGuard,
+  metrics?: GmailSyncMetricsRecorder,
+): number {
   const existing = db
     .select({ id: emails.id, threadId: emails.threadId })
     .from(emails)
@@ -473,7 +528,9 @@ function deleteGmailMessages(db: DatabaseClient, accountId: string, providerMess
     .all();
   if (existing.length === 0) return 0;
 
+  const dbWriteStartedAt = performance.now();
   db.transaction((tx) => {
+    leaseGuard?.assert(tx);
     tx.delete(emailAttachments).where(inArray(emailAttachments.emailId, existing.map((row) => row.id))).run();
     tx.delete(emailLabels).where(inArray(emailLabels.emailId, existing.map((row) => row.id))).run();
     tx.delete(emails).where(inArray(emails.id, existing.map((row) => row.id))).run();
@@ -485,6 +542,7 @@ function deleteGmailMessages(db: DatabaseClient, accountId: string, providerMess
       if (!remaining) tx.delete(threads).where(and(eq(threads.accountId, accountId), eq(threads.id, threadId))).run();
     }
   });
+  metrics?.recordDbWrite(performance.now() - dbWriteStartedAt);
 
   return existing.length;
 }

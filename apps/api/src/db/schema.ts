@@ -68,6 +68,75 @@ export const oauthAccounts = sqliteTable(
   }),
 );
 
+/** Durable, process-independent coordinator state for one Gmail account. */
+export const gmailSyncJobs = sqliteTable(
+  "gmail_sync_jobs",
+  {
+    accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    state: text("state").notNull().default("idle"),
+    requestVersion: integer("request_version").notNull().default(0),
+    pendingSources: integer("pending_sources").notNull().default(0),
+    pendingHistoryId: text("pending_history_id"),
+    pendingFullResync: integer("pending_full_resync", { mode: "boolean" }).notNull().default(false),
+    pendingFreshnessAt: integer("pending_freshness_at", { mode: "timestamp_ms" }),
+    activeSources: integer("active_sources").notNull().default(0),
+    activeHistoryId: text("active_history_id"),
+    activeFullResync: integer("active_full_resync", { mode: "boolean" }).notNull().default(false),
+    activeFreshnessAt: integer("active_freshness_at", { mode: "timestamp_ms" }),
+    leaseOwner: text("lease_owner"),
+    leaseVersion: integer("lease_version").notNull().default(0),
+    leaseExpiresAt: integer("lease_expires_at", { mode: "timestamp_ms" }),
+    availableAt: integer("available_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    coalescedCount: integer("coalesced_count").notNull().default(0),
+    totalEnqueued: integer("total_enqueued").notNull().default(0),
+    totalRuns: integer("total_runs").notNull().default(0),
+    lastStartedAt: integer("last_started_at", { mode: "timestamp_ms" }),
+    lastFinishedAt: integer("last_finished_at", { mode: "timestamp_ms" }),
+    lastError: text("last_error"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    readyIdx: index("gmail_sync_jobs_ready_idx").on(table.state, table.availableAt, table.updatedAt),
+    leaseExpiryIdx: index("gmail_sync_jobs_lease_expiry_idx").on(table.state, table.leaseExpiresAt),
+    stateCheck: check("gmail_sync_jobs_state_check", sql`${table.state} IN ('idle','queued','running')`),
+    pendingSourcesCheck: check("gmail_sync_jobs_pending_sources_check", sql`${table.pendingSources} >= 0 AND ${table.pendingSources} <= 15`),
+    activeSourcesCheck: check("gmail_sync_jobs_active_sources_check", sql`${table.activeSources} >= 0 AND ${table.activeSources} <= 15`),
+    requestVersionCheck: check("gmail_sync_jobs_request_version_check", sql`${table.requestVersion} >= 0`),
+    leaseVersionCheck: check("gmail_sync_jobs_lease_version_check", sql`${table.leaseVersion} >= 0`),
+  }),
+);
+
+/** Immutable coordinator-run telemetry, retained independently of the live queue row. */
+export const gmailSyncRuns = sqliteTable(
+  "gmail_sync_runs",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    requestVersion: integer("request_version").notNull(),
+    leaseVersion: integer("lease_version").notNull(),
+    sources: integer("sources").notNull(),
+    historyId: text("history_id"),
+    fullResync: integer("full_resync", { mode: "boolean" }).notNull().default(false),
+    status: text("status").notNull(),
+    messageCount: integer("message_count").notNull().default(0),
+    pageCount: integer("page_count").notNull().default(0),
+    providerFetchMs: integer("provider_fetch_ms").notNull().default(0),
+    dbPrepareCount: integer("db_prepare_count").notNull().default(0),
+    dbWriteMs: integer("db_write_ms").notNull().default(0),
+    freshnessMs: integer("freshness_ms").notNull().default(0),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    finishedAt: integer("finished_at", { mode: "timestamp_ms" }).notNull(),
+    error: text("error"),
+  },
+  (table) => ({
+    accountLeaseUniqueIdx: uniqueIndex("gmail_sync_runs_account_lease_unique_idx").on(table.accountId, table.leaseVersion),
+    accountFinishedIdx: index("gmail_sync_runs_account_finished_idx").on(table.accountId, table.finishedAt),
+    statusCheck: check("gmail_sync_runs_status_check", sql`${table.status} IN ('succeeded','failed')`),
+  }),
+);
+
 /**
  * Monotonic cursor root for every persisted input that can change an inbox
  * page. SQLite triggers advance it in the same transaction as the mutation.
@@ -811,6 +880,7 @@ export const emails = sqliteTable(
     humanClassificationReasons: text("human_classification_reasons"),
     humanClassifierVersion: text("human_classifier_version"),
     humanClassificationEvidence: text("human_classification_evidence"),
+    providerSnapshotDigest: text("provider_snapshot_digest"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(createdAtDefault),

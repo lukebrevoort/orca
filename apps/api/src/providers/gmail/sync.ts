@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { MailContact, NormalizedMessage } from "@orca/shared";
@@ -20,10 +22,12 @@ import {
   emails,
   labels,
   oauthAccounts,
+  organizationRules,
   threads,
 } from "../../db/schema.ts";
 import { normalizeGmailLabel, normalizeGmailMessage, type NormalizedGmailMessage } from "./normalizer.ts";
 import { createGmailClient, GmailApiError, type GmailClient } from "./client.ts";
+import type { GmailSyncLeaseGuard } from "./sync-coordinator.ts";
 
 type DatabaseClient = ReturnType<typeof createDatabaseClient>["db"];
 type DatabaseExecutor = Pick<DatabaseClient, "delete" | "insert" | "update" | "select">;
@@ -65,6 +69,13 @@ export type SyncOptions = {
   tokenFetch?: FetchLike;
   oauthConfig?: GmailOAuthConfig;
   propagation?: DeterministicPropagationRuntimeOptions;
+  leaseGuard?: GmailSyncLeaseGuard;
+  metrics?: GmailSyncMetricsRecorder;
+};
+
+export type GmailSyncMetricsRecorder = {
+  recordProviderFetch(durationMs: number): void;
+  recordDbWrite(durationMs: number): void;
 };
 
 export type GmailProviderTokenRecord = {
@@ -173,6 +184,7 @@ export async function syncGmailAccountPage(
   const since = new Date(syncState.startedAt);
 
   const syncWithAccessToken = async (accessToken: string): Promise<GmailSyncResult> => {
+    const providerStartedAt = performance.now();
     const [labelList, page] = await Promise.all([
       gmailClient.listLabels(accessToken),
       gmailClient.listInboxMessagePage({
@@ -183,6 +195,7 @@ export async function syncGmailAccountPage(
       }),
     ]);
     const gmailMessages = await fetchMessageDetails(gmailClient, accessToken, page.messageIds);
+    options.metrics?.recordProviderFetch(performance.now() - providerStartedAt);
     const nowDate = new Date(now);
     const persisted = await persistGmailMessages(db, {
       accountId: account.id,
@@ -192,6 +205,8 @@ export async function syncGmailAccountPage(
       now: nowDate,
       propagationTrigger: "sync",
       propagationOptions: options.propagation,
+      leaseGuard: options.leaseGuard,
+      metrics: options.metrics,
       afterPersist: (tx) => {
         tx
           .update(oauthAccounts)
@@ -263,6 +278,8 @@ export type GmailMessagePersistenceInput = {
   now: Date;
   propagationTrigger: "sync" | "push";
   propagationOptions?: DeterministicPropagationRuntimeOptions;
+  leaseGuard?: GmailSyncLeaseGuard;
+  metrics?: GmailSyncMetricsRecorder;
   afterPersist?: (db: DatabaseExecutor) => void;
 };
 
@@ -272,6 +289,8 @@ export type GmailMessagePersistenceResult = {
   labelCount: number;
   contactCount: number;
   threadIds: string[];
+  changedEmailCount: number;
+  unchangedEmailCount: number;
 };
 
 /**
@@ -297,8 +316,23 @@ export async function persistGmailMessages(
     .sort((left, right) => Date.parse(left.receivedAt) - Date.parse(right.receivedAt) || left.id.localeCompare(right.id));
   const existingThreadIds = new Set(threadIds.length === 0 ? [] : db.select({ id: threads.id }).from(threads)
     .where(and(eq(threads.accountId, input.accountId), inArray(threads.id, threadIds))).all().map((thread) => thread.id));
-  const existingMessageIds = new Set(messageIds.length === 0 ? [] : db.select({ id: emails.id }).from(emails)
-    .where(and(eq(emails.accountId, input.accountId), inArray(emails.id, messageIds))).all().map((message) => message.id));
+  const existingMessages = messageIds.length === 0 ? [] : db.select({
+    id: emails.id,
+    threadId: emails.threadId,
+    providerSnapshotDigest: emails.providerSnapshotDigest,
+  }).from(emails).where(and(eq(emails.accountId, input.accountId), inArray(emails.id, messageIds))).all();
+  const existingMessageById = new Map(existingMessages.map((message) => [message.id, message]));
+  const digestByMessageId = new Map(orderedMessages.map((message) => [message.id, providerSnapshotDigest(message)]));
+  const changedMessages = orderedMessages.filter((message) =>
+    existingMessageById.get(message.id)?.providerSnapshotDigest !== digestByMessageId.get(message.id));
+  const changedMessageIds = new Set(changedMessages.map((message) => message.id));
+  const changedThreadIds = [...new Set(changedMessages.flatMap((message) => {
+    const previousThreadId = existingMessageById.get(message.id)?.threadId;
+    return previousThreadId && previousThreadId !== message.threadId
+      ? [previousThreadId, message.threadId]
+      : [message.threadId];
+  }))];
+  const existingMessageIds = new Set(existingMessages.map((message) => message.id));
   const seenThreadIds = new Set(existingThreadIds);
   const evaluationEventsByMessageId = new Map(orderedMessages
     .filter((message) => !existingMessageIds.has(message.id))
@@ -308,32 +342,70 @@ export async function persistGmailMessages(
       return [message.id, { messageId: message.id, kind }] as const;
     }));
 
-  db.transaction((tx) => {
-    upsertLabels(tx, input.accountId, persistedLabels, input.now);
-    for (const message of orderedMessages) {
-      const messageBatch = [message];
-      upsertThreads(tx, messageBatch, input.now);
-      upsertEmails(tx, messageBatch, input.now);
-      upsertAttachments(tx, messageBatch, input.now);
-      upsertEmailLabels(tx, messageBatch, persistedLabels, input.now);
-      upsertContacts(tx, input.accountId, messageBatch, input.now);
-      refreshThreadAggregates(tx, { accountId: input.accountId, threadIds: [message.threadId], now: input.now });
+  const existingLabels = persistedLabels.length === 0 ? [] : db.select({
+    providerLabelId: labels.providerLabelId,
+    name: labels.name,
+    type: labels.type,
+  }).from(labels).where(eq(labels.accountId, input.accountId)).all();
+  const existingLabelByProviderId = new Map(existingLabels.map((label) => [label.providerLabelId, label]));
+  const changedLabels = persistedLabels.filter((label) => {
+    const existing = existingLabelByProviderId.get(label.providerLabelId);
+    return !existing || existing.name !== label.name || existing.type !== label.type;
+  });
+  const configuredRule = evaluationEventsByMessageId.size === 0 ? undefined : db.select({
+    id: organizationRules.id,
+    activeRevisionId: organizationRules.activeRevisionId,
+  })
+    .from(organizationRules)
+    .innerJoin(oauthAccounts, eq(oauthAccounts.userId, organizationRules.workspaceId))
+    .where(eq(oauthAccounts.id, input.accountId))
+    .orderBy(sql`${organizationRules.activeRevisionId} IS NULL`)
+    .get();
+  const requiresSequentialRuleEvaluation = configuredRule?.activeRevisionId !== null && configuredRule !== undefined;
+  const fallbackEvaluationEventsByThread = new Map<string, { messageId: string; kind: "message.received" | "thread.updated" }>();
+  if (configuredRule && !requiresSequentialRuleEvaluation) {
+    for (const message of changedMessages) {
+      const event = evaluationEventsByMessageId.get(message.id);
+      if (event) fallbackEvaluationEventsByThread.set(message.threadId, event);
+    }
+  }
 
-      const evaluationEvent = evaluationEventsByMessageId.get(message.id);
-      if (evaluationEvent) {
+  const dbWriteStartedAt = performance.now();
+  db.transaction((tx) => {
+    input.leaseGuard?.assert(tx);
+    upsertLabels(tx, input.accountId, changedLabels, input.now);
+    if (requiresSequentialRuleEvaluation) {
+      for (const message of changedMessages) {
+        upsertThreads(tx, [message], input.now);
+        upsertEmails(tx, [message], digestByMessageId, input.now);
+        upsertAttachments(tx, [message], input.now);
+        upsertEmailLabels(tx, [message], persistedLabels, input.now);
+        upsertContacts(tx, input.accountId, [message], input.now);
+        refreshThreadAggregates(tx, { accountId: input.accountId, threadIds: [message.threadId], now: input.now });
+        const event = evaluationEventsByMessageId.get(message.id);
+        if (event) evaluateLiveMessageRules(tx as unknown as DatabaseClient, { accountId: input.accountId, events: [event] });
+      }
+    } else {
+      upsertThreads(tx, changedMessages, input.now);
+      upsertEmails(tx, changedMessages, digestByMessageId, input.now);
+      upsertAttachments(tx, changedMessages, input.now);
+      upsertEmailLabels(tx, changedMessages, persistedLabels, input.now);
+      upsertContacts(tx, input.accountId, changedMessages, input.now);
+      refreshThreadAggregates(tx, { accountId: input.accountId, threadIds: changedThreadIds, now: input.now });
+      if (fallbackEvaluationEventsByThread.size > 0) {
         evaluateLiveMessageRules(tx as unknown as DatabaseClient, {
           accountId: input.accountId,
-          events: [evaluationEvent],
+          events: [...fallbackEvaluationEventsByThread.values()],
         });
-        evaluationEventsByMessageId.delete(message.id);
       }
     }
     input.afterPersist?.(tx);
   });
+  input.metrics?.recordDbWrite(performance.now() - dbWriteStartedAt);
 
   await runDeterministicPropagation(db, {
     accountId: input.accountId,
-    messages: normalizedMessages,
+    messages: changedMessages,
     trigger: input.propagationTrigger,
     options: input.propagationOptions,
   });
@@ -344,6 +416,8 @@ export async function persistGmailMessages(
     labelCount: persistedLabels.length,
     contactCount: collectContacts(normalizedMessages).length,
     threadIds,
+    changedEmailCount: changedMessageIds.size,
+    unchangedEmailCount: normalizedMessages.length - changedMessageIds.size,
   };
 }
 
@@ -612,20 +686,14 @@ function upsertLabels(
     return;
   }
 
-  for (const labelRow of labelRows) {
-    db
-      .insert(labels)
-      .values({
-        ...labelRow,
-        accountId,
-        createdAt: now,
-        updatedAt: now,
-      })
+  for (const batch of chunks(labelRows, 400)) {
+    db.insert(labels)
+      .values(batch.map((labelRow) => ({ ...labelRow, accountId, createdAt: now, updatedAt: now })))
       .onConflictDoUpdate({
         target: [labels.accountId, labels.providerLabelId],
         set: {
-          name: labelRow.name,
-          type: labelRow.type,
+          name: sql`excluded.name`,
+          type: sql`excluded.type`,
           updatedAt: now,
         },
       })
@@ -646,10 +714,7 @@ function upsertThreads(
     threadProviderIds.set(message.threadId, message.raw.threadId);
   }
 
-  for (const [threadId, subject] of threadSubjects.entries()) {
-    db
-      .insert(threads)
-      .values({
+  const rows = [...threadSubjects.entries()].map(([threadId, subject]) => ({
         id: threadId,
         accountId: normalizedMessages[0]?.raw.accountId ?? "",
         providerThreadId: threadProviderIds.get(threadId) ?? threadId,
@@ -659,11 +724,13 @@ function upsertThreads(
         isRead: true,
         createdAt: now,
         updatedAt: now,
-      })
+      }));
+  for (const batch of chunks(rows, 400)) {
+    db.insert(threads).values(batch)
       .onConflictDoUpdate({
         target: [threads.accountId, threads.providerThreadId],
         set: {
-          subject,
+          subject: sql`excluded.subject`,
           updatedAt: now,
         },
       })
@@ -674,14 +741,13 @@ function upsertThreads(
 function upsertEmails(
   db: DatabaseExecutor,
   normalizedMessages: NormalizedMessage[],
+  digestByMessageId: ReadonlyMap<string, string>,
   now: Date,
 ) {
-  for (const message of normalizedMessages) {
+  const rows = normalizedMessages.map((message) => {
     const automaticClassification = classifyHumanSignal(message.classificationEvidence);
     const classificationColumns = automaticClassificationColumns(automaticClassification);
-    db
-      .insert(emails)
-      .values({
+    return {
         id: message.id,
         accountId: message.raw.accountId,
         threadId: message.threadId,
@@ -706,33 +772,39 @@ function upsertEmails(
         humanClassificationEvidence: message.classificationEvidence
           ? JSON.stringify(message.classificationEvidence)
           : null,
+        providerSnapshotDigest: digestByMessageId.get(message.id)!,
         createdAt: now,
         updatedAt: now,
-      })
+      };
+  });
+  for (const batch of chunks(rows, 200)) {
+    db.insert(emails).values(batch)
       .onConflictDoUpdate({
         target: [emails.accountId, emails.providerMessageId],
         set: {
-          threadId: message.threadId,
-          fromAddress: message.from.email || null,
-          fromName: message.from.name,
-          toRecipients: JSON.stringify(message.to),
-          ccRecipients: JSON.stringify(message.cc),
-          bccRecipients: JSON.stringify(message.bcc),
-          subject: message.subject,
-          snippet: message.snippet,
-          bodyText: message.bodyText,
-          bodyHtml: message.bodyHtml,
-          internetMessageId: message.internetMessageId,
-          references: JSON.stringify(message.references),
-          receivedAt: new Date(message.receivedAt),
-          internalDate: new Date(message.receivedAt),
-          isRead: sql`CASE WHEN ${emails.isRead} = 1 AND ${message.unread} THEN 1 ELSE ${!message.unread} END`,
-          isStarred: message.labels.includes("STARRED"),
-          isDraft: message.labels.includes("DRAFT"),
-          ...classificationColumns,
-          humanClassificationEvidence: message.classificationEvidence
-            ? JSON.stringify(message.classificationEvidence)
-            : null,
+          threadId: sql`excluded.thread_id`,
+          fromAddress: sql`excluded.from_address`,
+          fromName: sql`excluded.from_name`,
+          toRecipients: sql`excluded.to_recipients`,
+          ccRecipients: sql`excluded.cc_recipients`,
+          bccRecipients: sql`excluded.bcc_recipients`,
+          subject: sql`excluded.subject`,
+          snippet: sql`excluded.snippet`,
+          bodyText: sql`excluded.body_text`,
+          bodyHtml: sql`excluded.body_html`,
+          internetMessageId: sql`excluded.internet_message_id`,
+          references: sql.raw('excluded."references"'),
+          receivedAt: sql`excluded.received_at`,
+          internalDate: sql`excluded.internal_date`,
+          isRead: sql`CASE WHEN ${emails.isRead} = 1 AND excluded.is_read = 0 THEN 1 ELSE excluded.is_read END`,
+          isStarred: sql`excluded.is_starred`,
+          isDraft: sql`excluded.is_draft`,
+          humanSignal: sql`excluded.human_signal`,
+          humanClassification: sql`excluded.human_classification`,
+          humanClassificationReasons: sql`excluded.human_classification_reasons`,
+          humanClassifierVersion: sql`excluded.human_classifier_version`,
+          humanClassificationEvidence: sql`excluded.human_classification_evidence`,
+          providerSnapshotDigest: sql`excluded.provider_snapshot_digest`,
           updatedAt: now,
         },
       })
@@ -745,14 +817,13 @@ function upsertAttachments(
   normalizedMessages: NormalizedGmailMessage[],
   now: Date,
 ) {
-  for (const message of normalizedMessages) {
-    db.delete(emailAttachments).where(eq(emailAttachments.emailId, message.id)).run();
-
-    for (const attachment of message.attachments) {
+  const messageIds = normalizedMessages.map((message) => message.id);
+  if (messageIds.length === 0) return;
+  db.delete(emailAttachments).where(inArray(emailAttachments.emailId, messageIds)).run();
+  const rows = normalizedMessages.flatMap((message) => message.attachments.flatMap((attachment) => {
       const providerAttachmentId = attachment.id.split(":attachment:").at(-1);
-      if (!providerAttachmentId) continue;
-
-      db.insert(emailAttachments).values({
+      if (!providerAttachmentId) return [];
+      return [{
         id: attachment.id,
         emailId: message.id,
         providerAttachmentId,
@@ -761,8 +832,10 @@ function upsertAttachments(
         size: attachment.size,
         createdAt: now,
         updatedAt: now,
-      }).run();
-    }
+      }];
+    }));
+  for (const batch of chunks(rows, 400)) {
+    db.insert(emailAttachments).values(batch).run();
   }
 }
 
@@ -774,26 +847,21 @@ function upsertEmailLabels(
 ) {
   const labelIdByProviderId = new Map(labelRows.map((labelRow) => [labelRow.providerLabelId, labelRow.id]));
 
-  for (const message of normalizedMessages) {
-    db.delete(emailLabels).where(eq(emailLabels.emailId, message.id)).run();
-
-    for (const providerLabelId of message.labels) {
+  const messageIds = normalizedMessages.map((message) => message.id);
+  if (messageIds.length === 0) return;
+  db.delete(emailLabels).where(inArray(emailLabels.emailId, messageIds)).run();
+  const rows = normalizedMessages.flatMap((message) => message.labels.flatMap((providerLabelId) => {
       const labelId = labelIdByProviderId.get(providerLabelId);
-      if (!labelId) {
-        continue;
-      }
-
-      db
-        .insert(emailLabels)
-        .values({
+      if (!labelId) return [];
+      return [{
           id: `${message.id}:${labelId}`,
           emailId: message.id,
           labelId,
           createdAt: now,
-        })
-        .onConflictDoNothing()
-        .run();
-    }
+        }];
+    }));
+  for (const batch of chunks(rows, 400)) {
+    db.insert(emailLabels).values(batch).onConflictDoNothing().run();
   }
 }
 
@@ -803,17 +871,16 @@ function upsertContacts(
   normalizedMessages: NormalizedMessage[],
   now: Date,
 ) {
-  for (const contact of collectContacts(normalizedMessages)) {
-    db
-      .insert(contacts)
-      .values({
+  const rows = collectContacts(normalizedMessages).map((contact) => ({
         id: buildContactId(accountId, contact.email),
         accountId,
         email: contact.email,
         name: contact.name,
         createdAt: now,
         updatedAt: now,
-      })
+      }));
+  for (const batch of chunks(rows, 400)) {
+    db.insert(contacts).values(batch)
       .onConflictDoUpdate({
         target: [contacts.accountId, contacts.email],
         set: {
@@ -823,6 +890,34 @@ function upsertContacts(
       })
       .run();
   }
+}
+
+function providerSnapshotDigest(message: NormalizedGmailMessage): string {
+  return createHash("sha256").update(JSON.stringify({
+    threadId: message.threadId,
+    providerMessageId: message.providerMessageId,
+    from: message.from,
+    to: message.to,
+    cc: message.cc,
+    bcc: message.bcc,
+    subject: message.subject,
+    snippet: message.snippet,
+    bodyText: message.bodyText,
+    bodyHtml: message.bodyHtml,
+    internetMessageId: message.internetMessageId,
+    references: message.references,
+    receivedAt: message.receivedAt,
+    unread: message.unread,
+    labels: [...message.labels].sort(),
+    classificationEvidence: message.classificationEvidence,
+    attachments: [...message.attachments].sort((left, right) => left.id.localeCompare(right.id)),
+  })).digest("hex");
+}
+
+function chunks<T>(values: readonly T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size));
+  return result;
 }
 
 function collectContacts(
