@@ -11,7 +11,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
 } from "react";
-import { deliveryResultSchema, messageDraftSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
+import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
@@ -78,7 +78,6 @@ export type ComposeAttachmentAcceptance = {
 export const MAX_COMPOSE_ATTACHMENTS = 25;
 export const MAX_COMPOSE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
-const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 export const COMPOSE_AUTOSAVE_DELAY_MS = 420;
 const PROVIDER_POLL_DELAY_MS = 500;
 
@@ -332,7 +331,7 @@ function sentDeliveryResult(draft: MessageDraft): DeliveryResult {
 }
 
 export function isValidEmail(value: string) {
-  return EMAIL_PATTERN.test(value.trim());
+  return outboundRecipientSchema.safeParse({ name: null, email: value }).success;
 }
 
 export function parseRecipientText(value: string): MailContact[] {
@@ -350,13 +349,15 @@ export function parseRecipientInput(value: string): { contacts: MailContact[]; i
 
   for (const token of tokens) {
     const match = token.match(/^(.*?)\s*<([^<>]+)>$/);
-    const contact = match
+    const candidate = match
       ? { name: match[1]!.trim().replace(/^['"]|['"]$/g, "") || null, email: match[2]!.trim().toLowerCase() }
       : { name: null, email: token.toLowerCase() };
-    if (!isValidEmail(contact.email)) {
+    const parsed = outboundRecipientSchema.safeParse(candidate);
+    if (!parsed.success) {
       invalid.push(token);
       continue;
     }
+    const contact = parsed.data;
     if (!seen.has(contact.email)) {
       contacts.push(contact);
       seen.add(contact.email);

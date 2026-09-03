@@ -315,6 +315,7 @@ export {
   normalizedMessageSchema,
   normalizedThreadPageSchema,
   normalizedThreadSchema,
+  outboundRecipientSchema,
   outboundErrorCodeSchema,
   outboundErrorSchema,
   providerPageShapeSchema,

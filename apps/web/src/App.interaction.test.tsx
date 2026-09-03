@@ -416,6 +416,39 @@ describe("Compose delivery validation", () => {
     expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain("unfinished-address");
   });
 
+  for (const { address, kind } of [
+    { address: "maya@example.com>", kind: "To" },
+    { address: "maya@example..com", kind: "Cc" },
+    { address: "maya@-example.com", kind: "Bcc" },
+  ] as const) {
+    test(`rejects shared-schema-invalid ${kind} input ${address} inline and restores field focus`, async () => {
+      const sent: ComposeDraft[] = [];
+      const draft = {
+        ...createEmptyComposeDraft("account"),
+        to: [{ name: "Dana", email: "dana@example.com" }],
+        body: "Keep this draft intact.",
+      };
+      await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+      if (kind !== "To") {
+        const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+          .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+        await act(async () => carbonToggle.click());
+      }
+      const input = browserWindow.document.querySelector(`[aria-label="Add ${kind} recipient"]`) as unknown as HTMLInputElement;
+      await enterInput(input, address);
+
+      const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+      await act(async () => send.click());
+
+      expect(sent).toHaveLength(0);
+      expect(input.value).toBe(address);
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(browserWindow.document.activeElement === (input as unknown)).toBe(true);
+      expect(browserWindow.document.querySelector('[role="alert"]')?.textContent).toContain(address);
+      expect(browserWindow.document.querySelector('[aria-label="Message body"]')?.textContent).toContain("Keep this draft intact.");
+    });
+  }
+
   test("commits valid pending To, Cc, and Bcc input into the exact delivery payload", async () => {
     const sent: ComposeDraft[] = [];
     const draft = { ...createEmptyComposeDraft("account"), body: "A complete note." };

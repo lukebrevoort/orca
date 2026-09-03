@@ -328,7 +328,7 @@ export const mailAttachmentSchema = z.object({
 }).strict();
 export type MailAttachment = z.infer<typeof mailAttachmentSchema>;
 
-const outboundRecipientSchema = z.object({
+export const outboundRecipientSchema = z.object({
   name: z.string().trim().min(1).max(200).nullable(),
   email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
 }).strict();
