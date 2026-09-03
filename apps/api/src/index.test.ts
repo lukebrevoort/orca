@@ -1675,7 +1675,23 @@ describe("Orca API", () => {
         accessTokenEncrypted: "access", refreshTokenEncrypted: "refresh", lastSyncedAt: new Date("2026-07-08T12:00:00.000Z"),
       }).run();
       const session = await createSession(db, "user_1");
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      let runHistoryReads = 0;
+      const dbFactory = () => {
+        const client = createDatabaseClient(dbPath);
+        const prepare = client.sqlite.prepare.bind(client.sqlite);
+        Object.defineProperty(client.sqlite, "prepare", {
+          configurable: true,
+          value(query: string) {
+            if (query.includes("gmail_sync_runs")) {
+              runHistoryReads += 1;
+              throw new Error("sync status must not read run history");
+            }
+            return prepare(query);
+          },
+        });
+        return client;
+      };
+      const testApp = createApp({ dbFactory });
 
       const response = await testApp.request("/api/sync/status", { headers: { cookie: `orca_session=${session.token}` } });
 
@@ -1687,6 +1703,7 @@ describe("Orca API", () => {
           state: "idle", lastSyncedAt: "2026-07-08T12:00:00.000Z", error: null,
         }],
       });
+      assert.equal(runHistoryReads, 0);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

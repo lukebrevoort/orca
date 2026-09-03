@@ -12,6 +12,7 @@ import { oauthAccounts, users } from "./db/schema.ts";
 import { createApp } from "./index.ts";
 import type { GmailClient } from "./providers/gmail/client.ts";
 import type { GmailPushConfig } from "./providers/gmail/push-config.ts";
+import { createDefaultGmailSyncCoordinator } from "./providers/gmail/sync-runtime.ts";
 import type { GmailMessage } from "./providers/gmail/types.ts";
 
 const tempDirs: string[] = [];
@@ -222,6 +223,79 @@ describe("Gmail push routes", () => {
       assert.equal(body.backfill.emailCount, 1);
       assert.equal((sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "50");
     } finally {
+      sqlite.close();
+    }
+  });
+
+  test("watch endpoint preserves renewal intent when a history push is already active", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const historyStarted = deferred();
+    const releaseHistory = deferred();
+    let watchCalls = 0;
+    const gmailClient: GmailClient = {
+      async getMessage() { throw new Error("not used"); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return []; },
+      async listHistory() {
+        historyStarted.resolve();
+        await releaseHistory.promise;
+        return { messageIds: [], deletedMessageIds: [], nextCursor: null, historyId: "11" };
+      },
+      async watch() {
+        watchCalls += 1;
+        return { historyId: "11", expiration: "1800000000000" };
+      },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1",
+        userId: "user_1",
+        provider: "gmail",
+        providerEmail: "luke@example.com",
+        providerId: "gmail-user-1",
+        syncHistoryId: "10",
+        lastSyncedAt: new Date("2026-08-10T00:00:00.000Z"),
+        watchExpirationAt: new Date("2026-08-10T00:00:00.000Z"),
+        watchTopic: pushConfig.topicName,
+      }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+      const session = await createSession(db, "user_1");
+      const dbFactory = () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite"));
+      const coordinator = createDefaultGmailSyncCoordinator({
+        dbFactory,
+        gmailClient,
+        config: pushConfig,
+        now: () => new Date("2026-08-11T00:00:00.000Z"),
+      });
+      const testApp = createApp({
+        dbFactory,
+        gmailClient,
+        gmailPushConfig: pushConfig,
+        gmailSyncCoordinator: coordinator,
+        now: () => new Date("2026-08-11T00:00:00.000Z"),
+      });
+
+      coordinator.enqueue({ accountId: "acct_1", source: "push", historyId: "11" });
+      const activePush = coordinator.drainAccount("acct_1");
+      await historyStarted.promise;
+      const watchResponse = testApp.request("/v1/gmail/watch", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+      await waitFor(() => (sqlite.query("select total_enqueued from gmail_sync_jobs where account_id = 'acct_1'").get() as { total_enqueued: number }).total_enqueued === 2);
+      releaseHistory.resolve();
+
+      const response = await watchResponse;
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.watch.historyId, "11");
+      assert.equal(watchCalls, 1);
+      assert.equal((await activePush).runs, 2);
+    } finally {
+      releaseHistory.resolve();
       sqlite.close();
     }
   });

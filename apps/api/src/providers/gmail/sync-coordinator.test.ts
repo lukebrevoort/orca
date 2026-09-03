@@ -93,13 +93,13 @@ describe("durable Gmail sync coordinator", () => {
     const { sqlite, dbFactory } = setup();
     const firstStarted = deferred<void>();
     const releaseFirst = deferred<void>();
-    const historyIds: Array<string | null> = [];
+    const claims: Array<{ historyId: string | null; sources: string[] }> = [];
     const coordinator = createGmailSyncCoordinator({
       dbFactory,
       ownerId: "combined-worker",
       worker: async (claim) => {
-        historyIds.push(claim.historyId);
-        if (historyIds.length === 1) {
+        claims.push({ historyId: claim.historyId, sources: claim.sources });
+        if (claims.length === 1) {
           firstStarted.resolve();
           await releaseFirst.promise;
         }
@@ -119,7 +119,10 @@ describe("durable Gmail sync coordinator", () => {
 
       const result = await drain;
       assert.equal(result.runs, 2);
-      assert.deepEqual(historyIds, ["101", "105"]);
+      assert.deepEqual(claims, [
+        { historyId: "101", sources: ["push"] },
+        { historyId: "105", sources: ["push", "fallback"] },
+      ]);
     } finally {
       sqlite.close();
     }
@@ -191,6 +194,7 @@ describe("durable Gmail sync coordinator", () => {
     let clock = new Date("2026-09-02T00:00:00.000Z");
     const started = deferred<void>();
     const release = deferred<void>();
+    let recoveredSources: string[] = [];
     const first = createGmailSyncCoordinator({
       dbFactory,
       ownerId: "crashed-process",
@@ -208,6 +212,7 @@ describe("durable Gmail sync coordinator", () => {
       leaseMs: 1_000,
       now: () => clock,
       worker: async (claim) => {
+        recoveredSources = claim.sources;
         claim.lease.assert();
         return { messageCount: 2 };
       },
@@ -217,9 +222,11 @@ describe("durable Gmail sync coordinator", () => {
       first.enqueue({ accountId: "account-a", source: "push", historyId: "200" });
       const staleDrain = first.drainAccount("account-a");
       await started.promise;
+      second.enqueue({ accountId: "account-a", source: "fallback" });
       clock = new Date(clock.getTime() + 2_000);
       const recovered = await second.drainAccount("account-a");
       assert.equal(recovered.completed, true);
+      assert.deepEqual(recoveredSources, ["push", "fallback"]);
       release.resolve();
       const stale = await staleDrain;
       assert.equal(stale.completed, false);

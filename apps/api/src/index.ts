@@ -627,9 +627,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const { db, sqlite } = dbFactory();
       try {
         const allowed = new Set(allowedAccountIds);
-        const durableSyncJobs = new Map(gmailSyncCoordinator.snapshot().jobs.map((job) => [job.accountId, job]));
-        return getUnifiedInboxAccounts(db, userId)
-          .filter((account) => allowed.has(account.id))
+        const connectedAccounts = getUnifiedInboxAccounts(db, userId)
+          .filter((account) => allowed.has(account.id));
+        const durableSyncJobs = new Map(gmailSyncCoordinator.jobsForAccounts(connectedAccounts.map((account) => account.id))
+          .map((job) => [job.accountId, job]));
+        return connectedAccounts
           .map((account) => {
             const durableStatus = durableSyncJobs.get(account.id);
             const authNeeded = !account.accessTokenEncrypted || !account.refreshTokenEncrypted;
@@ -1181,7 +1183,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     const { db, sqlite } = dbFactory();
     try {
       const accounts = getConnectedAccounts(db, c.get("auth").userId);
-      const durableSyncJobs = new Map(gmailSyncCoordinator.snapshot().jobs.map((job) => [job.accountId, job]));
+      const durableSyncJobs = new Map(gmailSyncCoordinator.jobsForAccounts(accounts.map((account) => account.id))
+        .map((job) => [job.accountId, job]));
       return jsonWithSchema(c, syncStatusSchema, {
         accounts: accounts.map((account) => {
           const durableStatus = durableSyncJobs.get(account.id);

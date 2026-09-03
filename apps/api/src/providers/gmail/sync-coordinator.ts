@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, gt, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 
 import { createDatabaseClient } from "../../db/client.ts";
 import { gmailSyncJobs, gmailSyncRuns, oauthAccounts } from "../../db/schema.ts";
@@ -493,6 +493,21 @@ export function createGmailSyncCoordinator(options: {
     }
   }
 
+  /** Account-bounded live status read; intentionally excludes immutable run history. */
+  function jobsForAccounts(accountIds: readonly string[]) {
+    const ids = [...new Set(accountIds)];
+    if (ids.length === 0) return [];
+    const { db, sqlite } = dbFactory();
+    try {
+      return db.select().from(gmailSyncJobs)
+        .where(inArray(gmailSyncJobs.accountId, ids))
+        .orderBy(asc(gmailSyncJobs.accountId))
+        .all();
+    } finally {
+      sqlite.close();
+    }
+  }
+
   function ownedJob(db: DatabaseExecutor, claim: GmailSyncClaim) {
     return db.select().from(gmailSyncJobs).where(and(
       eq(gmailSyncJobs.accountId, claim.accountId),
@@ -503,7 +518,7 @@ export function createGmailSyncCoordinator(options: {
     )).get();
   }
 
-  return { enqueue, drainAccount, drainReady, kick, snapshot, ownerId };
+  return { enqueue, drainAccount, drainReady, kick, snapshot, jobsForAccounts, ownerId };
 }
 
 function queueDepth(db: DatabaseExecutor): number {
@@ -523,6 +538,9 @@ function requestCovered(input: {
   pendingFullResync: boolean;
 }): boolean {
   if (input.fullResync) return input.activeFullResync || input.pendingFullResync;
+  if (input.source === "fallback") {
+    return ((input.activeSources | input.pendingSources) & sourceBits.fallback) !== 0;
+  }
   if (input.source !== "push") return input.activeSources !== 0 || input.pendingSources !== 0;
   if (!input.historyId) return true;
   const coveredHistory = laterHistoryId(input.activeHistoryId, input.pendingHistoryId);
