@@ -494,6 +494,86 @@ describe("App", () => {
     expect(html.indexOf("message-0")).toBeLessThan(html.indexOf("message-4"));
   });
 
+  test("removes unsupported reader actions and truthfully explains attachment availability", () => {
+    const message = {
+      ...makeThreadMessage("attachment-message", "2026-07-12T18:00:00.000Z"),
+      attachments: [{ id: "attachment-1", filename: "launch-notes.pdf", mimeType: "application/pdf", size: 2483200 }],
+    };
+    const detail = makeThreadDetail([message]);
+    detail.thread.attention.hasStarred = true;
+
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={detail}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).not.toContain("Star conversation");
+    expect(html).not.toContain("More conversation actions");
+    expect(html).toContain("launch-notes.pdf");
+    expect(html).toContain("2.4 MB · application/pdf");
+    expect(html).toContain("Files aren’t available in Orca yet.");
+    expect(html).toContain("Open this conversation in Gmail to view or download them.");
+    expect(html).toContain('aria-describedby="reader-attachments-note-attachment-message"');
+    expect(html).toContain("Details only");
+    expect(html).not.toContain('aria-label="Download launch-notes.pdf"');
+  });
+
+  test("keeps partial reader data and no-attachment states explicit without inventing actions", () => {
+    const partialMessage = {
+      ...makeThreadMessage("partial-message", "2026-07-12T18:00:00.000Z"),
+      bodyText: null,
+      bodyHtml: null,
+      attachments: [],
+    };
+
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={makeThreadDetail([partialMessage])}
+        error={null}
+        fallbackMessages={[]}
+        fallbackTitle="Reader test"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="ready"
+      />,
+    );
+
+    expect(html).toContain("Orca synced this message’s details, but no readable text body was available.");
+    expect(html).toContain("The rest of this conversation is still here.");
+    expect(html).not.toContain(">Attachments</h3>");
+    expect(html).not.toContain("Files aren’t available in Orca yet.");
+  });
+
+  test("keeps reader return context available during failure and retry", () => {
+    const html = renderToStaticMarkup(
+      <MessageReader
+        detail={null}
+        error="The provider did not answer."
+        fallbackMessages={[]}
+        fallbackTitle="Quarterly launch"
+        originLabel="Focus"
+        onAttentionChange={async () => "normal"}
+        onBack={() => {}}
+        onRetry={() => {}}
+        status="error"
+      />,
+    );
+
+    expect(html).toContain(">Focus</span>");
+    expect(html).toContain("Your place in Focus is preserved.");
+    expect(html).toContain("The provider did not answer.");
+    expect(html).toContain(">Try again</button>");
+  });
+
   test("keeps the unread divider from colliding with the date heading", () => {
     const readOlder = makeThreadMessage("read-older", "2026-07-10T09:00:00.000Z", false, "Read older");
     const readSameDay = makeThreadMessage("read-same-day", "2026-07-11T09:00:00.000Z", false, "Read same day");

@@ -4978,7 +4978,7 @@ export function MessageReader({
         <section className="reader-state" role="alert">
           <p>Message unavailable</p>
           <h1 id="reader-title">This conversation couldn’t open.</h1>
-          <span>{error ?? "Orca could not load the message body."}</span>
+          <span><strong>Your place in {originLabel} is preserved.</strong> {error ?? "Orca could not load the message body."}</span>
           <button onClick={onRetry} type="button">Try again</button>
         </section>
       ) : null}
@@ -4988,7 +4988,7 @@ export function MessageReader({
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
+            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -5056,12 +5056,13 @@ export function MessageReader({
                         ) : null}
                       </>
                     ) : (
-                      <p className="reader-no-body">This message has no readable text body.</p>
+                      <p className="reader-no-body"><strong>Readable body unavailable.</strong><span>Orca synced this message’s details, but no readable text body was available. The rest of this conversation is still here.</span></p>
                     )}
                     {message.attachments.length ? (
-                      <section className="reader-attachments" aria-label={`${message.attachments.length} attachments`}>
-                        <h3>Attachments</h3>
-                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div></li>)}</ul>
+                      <section className="reader-attachments" aria-describedby={`reader-attachments-note-${message.id}`} aria-labelledby={`reader-attachments-title-${message.id}`}>
+                        <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
+                        <p className="reader-attachments-note" id={`reader-attachments-note-${message.id}`}><strong>Files aren’t available in Orca yet.</strong> Attachment details are synced safely. Open this conversation in {detail.account.provider === "gmail" ? "Gmail" : "Outlook"} to view or download them.</p>
+                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
                       </section>
                     ) : null}
                         </article>
