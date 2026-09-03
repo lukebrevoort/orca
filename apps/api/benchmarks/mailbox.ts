@@ -1,19 +1,24 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { arch, cpus, platform, release, tmpdir, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 
-import { startVisibleMailboxRevalidation, type MailboxRevalidationMetric } from "../../web/src/mailbox-revalidation.ts";
+import { refreshMailboxThroughProvider, startVisibleMailboxRevalidation, type MailboxRevalidationMetric } from "../../web/src/mailbox-revalidation.ts";
+import { createSession } from "../src/auth/session-store.ts";
 import { createDatabaseClient } from "../src/db/client.ts";
-import { humanClassificationOverrides, oauthAccounts, senderAttentionRules, users } from "../src/db/schema.ts";
-import { createMailboxReader, mailboxReadTargets, type MailboxReadAccount } from "../src/mailbox/read.ts";
+import { emailLabels, humanClassificationOverrides, labels, oauthAccounts, senderAttentionRules, users } from "../src/db/schema.ts";
+import { createApp } from "../src/index.ts";
+import { createMailboxReader, mailboxReadTargets, type MailboxPageQueryPlan, type MailboxReadAccount, type MailboxReadMetric } from "../src/mailbox/read.ts";
 
 const SAMPLE_COUNT = Number(Bun.env.MAILBOX_BENCH_SAMPLES ?? 30);
 const WARMUP_COUNT = Number(Bun.env.MAILBOX_BENCH_WARMUPS ?? 5);
-const FIXTURE_SEED = "BRE-367-v1";
+const FIXTURE_SEED = "BRE-367-v2-high-association";
 const FIXTURE_SIZES = [1_000, 5_000] as const;
 const baseTime = Date.parse("2026-09-02T12:00:00.000Z");
+process.env.SESSION_SECRET = "BRE-367-benchmark-session-secret-with-32-bytes";
+process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 37).toString("base64");
 
 if (!Number.isInteger(SAMPLE_COUNT) || SAMPLE_COUNT < 1 || !Number.isInteger(WARMUP_COUNT) || WARMUP_COUNT < 0) {
   throw new Error("MAILBOX_BENCH_SAMPLES must be positive and MAILBOX_BENCH_WARMUPS must be non-negative integers");
@@ -27,16 +32,23 @@ type DatasetResult = {
   firstPageTargetMs: number;
   focusToFreshP95Ms: number;
   focusToFreshTargetMs: number;
-  maxProjectedRows: number;
-  projectedRowsTarget: number;
+  maxPageRowsProjected: number;
+  maxLabelAssociationRowsLoaded: number;
+  maxEffectiveOverridesProjected: number;
+  queryPlan: string[];
+  focusHttpRequests: { status: number; sync: number; inbox: number; total: number };
+  coalescedTriggers: number;
+  hiddenTriggerRequests: number;
+  distinctFocusRevisions: number;
   firstPageSamplesMs: number[];
   focusToFreshSamplesMs: number[];
   passed: boolean;
 };
 
-function createFixture(messageCount: number) {
+async function createFixture(messageCount: number) {
   const directory = mkdtempSync(join(tmpdir(), `orca-mailbox-bench-${messageCount}-`));
-  const client = createDatabaseClient(join(directory, "mailbox.sqlite"));
+  const dbPath = join(directory, "mailbox.sqlite");
+  const client = createDatabaseClient(dbPath);
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
   client.db.insert(users).values({ id: "user", email: "benchmark@example.com", displayName: "Benchmark" }).run();
   client.db.insert(oauthAccounts).values({
@@ -61,6 +73,26 @@ function createFixture(messageCount: number) {
     createdAt: new Date(baseTime),
     updatedAt: new Date(baseTime),
   }))).run();
+  const fixtureLabels = ["benchmark-one", "benchmark-two", "benchmark-three"];
+  client.db.insert(labels).values(fixtureLabels.map((name) => ({
+    id: `label-${name}`,
+    accountId: "account",
+    providerLabelId: name.toUpperCase(),
+    name,
+    type: "user",
+    createdAt: new Date(baseTime),
+    updatedAt: new Date(baseTime),
+  }))).run();
+  client.db.insert(humanClassificationOverrides).values(behaviors.map((_, index) => ({
+    id: `override-domain-${index}`,
+    accountId: "account",
+    targetType: "sender_domain",
+    targetValue: `group-${index}.example`,
+    classification: "automated_or_bulk",
+    source: "user_choice",
+    createdAt: new Date(baseTime),
+    updatedAt: new Date(baseTime),
+  }))).run();
 
   const insertThread = client.sqlite.prepare(`
     insert into threads (
@@ -73,6 +105,13 @@ function createFixture(messageCount: number) {
       subject, snippet, received_at, is_read, human_signal, human_classification,
       human_classification_reasons, human_classifier_version, created_at, updated_at
     ) values (?, 'account', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'benchmark-v1', ?, ?)`);
+  const insertEmailLabel = client.sqlite.prepare(`
+    insert into email_labels (id, email_id, label_id, created_at)
+    values (?, ?, ?, ?)`);
+  const insertOverride = client.sqlite.prepare(`
+    insert into human_classification_overrides (
+      id, account_id, target_type, target_value, classification, source, created_at, updated_at
+    ) values (?, 'account', ?, ?, ?, 'user_choice', ?, ?)`);
   client.sqlite.transaction(() => {
     for (let index = 0; index < messageCount; index += 1) {
       const suffix = index.toString().padStart(5, "0");
@@ -95,20 +134,18 @@ function createFixture(messageCount: number) {
         timestamp,
         baseTime,
       );
+      for (const name of fixtureLabels) {
+        insertEmailLabel.run(`email-label-${suffix}-${name}`, `message-${suffix}`, `label-${name}`, baseTime);
+      }
+      insertOverride.run(`override-address-${suffix}`, "sender_address", `sender-${index}@group-${index % behaviors.length}.example`, "likely_human", baseTime, baseTime);
+      insertOverride.run(`override-message-${suffix}`, "message", `message-${suffix}`, "uncertain", baseTime, baseTime);
     }
   })();
-  client.db.insert(humanClassificationOverrides).values([
-    { id: "override-domain", accountId: "account", targetType: "sender_domain", targetValue: "group-0.example", classification: "automated_or_bulk", source: "user_choice", createdAt: new Date(baseTime), updatedAt: new Date(baseTime) },
-    { id: "override-address", accountId: "account", targetType: "sender_address", targetValue: "sender-1@group-1.example", classification: "likely_human", source: "user_choice", createdAt: new Date(baseTime), updatedAt: new Date(baseTime) },
-    { id: "override-message", accountId: "account", targetType: "message", targetValue: "message-00002", classification: "uncertain", source: "user_choice", createdAt: new Date(baseTime), updatedAt: new Date(baseTime) },
-  ]).run();
 
   const account: MailboxReadAccount = {
     id: "account",
     provider: "gmail",
-    syncHistoryId: `history-${messageCount}`,
     lastSyncedAt: new Date(baseTime),
-    updatedAt: new Date(baseTime),
     serialized: {
       id: "account",
       provider: "gmail",
@@ -117,7 +154,32 @@ function createFixture(messageCount: number) {
       capabilities: { read: true, draft: false, send: false },
     },
   };
-  return { ...client, account, directory };
+  const session = await createSession(client.db, "user");
+  let syncTick = 0;
+  const mailboxMetrics: MailboxReadMetric[] = [];
+  const app = createApp({
+    dbFactory: () => createDatabaseClient(dbPath),
+    mailboxReadObserver: (metric) => mailboxMetrics.push(metric),
+    syncPage: async (db, input) => {
+      syncTick += 1;
+      const syncedAt = new Date(baseTime + syncTick);
+      db.update(oauthAccounts).set({
+        syncHistoryId: `history-${messageCount}-${syncTick}`,
+        lastSyncedAt: syncedAt,
+        updatedAt: syncedAt,
+      }).where(eq(oauthAccounts.id, input.accountId)).run();
+      return {
+        accountId: input.accountId,
+        emailCount: 0,
+        threadCount: 0,
+        labelCount: 0,
+        contactCount: 0,
+        nextCursor: null,
+        lastSyncedAt: syncedAt.toISOString(),
+      };
+    },
+  });
+  return { ...client, account, app, authHeaders: { cookie: `orca_session=${session.token}` }, mailboxMetrics, directory };
 }
 
 function percentile95(values: number[]) {
@@ -130,33 +192,74 @@ function rounded(value: number) {
 }
 
 async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): Promise<DatasetResult> {
-  const fixture = createFixture(messageCount);
+  const fixture = await createFixture(messageCount);
   try {
-    const reader = createMailboxReader(fixture.sqlite);
-    const read = () => reader.read({
+    const plans: MailboxPageQueryPlan[] = [];
+    createMailboxReader(fixture.sqlite, { observePageQueryPlan: (plan) => plans.push(plan) }).read({
       accounts: [fixture.account],
       query: { view: "all", classification: "all", limit: 100 },
     });
-    for (let iteration = 0; iteration < WARMUP_COUNT; iteration += 1) read();
+    const inboxPath = "/v1/inbox?view=all&classification=all&limit=100";
+    const requestJson = async (path: string, init?: RequestInit) => {
+      const response = await fixture.app.request(path, {
+        ...init,
+        headers: { ...fixture.authHeaders, ...(init?.headers ?? {}) },
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(`${init?.method ?? "GET"} ${path} failed: ${response.status} ${JSON.stringify(payload)}`);
+      return payload;
+    };
+    for (let iteration = 0; iteration < WARMUP_COUNT; iteration += 1) await requestJson(inboxPath);
 
     const firstPageSamples: number[] = [];
-    let maxProjectedRows = 0;
+    fixture.mailboxMetrics.length = 0;
     for (let iteration = 0; iteration < SAMPLE_COUNT; iteration += 1) {
-      const result = read();
-      firstPageSamples.push(result.metric.durationMs);
-      maxProjectedRows = Math.max(maxProjectedRows, result.metric.projectedRows);
+      const startedAt = performance.now();
+      await requestJson(inboxPath);
+      firstPageSamples.push(performance.now() - startedAt);
     }
 
     const focusMetrics: MailboxRevalidationMetric[] = [];
+    const focusRevisions: string[] = [];
     const visibilitySource = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    const focusRequests = { status: 0, sync: 0, inbox: 0 };
+    const refresh = () => refreshMailboxThroughProvider({
+      readStatus: async () => {
+        focusRequests.status += 1;
+        return requestJson("/v1/sync/status");
+      },
+      sync: async () => {
+        focusRequests.sync += 1;
+        await requestJson("/v1/sync/gmail", { method: "POST" });
+      },
+      readInbox: async () => {
+        focusRequests.inbox += 1;
+        const inbox = await requestJson(inboxPath) as { freshness?: { revision?: string } };
+        if (inbox.freshness?.revision) focusRevisions.push(inbox.freshness.revision);
+        return inbox;
+      },
+    });
     const controller = startVisibleMailboxRevalidation({
-      load: async () => { read(); },
+      load: refresh,
       visibilitySource,
       focusSource: new EventTarget(),
       scheduler: { setInterval: () => 1, clearInterval: () => undefined },
       observe: (metric) => focusMetrics.push(metric),
     });
-    for (let iteration = 0; iteration < SAMPLE_COUNT; iteration += 1) await controller.revalidate("focus");
+    for (let iteration = 0; iteration < WARMUP_COUNT; iteration += 1) await controller.revalidate("focus");
+    focusMetrics.length = 0;
+    focusRevisions.length = 0;
+    focusRequests.status = 0;
+    focusRequests.sync = 0;
+    focusRequests.inbox = 0;
+    visibilitySource.visibilityState = "hidden";
+    const beforeHidden = focusRequests.status + focusRequests.sync + focusRequests.inbox;
+    await controller.revalidate("focus");
+    const hiddenTriggerRequests = focusRequests.status + focusRequests.sync + focusRequests.inbox - beforeHidden;
+    visibilitySource.visibilityState = "visible";
+    for (let iteration = 0; iteration < SAMPLE_COUNT; iteration += 1) {
+      await Promise.all([controller.revalidate("focus"), controller.revalidate("visibility")]);
+    }
     controller.stop();
 
     const focusToFreshSamples = focusMetrics.map((metric) => metric.durationMs);
@@ -164,7 +267,16 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
     const focusToFreshP95Ms = rounded(percentile95(focusToFreshSamples));
     const firstPageTargetMs = mailboxReadTargets.firstPageP95Ms[messageCount];
     const focusToFreshTargetMs = mailboxReadTargets.focusToFreshP95Ms[messageCount];
-    const projectedRowsTarget = 105;
+    const maxPageRowsProjected = Math.max(...fixture.mailboxMetrics.map((metric) => metric.pageRowsProjected));
+    const maxLabelAssociationRowsLoaded = Math.max(...fixture.mailboxMetrics.map((metric) => metric.labelAssociationRowsLoaded));
+    const maxEffectiveOverridesProjected = Math.max(...fixture.mailboxMetrics.map((metric) => metric.effectiveOverridesProjected));
+    const queryPlan = [...new Set(plans.flatMap((plan) => plan.details))];
+    const focusHttpRequests = {
+      ...focusRequests,
+      total: focusRequests.status + focusRequests.sync + focusRequests.inbox,
+    };
+    const coalescedTriggers = SAMPLE_COUNT * 2 - focusMetrics.length;
+    const distinctFocusRevisions = new Set(focusRevisions).size;
     return {
       fixtureMessages: messageCount,
       samples: SAMPLE_COUNT,
@@ -173,13 +285,26 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
       firstPageTargetMs,
       focusToFreshP95Ms,
       focusToFreshTargetMs,
-      maxProjectedRows,
-      projectedRowsTarget,
+      maxPageRowsProjected,
+      maxLabelAssociationRowsLoaded,
+      maxEffectiveOverridesProjected,
+      queryPlan,
+      focusHttpRequests,
+      coalescedTriggers,
+      hiddenTriggerRequests,
+      distinctFocusRevisions,
       firstPageSamplesMs: firstPageSamples.map(rounded),
       focusToFreshSamplesMs: focusToFreshSamples.map(rounded),
       passed: firstPageP95Ms <= firstPageTargetMs
         && focusToFreshP95Ms <= focusToFreshTargetMs
-        && maxProjectedRows <= projectedRowsTarget,
+        && maxPageRowsProjected <= 101
+        && queryPlan.some((detail) => detail.includes("emails_mailbox_account_page_idx"))
+        && focusMetrics.length === SAMPLE_COUNT
+        && focusRequests.status === SAMPLE_COUNT * 2
+        && focusRequests.sync === SAMPLE_COUNT
+        && focusRequests.inbox === SAMPLE_COUNT
+        && distinctFocusRevisions === SAMPLE_COUNT
+        && hiddenTriggerRequests === 0,
     };
   } finally {
     fixture.sqlite.close();
@@ -191,9 +316,22 @@ const datasets: DatasetResult[] = [];
 for (const fixtureSize of FIXTURE_SIZES) datasets.push(await benchmarkDataset(fixtureSize));
 const report = {
   benchmark: "BRE-367 bounded mailbox first-page and focus-to-fresh",
+  measurementBoundary: {
+    firstPage: "authenticated Hono GET /v1/inbox through SQLite and JSON parsing",
+    focusToFresh: ["GET /v1/sync/status", "POST /v1/sync/gmail (deterministic local provider)", "GET /v1/inbox", "GET /v1/sync/status"],
+    controller: "visible-tab controller; paired focus + visibility triggers per sample",
+  },
   fixtureSeed: FIXTURE_SEED,
   generatedAt: new Date().toISOString(),
   runtime: `Bun ${Bun.version}`,
+  host: {
+    platform: platform(),
+    release: release(),
+    architecture: arch(),
+    cpu: cpus()[0]?.model ?? "unknown",
+    logicalCpus: cpus().length,
+    memoryBytes: totalmem(),
+  },
   warmups: WARMUP_COUNT,
   datasets,
   passed: datasets.every((dataset) => dataset.passed),

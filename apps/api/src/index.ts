@@ -229,9 +229,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   const mailboxReadAccounts = (accounts: ConnectedAccount[]): MailboxReadAccount[] => accounts.map((account) => ({
     id: account.id,
     provider: account.provider,
-    syncHistoryId: account.syncHistoryId,
     lastSyncedAt: account.lastSyncedAt,
-    updatedAt: account.updatedAt,
     serialized: serializeMailAccount(account),
   }));
   const transportFor = (account: ConnectedAccount) => {

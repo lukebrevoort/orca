@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { VISIBLE_MAILBOX_REVALIDATE_MS, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import { refreshMailboxThroughProvider, VISIBLE_MAILBOX_REVALIDATE_MS, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
 
 class VisibilityTarget extends EventTarget {
   visibilityState = "visible";
@@ -35,6 +35,30 @@ function harness(load: (reason: "interval" | "focus" | "visibility" | "manual") 
 }
 
 describe("visible mailbox revalidation", () => {
+  test("runs the same status, provider sync, inbox, status sequence used by the app", async () => {
+    const calls: string[] = [];
+    let statusRead = 0;
+    const result = await refreshMailboxThroughProvider({
+      readStatus: async () => {
+        calls.push("GET /v1/sync/status");
+        statusRead += 1;
+        return statusRead === 1 ? "before" : "fresh";
+      },
+      sync: async () => { calls.push("POST /v1/sync/gmail"); },
+      readInbox: async () => {
+        calls.push("GET /v1/inbox");
+        return ["message"];
+      },
+    });
+    expect(calls).toEqual([
+      "GET /v1/sync/status",
+      "POST /v1/sync/gmail",
+      "GET /v1/inbox",
+      "GET /v1/sync/status",
+    ]);
+    expect(result).toEqual({ inbox: ["message"], status: "fresh" });
+  });
+
   test("uses the 15 second target and skips every trigger while the tab is hidden", async () => {
     const reasons: string[] = [];
     const view = harness(async (reason) => { reasons.push(reason); });

@@ -253,6 +253,13 @@
       "when": 1788418800000,
       "tag": "0035_bounded_mailbox_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1788422400000,
+      "tag": "0036_mailbox_revision_root",
+      "breakpoints": true
     }
   ]
 }

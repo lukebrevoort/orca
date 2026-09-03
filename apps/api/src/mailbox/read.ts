@@ -26,9 +26,7 @@ export const mailboxReadTargets = Object.freeze({
 export type MailboxReadAccount = {
   id: string;
   provider: MailProvider;
-  syncHistoryId: string | null;
   lastSyncedAt: Date | null;
-  updatedAt: Date;
   serialized: MailAccount;
 };
 
@@ -51,8 +49,17 @@ export type MailboxReadMetric = {
   accountCount: number;
   limit: number;
   returnedMessages: number;
-  projectedRows: number;
+  aggregateRowsReturned: number;
+  pageRowsProjected: number;
+  lookaheadRowsProjected: number;
+  labelAssociationRowsLoaded: number;
+  effectiveOverridesProjected: number;
   revision: string;
+};
+
+export type MailboxPageQueryPlan = {
+  behavior: AttentionBehavior;
+  details: string[];
 };
 
 export type MailboxReadResult = {
@@ -74,6 +81,7 @@ export class MailboxCursorError extends Error {
 type MailboxReaderOptions = {
   clock?: () => number;
   observe?: (metric: MailboxReadMetric) => void;
+  observePageQueryPlan?: (plan: MailboxPageQueryPlan) => void;
 };
 
 type RawMailboxMessage = {
@@ -92,6 +100,14 @@ type RawMailboxMessage = {
   human_classification_reasons: string | null;
   human_classifier_version: string | null;
   attention_behavior: string;
+  override_id: string | null;
+  override_account_id: string | null;
+  override_target_type: string | null;
+  override_target_value: string | null;
+  override_classification: string | null;
+  override_source: string | null;
+  override_created_at: number | null;
+  override_updated_at: number | null;
 };
 
 type RawCountRow = {
@@ -107,16 +123,8 @@ type RawCountRow = {
 };
 
 type RawLabelRow = { email_id: string; name: string };
-type RawOverrideRow = {
-  id: string;
-  account_id: string;
-  target_type: string;
-  target_value: string;
-  classification: string;
-  source: string;
-  created_at: number;
-  updated_at: number;
-};
+type RawRevisionRow = { account_id: string; revision: number };
+type RawQueryPlanRow = { detail: string };
 
 type InboxCursor = {
   version: 1;
@@ -164,6 +172,16 @@ const resolvedJoinsSql = `
     and classification_domain.target_value = ${normalizedDomainSql}`;
 const attentionSql = "coalesce(attention_address.behavior, attention_domain.behavior, 'normal')";
 const effectiveClassificationSql = "coalesce(classification_message.classification, classification_address.classification, classification_domain.classification, e.human_classification, 'unclassified')";
+const effectiveOverrideSql = {
+  id: "coalesce(classification_message.id, classification_address.id, classification_domain.id)",
+  accountId: "coalesce(classification_message.account_id, classification_address.account_id, classification_domain.account_id)",
+  targetType: "coalesce(classification_message.target_type, classification_address.target_type, classification_domain.target_type)",
+  targetValue: "coalesce(classification_message.target_value, classification_address.target_value, classification_domain.target_value)",
+  classification: "coalesce(classification_message.classification, classification_address.classification, classification_domain.classification)",
+  source: "coalesce(classification_message.source, classification_address.source, classification_domain.source)",
+  createdAt: "coalesce(classification_message.created_at, classification_address.created_at, classification_domain.created_at)",
+  updatedAt: "coalesce(classification_message.updated_at, classification_address.updated_at, classification_domain.updated_at)",
+} as const;
 
 /**
  * Deep mailbox-read module. Its single read interface owns authorization scope,
@@ -175,6 +193,9 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
 
   return {
     read(input: { accounts: MailboxReadAccount[]; query: MailboxReadQuery }): MailboxReadResult {
+      // Pin revision, counts, page, and enrichment to one SQLite snapshot so a
+      // concurrent writer cannot produce a response paired with an older token.
+      return sqlite.transaction(() => {
       const startedAt = clock();
       // Preserve the Account ordering chosen by the authenticated adapter; it
       // is user-visible metadata and was part of the existing inbox contract.
@@ -185,7 +206,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
       const scope = cursorScope(input.query);
-      const revision = mailboxRevision(accounts);
+      const revision = mailboxRevision(sqlite, accountIds);
       const cursor = decodeCursor(input.query.cursor);
       validateCursor(cursor, { accountIds, classification, revision, scope, view });
 
@@ -230,13 +251,21 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
             }
           : { sql: "", params: [] as Array<string | number | null> };
         const classificationPredicate = classificationWhere(classification);
-        const rows = queryAll<RawMailboxMessage>(sqlite, `
+        const pageSql = `
           select
             e.id, e.account_id, e.provider_message_id, e.thread_id,
             e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
             e.is_read, e.human_signal, e.human_classification,
             e.human_classification_reasons, e.human_classifier_version,
-            ${attentionSql} as attention_behavior
+            ${attentionSql} as attention_behavior,
+            ${effectiveOverrideSql.id} as override_id,
+            ${effectiveOverrideSql.accountId} as override_account_id,
+            ${effectiveOverrideSql.targetType} as override_target_type,
+            ${effectiveOverrideSql.targetValue} as override_target_value,
+            ${effectiveOverrideSql.classification} as override_classification,
+            ${effectiveOverrideSql.source} as override_source,
+            ${effectiveOverrideSql.createdAt} as override_created_at,
+            ${effectiveOverrideSql.updatedAt} as override_updated_at
           from emails e
           ${resolvedJoinsSql}
           where ${base.sql}
@@ -244,7 +273,15 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
             and ${classificationPredicate}
             ${keyset.sql}
           order by coalesce(e.received_at, 0) desc, e.account_id asc, e.id asc
-          limit ?`, [...base.params, behavior, ...keyset.params, remaining]);
+          limit ?`;
+        const pageParams = [...base.params, behavior, ...keyset.params, remaining];
+        if (options.observePageQueryPlan) {
+          options.observePageQueryPlan({
+            behavior,
+            details: queryAll<RawQueryPlanRow>(sqlite, `explain query plan ${pageSql}`, pageParams).map((row) => row.detail),
+          });
+        }
+        const rows = queryAll<RawMailboxMessage>(sqlite, pageSql, pageParams);
         pageRows.push(...rows);
       }
       const hasNextPage = pageRows.length > input.query.limit;
@@ -253,13 +290,12 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageDurationMs = clock() - pageStartedAt;
 
       const enrichmentStartedAt = clock();
-      const labelsByMessage = readLabels(sqlite, pageRows.map((row) => row.id));
-      const overrides = readOverrides(sqlite, pageRows);
+      const labels = readLabels(sqlite, pageRows.map((row) => row.id));
       const accountById = new Map(accounts.map((account) => [account.id, account]));
       const messages = pageRows.map((row): InboxMessage => {
         const account = accountById.get(row.account_id);
         if (!account) throw new Error("A mailbox row escaped its authorized Account scope");
-        const humanClassification = resolveClassification(row, overrides);
+        const humanClassification = resolveClassification(row);
         return {
           id: row.id,
           accountId: row.account_id,
@@ -271,7 +307,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
           snippet: row.snippet ?? "",
           receivedAt: new Date(row.received_at ?? 0).toISOString(),
           unread: row.is_read !== 1,
-          labels: labelsByMessage.get(row.id) ?? [],
+          labels: labels.byMessage.get(row.id) ?? [],
           attentionBehavior: row.attention_behavior as AttentionBehavior,
           humanSignal: humanClassification.effective.score,
           humanClassification,
@@ -325,11 +361,16 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         accountCount: accounts.length,
         limit: input.query.limit,
         returnedMessages: messages.length,
-        projectedRows: 1 + fetchedPageRowCount + [...labelsByMessage.values()].reduce((total, names) => total + names.length, 0) + overrides.size,
+        aggregateRowsReturned: countRows.length,
+        pageRowsProjected: fetchedPageRowCount,
+        lookaheadRowsProjected: hasNextPage ? 1 : 0,
+        labelAssociationRowsLoaded: labels.rowCount,
+        effectiveOverridesProjected: pageRows.reduce((total, row) => total + (row.override_id ? 1 : 0), 0),
         revision,
       };
       options.observe?.(metric);
       return { response, metric };
+      })();
     },
   };
 }
@@ -372,14 +413,17 @@ function behaviorsForView(view: MailboxReadQuery["view"]): AttentionBehavior[] {
   return ["notify", "focus", "normal"];
 }
 
-function mailboxRevision(accounts: MailboxReadAccount[]) {
-  const digest = createHash("sha256").update(JSON.stringify(accounts.map((account) => ({
-    id: account.id,
-    syncHistoryId: account.syncHistoryId,
-    lastSyncedAt: account.lastSyncedAt?.getTime() ?? null,
-    updatedAt: account.updatedAt.getTime(),
-  })))).digest("hex");
-  return `mailbox-v1:${digest}`;
+function mailboxRevision(sqlite: Database, accountIds: string[]) {
+  const rows = queryAll<RawRevisionRow>(sqlite, `
+    select account_id, revision
+    from mailbox_revisions
+    where account_id in (${placeholders(accountIds.length)})`, accountIds);
+  const revisions = new Map(rows.map((row) => [row.account_id, row.revision]));
+  if (revisions.size !== accountIds.length) throw new Error("Mailbox revision state is missing for an authorized Account");
+  const digest = createHash("sha256")
+    .update(JSON.stringify(accountIds.map((id) => ({ id, revision: revisions.get(id) }))))
+    .digest("hex");
+  return `mailbox-v2:${digest}`;
 }
 
 function mailboxFreshAt(accounts: MailboxReadAccount[]) {
@@ -432,7 +476,7 @@ function decodeCursor(value: string | undefined): InboxCursor | null {
       && Array.isArray(parsed.accountIds) && parsed.accountIds.length > 0
       && parsed.accountIds.every((accountId) => typeof accountId === "string" && accountId.length > 0)
       && (parsed.scope === undefined || typeof parsed.scope === "string")
-      && typeof parsed.revision === "string" && parsed.revision.startsWith("mailbox-v1:")) {
+      && typeof parsed.revision === "string" && parsed.revision.startsWith("mailbox-v2:")) {
       return parsed as InboxCursor;
     }
   } catch { /* Invalid cursors are rejected below. */ }
@@ -441,7 +485,7 @@ function decodeCursor(value: string | undefined): InboxCursor | null {
 
 function readLabels(sqlite: Database, messageIds: string[]) {
   const labelsByMessage = new Map<string, string[]>();
-  if (messageIds.length === 0) return labelsByMessage;
+  if (messageIds.length === 0) return { byMessage: labelsByMessage, rowCount: 0 };
   const rows = queryAll<RawLabelRow>(sqlite, `
     select el.email_id, l.name
     from email_labels el
@@ -453,59 +497,26 @@ function readLabels(sqlite: Database, messageIds: string[]) {
     if (!names.includes(row.name)) names.push(row.name);
     labelsByMessage.set(row.email_id, names);
   }
-  return labelsByMessage;
+  return { byMessage: labelsByMessage, rowCount: rows.length };
 }
 
-function readOverrides(sqlite: Database, rows: RawMailboxMessage[]) {
-  const result = new Map<string, RawOverrideRow>();
-  if (rows.length === 0) return result;
-  const messageIds = [...new Set(rows.map((row) => row.id))];
-  const addresses = [...new Set(rows.map((row) => row.from_address?.trim().toLocaleLowerCase() ?? "").filter(Boolean))];
-  const domains = [...new Set(addresses.map((address) => address.split("@")[1] ?? "").filter(Boolean))];
-  const accountIds = [...new Set(rows.map((row) => row.account_id))];
-  const targets: string[] = [];
-  const params: Array<string | number | null> = [...accountIds];
-  if (messageIds.length) {
-    targets.push(`(target_type = 'message' and target_value in (${placeholders(messageIds.length)}))`);
-    params.push(...messageIds);
-  }
-  if (addresses.length) {
-    targets.push(`(target_type = 'sender_address' and target_value in (${placeholders(addresses.length)}))`);
-    params.push(...addresses);
-  }
-  if (domains.length) {
-    targets.push(`(target_type = 'sender_domain' and target_value in (${placeholders(domains.length)}))`);
-    params.push(...domains);
-  }
-  const overrideRows = queryAll<RawOverrideRow>(sqlite, `
-    select id, account_id, target_type, target_value, classification, source, created_at, updated_at
-    from human_classification_overrides
-    where account_id in (${placeholders(accountIds.length)}) and (${targets.join(" or ")})`, params);
-  for (const row of overrideRows) result.set(`${row.account_id}:${row.target_type}:${row.target_value.toLocaleLowerCase()}`, row);
-  return result;
-}
-
-function resolveClassification(row: RawMailboxMessage, overrides: ReadonlyMap<string, RawOverrideRow>): HumanClassificationResult {
+function resolveClassification(row: RawMailboxMessage): HumanClassificationResult {
   const automatic = automaticClassification(row);
-  const address = row.from_address?.trim().toLocaleLowerCase() ?? "";
-  const domain = address.split("@")[1] ?? "";
-  const override = overrides.get(`${row.account_id}:message:${row.id}`)
-    ?? (address ? overrides.get(`${row.account_id}:sender_address:${address}`) : undefined)
-    ?? (domain ? overrides.get(`${row.account_id}:sender_domain:${domain}`) : undefined);
-  if (override) {
-    const target = override.target_type === "message"
-      ? { scope: "message" as const, messageId: override.target_value }
-      : override.target_type === "sender_address"
-        ? { scope: "sender_address" as const, address: override.target_value }
-        : { scope: "sender_domain" as const, domain: override.target_value };
+  if (row.override_id && row.override_account_id && row.override_target_type && row.override_target_value
+    && row.override_classification && row.override_source && row.override_created_at !== null && row.override_updated_at !== null) {
+    const target = row.override_target_type === "message"
+      ? { scope: "message" as const, messageId: row.override_target_value }
+      : row.override_target_type === "sender_address"
+        ? { scope: "sender_address" as const, address: row.override_target_value }
+        : { scope: "sender_domain" as const, domain: row.override_target_value };
     const userOverride = humanClassificationOverrideSchema.parse({
-      id: override.id,
-      accountId: override.account_id,
+      id: row.override_id,
+      accountId: row.override_account_id,
       target,
-      classification: override.classification,
-      source: override.source,
-      createdAt: new Date(override.created_at).toISOString(),
-      updatedAt: new Date(override.updated_at).toISOString(),
+      classification: row.override_classification,
+      source: row.override_source,
+      createdAt: new Date(row.override_created_at).toISOString(),
+      updatedAt: new Date(row.override_updated_at).toISOString(),
     });
     const overrideReason = {
       message: "user_message_override",
@@ -516,9 +527,9 @@ function resolveClassification(row: RawMailboxMessage, overrides: ReadonlyMap<st
       automatic,
       userOverride,
       effective: {
-        classification: humanClassificationSchema.parse(override.classification),
+        classification: humanClassificationSchema.parse(row.override_classification),
         score: null,
-        reasonCodes: [overrideReason[override.target_type as keyof typeof overrideReason]],
+        reasonCodes: [overrideReason[row.override_target_type as keyof typeof overrideReason]],
         classifierVersion: null,
         source: "user_override",
         userOverride,

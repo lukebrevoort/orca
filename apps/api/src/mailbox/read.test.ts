@@ -6,8 +6,8 @@ import { join, resolve } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
-import { createMailboxReader, MailboxCursorError, type MailboxReadAccount, type MailboxReadMetric } from "./read.ts";
+import { emailLabels, emails, humanClassificationOverrides, labels, mailboxRevisions, oauthAccounts, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { createMailboxReader, MailboxCursorError, type MailboxPageQueryPlan, type MailboxReadAccount, type MailboxReadMetric } from "./read.ts";
 
 const tempDirectories: string[] = [];
 
@@ -81,9 +81,7 @@ function createFixture(messageCount = 240) {
   const account: MailboxReadAccount = {
     id: row.id,
     provider: "gmail",
-    syncHistoryId: row.syncHistoryId,
     lastSyncedAt: row.lastSyncedAt,
-    updatedAt: row.updatedAt,
     serialized: {
       id: row.id,
       provider: "gmail",
@@ -92,27 +90,39 @@ function createFixture(messageCount = 240) {
       capabilities: { read: true, draft: false, send: false },
     },
   };
-  return { ...client, account, baseTime };
+  return { ...client, account, baseTime, dbPath };
 }
 
 describe("bounded mailbox reader", () => {
   test("projects one keyset page while SQL aggregates the complete mailbox counts", () => {
     const fixture = createFixture();
     const observed: MailboxReadMetric[] = [];
-    const reader = createMailboxReader(fixture.sqlite, { observe: (metric) => observed.push(metric) });
+    const plans: MailboxPageQueryPlan[] = [];
+    const reader = createMailboxReader(fixture.sqlite, {
+      observe: (metric) => observed.push(metric),
+      observePageQueryPlan: (plan) => plans.push(plan),
+    });
     const first = reader.read({ accounts: [fixture.account], query: { view: "all", classification: "all", limit: 25 } });
 
-    expect(fixture.sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get()).toEqual({ name: "emails_mailbox_page_idx" });
+    expect(fixture.sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get()).toBeNull();
+    expect(fixture.sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_account_page_idx'").get()).toEqual({ name: "emails_mailbox_account_page_idx" });
+    const planDetails = plans.flatMap((plan) => plan.details);
+    expect(planDetails.some((detail) => detail.includes("emails_mailbox_account_page_idx"))).toBe(true);
+    expect(planDetails.some((detail) => detail.includes("USE TEMP B-TREE FOR ORDER BY"))).toBe(false);
     expect(first.response.messages).toHaveLength(25);
     expect(first.response.counts.attention).toEqual({ focus: 96, normal: 48, quiet: 48, hidden: 48, all: 240 });
     expect(first.response.counts.classification).toEqual({ likely_human: 120, automated_or_bulk: 120, uncertain: 0, unclassified: 0, all: 240 });
     expect(first.response.freshness).toEqual({
-      revision: expect.stringMatching(/^mailbox-v1:[0-9a-f]{64}$/),
+      revision: expect.stringMatching(/^mailbox-v2:[0-9a-f]{64}$/),
       lastSyncedAt: "2026-09-02T12:00:00.000Z",
     });
     expect(first.response.nextCursor).toBeString();
     expect(first.metric.returnedMessages).toBe(25);
-    expect(first.metric.projectedRows).toBeLessThan(100);
+    expect(first.metric.aggregateRowsReturned).toBe(1);
+    expect(first.metric.pageRowsProjected).toBe(26);
+    expect(first.metric.lookaheadRowsProjected).toBe(1);
+    expect(first.metric.labelAssociationRowsLoaded).toBe(0);
+    expect(first.metric.effectiveOverridesProjected).toBe(0);
     expect(observed).toEqual([first.metric]);
 
     const second = reader.read({ accounts: [fixture.account], query: { view: "all", classification: "all", limit: 25, cursor: first.response.nextCursor! } });
@@ -121,26 +131,91 @@ describe("bounded mailbox reader", () => {
     fixture.sqlite.close();
   });
 
-  test("binds cursors to the durable mailbox revision and Account/filter scope", () => {
+  test("rejects stale cursors after attention, classification, label, and concurrent email mutations", () => {
     const fixture = createFixture(60);
     const reader = createMailboxReader(fixture.sqlite);
-    const first = reader.read({ accounts: [fixture.account], query: { view: "normal", classification: "human", limit: 5 } });
-    expect(first.response.nextCursor).toBeString();
-
-    const refreshedAccount = {
-      ...fixture.account,
-      syncHistoryId: "history-241",
-      lastSyncedAt: new Date(fixture.baseTime + 1_000),
-      updatedAt: new Date(fixture.baseTime + 1_000),
+    const readPage = () => reader.read({ accounts: [fixture.account], query: { view: "all", classification: "all", limit: 2 } });
+    const expectCursorRejectedAfter = (mutate: () => void) => {
+      const page = readPage();
+      expect(page.response.nextCursor).toBeString();
+      const before = fixture.db.select().from(mailboxRevisions).get()!.revision;
+      mutate();
+      expect(fixture.db.select().from(mailboxRevisions).get()!.revision).toBeGreaterThan(before);
+      expect(() => reader.read({
+        accounts: [fixture.account],
+        query: { view: "all", classification: "all", limit: 2, cursor: page.response.nextCursor! },
+      })).toThrow(MailboxCursorError);
+      expect(readPage().response.freshness.revision).not.toBe(page.response.freshness.revision);
     };
-    expect(() => createMailboxReader(fixture.sqlite).read({
-      accounts: [refreshedAccount],
-      query: { view: "normal", classification: "human", limit: 5, cursor: first.response.nextCursor! },
-    })).toThrow(MailboxCursorError);
+
+    // Regression for the duplicate-page repro: moving the first ranked sender
+    // after page one must invalidate its cursor before page two is evaluated.
+    expectCursorRejectedAfter(() => fixture.sqlite.run("update sender_attention_rules set behavior = 'hidden' where id = 'rule-notify'"));
+    expectCursorRejectedAfter(() => fixture.db.insert(humanClassificationOverrides).values({
+      id: "override-message",
+      accountId: "account",
+      targetType: "message",
+      targetValue: "message-00000",
+      classification: "uncertain",
+      source: "user_choice",
+    }).run());
+    fixture.db.insert(labels).values({ id: "label-review", accountId: "account", providerLabelId: "REVIEW", name: "Review", type: "user" }).run();
+    expectCursorRejectedAfter(() => fixture.db.insert(emailLabels).values({ id: "message-label-review", emailId: "message-00000", labelId: "label-review" }).run());
+    expectCursorRejectedAfter(() => {
+      const concurrent = createDatabaseClient(fixture.dbPath);
+      try {
+        concurrent.sqlite.run("update emails set received_at = received_at + 5000 where id = 'message-00010'");
+      } finally {
+        concurrent.sqlite.close();
+      }
+    });
+
+    const rollbackPage = readPage();
+    const revisionBeforeRollback = fixture.db.select().from(mailboxRevisions).get()!.revision;
+    expect(() => fixture.sqlite.transaction(() => {
+      fixture.sqlite.run("update emails set subject = 'rolled back' where id = 'message-00010'");
+      throw new Error("rollback");
+    })()).toThrow("rollback");
+    expect(fixture.db.select().from(mailboxRevisions).get()!.revision).toBe(revisionBeforeRollback);
     expect(() => reader.read({
       accounts: [fixture.account],
-      query: { view: "normal", classification: "tideline", limit: 5, cursor: first.response.nextCursor! },
+      query: { view: "all", classification: "all", limit: 2, cursor: rollbackPage.response.nextCursor! },
+    })).not.toThrow();
+
+    const first = readPage();
+    expect(() => reader.read({
+      accounts: [fixture.account],
+      query: { view: "all", classification: "human", limit: 2, cursor: first.response.nextCursor! },
     })).toThrow(MailboxCursorError);
+    fixture.sqlite.close();
+  });
+
+  test("reports high-association enrichment separately and projects one effective override per message row", () => {
+    const fixture = createFixture(40);
+    fixture.db.insert(labels).values(["one", "two", "three"].map((name) => ({
+      id: `label-${name}`, accountId: "account", providerLabelId: name.toUpperCase(), name, type: "user",
+    }))).run();
+    fixture.db.insert(emailLabels).values(Array.from({ length: 40 }, (_, index) => ["one", "two", "three"].map((name) => ({
+      id: `message-${index}-${name}`,
+      emailId: `message-${index.toString().padStart(5, "0")}`,
+      labelId: `label-${name}`,
+    }))).flat()).run();
+    fixture.db.insert(humanClassificationOverrides).values(Array.from({ length: 40 }, (_, index) => ({
+      id: `override-message-${index}`,
+      accountId: "account",
+      targetType: "message",
+      targetValue: `message-${index.toString().padStart(5, "0")}`,
+      classification: "uncertain",
+      source: "user_choice",
+    }))).run();
+
+    const result = createMailboxReader(fixture.sqlite).read({ accounts: [fixture.account], query: { view: "all", classification: "all", limit: 25 } });
+    expect(result.metric.pageRowsProjected).toBe(26);
+    expect(result.metric.lookaheadRowsProjected).toBe(1);
+    expect(result.metric.labelAssociationRowsLoaded).toBe(75);
+    expect(result.metric.effectiveOverridesProjected).toBe(25);
+    expect(result.response.messages.every((message) => message.labels.length === 3)).toBe(true);
+    expect(result.response.messages.every((message) => message.humanClassification?.userOverride?.target.scope === "message")).toBe(true);
     fixture.sqlite.close();
   });
 });

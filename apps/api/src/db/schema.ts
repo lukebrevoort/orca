@@ -69,6 +69,22 @@ export const oauthAccounts = sqliteTable(
 );
 
 /**
+ * Monotonic cursor root for every persisted input that can change an inbox
+ * page. SQLite triggers advance it in the same transaction as the mutation.
+ */
+export const mailboxRevisions = sqliteTable(
+  "mailbox_revisions",
+  {
+    accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull().default(1),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(createdAtDefault),
+  },
+  (table) => ({
+    revisionCheck: check("mailbox_revisions_revision_check", sql`${table.revision} >= 1`),
+  }),
+);
+
+/**
  * Calendar authorization is deliberately separate from mail authorization.
  * A Gmail token can never satisfy this connection, even when both providers
  * happen to be Google accounts.
@@ -815,9 +831,9 @@ export const emails = sqliteTable(
       table.accountId,
       table.humanClassification,
     ),
-    mailboxPageIdx: index("emails_mailbox_page_idx").on(
-      sql`COALESCE(${table.receivedAt},0) DESC`,
+    mailboxAccountPageIdx: index("emails_mailbox_account_page_idx").on(
       table.accountId,
+      sql`COALESCE(${table.receivedAt},0) DESC`,
       table.id,
     ),
     accountThreadIdUniqueIdx: uniqueIndex("emails_account_thread_id_unique_idx").on(

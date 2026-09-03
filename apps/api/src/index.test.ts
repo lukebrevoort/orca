@@ -910,7 +910,7 @@ describe("Orca API", () => {
       ]).run();
 
       const session = await createSession(db, "user_1");
-      const mailboxMetrics: Array<{ returnedMessages: number; projectedRows: number; durationMs: number }> = [];
+      const mailboxMetrics: Array<{ returnedMessages: number; pageRowsProjected: number; labelAssociationRowsLoaded: number; durationMs: number }> = [];
       const testApp = createApp({
         dbFactory: () => createDatabaseClient(dbPath),
         mailboxReadObserver: (metric) => mailboxMetrics.push(metric),
@@ -928,12 +928,13 @@ describe("Orca API", () => {
         { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
       ]);
       assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
-      assert.match(firstPage.freshness.revision, /^mailbox-v1:[0-9a-f]{64}$/);
+      assert.match(firstPage.freshness.revision, /^mailbox-v2:[0-9a-f]{64}$/);
       assert.equal(firstPage.freshness.lastSyncedAt, "2026-07-08T15:59:00.000Z");
       assert.equal(firstResponse.headers.get("x-orca-mailbox-revision"), firstPage.freshness.revision);
       assert.match(firstResponse.headers.get("server-timing") ?? "", /^orca-mailbox;dur=[0-9.]+$/);
       assert.equal(mailboxMetrics[0]?.returnedMessages, 2);
-      assert.equal(mailboxMetrics[0]?.projectedRows, 6);
+      assert.equal(mailboxMetrics[0]?.pageRowsProjected, 3);
+      assert.equal(mailboxMetrics[0]?.labelAssociationRowsLoaded, 2);
       assert.equal(typeof mailboxMetrics[0]?.durationMs, "number");
       assert.equal(typeof firstPage.nextCursor, "string");
 
@@ -1471,6 +1472,10 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "gmail_label_migrations"));
         assert.ok(tables.some((table) => table.name === "gmail_label_collection_imports"));
         assert.ok(tables.some((table) => table.name === "message_drafts"));
+        assert.ok(tables.some((table) => table.name === "mailbox_revisions"));
+        assert.equal(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get(), null);
+        assert.deepEqual(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_account_page_idx'").get(), { name: "emails_mailbox_account_page_idx" });
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 1 });
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
         assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);

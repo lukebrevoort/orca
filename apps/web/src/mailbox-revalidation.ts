@@ -25,6 +25,27 @@ type MailboxRevalidationOptions = {
   observe?: (metric: MailboxRevalidationMetric) => void;
 };
 
+type MailboxRefreshSequenceOptions<Status, Inbox> = {
+  readStatus: () => Promise<Status>;
+  sync: () => Promise<void>;
+  readInbox: () => Promise<Inbox>;
+  onInitialStatus?: (status: Status) => void;
+};
+
+/**
+ * The production focus-to-fresh sequence. Keeping the four network/database
+ * boundaries behind this interface lets the browser and benchmark exercise
+ * exactly the same ordered path.
+ */
+export async function refreshMailboxThroughProvider<Status, Inbox>(options: MailboxRefreshSequenceOptions<Status, Inbox>) {
+  const initialStatus = await options.readStatus();
+  options.onInitialStatus?.(initialStatus);
+  await options.sync();
+  const inbox = await options.readInbox();
+  const status = await options.readStatus();
+  return { inbox, status };
+}
+
 /**
  * One small interface hides the visible-tab lifecycle and its concurrency
  * invariant: at most one mailbox revalidation may be in flight.
