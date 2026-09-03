@@ -153,6 +153,9 @@ describe("primary mobile navigation", () => {
     expect(styles).toContain("background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);");
     expect(styles).toContain(".feedback-kit-bottom-right { bottom: 84px; right: 16px; }");
     expect(styles).toContain(".feedback-kit-trigger span { display: none; }");
+    expect(styles).toContain('body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { opacity: 0; pointer-events: none; visibility: hidden; }');
+    expect(desktopStyles).toContain(".desktop-connectivity-notice button { min-height: 34px;");
+    expect(desktopStyles).toContain("background: var(--desktop-surface); color: var(--desktop-ink);");
   });
 });
 

@@ -134,11 +134,14 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
 describe("desktop application shell", () => {
   test("exposes one named primary navigation landmark and one current destination", () => {
     const html = renderToStaticMarkup(createElement(AppSidebar, {
-      account: { displayName: "Luke Brevoort", email: "luke@example.com", accountCount: 1, health: "synced" },
-      active: "inbox",
-      inboxCount: 4,
-      draftCount: 2,
-      spaces: [{ id: "focus", label: "Focus", description: "protected attention" }],
+      projection: {
+        account: { displayName: "Luke Brevoort", email: "luke@example.com", accountCount: 1, health: "synced" },
+        active: "inbox",
+        inboxCount: 4,
+        draftCount: 2,
+        online: true,
+        spaces: [{ id: "focus", label: "Focus", description: "protected attention" }],
+      },
       theme: "light",
       onCompose: () => undefined,
       onManageSpaces: () => undefined,

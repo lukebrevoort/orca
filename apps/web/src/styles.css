@@ -4753,6 +4753,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 /* Thread organizer */
 .organizer-layer { isolation: isolate; z-index: 200; }
 body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none; visibility: hidden; }
+body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { opacity: 0; pointer-events: none; visibility: hidden; }
 .organizer-backdrop { backdrop-filter: blur(7px); background: color-mix(in srgb, #0f2422 48%, transparent); }
 .thread-organizer {
   background: var(--orca-paper);

@@ -104,25 +104,30 @@ describe("AppSidebar mobile navigation", () => {
     browserWindow.document.body.append(container);
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<TopLayerProvider><AppSidebar
-      account={{ displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" }}
-      active="quiet"
-      draftCount={3}
-      inboxCount={12}
       onCompose={() => { composeCalls += 1; }}
       onManageSpaces={() => { manageCalls += 1; }}
       onNavigate={(destination) => { destinations.push(destination); }}
-      spaces={[
-        { id: "focus", label: "Focus", description: "protected attention", count: 2 },
-        { id: "signals", label: "Signals", description: "important changes", count: 4 },
-        { id: "quiet", label: "Quiet", description: "low interruption", count: 1 },
-        { id: "later", label: "Later", description: "held intentionally", count: 3 },
-        { id: "launch", label: "Orca launch", description: "custom collection", custom: true, count: 5 },
-      ]}
+      projection={{
+        account: { displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" },
+        active: "quiet",
+        draftCount: 3,
+        inboxCount: 12,
+        online: true,
+        spaces: [
+          { id: "focus", label: "Focus", description: "protected attention", count: 2 },
+          { id: "signals", label: "Signals", description: "important changes", count: 4 },
+          { id: "quiet", label: "Quiet", description: "low interruption", count: 1 },
+          { id: "later", label: "Later", description: "held intentionally", count: 3 },
+          { id: "launch", label: "Orca launch", description: "custom collection", custom: true, count: 5 },
+        ],
+      }}
       theme="dark"
     /></TopLayerProvider>));
 
     const mobile = container.querySelector('nav[aria-label="Mobile primary"]') as unknown as HTMLElement;
     expect(mobile).not.toBeNull();
+    expect(container.querySelector("svg.desktop-orca-eye")).not.toBeNull();
+    expect(container.querySelector('img[src="/orca-black-mark.svg"]')).toBeNull();
     expect(button(mobile, "Compose").getAttribute("aria-keyshortcuts")).toBe("c");
     await click(button(mobile, "Compose"));
     expect(composeCalls).toBe(1);

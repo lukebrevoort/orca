@@ -32,7 +32,8 @@ import { ClassificationBadge, ClassificationCorrection, classificationViewLabel,
 import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
-import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
+import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
+import { createSidebarNavigationProjection, desktopDestinationFromLocation, desktopDestinationUrl, destinationForSpace, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
@@ -61,27 +62,6 @@ const readerDensityHint = "Calm gives each message more room. Compact fits more 
 type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
-
-type StoredSpacePreferences = {
-  revision: 1;
-  order: string[];
-  hidden: string[];
-  labels: Record<string, string>;
-};
-
-function spacePreferencesKey(accountId: string) {
-  return `orca:space-preferences:v1:${accountId}`;
-}
-
-function readSpacePreferences(accountId: string): StoredSpacePreferences | null {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(spacePreferencesKey(accountId)) ?? "null") as Partial<StoredSpacePreferences> | null;
-    if (!value || value.revision !== 1 || !Array.isArray(value.order) || !Array.isArray(value.hidden) || !value.labels || typeof value.labels !== "object") return null;
-    return { revision: 1, order: value.order.filter((id): id is string => typeof id === "string"), hidden: value.hidden.filter((id): id is string => typeof id === "string"), labels: Object.fromEntries(Object.entries(value.labels).filter((entry): entry is [string, string] => typeof entry[1] === "string")) };
-  } catch {
-    return null;
-  }
-}
 
 const pinMailboxOptions: Array<{ id: PinMailbox; label: string }> = [
   { id: "inbox", label: "Inbox" },
@@ -869,31 +849,32 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   const connectedAccountsIssue = connectedAccountsStatus === "error" ? buildSettingsReadIssue("accounts", connectedAccountsError) : null;
   const agentConnectionsIssue = agentConnectionsStatus === "error" ? buildSettingsReadIssue("agents", agentConnectionsError) : null;
   const syncStatusIssue = settingsSyncReadStatus === "error" ? buildSettingsReadIssue("sync", settingsSyncError) : null;
-  const [settingsQuery, setSettingsQuery] = useState("");
-  const settingsSpaces: WorkflowSpace[] = [
-    { id: "focus", label: "Focus", description: "protected attention" },
-    { id: "signals", label: "Signals", description: "important changes" },
-    { id: "quiet", label: "Quiet", description: "low interruption" },
-    { id: "later", label: "Later", description: "held intentionally" },
-  ];
-  const settingsAccount = {
-    displayName: profileAccount?.displayName ?? profileAccount?.email ?? "Orca workspace",
-    email: profileAccount?.email ?? "",
-    accountCount: connectedAccounts.length,
-    health: (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" ? "syncing" : connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" ? "attention" : !settingsSyncStatus ? "unknown" : settingsSyncStatus.accounts.some((item) => item.state === "syncing") ? "syncing" : settingsSyncStatus.accounts.some((item) => item.state === "auth_needed" || item.state === "error") ? "attention" : "synced") as "synced" | "syncing" | "attention" | "unknown",
-    detail: demoMode ? "Preview route · account status unavailable" : settingsSyncReadStatus === "error" ? "Sync status needs attention" : !settingsSyncStatus ? "Account status unavailable" : undefined,
-  };
-  function navigateFromSettings(destination: DesktopDestination) {
-    if (destination === "settings") return;
-    if (destination === "organization") { window.location.assign("/?destination=organization"); return; }
-    if (destination.startsWith("space:")) { window.location.assign("/"); return; }
-    window.location.assign(`/?destination=${encodeURIComponent(destination)}`);
-  }
+  const settingsNavigationPreview = useMemo<SettingsNavigationPreview>(() => ({
+    account: {
+      displayName: (demoMode ? demoAccount.displayName : profileAccount?.displayName) ?? (demoMode ? demoAccount.email : profileAccount?.email) ?? "Orca workspace",
+      email: demoMode ? demoAccount.email : profileAccount?.email ?? "",
+      accountCount: demoMode ? 1 : connectedAccounts.length,
+      avatar: <ProfileAvatar account={demoMode ? demoAccount : profileAccount} variant="sidebar" />,
+      detail: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error") ? "Account status unavailable" : undefined,
+    },
+    accountId: demoMode ? demoAccount.id : profileAccount?.id ?? null,
+    attention: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error"))),
+    collections: demoMode ? demoCollections : [],
+    complete: demoMode,
+    counts: demoMode ? {
+      focus: getMessagesForMailbox(demoMailWithAgentSources, "focus").length,
+      signals: getMessagesForMailbox(demoMailWithAgentSources, "signals").length,
+      quiet: getMessagesForMailbox(demoMailWithAgentSources, "quiet").length,
+      later: new Set(demoReminders.filter((item) => item.status === "scheduled" || item.status === "resurfaced").map((item) => item.threadId)).size,
+    } : {},
+    draftCount: demoMode ? demoDrafts.length : undefined,
+    inboxCount: demoMode ? demoMailWithAgentSources.length : undefined,
+    known: demoMode || (connectedAccountsStatus === "ready" && settingsSyncReadStatus === "ready"),
+    labels: {},
+    syncing: !demoMode && (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "syncing"))),
+  }), [connectedAccounts.length, connectedAccountsStatus, demoMode, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
-  return <main className="desktop-shell settings-desktop-shell">
-    <AppSidebar account={settingsAccount} active="settings" onCompose={() => window.location.assign("/?compose=1")} onManageSpaces={() => window.location.assign("/settings/attention-views")} onNavigate={navigateFromSettings} spaces={settingsSpaces} theme={theme}/>
-    <section className="desktop-workspace">
-    <WorkspaceHeader health={settingsAccount.health} onQueryChange={setSettingsQuery} onQuerySubmit={(value) => window.location.assign(value.trim() ? `/?q=${encodeURIComponent(value.trim())}` : "/")} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} query={settingsQuery} theme={theme} title="Settings"/>
+  return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <section className="settings-home-page">
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
@@ -966,8 +947,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
       </section>
     </div>
   </section>
-  </section>
-  </main>;
+  </DesktopSettingsFrame>;
 }
 
 function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
@@ -1264,6 +1244,7 @@ export function InboxApp({
   bulkAttentionClient?: BulkAttentionClient;
 }) {
   const topLayerActive = useTopLayerActive();
+  const online = useOnlineStatus();
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
   const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
@@ -1282,6 +1263,9 @@ export function InboxApp({
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
+  const [collectionsLoad, setCollectionsLoad] = useState<{ accountId: string | null; status: "loading" | "ready" | "error" }>(() => demoMode
+    ? { accountId: demoAccount.id, status: "ready" }
+    : { accountId: null, status: "loading" });
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
   const [drafts, setDrafts] = useState<MessageDraft[] | null>(demoMode ? demoDrafts : null);
@@ -1303,7 +1287,7 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("destination") === "organization");
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && desktopDestinationFromLocation(window.location) === "organization");
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
     const requested = new URLSearchParams(window.location.search).get("bre320Evidence");
@@ -1325,14 +1309,14 @@ export function InboxApp({
   const [readerOriginLabel, setReaderOriginLabel] = useState("Inbox");
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    const destination = new URLSearchParams(window.location.search).get("destination");
+    const destination = desktopDestinationFromLocation(window.location);
     return destination?.startsWith("space:") ? destination.slice("space:".length) || null : null;
   });
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
     if (typeof window === "undefined") return "inbox";
-    const destination = new URLSearchParams(window.location.search).get("destination");
+    const destination = desktopDestinationFromLocation(window.location);
     return ["inbox", "focus", "signals", "quiet", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
@@ -1356,9 +1340,8 @@ export function InboxApp({
   useEffect(() => {
     const onPopState = () => {
       const params = new URLSearchParams(window.location.search);
-      const destination = params.get("destination") as DesktopDestination | null;
       setStreamQuery(params.get("q") ?? "");
-      navigateDesktop(destination ?? "inbox", false);
+      navigateDesktop(desktopDestinationFromLocation(window.location), false);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -1413,8 +1396,7 @@ export function InboxApp({
 
   useEffect(() => {
     if (!account?.id || !spacePreferencesReady) return;
-    const value: StoredSpacePreferences = { revision: 1, order: spaceOrder, hidden: hiddenSpaceIds, labels: spaceLabels };
-    window.localStorage.setItem(spacePreferencesKey(account.id), JSON.stringify(value));
+    writeSpacePreferences(account.id, { revision: 1, order: spaceOrder, hidden: hiddenSpaceIds, labels: spaceLabels });
   }, [account?.id, hiddenSpaceIds, spaceLabels, spaceOrder, spacePreferencesReady]);
 
   useEffect(() => {
@@ -1616,22 +1598,39 @@ export function InboxApp({
   useEffect(() => {
     if (demoMode || !account || status !== "ready") return;
     const controller = new AbortController();
+    const accountId = account.id;
+    setCollectionsLoad((current) => current.accountId === accountId && current.status === "ready"
+      ? current
+      : { accountId, status: "loading" });
+    const collectionsRequest = fetchJson("/v1/collections", collectionsResponseSchema, controller.signal)
+      .then((nextCollections) => {
+        if (!controller.signal.aborted) {
+          setCollections(nextCollections);
+          setCollectionsLoad({ accountId, status: "ready" });
+        }
+        return nextCollections;
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setCollectionsLoad({ accountId, status: "error" });
+        throw error;
+      });
     void Promise.all([
-      fetchJson("/v1/collections", collectionsResponseSchema, controller.signal),
+      collectionsRequest,
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
       fetchJson("/v1/reminders", remindersResponseSchema, controller.signal),
       fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, controller.signal),
       fetchJson("/v1/attention/view-settings", attentionViewSettingsSchema, controller.signal),
-    ]).then(([nextCollections, nextPins, nextReminders, viewSettings, attentionSettings]) => {
+    ]).then(([, nextPins, nextReminders, viewSettings, attentionSettings]) => {
       if (controller.signal.aborted) return;
-      setCollections(nextCollections);
       setPins(nextPins);
       setReminders(nextReminders);
       setLaterLabel(viewSettings.displayName);
       const ids = { focus: "focus", notify: "signals", quiet: "quiet" } as const;
       setSpaceLabels((current) => ({ ...current, ...Object.fromEntries(attentionSettings.filter((setting) => setting.behavior in ids).map((setting) => [ids[setting.behavior as keyof typeof ids], setting.displayName])) }));
     }).catch((error) => {
-      if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
+      if (!controller.signal.aborted) {
+        setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
+      }
     });
     return () => controller.abort();
   }, [account?.id, demoMode, status]);
@@ -1750,29 +1749,49 @@ export function InboxApp({
     }));
   }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
-  const workflowSpaces = useMemo<WorkflowSpace[]>(() => {
-    const builtIn: Record<string, WorkflowSpace> = {
-      focus: { id: "focus", label: spaceLabels.focus ?? "Focus", description: "protected attention", count: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length },
-      signals: { id: "signals", label: spaceLabels.signals ?? "Signals", description: "important changes", count: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length },
-      quiet: { id: "quiet", label: spaceLabels.quiet ?? "Quiet", description: "low interruption", count: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length },
-      later: { id: "later", label: spaceLabels.later ?? laterLabel, description: "held intentionally", count: reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").length },
-    };
-    const custom = new Map(collections.map((collection) => [collection.id, {
-      id: collection.id,
-      label: spaceLabels[collection.id] ?? collection.name,
-      description: "custom collection",
-      count: collection.threadIds.length,
-      color: collection.color,
-      custom: true,
-    } satisfies WorkflowSpace]));
-    return spaceOrder.map((id) => builtIn[id] ?? custom.get(id)).filter((space): space is WorkflowSpace => Boolean(space)).map((space) => ({ ...space, hidden: hiddenSpaceIds.includes(space.id) }));
-  }, [allMailMessages, attentionByAddress, collections, hiddenSpaceIds, laterLabel, reminders, spaceLabels, spaceOrder]);
-
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
     ? "organization"
     : activeCollectionId
       ? `space:${activeCollectionId}`
       : activeMailbox === "hidden" ? "all" : activeMailbox;
+
+  const sidebarProjection = useMemo(() => createSidebarNavigationProjection({
+    account: {
+      displayName: account?.displayName ?? account?.email ?? "Orca workspace",
+      email: account?.email ?? "",
+      accountCount: Math.max(1, syncStatus?.accounts.length ?? 1),
+      avatar: <ProfileAvatar account={account} variant="sidebar" />,
+    },
+    active: activeDesktopDestination,
+    attention: status === "error" || Boolean(syncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error")),
+    collections,
+    counts: {
+      focus: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
+      signals: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length,
+      quiet: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length,
+      later: new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size,
+    },
+    draftCount: drafts?.length ?? 0,
+    hidden: hiddenSpaceIds,
+    inboxCount: messages.length,
+    known: status === "ready" || status === "syncing",
+    labels: { ...spaceLabels, later: spaceLabels.later ?? laterLabel },
+    online,
+    order: spaceOrder,
+    syncing: status === "syncing" || isGmailRefreshing,
+  }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, spaceLabels, spaceOrder, status, syncStatus]);
+  const workflowSpaces = sidebarProjection.spaces;
+
+  useEffect(() => {
+    if (!spacePreferencesReady || status !== "ready") return;
+    const customSpaceRequested = activeDesktopDestination.startsWith("space:");
+    const builtInSpaceRequested = ["focus", "signals", "quiet", "later"].includes(activeDesktopDestination);
+    const selectedSpace = workflowSpaces.find((space) => destinationForSpace(space) === activeDesktopDestination);
+    if ((!customSpaceRequested && !builtInSpaceRequested) || (selectedSpace && !selectedSpace.hidden)) return;
+    if (customSpaceRequested && (collectionsLoad.accountId !== account?.id || collectionsLoad.status !== "ready")) return;
+    window.history.replaceState({ destination: "inbox" }, "", desktopDestinationUrl(window.location.href, "inbox"));
+    selectMailbox("inbox");
+  }, [account?.id, activeDesktopDestination, collectionsLoad, spacePreferencesReady, status, workflowSpaces]);
 
   const readerAccountId = getSelectedThreadAccountId(allMailMessages, selectedThreadId, selectedThreadAccountId);
 
@@ -2360,6 +2379,7 @@ export function InboxApp({
   function selectCollection(id: string) {
     runUiTransition("content", () => {
       setActiveCollectionId(id);
+      setActiveMailbox("inbox");
       setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
@@ -2406,7 +2426,7 @@ export function InboxApp({
     try {
       if (!demoMode) await fetchNoContent(`/v1/collections/${encodeURIComponent(collection.id)}`, { method: "DELETE" });
       setCollections((current) => current.filter((item) => item.id !== collection.id).map((item, position) => ({ ...item, position })));
-      if (activeCollectionId === collection.id) setActiveCollectionId(null);
+      if (activeCollectionId === collection.id) navigateDesktop("inbox");
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
     }
@@ -2644,12 +2664,7 @@ export function InboxApp({
       return;
     }
     if (pushHistory) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("destination", destination);
-      url.searchParams.delete("thread");
-      url.searchParams.delete("accountId");
-      url.searchParams.delete("compose");
-      window.history.pushState({ destination }, "", `${url.pathname}${url.search}${url.hash}`);
+      window.history.pushState({ destination }, "", desktopDestinationUrl(window.location.href, destination));
     }
     if (destination === "organization") {
       runUiTransition("content", () => {
@@ -2671,10 +2686,10 @@ export function InboxApp({
   async function createWorkflowSpace(name: string) {
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
-    const created = await createCollection(name, true);
+    const created = await createCollection(name, false);
     if (created) {
       setSpaceOrder((current) => current.includes(created.id) ? current : [...current, created.id]);
-      setManageSpacesOpen(false);
+      navigateDesktop(`space:${created.id}`);
     } else {
       setSpaceOperationError("Could not create this space. Nothing was changed; try again.");
     }
@@ -2730,6 +2745,10 @@ export function InboxApp({
   function hideWorkflowSpace(space: WorkflowSpace) {
     setSpaceOperationError(null);
     setHiddenSpaceIds((current) => current.includes(space.id) ? current : [...current, space.id]);
+    if (activeDesktopDestination === destinationForSpace(space)) {
+      navigateDesktop("inbox");
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => contentPaneRef.current?.focus({ preventScroll: true })));
+    }
   }
 
   function restoreWorkflowSpace(space: WorkflowSpace) {
@@ -2737,38 +2756,27 @@ export function InboxApp({
     setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
   }
 
-  const sidebarAccount = {
-    displayName: account?.displayName ?? account?.email ?? "Orca workspace",
-    email: account?.email ?? "",
-    accountCount: Math.max(1, syncStatus?.accounts.length ?? 1),
-    health: (status === "syncing" || isGmailRefreshing ? "syncing" : status === "error" ? "attention" : typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced") as "synced" | "syncing" | "offline" | "attention",
-    avatar: <ProfileAvatar account={account} variant="sidebar" />,
-  };
-
   return (
     <div className="app-root">
       <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
-          account={sidebarAccount}
-          active={activeDesktopDestination}
           composeButtonRef={composeTriggerRef}
-          draftCount={drafts?.length ?? 0}
-          inboxCount={messages.length}
           onCompose={() => openCompose()}
           onManageSpaces={() => setManageSpacesOpen(true)}
           onNavigate={navigateDesktop}
-          spaces={workflowSpaces}
+          projection={sidebarProjection}
           theme={theme}
         />
         <section className="desktop-workspace">
           <WorkspaceHeader
-            health={sidebarAccount.health}
+            health={sidebarProjection.account.health}
             onQueryChange={setStreamQuery}
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
             title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
+          <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView

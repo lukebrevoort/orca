@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
-import type { MessageDraft, UserPreferences } from "@orca/shared";
+import { accountFixture, inboxFixture, type Collection, type MessageDraft, type UserPreferences } from "@orca/shared";
 import { TopLayerProvider } from "./top-layer";
 
 type FrameCallback = (timestamp: number) => void;
@@ -148,12 +148,12 @@ function restoreDom() {
 async function renderApp(
   preferences: ReaderPreferences = defaultReaderPreferences,
   strict = false,
-  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient"> = { theme: "light" },
+  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient"> & { demoMode?: boolean } = { theme: "light" },
 ) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <TopLayerProvider><InboxApp demoMode preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} /></TopLayerProvider>;
+  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -333,12 +333,12 @@ async function waitFor(milliseconds: number) {
   });
 }
 
-async function renderSettingsHome(theme: "light" | "dark" = "light") {
+async function renderSettingsHome(theme: "light" | "dark" = "light", demoMode = false) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
   await act(async () => {
-    root!.render(<SettingsHome preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />);
+    root!.render(<SettingsHome demoMode={demoMode} preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme={theme} />);
   });
   return container;
 }
@@ -349,6 +349,38 @@ function jsonResponse(body: unknown, status = 200) {
 
 function apiError(status: number, code: string, message: string) {
   return jsonResponse({ error: { code, message } }, status);
+}
+
+function createProductionInboxFetch(collectionsResponse: Promise<Response>, onCollectionsRequest?: () => void): typeof fetch {
+  const syncStatus = {
+    accounts: [{ ...accountFixture, state: "idle", lastSyncedAt: "2026-06-28T17:30:00.000Z", error: null }],
+  };
+  const inbox = {
+    accounts: [accountFixture],
+    messages: inboxFixture,
+    nextCursor: null,
+    counts: {
+      attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+      classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+    },
+  };
+
+  return (async (input: string | URL | Request) => {
+    const url = new URL(String(input), browserWindow.location.href);
+    if (url.pathname === "/v1/me") return jsonResponse(accountFixture);
+    if (url.pathname === "/v1/sync/status") return jsonResponse(syncStatus);
+    if (url.pathname === "/v1/sync/gmail") return jsonResponse({});
+    if (url.pathname === "/v1/inbox") return jsonResponse(inbox);
+    if (url.pathname === "/v1/collections") {
+      onCollectionsRequest?.();
+      return collectionsResponse;
+    }
+    if (url.pathname === "/v1/pins" || url.pathname === "/v1/reminders" || url.pathname === "/v1/drafts" || url.pathname === "/v1/attention/view-settings" || url.pathname === "/v1/agent-event-mutes") return jsonResponse([]);
+    if (url.pathname === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
+    if (url.pathname === "/v1/agent-events") return jsonResponse({ events: [], nextCursor: null });
+    if (url.pathname === "/v1/attention/resolve") return jsonResponse({ behavior: "normal", rule: null });
+    throw new Error(`Unexpected production Inbox request: ${url.pathname}${url.search}`);
+  }) as typeof fetch;
 }
 
 describe("OAuth login availability and recovery", () => {
@@ -1409,6 +1441,79 @@ describe("Desktop evidence and navigation", () => {
     expect(focus.getAttribute("aria-current")).toBe("page");
   });
 
+  test("preserves a production custom-space deep link until deferred collections select it", async () => {
+    const originalFetch = globalThis.fetch;
+    let resolveCollections!: (response: Response) => void;
+    let collectionsRequested = false;
+    const collectionsResponse = new Promise<Response>((resolve) => {
+      resolveCollections = resolve;
+    });
+    const collection: Collection = {
+      id: "collection_deferred_launch",
+      accountId: accountFixture.id,
+      name: "Launch review",
+      color: "#70867d",
+      position: 0,
+      threadIds: [inboxFixture[0]!.threadId],
+      createdAt: "2026-06-28T17:30:00.000Z",
+      updatedAt: "2026-06-28T17:30:00.000Z",
+    };
+
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=space%3Acollection_deferred_launch");
+    globalThis.fetch = createProductionInboxFetch(collectionsResponse, () => { collectionsRequested = true; });
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 10 && !collectionsRequested; index += 1) await waitFor(0);
+
+      expect(collectionsRequested).toBe(true);
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("space:collection_deferred_launch");
+
+      await act(async () => {
+        resolveCollections(jsonResponse([collection]));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 10 && !browserWindow.document.querySelector('[aria-current="page"]')?.textContent?.includes("Launch review"); index += 1) await waitFor(0);
+
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("space:collection_deferred_launch");
+      expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toContain("Launch review");
+      expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Launch review");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("falls back only after production collections settle without the requested custom space", async () => {
+    const originalFetch = globalThis.fetch;
+    let resolveCollections!: (response: Response) => void;
+    let collectionsRequested = false;
+    const collectionsResponse = new Promise<Response>((resolve) => {
+      resolveCollections = resolve;
+    });
+
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=space%3Acollection_missing");
+    globalThis.fetch = createProductionInboxFetch(collectionsResponse, () => { collectionsRequested = true; });
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 10 && !collectionsRequested; index += 1) await waitFor(0);
+
+      expect(collectionsRequested).toBe(true);
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("space:collection_missing");
+
+      await act(async () => {
+        resolveCollections(jsonResponse([]));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 10 && new URL(browserWindow.location.href).searchParams.get("destination") !== "inbox"; index += 1) await waitFor(0);
+
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+      expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toContain("Inbox");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("persists hidden workspace visibility across a reload", async () => {
     await renderApp();
     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
@@ -1443,6 +1548,115 @@ describe("Desktop evidence and navigation", () => {
     });
     const labels = [...dialog.querySelectorAll(".desktop-space-list article > div > strong")].map((label) => label.textContent);
     expect(labels.slice(0, 4)).toEqual(["Signals", "Quiet", "Later", "Focus"]);
+  });
+
+  test("keeps Inbox and Settings on the same customized sidebar projection in both themes", async () => {
+    browserWindow.localStorage.setItem("orca:space-preferences:v1:acct_demo", JSON.stringify({
+      revision: 1,
+      order: ["collection_demo_life", "focus", "quiet", "later", "collection_demo_work", "signals"],
+      hidden: ["signals"],
+      labels: { focus: "Deep focus", collection_demo_work: "Launch watch" },
+    }));
+    const sidebarRows = () => [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+      .map((button) => button.textContent?.replace(/\s+/g, " ").trim());
+
+    for (const theme of ["light", "dark"] as const) {
+      browserWindow.history.replaceState({}, "", "/dev/inbox");
+      await renderApp(defaultReaderPreferences, false, { theme });
+      await waitFor(0);
+      const inboxRows = sidebarRows();
+      expect(inboxRows.some((label) => label?.includes("Launch watch"))).toBe(true);
+      expect(inboxRows.some((label) => label?.includes("Signals"))).toBe(false);
+
+      await act(async () => root!.unmount());
+      root = null;
+      browserWindow.history.replaceState({}, "", "/dev/settings");
+      await renderSettingsHome(theme, true);
+      await waitFor(0);
+      expect(sidebarRows()).toEqual(inboxRows);
+      const customDestination = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+        .find((button) => button.textContent?.includes("Launch watch")) as unknown as HTMLButtonElement;
+      await act(async () => customDestination.click());
+      expect(browserWindow.location.pathname).toBe("/dev/inbox");
+      expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("space:collection_demo_work");
+
+      await act(async () => root!.unmount());
+      root = null;
+    }
+  });
+
+  test("reacts immediately to connectivity changes across Inbox and Settings in both themes", async () => {
+    let online = true;
+    Object.defineProperty(browserWindow.navigator, "onLine", { configurable: true, get: () => online });
+
+    for (const route of ["inbox", "settings"] as const) {
+      for (const theme of ["light", "dark"] as const) {
+        browserWindow.history.replaceState({}, "", route === "inbox" ? "/dev/inbox" : "/dev/settings");
+        if (route === "inbox") await renderApp(defaultReaderPreferences, false, { theme });
+        else await renderSettingsHome(theme, true);
+
+        expect(browserWindow.document.querySelector(".desktop-health")?.textContent).not.toContain("offline");
+        online = false;
+        await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("offline")));
+        expect(browserWindow.document.querySelector(".desktop-health")?.textContent).toContain("offline");
+        expect(browserWindow.document.querySelector(".desktop-connectivity-notice")?.textContent).toContain("Cached mail stays readable");
+        expect(browserWindow.document.querySelector(".desktop-connectivity-notice button")?.textContent).toBe("Open drafts");
+
+        online = true;
+        await act(async () => browserWindow.dispatchEvent(new browserWindow.Event("online")));
+        expect(browserWindow.document.querySelector(".desktop-connectivity-notice")).toBeNull();
+        await act(async () => root!.unmount());
+        root = null;
+      }
+    }
+  });
+
+  test("keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback", async () => {
+    await renderApp();
+    const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+    await act(async () => manageButton().click());
+    const createTrigger = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "+ Create a workflow space") as unknown as HTMLButtonElement;
+    await act(async () => createTrigger.click());
+    const createForm = browserWindow.document.querySelector(".desktop-create-space") as unknown as HTMLElement;
+    const nameInput = createForm.querySelector('input[aria-label="Workflow space name"]') as unknown as HTMLInputElement;
+    await enterInput(nameInput, "Launch review");
+    const createButton = [...createForm.querySelectorAll("button")].find((button) => button.textContent === "Create") as unknown as HTMLButtonElement;
+    expect(createButton.disabled).toBe(false);
+    await act(async () => { createButton.click(); await Promise.resolve(); });
+    await waitFor(0);
+
+    const createdDestination = new URL(browserWindow.location.href).searchParams.get("destination");
+    expect(createdDestination).toStartWith("space:collection_demo_");
+    expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toContain("Launch review");
+
+    await act(async () => manageButton().click());
+    let dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    let activeRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Launch review"))!;
+    Object.defineProperty(browserWindow, "prompt", { configurable: true, value: () => "Renamed launch" });
+    await act(async () => { ([...activeRow.querySelectorAll("button")].find((button) => button.textContent === "Rename") as unknown as HTMLButtonElement).click(); await Promise.resolve(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe(createdDestination);
+    expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toContain("Renamed launch");
+
+    dialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    activeRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Renamed launch"))!;
+    const moveUp = activeRow.querySelector('button[aria-label^="Move Renamed launch up"]') as unknown as HTMLButtonElement;
+    if (!moveUp.disabled) await act(async () => { moveUp.click(); await Promise.resolve(); });
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe(createdDestination);
+
+    const hide = [...activeRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
+    await act(async () => hide.click());
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]')).toBeNull();
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+    expect(browserWindow.document.querySelector('nav[aria-label="Primary navigation"] [aria-current="page"]')?.textContent).toContain("Inbox");
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Renamed launch"))).toBe(false);
+    await act(async () => { flushAnimationFrames(); flushAnimationFrames(); flushAnimationFrames(); });
+    expect((browserWindow.document.activeElement as unknown as HTMLElement).classList.contains("content-pane")).toBe(true);
+
+    await act(async () => manageButton().click());
+    const restore = [...browserWindow.document.querySelectorAll(".desktop-hidden-spaces button")].find((button) => button.textContent?.includes("Renamed launch")) as unknown as HTMLButtonElement;
+    await act(async () => restore.click());
+    expect(new URL(browserWindow.location.href).searchParams.get("destination")).toBe("inbox");
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Renamed launch"))).toBe(true);
   });
 });
 

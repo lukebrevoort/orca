@@ -1,33 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
-import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
+import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace } from "./organization-views";
 import { createTidePreviewRequest, TideTableEditor, type TideCompileSuccess } from "./tide-table";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 
 export { DesktopDrawer } from "./desktop-drawer";
-
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}`;
-
-export type WorkflowSpace = {
-  id: string;
-  label: string;
-  description: string;
-  count?: number;
-  color?: string;
-  custom?: boolean;
-  hidden?: boolean;
-};
-
-export type SidebarAccount = {
-  displayName: string;
-  email: string;
-  accountCount: number;
-  health: "synced" | "syncing" | "offline" | "attention" | "unknown";
-  detail?: string;
-  avatar?: ReactNode;
-};
+export type { DesktopDestination, SidebarAccount, SidebarNavigationProjection, WorkflowSpace } from "./navigation";
 
 const icons = {
   inbox: <><path d="M3 5h14v10H3z"/><path d="m3 6 7 5 7-5"/></>,
@@ -47,6 +28,13 @@ function WaveMark() {
   return <svg aria-hidden="true" className="desktop-wave-mark" viewBox="0 0 28 28"><path d="M4 10c3-3 5.5-3 8.5 0s5.5 3 8.5 0M4 17c3-3 5.5-3 8.5 0s5.5 3 8.5 0"/></svg>;
 }
 
+function OrcaBlackMark() {
+  return <svg aria-hidden="true" className="desktop-orca-eye" viewBox="0 0 30 30">
+    <path d="M8 0h14c4.418 0 8 3.582 8 8v14c0 4.418-3.582 8-8 8H7c-3.866 0-7-3.134-7-7V8C0 3.582 3.582 0 8 0Z" fill="#f4f3ef"/>
+    <path d="M15 8.1c4.142 0 7.5 3.089 7.5 6.9s-3.358 6.9-7.5 6.9S7.5 18.811 7.5 15 10.858 8.1 15 8.1Zm0 4.05c-1.712 0-3.1 1.276-3.1 2.85s1.388 2.85 3.1 2.85 3.1-1.276 3.1-2.85-1.388-2.85-3.1-2.85Z" fill="#050505" fillRule="evenodd"/>
+  </svg>;
+}
+
 function SidebarItem({ active, count, icon, label, onClick }: { active: boolean; count?: number; icon: ReactNode; label: string; onClick: () => void }) {
   return <button aria-current={active ? "page" : undefined} className="desktop-sidebar-item" onClick={onClick} type="button">
     {icon}<span>{label}</span>{count !== undefined ? <small>{count}</small> : null}
@@ -59,23 +47,20 @@ function MobileMenuItem({ active = false, count, icon, label, onClick }: { activ
   </button>;
 }
 
-export function AppSidebar({ account, active, composeButtonRef, inboxCount, draftCount, spaces, theme, onCompose, onManageSpaces, onNavigate }: {
-  account: SidebarAccount;
-  active: DesktopDestination;
-  inboxCount?: number;
-  draftCount?: number;
-  spaces: WorkflowSpace[];
+export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onManageSpaces, onNavigate }: {
+  projection: SidebarNavigationProjection;
   theme: "light" | "dark";
   composeButtonRef?: RefObject<HTMLButtonElement | null>;
   onCompose: () => void;
   onManageSpaces: () => void;
   onNavigate: (destination: DesktopDestination) => void;
 }) {
+  const { account, active, draftCount, inboxCount, spaces } = projection;
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const visibleSpaces = spaces.filter((space) => !space.hidden);
-  const activeSpace = spaces.find((space) => active === (space.custom ? `space:${space.id}` : space.id));
+  const activeSpace = spaces.find((space) => active === destinationForSpace(space));
   const mobileMenuOwnsCurrentDestination = active !== "inbox" && active !== "drafts";
 
   function navigateFromMobileMenu(destination: DesktopDestination) {
@@ -98,7 +83,7 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
 
   return <div className="desktop-sidebar">
     <nav aria-label="Primary navigation" className="desktop-sidebar-content">
-      <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
+      <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <OrcaBlackMark /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
       <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
       </button>
@@ -107,12 +92,12 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
       <SidebarItem active={active === "drafts"} count={draftCount} icon={<NavIcon name="drafts" />} label="Drafts" onClick={() => onNavigate("drafts")} />
       <div className="desktop-sidebar-section-head"><span>My spaces</span><button onClick={onManageSpaces} type="button">Manage</button></div>
       {visibleSpaces.map((space) => <SidebarItem
-        active={active === (space.custom ? `space:${space.id}` : space.id)}
+        active={active === destinationForSpace(space)}
         count={space.count}
         icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
         key={space.id}
         label={space.label}
-        onClick={() => onNavigate(space.custom ? `space:${space.id}` : space.id as DesktopDestination)}
+        onClick={() => onNavigate(destinationForSpace(space))}
       />)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
@@ -147,12 +132,12 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
           <div aria-label="My spaces" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">My spaces</p>
             {visibleSpaces.map((space) => <MobileMenuItem
-              active={active === (space.custom ? `space:${space.id}` : space.id)}
+              active={active === destinationForSpace(space)}
               count={space.count}
               icon={<span aria-hidden="true" className={`desktop-space-mark desktop-space-${space.id}`} style={space.color ? { background: space.color } : undefined}/>}
               key={space.id}
               label={space.label}
-              onClick={() => navigateFromMobileMenu(space.custom ? `space:${space.id}` : space.id as DesktopDestination)}
+              onClick={() => navigateFromMobileMenu(destinationForSpace(space))}
             />)}
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-mobile-menu-symbol">±</span>} label="Manage spaces" onClick={onManageSpaces} />
           </div>
@@ -208,17 +193,43 @@ export function WorkspaceHeader({ health, query, title, theme, onQueryChange, on
   </header>;
 }
 
-export function DesktopSettingsFrame({ children, theme, title, onThemeChange }: { children: ReactNode; theme: "light" | "dark"; title: string; onThemeChange: () => void }) {
-  const defaultSpaces: WorkflowSpace[] = [
-    { id: "focus", label: "Focus", description: "protected attention" },
-    { id: "signals", label: "Signals", description: "important changes" },
-    { id: "quiet", label: "Quiet", description: "low interruption" },
-    { id: "later", label: "Later", description: "held intentionally" },
-  ];
-  const [spaces, setSpaces] = useState(defaultSpaces);
-  const [account, setAccount] = useState<SidebarAccount>({ displayName: "Orca workspace", email: "", accountCount: 0, health: "unknown", detail: "Checking account status…" });
+type SettingsNavigationSource = {
+  account: Omit<SidebarAccount, "health">;
+  accountId: string | null;
+  attention: boolean;
+  collections: Collection[];
+  counts: Partial<Record<"focus" | "signals" | "quiet" | "later", number>>;
+  draftCount?: number;
+  inboxCount?: number;
+  known: boolean;
+  labels: Record<string, string>;
+  syncing: boolean;
+};
+
+export type SettingsNavigationPreview = SettingsNavigationSource & { complete?: boolean };
+
+const emptySettingsNavigationSource: SettingsNavigationSource = {
+  account: { displayName: "Orca workspace", email: "", accountCount: 0, detail: "Checking account status…" },
+  accountId: null,
+  attention: false,
+  collections: [],
+  counts: {},
+  known: false,
+  labels: {},
+  syncing: false,
+};
+
+export function DesktopSettingsFrame({ children, navigationPreview, theme, title, onThemeChange }: { children: ReactNode; navigationPreview?: SettingsNavigationPreview; theme: "light" | "dark"; title: string; onThemeChange: () => void }) {
+  const online = useOnlineStatus();
+  const [source, setSource] = useState<SettingsNavigationSource>(() => navigationPreview
+    ? navigationPreview
+    : emptySettingsNavigationSource);
   const [query, setQuery] = useState("");
   useEffect(() => {
+    if (navigationPreview?.complete) {
+      setSource(navigationPreview);
+      return;
+    }
     const controller = new AbortController();
     async function read(path: string) {
       const response = await fetch(path, { credentials: "include", signal: controller.signal });
@@ -226,11 +237,14 @@ export function DesktopSettingsFrame({ children, theme, title, onThemeChange }: 
       return response.json() as Promise<unknown>;
     }
     void Promise.allSettled([
-      read("/v1/accounts"),
-      read("/v1/sync/status"),
+      navigationPreview ? Promise.resolve(null) : read("/v1/accounts"),
+      navigationPreview ? Promise.resolve(null) : read("/v1/sync/status"),
       read("/v1/attention/view-settings"),
       read("/v1/collections"),
       read("/v1/reminders/view-settings"),
+      read("/v1/inbox?view=all&classification=all&limit=100"),
+      read("/v1/drafts"),
+      read("/v1/reminders"),
     ]).then((results) => {
       if (controller.signal.aborted) return;
       const accounts = results[0]?.status === "fulfilled" ? mailAccountPageSchema.safeParse(results[0].value) : null;
@@ -242,45 +256,87 @@ export function DesktopSettingsFrame({ children, theme, title, onThemeChange }: 
         ? results[3].value.map((item) => collectionSchema.safeParse(item)).filter((item) => item.success).map((item) => item.data)
         : [];
       const reminder = results[4]?.status === "fulfilled" ? reminderViewSettingsSchema.safeParse(results[4].value) : null;
+      const inbox = results[5]?.status === "fulfilled" ? inboxClassificationResponseSchema.safeParse(results[5].value) : null;
+      const drafts: MessageDraft[] = results[6]?.status === "fulfilled" && Array.isArray(results[6].value)
+        ? results[6].value.map((item) => messageDraftSchema.safeParse(item)).filter((item) => item.success).map((item) => item.data)
+        : [];
+      const reminders: Reminder[] = results[7]?.status === "fulfilled" && Array.isArray(results[7].value)
+        ? results[7].value.map((item) => reminderSchema.safeParse(item)).filter((item) => item.success).map((item) => item.data)
+        : [];
       const accountItems: MailAccount[] = accounts?.success ? accounts.data.items : [];
       const syncValue: SyncStatus | null = sync?.success ? sync.data : null;
+      const messages: InboxMessage[] = inbox?.success ? inbox.data.messages : [];
       const primary = accountItems[0];
       const syncStates = syncValue?.accounts.map((item) => item.state) ?? [];
-      const health: SidebarAccount["health"] = !syncValue ? "unknown" : syncStates.some((state) => state === "syncing") ? "syncing" : syncStates.some((state) => state === "auth_needed" || state === "error") ? "attention" : "synced";
-      setAccount({
-        displayName: primary?.displayName ?? primary?.email ?? "Orca workspace",
-        email: primary?.email ?? "",
-        accountCount: accountItems.length,
-        health,
-        detail: !accounts?.success || !syncValue ? "Account status unavailable" : `${accountItems.length} ${accountItems.length === 1 ? "account" : "accounts"} · ${health}`,
-      });
       const labelByBehavior = new Map(attention.map((setting) => [setting.behavior, setting.displayName]));
-      setSpaces([
-        { id: "focus", label: labelByBehavior.get("focus") ?? "Focus", description: "protected attention" },
-        { id: "signals", label: labelByBehavior.get("notify") ?? "Signals", description: "important changes" },
-        { id: "quiet", label: labelByBehavior.get("quiet") ?? "Quiet", description: "low interruption" },
-        { id: "later", label: reminder?.success ? reminder.data.displayName : "Later", description: "held intentionally" },
-        ...collections.sort((left, right) => left.position - right.position).map((item) => ({ id: item.id, label: item.name, description: "saved collection", color: item.color, custom: true })),
-      ]);
+      setSource({
+        account: navigationPreview?.account ?? {
+          displayName: primary?.displayName ?? primary?.email ?? "Orca workspace",
+          email: primary?.email ?? "",
+          accountCount: accountItems.length,
+          detail: !accounts?.success || !syncValue ? "Account status unavailable" : undefined,
+        },
+        accountId: navigationPreview?.accountId ?? primary?.id ?? null,
+        attention: navigationPreview?.attention ?? syncStates.some((state) => state === "auth_needed" || state === "error"),
+        collections: collections.length ? collections : navigationPreview?.collections ?? [],
+        counts: {
+          focus: inbox?.success ? messages.filter((message) => message.attentionBehavior === "focus").length : navigationPreview?.counts.focus,
+          signals: inbox?.success ? messages.filter((message) => message.attentionBehavior === "notify").length : navigationPreview?.counts.signals,
+          quiet: inbox?.success ? messages.filter((message) => message.attentionBehavior === "quiet").length : navigationPreview?.counts.quiet,
+          later: results[7]?.status === "fulfilled" ? new Set(reminders.filter((item) => item.status === "scheduled" || item.status === "resurfaced").map((item) => item.threadId)).size : navigationPreview?.counts.later,
+        },
+        draftCount: results[6]?.status === "fulfilled" ? drafts.filter((draft) => draft.deliveryStatus === "draft").length : navigationPreview?.draftCount,
+        inboxCount: inbox?.success ? messages.length : navigationPreview?.inboxCount,
+        known: navigationPreview?.known ?? Boolean(accounts?.success && syncValue),
+        labels: {
+          ...navigationPreview?.labels,
+          ...(labelByBehavior.has("focus") ? { focus: labelByBehavior.get("focus")! } : {}),
+          ...(labelByBehavior.has("notify") ? { signals: labelByBehavior.get("notify")! } : {}),
+          ...(labelByBehavior.has("quiet") ? { quiet: labelByBehavior.get("quiet")! } : {}),
+          ...(reminder?.success ? { later: reminder.data.displayName } : {}),
+        },
+        syncing: navigationPreview?.syncing ?? syncStates.some((state) => state === "syncing"),
+      });
     });
     return () => controller.abort();
-  }, []);
+  }, [navigationPreview]);
+  const stored = source.accountId ? readSpacePreferences(source.accountId) : null;
+  const projection = createSidebarNavigationProjection({
+    account: source.account,
+    active: "settings",
+    attention: source.attention,
+    collections: source.collections,
+    counts: source.counts,
+    draftCount: source.draftCount,
+    hidden: stored?.hidden,
+    inboxCount: source.inboxCount,
+    known: source.known,
+    labels: { ...stored?.labels, ...source.labels },
+    online,
+    order: stored?.order,
+    syncing: source.syncing,
+  });
   const navigate = (destination: DesktopDestination) => {
-    if (destination === "settings") { window.location.assign("/settings"); return; }
-    if (destination === "organization") { window.location.assign("/?destination=organization"); return; }
-    window.location.assign(`/?destination=${encodeURIComponent(destination)}`);
+    if (destination === "settings") return;
+    window.location.assign(desktopDestinationHref(destination, window.location.pathname));
   };
   return <div className="desktop-shell desktop-settings-frame">
     <AppSidebar
-      account={account}
-      active="settings"
       onCompose={() => window.location.assign("/?compose=1")}
       onManageSpaces={() => window.location.assign("/settings/attention-views")}
       onNavigate={navigate}
-      spaces={spaces}
+      projection={projection}
       theme={theme}
     />
-    <section className="desktop-workspace"><WorkspaceHeader health={account.health} onQueryChange={setQuery} onQuerySubmit={(value) => { const search = value.trim(); window.location.assign(search ? `/?q=${encodeURIComponent(search)}` : "/"); }} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/>{children}</section>
+    <section className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onQueryChange={setQuery} onQuerySubmit={(value) => { const search = value.trim(); window.location.assign(search ? `/?q=${encodeURIComponent(search)}` : "/"); }} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</section>
+  </div>;
+}
+
+export function ConnectivityNotice({ online, onOpenDrafts }: { online: boolean; onOpenDrafts: () => void }) {
+  if (online) return null;
+  return <div className="desktop-connectivity-notice" role="status">
+    <div><strong>Orca is offline</strong><span>Cached mail stays readable, local triage is preserved, and drafts remain available. Provider changes will sync after you reconnect.</span></div>
+    <button onClick={onOpenDrafts} type="button">Open drafts</button>
   </div>;
 }
 
@@ -325,7 +381,7 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
       <div className="desktop-space-row-actions"><button aria-label={`Move ${space.label} up`} disabled={busy || index === 0} onClick={() => moveBy(space, -1)} type="button">↑</button><button aria-label={`Move ${space.label} down`} disabled={busy || index === visible.length - 1} onClick={() => moveBy(space, 1)} type="button">↓</button><button disabled={busy} onClick={() => { const name = window.prompt("Rename workflow space", space.label)?.trim(); if (name) void onRename(space, name); }} type="button">Rename</button><button disabled={busy} onClick={() => void onHide(space)} type="button">Hide</button></div>
     </article>)}</div>
     {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <button disabled={busy} key={space.id} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>Rules intact</small><strong>Restore</strong></button>)}</section> : null}
-    <footer>{creating ? <div className="desktop-create-space"><input aria-label="Workflow space name" autoFocus disabled={busy} maxLength={60} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a workflow space"}</button>}</footer>
+    <footer>{creating ? <div className="desktop-create-space"><input aria-label="Workflow space name" autoFocus disabled={busy} maxLength={60} onInput={(event) => setNewName(event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a workflow space"}</button>}</footer>
   </TopLayer>;
 }
 
