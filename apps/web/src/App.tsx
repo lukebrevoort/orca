@@ -33,10 +33,23 @@ import { ReplyBriefPanel } from "./reply-brief";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
-import { createSidebarNavigationProjection, desktopDestinationFromLocation, desktopDestinationUrl, destinationForSpace, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
+import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import {
+  SurfaceHistory,
+  canRestoreSurfaceFocus,
+  captureSurfaceReturnContext,
+  getDesktopWorkspace,
+  readInitialThreadSelection,
+  readSurfaceLocation,
+  restoreWorkspaceScroll,
+  type SurfaceLocation,
+  type SurfaceReturnContext,
+} from "./surface-history";
+
+export { readInitialThreadSelection } from "./surface-history";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -104,6 +117,17 @@ const pinColorOptions = [
   { name: "Berry", value: "#9b6e83" },
 ] as const;
 
+function readerOriginLabelForDestination(destination: DesktopDestination, spaces: readonly WorkflowSpace[]) {
+  const space = spaces.find((candidate) => destinationForSpace(candidate) === destination);
+  if (space) return space.label;
+  if (destination === "all") return "All Mail";
+  if (destination === "drafts") return "Drafts";
+  if (destination === "organization") return "Organization";
+  if (destination === "settings") return "Settings";
+  if (destination.startsWith("space:")) return "Workflow space";
+  return destination.charAt(0).toUpperCase() + destination.slice(1);
+}
+
 type PinInput = Pick<Pin, "kind" | "targetId" | "label"> & Partial<Pick<Pin, "icon" | "color">>;
 
 type MailboxItem = {
@@ -145,13 +169,6 @@ const ZEN_ANIM_MS = 500;
 const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
-
-type InboxViewportPosition = {
-  windowX: number;
-  windowY: number;
-  contentX: number | null;
-  contentY: number | null;
-};
 
 const demoAgentLifecycleStorageKey = "orca-demo-agent-event-lifecycles-v1";
 const demoAgentMuteStorageKey = "orca-demo-agent-event-mutes-v1";
@@ -239,28 +256,6 @@ function shouldReduceMotion() {
   const preference = document.documentElement.dataset.motion;
   return preference === "reduced"
     || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-}
-
-function getInboxContentPane() {
-  return document.querySelector<HTMLElement>(".content-pane:not(.content-pane-reader)");
-}
-
-function captureInboxViewport(): InboxViewportPosition {
-  const contentPane = getInboxContentPane();
-  return {
-    windowX: window.scrollX,
-    windowY: window.scrollY,
-    contentX: contentPane?.scrollLeft ?? null,
-    contentY: contentPane?.scrollTop ?? null,
-  };
-}
-
-function restoreInboxViewport(position: InboxViewportPosition) {
-  window.scrollTo({ left: position.windowX, top: position.windowY, behavior: "instant" });
-  const contentPane = getInboxContentPane();
-  if (!contentPane || position.contentX === null || position.contentY === null) return;
-  contentPane.scrollLeft = position.contentX;
-  contentPane.scrollTop = position.contentY;
 }
 
 function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
@@ -1306,7 +1301,6 @@ export function InboxApp({
   const [hiddenSpaceIds, setHiddenSpaceIds] = useState<string[]>([]);
   const [spaceOrder, setSpaceOrder] = useState<string[]>(["focus", "signals", "quiet", "later"]);
   const [spaceLabels, setSpaceLabels] = useState<Record<string, string>>({});
-  const [readerOriginLabel, setReaderOriginLabel] = useState("Inbox");
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     const destination = desktopDestinationFromLocation(window.location);
@@ -1323,29 +1317,37 @@ export function InboxApp({
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
-  const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
-  const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
+  const [composeDraftId, setComposeDraftId] = useState<string | null>(() => typeof window === "undefined" ? null : readSurfaceLocation(window.location).composer?.draftId ?? null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
   const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
-  const originMessageIdRef = useRef<string | null>(null);
-  const originAgentEventIdRef = useRef<string | null>(null);
-  const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
+  const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
+  const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
+  if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
+  const historySynchronizerRef = useRef<(location: SurfaceLocation) => void>(() => {});
+  historySynchronizerRef.current = synchronizeSurfaceLocation;
 
   useEffect(() => {
-    const onPopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      setStreamQuery(params.get("q") ?? "");
-      navigateDesktop(desktopDestinationFromLocation(window.location), false);
+    const history = surfaceHistoryRef.current;
+    if (!history) return;
+    history.initialize({ defaultComposerZen: preferences.composeZenByDefault });
+    const synchronize = () => {
+      historySynchronizerRef.current(history.read());
     };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+    const onPageShow = () => synchronize();
+    window.addEventListener("popstate", synchronize);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("popstate", synchronize);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [preferences.composeZenByDefault]);
   const demoDataInitializedRef = useRef(false);
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
@@ -1365,7 +1367,8 @@ export function InboxApp({
   const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts);
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).get("compose") === "1" && preferences.composeZenByDefault;
+    const composer = readSurfaceLocation(window.location).composer;
+    return Boolean(composer && (composer.zen || preferences.composeZenByDefault));
   });
   const [panelClosing, setPanelClosing] = useState(false);
   const [showSendPermission, setShowSendPermission] = useState(false);
@@ -1781,6 +1784,7 @@ export function InboxApp({
     syncing: status === "syncing" || isGmailRefreshing,
   }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
+  const readerOriginLabel = readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
@@ -1789,8 +1793,9 @@ export function InboxApp({
     const selectedSpace = workflowSpaces.find((space) => destinationForSpace(space) === activeDesktopDestination);
     if ((!customSpaceRequested && !builtInSpaceRequested) || (selectedSpace && !selectedSpace.hidden)) return;
     if (customSpaceRequested && (collectionsLoad.accountId !== account?.id || collectionsLoad.status !== "ready")) return;
-    window.history.replaceState({ destination: "inbox" }, "", desktopDestinationUrl(window.location.href, "inbox"));
-    selectMailbox("inbox");
+    const next = surfaceHistoryRef.current?.replaceDestination("inbox");
+    if (next) historySynchronizerRef.current(next);
+    else selectMailbox("inbox");
   }, [account?.id, activeDesktopDestination, collectionsLoad, spacePreferencesReady, status, workflowSpaces]);
 
   const readerAccountId = getSelectedThreadAccountId(allMailMessages, selectedThreadId, selectedThreadAccountId);
@@ -1853,21 +1858,38 @@ export function InboxApp({
   }, [selectedThreadId, topLayerActive]);
 
   useLayoutEffect(() => {
-    if (selectedThreadId || !inboxViewportRef.current) return;
-    const viewport = inboxViewportRef.current;
-    const originMessageId = originMessageIdRef.current;
-    const originAgentEventId = originAgentEventIdRef.current;
+    if (selectedThreadId || panelMode || !pendingReturnContextRef.current) return;
+    const returnContext = pendingReturnContextRef.current;
     const navigationGeneration = readerNavigationGenerationRef.current;
-    inboxViewportRef.current = null;
-    restoreInboxViewport(viewport);
-    readerFocusFrameRef.current = window.requestAnimationFrame(() => {
-      readerFocusFrameRef.current = null;
-      if (readerNavigationGenerationRef.current !== navigationGeneration) return;
-      const origin = originAgentEventId
-        ? agentEventSourceRefs.current.get(originAgentEventId)
-        : messageRowRefs.current.get(originMessageId ?? "");
-      origin?.focus({ preventScroll: true });
-    });
+    pendingReturnContextRef.current = null;
+    restoreWorkspaceScroll(returnContext);
+
+    const restoreFocus = (attempt: number) => {
+      readerFocusFrameRef.current = window.requestAnimationFrame(() => {
+        readerFocusFrameRef.current = null;
+        if (readerNavigationGenerationRef.current !== navigationGeneration) return;
+        const origin = returnContext.target?.kind === "agent-event"
+          ? agentEventSourceRefs.current.get(returnContext.target.id)
+          : returnContext.target?.kind === "message"
+            ? messageRowRefs.current.get(returnContext.target.id)
+            : null;
+        if (canRestoreSurfaceFocus(origin)) {
+          restoreWorkspaceScroll(returnContext);
+          origin!.focus({ preventScroll: true });
+          return;
+        }
+        if (attempt < 4) restoreFocus(attempt + 1);
+      });
+    };
+    restoreFocus(0);
+  }, [panelMode, selectedThreadId]);
+
+  useLayoutEffect(() => {
+    if (!selectedThreadId) return;
+    const workspace = getDesktopWorkspace();
+    if (!workspace) return;
+    workspace.scrollLeft = 0;
+    workspace.scrollTop = 0;
   }, [selectedThreadId]);
 
   useEffect(() => {
@@ -1952,16 +1974,91 @@ export function InboxApp({
     return <LoginRequiredScreen />;
   }
 
+  function synchronizeSurfaceLocation(location: SurfaceLocation) {
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    const destination = parseDesktopDestination(location.destination) ?? "inbox";
+    if (destination === "settings") {
+      window.location.assign("/settings");
+      return;
+    }
+    setManageSpacesOpen(false);
+    setStreamQuery(location.query);
+    setOrganizationStudioOpen(destination === "organization");
+    if (destination.startsWith("space:")) {
+      setActiveCollectionId(destination.slice("space:".length) || null);
+    } else {
+      setActiveCollectionId(null);
+      if (destination !== "organization") setActiveMailbox(destination as Mailbox);
+    }
+
+    const history = surfaceHistoryRef.current;
+    const enteringReaderFromList = !selectedThreadId && !panelMode && Boolean(location.reader);
+    if (enteringReaderFromList && location.reader) {
+      const messageTarget = visibleMessages.find((message) => message.threadId === location.reader!.threadId
+        && (!location.reader!.accountId || message.accountId === location.reader!.accountId));
+      const eventTarget = agentEvents.find((event) => event.source.threadId === location.reader!.threadId
+        && event.source.accountId === location.reader!.accountId);
+      const messageNode = messageTarget ? messageRowRefs.current.get(messageTarget.id) : null;
+      const eventNode = eventTarget ? agentEventSourceRefs.current.get(eventTarget.id) : null;
+      const focusedNode = document.activeElement;
+      const focusedTarget = eventTarget && eventNode?.isConnected && (eventNode === focusedNode || eventNode.contains(focusedNode))
+        ? { kind: "agent-event" as const, id: eventTarget.id }
+        : messageTarget && messageNode?.isConnected && (messageNode === focusedNode || messageNode.contains(focusedNode))
+          ? { kind: "message" as const, id: messageTarget.id }
+          : null;
+      const previousTarget = history?.lastReturnTarget() ?? null;
+      const preservedTarget = previousTarget?.kind === "agent-event" && previousTarget.id === eventTarget?.id && eventNode?.isConnected
+        ? previousTarget
+        : previousTarget?.kind === "message" && previousTarget.id === messageTarget?.id && messageNode?.isConnected
+          ? previousTarget
+          : null;
+      const target = focusedTarget
+        ?? preservedTarget
+        ?? (messageTarget && messageNode?.isConnected ? { kind: "message" as const, id: messageTarget.id } : null)
+        ?? (eventTarget && eventNode?.isConnected ? { kind: "agent-event" as const, id: eventTarget.id } : null)
+        ?? (messageTarget ? { kind: "message" as const, id: messageTarget.id } : null)
+        ?? (eventTarget ? { kind: "agent-event" as const, id: eventTarget.id } : null);
+      history?.armReturnContext(captureSurfaceReturnContext(target));
+    }
+    const leavingReader = Boolean(selectedThreadId) && !location.reader && !location.composer;
+    pendingReturnContextRef.current = leavingReader
+      ? history?.consumeReturnContext() ?? null
+      : null;
+    setSelectedThreadId(location.reader?.threadId ?? null);
+    setSelectedThreadAccountId(location.reader?.accountId ?? null);
+    setPanelMode(location.composer ? "compose" : null);
+    setComposeDraftId(location.composer?.draftId ?? null);
+    setZen(Boolean(location.composer?.zen));
+    setPanelClosing(false);
+    setZenClosing(false);
+    if (!location.composer) setShowSendPermission(false);
+  }
+
   function openCompose(draftId: string | null = null) {
     if (panelClosing) {
       return;
     }
 
+    surfaceHistoryRef.current?.openComposer({ draftId, zen: preferences.composeZenByDefault });
     setPanelClosing(false);
     setZenClosing(false);
     setComposeDraftId(draftId);
     setPanelMode("compose");
     setZen(preferences.composeZenByDefault);
+  }
+
+  function changeStreamQuery(query: string) {
+    setStreamQuery(query);
+    surfaceHistoryRef.current?.replaceQuery(query);
   }
 
   function openOrganizer(message: InboxMessage) {
@@ -1997,15 +2094,11 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
-    if (!selectedThreadId && !inboxViewportRef.current) {
-      inboxViewportRef.current = captureInboxViewport();
-    }
-    setReaderOriginLabel(activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1)));
+    const returnContext = captureSurfaceReturnContext({ kind: "message", id: message.id });
+    surfaceHistoryRef.current?.openReader({ threadId: message.threadId, accountId: message.accountId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
-      originMessageIdRef.current = message.id;
-      originAgentEventIdRef.current = null;
       setSelectedThreadId(message.threadId);
       setSelectedThreadAccountId(message.accountId);
     });
@@ -2032,12 +2125,11 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
-    if (!selectedThreadId && !inboxViewportRef.current) inboxViewportRef.current = captureInboxViewport();
+    const returnContext = captureSurfaceReturnContext({ kind: "agent-event", id: event.id });
+    surfaceHistoryRef.current?.openReader({ threadId: event.source.threadId, accountId: event.source.accountId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
-      originMessageIdRef.current = null;
-      originAgentEventIdRef.current = event.id;
       setSelectedThreadId(event.source.threadId);
       setSelectedThreadAccountId(event.source.accountId);
     });
@@ -2130,6 +2222,10 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
+    const history = surfaceHistoryRef.current;
+    const dismissal = history?.dismiss("reader");
+    if (dismissal?.mode === "back") return;
+    pendingReturnContextRef.current = history?.consumeReturnContext() ?? null;
     runUiTransition("reader-back", () => {
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
@@ -2158,9 +2254,11 @@ export function InboxApp({
     }
 
     if (shouldReduceMotion()) {
+      setDraftRefreshKey((key) => key + 1);
+      const dismissal = surfaceHistoryRef.current?.dismiss("composer");
+      if (dismissal?.mode === "back") return;
       setPanelMode(null);
       setComposeDraftId(null);
-      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
@@ -2173,13 +2271,15 @@ export function InboxApp({
     }
 
     closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      setDraftRefreshKey((key) => key + 1);
+      const dismissal = surfaceHistoryRef.current?.dismiss("composer");
+      if (dismissal?.mode === "back") return;
       setPanelMode(null);
       setComposeDraftId(null);
-      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
-      closeTimerRef.current = null;
     }, PANEL_ANIM_MS);
   }
 
@@ -2199,6 +2299,8 @@ export function InboxApp({
     }
 
     if (shouldReduceMotion()) {
+      const dismissal = surfaceHistoryRef.current?.dismiss("zen");
+      if (dismissal?.mode === "back") return;
       setZen(false);
       setZenClosing(false);
       return;
@@ -2206,9 +2308,11 @@ export function InboxApp({
 
     setZenClosing(true);
     closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      const dismissal = surfaceHistoryRef.current?.dismiss("zen");
+      if (dismissal?.mode === "back") return;
       setZen(false);
       setZenClosing(false);
-      closeTimerRef.current = null;
     }, ZEN_ANIM_MS);
   }
 
@@ -2218,6 +2322,7 @@ export function InboxApp({
     }
 
     setZenClosing(false);
+    surfaceHistoryRef.current?.openZen();
     setZen(true);
   }
 
@@ -2548,11 +2653,17 @@ export function InboxApp({
   }
 
   function selectPin(pin: Pin) {
-    if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
+    if (pin.kind === "view") {
+      const mailbox = pin.targetId as Mailbox;
+      if (mailbox === "hidden") selectMailbox(mailbox);
+      else navigateDesktop(mailbox);
+    }
     if (pin.kind === "sender") togglePersonFilter(pin.targetId);
     if (pin.kind === "filter") {
       const filter = parsePinFilterTarget(pin.targetId);
       if (!filter) return;
+      surfaceHistoryRef.current?.navigate(filter.mailbox);
+      surfaceHistoryRef.current?.replaceQuery(filter.query);
       runUiTransition("content", () => {
         setActiveMailbox(filter.mailbox);
         if (filter.mailbox === "inbox" || filter.mailbox === "all") {
@@ -2657,15 +2768,13 @@ export function InboxApp({
     setLaterLabel(displayName);
   }
 
-  function navigateDesktop(destination: DesktopDestination, pushHistory = true) {
+  function navigateDesktop(destination: DesktopDestination) {
     setManageSpacesOpen(false);
     if (destination === "settings") {
       window.location.assign("/settings");
       return;
     }
-    if (pushHistory) {
-      window.history.pushState({ destination }, "", desktopDestinationUrl(window.location.href, destination));
-    }
+    surfaceHistoryRef.current?.navigate(destination);
     if (destination === "organization") {
       runUiTransition("content", () => {
         setOrganizationStudioOpen(true);
@@ -2770,7 +2879,7 @@ export function InboxApp({
         <section className="desktop-workspace">
           <WorkspaceHeader
             health={sidebarProjection.account.health}
-            onQueryChange={setStreamQuery}
+            onQueryChange={changeStreamQuery}
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
@@ -2837,7 +2946,7 @@ export function InboxApp({
               onSnoozeLater={(message, reminder) => saveReminder({ threadId: message.threadId, scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", notify: reminder?.notify ?? false }, reminder)}
               onRenameCollection={activeCollection ? () => { const name = window.prompt("Rename collection", activeCollection.name)?.trim(); if (name) void updateCollection(activeCollection, { name }); } : undefined}
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
-              onSearchChange={setStreamQuery}
+              onSearchChange={changeStreamQuery}
               searchQuery={streamQuery}
               reminders={reminders}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
@@ -4936,15 +5045,17 @@ export function MessageReader({
   const title = detail?.thread.subject || fallbackTitle;
 
   useEffect(() => {
-    if (status === "ready") headingRef.current?.focus();
+    if (status === "ready") headingRef.current?.focus({ preventScroll: true });
   }, [status]);
 
   useEffect(() => {
     if (status !== "ready") return;
-    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(window.scrollY, window.innerHeight));
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    if (!scrollport) return;
+    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(scrollport.scrollTop, scrollport.clientHeight));
     updateJumpToTop();
-    window.addEventListener("scroll", updateJumpToTop, { passive: true });
-    return () => window.removeEventListener("scroll", updateJumpToTop);
+    scrollport.addEventListener("scroll", updateJumpToTop, { passive: true });
+    return () => scrollport.removeEventListener("scroll", updateJumpToTop);
   }, [status]);
 
   function jumpToNewest() {
@@ -4956,10 +5067,13 @@ export function MessageReader({
 
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
-    window.scrollTo({
-      top: 0,
-      behavior: shouldReduceMotion() ? "auto" : "smooth",
-    });
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    if (!scrollport) return;
+    if (typeof scrollport.scrollTo === "function") {
+      scrollport.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
+    } else {
+      scrollport.scrollTop = 0;
+    }
   }
 
   return (
@@ -5914,26 +6028,6 @@ export function getSelectedThreadAccountId(
   return selectedThreadAccountId
     ?? messages.find((message) => message.threadId === selectedThreadId)?.accountId
     ?? null;
-}
-
-export function readInitialThreadSelection(location: { pathname: string; search: string }) {
-  const query = new URLSearchParams(location.search);
-  const queryThreadId = query.get("thread");
-  const queryAccountId = query.get("accountId");
-  if (queryThreadId || queryAccountId) {
-    return { threadId: queryThreadId, accountId: queryAccountId };
-  }
-
-  const pathMatch = location.pathname.match(/^\/accounts\/([^/]+)\/threads\/([^/]+)$/);
-  if (!pathMatch) return { threadId: null, accountId: null };
-  try {
-    return {
-      accountId: decodeURIComponent(pathMatch[1]!),
-      threadId: decodeURIComponent(pathMatch[2]!),
-    };
-  } catch {
-    return { threadId: null, accountId: null };
-  }
 }
 
 function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {

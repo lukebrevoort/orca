@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
-import { accountFixture, inboxFixture, type Collection, type MessageDraft, type UserPreferences } from "@orca/shared";
+import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
+import { demoAgentEvents } from "./demo-data";
 import { TopLayerProvider } from "./top-layer";
 
 type FrameCallback = (timestamp: number) => void;
@@ -174,6 +175,12 @@ function inboxPane() {
   return pane;
 }
 
+function desktopWorkspace() {
+  const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+  if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+  return workspace;
+}
+
 function setScroll(position: ScrollPosition) {
   scrollPosition = position;
 }
@@ -293,6 +300,7 @@ async function openMessage(sender: string) {
 async function escapeReader() {
   await act(async () => {
     browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -301,6 +309,7 @@ async function goBackToInbox() {
   if (!back) throw new Error("Could not find reader back control");
   await act(async () => {
     back.click();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -351,18 +360,61 @@ function apiError(status: number, code: string, message: string) {
   return jsonResponse({ error: { code, message } }, status);
 }
 
-function createProductionInboxFetch(collectionsResponse: Promise<Response>, onCollectionsRequest?: () => void): typeof fetch {
+function createProductionInboxFetch(
+  collectionsResponse: Promise<Response>,
+  onCollectionsRequest?: () => void,
+  options: { messages?: InboxMessage[]; agentEvents?: PropagatedAgentEvent[] } = {},
+): typeof fetch {
+  const messages = options.messages ?? inboxFixture;
+  const message = messages[0]!;
   const syncStatus = {
     accounts: [{ ...accountFixture, state: "idle", lastSyncedAt: "2026-06-28T17:30:00.000Z", error: null }],
   };
   const inbox = {
     accounts: [accountFixture],
-    messages: inboxFixture,
+    messages,
     nextCursor: null,
     counts: {
-      attention: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
-      classification: { likely_human: 1, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 1 },
+      attention: { focus: 0, normal: messages.length, quiet: 0, hidden: 0, all: messages.length },
+      classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length },
     },
+  };
+  const threadDetail: ThreadDetail = {
+    account: accountFixture,
+    thread: {
+      id: message.threadId,
+      provider: message.provider,
+      providerThreadId: `provider-${message.threadId}`,
+      subject: message.subject,
+      latestReceivedAt: message.receivedAt,
+      messageCount: 1,
+      labels: message.labels,
+      participants: [message.from],
+      readState: message.unread ? "unread" : "read",
+      attention: { hasUnread: message.unread, hasStarred: false, hasDraft: false, humanSignal: message.humanSignal },
+    },
+    messages: [{
+      id: message.id,
+      accountId: message.accountId,
+      provider: message.provider,
+      providerMessageId: message.providerMessageId,
+      from: message.from,
+      to: [{ name: accountFixture.displayName, email: accountFixture.email }],
+      cc: [],
+      bcc: [],
+      subject: message.subject,
+      snippet: message.snippet,
+      bodyText: message.snippet,
+      bodyHtml: null,
+      internetMessageId: `<${message.id}@example.com>`,
+      references: [],
+      receivedAt: message.receivedAt,
+      unread: message.unread,
+      labels: message.labels,
+      humanSignal: message.humanSignal,
+      humanClassification: message.humanClassification,
+      attachments: [],
+    }],
   };
 
   return (async (input: string | URL | Request) => {
@@ -371,14 +423,18 @@ function createProductionInboxFetch(collectionsResponse: Promise<Response>, onCo
     if (url.pathname === "/v1/sync/status") return jsonResponse(syncStatus);
     if (url.pathname === "/v1/sync/gmail") return jsonResponse({});
     if (url.pathname === "/v1/inbox") return jsonResponse(inbox);
+    if (url.pathname === `/v1/threads/${encodeURIComponent(message.threadId)}`) return jsonResponse(threadDetail);
     if (url.pathname === "/v1/collections") {
       onCollectionsRequest?.();
       return collectionsResponse;
     }
     if (url.pathname === "/v1/pins" || url.pathname === "/v1/reminders" || url.pathname === "/v1/drafts" || url.pathname === "/v1/attention/view-settings" || url.pathname === "/v1/agent-event-mutes") return jsonResponse([]);
     if (url.pathname === "/v1/reminders/view-settings") return jsonResponse({ displayName: "Later" });
-    if (url.pathname === "/v1/agent-events") return jsonResponse({ events: [], nextCursor: null });
-    if (url.pathname === "/v1/attention/resolve") return jsonResponse({ behavior: "normal", rule: null });
+    if (url.pathname === "/v1/agent-events") return jsonResponse({ events: options.agentEvents ?? [], nextCursor: null });
+    if (url.pathname === "/v1/attention/resolve") {
+      const matched = messages.find((candidate) => candidate.from.email.toLowerCase() === url.searchParams.get("address")?.toLowerCase());
+      return jsonResponse({ behavior: matched?.attentionBehavior ?? "normal", rule: null });
+    }
     throw new Error(`Unexpected production Inbox request: ${url.pathname}${url.search}`);
   }) as typeof fetch;
 }
@@ -2059,50 +2115,341 @@ describe("Inbox reader viewport restoration", () => {
     restoreDom();
   });
 
-  test("restores the window viewport and origin focus after Escape", async () => {
+  async function expectReaderOrigin(label: string) {
+    for (let index = 0; index < 20 && browserWindow.document.querySelector(".reader-back span")?.textContent !== label; index += 1) await waitFor(0);
+    expect(browserWindow.document.querySelector(".reader-back span")?.textContent).toBe(label);
+    expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toStartWith(`${label} ·`);
+  }
+
+  test("labels a direct and reloaded production Focus reader from its synchronized destination", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=focus&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await expectReaderOrigin("Focus");
+
+      await act(async () => root!.unmount());
+      root = null;
+      globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await expectReaderOrigin("Focus");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("labels a deferred production custom-space reader after load, Forward, and reload", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    const collection: Collection = {
+      id: "collection_deferred_reader",
+      accountId: accountFixture.id,
+      name: "Launch review",
+      color: "#70867d",
+      position: 0,
+      threadIds: [message.threadId],
+      createdAt: "2026-06-28T17:30:00.000Z",
+      updatedAt: "2026-06-28T17:30:00.000Z",
+    };
+    let resolveCollections!: (response: Response) => void;
+    const collectionsResponse = new Promise<Response>((resolve) => { resolveCollections = resolve; });
+    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=space%3A${collection.id}&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`);
+    globalThis.fetch = createProductionInboxFetch(collectionsResponse);
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await act(async () => {
+        resolveCollections(jsonResponse([collection]));
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await expectReaderOrigin("Launch review");
+
+      await act(async () => {
+        browserWindow.history.back();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        browserWindow.history.forward();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+      await expectReaderOrigin("Launch review");
+
+      await act(async () => root!.unmount());
+      root = null;
+      globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([collection])));
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      await expectReaderOrigin("Launch review");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("keeps reader and composer in URL order across browser Back and Forward", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&q=launch&flag=kept#mail");
     await renderApp();
-    const pane = inboxPane();
+    await openMessage("Luke Brevoort");
+    let params = new URL(browserWindow.location.href).searchParams;
+    expect(params.get("thread")).toBe("thread_1");
+    expect(params.get("accountId")).toBe("acct_demo");
+    expect(params.get("q")).toBe("launch");
+    expect(params.get("flag")).toBe("kept");
+
+    await act(async () => {
+      (browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement).click();
+    });
+    params = new URL(browserWindow.location.href).searchParams;
+    expect(params.get("compose")).toBe("1");
+    expect(params.get("thread")).toBe("thread_1");
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+    expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBeNull();
+
+    await act(async () => {
+      browserWindow.history.forward();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBe("thread_1");
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+  });
+
+  test("returns from a reader to the same shared custom-space destination", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&q=launch&flag=kept");
+    await renderApp();
+    const custom = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+      .find((button) => button.textContent?.includes("Orca launch")) as unknown as HTMLButtonElement;
+    await act(async () => custom.click());
+    const customDestination = new URL(browserWindow.location.href).searchParams.get("destination");
+    expect(customDestination).toBe("space:collection_demo_work");
+
+    const filteredResult = browserWindow.document.querySelector("button.message-row") as unknown as HTMLButtonElement;
+    expect(filteredResult.textContent).toContain("Launch notes for Orca Mail");
+    await act(async () => filteredResult.click());
+    let params = new URL(browserWindow.location.href).searchParams;
+    expect(params.get("destination")).toBe(customDestination);
+    expect(params.get("q")).toBe("launch");
+    expect(params.get("flag")).toBe("kept");
+    expect(params.get("thread")).toBe("thread_1");
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    params = new URL(browserWindow.location.href).searchParams;
+    expect(params.get("thread")).toBeNull();
+    expect(params.get("destination")).toBe(customDestination);
+    expect(custom.getAttribute("aria-current")).toBe("page");
+  });
+
+  test("cancels an animated Compose close when browser Back already revealed the reader", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    await act(async () => {
+      (browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement).click();
+    });
+    const close = browserWindow.document.querySelector('button[aria-label="Close panel"]') as unknown as HTMLButtonElement;
+    await act(async () => close.click());
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).not.toBeNull();
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    await waitFor(700);
+
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBe("thread_1");
+  });
+
+  test("reloads an initial deep link once and gives it a safe in-app Back target", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus&q=notes&thread=thread_1&accountId=acct_demo&flag=kept");
+    await renderApp();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+
+    await act(async () => {
+      root!.unmount();
+    });
+    root = null;
+    await renderApp();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    const params = new URL(browserWindow.location.href).searchParams;
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).toBeNull();
+    expect(params.get("thread")).toBeNull();
+    expect(params.get("destination")).toBe("focus");
+    expect(params.get("q")).toBe("notes");
+    expect(params.get("flag")).toBe("kept");
+  });
+
+  test("reconciles a bfcache pageshow with the current surface URL", async () => {
+    await renderApp();
+    browserWindow.history.replaceState(browserWindow.history.state, "", "/dev/inbox?destination=focus&thread=thread_1&accountId=acct_demo");
+    const pageShow = new browserWindow.Event("pageshow") as unknown as PageTransitionEvent;
+    Object.defineProperty(pageShow, "persisted", { configurable: true, value: true });
+    await act(async () => {
+      browserWindow.dispatchEvent(pageShow as never);
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Launch notes for Orca Mail");
+  });
+
+  test("observes and scrolls the desktop workspace for reader jump-to-top", async () => {
+    await renderApp();
+    await openMessage("Luke Brevoort");
+    const workspace = desktopWorkspace();
+    Object.defineProperty(workspace, "clientHeight", { configurable: true, value: 800 });
+    Object.defineProperty(workspace, "scrollTo", {
+      configurable: true,
+      value: (options: ScrollToOptions) => { workspace.scrollTop = options.top ?? workspace.scrollTop; },
+    });
+    workspace.scrollTop = 420;
+    await act(async () => {
+      workspace.dispatchEvent(new browserWindow.Event("scroll") as unknown as Event);
+    });
+    const jump = browserWindow.document.querySelector("button.reader-jump-top") as unknown as HTMLButtonElement;
+    expect(jump.hidden).toBe(false);
+    await act(async () => jump.click());
+    expect(workspace.scrollTop).toBe(0);
+  });
+
+  test("restores the desktop workspace and origin focus after Escape", async () => {
+    await renderApp();
+    const workspace = desktopWorkspace();
     const origin = messageRow("Jordan Bell");
     const focusCalls = trackFocus(origin);
-    setScroll({ x: 13, y: 143 });
-    pane.scrollLeft = 0;
-    pane.scrollTop = 0;
+    workspace.scrollLeft = 13;
+    workspace.scrollTop = 143;
 
     await openMessage("Jordan Bell");
-    setScroll({ x: 0, y: 0 });
-    pane.scrollLeft = 4;
-    pane.scrollTop = 8;
+    expect(workspace.scrollTop).toBe(0);
+    workspace.scrollLeft = 4;
+    workspace.scrollTop = 8;
     await escapeReader();
 
-    expect(scrollPosition).toEqual({ x: 13, y: 143 });
-    expect(pane.scrollLeft).toBe(0);
-    expect(pane.scrollTop).toBe(0);
+    expect(workspace.scrollLeft).toBe(13);
+    expect(workspace.scrollTop).toBe(143);
+    expect(scrollPosition).toEqual({ x: 0, y: 0 });
+    expect(new URL(browserWindow.location.href).searchParams.get("thread")).toBeNull();
     await act(async () => flushAnimationFrames());
     expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(origin);
     expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
   });
 
-  test("restores nested content-pane offsets and focus after Inbox Back", async () => {
+  test("restores the selected row and workspace offsets after Inbox Back", async () => {
     await renderApp();
-    const pane = inboxPane();
+    const workspace = desktopWorkspace();
     const origin = messageRow("Luke Brevoort");
     const focusCalls = trackFocus(origin);
-    setScroll({ x: 21, y: 88 });
-    pane.scrollLeft = 17;
-    pane.scrollTop = 319;
+    workspace.scrollLeft = 17;
+    workspace.scrollTop = 319;
 
     await openMessage("Luke Brevoort");
-    setScroll({ x: 0, y: 0 });
-    pane.scrollLeft = 0;
-    pane.scrollTop = 0;
+    workspace.scrollLeft = 0;
+    workspace.scrollTop = 0;
     await goBackToInbox();
 
-    expect(scrollPosition).toEqual({ x: 21, y: 88 });
-    expect(pane.scrollLeft).toBe(17);
-    expect(pane.scrollTop).toBe(319);
+    expect(workspace.scrollLeft).toBe(17);
+    expect(workspace.scrollTop).toBe(319);
     await act(async () => flushAnimationFrames());
     expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(origin);
     expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
+  });
+
+  test("re-arms the list return point when Forward reopens a reader", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    const workspace = desktopWorkspace();
+    const origin = messageRow("Luke Brevoort");
+    const focusCalls = trackFocus(origin);
+    workspace.scrollLeft = 17;
+    workspace.scrollTop = 319;
+
+    await openMessage("Luke Brevoort");
+    await goBackToInbox();
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+    expect(workspace.scrollLeft).toBe(17);
+    expect(workspace.scrollTop).toBe(319);
+    const firstRestoreCount = focusCalls.length;
+
+    await act(async () => {
+      browserWindow.history.forward();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(workspace.scrollLeft).toBe(0);
+    expect(workspace.scrollTop).toBe(0);
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+    expect(workspace.scrollLeft).toBe(17);
+    expect(workspace.scrollTop).toBe(319);
+    expect(focusCalls).toHaveLength(firstRestoreCount + 1);
+    expect(isSameNode(browserWindow.document.activeElement, origin)).toBe(true);
+
+    const secondRestoreCount = focusCalls.length;
+    const composeTrigger = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    composeTrigger.focus();
+    await act(async () => composeTrigger.click());
+    await act(async () => {
+      (browserWindow.document.querySelector('button[aria-label="Close panel"]') as unknown as HTMLButtonElement).click();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Compose message"]'))).toBe(false);
+    expect(focusCalls).toHaveLength(secondRestoreCount);
+    expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
+  });
+
+  test("restores a reader row once without stealing focus after a fresh Compose closes", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    const origin = messageRow("Luke Brevoort");
+    const rowFocusCalls = trackFocus(origin);
+
+    await openMessage("Luke Brevoort");
+    await goBackToInbox();
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+    expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(origin);
+    expect((browserWindow.history.state as { __orcaSurfaceHistoryV1?: { returnContext?: unknown } }).__orcaSurfaceHistoryV1?.returnContext).toBeNull();
+    const readerRestoreCount = rowFocusCalls.length;
+
+    const composeTrigger = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    composeTrigger.focus();
+    await act(async () => composeTrigger.click());
+    await escapeReader();
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).toBeNull();
+    expect(rowFocusCalls).toHaveLength(readerRestoreCount);
+    expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
   });
 
   test("opens a propagated event source and returns to the same signal position", async () => {
@@ -2111,14 +2458,13 @@ describe("Inbox reader viewport restoration", () => {
       ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
-    const pane = inboxPane();
+    const workspace = desktopWorkspace();
     const card = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes("Orca 2.4 is ready in TestFlight"));
     const origin = card?.querySelector("button") as unknown as HTMLButtonElement | null;
     if (!origin) throw new Error("Could not find the propagated event source action");
     const focusCalls = trackFocus(origin);
-    setScroll({ x: 9, y: 264 });
-    pane.scrollLeft = 3;
-    pane.scrollTop = 188;
+    workspace.scrollLeft = 3;
+    workspace.scrollTop = 188;
 
     await act(async () => {
       origin.click();
@@ -2127,18 +2473,106 @@ describe("Inbox reader viewport restoration", () => {
     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
     expect(browserWindow.document.querySelector("#reader-title")?.textContent).toContain("Orca 2.4 is ready to test");
 
-    setScroll({ x: 0, y: 0 });
-    pane.scrollLeft = 0;
-    pane.scrollTop = 0;
+    workspace.scrollLeft = 0;
+    workspace.scrollTop = 0;
     await goBackToInbox();
 
-    expect(scrollPosition).toEqual({ x: 9, y: 264 });
-    expect(pane.scrollLeft).toBe(3);
-    expect(pane.scrollTop).toBe(188);
+    expect(workspace.scrollLeft).toBe(3);
+    expect(workspace.scrollTop).toBe(188);
     await act(async () => flushAnimationFrames());
     expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(origin);
     expect(focusCalls.some((options) => options?.preventScroll === true)).toBe(true);
+    const firstRestoreCount = focusCalls.length;
+
+    await act(async () => {
+      browserWindow.history.forward();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(workspace.scrollLeft).toBe(0);
+    expect(workspace.scrollTop).toBe(0);
+
+    await act(async () => {
+      browserWindow.history.back();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+    });
+    expect(workspace.scrollLeft).toBe(3);
+    expect(workspace.scrollTop).toBe(188);
+    expect(focusCalls).toHaveLength(firstRestoreCount + 1);
+    expect(isSameNode(browserWindow.document.activeElement, origin)).toBe(true);
     expect(browserWindow.localStorage.getItem("orca-demo-agent-event-lifecycles-v1")).toContain('"state":"seen"');
+  });
+
+  test("keeps a connected propagated-event origin through Back, Forward, and Back", async () => {
+    const originalFetch = globalThis.fetch;
+    const message: InboxMessage = { ...inboxFixture[0]!, attentionBehavior: "notify" };
+    const template = demoAgentEvents[1]!;
+    const event: PropagatedAgentEvent = {
+      ...template,
+      id: "event_production_collision",
+      source: {
+        ...template.source,
+        accountId: message.accountId,
+        provider: message.provider,
+        messageId: message.id,
+        providerMessageId: message.providerMessageId,
+        threadId: message.threadId,
+        sender: message.from,
+        subject: message.subject,
+        receivedAt: message.receivedAt,
+        sourceUrl: `http://localhost:5173/dev/inbox?thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`,
+      },
+    };
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=signals");
+    globalThis.fetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [message], agentEvents: [event] });
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 20 && (!browserWindow.document.querySelector("article.agent-event")
+        || ![...browserWindow.document.querySelectorAll("button.message-row")].some((candidate) => candidate.textContent?.includes(message.from.name!))); index += 1) await waitFor(0);
+      const card = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes(event.title));
+      const origin = card?.querySelector("button") as unknown as HTMLButtonElement | null;
+      if (!origin) throw new Error("Could not find the production propagated-event source action");
+      const row = messageRow(message.from.name!);
+      const eventFocusCalls = trackFocus(origin);
+      const rowFocusCalls = trackFocus(row);
+      const workspace = desktopWorkspace();
+      workspace.scrollLeft = 5;
+      workspace.scrollTop = 244;
+
+      origin.focus();
+      await act(async () => origin.click());
+      expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+      await goBackToInbox();
+      await act(async () => {
+        for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+      });
+      expect(isSameNode(browserWindow.document.activeElement, origin)).toBe(true);
+      const firstEventRestoreCount = eventFocusCalls.length;
+
+      await act(async () => {
+        browserWindow.history.forward();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+      expect(workspace.scrollLeft).toBe(0);
+      expect(workspace.scrollTop).toBe(0);
+      await act(async () => {
+        browserWindow.history.back();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+      await act(async () => {
+        for (let index = 0; index < 5 && frameCallbacks.size > 0; index += 1) flushAnimationFrames();
+      });
+      expect(workspace.scrollLeft).toBe(5);
+      expect(workspace.scrollTop).toBe(244);
+      expect(eventFocusCalls).toHaveLength(firstEventRestoreCount + 1);
+      expect(rowFocusCalls).toHaveLength(0);
+      expect(isSameNode(browserWindow.document.activeElement, origin)).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("reveals and restores a quieted local signal without changing its source mail", async () => {
