@@ -255,6 +255,8 @@ export type {
 } from "./mcp-contract.ts";
 
 export {
+  authProviderAvailabilitySchema,
+  authProviderUnavailableReasonSchema,
   authSessionSchema,
   authUserSchema,
   mcpConnectionAccountSchema,
@@ -471,6 +473,8 @@ export type {
 } from "./agent-contract.ts";
 
 export type {
+  AuthProviderAvailability,
+  AuthProviderUnavailableReason,
   AuthSession,
   AuthUser,
   McpConnection,

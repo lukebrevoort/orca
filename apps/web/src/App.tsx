@@ -12,8 +12,8 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import type { AgentPropagationMuteRule, AttentionViewSetting, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoAgentEvents,
@@ -148,10 +148,16 @@ type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "h
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
 type OAuthConnectStatus = "idle" | "loading" | "error";
+type OAuthProviderAvailabilityState =
+  | { status: "loading" | "error"; providers: null }
+  | { status: "ready"; providers: Record<OAuthProvider, AuthProviderAvailability> };
+type OAuthReturnErrorReason = "provider_error" | "compose_not_granted" | "account_mismatch" | "upgrade_account_missing" | "connect_account_missing" | "account_persistence_failed" | "missing_code" | "invalid_state" | "missing_state" | "token_exchange_failed" | "userinfo_failed" | "account_identity_missing" | "oauth_not_configured";
 type OAuthReturnStatus =
   | { provider: OAuthProvider; kind: "success"; email: string | null; intent: string | null }
-  | { provider: OAuthProvider; kind: "error"; reason: string | null; message: string | null; intent: string | null }
+  | { provider: OAuthProvider; kind: "error"; reason: OAuthReturnErrorReason | null; intent: string | null }
   | null;
+
+const oauthReturnErrorReasons = new Set<OAuthReturnErrorReason>(["provider_error", "compose_not_granted", "account_mismatch", "upgrade_account_missing", "connect_account_missing", "account_persistence_failed", "missing_code", "invalid_state", "missing_state", "token_exchange_failed", "userinfo_failed", "account_identity_missing", "oauth_not_configured"]);
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 500;
@@ -3344,13 +3350,31 @@ function OAuthLoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
   const [activeProvider, setActiveProvider] = useState<OAuthProvider | null>(null);
+  const [availability, setAvailability] = useState<OAuthProviderAvailabilityState>({ status: "loading", providers: null });
   const connectInFlightRef = useRef(false);
   const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
   const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
   const returnProvider = returnStatus?.provider ?? "gmail";
 
+  async function refreshAvailability() {
+    setAvailability({ status: "loading", providers: null });
+    setErrorMessage(null);
+    try {
+      setAvailability({ status: "ready", providers: await loadAuthProviderAvailability() });
+    } catch {
+      setAvailability({ status: "error", providers: null });
+    }
+  }
+
+  useEffect(() => {
+    void refreshAvailability();
+  }, []);
+
   async function connectProvider(provider: OAuthProvider) {
     if (connectInFlightRef.current || connectStatus === "loading") {
+      return;
+    }
+    if (availability.status !== "ready" || !availability.providers[provider].available) {
       return;
     }
 
@@ -3363,9 +3387,13 @@ function OAuthLoginPage() {
     const started = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
     if (!started) {
       connectInFlightRef.current = false;
-      setActiveProvider(null);
     }
   }
+
+  const providerIsAvailable = (provider: OAuthProvider) => availability.status === "ready" && availability.providers[provider].available;
+  const unavailableProviders = availability.status === "ready"
+    ? (["gmail", "outlook"] as const).filter((provider) => !availability.providers[provider].available)
+    : [];
 
   return (
     <main className="oauth-page">
@@ -3399,32 +3427,48 @@ function OAuthLoginPage() {
             <div className="oauth-notice oauth-notice-error" role="alert">
               <strong>Connection could not start</strong>
               <span>{errorMessage}</span>
+              {activeProvider ? <button className="oauth-retry-button" onClick={() => void connectProvider(activeProvider)} type="button">Try {providerDisplayName(activeProvider)} again</button> : null}
             </div>
           ) : null}
 
           {isOnboarding && returnStatus?.kind === "success" ? (
             <a className="oauth-provider-button oauth-enter-button" href="/">Enter Orca <span aria-hidden="true">→</span></a>
           ) : (
-            <div aria-label="Choose a mail provider" className="oauth-provider-list">
+            <div aria-busy={availability.status === "loading"} aria-label="Choose a mail provider" className="oauth-provider-list">
               <button
                 className="oauth-google-button"
-                disabled={connectStatus === "loading"}
+                aria-describedby={!providerIsAvailable("gmail") && availability.status === "ready" ? "gmail-unavailable-reason" : undefined}
+                disabled={connectStatus === "loading" || !providerIsAvailable("gmail")}
                 onClick={() => void connectProvider("gmail")}
                 type="button"
               >
                 <GoogleGlyph />
-                <span>{connectStatus === "loading" && activeProvider === "gmail" ? "Opening Google…" : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
+                <span>{connectStatus === "loading" && activeProvider === "gmail" ? "Opening Google…" : returnStatus?.kind === "error" && returnStatus.provider === "gmail" ? "Try Google again" : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
               </button>
               <div className="oauth-provider-separator" aria-hidden="true"><span>or</span></div>
               <button
                 className="oauth-outlook-button"
-                disabled={connectStatus === "loading"}
+                aria-describedby={!providerIsAvailable("outlook") && availability.status === "ready" ? "outlook-unavailable-reason" : undefined}
+                disabled={connectStatus === "loading" || !providerIsAvailable("outlook")}
                 onClick={() => void connectProvider("outlook")}
                 type="button"
               >
                 <OutlookGlyph />
-                <span>{connectStatus === "loading" && activeProvider === "outlook" ? "Opening Outlook…" : isLogin ? "Continue with Outlook" : "Connect Outlook"}</span>
+                <span>{connectStatus === "loading" && activeProvider === "outlook" ? "Opening Outlook…" : returnStatus?.kind === "error" && returnStatus.provider === "outlook" ? "Try Outlook again" : isLogin ? "Continue with Outlook" : "Connect Outlook"}</span>
               </button>
+              {availability.status === "loading" ? <p className="oauth-provider-status" role="status">Checking which sign-in choices are ready…</p> : null}
+              {availability.status === "error" ? (
+                <div className="oauth-provider-availability" role="alert">
+                  <p><strong>Sign-in choices could not be checked.</strong> Nothing in Orca or your mail accounts changed.</p>
+                  <button className="oauth-retry-button" onClick={() => void refreshAvailability()} type="button">Check again</button>
+                </div>
+              ) : null}
+              {availability.status === "ready" && unavailableProviders.length > 0 ? (
+                <div className="oauth-provider-availability" role="status">
+                  {unavailableProviders.map((provider) => <p id={`${provider}-unavailable-reason`} key={provider}><strong>{providerDisplayName(provider)} sign-in is unavailable here.</strong> Nothing in Orca or your mail account changed. Ask your Orca administrator to enable it.</p>)}
+                  <button className="oauth-retry-button" onClick={() => void refreshAvailability()} type="button">Check availability again</button>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -3479,19 +3523,35 @@ async function beginProviderAuthorization(
     const response = await fetch(`/v1/auth/${provider}/${intent}?${query}`, { credentials: "include" });
     const body = await readJsonObject(response);
     if (!response.ok) {
-      throw new Error(getStringField(body, "message") ?? `Could not start ${providerDisplayName(provider)} OAuth (${response.status} ${response.statusText})`.trim());
+      const code = getNestedErrorCode(body);
+      setStatus("error");
+      setError(code === "provider_unavailable"
+        ? `${providerDisplayName(provider)} sign-in is unavailable here. Nothing in Orca or your mail account changed. Check availability and try again.`
+        : `${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
+      return false;
     }
     const authUrl = getStringField(body, "authUrl");
     if (!authUrl) {
-      throw new Error(`The ${providerDisplayName(provider)} OAuth response did not include an authUrl.`);
+      throw new Error("invalid_authorization_response");
     }
     window.location.assign(authUrl);
     return true;
-  } catch (error) {
+  } catch {
     setStatus("error");
-    setError(getErrorMessage(error));
+    setError(`${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
     return false;
   }
+}
+
+export async function loadAuthProviderAvailability(fetchImpl: typeof fetch = fetch): Promise<Record<OAuthProvider, AuthProviderAvailability>> {
+  const entries = await Promise.all((["gmail", "outlook"] as const).map(async (provider) => {
+    const response = await fetchImpl(`/v1/auth/${provider}/status`, { credentials: "include" });
+    if (!response.ok) throw new Error("provider_availability_unavailable");
+    const parsed = authProviderAvailabilitySchema.safeParse(await readJsonObject(response));
+    if (!parsed.success || parsed.data.provider !== provider) throw new Error("invalid_provider_availability");
+    return [provider, parsed.data] as const;
+  }));
+  return Object.fromEntries(entries) as Record<OAuthProvider, AuthProviderAvailability>;
 }
 
 function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
@@ -3526,14 +3586,17 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
 
 function oauthErrorMessage(reason: string | null, preserveReading: boolean, provider: OAuthProvider = "gmail") {
   const providerName = providerDisplayName(provider);
-  const suffix = preserveReading ? " Your read-only inbox still works." : "";
+  const suffix = preserveReading ? " Your read-only inbox still works." : " Nothing in Orca or your mail account changed.";
   switch (reason) {
     case "provider_error": return `${providerName} permission was not granted.${suffix}`;
     case "compose_not_granted": return `Google did not grant Gmail draft and send access.${suffix}`;
     case "account_mismatch": return `Choose the same ${providerName} account that is already connected to Orca.${suffix}`;
     case "upgrade_account_missing": return `Orca could not find the Gmail connection to upgrade.${suffix}`;
+    case "connect_account_missing": return `Orca could not find the ${providerName} connection to repair.${suffix}`;
+    case "account_persistence_failed": return `Orca could not safely update the ${providerName} connection.${suffix}`;
+    case "oauth_not_configured": return `${providerName} sign-in is unavailable in this Orca environment.${suffix}`;
     case "invalid_state":
-    case "missing_state": return "The authorization return could not be verified. Start again from Orca.";
+    case "missing_state": return `The authorization return could not be verified.${suffix} Start again from Orca.`;
     case "token_exchange_failed":
     case "userinfo_failed": return `${providerName} could not confirm the authorization. Try again.${suffix}`;
     default: return `The ${providerName} authorization flow did not complete.${suffix}`;
@@ -6188,6 +6251,12 @@ function getStringField(value: Record<string, unknown>, key: string) {
   return typeof field === "string" && field.trim() ? field : null;
 }
 
+function getNestedErrorCode(value: Record<string, unknown>) {
+  const error = value.error;
+  if (!error || typeof error !== "object" || Array.isArray(error)) return null;
+  return getStringField(error as Record<string, unknown>, "code");
+}
+
 function isLoginRoute() {
   if (typeof window === "undefined") {
     return false;
@@ -6244,20 +6313,22 @@ function isDevPreviewRoute() {
     && isDevPreviewPath(window.location.pathname, import.meta.env.DEV, import.meta.env.VITE_ORCA_DEMO === "true");
 }
 
-function readOAuthReturnStatus(): OAuthReturnStatus {
+export function readOAuthReturnStatus(): OAuthReturnStatus {
   if (typeof window === "undefined") {
     return null;
   }
 
   const params = new URLSearchParams(window.location.search);
   const status = params.get("status");
-  const provider = params.get("provider") === "outlook" ? "outlook" : "gmail";
+  const providerParam = params.get("provider");
+  if (providerParam !== "gmail" && providerParam !== "outlook") return null;
+  const provider = providerParam;
 
   if (status === "success") {
     return {
       provider,
       kind: "success",
-      email: params.get("email"),
+      email: sanitizeOAuthEmail(params.get("email")),
       intent: params.get("intent"),
     };
   }
@@ -6266,13 +6337,22 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
     return {
       provider,
       kind: "error",
-      reason: params.get("reason"),
-      message: params.get("message"),
+      reason: readOAuthReturnErrorReason(params.get("reason")),
       intent: params.get("intent"),
     };
   }
 
   return null;
+}
+
+function readOAuthReturnErrorReason(value: string | null): OAuthReturnErrorReason | null {
+  return value && oauthReturnErrorReasons.has(value as OAuthReturnErrorReason) ? value as OAuthReturnErrorReason : null;
+}
+
+function sanitizeOAuthEmail(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.trim();
+  return normalized.length <= 320 && /^[^\s@]+@[^\s@]+$/.test(normalized) ? normalized : null;
 }
 
 export function readStoredPreferences(storage?: Pick<Storage, "getItem">): ReaderPreferences {

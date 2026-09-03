@@ -103,6 +103,12 @@ describe("App", () => {
       expect(html).toContain("Continue with Outlook");
       expect(html).toContain("Outlook setup guide");
       expect(html).toContain("What happens next");
+      expect(html).toContain("Checking which sign-in choices are ready");
+
+      window.location.search = "?provider=gmail&status=error&reason=GMAIL_CLIENT_SECRET&message=do-not-render";
+      const malformedReturnHtml = renderToStaticMarkup(<App />);
+      expect(malformedReturnHtml).toContain("The Gmail authorization flow did not complete");
+      expect(malformedReturnHtml).not.toMatch(/GMAIL_|CLIENT_|SECRET|do-not-render/i);
     } finally {
       Object.defineProperty(globalThis, "window", {
         configurable: true,

@@ -44,6 +44,48 @@ const authMiddleware: MiddlewareHandler<{ Variables: AuthVariables }> = async (c
 };
 
 describe("Gmail auth routes", () => {
+  test("publishes a safe sign-in availability contract without configuration identifiers", async () => {
+    const ready = await createGmailAuthApp({ authMiddleware, config, store: new InMemoryOAuthAccountStore() }).request("/status");
+    expect(await ready.json()).toEqual({ provider: "gmail", available: true, reason: null });
+
+    const unavailableApp = createGmailAuthApp({
+      authMiddleware,
+      config: { ...config, clientId: "", clientSecret: "", stateSecret: "" },
+      store: new InMemoryOAuthAccountStore(),
+    });
+    const unavailable = await unavailableApp.request("/status");
+    const unavailableText = await unavailable.text();
+    expect(JSON.parse(unavailableText)).toEqual({ provider: "gmail", available: false, reason: "configuration_required" });
+    expect(unavailableText).not.toMatch(/GMAIL_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
+
+    const start = await unavailableApp.request("/login");
+    const startText = await start.text();
+    expect(start.status).toBe(503);
+    expect(JSON.parse(startText)).toEqual({ error: {
+      code: "provider_unavailable",
+      message: "Gmail sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.",
+      retryable: true,
+    } });
+    expect(startText).not.toMatch(/GMAIL_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
+  });
+
+  test("sanitizes callback failures when no browser redirect is configured", async () => {
+    const app = createGmailAuthApp({
+      authMiddleware,
+      config: { ...config, errorRedirectUrl: null },
+      store: new InMemoryOAuthAccountStore(),
+    });
+    const response = await app.request("/callback?error=GMAIL_CLIENT_SECRET");
+    const bodyText = await response.text();
+    expect(response.status).toBe(400);
+    expect(JSON.parse(bodyText)).toEqual({
+      ok: false,
+      error: "missing_state",
+      message: "Gmail sign-in could not be completed. Nothing in your account was changed. Try again from Orca.",
+    });
+    expect(bodyText).not.toMatch(/GMAIL_|CLIENT_|SECRET|access_denied/i);
+  });
+
   test("sends returning users to their workspace while retaining callback status", () => {
     expect(
       redirectReturningUserToWorkspace(

@@ -16,6 +16,25 @@ const labelListSchema = z.array(nonEmptyStringSchema);
 export const mailProviderSchema = z.enum(["gmail", "outlook"]);
 export type MailProvider = z.infer<typeof mailProviderSchema>;
 
+export const authProviderUnavailableReasonSchema = z.enum([
+  "configuration_required",
+]);
+export type AuthProviderUnavailableReason = z.infer<typeof authProviderUnavailableReasonSchema>;
+
+export const authProviderAvailabilitySchema = z.discriminatedUnion("available", [
+  z.object({
+    provider: mailProviderSchema,
+    available: z.literal(true),
+    reason: z.null(),
+  }).strict(),
+  z.object({
+    provider: mailProviderSchema,
+    available: z.literal(false),
+    reason: authProviderUnavailableReasonSchema,
+  }).strict(),
+]);
+export type AuthProviderAvailability = z.infer<typeof authProviderAvailabilitySchema>;
+
 export const mailContactSchema = z
   .object({
     name: z.string().nullable(),

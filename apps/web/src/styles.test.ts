@@ -127,6 +127,22 @@ describe("profile avatar controls", () => {
   });
 });
 
+describe("OAuth login layout and provider states", () => {
+  test("reserves a brand row and keeps unavailable controls readable in both themes", () => {
+    expect(cssRuleWithDeclaration(".oauth-shell", "display: grid; gap: 28px 92px")).toContain('grid-template-areas: "brand brand" "hero setup"');
+    expect(cssRuleWithDeclaration(".oauth-brand", "align-self: start")).toContain("grid-area: brand");
+    expect(cssRuleWithDeclaration(".oauth-brand", "align-self: start")).toContain("position: static");
+    expect(latestCssRule(".oauth-hero .oauth-eyebrow")).toContain("position: static");
+    const disabled = latestCssRule(".oauth-provider-button:disabled, .oauth-google-button:disabled, .oauth-outlook-button:disabled");
+    expect(disabled).toContain("background: var(--orca-surface-hover)");
+    expect(disabled).toContain("border-color: var(--orca-border)");
+    expect(disabled).toContain("color: var(--orca-muted)");
+    expect(disabled).toContain("opacity: 1");
+    expect(styles).toContain(".oauth-google-button:focus-visible");
+    expect(styles).toContain("outline: 2px solid var(--orca-accent)");
+  });
+});
+
 describe("primary mobile navigation", () => {
   test("keeps Drafts selected states theme-safe and moves local feedback clear of the rail", () => {
     expect(styles).toContain('.wave-rail button[aria-current="page"]');

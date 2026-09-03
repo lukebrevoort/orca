@@ -5123,19 +5123,29 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
 .label-migration-actions .label-import-button { background: var(--orca-ink); color: var(--orca-paper); }
 
 .oauth-page { min-height: 100vh; padding: 0; }
-.oauth-shell { align-items: center; display: grid; gap: 92px; grid-template-columns: minmax(0,1.15fr) minmax(320px,.85fr); margin: 0 auto; max-width: 970px; min-height: 100vh; padding: 80px 0; position: relative; }
-.oauth-brand { gap: 0; left: 0; position: absolute; top: 25%; }
+.oauth-shell { display: grid; gap: 28px 92px; grid-template-areas: "brand brand" "hero setup"; grid-template-columns: minmax(0,1.15fr) minmax(320px,.85fr); grid-template-rows: auto minmax(0,1fr); margin: 0 auto; max-width: 970px; min-height: 100vh; padding: 48px 0 64px; position: relative; }
+.oauth-brand { align-self: start; gap: 0; grid-area: brand; position: static; }
 .oauth-brand > span:last-child { display: none; }
 .oauth-brand-mark { background: var(--orca-accent); border-radius: 14px; color: #fff; height: 54px; width: 54px; }
 .oauth-brand-mark .wave-glyph { height: 26px; width: 26px; }
-.oauth-hero { padding-top: 104px; }
-.oauth-hero .oauth-eyebrow { margin-top: 44px; position: relative; top: 20px; }
+.oauth-hero { align-self: center; grid-area: hero; padding: 28px 0; }
+.oauth-hero .oauth-eyebrow { margin-top: 0; position: static; }
 .oauth-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; }
 .oauth-hero h1 { font-family: var(--orca-font-display); font-size: 44px; font-weight: 600; letter-spacing: -.05em; line-height: 1.04; margin: 28px 0 28px; max-width: 420px; }
 .oauth-hero > p:not(.oauth-eyebrow):not(.oauth-fine-print) { font-size: 15px; line-height: 1.6; max-width: 450px; }
 .oauth-provider-button, .oauth-google-button, .oauth-outlook-button { background: var(--orca-surface); border: 1px solid var(--orca-border); border-radius: 999px; box-shadow: 0 8px 20px rgb(15 36 34 / 10%); font-size: 14px; padding: 13px 22px; }
+.oauth-provider-button:hover:not(:disabled), .oauth-google-button:hover:not(:disabled), .oauth-outlook-button:hover:not(:disabled) { background: var(--orca-surface-hover); border-color: var(--orca-accent); color: var(--orca-ink); }
+.oauth-provider-button:focus-visible, .oauth-google-button:focus-visible, .oauth-outlook-button:focus-visible, .oauth-retry-button:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 3px; }
+.oauth-provider-button:disabled, .oauth-google-button:disabled, .oauth-outlook-button:disabled { background: var(--orca-surface-hover); border-color: var(--orca-border); box-shadow: none; color: var(--orca-muted); cursor: not-allowed; opacity: 1; }
 .oauth-fine-print { font-size: 11px; max-width: 420px; }
-.oauth-setup-panel { background: var(--orca-surface); border: 0; border-radius: 24px; box-shadow: var(--orca-shadow); padding: 30px; }
+.oauth-provider-status { color: var(--orca-muted); font-size: 11px; line-height: 1.5; margin: 2px 4px 0; }
+.oauth-provider-availability { border-top: 1px solid var(--orca-border); display: grid; gap: 10px; margin-top: 4px; padding: 14px 4px 0; }
+.oauth-provider-availability p { color: var(--orca-muted); font-size: 12px; line-height: 1.55; margin: 0; }
+.oauth-provider-availability strong { color: var(--orca-ink); display: block; }
+.oauth-retry-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font-size: 12px; font-weight: 700; justify-self: start; min-height: 36px; padding: 8px 13px; }
+.oauth-retry-button:hover { background: var(--orca-surface); border-color: var(--orca-accent); }
+.oauth-notice .oauth-retry-button { margin-top: 5px; }
+.oauth-setup-panel { align-self: center; background: var(--orca-surface); border: 0; border-radius: 24px; box-shadow: var(--orca-shadow); grid-area: setup; padding: 30px; }
 .oauth-setup-panel h2 { font-family: var(--orca-font-display); font-size: 16px; font-weight: 600; }
 .oauth-setup-panel ol { counter-reset: setup; gap: 20px; list-style: none; padding-left: 0; }
 .oauth-setup-panel li { font-size: 13px; line-height: 1.5; padding-left: 36px; position: relative; }
@@ -5207,8 +5217,8 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
   .settings-home-page, .preferences-page, .attention-settings-page, .gmail-settings-page, .label-migration-page { padding: 18px 18px 84px; }
   .settings-home-layout { display: block; margin-top: 44px; }
   .settings-home-nav { display: none; }
-  .oauth-shell { display: block; padding: 84px 24px; width: min(100%, 560px); }
-  .oauth-brand { left: 24px; top: 48px; }
+  .oauth-shell { display: grid; gap: 0; grid-template-areas: "brand" "hero" "setup"; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto auto; padding: 48px 24px 84px; width: min(100%, 560px); }
+  .oauth-brand { position: static; }
   .oauth-hero { padding-top: 68px; }
   .oauth-setup-panel { margin-top: 54px; }
 }

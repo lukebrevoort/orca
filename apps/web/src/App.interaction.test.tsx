@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { StrictMode, act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import type { MessageDraft, UserPreferences } from "@orca/shared";
 import { TopLayerProvider } from "./top-layer";
@@ -350,6 +350,108 @@ function jsonResponse(body: unknown, status = 200) {
 function apiError(status: number, code: string, message: string) {
   return jsonResponse({ error: { code, message } }, status);
 }
+
+describe("OAuth login availability and recovery", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    installDom();
+    browserWindow.history.replaceState({}, "", "/login");
+  });
+
+  afterEach(async () => {
+    globalThis.fetch = originalFetch;
+    if (root) {
+      await act(async () => {
+        root!.unmount();
+      });
+      root = null;
+    }
+    restoreDom();
+  });
+
+  async function renderLogin() {
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => {
+      root!.render(<App />);
+    });
+    await waitFor(0);
+  }
+
+  function providerButton(label: string) {
+    const button = [...browserWindow.document.querySelectorAll("button")]
+      .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+    if (!button) throw new Error(`Could not find provider button: ${label}`);
+    return button;
+  }
+
+  test("enables every configured provider after checking the public contract", async () => {
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const provider = String(input).includes("/outlook/") ? "outlook" : "gmail";
+      return jsonResponse({ provider, available: true, reason: null });
+    }) as typeof fetch;
+
+    await renderLogin();
+
+    expect(providerButton("Continue with Google").disabled).toBe(false);
+    expect(providerButton("Continue with Outlook").disabled).toBe(false);
+    expect(browserWindow.document.querySelector(".oauth-provider-availability")).toBeNull();
+  });
+
+  test("keeps an unavailable provider inert and gives one readable repair action", async () => {
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const provider = String(input).includes("/outlook/") ? "outlook" : "gmail";
+      return provider === "gmail"
+        ? jsonResponse({ provider, available: false, reason: "configuration_required" })
+        : jsonResponse({ provider, available: true, reason: null });
+    }) as typeof fetch;
+
+    await renderLogin();
+
+    const gmail = providerButton("Continue with Google");
+    expect(gmail.disabled).toBe(true);
+    expect(gmail.getAttribute("aria-describedby")).toBe("gmail-unavailable-reason");
+    expect(providerButton("Continue with Outlook").disabled).toBe(false);
+    expect(browserWindow.document.body.textContent).toContain("Gmail sign-in is unavailable here");
+    expect(browserWindow.document.body.textContent).toContain("Nothing in Orca or your mail account changed");
+    expect(providerButton("Check availability again")).toBeTruthy();
+    expect(browserWindow.document.body.textContent).not.toMatch(/GMAIL_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
+  });
+
+  test("recovers a failed availability check and sanitizes a failed provider start", async () => {
+    let availabilityAttempt = 0;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/status")) {
+        availabilityAttempt += 1;
+        if (availabilityAttempt <= 2) throw new Error("GMAIL_CLIENT_SECRET=do-not-render");
+        const provider = url.includes("/outlook/") ? "outlook" : "gmail";
+        return jsonResponse({ provider, available: true, reason: null });
+      }
+      if (url.includes("/gmail/login")) {
+        return jsonResponse({ error: { code: "provider_unavailable", message: "Missing GMAIL_CLIENT_SECRET=do-not-render" } }, 503);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderLogin();
+    expect(browserWindow.document.body.textContent).toContain("Sign-in choices could not be checked");
+    expect(providerButton("Continue with Google").disabled).toBe(true);
+
+    await act(async () => { providerButton("Check again").click(); });
+    await waitFor(0);
+    const gmail = providerButton("Continue with Google");
+    expect(gmail.disabled).toBe(false);
+
+    await act(async () => { gmail.click(); });
+    await waitFor(0);
+    expect(browserWindow.document.body.textContent).toContain("Gmail sign-in is unavailable here");
+    expect(providerButton("Try Gmail again")).toBeTruthy();
+    expect(browserWindow.document.body.textContent).not.toMatch(/GMAIL_|CLIENT_|SECRET|do-not-render/i);
+  });
+});
 
 const loadedPreferences: UserPreferences = {
   signature: "Warmly, Luke",
