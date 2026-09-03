@@ -4422,6 +4422,15 @@ function InboxView({
       setBulkPendingBehavior(null);
     }
   }
+  const inboxResultStatus = status === "loading"
+    ? `Loading ${inboxTitle}.`
+    : status === "syncing"
+      ? `Syncing ${inboxTitle}.`
+      : status === "error"
+        ? `${inboxTitle} could not be loaded.`
+        : searchQuery.trim()
+          ? `${displayMessages.length} ${displayMessages.length === 1 ? "result" : "results"} for ${searchQuery.trim()}.`
+          : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       <header className="pane-header">
@@ -4575,6 +4584,7 @@ function InboxView({
               <span>Changes apply to future mail from each sender.</span>
             </div>
             <button
+              aria-pressed={displayMessages.length > 0 && selectedVisibleMessageCount === displayMessages.length}
               className="bulk-select-all"
               disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
               onClick={() => setSelectedTargets((current) => {
@@ -4596,7 +4606,8 @@ function InboxView({
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.addresses)} type="button">Retry failed</button> : null}</div> : null}
 
-        <section className="inbox-body" aria-live="polite">
+        <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
+        <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
         {viewMode === "signals" && !searchQuery.trim() && !personFilter && !selectionMode ? (
           <AgentEventTimeline
             accountLabels={account ? { [account.id]: account.email } : {}}

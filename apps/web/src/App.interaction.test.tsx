@@ -1417,12 +1417,12 @@ describe("Desktop evidence and navigation", () => {
     const signalsRow = [...dialog.querySelectorAll("article")].find((row) => row.textContent?.includes("Signals"))!;
     const hide = [...signalsRow.querySelectorAll("button")].find((button) => button.textContent === "Hide") as unknown as HTMLButtonElement;
     await act(async () => { hide.click(); });
-    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
 
     await act(async () => { root!.unmount(); });
     root = null;
     await renderApp();
-    expect([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].some((button) => button.textContent?.includes("Signals"))).toBe(false);
   });
 
   test("persists one absolute order when a drag crosses multiple rows", async () => {
@@ -1464,7 +1464,7 @@ describe("Drafts mailbox", () => {
   test("opens the saved drafts view and reopens a selected draft", async () => {
     await renderApp();
 
-    const draftsButton = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+    const draftsButton = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
     expect(draftsButton).toBeDefined();
 
@@ -1571,7 +1571,7 @@ describe("Drafts mailbox", () => {
 
   test("moves between user-owned workflow spaces without reviving classification tabs", async () => {
     await renderApp();
-    const primary = browserWindow.document.querySelector('aside[aria-label="Primary"]');
+    const primary = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]');
     expect(primary).not.toBeNull();
     expect(browserWindow.document.querySelector('[aria-label="Inbox classification views"]')).toBeNull();
 
@@ -1622,7 +1622,7 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".stream-title-line h1")?.textContent).toBe("Maya Chen");
     expect(buttonByName("Open Maya Chen pin").getAttribute("aria-pressed")).toBe("true");
 
-    const signals = [...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+    const signals = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
       .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement;
     await act(async () => { signals.click(); });
 
@@ -1634,7 +1634,7 @@ describe("Pin navigation and bulk sender actions", () => {
   test("opens a pinned thread from outside its current signal view", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     await act(async () => {
@@ -1666,6 +1666,35 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(save).toBeDefined();
     await act(async () => { save!.click(); });
     expect((browserWindow.document.querySelector(".pin-builder-search input") as unknown as HTMLInputElement).value).toBe("moonbase ledger");
+  });
+
+  test("announces a concise result status without making the message list live", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?q=Jordan");
+    await renderApp();
+    const listRegion = browserWindow.document.querySelector(".inbox-body");
+    const resultStatus = browserWindow.document.querySelector(".inbox-results-status");
+
+    expect(listRegion?.hasAttribute("aria-live")).toBe(false);
+    expect(listRegion?.hasAttribute("aria-busy")).toBe(false);
+    expect(resultStatus?.getAttribute("role")).toBe("status");
+    expect(resultStatus?.getAttribute("aria-atomic")).toBe("true");
+    expect(resultStatus?.textContent).toBe("1 result for Jordan.");
+  });
+
+  test("exposes the visible bulk-selection state as pressed", async () => {
+    await renderApp();
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement;
+    await act(async () => { selectMode.click(); });
+    const selectAll = browserWindow.document.querySelector(".bulk-select-all") as unknown as HTMLButtonElement;
+
+    expect(selectAll.getAttribute("aria-pressed")).toBe("false");
+    await act(async () => { selectAll.click(); });
+    expect(selectAll.getAttribute("aria-pressed")).toBe("true");
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "true")).toBe(true);
+
+    await act(async () => { selectAll.click(); });
+    expect(selectAll.getAttribute("aria-pressed")).toBe("false");
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "false")).toBe(true);
   });
 
   test("moves multiple selected senders to Quiet in one action", async () => {
@@ -1788,6 +1817,7 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { quiet.click(); await Promise.resolve(); });
 
     const actionButtons = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')] as unknown as HTMLButtonElement[];
+    expect(browserWindow.document.querySelector(".bulk-action-bar")?.getAttribute("aria-busy")).toBe("true");
     expect(actionButtons.every((button) => button.disabled)).toBe(true);
     expect((browserWindow.document.querySelector(".bulk-select-all") as unknown as HTMLButtonElement).disabled).toBe(true);
     quiet.click();
@@ -1864,7 +1894,7 @@ describe("Inbox reader viewport restoration", () => {
   test("opens a propagated event source and returns to the same signal position", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const pane = inboxPane();
@@ -1900,7 +1930,7 @@ describe("Inbox reader viewport restoration", () => {
   test("reveals and restores a quieted local signal without changing its source mail", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;
@@ -1914,7 +1944,7 @@ describe("Inbox reader viewport restoration", () => {
     });
     expect(quieted?.textContent).toContain("Seen");
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("All Mail")) as unknown as HTMLButtonElement).click();
     });
     expect(messageRow("Figma Billing")).not.toBeNull();
@@ -1923,7 +1953,7 @@ describe("Inbox reader viewport restoration", () => {
   test("keeps broad mutes explicitly reversible before restoring the event", async () => {
     await renderApp();
     await act(async () => {
-      ([...browserWindow.document.querySelectorAll('aside[aria-label="Primary"] button.desktop-sidebar-item')]
+      ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
     });
     const review = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review quieted")) as unknown as HTMLButtonElement;

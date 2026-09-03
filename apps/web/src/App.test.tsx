@@ -41,7 +41,7 @@ describe("App", () => {
     const draftHtml = renderToStaticMarkup(<DraftsView drafts={[savedDraft]} onOpenDraft={() => {}} />);
     const pendingDraftHtml = renderToStaticMarkup(<DraftsView drafts={[{ ...savedDraft, providerSyncStatus: "pending" }]} onOpenDraft={() => {}} />);
 
-    expect(html).toContain('aria-label="Primary"');
+    expect(html).toContain('<nav aria-label="Primary navigation"');
     expect(html).not.toContain('aria-label="Collections and pins"');
     expect(html).toContain('<span>Drafts</span>');
     expect(html).toContain("Drafts");

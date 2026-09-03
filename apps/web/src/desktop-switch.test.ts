@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import { AppSidebar } from "./desktop-switch";
 
 const styles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
 const baseStyles = await Bun.file(new URL("./styles.css", import.meta.url)).text();
@@ -128,6 +132,30 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
 }
 
 describe("desktop application shell", () => {
+  test("exposes one named primary navigation landmark and one current destination", () => {
+    const html = renderToStaticMarkup(createElement(AppSidebar, {
+      account: { displayName: "Luke Brevoort", email: "luke@example.com", accountCount: 1, health: "synced" },
+      active: "inbox",
+      inboxCount: 4,
+      draftCount: 2,
+      spaces: [{ id: "focus", label: "Focus", description: "protected attention" }],
+      theme: "light",
+      onCompose: () => undefined,
+      onManageSpaces: () => undefined,
+      onNavigate: () => undefined,
+    }));
+    const browser = new Window();
+    browser.document.body.innerHTML = html;
+
+    const primary = browser.document.querySelector('nav[aria-label="Primary navigation"]');
+    const current = primary?.querySelectorAll('[aria-current="page"]') ?? [];
+    expect(primary).not.toBeNull();
+    expect(browser.document.querySelector('aside[aria-label="Primary"]')).toBeNull();
+    expect(current).toHaveLength(1);
+    expect(current[0]?.textContent).toContain("Inbox");
+    browser.close();
+  });
+
   test("keeps the sidebar in the viewport while the workspace owns long-page scrolling", () => {
     const computed = desktopShellStyles();
 

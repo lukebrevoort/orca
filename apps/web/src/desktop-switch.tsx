@@ -96,8 +96,8 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
     items[next]?.focus();
   }
 
-  return <aside aria-label="Primary" className="desktop-sidebar">
-    <div className="desktop-sidebar-content">
+  return <div className="desktop-sidebar">
+    <nav aria-label="Primary navigation" className="desktop-sidebar-content">
       <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
       <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
         <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
@@ -122,7 +122,7 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
         <span className="desktop-account-avatar">{account.avatar ?? initials}</span><span><strong>{account.displayName}</strong><small>{account.detail ?? `${account.accountCount} ${account.accountCount === 1 ? "account" : "accounts"} · ${account.health}`}</small></span><span aria-hidden="true">›</span>
       </button>
-    </div>
+    </nav>
     <nav aria-label="Mobile primary" className="desktop-mobile-navigation">
       {mobileMenuOpen ? <TopLayer
         ariaLabel="Navigation menu"
@@ -179,7 +179,7 @@ export function AppSidebar({ account, active, composeButtonRef, inboxCount, draf
         type="button"
       ><NavIcon name="more"/><span>More</span></button>
     </nav>
-  </aside>;
+  </div>;
 }
 
 export function WorkspaceHeader({ health, query, title, theme, onQueryChange, onQuerySubmit, onThemeChange }: {
