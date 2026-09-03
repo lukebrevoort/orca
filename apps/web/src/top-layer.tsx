@@ -32,6 +32,7 @@ type LayerRecord = {
   id: string;
   onClose: () => void;
   opener: HTMLElement | null;
+  returnFocus: () => HTMLElement | null;
 };
 
 type TopLayerManager = {
@@ -55,6 +56,30 @@ function isEditableTarget(target: EventTarget | null) {
     && target.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]');
 }
 
+function canRestoreFocus(element: HTMLElement | null | undefined) {
+  if (
+    !element
+    || element === document.body
+    || element === document.documentElement
+    || !element.isConnected
+    || element.matches(":disabled, [aria-disabled=true]")
+  ) return false;
+
+  for (let current: HTMLElement | null = element; current; current = current.parentElement) {
+    if (current.hidden || current.inert || current.getAttribute("aria-hidden") === "true") return false;
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse") return false;
+  }
+  return true;
+}
+
+function firstBackgroundFocusTarget() {
+  const portalRoot = document.getElementById("orca-top-layer-root");
+  return [...document.body.querySelectorAll<HTMLElement>(focusableSelector)].find((element) => (
+    !portalRoot?.contains(element) && canRestoreFocus(element)
+  )) ?? null;
+}
+
 function ensurePortalRoot() {
   if (typeof document === "undefined") return null;
   const existing = document.getElementById("orca-top-layer-root");
@@ -69,6 +94,7 @@ export function TopLayerProvider({ children }: { children: ReactNode }) {
   const stackRef = useRef<LayerRecord[]>([]);
   const backgroundStateRef = useRef(new Map<Element, { ariaHidden: string | null; inert: boolean }>());
   const restoreFrameRef = useRef<number | null>(null);
+  const rootReturnFocusRef = useRef<HTMLElement | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const setBackgroundBlocked = useCallback((blocked: boolean) => {
@@ -100,6 +126,9 @@ export function TopLayerProvider({ children }: { children: ReactNode }) {
       restoreFrameRef.current = null;
     }
     const previousTop = stackRef.current.at(-1);
+    if (!previousTop) {
+      rootReturnFocusRef.current = canRestoreFocus(record.opener) ? record.opener : record.returnFocus();
+    }
     previousTop?.element.parentElement?.setAttribute("aria-hidden", "true");
     if (previousTop?.element.parentElement instanceof HTMLElement) previousTop.element.parentElement.inert = true;
     stackRef.current = [...stackRef.current, record];
@@ -121,13 +150,23 @@ export function TopLayerProvider({ children }: { children: ReactNode }) {
       setActiveId(nextTop?.id ?? null);
       if (!stackRef.current.length) setBackgroundBlocked(false);
       if (!wasTop) return;
+      if (restoreFrameRef.current !== null) {
+        window.cancelAnimationFrame(restoreFrameRef.current);
+        restoreFrameRef.current = null;
+      }
+      const rootReturnFocus = rootReturnFocusRef.current;
+      if (!nextTop) rootReturnFocusRef.current = null;
       restoreFrameRef.current = window.requestAnimationFrame(() => {
         restoreFrameRef.current = null;
-        if (record.opener?.isConnected) {
-          record.opener.focus({ preventScroll: true });
+        const candidates = nextTop
+          ? [record.opener, record.returnFocus()]
+          : [record.opener, record.returnFocus(), rootReturnFocus, firstBackgroundFocusTarget()];
+        for (const candidate of candidates) {
+          if (!canRestoreFocus(candidate)) continue;
+          candidate!.focus({ preventScroll: true });
           return;
         }
-        nextTop?.focus();
+        if (nextTop && stackRef.current.some((candidate) => candidate.id === nextTop.id)) nextTop.focus();
       });
     };
   }, [setBackgroundBlocked]);
@@ -215,6 +254,7 @@ type TopLayerProps = AccessibleName & {
   initialFocusSelector?: string;
   layerClassName?: string;
   onClose: () => void;
+  returnFocusRef?: RefObject<HTMLElement | null>;
   surfaceProps?: HTMLAttributes<HTMLElement>;
   style?: CSSProperties;
 };
@@ -235,6 +275,7 @@ export function TopLayer({
   initialFocusSelector,
   layerClassName = "",
   onClose,
+  returnFocusRef,
   surfaceProps,
   style,
 }: TopLayerProps) {
@@ -271,14 +312,11 @@ export function TopLayer({
       id,
       onClose: () => closeRef.current(),
       opener: openerRef.current,
+      returnFocus: () => returnFocusRef?.current ?? null,
     });
   }, [id, manager.register]);
 
   const isTop = manager.activeId === id;
-  const onSurfaceKeyDown: HTMLAttributes<HTMLElement>["onKeyDown"] = (event) => {
-    surfaceProps?.onKeyDown?.(event);
-    event.stopPropagation();
-  };
   const layer = (
     <div
       aria-hidden={isTop ? undefined : "true"}
@@ -303,7 +341,6 @@ export function TopLayer({
         "aria-labelledby": ariaLabelledBy,
         "aria-modal": "true",
         className,
-        onKeyDown: onSurfaceKeyDown,
         ref: surfaceRef,
         role: "dialog",
         style,

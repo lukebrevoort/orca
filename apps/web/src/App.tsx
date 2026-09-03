@@ -9,6 +9,7 @@ import {
   type MouseEvent,
   type ReactNode,
   type Ref,
+  type RefObject,
   type SetStateAction,
 } from "react";
 import type { AgentPropagationMuteRule, AttentionViewSetting, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
@@ -1375,6 +1376,7 @@ export function InboxApp({
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composeTriggerRef = useRef<HTMLButtonElement>(null);
   const contentPaneRef = useRef<HTMLElement>(null);
   const pinOrderRef = useRef<Pin[]>(demoMode ? demoPins : []);
   const pinReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -2720,6 +2722,7 @@ export function InboxApp({
         <AppSidebar
           account={sidebarAccount}
           active={activeDesktopDestination}
+          composeButtonRef={composeTriggerRef}
           draftCount={drafts?.length ?? 0}
           inboxCount={messages.length}
           onCompose={() => openCompose()}
@@ -2870,6 +2873,7 @@ export function InboxApp({
             dismissible={!panelClosing}
             initialFocusSelector=".compose-recipient-row input"
             onClose={closePanel}
+            returnFocusRef={composeTriggerRef}
           >
             <header className="panel-header">
               <h2>New message</h2>
@@ -3743,10 +3747,11 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   </aside>;
 }
 
-function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
+function PinRail({ pins, pinnedPeople, classificationView, fallbackFocusRef, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
   pins: Pin[];
   pinnedPeople: PersonItem[];
   classificationView: ClassificationView;
+  fallbackFocusRef: RefObject<HTMLButtonElement | null>;
   inboxFilter: InboxFilter;
   personFilter: string | null;
   searchQuery: string;
@@ -3900,11 +3905,12 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
       {moveError ? <p className="pin-rail-error" role="alert">{moveError}</p> : null}
       <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
     </div>
-    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
+    {editingPin ? <PinAppearanceEditor fallbackFocusRef={fallbackFocusRef} pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
   </>;
 }
 
-function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
+function PinAppearanceEditor({ fallbackFocusRef, pin, onClose, onRemove, onSave }: {
+  fallbackFocusRef: RefObject<HTMLButtonElement | null>;
   pin: Pin;
   onClose: () => void;
   onRemove: (pin: Pin) => Promise<boolean>;
@@ -3946,7 +3952,7 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
 
   const busy = pendingAction !== "idle";
 
-  return <TopLayer ariaBusy={busy} ariaLabelledBy="pin-appearance-title" as="section" backdropAriaLabel="Close pin customization" backdropClassName="pin-appearance-backdrop" className="pin-appearance" dismissible={!busy} layerClassName="pin-appearance-layer" onClose={onClose}>
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="pin-appearance-title" as="section" backdropAriaLabel="Close pin customization" backdropClassName="pin-appearance-backdrop" className="pin-appearance" dismissible={!busy} layerClassName="pin-appearance-layer" onClose={onClose} returnFocusRef={fallbackFocusRef}>
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
         <button aria-label="Close pin customization" data-dialog-initial-focus disabled={busy} onClick={onClose} type="button">×</button>
@@ -4362,7 +4368,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} fallbackFocusRef={pinMenuTriggerRef} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"

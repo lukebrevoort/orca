@@ -64,6 +64,7 @@ function NestedLayers() {
     </TopLayer> : null}
     {inner ? <TopLayer ariaLabel="Inner layer" onClose={() => setInner(false)}>
       <button data-testid="inner-close" onClick={() => setInner(false)} type="button">Close inner</button>
+      <button data-testid="close-all" onClick={() => { setInner(false); setOuter(false); }} type="button">Close all</button>
     </TopLayer> : null}
   </TopLayerProvider>;
 }
@@ -155,5 +156,37 @@ describe("shared top-layer contract", () => {
     expect(isSameNode(browserWindow.document.activeElement, dialog)).toBe(true);
     await keydown("Escape");
     expect(isSameNode(browserWindow.document.querySelector('[aria-label="Busy layer"]'), dialog)).toBe(true);
+  });
+
+  test("coalesces nested unregister restoration into one frame and restores the external opener", async () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let frameId = 0;
+    Object.defineProperties(browserWindow, {
+      requestAnimationFrame: {
+        configurable: true,
+        value: (callback: FrameRequestCallback) => {
+          frameId += 1;
+          callbacks.set(frameId, callback);
+          return frameId;
+        },
+      },
+      cancelAnimationFrame: {
+        configurable: true,
+        value: (id: number) => { callbacks.delete(id); },
+      },
+    });
+
+    await act(async () => root!.render(<NestedLayers />));
+    const opener = browserWindow.document.querySelector('[data-testid="outer-opener"]') as unknown as HTMLButtonElement;
+    opener.focus();
+    await act(async () => opener.click());
+    const innerOpener = browserWindow.document.querySelector('[data-testid="inner-opener"]') as unknown as HTMLButtonElement;
+    await act(async () => innerOpener.click());
+    const closeAll = browserWindow.document.querySelector('[data-testid="close-all"]') as unknown as HTMLButtonElement;
+    await act(async () => closeAll.click());
+
+    expect(callbacks.size).toBe(1);
+    for (const callback of callbacks.values()) callback(0);
+    expect(isSameNode(browserWindow.document.activeElement, opener)).toBe(true);
   });
 });

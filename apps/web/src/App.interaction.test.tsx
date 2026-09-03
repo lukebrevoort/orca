@@ -966,6 +966,41 @@ describe("App top-layer contract", () => {
     expect(browserWindow.document.querySelector('[aria-labelledby="pin-builder-title"]')).toBeNull();
     expect(isSameNode(browserWindow.document.activeElement, pinOpener)).toBe(true);
   });
+
+  test("restores the Compose trigger when default Zen and Compose close together", async () => {
+    await renderApp({ ...defaultReaderPreferences, composeZenByDefault: true, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    browserWindow.document.body.tabIndex = -1;
+    browserWindow.document.body.focus();
+    await act(async () => {
+      browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
+    });
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Zen writing mode"]'))).toBe(true);
+
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+    const composeTrigger = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Zen writing mode"]'))).toBe(false);
+    expect(Boolean(browserWindow.document.querySelector('[aria-label="Compose message"]'))).toBe(false);
+    expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
+  });
+
+  test("restores a stable visible app control when Remove pin deletes the opener", async () => {
+    await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    const savedPins = browserWindow.document.querySelector('[aria-label="Saved pins"]') as unknown as HTMLElement;
+    savedPins.hidden = true;
+    const customize = browserWindow.document.querySelector('button[aria-label^="Customize "]') as unknown as HTMLButtonElement;
+    customize.focus();
+    await act(async () => customize.click());
+    const remove = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Remove pin") as unknown as HTMLButtonElement;
+    await act(async () => { remove.click(); await Promise.resolve(); });
+    await act(async () => flushAnimationFrames());
+
+    const composeTrigger = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    expect(Boolean(browserWindow.document.querySelector('[aria-labelledby="pin-appearance-title"]'))).toBe(false);
+    expect(customize.isConnected).toBe(false);
+    expect(isSameNode(browserWindow.document.activeElement, composeTrigger)).toBe(true);
+  });
 });
 
 describe("Inbox row action affordances", () => {

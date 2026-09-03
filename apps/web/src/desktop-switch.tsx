@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, mailAccountPageSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderViewSettingsSchema, syncStatusSchema, type MailAccount, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
@@ -51,13 +51,14 @@ function SidebarItem({ active, count, icon, label, onClick }: { active: boolean;
   </button>;
 }
 
-export function AppSidebar({ account, active, inboxCount, draftCount, spaces, theme, onCompose, onManageSpaces, onNavigate }: {
+export function AppSidebar({ account, active, composeButtonRef, inboxCount, draftCount, spaces, theme, onCompose, onManageSpaces, onNavigate }: {
   account: SidebarAccount;
   active: DesktopDestination;
   inboxCount?: number;
   draftCount?: number;
   spaces: WorkflowSpace[];
   theme: "light" | "dark";
+  composeButtonRef?: RefObject<HTMLButtonElement | null>;
   onCompose: () => void;
   onManageSpaces: () => void;
   onNavigate: (destination: DesktopDestination) => void;
@@ -65,7 +66,7 @@ export function AppSidebar({ account, active, inboxCount, draftCount, spaces, th
   const initials = account.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "O";
   return <aside aria-label="Primary" className="desktop-sidebar">
     <div className="desktop-brand"><span className="desktop-wordmark">orca</span>{theme === "dark" ? <img alt="" aria-hidden="true" className="desktop-orca-eye" src="/orca-black-mark.svg" /> : <WaveMark />}<span className="desktop-workspace-name">personal</span></div>
-    <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} type="button">
+    <button aria-keyshortcuts="c" className="desktop-compose" onClick={onCompose} ref={composeButtonRef} type="button">
       <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 15.5h3.2L15.8 6l-3-3L3 12.5v3zM10.9 4.9l3 3"/></svg><span>Compose</span><kbd>C</kbd>
     </button>
     <p className="desktop-sidebar-label">Anchors</p>
