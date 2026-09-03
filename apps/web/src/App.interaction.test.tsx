@@ -5,7 +5,7 @@ import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
-import { demoAgentEvents, demoMessages } from "./demo-data";
+import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
@@ -150,7 +150,7 @@ function restoreDom() {
 async function renderApp(
   preferences: ReaderPreferences = defaultReaderPreferences,
   strict = false,
-  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient" | "initialDemoMessages"> & { demoMode?: boolean } = { theme: "light" },
+  options: Pick<Parameters<typeof InboxApp>[0], "demoMode" | "theme" | "bulkAttentionClient" | "initialDemoMessages"> = { theme: "light" },
 ) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
@@ -2193,31 +2193,39 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
   });
 
-  test("keeps identical sender addresses and message ids distinct across accounts and retries the exact target", async () => {
+  test("keeps paginated same-id messages distinct across accounts, restores the exact row, and retries the exact target", async () => {
     const source = demoMessages[0]!;
-    const initialDemoMessages: InboxMessage[] = [
-      {
-        ...source,
-        id: "shared-message-id",
-        accountId: "account-gmail",
-        provider: "gmail",
-        providerMessageId: "gmail-shared-message",
-        threadId: "gmail-shared-thread",
-        from: { name: "Shared Gmail", email: " Shared@Example.com " },
-        subject: "Gmail copy",
-      },
-      {
-        ...source,
-        id: "shared-message-id",
-        accountId: "account-outlook",
-        provider: "outlook",
-        providerMessageId: "outlook-shared-message",
-        threadId: "outlook-shared-thread",
-        from: { name: "Shared Outlook", email: "shared@example.com" },
-        subject: "Outlook copy",
-        receivedAt: "2026-07-03T12:00:00.000Z",
-      },
-    ];
+    const gmailAccount = { ...demoAccount, id: "account-gmail" };
+    const outlookAccount = { ...demoAccount, id: "account-outlook", provider: "outlook" as const, email: "outlook@example.com" };
+    const gmailMessage: InboxMessage = {
+      ...source,
+      id: "shared-message-id",
+      accountId: gmailAccount.id,
+      provider: "gmail",
+      providerMessageId: "gmail-shared-message",
+      threadId: "gmail-shared-thread",
+      from: { name: "Shared Gmail", email: " Shared@Example.com " },
+      subject: "Gmail copy",
+      receivedAt: "2026-07-02T12:00:00.000Z",
+      unread: false,
+    };
+    const refreshedGmailMessage = { ...gmailMessage, subject: "Gmail copy refreshed", snippet: "Refreshed on page two." };
+    const outlookMessage: InboxMessage = {
+      ...source,
+      id: "shared-message-id",
+      accountId: outlookAccount.id,
+      provider: "outlook",
+      providerMessageId: "outlook-shared-message",
+      threadId: "outlook-shared-thread",
+      from: { name: "Shared Outlook", email: "shared@example.com" },
+      subject: "Outlook copy",
+      receivedAt: "2026-07-03T12:00:00.000Z",
+      unread: false,
+    };
+    const counts = {
+      attention: { focus: 0, normal: 2, quiet: 0, hidden: 0, all: 2 },
+      classification: { likely_human: 2, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: 2 },
+    };
     const requests: Array<Array<{ accountId: string; address: string }>> = [];
     const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ targets, behavior }) => {
       requests.push(targets);
@@ -2228,29 +2236,64 @@ describe("Pin navigation and bulk sender actions", () => {
           : { status: "succeeded" as const, target, resolution: { behavior, rule: null } }),
       };
     };
-    await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient, initialDemoMessages });
-    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
-    await act(async () => {
-      buttonByName("Select Shared Gmail: Gmail copy").click();
-      buttonByName("Select Shared Outlook: Outlook copy").click();
-    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/v1/me") return jsonResponse(gmailAccount);
+      if (url === "/v1/sync/status") return jsonResponse({ accounts: [] });
+      if (url.includes("/v1/inbox?view=all&classification=all&limit=100&cursor=")) {
+        return jsonResponse({ accounts: [gmailAccount, outlookAccount], messages: [refreshedGmailMessage, outlookMessage], counts, nextCursor: null });
+      }
+      if (url === "/v1/inbox?view=all&classification=all&limit=100") {
+        return jsonResponse({ accounts: [gmailAccount, outlookAccount], messages: [gmailMessage], counts, nextCursor: "page-two" });
+      }
+      if (url === "/v1/sync/gmail" && init?.method === "POST") return apiError(503, "temporarily_unavailable", "Skip background refresh in this test");
+      return apiError(503, "temporarily_unavailable", `Unexpected auxiliary request: ${url}`);
+    }) as typeof fetch;
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", bulkAttentionClient });
+      await waitFor(0);
+      const loadMore = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Load more messages") as unknown as HTMLButtonElement;
+      expect(loadMore).toBeDefined();
+      await act(async () => { loadMore.click(); await Promise.resolve(); });
 
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
-    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
-    await act(async () => { quiet.click(); await Promise.resolve(); });
+      expect([...browserWindow.document.querySelectorAll("button.message-row")].map((row) => row.textContent)).toEqual([
+        expect.stringContaining("Shared Outlook"),
+        expect.stringContaining("Shared Gmail"),
+      ]);
+      expect(browserWindow.document.body.textContent).toContain("Gmail copy refreshed");
 
-    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
-    expect(buttonByName("Deselect Shared Outlook: Outlook copy").getAttribute("aria-pressed")).toBe("true");
-    const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
-    await act(async () => { retry.click(); await Promise.resolve(); });
+      const outlookOrigin = messageRow("Shared Outlook");
+      await act(async () => { outlookOrigin.click(); });
+      await escapeReader();
+      await act(async () => flushAnimationFrames());
+      expect(browserWindow.document.activeElement as unknown as HTMLElement).toBe(outlookOrigin);
 
-    expect(requests).toEqual([
-      [
-        { accountId: "account-gmail", address: "shared@example.com" },
-        { accountId: "account-outlook", address: "shared@example.com" },
-      ],
-      [{ accountId: "account-outlook", address: "shared@example.com" }],
-    ]);
+      await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+      await act(async () => {
+        buttonByName("Select Shared Gmail: Gmail copy refreshed").click();
+        buttonByName("Select Shared Outlook: Outlook copy").click();
+      });
+
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+      const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+      await act(async () => { quiet.click(); await Promise.resolve(); });
+
+      expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+      expect(buttonByName("Deselect Shared Outlook: Outlook copy").getAttribute("aria-pressed")).toBe("true");
+      const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
+      await act(async () => { retry.click(); await Promise.resolve(); });
+
+      expect(requests).toEqual([
+        [
+          { accountId: "account-gmail", address: "shared@example.com" },
+          { accountId: "account-outlook", address: "shared@example.com" },
+        ],
+        [{ accountId: "account-outlook", address: "shared@example.com" }],
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("disables every duplicate bulk submission path while saving", async () => {

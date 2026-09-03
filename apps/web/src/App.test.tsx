@@ -325,12 +325,23 @@ describe("App", () => {
     expect(mixed.find((message) => message.id === "msg_7_mixed_automated")?.humanClassification?.effective.classification).toBe("automated_or_bulk");
   });
 
-  test("merges paginated messages without losing refreshed rows", () => {
+  test("merges paginated messages by account and message identity", () => {
     const first = demoMessages[0]!;
     const refreshed = { ...first, snippet: "Updated after the next page loaded." };
+    const sameIdFromAnotherAccount = {
+      ...first,
+      accountId: "another-account",
+      provider: "outlook" as const,
+      providerMessageId: "outlook-shared-message",
+      threadId: "outlook-shared-thread",
+    };
     const appended = { ...demoMessages[1]!, id: "page-two-message", providerMessageId: "page-two-message" };
 
-    expect(mergeMessages([first], [refreshed, appended])).toEqual([refreshed, appended]);
+    expect(mergeMessages([first], [refreshed, sameIdFromAnotherAccount, appended])).toEqual([
+      refreshed,
+      sameIdFromAnotherAccount,
+      appended,
+    ]);
   });
 
   test("keeps classification tab counts and the controlled panel accessible", () => {

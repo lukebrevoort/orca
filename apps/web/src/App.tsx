@@ -1742,8 +1742,8 @@ export function InboxApp({
       : mailboxMessages;
     if (!activeCollectionId && isClassificationMailbox) {
       filtered = filtered.filter((message) => classificationMatchesView(message, classificationView));
-      const latestRows = new Set(getLatestThreadRows(allMailMessages).map((message) => message.id));
-      filtered = filtered.filter((message) => latestRows.has(message.id));
+      const latestRows = new Set(getLatestThreadRows(allMailMessages).map(messageIdentityKey));
+      filtered = filtered.filter((message) => latestRows.has(messageIdentityKey(message)));
     }
     if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
@@ -2014,25 +2014,26 @@ export function InboxApp({
         && (!location.reader!.accountId || message.accountId === location.reader!.accountId));
       const eventTarget = agentEvents.find((event) => event.source.threadId === location.reader!.threadId
         && event.source.accountId === location.reader!.accountId);
-      const messageNode = messageTarget ? messageRowRefs.current.get(messageTarget.id) : null;
+      const messageTargetKey = messageTarget ? messageIdentityKey(messageTarget) : null;
+      const messageNode = messageTargetKey ? messageRowRefs.current.get(messageTargetKey) : null;
       const eventNode = eventTarget ? agentEventSourceRefs.current.get(eventTarget.id) : null;
       const focusedNode = document.activeElement;
       const focusedTarget = eventTarget && eventNode?.isConnected && (eventNode === focusedNode || eventNode.contains(focusedNode))
         ? { kind: "agent-event" as const, id: eventTarget.id }
-        : messageTarget && messageNode?.isConnected && (messageNode === focusedNode || messageNode.contains(focusedNode))
-          ? { kind: "message" as const, id: messageTarget.id }
+        : messageTargetKey && messageNode?.isConnected && (messageNode === focusedNode || messageNode.contains(focusedNode))
+          ? { kind: "message" as const, id: messageTargetKey }
           : null;
       const previousTarget = history?.lastReturnTarget() ?? null;
       const preservedTarget = previousTarget?.kind === "agent-event" && previousTarget.id === eventTarget?.id && eventNode?.isConnected
         ? previousTarget
-        : previousTarget?.kind === "message" && previousTarget.id === messageTarget?.id && messageNode?.isConnected
+        : previousTarget?.kind === "message" && previousTarget.id === messageTargetKey && messageNode?.isConnected
           ? previousTarget
           : null;
       const target = focusedTarget
         ?? preservedTarget
-        ?? (messageTarget && messageNode?.isConnected ? { kind: "message" as const, id: messageTarget.id } : null)
+        ?? (messageTargetKey && messageNode?.isConnected ? { kind: "message" as const, id: messageTargetKey } : null)
         ?? (eventTarget && eventNode?.isConnected ? { kind: "agent-event" as const, id: eventTarget.id } : null)
-        ?? (messageTarget ? { kind: "message" as const, id: messageTarget.id } : null)
+        ?? (messageTargetKey ? { kind: "message" as const, id: messageTargetKey } : null)
         ?? (eventTarget ? { kind: "agent-event" as const, id: eventTarget.id } : null);
       history?.armReturnContext(captureSurfaceReturnContext(target));
     }
@@ -2101,7 +2102,7 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
-    const returnContext = captureSurfaceReturnContext({ kind: "message", id: message.id });
+    const returnContext = captureSurfaceReturnContext({ kind: "message", id: messageIdentityKey(message) });
     surfaceHistoryRef.current?.openReader({ threadId: message.threadId, accountId: message.accountId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
@@ -2117,10 +2118,10 @@ export function InboxApp({
         writeDemoReadState(message.threadId);
       }
       setMessages((prev) =>
-        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
       setAllMailMessages((prev) =>
-        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
     }
   }
@@ -4685,7 +4686,7 @@ function InboxView({
                       <ul>
                         {pinPreview.messages.map((message) => {
                           const signature = getContactSignature(message.from);
-                          return <li key={message.id}><span aria-hidden="true" className="pin-preview-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{message.from.name ?? message.from.email}</strong><b>{message.subject || "(no subject)"}</b><small>{message.snippet}</small></span></li>;
+                          return <li key={messageIdentityKey(message)}><span aria-hidden="true" className="pin-preview-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{message.from.name ?? message.from.email}</strong><b>{message.subject || "(no subject)"}</b><small>{message.snippet}</small></span></li>;
                         })}
                       </ul>
                     ) : <p className="pin-builder-empty">No messages match this exact scope. You can save it to watch for future mail, or broaden a filter.</p>}
@@ -4722,7 +4723,7 @@ function InboxView({
               <span>Changes apply to future mail from each sender.</span>
             </div>
             <button
-              aria-pressed={displayMessages.length > 0 && selectedVisibleMessageCount === displayMessages.length}
+              aria-pressed={visibleTargetKeys.size > 0 && selectedVisibleTargetCount === visibleTargetKeys.size}
               className="bulk-select-all"
               disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
               onClick={() => setSelectedTargets((current) => {
@@ -4813,7 +4814,7 @@ function InboxView({
               const selected = selectedTargets.has(senderAttentionTargetKey(senderAttentionTargetForMessage(message)));
 
               return (
-                <li key={JSON.stringify([message.accountId, message.id])}>
+                <li key={messageIdentityKey(message)}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
                   <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
@@ -4823,8 +4824,9 @@ function InboxView({
                       disabled={selectionMode && bulkAttentionStatus === "saving"}
                       onClick={() => selectionMode ? toggleSelection(message) : onOpenThread(message)}
                       ref={(node) => {
-                        if (node) rowRefs.current.set(message.id, node);
-                        else rowRefs.current.delete(message.id);
+                        const key = messageIdentityKey(message);
+                        if (node) rowRefs.current.set(key, node);
+                        else rowRefs.current.delete(key);
                       }}
                       style={
                         {
@@ -5085,7 +5087,7 @@ export function MessageReader({
 
   function jumpToNewest() {
     if (!jumpTarget) return;
-    const node = messageRefs.current.get(jumpTarget.id);
+    const node = messageRefs.current.get(messageIdentityKey(jumpTarget));
     node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
     node?.focus({ preventScroll: true });
   }
@@ -5153,17 +5155,18 @@ export function MessageReader({
                   {group.messages.map((message, index) => {
                     const signature = getContactSignature(message.from);
                     const plainBody = !message.bodyHtml && message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
-                    const isNewest = message.id === newestMessage?.id;
-                    const isFirstUnread = message.id === firstUnreadMessage?.id;
+                    const messageKey = messageIdentityKey(message);
+                    const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
+                    const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={message.id}>
+                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
                           ref={(node) => {
-                            if (node) messageRefs.current.set(message.id, node);
-                            else messageRefs.current.delete(message.id);
+                            if (node) messageRefs.current.set(messageKey, node);
+                            else messageRefs.current.delete(messageKey);
                           }}
                           tabIndex={-1}
                         >
@@ -6132,12 +6135,13 @@ function shouldApplyClassificationTarget(
 export function getLatestThreadRows(messages: InboxMessage[]) {
   const latest = new Map<string, InboxMessage>();
   for (const message of messages) {
-    const current = latest.get(message.threadId);
+    const threadKey = accountScopedIdentityKey(message.accountId, message.threadId);
+    const current = latest.get(threadKey);
     if (!current || message.receivedAt.localeCompare(current.receivedAt) > 0 || (message.receivedAt === current.receivedAt && message.id.localeCompare(current.id) > 0)) {
-      latest.set(message.threadId, message);
+      latest.set(threadKey, message);
     }
   }
-  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || a.id.localeCompare(b.id));
+  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || messageIdentityKey(a).localeCompare(messageIdentityKey(b)));
 }
 
 function sameMailAccount(left: MailAccount, right: MailAccount) {
@@ -6151,9 +6155,17 @@ function sameMailAccount(left: MailAccount, right: MailAccount) {
     && left.capabilities.send === right.capabilities.send;
 }
 
+function accountScopedIdentityKey(accountId: string, id: string) {
+  return JSON.stringify([accountId, id]);
+}
+
+export function messageIdentityKey(message: Pick<InboxMessage, "accountId" | "id">) {
+  return accountScopedIdentityKey(message.accountId, message.id);
+}
+
 export function mergeMessages(existing: InboxMessage[], incoming: InboxMessage[]) {
-  const merged = new Map(existing.map((message) => [message.id, message]));
-  for (const message of incoming) merged.set(message.id, message);
+  const merged = new Map(existing.map((message) => [messageIdentityKey(message), message]));
+  for (const message of incoming) merged.set(messageIdentityKey(message), message);
   return [...merged.values()];
 }
 
