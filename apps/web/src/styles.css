@@ -5143,7 +5143,8 @@ body:has(.organizer-layer) .feedback-kit-root { opacity: 0; pointer-events: none
 .oauth-provider-availability p { color: var(--orca-muted); font-size: 12px; line-height: 1.55; margin: 0; }
 .oauth-provider-availability strong { color: var(--orca-ink); display: block; }
 .oauth-retry-button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; font-size: 12px; font-weight: 700; justify-self: start; min-height: 36px; padding: 8px 13px; }
-.oauth-retry-button:hover { background: var(--orca-surface); border-color: var(--orca-accent); }
+.oauth-retry-button:hover:not(:disabled) { background: var(--orca-surface); border-color: var(--orca-accent); }
+.oauth-retry-button:disabled { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-muted); cursor: not-allowed; }
 .oauth-notice .oauth-retry-button { margin-top: 5px; }
 .oauth-setup-panel { align-self: center; background: var(--orca-surface); border: 0; border-radius: 24px; box-shadow: var(--orca-shadow); grid-area: setup; padding: 30px; }
 .oauth-setup-panel h2 { font-family: var(--orca-font-display); font-size: 16px; font-weight: 600; }

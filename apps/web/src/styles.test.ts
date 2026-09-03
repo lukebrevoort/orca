@@ -138,6 +138,10 @@ describe("OAuth login layout and provider states", () => {
     expect(disabled).toContain("border-color: var(--orca-border)");
     expect(disabled).toContain("color: var(--orca-muted)");
     expect(disabled).toContain("opacity: 1");
+    const retryDisabled = latestCssRule(".oauth-retry-button:disabled");
+    expect(retryDisabled).toContain("background: var(--orca-surface-hover)");
+    expect(retryDisabled).toContain("color: var(--orca-muted)");
+    expect(retryDisabled).toContain("cursor: not-allowed");
     expect(styles).toContain(".oauth-google-button:focus-visible");
     expect(styles).toContain("outline: 2px solid var(--orca-accent)");
   });

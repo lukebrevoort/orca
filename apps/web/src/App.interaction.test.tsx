@@ -420,6 +420,94 @@ describe("OAuth login availability and recovery", () => {
     expect(browserWindow.document.body.textContent).not.toMatch(/GMAIL_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
   });
 
+  test("downgrades stale readiness after a provider-unavailable start and rechecks before enabling OAuth", async () => {
+    let gmailStatusRequests = 0;
+    let outlookStatusRequests = 0;
+    let gmailStartRequests = 0;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/gmail/status")) {
+        gmailStatusRequests += 1;
+        return jsonResponse({ provider: "gmail", available: true, reason: null });
+      }
+      if (url.includes("/outlook/status")) {
+        outlookStatusRequests += 1;
+        return jsonResponse({ provider: "outlook", available: true, reason: null });
+      }
+      if (url.includes("/gmail/login")) {
+        gmailStartRequests += 1;
+        return jsonResponse({ error: { code: "provider_unavailable", message: "Missing GMAIL_CLIENT_SECRET=do-not-render" } }, 503);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderLogin();
+    const gmail = providerButton("Continue with Google");
+    expect(gmail.disabled).toBe(false);
+
+    await act(async () => { gmail.click(); });
+    await waitFor(0);
+
+    expect(gmailStartRequests).toBe(1);
+    expect(providerButton("Continue with Google").disabled).toBe(true);
+    expect(browserWindow.document.body.textContent).toContain("Gmail sign-in is unavailable here");
+    expect(browserWindow.document.body.textContent).toContain("Nothing in Orca or your mail account changed");
+    const recoveryActions = [...browserWindow.document.querySelectorAll(".oauth-retry-button")] as unknown as HTMLButtonElement[];
+    expect(recoveryActions).toHaveLength(1);
+    expect(recoveryActions[0]?.textContent?.trim()).toBe("Check availability again");
+
+    await act(async () => { recoveryActions[0]!.click(); });
+    await waitFor(0);
+
+    expect(gmailStartRequests).toBe(1);
+    expect(gmailStatusRequests).toBe(2);
+    expect(outlookStatusRequests).toBe(2);
+    expect(providerButton("Continue with Google").disabled).toBe(false);
+    expect(browserWindow.document.querySelector(".oauth-provider-availability")).toBeNull();
+  });
+
+  test("does not let an availability recheck race an OAuth start", async () => {
+    let statusRequests = 0;
+    let finishStart!: (response: Response) => void;
+    const startResponse = new Promise<Response>((resolve) => { finishStart = resolve; });
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/status")) {
+        statusRequests += 1;
+        const provider = url.includes("/outlook/") ? "outlook" : "gmail";
+        return provider === "outlook"
+          ? jsonResponse({ provider, available: false, reason: "configuration_required" })
+          : jsonResponse({ provider, available: true, reason: null });
+      }
+      if (url.includes("/gmail/login")) return startResponse;
+      throw new Error(`Unexpected request: ${url}`);
+    }) as typeof fetch;
+
+    await renderLogin();
+    const recovery = providerButton("Check availability again");
+    await act(async () => {
+      providerButton("Continue with Google").click();
+      await waitFor(0);
+    });
+
+    expect(recovery.disabled).toBe(true);
+    await act(async () => { recovery.click(); });
+    await waitFor(0);
+    expect(statusRequests).toBe(2);
+
+    await act(async () => {
+      finishStart(apiError(503, "provider_unavailable", "Missing GMAIL_CLIENT_SECRET=do-not-render"));
+      await startResponse;
+    });
+    await waitFor(0);
+
+    expect(providerButton("Continue with Google").disabled).toBe(true);
+    const recoveryActions = [...browserWindow.document.querySelectorAll(".oauth-retry-button")] as unknown as HTMLButtonElement[];
+    expect(recoveryActions).toHaveLength(1);
+    expect(recoveryActions[0]?.disabled).toBe(false);
+    expect(browserWindow.document.body.textContent).not.toMatch(/GMAIL_|CLIENT_|SECRET|do-not-render/i);
+  });
+
   test("recovers a failed availability check and sanitizes a failed provider start", async () => {
     let availabilityAttempt = 0;
     globalThis.fetch = (async (input: string | URL | Request) => {
@@ -448,7 +536,8 @@ describe("OAuth login availability and recovery", () => {
     await act(async () => { gmail.click(); });
     await waitFor(0);
     expect(browserWindow.document.body.textContent).toContain("Gmail sign-in is unavailable here");
-    expect(providerButton("Try Gmail again")).toBeTruthy();
+    expect(providerButton("Continue with Google").disabled).toBe(true);
+    expect(providerButton("Check availability again")).toBeTruthy();
     expect(browserWindow.document.body.textContent).not.toMatch(/GMAIL_|CLIENT_|SECRET|do-not-render/i);
   });
 });

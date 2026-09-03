@@ -148,6 +148,7 @@ type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "h
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
 type OAuthConnectStatus = "idle" | "loading" | "error";
+type OAuthAuthorizationStartResult = "started" | "provider_unavailable" | "failed";
 type OAuthProviderAvailabilityState =
   | { status: "loading" | "error"; providers: null }
   | { status: "ready"; providers: Record<OAuthProvider, AuthProviderAvailability> };
@@ -834,7 +835,11 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
-    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
+    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+      if (result !== "provider_unavailable") return;
+      setOutlookAuthorizationStatus("error");
+      setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
+    });
   }
   async function revokeConnection(connection: McpConnection) {
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
@@ -3352,17 +3357,27 @@ function OAuthLoginPage() {
   const [activeProvider, setActiveProvider] = useState<OAuthProvider | null>(null);
   const [availability, setAvailability] = useState<OAuthProviderAvailabilityState>({ status: "loading", providers: null });
   const connectInFlightRef = useRef(false);
+  const availabilityInFlightRef = useRef(false);
+  const availabilityRequestRef = useRef(0);
   const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
   const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
   const returnProvider = returnStatus?.provider ?? "gmail";
 
   async function refreshAvailability() {
+    if (connectInFlightRef.current || availabilityInFlightRef.current) return;
+    const requestId = ++availabilityRequestRef.current;
+    availabilityInFlightRef.current = true;
     setAvailability({ status: "loading", providers: null });
     setErrorMessage(null);
     try {
-      setAvailability({ status: "ready", providers: await loadAuthProviderAvailability() });
+      const providers = await loadAuthProviderAvailability();
+      if (requestId !== availabilityRequestRef.current) return;
+      setAvailability({ status: "ready", providers });
     } catch {
+      if (requestId !== availabilityRequestRef.current) return;
       setAvailability({ status: "error", providers: null });
+    } finally {
+      if (requestId === availabilityRequestRef.current) availabilityInFlightRef.current = false;
     }
   }
 
@@ -3378,15 +3393,30 @@ function OAuthLoginPage() {
       return;
     }
 
+    const providersAtStart = availability.providers;
     connectInFlightRef.current = true;
     setActiveProvider(provider);
     setReturnStatus(null);
     const returnTo = typeof window === "undefined"
       ? "/onboarding"
       : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`;
-    const started = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
-    if (!started) {
-      connectInFlightRef.current = false;
+    const result = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
+    if (result === "started") return;
+
+    connectInFlightRef.current = false;
+    if (result === "provider_unavailable") {
+      availabilityRequestRef.current += 1;
+      availabilityInFlightRef.current = false;
+      setAvailability({
+        status: "ready",
+        providers: {
+          ...providersAtStart,
+          [provider]: { provider, available: false, reason: "configuration_required" },
+        },
+      });
+      setConnectStatus("idle");
+      setErrorMessage(null);
+      setActiveProvider(null);
     }
   }
 
@@ -3466,7 +3496,7 @@ function OAuthLoginPage() {
               {availability.status === "ready" && unavailableProviders.length > 0 ? (
                 <div className="oauth-provider-availability" role="status">
                   {unavailableProviders.map((provider) => <p id={`${provider}-unavailable-reason`} key={provider}><strong>{providerDisplayName(provider)} sign-in is unavailable here.</strong> Nothing in Orca or your mail account changed. Ask your Orca administrator to enable it.</p>)}
-                  <button className="oauth-retry-button" onClick={() => void refreshAvailability()} type="button">Check availability again</button>
+                  <button className="oauth-retry-button" disabled={connectStatus === "loading"} onClick={() => void refreshAvailability()} type="button">Check availability again</button>
                 </div>
               ) : null}
             </div>
@@ -3515,7 +3545,7 @@ async function beginProviderAuthorization(
   returnTo: string,
   setStatus: (status: OAuthConnectStatus) => void,
   setError: (message: string | null) => void,
-): Promise<boolean> {
+): Promise<OAuthAuthorizationStartResult> {
   setStatus("loading");
   setError(null);
   try {
@@ -3524,22 +3554,23 @@ async function beginProviderAuthorization(
     const body = await readJsonObject(response);
     if (!response.ok) {
       const code = getNestedErrorCode(body);
+      if (code === "provider_unavailable") {
+        return "provider_unavailable";
+      }
       setStatus("error");
-      setError(code === "provider_unavailable"
-        ? `${providerDisplayName(provider)} sign-in is unavailable here. Nothing in Orca or your mail account changed. Check availability and try again.`
-        : `${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
-      return false;
+      setError(`${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
+      return "failed";
     }
     const authUrl = getStringField(body, "authUrl");
     if (!authUrl) {
       throw new Error("invalid_authorization_response");
     }
     window.location.assign(authUrl);
-    return true;
+    return "started";
   } catch {
     setStatus("error");
     setError(`${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
-    return false;
+    return "failed";
   }
 }
 
