@@ -2585,8 +2585,8 @@ export function InboxApp({
     }
   }
 
-  async function updateSelectedSenderAttention(selectedMessages: InboxMessage[], behavior: AttentionBehavior) {
-    const addresses = [...new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
+  async function updateSelectedSenderAttention(selectedAddresses: readonly string[], behavior: AttentionBehavior) {
+    const addresses = [...new Set(selectedAddresses.map((address) => address.trim().toLowerCase()).filter(Boolean))];
     if (!addresses.length) throw new Error("Select at least one sender");
     const input = { addresses, behavior } satisfies BatchSenderAttentionChange;
     const result = bulkAttentionClient
@@ -4225,7 +4225,7 @@ function InboxView({
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
-  onBulkAttentionChange: (messages: InboxMessage[], behavior: AttentionBehavior) => Promise<SenderAttentionBatchResult>;
+  onBulkAttentionChange: (addresses: readonly string[], behavior: AttentionBehavior) => Promise<SenderAttentionBatchResult>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onFinishLater: (reminder: Reminder) => void;
@@ -4261,20 +4261,17 @@ function InboxView({
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
+  const [selectedTargets, setSelectedTargets] = useState<Map<string, string>>(() => new Map());
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
   const [bulkPendingBehavior, setBulkPendingBehavior] = useState<AttentionBehavior | null>(null);
   const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; addresses: string[] } | null>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
-  const selectedMessages = useMemo(
-    () => messages.filter((message) => selectedMessageIds.has(message.id)),
-    [messages, selectedMessageIds],
-  );
+  const selectedMessageIds = useMemo(() => new Set(selectedTargets.keys()), [selectedTargets]);
   const selectedVisibleMessageCount = displayMessages.filter((message) => selectedMessageIds.has(message.id)).length;
   const selectedSenderCount = useMemo(
-    () => new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase())).size,
-    [selectedMessages],
+    () => new Set(selectedTargets.values()).size,
+    [selectedTargets],
   );
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
@@ -4328,7 +4325,7 @@ function InboxView({
 
   useEffect(() => {
     setSelectionMode(false);
-    setSelectedMessageIds(new Set());
+    setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
   }, [classificationView, personFilter, viewMode]);
@@ -4391,15 +4388,15 @@ function InboxView({
     }
   }
 
-  function toggleSelection(messageId: string) {
+  function toggleSelection(message: InboxMessage) {
     if (bulkAttentionStatus === "saving") return;
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
     setBulkRetry(null);
-    setSelectedMessageIds((current) => {
-      const next = new Set(current);
-      if (next.has(messageId)) next.delete(messageId);
-      else next.add(messageId);
+    setSelectedTargets((current) => {
+      const next = new Map(current);
+      if (next.has(message.id)) next.delete(message.id);
+      else next.set(message.id, message.from.email.trim().toLowerCase());
       return next;
     });
   }
@@ -4407,34 +4404,27 @@ function InboxView({
   function closeSelectionMode() {
     if (bulkAttentionStatus === "saving") return;
     setSelectionMode(false);
-    setSelectedMessageIds(new Set());
+    setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
     setBulkRetry(null);
   }
 
   async function applyBulkAttention(behavior: AttentionBehavior, onlyAddresses?: readonly string[]) {
-    const addressFilter = onlyAddresses ? new Set(onlyAddresses) : null;
-    const attemptedMessages = addressFilter
-      ? selectedMessages.filter((message) => addressFilter.has(message.from.email.trim().toLowerCase()))
-      : selectedMessages;
-    if (!attemptedMessages.length || bulkAttentionStatus === "saving") return;
-    const attemptedAddresses = [...new Set(attemptedMessages.map((message) => message.from.email.trim().toLowerCase()))];
+    const attemptedAddresses = [...new Set(onlyAddresses ?? selectedTargets.values())];
+    if (!attemptedAddresses.length || bulkAttentionStatus === "saving") return;
     const count = attemptedAddresses.length;
     setBulkAttentionStatus("saving");
     setBulkPendingBehavior(behavior);
     setBulkAttentionMessage("");
     setBulkRetry(null);
     try {
-      const result = await onBulkAttentionChange(attemptedMessages, behavior);
+      const result = await onBulkAttentionChange(attemptedAddresses, behavior);
       const succeeded = result.outcomes.filter((outcome) => outcome.status === "succeeded");
       const failed = result.outcomes.filter((outcome) => outcome.status === "failed");
       const succeededAddresses = new Set(succeeded.map((outcome) => outcome.address));
-      const nextSelected = new Set([...selectedMessageIds].filter((id) => {
-        const message = messages.find((candidate) => candidate.id === id);
-        return !message || !succeededAddresses.has(message.from.email.trim().toLowerCase());
-      }));
-      setSelectedMessageIds(nextSelected);
+      const nextSelected = new Map([...selectedTargets].filter(([, address]) => !succeededAddresses.has(address)));
+      setSelectedTargets(nextSelected);
       const retryable = failed.filter((outcome) => outcome.retryable).map((outcome) => outcome.address);
       setBulkRetry(retryable.length ? { behavior, addresses: retryable } : null);
       const destination = behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : behavior === "hidden" ? "Hidden" : behavior === "focus" ? "Focus" : "Notify me";
@@ -4445,13 +4435,15 @@ function InboxView({
       } else {
         setBulkAttentionStatus(succeeded.length ? "partial" : "error");
         const saved = succeeded.length ? `${succeeded.length} ${succeeded.length === 1 ? "sender" : "senders"} moved to ${destination}. ` : "";
-        const retry = retryable.length ? ` ${retryable.length === failed.length ? "They remain" : `${retryable.length} remain`} selected to retry.` : " Review the selected senders before trying again.";
+        const retry = retryable.length
+          ? ` ${retryable.length} ${retryable.length === 1 ? "sender is" : "senders are"} ready to retry.`
+          : " No automatic retry is available.";
         setBulkAttentionMessage(`${saved}${failed.length} ${failed.length === 1 ? "sender" : "senders"} could not be updated.${retry}`);
       }
     } catch (error) {
       setBulkAttentionStatus("error");
       setBulkRetry({ behavior, addresses: attemptedAddresses });
-      setBulkAttentionMessage(`Could not update ${count} ${count === 1 ? "sender" : "senders"}. They remain selected to retry. ${getErrorMessage(error)}`);
+      setBulkAttentionMessage(`Could not update ${count} ${count === 1 ? "sender" : "senders"}. ${count === 1 ? "The sender is" : "The senders are"} ready to retry. ${getErrorMessage(error)}`);
     } finally {
       setBulkPendingBehavior(null);
     }
@@ -4614,10 +4606,10 @@ function InboxView({
             <button
               className="bulk-select-all"
               disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
-              onClick={() => setSelectedMessageIds((current) => {
-                const next = new Set(current);
+              onClick={() => setSelectedTargets((current) => {
+                const next = new Map(current);
                 if (selectedVisibleMessageCount === displayMessages.length) displayMessages.forEach((message) => next.delete(message.id));
-                else displayMessages.forEach((message) => next.add(message.id));
+                else displayMessages.forEach((message) => next.set(message.id, message.from.email.trim().toLowerCase()));
                 return next;
               })}
               type="button"
@@ -4625,9 +4617,9 @@ function InboxView({
               {selectedVisibleMessageCount === displayMessages.length ? "Clear visible" : "Select all visible"}
             </button>
             <div aria-label="Move selected senders" role="group">
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
             </div>
           </section>
         ) : null}
@@ -4705,7 +4697,7 @@ function InboxView({
                       aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
                       disabled={selectionMode && bulkAttentionStatus === "saving"}
-                      onClick={() => selectionMode ? toggleSelection(message.id) : onOpenThread(message)}
+                      onClick={() => selectionMode ? toggleSelection(message) : onOpenThread(message)}
                       ref={(node) => {
                         if (node) rowRefs.current.set(message.id, node);
                         else rowRefs.current.delete(message.id);

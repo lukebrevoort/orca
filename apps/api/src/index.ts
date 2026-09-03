@@ -1220,7 +1220,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
         const result = await applySenderAttentionBatch(input, {
-          apply(address, behavior) {
+          write(address, behavior) {
             const updatedAt = new Date();
             db.insert(senderAttentionRules).values({
               id: `sender-rule:${crypto.randomUUID()}`,
@@ -1234,7 +1234,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
               target: [senderAttentionRules.accountId, senderAttentionRules.scope, senderAttentionRules.value],
               set: { behavior, source: "user_choice", updatedAt },
             }).run();
-            return resolveSenderAttention(db, account.id, address);
           },
           resolve(address) {
             return resolveSenderAttention(db, account.id, address);

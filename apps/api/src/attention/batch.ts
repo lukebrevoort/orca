@@ -7,7 +7,7 @@ import {
 } from "@orca/shared";
 
 export type SenderAttentionBatchAdapter = {
-  apply(address: string, behavior: AttentionBehavior): ResolvedSenderAttention | Promise<ResolvedSenderAttention>;
+  write(address: string, behavior: AttentionBehavior): void | Promise<void>;
   resolve(address: string): ResolvedSenderAttention | null | Promise<ResolvedSenderAttention | null>;
 };
 
@@ -33,35 +33,59 @@ export async function applySenderAttentionBatch(
   const outcomes: SenderAttentionBatchResult["outcomes"] = [];
 
   for (const address of input.addresses) {
+    let writeError: SenderAttentionChangeError | null = null;
     try {
-      outcomes.push({
-        status: "succeeded",
-        address,
-        resolution: await adapter.apply(address, input.behavior),
-      });
+      await adapter.write(address, input.behavior);
     } catch (error) {
-      const expected = error instanceof SenderAttentionChangeError
+      writeError = error instanceof SenderAttentionChangeError
         ? error
         : new SenderAttentionChangeError(
           "temporarily_unavailable",
           "This sender could not be updated right now",
           true,
         );
-      let resolution: ResolvedSenderAttention | null = null;
+    }
+
+    let resolution: ResolvedSenderAttention | null = null;
+    let resolutionFailed = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         resolution = await adapter.resolve(address);
+        resolutionFailed = false;
+        break;
       } catch {
-        // A missing canonical read is explicit in the wire result rather than
-        // being guessed by the client.
+        resolutionFailed = true;
       }
+    }
+
+    // A canonical read is the source of truth even if the write threw after
+    // persistence or the first read failed. Desired canonical state is success.
+    if (resolution?.behavior === input.behavior) {
+      outcomes.push({ status: "succeeded", address, resolution });
+      continue;
+    }
+
+    if (writeError) {
       outcomes.push({
         status: "failed",
         address,
-        retryable: expected.retryable,
-        error: { code: expected.code, message: expected.message },
+        retryable: writeError.retryable,
+        error: { code: writeError.code, message: writeError.message },
         resolution,
       });
+      continue;
     }
+
+    const unresolved = resolutionFailed || !resolution;
+    outcomes.push({
+      status: "failed",
+      address,
+      retryable: unresolved,
+      error: unresolved
+        ? { code: "temporarily_unavailable", message: "The saved sender state could not be verified right now" }
+        : { code: "conflict", message: "The saved sender state did not match the requested behavior" },
+      resolution,
+    });
   }
 
   return senderAttentionBatchResultSchema.parse({ behavior: input.behavior, outcomes });

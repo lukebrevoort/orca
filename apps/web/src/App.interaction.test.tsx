@@ -1367,7 +1367,7 @@ describe("Pin navigation and bulk sender actions", () => {
     const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
     await act(async () => { quiet.click(); await Promise.resolve(); });
 
-    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toContain("1 sender moved to Quiet. 1 sender could not be updated. They remain selected to retry.");
+    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toContain("1 sender moved to Quiet. 1 sender could not be updated. 1 sender is ready to retry.");
     expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
     expect(buttonByName("Deselect Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("true");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
@@ -1377,6 +1377,40 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(requestCount).toBe(2);
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
     expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
+  });
+
+  test("retries a retryable sender by address after its canonical state removes the row", async () => {
+    const requests: string[][] = [];
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ addresses, behavior }) => {
+      requests.push([...addresses]);
+      return requests.length === 1
+        ? {
+          behavior,
+          outcomes: [{
+            status: "failed",
+            address: "jordan@example.com",
+            retryable: true,
+            error: { code: "temporarily_unavailable", message: "Retry the canonical write" },
+            resolution: { behavior: "hidden", rule: null },
+          }],
+        }
+        : {
+          behavior,
+          outcomes: [{ status: "succeeded", address: "jordan@example.com", resolution: { behavior, rule: null } }],
+        };
+    };
+    await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
+    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button').values()].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+    await act(async () => { quiet.click(); await Promise.resolve(); });
+
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Jordan Bell"))).toBe(false);
+    const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
+    await act(async () => { retry.click(); await Promise.resolve(); });
+
+    expect(requests).toEqual([["jordan@example.com"], ["jordan@example.com"]]);
+    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
   });
 
   test("disables every duplicate bulk submission path while saving", async () => {
