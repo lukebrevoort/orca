@@ -12,8 +12,12 @@ import {
   type InboxClassificationResponse,
   type InboxMessage,
   type MailAccount,
+  type MailCapabilities,
   type MailProvider,
 } from "@orca/shared";
+
+import { detectGmailCapabilities } from "../auth/gmail/capabilities.ts";
+import { detectOutlookCapabilities } from "../auth/outlook/capabilities.ts";
 
 export const mailboxReadTargets = Object.freeze({
   // Ticket evidence measured 1.8s at 1k and 6.8–8.8s at 5k. These gates
@@ -23,11 +27,9 @@ export const mailboxReadTargets = Object.freeze({
   focusToFreshP95Ms: Object.freeze({ 1_000: 500, 5_000: 750 }),
 });
 
-export type MailboxReadAccount = {
-  id: string;
-  provider: MailProvider;
-  lastSyncedAt: Date | null;
-  serialized: MailAccount;
+export type MailboxReadAuthorization = {
+  userId: string;
+  accountIds?: readonly string[];
 };
 
 export type MailboxReadQuery = {
@@ -54,10 +56,13 @@ export type MailboxReadMetric = {
   lookaheadRowsProjected: number;
   labelAssociationRowsLoaded: number;
   effectiveOverridesProjected: number;
+  accountPageQueries: number;
+  maxPageRowsBound: number;
   revision: string;
 };
 
 export type MailboxPageQueryPlan = {
+  accountId: string;
   behavior: AttentionBehavior;
   details: string[];
 };
@@ -78,10 +83,30 @@ export class MailboxCursorError extends Error {
   }
 }
 
+export class MailboxScopeError extends Error {
+  readonly code = "no_accounts" as const;
+
+  constructor(message = "No authorized mail account is connected") {
+    super(message);
+    this.name = "MailboxScopeError";
+  }
+}
+
 type MailboxReaderOptions = {
   clock?: () => number;
+  capabilitiesFor?: (provider: MailProvider, scopes: string | null) => MailCapabilities;
   observe?: (metric: MailboxReadMetric) => void;
   observePageQueryPlan?: (plan: MailboxPageQueryPlan) => void;
+};
+
+type RawMailboxAccount = {
+  id: string;
+  provider: MailProvider;
+  provider_email: string;
+  profile_image_url: string | null;
+  scope: string | null;
+  last_synced_at: number | null;
+  display_name: string | null;
 };
 
 type RawMailboxMessage = {
@@ -190,18 +215,19 @@ const effectiveOverrideSql = {
  */
 export function createMailboxReader(sqlite: Database, options: MailboxReaderOptions = {}) {
   const clock = options.clock ?? (() => performance.now());
+  const capabilitiesFor = options.capabilitiesFor ?? defaultCapabilitiesFor;
 
   return {
-    read(input: { accounts: MailboxReadAccount[]; query: MailboxReadQuery }): MailboxReadResult {
-      // Pin revision, counts, page, and enrichment to one SQLite snapshot so a
-      // concurrent writer cannot produce a response paired with an older token.
+    read(input: { authorization: MailboxReadAuthorization; query: MailboxReadQuery }): MailboxReadResult {
+      // Account metadata, revision, counts, page, and enrichment share one
+      // SQLite snapshot. Callers provide only stable authorization context, so
+      // no mutable response field can be paired with a newer revision.
       return sqlite.transaction(() => {
       const startedAt = clock();
-      // Preserve the Account ordering chosen by the authenticated adapter; it
-      // is user-visible metadata and was part of the existing inbox contract.
-      const accounts = [...input.accounts];
-      const accountIds = accounts.map((account) => account.id);
-      if (accountIds.length === 0) throw new Error("Mailbox reads require at least one authorized account");
+      const accountRows = readMailboxAccounts(sqlite, input.authorization);
+      if (accountRows.length === 0) throw new MailboxScopeError();
+      const accounts = accountRows.map((account) => serializeMailboxAccount(account, capabilitiesFor));
+      const accountIds = accountRows.map((account) => account.id);
 
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
@@ -235,63 +261,67 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const pageStartedAt = clock();
       const requestedRows = input.query.limit + 1;
       const pageRows: RawMailboxMessage[] = [];
+      let pageRowsProjected = 0;
+      let accountPageQueries = 0;
       for (const behavior of behaviorsForView(input.query.view)) {
         if (pageRows.length >= requestedRows) break;
         const rank = attentionRank[behavior];
         if (cursor && rank < cursor.attentionRank) continue;
         const remaining = requestedRows - pageRows.length;
-        const keyset = cursor && rank === cursor.attentionRank
-          ? {
-              sql: `and (
-                coalesce(e.received_at, 0) < ? or
-                (coalesce(e.received_at, 0) = ? and e.account_id > ?) or
-                (coalesce(e.received_at, 0) = ? and e.account_id = ? and e.id > ?)
-              )`,
-              params: [cursor.receivedAt, cursor.receivedAt, cursor.accountId, cursor.receivedAt, cursor.accountId, cursor.id],
-            }
-          : { sql: "", params: [] as Array<string | number | null> };
         const classificationPredicate = classificationWhere(classification);
-        const pageSql = `
-          select
-            e.id, e.account_id, e.provider_message_id, e.thread_id,
-            e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
-            e.is_read, e.human_signal, e.human_classification,
-            e.human_classification_reasons, e.human_classifier_version,
-            ${attentionSql} as attention_behavior,
-            ${effectiveOverrideSql.id} as override_id,
-            ${effectiveOverrideSql.accountId} as override_account_id,
-            ${effectiveOverrideSql.targetType} as override_target_type,
-            ${effectiveOverrideSql.targetValue} as override_target_value,
-            ${effectiveOverrideSql.classification} as override_classification,
-            ${effectiveOverrideSql.source} as override_source,
-            ${effectiveOverrideSql.createdAt} as override_created_at,
-            ${effectiveOverrideSql.updatedAt} as override_updated_at
-          from emails e
-          ${resolvedJoinsSql}
-          where ${base.sql}
-            and ${attentionSql} = ?
-            and ${classificationPredicate}
-            ${keyset.sql}
-          order by coalesce(e.received_at, 0) desc, e.account_id asc, e.id asc
-          limit ?`;
-        const pageParams = [...base.params, behavior, ...keyset.params, remaining];
-        if (options.observePageQueryPlan) {
-          options.observePageQueryPlan({
-            behavior,
-            details: queryAll<RawQueryPlanRow>(sqlite, `explain query plan ${pageSql}`, pageParams).map((row) => row.detail),
-          });
+        const accountRowsForBehavior: RawMailboxMessage[][] = [];
+        for (const accountId of accountIds) {
+          const accountBase = buildAccountBaseWhere(accountId, input.query);
+          const keyset = pageKeyset(cursor, rank, accountId);
+          const pageSql = `
+            select
+              e.id, e.account_id, e.provider_message_id, e.thread_id,
+              e.from_address, e.from_name, e.subject, e.snippet, e.received_at,
+              e.is_read, e.human_signal, e.human_classification,
+              e.human_classification_reasons, e.human_classifier_version,
+              ${attentionSql} as attention_behavior,
+              ${effectiveOverrideSql.id} as override_id,
+              ${effectiveOverrideSql.accountId} as override_account_id,
+              ${effectiveOverrideSql.targetType} as override_target_type,
+              ${effectiveOverrideSql.targetValue} as override_target_value,
+              ${effectiveOverrideSql.classification} as override_classification,
+              ${effectiveOverrideSql.source} as override_source,
+              ${effectiveOverrideSql.createdAt} as override_created_at,
+              ${effectiveOverrideSql.updatedAt} as override_updated_at
+            from emails e
+            ${resolvedJoinsSql}
+            where ${accountBase.sql}
+              and ${attentionSql} = ?
+              and ${classificationPredicate}
+              ${keyset.sql}
+            order by coalesce(e.received_at, 0) desc, e.id asc
+            limit ?`;
+          const pageParams = [...accountBase.params, behavior, ...keyset.params, remaining];
+          if (options.observePageQueryPlan) {
+            options.observePageQueryPlan({
+              accountId,
+              behavior,
+              details: queryAll<RawQueryPlanRow>(sqlite, `explain query plan ${pageSql}`, pageParams).map((row) => row.detail),
+            });
+          }
+          const rows = queryAll<RawMailboxMessage>(sqlite, pageSql, pageParams);
+          accountPageQueries += 1;
+          pageRowsProjected += rows.length;
+          accountRowsForBehavior.push(rows);
         }
-        const rows = queryAll<RawMailboxMessage>(sqlite, pageSql, pageParams);
-        pageRows.push(...rows);
+        pageRows.push(...mergeAccountPages(accountRowsForBehavior, remaining));
+      }
+      const maxPageRowsBound = accountIds.length * requestedRows;
+      if (pageRowsProjected > maxPageRowsBound) {
+        throw new Error(`Mailbox page projection exceeded its bound (${pageRowsProjected} > ${maxPageRowsBound})`);
       }
       const hasNextPage = pageRows.length > input.query.limit;
-      const fetchedPageRowCount = pageRows.length;
       if (hasNextPage) pageRows.length = input.query.limit;
       const pageDurationMs = clock() - pageStartedAt;
 
       const enrichmentStartedAt = clock();
       const labels = readLabels(sqlite, pageRows.map((row) => row.id));
-      const accountById = new Map(accounts.map((account) => [account.id, account]));
+      const accountById = new Map(accountRows.map((account) => [account.id, account]));
       const messages = pageRows.map((row): InboxMessage => {
         const account = accountById.get(row.account_id);
         if (!account) throw new Error("A mailbox row escaped its authorized Account scope");
@@ -316,7 +346,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       const enrichmentDurationMs = clock() - enrichmentStartedAt;
       const last = pageRows.at(-1);
       const response: MailboxReadResult["response"] = {
-        accounts: accounts.map((account) => account.serialized),
+        accounts,
         messages,
         counts: {
           attention: {
@@ -336,7 +366,7 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         },
         freshness: {
           revision,
-          lastSyncedAt: mailboxFreshAt(accounts),
+          lastSyncedAt: mailboxFreshAt(accountRows),
         },
         nextCursor: hasNextPage && last
           ? encodeCursor({
@@ -358,14 +388,16 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
         countDurationMs,
         pageDurationMs,
         enrichmentDurationMs,
-        accountCount: accounts.length,
+        accountCount: accountRows.length,
         limit: input.query.limit,
         returnedMessages: messages.length,
         aggregateRowsReturned: countRows.length,
-        pageRowsProjected: fetchedPageRowCount,
+        pageRowsProjected,
         lookaheadRowsProjected: hasNextPage ? 1 : 0,
         labelAssociationRowsLoaded: labels.rowCount,
         effectiveOverridesProjected: pageRows.reduce((total, row) => total + (row.override_id ? 1 : 0), 0),
+        accountPageQueries,
+        maxPageRowsBound,
         revision,
       };
       options.observe?.(metric);
@@ -375,9 +407,113 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
   };
 }
 
+function readMailboxAccounts(sqlite: Database, authorization: MailboxReadAuthorization): RawMailboxAccount[] {
+  if (authorization.accountIds !== undefined && authorization.accountIds.length === 0) return [];
+  const accountFilter = authorization.accountIds === undefined
+    ? { sql: "", params: [] as string[] }
+    : {
+        sql: `and a.id in (${placeholders(authorization.accountIds.length)})`,
+        params: [...authorization.accountIds],
+      };
+  return queryAll<RawMailboxAccount>(sqlite, `
+    select
+      a.id,
+      a.provider,
+      a.provider_email,
+      a.profile_image_url,
+      a.scope,
+      a.last_synced_at,
+      u.display_name
+    from oauth_accounts a
+    inner join users u on u.id = a.user_id
+    where a.user_id = ?
+      ${accountFilter.sql}
+    order by a.created_at asc, a.id asc`, [authorization.userId, ...accountFilter.params]);
+}
+
+function serializeMailboxAccount(
+  account: RawMailboxAccount,
+  capabilitiesFor: NonNullable<MailboxReaderOptions["capabilitiesFor"]>,
+): MailAccount {
+  return {
+    id: account.id,
+    provider: account.provider,
+    email: account.provider_email,
+    displayName: account.display_name ?? account.provider_email.split("@")[0] ?? account.provider_email,
+    ...(account.profile_image_url ? { avatarUrl: `/v1/accounts/${encodeURIComponent(account.id)}/avatar` } : {}),
+    capabilities: capabilitiesFor(account.provider, account.scope),
+  };
+}
+
+function defaultCapabilitiesFor(provider: MailProvider, scopes: string | null) {
+  return provider === "gmail" ? detectGmailCapabilities(scopes) : detectOutlookCapabilities(scopes);
+}
+
+function pageKeyset(cursor: InboxCursor | null, rank: number, accountId: string) {
+  if (!cursor || rank !== cursor.attentionRank) return { sql: "", params: [] as Array<string | number | null> };
+  if (accountId < cursor.accountId) {
+    return { sql: "and coalesce(e.received_at, 0) < ?", params: [cursor.receivedAt] };
+  }
+  if (accountId > cursor.accountId) {
+    return { sql: "and coalesce(e.received_at, 0) <= ?", params: [cursor.receivedAt] };
+  }
+  return {
+    sql: `and (
+      coalesce(e.received_at, 0) < ? or
+      (coalesce(e.received_at, 0) = ? and e.id > ?)
+    )`,
+    params: [cursor.receivedAt, cursor.receivedAt, cursor.id],
+  };
+}
+
+function mergeAccountPages(pages: RawMailboxMessage[][], limit: number) {
+  const offsets = pages.map(() => 0);
+  const merged: RawMailboxMessage[] = [];
+  while (merged.length < limit) {
+    let selectedPage = -1;
+    let selected: RawMailboxMessage | undefined;
+    for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+      const candidate = pages[pageIndex]?.[offsets[pageIndex] ?? 0];
+      if (candidate && (!selected || compareMailboxRows(candidate, selected) < 0)) {
+        selected = candidate;
+        selectedPage = pageIndex;
+      }
+    }
+    if (!selected || selectedPage < 0) break;
+    merged.push(selected);
+    offsets[selectedPage] = (offsets[selectedPage] ?? 0) + 1;
+  }
+  return merged;
+}
+
+function compareMailboxRows(left: RawMailboxMessage, right: RawMailboxMessage) {
+  const leftReceivedAt = left.received_at ?? 0;
+  const rightReceivedAt = right.received_at ?? 0;
+  if (leftReceivedAt !== rightReceivedAt) return rightReceivedAt - leftReceivedAt;
+  if (left.account_id !== right.account_id) return left.account_id < right.account_id ? -1 : 1;
+  if (left.id === right.id) return 0;
+  return left.id < right.id ? -1 : 1;
+}
+
 function buildBaseWhere(accountIds: string[], query: MailboxReadQuery) {
   const clauses = [`e.account_id in (${placeholders(accountIds.length)})`];
   const params: Array<string | number | null> = [...accountIds];
+  addMailboxFilters(clauses, params, query);
+  return { sql: clauses.join(" and "), params };
+}
+
+function buildAccountBaseWhere(accountId: string, query: MailboxReadQuery) {
+  const clauses = ["e.account_id = ?"];
+  const params: Array<string | number | null> = [accountId];
+  addMailboxFilters(clauses, params, query);
+  return { sql: clauses.join(" and "), params };
+}
+
+function addMailboxFilters(
+  clauses: string[],
+  params: Array<string | number | null>,
+  query: MailboxReadQuery,
+) {
   if (query.query?.trim()) {
     clauses.push(`lower(coalesce(e.from_name, '') || char(10) || coalesce(e.from_address, '') || char(10) || coalesce(e.subject, '') || char(10) || coalesce(e.snippet, '')) like ? escape '\\'`);
     params.push(`%${escapeLike(query.query.trim().toLocaleLowerCase())}%`);
@@ -394,7 +530,6 @@ function buildBaseWhere(accountIds: string[], query: MailboxReadQuery) {
     clauses.push("coalesce(e.received_at, 0) <= ?");
     params.push(Date.parse(query.receivedBefore));
   }
-  return { sql: clauses.join(" and "), params };
 }
 
 function classificationWhere(classification: MailboxReadQuery["classification"] | "all") {
@@ -426,9 +561,9 @@ function mailboxRevision(sqlite: Database, accountIds: string[]) {
   return `mailbox-v2:${digest}`;
 }
 
-function mailboxFreshAt(accounts: MailboxReadAccount[]) {
-  if (accounts.some((account) => account.lastSyncedAt === null)) return null;
-  const oldest = Math.min(...accounts.map((account) => account.lastSyncedAt!.getTime()));
+function mailboxFreshAt(accounts: RawMailboxAccount[]) {
+  if (accounts.some((account) => account.last_synced_at === null)) return null;
+  const oldest = Math.min(...accounts.map((account) => account.last_synced_at!));
   return new Date(oldest).toISOString();
 }
 

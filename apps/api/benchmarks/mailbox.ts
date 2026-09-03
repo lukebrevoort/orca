@@ -10,11 +10,11 @@ import { createSession } from "../src/auth/session-store.ts";
 import { createDatabaseClient } from "../src/db/client.ts";
 import { emailLabels, humanClassificationOverrides, labels, oauthAccounts, senderAttentionRules, users } from "../src/db/schema.ts";
 import { createApp } from "../src/index.ts";
-import { createMailboxReader, mailboxReadTargets, type MailboxPageQueryPlan, type MailboxReadAccount, type MailboxReadMetric } from "../src/mailbox/read.ts";
+import { createMailboxReader, mailboxReadTargets, type MailboxPageQueryPlan, type MailboxReadMetric } from "../src/mailbox/read.ts";
 
 const SAMPLE_COUNT = Number(Bun.env.MAILBOX_BENCH_SAMPLES ?? 30);
 const WARMUP_COUNT = Number(Bun.env.MAILBOX_BENCH_WARMUPS ?? 5);
-const FIXTURE_SEED = "BRE-367-v2-high-association";
+const FIXTURE_SEED = "BRE-367-v3-two-account-high-association";
 const FIXTURE_SIZES = [1_000, 5_000] as const;
 const baseTime = Date.parse("2026-09-02T12:00:00.000Z");
 process.env.SESSION_SECRET = "BRE-367-benchmark-session-secret-with-32-bytes";
@@ -28,14 +28,16 @@ type DatasetResult = {
   fixtureMessages: number;
   samples: number;
   pageSize: number;
+  accountCount: number;
   firstPageP95Ms: number;
   firstPageTargetMs: number;
   focusToFreshP95Ms: number;
   focusToFreshTargetMs: number;
   maxPageRowsProjected: number;
+  maxPageRowsBound: number;
   maxLabelAssociationRowsLoaded: number;
   maxEffectiveOverridesProjected: number;
-  queryPlan: string[];
+  queryPlans: MailboxPageQueryPlan[];
   focusHttpRequests: { status: number; sync: number; inbox: number; total: number };
   coalescedTriggers: number;
   hiddenTriggerRequests: number;
@@ -51,75 +53,80 @@ async function createFixture(messageCount: number) {
   const client = createDatabaseClient(dbPath);
   migrate(client.db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
   client.db.insert(users).values({ id: "user", email: "benchmark@example.com", displayName: "Benchmark" }).run();
-  client.db.insert(oauthAccounts).values({
-    id: "account",
+  const accountIds = ["account-a", "account-b"] as const;
+  client.db.insert(oauthAccounts).values(accountIds.map((accountId, index) => ({
+    id: accountId,
     userId: "user",
-    provider: "gmail",
-    providerEmail: "benchmark@example.com",
-    providerId: "gmail-benchmark",
-    syncHistoryId: `history-${messageCount}`,
-    lastSyncedAt: new Date(baseTime),
-    createdAt: new Date(baseTime),
+    provider: "gmail" as const,
+    providerEmail: `benchmark-${index + 1}@example.com`,
+    providerId: `gmail-benchmark-${index + 1}`,
+    syncHistoryId: `history-${messageCount}-${index + 1}`,
+    // The primary account is the deterministic sync target. Keeping the
+    // second account ahead makes aggregate freshness advance with that sync.
+    lastSyncedAt: new Date(baseTime + index * 3_600_000),
+    createdAt: new Date(baseTime + index),
     updatedAt: new Date(baseTime),
-  }).run();
+  }))).run();
   const behaviors = ["notify", "focus", "normal", "quiet", "hidden"] as const;
-  client.db.insert(senderAttentionRules).values(behaviors.map((behavior, index) => ({
-    id: `rule-${behavior}`,
-    accountId: "account",
+  client.db.insert(senderAttentionRules).values(accountIds.flatMap((accountId) => behaviors.map((behavior, index) => ({
+    id: `${accountId}-rule-${behavior}`,
+    accountId,
     scope: "domain",
     value: `group-${index}.example`,
     behavior,
     source: "user_choice",
     createdAt: new Date(baseTime),
     updatedAt: new Date(baseTime),
-  }))).run();
+  })))).run();
   const fixtureLabels = ["benchmark-one", "benchmark-two", "benchmark-three"];
-  client.db.insert(labels).values(fixtureLabels.map((name) => ({
-    id: `label-${name}`,
-    accountId: "account",
+  client.db.insert(labels).values(accountIds.flatMap((accountId) => fixtureLabels.map((name) => ({
+    id: `${accountId}-label-${name}`,
+    accountId,
     providerLabelId: name.toUpperCase(),
     name,
     type: "user",
     createdAt: new Date(baseTime),
     updatedAt: new Date(baseTime),
-  }))).run();
-  client.db.insert(humanClassificationOverrides).values(behaviors.map((_, index) => ({
-    id: `override-domain-${index}`,
-    accountId: "account",
+  })))).run();
+  client.db.insert(humanClassificationOverrides).values(accountIds.flatMap((accountId) => behaviors.map((_, index) => ({
+    id: `${accountId}-override-domain-${index}`,
+    accountId,
     targetType: "sender_domain",
     targetValue: `group-${index}.example`,
     classification: "automated_or_bulk",
     source: "user_choice",
     createdAt: new Date(baseTime),
     updatedAt: new Date(baseTime),
-  }))).run();
+  })))).run();
 
   const insertThread = client.sqlite.prepare(`
     insert into threads (
       id, account_id, provider_thread_id, subject, latest_received_at,
       message_count, is_read, created_at, updated_at
-    ) values (?, 'account', ?, ?, ?, 1, ?, ?, ?)`);
+    ) values (?, ?, ?, ?, ?, 1, ?, ?, ?)`);
   const insertEmail = client.sqlite.prepare(`
     insert into emails (
       id, account_id, thread_id, provider_message_id, from_address, from_name,
       subject, snippet, received_at, is_read, human_signal, human_classification,
       human_classification_reasons, human_classifier_version, created_at, updated_at
-    ) values (?, 'account', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'benchmark-v1', ?, ?)`);
+    ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'benchmark-v1', ?, ?)`);
   const insertEmailLabel = client.sqlite.prepare(`
     insert into email_labels (id, email_id, label_id, created_at)
     values (?, ?, ?, ?)`);
   const insertOverride = client.sqlite.prepare(`
     insert into human_classification_overrides (
       id, account_id, target_type, target_value, classification, source, created_at, updated_at
-    ) values (?, 'account', ?, ?, ?, 'user_choice', ?, ?)`);
+    ) values (?, ?, ?, ?, ?, 'user_choice', ?, ?)`);
   client.sqlite.transaction(() => {
     for (let index = 0; index < messageCount; index += 1) {
       const suffix = index.toString().padStart(5, "0");
+      const accountId = accountIds[index % accountIds.length]!;
       const timestamp = baseTime - index * 1_000;
       const isHuman = index % 3 !== 0;
-      insertThread.run(`thread-${suffix}`, `provider-thread-${index}`, `Subject ${index}`, timestamp, index % 2, timestamp, baseTime);
+      insertThread.run(`thread-${suffix}`, accountId, `provider-thread-${index}`, `Subject ${index}`, timestamp, index % 2, timestamp, baseTime);
       insertEmail.run(
         `message-${suffix}`,
+        accountId,
         `thread-${suffix}`,
         `provider-message-${index}`,
         `sender-${index}@group-${index % behaviors.length}.example`,
@@ -135,25 +142,13 @@ async function createFixture(messageCount: number) {
         baseTime,
       );
       for (const name of fixtureLabels) {
-        insertEmailLabel.run(`email-label-${suffix}-${name}`, `message-${suffix}`, `label-${name}`, baseTime);
+        insertEmailLabel.run(`email-label-${suffix}-${name}`, `message-${suffix}`, `${accountId}-label-${name}`, baseTime);
       }
-      insertOverride.run(`override-address-${suffix}`, "sender_address", `sender-${index}@group-${index % behaviors.length}.example`, "likely_human", baseTime, baseTime);
-      insertOverride.run(`override-message-${suffix}`, "message", `message-${suffix}`, "uncertain", baseTime, baseTime);
+      insertOverride.run(`override-address-${suffix}`, accountId, "sender_address", `sender-${index}@group-${index % behaviors.length}.example`, "likely_human", baseTime, baseTime);
+      insertOverride.run(`override-message-${suffix}`, accountId, "message", `message-${suffix}`, "uncertain", baseTime, baseTime);
     }
   })();
 
-  const account: MailboxReadAccount = {
-    id: "account",
-    provider: "gmail",
-    lastSyncedAt: new Date(baseTime),
-    serialized: {
-      id: "account",
-      provider: "gmail",
-      email: "benchmark@example.com",
-      displayName: "Benchmark",
-      capabilities: { read: true, draft: false, send: false },
-    },
-  };
   const session = await createSession(client.db, "user");
   let syncTick = 0;
   const mailboxMetrics: MailboxReadMetric[] = [];
@@ -179,7 +174,7 @@ async function createFixture(messageCount: number) {
       };
     },
   });
-  return { ...client, account, app, authHeaders: { cookie: `orca_session=${session.token}` }, mailboxMetrics, directory };
+  return { ...client, authorization: { userId: "user", accountIds }, app, authHeaders: { cookie: `orca_session=${session.token}` }, mailboxMetrics, directory };
 }
 
 function percentile95(values: number[]) {
@@ -196,7 +191,7 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
   try {
     const plans: MailboxPageQueryPlan[] = [];
     createMailboxReader(fixture.sqlite, { observePageQueryPlan: (plan) => plans.push(plan) }).read({
-      accounts: [fixture.account],
+      authorization: fixture.authorization,
       query: { view: "all", classification: "all", limit: 100 },
     });
     const inboxPath = "/v1/inbox?view=all&classification=all&limit=100";
@@ -268,9 +263,9 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
     const firstPageTargetMs = mailboxReadTargets.firstPageP95Ms[messageCount];
     const focusToFreshTargetMs = mailboxReadTargets.focusToFreshP95Ms[messageCount];
     const maxPageRowsProjected = Math.max(...fixture.mailboxMetrics.map((metric) => metric.pageRowsProjected));
+    const maxPageRowsBound = Math.max(...fixture.mailboxMetrics.map((metric) => metric.maxPageRowsBound));
     const maxLabelAssociationRowsLoaded = Math.max(...fixture.mailboxMetrics.map((metric) => metric.labelAssociationRowsLoaded));
     const maxEffectiveOverridesProjected = Math.max(...fixture.mailboxMetrics.map((metric) => metric.effectiveOverridesProjected));
-    const queryPlan = [...new Set(plans.flatMap((plan) => plan.details))];
     const focusHttpRequests = {
       ...focusRequests,
       total: focusRequests.status + focusRequests.sync + focusRequests.inbox,
@@ -281,14 +276,16 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
       fixtureMessages: messageCount,
       samples: SAMPLE_COUNT,
       pageSize: 100,
+      accountCount: fixture.authorization.accountIds.length,
       firstPageP95Ms,
       firstPageTargetMs,
       focusToFreshP95Ms,
       focusToFreshTargetMs,
       maxPageRowsProjected,
+      maxPageRowsBound,
       maxLabelAssociationRowsLoaded,
       maxEffectiveOverridesProjected,
-      queryPlan,
+      queryPlans: plans,
       focusHttpRequests,
       coalescedTriggers,
       hiddenTriggerRequests,
@@ -297,8 +294,11 @@ async function benchmarkDataset(messageCount: (typeof FIXTURE_SIZES)[number]): P
       focusToFreshSamplesMs: focusToFreshSamples.map(rounded),
       passed: firstPageP95Ms <= firstPageTargetMs
         && focusToFreshP95Ms <= focusToFreshTargetMs
-        && maxPageRowsProjected <= 101
-        && queryPlan.some((detail) => detail.includes("emails_mailbox_account_page_idx"))
+        && maxPageRowsProjected <= maxPageRowsBound
+        && maxPageRowsBound === fixture.authorization.accountIds.length * 101
+        && new Set(plans.map((plan) => plan.accountId)).size === fixture.authorization.accountIds.length
+        && plans.every((plan) => plan.details.some((detail) => detail.includes("emails_mailbox_account_page_idx")))
+        && plans.every((plan) => plan.details.every((detail) => !detail.includes("USE TEMP B-TREE FOR ORDER BY")))
         && focusMetrics.length === SAMPLE_COUNT
         && focusRequests.status === SAMPLE_COUNT * 2
         && focusRequests.sync === SAMPLE_COUNT

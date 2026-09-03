@@ -143,7 +143,7 @@ import { registerOrganizationContextRoutes } from "./organization/contexts/route
 import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
 import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
-import { createMailboxReader, MailboxCursorError, type MailboxReadAccount, type MailboxReadMetric } from "./mailbox/read.ts";
+import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxReadMetric } from "./mailbox/read.ts";
 import { createOrganizationViews } from "./organization/views/module.ts";
 import { createSqliteOrganizationViewsRepository } from "./organization/views/sqlite-repository.ts";
 import { createRuleRevisionService } from "./organization/rules/service.ts";
@@ -226,12 +226,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     ...(account.profileImageUrl ? { avatarUrl: `/v1/accounts/${encodeURIComponent(account.id)}/avatar` } : {}),
     capabilities: providerFor(account).detectCapabilities(account.scope),
   });
-  const mailboxReadAccounts = (accounts: ConnectedAccount[]): MailboxReadAccount[] => accounts.map((account) => ({
-    id: account.id,
-    provider: account.provider,
-    lastSyncedAt: account.lastSyncedAt,
-    serialized: serializeMailAccount(account),
-  }));
+  const mailboxCapabilitiesFor = (provider: MailProvider, scope: string | null) => providerRegistry.get(provider).detectCapabilities(scope);
   const transportFor = (account: ConnectedAccount) => {
     if (account.provider === "gmail" && options.gmailTransport) return options.gmailTransport;
     const existing = providerTransports.get(account.provider);
@@ -565,14 +560,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       } finally { sqlite.close(); }
     },
     searchMail({ userId, allowedAccountIds, query }) {
-      const { db, sqlite } = dbFactory();
+      const { sqlite } = dbFactory();
       try {
-        const allowed = new Set(allowedAccountIds);
-        const accounts = getUnifiedInboxAccounts(db, userId).filter((account) => allowed.has(account.id));
-        if (accounts.length === 0) throw new McpReadError("account_denied", "No authorized mail account is connected");
         try {
-          return createMailboxReader(sqlite, { observe: options.mailboxReadObserver }).read({
-            accounts: mailboxReadAccounts(accounts),
+          return createMailboxReader(sqlite, {
+            capabilitiesFor: mailboxCapabilitiesFor,
+            observe: options.mailboxReadObserver,
+          }).read({
+            authorization: { userId, accountIds: allowedAccountIds },
             query: {
               cursor: query.cursor,
               limit: query.limit ?? 25,
@@ -586,6 +581,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           }).response;
         } catch (error) {
           if (error instanceof MailboxCursorError) throw new McpReadError("invalid_cursor", error.message);
+          if (error instanceof MailboxScopeError) throw new McpReadError("account_denied", error.message);
           throw error;
         }
       } finally {
@@ -2206,15 +2202,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     (c) => {
       const { cursor, limit = defaultInboxLimit, view, classification } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
-      const { db, sqlite } = dbFactory();
+      const { sqlite } = dbFactory();
       try {
-        const accounts = getUnifiedInboxAccounts(db, c.get("auth").userId);
-        if (accounts.length === 0) {
-          return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
-        }
         try {
-          const { response: result, metric } = createMailboxReader(sqlite, { observe: options.mailboxReadObserver }).read({
-            accounts: mailboxReadAccounts(accounts),
+          const { response: result, metric } = createMailboxReader(sqlite, {
+            capabilitiesFor: mailboxCapabilitiesFor,
+            observe: options.mailboxReadObserver,
+          }).read({
+            authorization: { userId: c.get("auth").userId },
             query: { cursor, limit, view, classification },
           });
           c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
@@ -2226,6 +2221,9 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         } catch (error) {
           if (error instanceof MailboxCursorError) {
             return c.json({ error: { code: error.code, message: error.message } }, 400);
+          }
+          if (error instanceof MailboxScopeError) {
+            return c.json({ error: { code: "not_found", message: error.message } }, 404);
           }
           throw error;
         }
