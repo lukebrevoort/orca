@@ -613,6 +613,47 @@ export const resolvedSenderAttentionSchema = z.object({
 }).strict();
 export type ResolvedSenderAttention = z.infer<typeof resolvedSenderAttentionSchema>;
 
+const senderAddressSchema = z.string().trim().email().max(320).transform((value) => value.toLowerCase());
+
+export const batchSenderAttentionChangeSchema = z.object({
+  addresses: z.array(senderAddressSchema).min(1).max(100),
+  behavior: attentionBehaviorSchema,
+}).strict().superRefine((input, context) => {
+  const seen = new Set<string>();
+  input.addresses.forEach((address, index) => {
+    if (seen.has(address)) {
+      context.addIssue({ code: "custom", path: ["addresses", index], message: "Sender addresses must be unique" });
+    }
+    seen.add(address);
+  });
+});
+export type BatchSenderAttentionChange = z.infer<typeof batchSenderAttentionChangeSchema>;
+
+export const senderAttentionBatchOutcomeSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("succeeded"),
+    address: senderAddressSchema,
+    resolution: resolvedSenderAttentionSchema,
+  }).strict(),
+  z.object({
+    status: z.literal("failed"),
+    address: senderAddressSchema,
+    retryable: z.boolean(),
+    error: z.object({
+      code: z.enum(["conflict", "temporarily_unavailable", "validation_error"]),
+      message: z.string().trim().min(1).max(240),
+    }).strict(),
+    resolution: resolvedSenderAttentionSchema.nullable(),
+  }).strict(),
+]);
+export type SenderAttentionBatchOutcome = z.infer<typeof senderAttentionBatchOutcomeSchema>;
+
+export const senderAttentionBatchResultSchema = z.object({
+  behavior: attentionBehaviorSchema,
+  outcomes: z.array(senderAttentionBatchOutcomeSchema).min(1).max(100),
+}).strict();
+export type SenderAttentionBatchResult = z.infer<typeof senderAttentionBatchResultSchema>;
+
 export const attentionViewSettingSchema = z.object({
   behavior: attentionBehaviorSchema,
   displayName: z.string().trim().min(1).max(80),

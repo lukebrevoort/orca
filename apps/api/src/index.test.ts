@@ -1788,6 +1788,61 @@ describe("Orca API", () => {
     }
   });
 
+  test("validates, authorizes, and canonically reconciles batch sender attention changes", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-batch-test-"));
+    const dbPath = join(tempDir, "attention-batch.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
+      }).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ addresses: ["maya@example.com"], behavior: "quiet" }),
+      })).status, 401);
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({ addresses: ["not-an-email"], behavior: "quiet" }),
+      })).status, 400);
+
+      const response = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({ addresses: ["Maya@Example.com", "jordan@example.com"], behavior: "quiet" }),
+      });
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.deepEqual(result.outcomes.map((outcome: { address: string; status: string; resolution: { behavior: string } }) => [outcome.address, outcome.status, outcome.resolution.behavior]), [
+        ["maya@example.com", "succeeded", "quiet"],
+        ["jordan@example.com", "succeeded", "quiet"],
+      ]);
+      assert.deepEqual(
+        db.select().from(senderAttentionRules).where(eq(senderAttentionRules.accountId, "acct_1")).all()
+          .map((rule) => [rule.value, rule.behavior]).sort(),
+        [["jordan@example.com", "quiet"], ["maya@example.com", "quiet"]],
+      );
+
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({ addresses: ["Maya@example.com", "maya@example.com"], behavior: "hidden" }),
+      })).status, 400);
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
   test("persists presentation independently of attention behavior", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");

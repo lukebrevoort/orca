@@ -10,6 +10,7 @@ import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
   type AttentionBehavior,
+  type ResolvedSenderAttention,
   type HumanClassificationResult,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
@@ -29,6 +30,7 @@ import {
   agentEventListPageSchema,
   agentPropagationMuteRuleSchema,
   attentionBehaviorSchema,
+  batchSenderAttentionChangeSchema,
   attentionViewSettingSchema,
   authSessionSchema,
   calendarWorkingHoursSchema,
@@ -67,6 +69,7 @@ import {
   reminderViewSettingsSchema,
   replyBriefOutputSchema,
   senderAttentionRuleSchema,
+  senderAttentionBatchResultSchema,
   syncStatusSchema,
   sendMessageDraftSchema,
   threadDetailSchema,
@@ -84,6 +87,7 @@ import {
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
+import { applySenderAttentionBatch } from "./attention/batch.ts";
 import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
@@ -1206,6 +1210,44 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
   });
 
   app.post(
+    "/v1/attention/rules/batch",
+    validator("json", (value, c) => validateJson(c, batchSenderAttentionChangeSchema, value)),
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
+        if (!account) return noConnectedAccount(c);
+        const input = c.req.valid("json");
+        const result = await applySenderAttentionBatch(input, {
+          apply(address, behavior) {
+            const updatedAt = new Date();
+            db.insert(senderAttentionRules).values({
+              id: `sender-rule:${crypto.randomUUID()}`,
+              accountId: account.id,
+              scope: "address",
+              value: address,
+              behavior,
+              source: "user_choice",
+              updatedAt,
+            }).onConflictDoUpdate({
+              target: [senderAttentionRules.accountId, senderAttentionRules.scope, senderAttentionRules.value],
+              set: { behavior, source: "user_choice", updatedAt },
+            }).run();
+            return resolveSenderAttention(db, account.id, address);
+          },
+          resolve(address) {
+            return resolveSenderAttention(db, account.id, address);
+          },
+        });
+        return jsonWithSchema(c, senderAttentionBatchResultSchema, result);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  app.post(
     "/v1/attention/rules",
     validator("json", (value, c) => validateJson(c, createSenderAttentionRuleSchema, value)),
     requireAuth({ dbFactory }),
@@ -1273,20 +1315,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const address = c.req.valid("query").address.toLowerCase();
-        const domain = address.split("@")[1]!;
-        const rule = db.select().from(senderAttentionRules).where(and(
-          eq(senderAttentionRules.accountId, account.id),
-          eq(senderAttentionRules.scope, "address"),
-          eq(senderAttentionRules.value, address),
-        )).get() ?? db.select().from(senderAttentionRules).where(and(
-          eq(senderAttentionRules.accountId, account.id),
-          eq(senderAttentionRules.scope, "domain"),
-          eq(senderAttentionRules.value, domain),
-        )).get();
-        return jsonWithSchema(c, resolvedSenderAttentionSchema, {
-          behavior: rule?.behavior ?? "normal",
-          rule: rule ? toSenderRule(rule) : null,
-        });
+        return jsonWithSchema(c, resolvedSenderAttentionSchema, resolveSenderAttention(db, account.id, address));
       } finally {
         sqlite.close();
       }
@@ -3006,6 +3035,23 @@ function listSenderRules(db: Database, accountId: string) {
   return db.select().from(senderAttentionRules)
     .where(eq(senderAttentionRules.accountId, accountId))
     .orderBy(asc(senderAttentionRules.scope), asc(senderAttentionRules.value)).all();
+}
+
+function resolveSenderAttention(db: Database, accountId: string, address: string): ResolvedSenderAttention {
+  const domain = address.split("@")[1]!;
+  const rule = db.select().from(senderAttentionRules).where(and(
+    eq(senderAttentionRules.accountId, accountId),
+    eq(senderAttentionRules.scope, "address"),
+    eq(senderAttentionRules.value, address),
+  )).get() ?? db.select().from(senderAttentionRules).where(and(
+    eq(senderAttentionRules.accountId, accountId),
+    eq(senderAttentionRules.scope, "domain"),
+    eq(senderAttentionRules.value, domain),
+  )).get();
+  return resolvedSenderAttentionSchema.parse({
+    behavior: rule?.behavior ?? "normal",
+    rule: rule ? toSenderRule(rule) : null,
+  });
 }
 
 function resolveAttentionBehavior(address: string | null, rules: SenderRuleRecord[]): AttentionBehavior {

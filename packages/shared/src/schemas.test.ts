@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   authSessionSchema,
+  batchSenderAttentionChangeSchema,
   createCollectionSchema,
   createHumanClassificationOverrideSchema,
   createPinSchema,
@@ -14,6 +15,7 @@ import {
   inboxQuerySchema,
   inboxResponseSchema,
   pinFilterSchema,
+  senderAttentionBatchResultSchema,
   threadDetailSchema,
   updateMessageDraftSchema,
   updateCollectionSchema,
@@ -105,6 +107,36 @@ describe("shared API schemas", () => {
     assert.equal(inboxQuerySchema.safeParse({ limit: "0" }).success, false);
     assert.equal(inboxQuerySchema.safeParse({ limit: "101" }).success, false);
     assert.equal(inboxQuerySchema.safeParse({ classification: "machine" }).success, false);
+  });
+
+  test("normalizes unique batch sender changes and preserves canonical per-sender outcomes", () => {
+    assert.deepEqual(batchSenderAttentionChangeSchema.parse({
+      addresses: [" Maya@Example.com ", "jordan@example.com"],
+      behavior: "quiet",
+    }), {
+      addresses: ["maya@example.com", "jordan@example.com"],
+      behavior: "quiet",
+    });
+    assert.equal(batchSenderAttentionChangeSchema.safeParse({
+      addresses: ["Maya@example.com", "maya@example.com"],
+      behavior: "quiet",
+    }).success, false);
+
+    const result = senderAttentionBatchResultSchema.parse({
+      behavior: "quiet",
+      outcomes: [
+        { status: "succeeded", address: "Maya@Example.com", resolution: { behavior: "quiet", rule: null } },
+        {
+          status: "failed",
+          address: "jordan@example.com",
+          retryable: true,
+          error: { code: "temporarily_unavailable", message: "Try again" },
+          resolution: { behavior: "normal", rule: null },
+        },
+      ],
+    });
+    assert.equal(result.outcomes[0]?.address, "maya@example.com");
+    assert.equal(result.outcomes[1]?.status, "failed");
   });
 
   test("defines an explainable, bounded Human Signal contract", () => {

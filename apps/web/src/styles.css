@@ -4511,8 +4511,13 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .bulk-action-bar button:focus-visible { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent-soft); outline-offset: 1px; }
 .bulk-action-bar button:disabled { cursor: not-allowed; opacity: .48; }
 .bulk-action-bar .bulk-select-all { background: transparent; color: var(--orca-ink); }
-.bulk-action-message { color: var(--orca-muted); font-size: 10px; grid-column: 1 / -1; margin: 0; }
-.bulk-action-message-error { color: var(--orca-danger); }
+.bulk-action-message { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 10px; color: var(--orca-ink); display: flex; font-size: 10px; gap: 10px; justify-content: space-between; margin: -8px 0 18px; padding: 9px 11px; }
+.bulk-action-message-error,
+.bulk-action-message-partial { background: color-mix(in srgb, var(--orca-danger) 8%, var(--orca-surface)); color: var(--orca-danger); }
+.bulk-action-message button { background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 999px; color: var(--orca-ink); cursor: pointer; flex: 0 0 auto; font: inherit; font-weight: 750; min-height: 30px; padding: 0 10px; }
+.bulk-action-message button:hover:not(:disabled),
+.bulk-action-message button:focus-visible { background: var(--orca-surface); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent-soft); outline-offset: 1px; }
+.bulk-action-message button:disabled { cursor: wait; opacity: .55; }
 .classification-action-message, .classification-action-error { border-radius: 10px; font-size: 11px; line-height: 1.45; margin: -5px 0 14px; padding: 9px 11px; }
 .classification-action-message { background: var(--orca-accent-soft); color: var(--orca-ink); }
 .classification-action-error { background: color-mix(in srgb, var(--orca-danger) 10%, var(--orca-surface)); color: var(--orca-danger); }

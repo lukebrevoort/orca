@@ -140,11 +140,15 @@ function restoreDom() {
   browserWindow.close();
 }
 
-async function renderApp(preferences: ReaderPreferences = defaultReaderPreferences, strict = false) {
+async function renderApp(
+  preferences: ReaderPreferences = defaultReaderPreferences,
+  strict = false,
+  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient"> = { theme: "light" },
+) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <InboxApp demoMode preferences={preferences} theme="light" setTheme={() => {}} />;
+  const app = <InboxApp demoMode preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} />;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -1325,6 +1329,81 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("2 senders moved to Quiet.");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
     expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Jordan Bell"))).toBe(false);
+    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
+  });
+
+  test("keeps selection across search and includes hidden selections in the sender count", async () => {
+    await renderApp();
+    const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+    await act(async () => { selectMode.click(); });
+    await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
+
+    const search = browserWindow.document.querySelector('input[aria-label="Search the stream"]') as unknown as HTMLInputElement;
+    await enterInput(search, "Jordan");
+
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(buttonByName("Select Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("false");
+    await act(async () => { buttonByName("Select Jordan Bell: Re: Team offsite planning").click(); });
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+  });
+
+  test("reconciles mixed failure, keeps only the failed sender selected, and retries it", async () => {
+    let requestCount = 0;
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ addresses, behavior }) => {
+      requestCount += 1;
+      return {
+        behavior,
+        outcomes: addresses.map((address) => requestCount === 1 && address === "jordan@example.com"
+          ? { status: "failed" as const, address, retryable: true, error: { code: "temporarily_unavailable" as const, message: "Try again" }, resolution: { behavior: "normal" as const, rule: null } }
+          : { status: "succeeded" as const, address, resolution: { behavior, rule: null } }),
+      };
+    };
+    await renderApp(defaultReaderPreferences, false, { theme: "dark", bulkAttentionClient });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => {
+      buttonByName("Select Mom: Dinner on Sunday?").click();
+      buttonByName("Select Jordan Bell: Re: Team offsite planning").click();
+    });
+    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+    await act(async () => { quiet.click(); await Promise.resolve(); });
+
+    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toContain("1 sender moved to Quiet. 1 sender could not be updated. They remain selected to retry.");
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(buttonByName("Deselect Jordan Bell: Re: Team offsite planning").getAttribute("aria-pressed")).toBe("true");
+    expect([...browserWindow.document.querySelectorAll("button.message-row")].some((row) => row.textContent?.includes("Mom"))).toBe(false);
+
+    const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
+    await act(async () => { retry.click(); await Promise.resolve(); });
+    expect(requestCount).toBe(2);
+    expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
+    expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
+  });
+
+  test("disables every duplicate bulk submission path while saving", async () => {
+    let resolveRequest!: (value: Awaited<ReturnType<NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]>>>) => void;
+    let calls = 0;
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = ({ addresses, behavior }) => {
+      calls += 1;
+      return new Promise((resolve) => {
+        resolveRequest = resolve;
+      });
+    };
+    await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
+    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+    await act(async () => { quiet.click(); await Promise.resolve(); });
+
+    const actionButtons = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')] as unknown as HTMLButtonElement[];
+    expect(actionButtons.every((button) => button.disabled)).toBe(true);
+    expect((browserWindow.document.querySelector(".bulk-select-all") as unknown as HTMLButtonElement).disabled).toBe(true);
+    quiet.click();
+    expect(calls).toBe(1);
+
+    await act(async () => {
+      resolveRequest({ behavior: "quiet", outcomes: [{ status: "succeeded", address: "family@example.com", resolution: { behavior: "quiet", rule: null } }] });
+      await Promise.resolve();
+    });
   });
 });
 
