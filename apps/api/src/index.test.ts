@@ -1848,7 +1848,7 @@ describe("Orca API", () => {
     }
   });
 
-  test("validates, authorizes, and canonically reconciles batch sender attention changes", async () => {
+  test("validates, authorizes, and canonically reconciles account-scoped batch sender attention changes", async () => {
     process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
     process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
     const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-batch-test-"));
@@ -1857,10 +1857,15 @@ describe("Orca API", () => {
     migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
 
     try {
-      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
-      db.insert(oauthAccounts).values({
-        id: "acct_1", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1",
-      }).run();
+      db.insert(users).values([
+        { id: "user_1", email: "luke@example.com" },
+        { id: "user_2", email: "other@example.com" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "acct_gmail", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" },
+        { id: "acct_outlook", userId: "user_1", provider: "outlook", providerEmail: "luke@outlook.example", providerId: "outlook-user-1" },
+        { id: "acct_other", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-user-2" },
+      ]).run();
       const session = await createSession(db, "user_1");
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
@@ -1868,33 +1873,98 @@ describe("Orca API", () => {
       assert.equal((await testApp.request("/v1/attention/rules/batch", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ addresses: ["maya@example.com"], behavior: "quiet" }),
+        body: JSON.stringify({ targets: [{ accountId: "acct_gmail", address: "maya@example.com" }], behavior: "quiet" }),
       })).status, 401);
       assert.equal((await testApp.request("/v1/attention/rules/batch", {
         method: "POST", headers,
-        body: JSON.stringify({ addresses: ["not-an-email"], behavior: "quiet" }),
+        body: JSON.stringify({ targets: [{ accountId: "acct_gmail", address: "not-an-email" }], behavior: "quiet" }),
       })).status, 400);
 
       const response = await testApp.request("/v1/attention/rules/batch", {
         method: "POST", headers,
-        body: JSON.stringify({ addresses: ["Maya@Example.com", "jordan@example.com"], behavior: "quiet" }),
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "Maya@Example.com" },
+            { accountId: "acct_outlook", address: "Maya@Example.com" },
+          ],
+          behavior: "quiet",
+        }),
       });
       assert.equal(response.status, 200);
       const result = await response.json();
-      assert.deepEqual(result.outcomes.map((outcome: { address: string; status: string; resolution: { behavior: string } }) => [outcome.address, outcome.status, outcome.resolution.behavior]), [
-        ["maya@example.com", "succeeded", "quiet"],
-        ["jordan@example.com", "succeeded", "quiet"],
+      assert.deepEqual(result.outcomes.map((outcome: { target: { accountId: string; address: string }; status: string; resolution: { behavior: string } }) => [outcome.target.accountId, outcome.target.address, outcome.status, outcome.resolution.behavior]), [
+        ["acct_gmail", "maya@example.com", "succeeded", "quiet"],
+        ["acct_outlook", "maya@example.com", "succeeded", "quiet"],
       ]);
       assert.deepEqual(
-        db.select().from(senderAttentionRules).where(eq(senderAttentionRules.accountId, "acct_1")).all()
-          .map((rule) => [rule.value, rule.behavior]).sort(),
-        [["jordan@example.com", "quiet"], ["maya@example.com", "quiet"]],
+        db.select().from(senderAttentionRules).all()
+          .map((rule) => [rule.accountId, rule.value, rule.behavior]).sort(),
+        [["acct_gmail", "maya@example.com", "quiet"], ["acct_outlook", "maya@example.com", "quiet"]],
       );
+
+      const retry = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "maya@example.com" },
+            { accountId: "acct_outlook", address: "maya@example.com" },
+          ],
+          behavior: "quiet",
+        }),
+      });
+      assert.equal(retry.status, 200);
+      assert.deepEqual((await retry.json()).outcomes.map((outcome: { status: string }) => outcome.status), ["succeeded", "succeeded"]);
+      assert.equal(db.select().from(senderAttentionRules).all().length, 2);
 
       assert.equal((await testApp.request("/v1/attention/rules/batch", {
         method: "POST", headers,
-        body: JSON.stringify({ addresses: ["Maya@example.com", "maya@example.com"], behavior: "hidden" }),
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "Maya@example.com" },
+            { accountId: "acct_gmail", address: "maya@example.com" },
+          ],
+          behavior: "hidden",
+        }),
       })).status, 400);
+
+      sqlite.exec(`
+        CREATE TRIGGER fail_atomic_attention_write
+        BEFORE INSERT ON sender_attention_rules
+        WHEN NEW.value = 'fail-write@example.com'
+        BEGIN
+          SELECT RAISE(ABORT, 'forced batch write failure');
+        END;
+      `);
+      const writeFailure = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "would-partially-write@example.com" },
+            { accountId: "acct_outlook", address: "fail-write@example.com" },
+          ],
+          behavior: "hidden",
+        }),
+      });
+      assert.equal(writeFailure.status, 200);
+      assert.deepEqual((await writeFailure.json()).outcomes.map((outcome: { status: string; retryable: boolean }) => [outcome.status, outcome.retryable]), [
+        ["failed", true],
+        ["failed", true],
+      ]);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "would-partially-write@example.com")).get(), undefined);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "fail-write@example.com")).get(), undefined);
+
+      const unauthorized = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "jordan@example.com" },
+            { accountId: "acct_other", address: "private@example.com" },
+          ],
+          behavior: "hidden",
+        }),
+      });
+      assert.equal(unauthorized.status, 404);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "jordan@example.com")).get(), undefined);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

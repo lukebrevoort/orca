@@ -145,31 +145,40 @@ describe("shared API schemas", () => {
 
   test("normalizes unique batch sender changes and preserves canonical per-sender outcomes", () => {
     assert.deepEqual(batchSenderAttentionChangeSchema.parse({
-      addresses: [" Maya@Example.com ", "jordan@example.com"],
+      targets: [
+        { accountId: "account-a", address: " Maya@Example.com " },
+        { accountId: "account-b", address: "Maya@Example.com" },
+      ],
       behavior: "quiet",
     }), {
-      addresses: ["maya@example.com", "jordan@example.com"],
+      targets: [
+        { accountId: "account-a", address: "maya@example.com" },
+        { accountId: "account-b", address: "maya@example.com" },
+      ],
       behavior: "quiet",
     });
     assert.equal(batchSenderAttentionChangeSchema.safeParse({
-      addresses: ["Maya@example.com", "maya@example.com"],
+      targets: [
+        { accountId: "account-a", address: "Maya@example.com" },
+        { accountId: "account-a", address: "maya@example.com" },
+      ],
       behavior: "quiet",
     }).success, false);
 
     const result = senderAttentionBatchResultSchema.parse({
       behavior: "quiet",
       outcomes: [
-        { status: "succeeded", address: "Maya@Example.com", resolution: { behavior: "quiet", rule: null } },
+        { status: "succeeded", target: { accountId: "account-a", address: "Maya@Example.com" }, resolution: { behavior: "quiet", rule: null } },
         {
           status: "failed",
-          address: "jordan@example.com",
+          target: { accountId: "account-b", address: "Maya@Example.com" },
           retryable: true,
           error: { code: "temporarily_unavailable", message: "Try again" },
           resolution: { behavior: "normal", rule: null },
         },
       ],
     });
-    assert.equal(result.outcomes[0]?.address, "maya@example.com");
+    assert.deepEqual(result.outcomes[0]?.target, { accountId: "account-a", address: "maya@example.com" });
     assert.equal(result.outcomes[1]?.status, "failed");
   });
 

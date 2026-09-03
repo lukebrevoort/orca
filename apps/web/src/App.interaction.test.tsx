@@ -5,7 +5,7 @@ import { Window } from "happy-dom";
 import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
-import { demoAgentEvents } from "./demo-data";
+import { demoAgentEvents, demoMessages } from "./demo-data";
 import { TopLayerProvider } from "./top-layer";
 import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
@@ -150,12 +150,12 @@ function restoreDom() {
 async function renderApp(
   preferences: ReaderPreferences = defaultReaderPreferences,
   strict = false,
-  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient"> & { demoMode?: boolean } = { theme: "light" },
+  options: Pick<Parameters<typeof InboxApp>[0], "theme" | "bulkAttentionClient" | "initialDemoMessages"> & { demoMode?: boolean } = { theme: "light" },
 ) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} /></TopLayerProvider>;
+  const app = <TopLayerProvider><InboxApp demoMode={options.demoMode ?? true} preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} initialDemoMessages={options.initialDemoMessages} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -2126,13 +2126,13 @@ describe("Pin navigation and bulk sender actions", () => {
 
   test("reconciles mixed failure, keeps only the failed sender selected, and retries it", async () => {
     let requestCount = 0;
-    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ addresses, behavior }) => {
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ targets, behavior }) => {
       requestCount += 1;
       return {
         behavior,
-        outcomes: addresses.map((address) => requestCount === 1 && address === "jordan@example.com"
-          ? { status: "failed" as const, address, retryable: true, error: { code: "temporarily_unavailable" as const, message: "Try again" }, resolution: { behavior: "normal" as const, rule: null } }
-          : { status: "succeeded" as const, address, resolution: { behavior, rule: null } }),
+        outcomes: targets.map((target) => requestCount === 1 && target.address === "jordan@example.com"
+          ? { status: "failed" as const, target, retryable: true, error: { code: "temporarily_unavailable" as const, message: "Try again" }, resolution: { behavior: "normal" as const, rule: null } }
+          : { status: "succeeded" as const, target, resolution: { behavior, rule: null } }),
       };
     };
     await renderApp(defaultReaderPreferences, false, { theme: "dark", bulkAttentionClient });
@@ -2156,16 +2156,16 @@ describe("Pin navigation and bulk sender actions", () => {
     expect([...browserWindow.document.querySelectorAll("button")].some((button) => button.textContent === "Done selecting")).toBe(false);
   });
 
-  test("retries a retryable sender by address after its canonical state removes the row", async () => {
-    const requests: string[][] = [];
-    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ addresses, behavior }) => {
-      requests.push([...addresses]);
+  test("retries a retryable exact sender target after its canonical state removes the row", async () => {
+    const requests: Array<Array<{ accountId: string; address: string }>> = [];
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ targets, behavior }) => {
+      requests.push([...targets]);
       return requests.length === 1
         ? {
           behavior,
           outcomes: [{
             status: "failed",
-            address: "jordan@example.com",
+            target: targets[0]!,
             retryable: true,
             error: { code: "temporarily_unavailable", message: "Retry the canonical write" },
             resolution: { behavior: "hidden", rule: null },
@@ -2173,7 +2173,7 @@ describe("Pin navigation and bulk sender actions", () => {
         }
         : {
           behavior,
-          outcomes: [{ status: "succeeded", address: "jordan@example.com", resolution: { behavior, rule: null } }],
+          outcomes: [{ status: "succeeded", target: targets[0]!, resolution: { behavior, rule: null } }],
         };
     };
     await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
@@ -2186,15 +2186,80 @@ describe("Pin navigation and bulk sender actions", () => {
     const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
     await act(async () => { retry.click(); await Promise.resolve(); });
 
-    expect(requests).toEqual([["jordan@example.com"], ["jordan@example.com"]]);
+    expect(requests).toEqual([
+      [{ accountId: "acct_demo", address: "jordan@example.com" }],
+      [{ accountId: "acct_demo", address: "jordan@example.com" }],
+    ]);
     expect(browserWindow.document.querySelector(".bulk-action-message")?.textContent).toBe("1 sender moved to Quiet.");
+  });
+
+  test("keeps identical sender addresses and message ids distinct across accounts and retries the exact target", async () => {
+    const source = demoMessages[0]!;
+    const initialDemoMessages: InboxMessage[] = [
+      {
+        ...source,
+        id: "shared-message-id",
+        accountId: "account-gmail",
+        provider: "gmail",
+        providerMessageId: "gmail-shared-message",
+        threadId: "gmail-shared-thread",
+        from: { name: "Shared Gmail", email: " Shared@Example.com " },
+        subject: "Gmail copy",
+      },
+      {
+        ...source,
+        id: "shared-message-id",
+        accountId: "account-outlook",
+        provider: "outlook",
+        providerMessageId: "outlook-shared-message",
+        threadId: "outlook-shared-thread",
+        from: { name: "Shared Outlook", email: "shared@example.com" },
+        subject: "Outlook copy",
+        receivedAt: "2026-07-03T12:00:00.000Z",
+      },
+    ];
+    const requests: Array<Array<{ accountId: string; address: string }>> = [];
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = async ({ targets, behavior }) => {
+      requests.push(targets);
+      return {
+        behavior,
+        outcomes: targets.map((target) => requests.length === 1 && target.accountId === "account-outlook"
+          ? { status: "failed" as const, target, retryable: true, error: { code: "temporarily_unavailable" as const, message: "Try again" }, resolution: { behavior: "normal" as const, rule: null } }
+          : { status: "succeeded" as const, target, resolution: { behavior, rule: null } }),
+      };
+    };
+    await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient, initialDemoMessages });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => {
+      buttonByName("Select Shared Gmail: Gmail copy").click();
+      buttonByName("Select Shared Outlook: Outlook copy").click();
+    });
+
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("2 senders selected");
+    const quiet = [...browserWindow.document.querySelectorAll('.bulk-action-bar [role="group"] button')].find((button) => button.textContent === "Quiet") as unknown as HTMLButtonElement;
+    await act(async () => { quiet.click(); await Promise.resolve(); });
+
+    expect(browserWindow.document.querySelector(".bulk-action-bar strong")?.textContent).toBe("1 sender selected");
+    expect(buttonByName("Deselect Shared Outlook: Outlook copy").getAttribute("aria-pressed")).toBe("true");
+    const retry = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Retry failed") as unknown as HTMLButtonElement;
+    await act(async () => { retry.click(); await Promise.resolve(); });
+
+    expect(requests).toEqual([
+      [
+        { accountId: "account-gmail", address: "shared@example.com" },
+        { accountId: "account-outlook", address: "shared@example.com" },
+      ],
+      [{ accountId: "account-outlook", address: "shared@example.com" }],
+    ]);
   });
 
   test("disables every duplicate bulk submission path while saving", async () => {
     let resolveRequest!: (value: Awaited<ReturnType<NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]>>>) => void;
+    let requestedTarget!: { accountId: string; address: string };
     let calls = 0;
-    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = ({ addresses, behavior }) => {
+    const bulkAttentionClient: NonNullable<Parameters<typeof InboxApp>[0]["bulkAttentionClient"]> = ({ targets }) => {
       calls += 1;
+      requestedTarget = targets[0]!;
       return new Promise((resolve) => {
         resolveRequest = resolve;
       });
@@ -2213,7 +2278,7 @@ describe("Pin navigation and bulk sender actions", () => {
     expect(calls).toBe(1);
 
     await act(async () => {
-      resolveRequest({ behavior: "quiet", outcomes: [{ status: "succeeded", address: "family@example.com", resolution: { behavior: "quiet", rule: null } }] });
+      resolveRequest({ behavior: "quiet", outcomes: [{ status: "succeeded", target: requestedTarget, resolution: { behavior: "quiet", rule: null } }] });
       await Promise.resolve();
     });
   });

@@ -148,7 +148,8 @@ type PersonItem = {
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
 type BulkAttentionClient = (input: BatchSenderAttentionChange) => Promise<SenderAttentionBatchResult>;
-type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
+type BulkAttentionTarget = BatchSenderAttentionChange["targets"][number];
+type SenderAttentionControlTarget = Pick<InboxMessage, "id" | "from">;
 type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "humanClassification" | "humanSignal">;
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
@@ -1232,18 +1233,21 @@ export function InboxApp({
   theme,
   setTheme,
   bulkAttentionClient,
+  initialDemoMessages,
 }: {
   demoMode?: boolean;
   preferences?: ReaderPreferences;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
   bulkAttentionClient?: BulkAttentionClient;
+  initialDemoMessages?: InboxMessage[];
 }) {
   const topLayerActive = useTopLayerActive();
   const online = useOnlineStatus();
+  const demoInboxMessages = initialDemoMessages ?? demoMailWithAgentSources;
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
-  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
+  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoInboxMessages) : []);
+  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoInboxMessages : []);
   const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
@@ -1445,7 +1449,7 @@ export function InboxApp({
     if (demoMode) {
       setAccount(demoAccount);
       const readThreadIds = readDemoReadState();
-      const readMessages = demoMailWithAgentSources.map((message) =>
+      const readMessages = demoInboxMessages.map((message) =>
         readThreadIds.has(message.threadId) ? { ...message, unread: false } : message,
       );
       const sourceMessages = demoDataInitializedRef.current ? allMailMessages : readMessages;
@@ -1710,26 +1714,12 @@ export function InboxApp({
   }, [account?.id, agentEventsRefreshKey, demoMode, status]);
 
   useEffect(() => {
-    const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
-    if (demoMode) {
-      setAttentionByAddress(Object.fromEntries(addresses.map((address) => [
-        address,
-        messages.find((message) => message.from.email.trim().toLowerCase() === address)?.attentionBehavior ?? "normal",
-      ])));
-      return;
-    }
-    if (status !== "ready" || addresses.length === 0) return;
-    const controller = new AbortController();
-    void Promise.all(addresses.map(async (address) => {
-      const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal);
-      return [address, resolved.behavior] as const;
-    })).then((entries) => {
-      if (!controller.signal.aborted) setAttentionByAddress(Object.fromEntries(entries));
-    }).catch(() => {
-      // Inbox mail remains visible if attention preferences cannot be loaded.
-    });
-    return () => controller.abort();
-  }, [demoMode, messages, status]);
+    if (status !== "ready") return;
+    setAttentionByAddress(Object.fromEntries(messages.map((message) => [
+      senderAttentionTargetKey(senderAttentionTargetForMessage(message)),
+      message.attentionBehavior,
+    ])));
+  }, [messages, status]);
 
   const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
   const mailboxMessages = useMemo(
@@ -1757,13 +1747,13 @@ export function InboxApp({
     }
     if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
-        const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+        const behavior = getMessageAttentionBehavior(message, attentionByAddress);
         return behavior === inboxFilter;
       });
     }
     return sortMessagesByAttention(filtered, attentionByAddress).map((message) => ({
       ...message,
-      attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
+      attentionBehavior: getMessageAttentionBehavior(message, attentionByAddress),
     }));
   }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
@@ -2704,20 +2694,23 @@ export function InboxApp({
     }
   }
 
-  async function updateSelectedSenderAttention(selectedAddresses: readonly string[], behavior: AttentionBehavior) {
-    const addresses = [...new Set(selectedAddresses.map((address) => address.trim().toLowerCase()).filter(Boolean))];
-    if (!addresses.length) throw new Error("Select at least one sender");
-    const input = { addresses, behavior } satisfies BatchSenderAttentionChange;
+  async function updateSelectedSenderAttention(selectedTargets: readonly BulkAttentionTarget[], behavior: AttentionBehavior) {
+    const targets = [...new Map(selectedTargets.map((target) => {
+      const normalized = { accountId: target.accountId, address: target.address.trim().toLowerCase() };
+      return [senderAttentionTargetKey(normalized), normalized] as const;
+    }).filter(([, target]) => Boolean(target.address))).values()];
+    if (!targets.length) throw new Error("Select at least one sender");
+    const input = { targets, behavior } satisfies BatchSenderAttentionChange;
     const result = bulkAttentionClient
       ? await bulkAttentionClient(input)
       : demoMode
         ? senderAttentionBatchResultSchema.parse({
           behavior,
-          outcomes: addresses.map((address, index) => {
-            if (bre358EvidenceState === "partial" && !bre358PartialServedRef.current && addresses.length > 1 && index === addresses.length - 1) {
-              return { status: "failed", address, retryable: true, error: { code: "temporarily_unavailable", message: "This sender could not be updated right now" }, resolution: { behavior: "normal", rule: null } };
+          outcomes: targets.map((target, index) => {
+            if (bre358EvidenceState === "partial" && !bre358PartialServedRef.current && targets.length > 1 && index === targets.length - 1) {
+              return { status: "failed", target, retryable: true, error: { code: "temporarily_unavailable", message: "This sender could not be updated right now" }, resolution: { behavior: "normal", rule: null } };
             }
-            return { status: "succeeded", address, resolution: { behavior, rule: null } };
+            return { status: "succeeded", target, resolution: { behavior, rule: null } };
           }),
         })
         : await fetchJson("/v1/attention/rules/batch", senderAttentionBatchResponseSchema, undefined, {
@@ -2729,10 +2722,11 @@ export function InboxApp({
     setAttentionByAddress((current) => {
       const next = { ...current };
       for (const outcome of result.outcomes) {
+        delete next[outcome.target.address];
         if (outcome.status === "succeeded") {
-          next[outcome.address] = outcome.resolution.behavior;
+          next[senderAttentionTargetKey(outcome.target)] = outcome.resolution.behavior;
         } else if (outcome.resolution) {
-          next[outcome.address] = outcome.resolution.behavior;
+          next[senderAttentionTargetKey(outcome.target)] = outcome.resolution.behavior;
         }
       }
       return next;
@@ -4359,7 +4353,7 @@ function InboxView({
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
-  onBulkAttentionChange: (addresses: readonly string[], behavior: AttentionBehavior) => Promise<SenderAttentionBatchResult>;
+  onBulkAttentionChange: (targets: readonly BulkAttentionTarget[], behavior: AttentionBehavior) => Promise<SenderAttentionBatchResult>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onFinishLater: (reminder: Reminder) => void;
@@ -4397,18 +4391,15 @@ function InboxView({
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedTargets, setSelectedTargets] = useState<Map<string, string>>(() => new Map());
+  const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
   const [bulkPendingBehavior, setBulkPendingBehavior] = useState<AttentionBehavior | null>(null);
-  const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; addresses: string[] } | null>(null);
+  const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
-  const selectedMessageIds = useMemo(() => new Set(selectedTargets.keys()), [selectedTargets]);
-  const selectedVisibleMessageCount = displayMessages.filter((message) => selectedMessageIds.has(message.id)).length;
-  const selectedSenderCount = useMemo(
-    () => new Set(selectedTargets.values()).size,
-    [selectedTargets],
-  );
+  const visibleTargetKeys = useMemo(() => new Set(displayMessages.map((message) => senderAttentionTargetKey(senderAttentionTargetForMessage(message)))), [displayMessages]);
+  const selectedVisibleTargetCount = [...visibleTargetKeys].filter((key) => selectedTargets.has(key)).length;
+  const selectedSenderCount = selectedTargets.size;
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -4434,7 +4425,7 @@ function InboxView({
     const signalView = pinFilterClassificationView(pinFilter);
     if (signalView) candidates = candidates.filter((message) => classificationMatchesView(message, signalView));
     if (pinFilter.mailbox === "inbox" && pinFilter.attention !== "all") {
-      candidates = candidates.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) === pinFilter.attention);
+      candidates = candidates.filter((message) => getMessageAttentionBehavior(message, attentionByAddress) === pinFilter.attention);
     }
     if (pinFilter.person) candidates = candidates.filter((message) => messageIncludesPerson(message, pinFilter.person!));
     const matchingMessages = getStreamMessages(candidates, pinFilter.mailbox, pinFilter.query);
@@ -4514,8 +4505,10 @@ function InboxView({
     setBulkRetry(null);
     setSelectedTargets((current) => {
       const next = new Map(current);
-      if (next.has(message.id)) next.delete(message.id);
-      else next.set(message.id, message.from.email.trim().toLowerCase());
+      const target = senderAttentionTargetForMessage(message);
+      const key = senderAttentionTargetKey(target);
+      if (next.has(key)) next.delete(key);
+      else next.set(key, target);
       return next;
     });
   }
@@ -4529,23 +4522,23 @@ function InboxView({
     setBulkRetry(null);
   }
 
-  async function applyBulkAttention(behavior: AttentionBehavior, onlyAddresses?: readonly string[]) {
-    const attemptedAddresses = [...new Set(onlyAddresses ?? selectedTargets.values())];
-    if (!attemptedAddresses.length || bulkAttentionStatus === "saving") return;
-    const count = attemptedAddresses.length;
+  async function applyBulkAttention(behavior: AttentionBehavior, onlyTargets?: readonly BulkAttentionTarget[]) {
+    const attemptedTargets = [...new Map((onlyTargets ?? [...selectedTargets.values()]).map((target) => [senderAttentionTargetKey(target), target])).values()];
+    if (!attemptedTargets.length || bulkAttentionStatus === "saving") return;
+    const count = attemptedTargets.length;
     setBulkAttentionStatus("saving");
     setBulkPendingBehavior(behavior);
     setBulkAttentionMessage("");
     setBulkRetry(null);
     try {
-      const result = await onBulkAttentionChange(attemptedAddresses, behavior);
+      const result = await onBulkAttentionChange(attemptedTargets, behavior);
       const succeeded = result.outcomes.filter((outcome) => outcome.status === "succeeded");
       const failed = result.outcomes.filter((outcome) => outcome.status === "failed");
-      const succeededAddresses = new Set(succeeded.map((outcome) => outcome.address));
-      const nextSelected = new Map([...selectedTargets].filter(([, address]) => !succeededAddresses.has(address)));
+      const succeededTargets = new Set(succeeded.map((outcome) => senderAttentionTargetKey(outcome.target)));
+      const nextSelected = new Map([...selectedTargets].filter(([key]) => !succeededTargets.has(key)));
       setSelectedTargets(nextSelected);
-      const retryable = failed.filter((outcome) => outcome.retryable).map((outcome) => outcome.address);
-      setBulkRetry(retryable.length ? { behavior, addresses: retryable } : null);
+      const retryable = failed.filter((outcome) => outcome.retryable).map((outcome) => outcome.target);
+      setBulkRetry(retryable.length ? { behavior, targets: retryable } : null);
       const destination = behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : behavior === "hidden" ? "Hidden" : behavior === "focus" ? "Focus" : "Notify me";
       if (!failed.length) {
         if (!nextSelected.size) setSelectionMode(false);
@@ -4561,7 +4554,7 @@ function InboxView({
       }
     } catch (error) {
       setBulkAttentionStatus("error");
-      setBulkRetry({ behavior, addresses: attemptedAddresses });
+      setBulkRetry({ behavior, targets: attemptedTargets });
       setBulkAttentionMessage(`Could not update ${count} ${count === 1 ? "sender" : "senders"}. ${count === 1 ? "The sender is" : "The senders are"} ready to retry. ${getErrorMessage(error)}`);
     } finally {
       setBulkPendingBehavior(null);
@@ -4734,13 +4727,16 @@ function InboxView({
               disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
               onClick={() => setSelectedTargets((current) => {
                 const next = new Map(current);
-                if (selectedVisibleMessageCount === displayMessages.length) displayMessages.forEach((message) => next.delete(message.id));
-                else displayMessages.forEach((message) => next.set(message.id, message.from.email.trim().toLowerCase()));
+                if (selectedVisibleTargetCount === visibleTargetKeys.size) visibleTargetKeys.forEach((key) => next.delete(key));
+                else displayMessages.forEach((message) => {
+                  const target = senderAttentionTargetForMessage(message);
+                  next.set(senderAttentionTargetKey(target), target);
+                });
                 return next;
               })}
               type="button"
             >
-              {selectedVisibleMessageCount === displayMessages.length ? "Clear visible" : "Select all visible"}
+              {selectedVisibleTargetCount === visibleTargetKeys.size ? "Clear visible" : "Select all visible"}
             </button>
             <div aria-label="Move selected senders" role="group">
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
@@ -4749,7 +4745,7 @@ function InboxView({
             </div>
           </section>
         ) : null}
-        {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.addresses)} type="button">Retry failed</button> : null}</div> : null}
+        {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
@@ -4814,14 +4810,15 @@ function InboxView({
               const senderAddress = message.from.email.trim().toLowerCase();
               const senderPinned = pinnedSenderAddresses.has(senderAddress);
               const senderName = message.from.name ?? message.from.email;
+              const selected = selectedTargets.has(senderAttentionTargetKey(senderAttentionTargetForMessage(message)));
 
               return (
-                <li key={message.id}>
+                <li key={JSON.stringify([message.accountId, message.id])}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
-                  <div className={`message-row-wrap${selectedMessageIds.has(message.id) ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
+                  <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
-                      aria-label={selectionMode ? `${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
-                      aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
+                      aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
+                      aria-pressed={selectionMode ? selected : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
                       disabled={selectionMode && bulkAttentionStatus === "saving"}
                       onClick={() => selectionMode ? toggleSelection(message) : onOpenThread(message)}
@@ -4838,7 +4835,7 @@ function InboxView({
                       }
                       type="button"
                     >
-                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selectedMessageIds.has(message.id) ? "✓" : ""}</span></span> : null}
+                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selected ? "✓" : ""}</span></span> : null}
                       <ContactMark
                         className={`stream-avatar stream-avatar-variant-${signature.variant}`}
                         contact={message.from}
@@ -5427,7 +5424,7 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionControlTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
   const presence = useExitPresence(expanded);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
@@ -6164,10 +6161,25 @@ export function buildThreadDetailRequest(message: Pick<InboxMessage, "threadId" 
   return `/v1/threads/${encodeURIComponent(message.threadId)}?accountId=${encodeURIComponent(message.accountId)}`;
 }
 
+export function senderAttentionTargetForMessage(message: Pick<InboxMessage, "accountId" | "from">): BulkAttentionTarget {
+  return { accountId: message.accountId, address: message.from.email.trim().toLowerCase() };
+}
+
+export function senderAttentionTargetKey(target: BulkAttentionTarget) {
+  return JSON.stringify([target.accountId, target.address.trim().toLowerCase()]);
+}
+
+function getMessageAttentionBehavior(message: InboxMessage, attentionByAddress: Record<string, AttentionBehavior>) {
+  const target = senderAttentionTargetForMessage(message);
+  return attentionByAddress[target.address]
+    ?? attentionByAddress[senderAttentionTargetKey(target)]
+    ?? message.attentionBehavior;
+}
+
 export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox, attentionByAddress: Record<string, AttentionBehavior> = {}) {
   if (mailboxId === "all") return messages;
   return messages.filter((message) => {
-    const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+    const behavior = getMessageAttentionBehavior(message, attentionByAddress);
     if (mailboxId === "inbox") return behavior !== "quiet" && behavior !== "hidden";
     if (mailboxId === "signals") return behavior === "notify";
     return mailboxId === "focus" ? behavior === "notify" || behavior === "focus" : behavior === mailboxId;
@@ -6175,7 +6187,7 @@ export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailb
 }
 
 export function applySenderAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
-  return sortMessagesByAttention(messages.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) !== "hidden"), attentionByAddress);
+  return sortMessagesByAttention(messages.filter((message) => getMessageAttentionBehavior(message, attentionByAddress) !== "hidden"), attentionByAddress);
 }
 
 export function sortMessagesByAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
@@ -6183,8 +6195,8 @@ export function sortMessagesByAttention(messages: InboxMessage[], attentionByAdd
   return messages
     .map((message) => ({ message }))
     .sort((a, b) => {
-      const aBehavior = attentionByAddress[a.message.from.email.trim().toLowerCase()] ?? a.message.attentionBehavior;
-      const bBehavior = attentionByAddress[b.message.from.email.trim().toLowerCase()] ?? b.message.attentionBehavior;
+      const aBehavior = getMessageAttentionBehavior(a.message, attentionByAddress);
+      const bBehavior = getMessageAttentionBehavior(b.message, attentionByAddress);
       return rank[aBehavior] - rank[bBehavior]
         || b.message.receivedAt.localeCompare(a.message.receivedAt)
         || a.message.id.localeCompare(b.message.id);

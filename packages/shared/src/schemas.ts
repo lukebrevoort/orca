@@ -638,16 +638,23 @@ export type ResolvedSenderAttention = z.infer<typeof resolvedSenderAttentionSche
 
 const senderAddressSchema = z.string().trim().email().max(320).transform((value) => value.toLowerCase());
 
+export const senderAttentionTargetSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  address: senderAddressSchema,
+}).strict();
+export type SenderAttentionTarget = z.infer<typeof senderAttentionTargetSchema>;
+
 export const batchSenderAttentionChangeSchema = z.object({
-  addresses: z.array(senderAddressSchema).min(1).max(100),
+  targets: z.array(senderAttentionTargetSchema).min(1).max(100),
   behavior: attentionBehaviorSchema,
 }).strict().superRefine((input, context) => {
   const seen = new Set<string>();
-  input.addresses.forEach((address, index) => {
-    if (seen.has(address)) {
-      context.addIssue({ code: "custom", path: ["addresses", index], message: "Sender addresses must be unique" });
+  input.targets.forEach((target, index) => {
+    const key = JSON.stringify([target.accountId, target.address]);
+    if (seen.has(key)) {
+      context.addIssue({ code: "custom", path: ["targets", index], message: "Sender targets must be unique" });
     }
-    seen.add(address);
+    seen.add(key);
   });
 });
 export type BatchSenderAttentionChange = z.infer<typeof batchSenderAttentionChangeSchema>;
@@ -655,12 +662,12 @@ export type BatchSenderAttentionChange = z.infer<typeof batchSenderAttentionChan
 export const senderAttentionBatchOutcomeSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("succeeded"),
-    address: senderAddressSchema,
+    target: senderAttentionTargetSchema,
     resolution: resolvedSenderAttentionSchema,
   }).strict(),
   z.object({
     status: z.literal("failed"),
-    address: senderAddressSchema,
+    target: senderAttentionTargetSchema,
     retryable: z.boolean(),
     error: z.object({
       code: z.enum(["conflict", "temporarily_unavailable", "validation_error"]),

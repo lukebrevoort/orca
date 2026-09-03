@@ -1228,27 +1228,37 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     async (c) => {
       const { db, sqlite } = dbFactory();
       try {
-        const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
-        if (!account) return noConnectedAccount(c);
         const input = c.req.valid("json");
+        const accountById = new Map(
+          getUnifiedInboxAccounts(db, c.get("auth").userId).map((account) => [account.id, account]),
+        );
+        if (input.targets.some((target) => !accountById.has(target.accountId))) {
+          return c.json({ error: { code: "not_found", message: "Mail account was not found" } }, 404);
+        }
         const result = await applySenderAttentionBatch(input, {
-          write(address, behavior) {
+          write(targets, behavior) {
             const updatedAt = new Date();
-            db.insert(senderAttentionRules).values({
-              id: `sender-rule:${crypto.randomUUID()}`,
-              accountId: account.id,
-              scope: "address",
-              value: address,
-              behavior,
-              source: "user_choice",
-              updatedAt,
-            }).onConflictDoUpdate({
-              target: [senderAttentionRules.accountId, senderAttentionRules.scope, senderAttentionRules.value],
-              set: { behavior, source: "user_choice", updatedAt },
-            }).run();
+            db.transaction((transaction) => {
+              for (const target of targets) {
+                const account = accountById.get(target.accountId)!;
+                transaction.insert(senderAttentionRules).values({
+                  id: `sender-rule:${crypto.randomUUID()}`,
+                  accountId: account.id,
+                  scope: "address",
+                  value: target.address,
+                  behavior,
+                  source: "user_choice",
+                  updatedAt,
+                }).onConflictDoUpdate({
+                  target: [senderAttentionRules.accountId, senderAttentionRules.scope, senderAttentionRules.value],
+                  set: { behavior, source: "user_choice", updatedAt },
+                }).run();
+              }
+            });
           },
-          resolve(address) {
-            return resolveSenderAttention(db, account.id, address);
+          resolve(target) {
+            const account = accountById.get(target.accountId)!;
+            return resolveSenderAttention(db, account.id, target.address);
           },
         });
         return jsonWithSchema(c, senderAttentionBatchResultSchema, result);

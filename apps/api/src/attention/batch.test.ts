@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { AttentionBehavior, ResolvedSenderAttention } from "@orca/shared";
+import type { AttentionBehavior, ResolvedSenderAttention, SenderAttentionTarget } from "@orca/shared";
 
 import { applySenderAttentionBatch, SenderAttentionChangeError } from "./batch.ts";
 
@@ -8,61 +8,66 @@ function resolution(behavior: AttentionBehavior): ResolvedSenderAttention {
   return { behavior, rule: null };
 }
 
+const mayaA = { accountId: "account-a", address: "maya@example.com" };
+const mayaB = { accountId: "account-b", address: "maya@example.com" };
+const jordanB = { accountId: "account-b", address: "jordan@example.com" };
+const targetKey = (target: SenderAttentionTarget) => JSON.stringify([target.accountId, target.address]);
+
 describe("sender attention batch", () => {
   test("returns canonical success for every sender", async () => {
     const canonical = new Map<string, ResolvedSenderAttention>();
     const result = await applySenderAttentionBatch(
-      { addresses: ["maya@example.com", "jordan@example.com"], behavior: "quiet" },
+      { targets: [mayaA, mayaB], behavior: "quiet" },
       {
-        write: (address, behavior) => { canonical.set(address, resolution(behavior)); },
-        resolve: (address) => canonical.get(address) ?? resolution("normal"),
+        write: (targets, behavior) => targets.forEach((target) => canonical.set(targetKey(target), resolution(behavior))),
+        resolve: (target) => canonical.get(targetKey(target)) ?? resolution("normal"),
       },
     );
 
-    assert.deepEqual(result.outcomes.map((outcome) => [outcome.address, outcome.status]), [
-      ["maya@example.com", "succeeded"],
-      ["jordan@example.com", "succeeded"],
+    assert.deepEqual(result.outcomes.map((outcome) => [outcome.target.accountId, outcome.target.address, outcome.status]), [
+      ["account-a", "maya@example.com", "succeeded"],
+      ["account-b", "maya@example.com", "succeeded"],
     ]);
   });
 
-  test("keeps mixed failures explicit and retries only the requested sender", async () => {
-    let jordanAttempts = 0;
-    const canonical = new Map<string, ResolvedSenderAttention>();
+  test("keeps canonical successes explicit and retries only the unresolved exact target", async () => {
+    let writeAttempts = 0;
+    const canonical = new Map<string, ResolvedSenderAttention>([[targetKey(mayaA), resolution("quiet")]]);
     const adapter = {
-      write(address: string, behavior: AttentionBehavior) {
-        if (address === "jordan@example.com" && jordanAttempts++ === 0) throw new Error("database busy");
-        canonical.set(address, resolution(behavior));
+      write(targets: readonly SenderAttentionTarget[], behavior: AttentionBehavior) {
+        if (writeAttempts++ === 0) throw new Error("database busy");
+        targets.forEach((target) => canonical.set(targetKey(target), resolution(behavior)));
       },
-      resolve: (address: string) => canonical.get(address) ?? resolution("normal"),
+      resolve: (target: SenderAttentionTarget) => canonical.get(targetKey(target)) ?? resolution("normal"),
     };
     const first = await applySenderAttentionBatch(
-      { addresses: ["maya@example.com", "jordan@example.com"], behavior: "quiet" },
+      { targets: [mayaA, jordanB], behavior: "quiet" },
       adapter,
     );
 
     assert.equal(first.outcomes[0]?.status, "succeeded");
     assert.deepEqual(first.outcomes[1], {
       status: "failed",
-      address: "jordan@example.com",
+      target: jordanB,
       retryable: true,
-      error: { code: "temporarily_unavailable", message: "This sender could not be updated right now" },
+      error: { code: "temporarily_unavailable", message: "These senders could not be updated right now" },
       resolution: { behavior: "normal", rule: null },
     });
 
     const retry = await applySenderAttentionBatch(
-      { addresses: ["jordan@example.com"], behavior: "quiet" },
+      { targets: [jordanB], behavior: "quiet" },
       adapter,
     );
     assert.deepEqual(retry.outcomes, [{
       status: "succeeded",
-      address: "jordan@example.com",
+      target: jordanB,
       resolution: { behavior: "quiet", rule: null },
     }]);
   });
 
   test("marks permanent failures as non-retryable without losing canonical state", async () => {
     const result = await applySenderAttentionBatch(
-      { addresses: ["maya@example.com"], behavior: "hidden" },
+      { targets: [mayaA], behavior: "hidden" },
       {
         write() { throw new SenderAttentionChangeError("conflict", "This sender rule conflicts", false); },
         resolve: () => resolution("focus"),
@@ -71,7 +76,7 @@ describe("sender attention batch", () => {
 
     assert.deepEqual(result.outcomes[0], {
       status: "failed",
-      address: "maya@example.com",
+      target: mayaA,
       retryable: false,
       error: { code: "conflict", message: "This sender rule conflicts" },
       resolution: { behavior: "focus", rule: null },
@@ -82,7 +87,7 @@ describe("sender attention batch", () => {
     let canonical = resolution("normal");
     let resolutionAttempts = 0;
     const result = await applySenderAttentionBatch(
-      { addresses: ["maya@example.com"], behavior: "quiet" },
+      { targets: [mayaA], behavior: "quiet" },
       {
         write(_address, behavior) {
           canonical = resolution(behavior);
@@ -96,7 +101,7 @@ describe("sender attention batch", () => {
 
     assert.deepEqual(result.outcomes, [{
       status: "succeeded",
-      address: "maya@example.com",
+      target: mayaA,
       resolution: { behavior: "quiet", rule: null },
     }]);
   });
