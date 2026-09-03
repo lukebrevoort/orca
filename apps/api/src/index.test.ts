@@ -908,6 +908,11 @@ describe("Orca API", () => {
         { id: "rule_secondary_shared", accountId: "acct_secondary", scope: "address", value: "shared@example.com", behavior: "quiet", source: "user_choice", createdAt: now, updatedAt: now },
         { id: "rule_secondary_urgent", accountId: "acct_secondary", scope: "address", value: "urgent@secondary.example", behavior: "notify", source: "user_choice", createdAt: now, updatedAt: now },
       ]).run();
+      db.insert(collections).values({ id: "collection_primary", accountId: "acct_primary", name: "Primary project", color: "#70867d", position: 0 }).run();
+      db.insert(collectionThreads).values([
+        { id: "membership_primary_focus", collectionId: "collection_primary", threadId: "thread_primary_focus" },
+        { id: "membership_primary_normal", collectionId: "collection_primary", threadId: "thread_primary_normal" },
+      ]).run();
 
       const session = await createSession(db, "user_1");
       const mailboxMetrics: Array<{ returnedMessages: number; pageRowsProjected: number; labelAssociationRowsLoaded: number; durationMs: number }> = [];
@@ -954,6 +959,28 @@ describe("Orca API", () => {
       assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_normal"]);
       const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
       assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+
+      const storedSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary", { headers })).json();
+      assert.deepEqual(storedSearch.messages.map((message: { id: string }) => message.id), ["secondary_notify", "secondary_quiet"]);
+      const defaultInboxSearchResponse = await testApp.request("/v1/inbox?classification=all&query=primary", { headers });
+      assert.equal(defaultInboxSearchResponse.status, 200);
+      const defaultInboxSearch = await defaultInboxSearchResponse.json();
+      assert.deepEqual(defaultInboxSearch.messages.map((message: { id: string }) => message.id), ["primary_focus", "primary_normal"]);
+      const accountSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=shared&accountId=acct_secondary", { headers })).json();
+      assert.deepEqual(accountSearch.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+      assert.deepEqual(accountSearch.accounts.map((item: { id: string }) => item.id), ["acct_secondary"]);
+      const collectionSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=primary&collectionId=collection_primary", { headers })).json();
+      assert.deepEqual(collectionSearch.messages.map((message: { id: string }) => message.id), ["primary_focus", "primary_normal"]);
+      assert.equal((await testApp.request("/v1/inbox?view=all&classification=all&accountId=acct_private", { headers })).status, 404);
+      assert.equal((await testApp.request("/v1/inbox?view=all&classification=all&collectionId=missing", { headers })).status, 404);
+
+      const collectionPage = await (await testApp.request("/v1/inbox?view=all&classification=all&collectionId=collection_primary&limit=1", { headers })).json();
+      assert.equal(typeof collectionPage.nextCursor, "string");
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&limit=1&cursor=${encodeURIComponent(collectionPage.nextCursor)}`, { headers })).status, 400);
+
+      const scopedPage = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary&limit=1", { headers })).json();
+      assert.equal(typeof scopedPage.nextCursor, "string");
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&query=primary&limit=1&cursor=${encodeURIComponent(scopedPage.nextCursor)}`, { headers })).status, 400);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

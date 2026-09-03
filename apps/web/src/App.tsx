@@ -36,6 +36,7 @@ import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, Ma
 import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
 import { TopLayer, useTopLayerActive } from "./top-layer";
+import { isMailSearchResultReader, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
 import {
   SurfaceHistory,
@@ -1341,11 +1342,25 @@ export function InboxApp({
       historySynchronizerRef.current(history.read());
     };
     const onPageShow = () => synchronize();
+    const onMailSearchLocation = () => synchronize();
+    const onMailSearchResult = (event: Event) => {
+      const detail = (event as CustomEvent<MailSearchResultEventDetail>).detail;
+      if (!detail || typeof detail.url !== "string") return;
+      const target = new URL(detail.url, window.location.href);
+      if (target.origin !== window.location.origin || !readSurfaceLocation(target).reader) return;
+      event.preventDefault();
+      history.openReaderLocation(target, captureSurfaceReturnContext(null));
+      synchronize();
+    };
     window.addEventListener("popstate", synchronize);
     window.addEventListener("pageshow", onPageShow);
+    window.addEventListener(mailSearchLocationEvent, onMailSearchLocation);
+    window.addEventListener(mailSearchResultEvent, onMailSearchResult);
     return () => {
       window.removeEventListener("popstate", synchronize);
       window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener(mailSearchLocationEvent, onMailSearchLocation);
+      window.removeEventListener(mailSearchResultEvent, onMailSearchResult);
     };
   }, [preferences.composeZenByDefault]);
   const demoDataInitializedRef = useRef(false);
@@ -1784,7 +1799,9 @@ export function InboxApp({
     syncing: status === "syncing" || isGmailRefreshing,
   }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
-  const readerOriginLabel = readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+  const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
+    ? "Search results"
+    : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
 
   useEffect(() => {
     if (!spacePreferencesReady || status !== "ready") return;
@@ -2662,6 +2679,10 @@ export function InboxApp({
     if (pin.kind === "filter") {
       const filter = parsePinFilterTarget(pin.targetId);
       if (!filter) return;
+      if (filter.dataSource === "stored_mail") {
+        openMailSearchFilter(filter);
+        return;
+      }
       surfaceHistoryRef.current?.navigate(filter.mailbox);
       surfaceHistoryRef.current?.replaceQuery(filter.query);
       runUiTransition("content", () => {
@@ -2879,7 +2900,6 @@ export function InboxApp({
         <section className="desktop-workspace">
           <WorkspaceHeader
             health={sidebarProjection.account.health}
-            onQueryChange={changeStreamQuery}
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
@@ -4375,6 +4395,7 @@ function InboxView({
   const [pinFilterQuery, setPinFilterQuery] = useState("");
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
+  const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedTargets, setSelectedTargets] = useState<Map<string, string>>(() => new Map());
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
@@ -4405,7 +4426,9 @@ function InboxView({
     classification: pinFilterMailbox === "inbox" ? pinFilterClassification : pinFilterMailbox === "all" ? "all" : undefined,
     person: pinFilterPerson,
     query: pinFilterQuery.trim(),
-  }), [pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
+    accountId: account?.id ?? null,
+    collectionId: collection?.id ?? null,
+  }), [account?.id, collection?.id, pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
   const pinPreview = useMemo(() => {
     let candidates = getMessagesForMailbox(allMessages, pinFilter.mailbox, attentionByAddress);
     const signalView = pinFilterClassificationView(pinFilter);
@@ -4417,6 +4440,7 @@ function InboxView({
     const matchingMessages = getStreamMessages(candidates, pinFilter.mailbox, pinFilter.query);
     return { count: matchingMessages.length, messages: matchingMessages.slice(0, 3) };
   }, [allMessages, attentionByAddress, pinFilter]);
+  useEffect(() => setPinZeroMatchConfirmed(false), [pinFilter]);
   const selectedPinPerson = pinPeople.find((person) => person.email === pinFilter.person) ?? null;
   const pinFilterDisplayLabel = pinFilterLabel(pinFilter, selectedPinPerson?.name);
   const streamSectionLabels = useMemo(() => {
@@ -4453,6 +4477,7 @@ function InboxView({
     setPinFilterQuery(searchQuery);
     setPinFilterIcon("search");
     setPinFilterColor(pinColorOptions[pins.length % pinColorOptions.length]!.value);
+    setPinZeroMatchConfirmed(false);
     setPinMenuOpen(true);
   }
 
@@ -4462,7 +4487,10 @@ function InboxView({
 
   function savePinFilter(event: React.FormEvent) {
     event.preventDefault();
-    if (!pinPreview.count) return;
+    if (!pinPreview.count && !pinZeroMatchConfirmed) {
+      setPinZeroMatchConfirmed(true);
+      return;
+    }
     onCreatePin({ kind: "filter", targetId: JSON.stringify(pinFilter), label: pinFilterDisplayLabel, icon: pinFilterIcon, color: pinFilterColor });
     closePinBuilder();
   }
@@ -4667,9 +4695,9 @@ function InboxView({
                           return <li key={message.id}><span aria-hidden="true" className="pin-preview-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{message.from.name ?? message.from.email}</strong><b>{message.subject || "(no subject)"}</b><small>{message.snippet}</small></span></li>;
                         })}
                       </ul>
-                    ) : <p className="pin-builder-empty">No messages match yet. Try a broader search or another view.</p>}
+                    ) : <p className="pin-builder-empty">No messages match this exact scope. You can save it to watch for future mail, or broaden a filter.</p>}
                   </section>
-                  <footer className="pin-builder-actions"><span>Saved as <strong>{pinFilterDisplayLabel}</strong></span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim()} type="submit">Pin this filter</button></footer>
+                  <footer className="pin-builder-actions"><span>{!pinPreview.count && pinZeroMatchConfirmed ? "Confirm this zero-match scope" : <>Saved as <strong>{pinFilterDisplayLabel}</strong></>}</span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim() && !pinFilterPerson} type="submit">{!pinPreview.count && pinZeroMatchConfirmed ? "Pin zero-match filter" : "Pin this filter"}</button></footer>
                 </form>
             </TopLayer>
           ) : null}

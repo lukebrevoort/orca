@@ -7,6 +7,7 @@ import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type Compos
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAgentEvents } from "./demo-data";
 import { TopLayerProvider } from "./top-layer";
+import { closeMailSearch, mailSearchLocationEvent, readMailSearchState } from "./global-search";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -366,7 +367,6 @@ function createProductionInboxFetch(
   options: { messages?: InboxMessage[]; agentEvents?: PropagatedAgentEvent[] } = {},
 ): typeof fetch {
   const messages = options.messages ?? inboxFixture;
-  const message = messages[0]!;
   const syncStatus = {
     accounts: [{ ...accountFixture, state: "idle", lastSyncedAt: "2026-06-28T17:30:00.000Z", error: null }],
   };
@@ -379,7 +379,7 @@ function createProductionInboxFetch(
       classification: { likely_human: messages.length, automated_or_bulk: 0, uncertain: 0, unclassified: 0, all: messages.length },
     },
   };
-  const threadDetail: ThreadDetail = {
+  const threadDetail = (message: InboxMessage): ThreadDetail => ({
     account: accountFixture,
     thread: {
       id: message.threadId,
@@ -415,7 +415,7 @@ function createProductionInboxFetch(
       humanClassification: message.humanClassification,
       attachments: [],
     }],
-  };
+  });
 
   return (async (input: string | URL | Request) => {
     const url = new URL(String(input), browserWindow.location.href);
@@ -423,7 +423,11 @@ function createProductionInboxFetch(
     if (url.pathname === "/v1/sync/status") return jsonResponse(syncStatus);
     if (url.pathname === "/v1/sync/gmail") return jsonResponse({});
     if (url.pathname === "/v1/inbox") return jsonResponse(inbox);
-    if (url.pathname === `/v1/threads/${encodeURIComponent(message.threadId)}`) return jsonResponse(threadDetail);
+    const requestedThread = url.pathname.match(/^\/v1\/threads\/([^/]+)$/)?.[1];
+    if (requestedThread) {
+      const message = messages.find((candidate) => candidate.threadId === decodeURIComponent(requestedThread));
+      if (message) return jsonResponse(threadDetail(message));
+    }
     if (url.pathname === "/v1/collections") {
       onCollectionsRequest?.();
       return collectionsResponse;
@@ -1210,7 +1214,7 @@ describe("App top-layer contract", () => {
 
   test("suspends Compose and search shortcuts behind Manage spaces and Pin Builder", async () => {
     await renderApp();
-    const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail, people, or rules"]') as unknown as HTMLInputElement;
+    const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage") as unknown as HTMLButtonElement;
     manage.focus();
     await act(async () => manage.click());
@@ -1495,6 +1499,115 @@ describe("Desktop evidence and navigation", () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     });
     expect(focus.getAttribute("aria-current")).toBe("page");
+  });
+
+  test("returns from a Search result to Search, then restores the mounted source Reader", async () => {
+    const originalFetch = globalThis.fetch;
+    const resultMessage = inboxFixture[0]!;
+    const sourceMessage: InboxMessage = {
+      ...resultMessage,
+      id: `${resultMessage.id}-source`,
+      threadId: `${resultMessage.threadId}-source`,
+      providerMessageId: `${resultMessage.providerMessageId}-source`,
+      subject: "Source reader conversation",
+    };
+    const source = `/dev/inbox?destination=focus&q=${encodeURIComponent(resultMessage.subject)}&thread=${encodeURIComponent(sourceMessage.threadId)}&accountId=${encodeURIComponent(sourceMessage.accountId)}`;
+    const productionFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: [resultMessage, sourceMessage] });
+    browserWindow.history.replaceState({}, "", source);
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/accounts") return jsonResponse({ items: [accountFixture], nextCursor: null });
+      if (url.pathname === "/v1/organization/collections-pins/query") return jsonResponse({ workspaceId: "workspace_1", accountIds: [accountFixture.id], collections: [], pins: [], queries: [] });
+      return productionFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 10 && !browserWindow.document.querySelector("article.message-reader"); index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(sourceMessage.subject);
+
+      const headerSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
+      await act(async () => headerSearch.form?.dispatchEvent(new browserWindow.Event("submit", { bubbles: true, cancelable: true }) as unknown as Event));
+      expect(new URL(browserWindow.location.href).searchParams.get("search")).toBe("mail");
+      const searchLayer = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="global-mail-search-title"]') as unknown as HTMLElement;
+      expect(searchLayer).not.toBeNull();
+      expect(new URL(browserWindow.location.href).searchParams.get("searchQuery")).toBe(resultMessage.subject);
+      for (let index = 0; index < 10 && !browserWindow.document.querySelector(".global-mail-result-list a"); index += 1) await waitFor(1);
+      const result = browserWindow.document.querySelector(".global-mail-result-list a") as unknown as HTMLAnchorElement;
+      expect(result).not.toBeNull();
+
+      await act(async () => {
+        result.dispatchEvent(new browserWindow.MouseEvent("click", { bubbles: true, cancelable: true }) as unknown as Event);
+        await Promise.resolve();
+      });
+      for (let index = 0; index < 10 && !browserWindow.document.querySelector(".reader-kicker")?.textContent?.includes("Search results"); index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector(".reader-back")?.textContent).toContain("Search results");
+      expect(browserWindow.document.querySelector(".reader-kicker")?.textContent).toContain("Search results");
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(resultMessage.subject);
+      expect(searchLayer.isConnected).toBe(false);
+
+      await act(async () => {
+        (browserWindow.document.querySelector(".reader-back") as unknown as HTMLButtonElement).click();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+      expect(readMailSearchState(browserWindow.location as unknown as Location)).not.toBeNull();
+      expect(browserWindow.document.querySelector('[role="dialog"][aria-labelledby="global-mail-search-title"]')).not.toBeNull();
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(sourceMessage.subject);
+
+      await act(async () => {
+        closeMailSearch();
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+      expect(`${browserWindow.location.pathname}${browserWindow.location.search}`).toBe(source);
+      expect(browserWindow.document.querySelector(".content-pane")?.getAttribute("aria-label")).toBe("Message reader");
+      expect(browserWindow.document.querySelector("#reader-title")?.textContent).toBe(sourceMessage.subject);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("closes an invalid Search return to a synchronized Inbox fallback", async () => {
+    const originalFetch = globalThis.fetch;
+    const message = inboxFixture[0]!;
+    const source = `/dev/inbox?destination=focus&thread=${encodeURIComponent(message.threadId)}&accountId=${encodeURIComponent(message.accountId)}`;
+    const productionFetch = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    browserWindow.history.replaceState({}, "", source);
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/accounts") return jsonResponse({ items: [accountFixture], nextCursor: null });
+      if (url.pathname === "/v1/organization/collections-pins/query") return jsonResponse({ workspaceId: "workspace_1", accountIds: [accountFixture.id], collections: [], pins: [], queries: [] });
+      return productionFetch(input, init);
+    }) as typeof fetch;
+
+    try {
+      await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+      for (let index = 0; index < 10 && !browserWindow.document.querySelector("article.message-reader"); index += 1) await waitFor(0);
+      expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
+
+      const invalidSearch = new URL(browserWindow.location.href);
+      invalidSearch.searchParams.set("search", "mail");
+      invalidSearch.searchParams.set("searchQuery", "");
+      invalidSearch.searchParams.set("searchMailbox", "all");
+      invalidSearch.searchParams.set("searchEvidence", "all");
+      invalidSearch.searchParams.set("searchSource", "/api/private");
+      await act(async () => {
+        browserWindow.history.replaceState({}, "", `${invalidSearch.pathname}${invalidSearch.search}`);
+        browserWindow.dispatchEvent(new browserWindow.Event(mailSearchLocationEvent));
+        await Promise.resolve();
+      });
+      expect(browserWindow.document.querySelector('[role="dialog"][aria-labelledby="global-mail-search-title"]')).not.toBeNull();
+
+      await act(async () => {
+        closeMailSearch();
+        await Promise.resolve();
+      });
+      expect(`${browserWindow.location.pathname}${browserWindow.location.search}`).toBe("/?destination=inbox");
+      expect(browserWindow.document.querySelector('[role="dialog"][aria-labelledby="global-mail-search-title"]')).toBeNull();
+      expect(browserWindow.document.querySelector(".content-pane")?.getAttribute("aria-label")).toBe("Inbox");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   test("preserves a production custom-space deep link until deferred collections select it", async () => {
@@ -1929,13 +2042,19 @@ describe("Pin navigation and bulk sender actions", () => {
   test("starts a saved search from the global no-results state", async () => {
     browserWindow.history.replaceState({}, "", "/dev/inbox?q=moonbase%20ledger");
     await renderApp();
-    const search = browserWindow.document.querySelector('input[aria-label="Search mail, people, or rules"]') as unknown as HTMLInputElement;
+    const search = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
     expect(search.value).toBe("moonbase ledger");
     const save = [...browserWindow.document.querySelectorAll("button")]
       .find((button) => button.textContent?.includes("Save this search")) as HTMLButtonElement | undefined;
     expect(save).toBeDefined();
     await act(async () => { save!.click(); });
     expect((browserWindow.document.querySelector(".pin-builder-search input") as unknown as HTMLInputElement).value).toBe("moonbase ledger");
+    const initialSave = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Pin this filter") as unknown as HTMLButtonElement;
+    await act(async () => initialSave.click());
+    expect(browserWindow.document.querySelector(".pin-builder-actions")?.textContent).toContain("Confirm this zero-match scope");
+    const confirmedSave = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Pin zero-match filter") as unknown as HTMLButtonElement;
+    await act(async () => confirmedSave.click());
+    expect(browserWindow.document.querySelector('[aria-labelledby="pin-builder-title"]')).toBeNull();
   });
 
   test("announces a concise result status without making the message list live", async () => {

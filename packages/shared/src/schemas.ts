@@ -567,6 +567,10 @@ export const inboxQuerySchema = z
     // message belongs in a person's workflow, while classification answers how
     // Orca currently estimates the message was produced.
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
+    query: z.string().trim().min(1).max(200).optional(),
+    sender: z.string().trim().min(1).max(320).optional(),
+    accountId: nonEmptyStringSchema.optional(),
+    collectionId: nonEmptyStringSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -750,6 +754,9 @@ export const pinFilterSchema = z.object({
   classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
   person: z.string().trim().max(500).nullable(),
   query: z.string().trim().max(200),
+  accountId: nonEmptyStringSchema.nullable().optional(),
+  collectionId: nonEmptyStringSchema.nullable().optional(),
+  dataSource: z.literal("stored_mail").optional(),
 }).strict();
 export type PinFilter = z.infer<typeof pinFilterSchema>;
 

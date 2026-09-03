@@ -123,6 +123,26 @@ describe("shared API schemas", () => {
     assert.equal(inboxQuerySchema.safeParse({ classification: "machine" }).success, false);
   });
 
+  test("validates bounded stored-mail search scope", () => {
+    assert.deepEqual(inboxQuerySchema.parse({
+      query: " launch notes ",
+      sender: " maya@example.com ",
+      accountId: "acct_work",
+      collectionId: "space_launch",
+      view: "all",
+      classification: "human",
+    }), {
+      query: "launch notes",
+      sender: "maya@example.com",
+      accountId: "acct_work",
+      collectionId: "space_launch",
+      view: "all",
+      classification: "human",
+    });
+    assert.equal(inboxQuerySchema.safeParse({ query: "" }).success, false);
+    assert.equal(inboxQuerySchema.safeParse({ query: "x".repeat(201) }).success, false);
+  });
+
   test("normalizes unique batch sender changes and preserves canonical per-sender outcomes", () => {
     assert.deepEqual(batchSenderAttentionChangeSchema.parse({
       addresses: [" Maya@Example.com ", "jordan@example.com"],

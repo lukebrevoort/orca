@@ -39,6 +39,7 @@ export type MailboxReadQuery = {
   classification?: "human" | "tideline" | "uncertain" | "all";
   query?: string;
   sender?: string;
+  collectionId?: string;
   receivedAfter?: string;
   receivedBefore?: string;
 };
@@ -228,6 +229,9 @@ export function createMailboxReader(sqlite: Database, options: MailboxReaderOpti
       if (accountRows.length === 0) throw new MailboxScopeError();
       const accounts = accountRows.map((account) => serializeMailboxAccount(account, capabilitiesFor));
       const accountIds = accountRows.map((account) => account.id);
+      if (input.query.collectionId && !mailboxCollectionExists(sqlite, input.query.collectionId, accountIds)) {
+        throw new MailboxScopeError("Collection not found");
+      }
 
       const classification = input.query.classification ?? "all";
       const view = input.query.view ?? "default";
@@ -514,6 +518,17 @@ function addMailboxFilters(
   params: Array<string | number | null>,
   query: MailboxReadQuery,
 ) {
+  if (query.collectionId) {
+    clauses.push(`exists (
+      select 1
+      from collections collection
+      inner join collection_threads membership on membership.collection_id = collection.id
+      where collection.id = ?
+        and collection.account_id = e.account_id
+        and membership.thread_id = e.thread_id
+    )`);
+    params.push(query.collectionId);
+  }
   if (query.query?.trim()) {
     clauses.push(`lower(coalesce(e.from_name, '') || char(10) || coalesce(e.from_address, '') || char(10) || coalesce(e.subject, '') || char(10) || coalesce(e.snippet, '')) like ? escape '\\'`);
     params.push(`%${escapeLike(query.query.trim().toLocaleLowerCase())}%`);
@@ -568,14 +583,24 @@ function mailboxFreshAt(accounts: RawMailboxAccount[]) {
 }
 
 function cursorScope(query: MailboxReadQuery) {
-  return query.query || query.sender || query.receivedAfter || query.receivedBefore
+  return query.query || query.sender || query.collectionId || query.receivedAfter || query.receivedBefore
     ? JSON.stringify({
         query: query.query?.trim() ?? null,
         sender: query.sender?.trim().toLocaleLowerCase() ?? null,
+        collectionId: query.collectionId ?? null,
         receivedAfter: query.receivedAfter ?? null,
         receivedBefore: query.receivedBefore ?? null,
       })
     : undefined;
+}
+
+function mailboxCollectionExists(sqlite: Database, collectionId: string, accountIds: string[]) {
+  return queryAll<{ id: string }>(sqlite, `
+    select id
+    from collections
+    where id = ?
+      and account_id in (${placeholders(accountIds.length)})
+    limit 1`, [collectionId, ...accountIds]).length > 0;
 }
 
 function validateCursor(

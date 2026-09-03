@@ -223,6 +223,16 @@ export class SurfaceHistory {
     this.push(url, null);
   }
 
+  openReaderLocation(target: URL, returnContext: SurfaceReturnContext) {
+    const url = new URL(target.href);
+    if (url.origin !== this.browser.location.origin || !readSurfaceLocation(url).reader) {
+      throw new Error("Reader navigation requires a same-origin Orca reader location.");
+    }
+    this.armReturnContext(returnContext);
+    this.push(url, null);
+    return this.read();
+  }
+
   openComposer(composer: { draftId: string | null; zen: boolean }) {
     const url = new URL(this.browser.location.href);
     url.searchParams.set("compose", "1");

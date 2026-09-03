@@ -43,6 +43,9 @@ function querySummary(query: OrganizationSavedQuery | undefined) {
     filters.sender ? `Sender: ${filters.sender}` : null,
     filters.attention ? `Attention: ${filters.attention}` : null,
     filters.classification ? `Classification: ${filters.classification}` : null,
+    filters.accountId ? `Account: ${filters.accountId}` : null,
+    filters.collectionId ? `Space: ${filters.collectionId}` : null,
+    filters.dataSource ? "Source: stored mail" : null,
   ].filter((value): value is string => value !== null);
   return pieces.join(" · ") || query.name;
 }

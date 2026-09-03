@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
+import { GlobalMailSearch, openMailSearch } from "./global-search";
 import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace } from "./organization-views";
@@ -167,29 +168,31 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
   </div>;
 }
 
-export function WorkspaceHeader({ health, query, title, theme, onQueryChange, onQuerySubmit, onThemeChange }: {
+export function WorkspaceHeader({ health, query, title, theme, onQuerySubmit, onThemeChange }: {
   health: SidebarAccount["health"];
   query: string;
   title: string;
   theme: "light" | "dark";
-  onQueryChange: (query: string) => void;
   onQuerySubmit?: (query: string) => void;
   onThemeChange: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(query);
   const topLayerActive = useTopLayerActive();
+  useEffect(() => setDraft(query), [query]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); inputRef.current?.focus(); }
+      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); openMailSearch(draft); }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [topLayerActive]);
+  }, [draft, topLayerActive]);
   return <header className="desktop-workspace-header">
-    <form className="desktop-global-search" onSubmit={(event) => { event.preventDefault(); onQuerySubmit?.(query); }} role="search"><label><span aria-hidden="true">⌕</span><input aria-label="Search mail, people, or rules" onChange={(event) => onQueryChange(event.target.value)} placeholder="Search mail, people, or rules" ref={inputRef} value={query}/><kbd>⌘ K</kbd></label></form>
+    <form className="desktop-global-search" onSubmit={(event) => { event.preventDefault(); onQuerySubmit?.(draft); openMailSearch(draft); }} role="search"><label><span aria-hidden="true">⌕</span><input aria-label="Search mail" maxLength={200} onChange={(event) => setDraft(event.target.value)} placeholder="Search mail" ref={inputRef} value={draft}/><kbd>⌘ K</kbd></label></form>
     <span className="desktop-header-context">{title}</span>
     <span className={`desktop-health desktop-health-${health}`}><i/>{health}</span>
     <button aria-label={theme === "dark" ? "Switch to Light" : "Switch to Orca Black"} className="desktop-theme-toggle" onClick={onThemeChange} type="button">{theme === "dark" ? "Light" : "Black"}</button>
+    <GlobalMailSearch returnFocusRef={inputRef}/>
   </header>;
 }
 
@@ -224,7 +227,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
   const [source, setSource] = useState<SettingsNavigationSource>(() => navigationPreview
     ? navigationPreview
     : emptySettingsNavigationSource);
-  const [query, setQuery] = useState("");
+  const query = "";
   useEffect(() => {
     if (navigationPreview?.complete) {
       setSource(navigationPreview);
@@ -328,7 +331,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
       projection={projection}
       theme={theme}
     />
-    <section className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onQueryChange={setQuery} onQuerySubmit={(value) => { const search = value.trim(); window.location.assign(search ? `/?q=${encodeURIComponent(search)}` : "/"); }} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</section>
+    <section className="desktop-workspace"><WorkspaceHeader health={projection.account.health} onThemeChange={onThemeChange} query={query} theme={theme} title={title}/><ConnectivityNotice onOpenDrafts={() => navigate("drafts")} online={online}/>{children}</section>
   </div>;
 }
 

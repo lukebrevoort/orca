@@ -99,9 +99,33 @@ describe("Organization Collections/Pins contract", () => {
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { attention: "focus" } }).success, false);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { mailbox: "inbox", attention: "quiet" } }).success, false);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { threadId: "thread_1" } }).success, false);
-    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { collectionId: "collection_1" } }).success, false);
+    assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { collectionId: "collection_1" } }).success, true);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { text: "" } }).success, false);
     assert.equal(organizationSavedQueryDefinitionSchema.safeParse({ revision: 1, filters: { sender: "" } }).success, false);
+  });
+
+  test("preserves exact stored-mail account and custom-space scope", () => {
+    const legacy = {
+      mailbox: "all" as const,
+      attention: "all" as const,
+      classification: "human" as const,
+      person: null,
+      query: "launch",
+      accountId: "account_a",
+      collectionId: "collection_launch",
+      dataSource: "stored_mail" as const,
+    };
+    const definition = organizationSavedQueryDefinitionFromLegacyPinFilter(legacy);
+    assert.deepEqual(definition.filters, {
+      mailbox: "all",
+      attention: "all",
+      classification: "human",
+      text: "launch",
+      accountId: "account_a",
+      collectionId: "collection_launch",
+      dataSource: "stored_mail",
+    });
+    assert.deepEqual(legacyPinFilterFromOrganizationSavedQueryDefinition(definition), legacy);
   });
 
   test("expresses auditable membership and shortcut changes without mail authority", () => {

@@ -2201,7 +2201,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
       const { sqlite } = dbFactory();
       try {
@@ -2210,8 +2210,8 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
             capabilitiesFor: mailboxCapabilitiesFor,
             observe: options.mailboxReadObserver,
           }).read({
-            authorization: { userId: c.get("auth").userId },
-            query: { cursor, limit, view, classification },
+            authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
+            query: { cursor, limit, view, classification, query, sender, collectionId },
           });
           c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
           c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
