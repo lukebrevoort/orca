@@ -86,8 +86,10 @@ export function createDefaultGmailSyncCoordinator(options: {
           }, runtimeMetrics);
         }
 
+        const fallback = claim.sources.includes("fallback");
+        let history = null;
         if (claim.historyId) {
-          const history = await syncGmailAccountHistory(db, {
+          history = await syncGmailAccountHistory(db, {
             accountId: claim.accountId,
             historyId: claim.historyId,
             gmailClient,
@@ -98,15 +100,16 @@ export function createDefaultGmailSyncCoordinator(options: {
             leaseGuard: claim.lease,
             metrics: runtimeMetrics,
           });
-          return withMetrics({
-            kind: "history",
-            history,
-            messageCount: history.emailCount,
-            pageCount: history.usedBackfill ? 1 : 0,
-          }, runtimeMetrics);
+          if (!fallback) {
+            return withMetrics({
+              kind: "history",
+              history,
+              messageCount: history.emailCount,
+              pageCount: history.usedBackfill ? 1 : 0,
+            }, runtimeMetrics);
+          }
         }
 
-        const fallback = claim.sources.includes("fallback");
         const account = getGmailAccount(db, claim.accountId);
         let watch = null;
         let watchError: string | null = null;
@@ -152,6 +155,17 @@ export function createDefaultGmailSyncCoordinator(options: {
             backfill,
             messageCount: backfill.emailCount,
             pageCount: backfill.pages,
+          }, runtimeMetrics);
+        }
+
+        if (history) {
+          return withMetrics({
+            kind: "fallback",
+            history,
+            watch,
+            watchError,
+            messageCount: history.emailCount,
+            pageCount: history.usedBackfill ? 1 : 0,
           }, runtimeMetrics);
         }
 
