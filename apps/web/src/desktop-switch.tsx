@@ -4,6 +4,7 @@ import { DesktopDrawer } from "./desktop-drawer";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
 import { OrganizationViewsWorkspace } from "./organization-views";
 import { createTidePreviewRequest, TideTableEditor, type TideCompileSuccess } from "./tide-table";
+import { TopLayer, useTopLayerActive } from "./top-layer";
 
 export { DesktopDrawer } from "./desktop-drawer";
 
@@ -100,13 +101,14 @@ export function WorkspaceHeader({ health, query, title, theme, onQueryChange, on
   onThemeChange: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const topLayerActive = useTopLayerActive();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); inputRef.current?.focus(); }
+      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); inputRef.current?.focus(); }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [topLayerActive]);
   return <header className="desktop-workspace-header">
     <form className="desktop-global-search" onSubmit={(event) => { event.preventDefault(); onQuerySubmit?.(query); }} role="search"><label><span aria-hidden="true">⌕</span><input aria-label="Search mail, people, or rules" onChange={(event) => onQueryChange(event.target.value)} placeholder="Search mail, people, or rules" ref={inputRef} value={query}/><kbd>⌘ K</kbd></label></form>
     <span className="desktop-header-context">{title}</span>
@@ -202,26 +204,9 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   onRename: (space: WorkflowSpace, name: string) => Promise<void> | void;
   onRestore: (space: WorkflowSpace) => Promise<void> | void;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const dialog = dialogRef.current;
-    dialog?.querySelector<HTMLElement>("button")?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab" || !dialog) return;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled])')];
-      if (!focusable.length) return;
-      const first = focusable[0]!; const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => { window.removeEventListener("keydown", onKeyDown); previous?.focus(); };
-  }, [onClose]);
   async function dropOn(event: DragEvent, target: WorkflowSpace) {
     event.preventDefault();
     if (!draggedId || draggedId === target.id) return;
@@ -241,7 +226,7 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
   }
   const visible = spaces.filter((space) => !space.hidden);
   const hidden = spaces.filter((space) => space.hidden);
-  return <div className="desktop-dialog-layer" role="presentation"><button aria-label="Close Manage spaces" className="desktop-dialog-backdrop" onClick={onClose} tabIndex={-1} type="button"/><div aria-busy={busy || undefined} aria-labelledby="manage-spaces-title" aria-modal="true" className="desktop-spaces-dialog" ref={dialogRef} role="dialog">
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="manage-spaces-title" backdropAriaLabel="Close Manage spaces" backdropClassName="desktop-dialog-backdrop" className="desktop-spaces-dialog" dismissible={!busy} layerClassName="desktop-dialog-layer" onClose={onClose}>
     <header><div><span>Workspace preference</span><h2 id="manage-spaces-title">Manage spaces</h2><p>Names and supported positions sync with your account. Cross-type ordering and hidden visibility are saved on this device; hiding never changes a rule.</p></div><button aria-label="Close" disabled={busy} onClick={onClose} type="button">×</button></header>
     {error ? <p className="desktop-space-operation-error" role="alert">{error}</p> : null}
     <div className="desktop-space-list">{visible.map((space, index) => <article draggable={!busy} onDragStart={() => setDraggedId(space.id)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => void dropOn(event, space)} key={space.id}>
@@ -250,7 +235,7 @@ export function ManageSpacesDialog({ busy = false, error = null, spaces, onClose
     </article>)}</div>
     {hidden.length ? <section className="desktop-hidden-spaces"><h3>Hidden on this device</h3>{hidden.map((space) => <button disabled={busy} key={space.id} onClick={() => void onRestore(space)} type="button"><span>{space.label}</span><small>Rules intact</small><strong>Restore</strong></button>)}</section> : null}
     <footer>{creating ? <div className="desktop-create-space"><input aria-label="Workflow space name" autoFocus disabled={busy} maxLength={60} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void create(); }} placeholder="e.g. Launch watch" value={newName}/><button disabled={busy || !newName.trim()} onClick={() => void create()} type="button">{busy ? "Creating…" : "Create"}</button><button disabled={busy} onClick={() => setCreating(false)} type="button">Cancel</button></div> : <button className="desktop-create-space-button" disabled={busy} onClick={() => setCreating(true)} type="button">{busy ? "Saving…" : "+ Create a workflow space"}</button>}</footer>
-  </div></div>;
+  </TopLayer>;
 }
 
 export function moveSpaceOrder(order: string[], draggedId: string, targetId: string) {

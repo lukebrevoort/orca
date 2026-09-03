@@ -29,11 +29,11 @@ import { getContactIdentity, getContactSignature, type ContactSignature } from "
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
-import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
 import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
 import { ThreadLaneControls } from "./organization-lanes";
+import { TopLayer, useTopLayerActive } from "./top-layer";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -1250,6 +1250,7 @@ export function InboxApp({
   setTheme: Dispatch<SetStateAction<Theme>>;
   bulkAttentionClient?: BulkAttentionClient;
 }) {
+  const topLayerActive = useTopLayerActive();
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
   const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
@@ -1289,7 +1290,6 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationOpen, setOrganizationOpen] = useState(false);
   const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("destination") === "organization");
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
@@ -1359,7 +1359,6 @@ export function InboxApp({
   const gmailRefreshControllerRef = useRef<AbortController | null>(null);
   const gmailRefreshGenerationRef = useRef(0);
   const [isGmailRefreshing, setIsGmailRefreshing] = useState(false);
-  const composeReturnFocusRef = useRef<HTMLElement | null>(null);
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -1376,9 +1375,7 @@ export function InboxApp({
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const libraryRef = useRef<HTMLElement>(null);
   const contentPaneRef = useRef<HTMLElement>(null);
-  const libraryReturnFocusRef = useRef<HTMLElement | null>(null);
   const pinOrderRef = useRef<Pin[]>(demoMode ? demoPins : []);
   const pinReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -1422,43 +1419,6 @@ export function InboxApp({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!organizationOpen) return;
-    if (!libraryReturnFocusRef.current) libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const drawer = libraryRef.current;
-    const getFocusable = () => drawer ? Array.from(drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden")) : [];
-    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOrganizationOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = getFocusable();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      const returnFocus = libraryReturnFocusRef.current;
-      libraryReturnFocusRef.current = null;
-      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
-    };
-  }, [organizationOpen]);
 
   useEffect(() => {
     const requestId = ++classificationRequestRef.current;
@@ -1833,14 +1793,14 @@ export function InboxApp({
   useEffect(() => {
     if (!selectedThreadId) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
+      if (!topLayerActive && event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
         event.preventDefault();
         closeThread();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedThreadId]);
+  }, [selectedThreadId, topLayerActive]);
 
   useLayoutEffect(() => {
     if (selectedThreadId || !inboxViewportRef.current) return;
@@ -1871,6 +1831,7 @@ export function InboxApp({
         event.isComposing ||
         event.repeat ||
         (!legacyShortcut && !composeShortcut) ||
+        topLayerActive ||
         panelMode ||
         panelClosing ||
         (target instanceof HTMLElement && target.matches("input, textarea, [contenteditable=true]"))
@@ -1884,7 +1845,7 @@ export function InboxApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [panelClosing, panelMode, preferences.composeZenByDefault]);
+  }, [panelClosing, panelMode, preferences.composeZenByDefault, topLayerActive]);
 
   const mailboxItems = useMemo(
     () =>
@@ -1946,30 +1907,11 @@ export function InboxApp({
       return;
     }
 
-    if (!panelMode) composeReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPanelClosing(false);
     setZenClosing(false);
     setComposeDraftId(draftId);
     setPanelMode("compose");
     setZen(preferences.composeZenByDefault);
-  }
-
-  function restoreComposeFocus() {
-    const target = composeReturnFocusRef.current;
-    composeReturnFocusRef.current = null;
-    window.requestAnimationFrame(() => {
-      if (target?.isConnected) target.focus({ preventScroll: true });
-    });
-  }
-
-  function openLibrary() {
-    libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setOrganizationOpen(true);
-  }
-
-  function toggleLibrary() {
-    if (organizationOpen) setOrganizationOpen(false);
-    else openLibrary();
   }
 
   function openOrganizer(message: InboxMessage) {
@@ -2172,7 +2114,6 @@ export function InboxApp({
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
-      restoreComposeFocus();
       return;
     }
 
@@ -2189,7 +2130,6 @@ export function InboxApp({
       setPanelClosing(false);
       setZenClosing(false);
       closeTimerRef.current = null;
-      restoreComposeFocus();
     }, PANEL_ANIM_MS);
   }
 
@@ -2242,7 +2182,6 @@ export function InboxApp({
   }
 
   function selectMailbox(mailbox: Mailbox, focusDestination = false) {
-    if (focusDestination) libraryReturnFocusRef.current = null;
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
       if (mailbox === "inbox") setClassificationView("all");
@@ -2252,7 +2191,6 @@ export function InboxApp({
       setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
-      setOrganizationOpen(false);
     });
     if (focusDestination) {
       window.requestAnimationFrame(() => contentPaneRef.current?.focus({ preventScroll: true }));
@@ -2395,7 +2333,6 @@ export function InboxApp({
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
       setInboxFilter("all");
-      setOrganizationOpen(false);
     });
   }
 
@@ -2576,7 +2513,6 @@ export function InboxApp({
         setStreamQuery(filter.query);
         setSelectedThreadId(null);
         setSelectedThreadAccountId(null);
-        setOrganizationOpen(false);
       });
     }
     if (pin.kind === "thread") {
@@ -2780,7 +2716,7 @@ export function InboxApp({
 
   return (
     <div className="app-root">
-      <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
+      <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
           account={sidebarAccount}
           active={activeDesktopDestination}
@@ -2925,20 +2861,15 @@ export function InboxApp({
 
       {panelMode ? (
         <>
-          <button
-            aria-label="Close"
-            aria-hidden={zen || undefined}
-            className={`overlay-backdrop${panelClosing ? " overlay-backdrop-closing" : ""}`}
-            inert={zen || undefined}
-            onClick={closePanel}
-            type="button"
-          />
-
-          <aside
-            aria-hidden={zen || undefined}
-            aria-label="Compose message"
+          <TopLayer
+            ariaLabel="Compose message"
+            as="aside"
+            backdropAriaLabel="Close compose"
+            backdropClassName={`overlay-backdrop${panelClosing ? " overlay-backdrop-closing" : ""}`}
             className={`slide-panel slide-panel-open${panelClosing ? " slide-panel-closing" : ""}`}
-            inert={zen || undefined}
+            dismissible={!panelClosing}
+            initialFocusSelector=".compose-recipient-row input"
+            onClose={closePanel}
           >
             <header className="panel-header">
               <h2>New message</h2>
@@ -2969,7 +2900,7 @@ export function InboxApp({
                 onSent={closePanel}
               />
             </div>
-          </aside>
+          </TopLayer>
 
           {zen ? (
             <ComposeWorkspace
@@ -3225,18 +3156,17 @@ export function WelcomeOrientationPage({ onComplete, theme, setTheme }: {
   </main>;
 }
 
-function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
+export function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
   const continueRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { continueRef.current?.focus(); }, []);
 
-  return <div className="gmail-permission-backdrop" role="presentation"><section aria-labelledby="gmail-permission-title" aria-modal="true" className="gmail-permission-dialog" onKeyDown={(event) => { if (event.key === "Escape") onCancel(); }} role="dialog">
+  return <TopLayer ariaBusy={status === "loading"} ariaLabelledBy="gmail-permission-title" as="section" backdrop={false} className="gmail-permission-dialog" dismissible={status !== "loading"} initialFocusRef={continueRef} layerClassName="gmail-permission-backdrop" onClose={onCancel}>
     <p className="settings-eyebrow">Before Google opens</p>
     <h2 id="gmail-permission-title">Enable drafts and sending?</h2>
     <p>Orca will request <code>gmail.compose</code> so it can create and update Gmail drafts, then send new messages, replies, and forwards. Reading continues even if you cancel or Google denies the request.</p>
     <ul><li>No deleting mail</li><li>No changing labels</li><li>No broader mailbox modification</li></ul>
     {error ? <p className="gmail-authorization-error" role="alert">{error}</p> : null}
     <div><button disabled={status === "loading"} onClick={onCancel} type="button">Not now</button><button className="gmail-permission-continue" disabled={status === "loading"} onClick={onContinue} ref={continueRef} type="button">{status === "loading" ? "Opening Google…" : "Continue to Google"}</button></div>
-  </section></div>;
+  </TopLayer>;
 }
 
 async function beginGmailAuthorization(
@@ -3985,53 +3915,6 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
   const [color, setColor] = useState<string>(pin.color);
   const [pendingAction, setPendingAction] = useState<"idle" | "saving" | "removing">("idle");
   const [error, setError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLElement>(null);
-  const onCloseRef = useRef(onClose);
-  const savingRef = useRef(pendingAction !== "idle");
-  onCloseRef.current = onClose;
-  savingRef.current = pendingAction !== "idle";
-
-  useEffect(() => {
-    const root = document.getElementById("root");
-    const previousRootInert = root?.inert ?? false;
-    if (root) root.inert = true;
-    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const getFocusable = () => dialogRef.current
-      ? Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden"))
-      : [];
-    const closeOnKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !savingRef.current) {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = getFocusable();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (!dialogRef.current?.contains(document.activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", closeOnKeyDown);
-    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
-    return () => {
-      document.removeEventListener("keydown", closeOnKeyDown);
-      if (root) root.inert = previousRootInert;
-      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
-    };
-  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -4063,9 +3946,7 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
 
   const busy = pendingAction !== "idle";
 
-  const dialog = <div className="pin-appearance-layer" role="presentation">
-    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={busy} onClick={onClose} type="button" />
-    <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" ref={dialogRef} role="dialog">
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="pin-appearance-title" as="section" backdropAriaLabel="Close pin customization" backdropClassName="pin-appearance-backdrop" className="pin-appearance" dismissible={!busy} layerClassName="pin-appearance-layer" onClose={onClose}>
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
         <button aria-label="Close pin customization" data-dialog-initial-focus disabled={busy} onClick={onClose} type="button">×</button>
@@ -4096,9 +3977,7 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
         {error ? <p className="pin-appearance-error" role="alert">{error}</p> : null}
         <footer className="pin-appearance-actions"><button className="pin-appearance-remove" disabled={busy} onClick={() => void remove()} type="button">{pendingAction === "removing" ? "Removing…" : "Remove pin"}</button><button disabled={busy} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={busy} type="submit">{pendingAction === "saving" ? "Saving…" : "Save pin style"}</button></footer>
       </form>
-    </section>
-  </div>;
-  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
+  </TopLayer>;
 }
 
 export function MessageSubject({ subject, unread }: { subject: string; unread: boolean }) {
@@ -4238,6 +4117,7 @@ function InboxView({
   viewMode: "collection" | Mailbox;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
+  const topLayerActive = useTopLayerActive();
   const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
     { id: "all", label: "Everything" },
     { id: "notify", label: "Notify me" },
@@ -4313,7 +4193,7 @@ function InboxView({
   useEffect(() => {
     if (collection) return;
     const focusSearch = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
@@ -4321,7 +4201,7 @@ function InboxView({
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, [collection]);
+  }, [collection, topLayerActive]);
 
   useEffect(() => {
     setSelectionMode(false);
@@ -4329,29 +4209,6 @@ function InboxView({
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
   }, [classificationView, personFilter, viewMode]);
-
-  useEffect(() => {
-    if (!pinMenuOpen) return;
-    const closeOnPointerDown = (event: PointerEvent) => {
-      if (!pinMenuRef.current?.contains(event.target as Node)) setPinMenuOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setPinMenuOpen(false);
-      pinMenuTriggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", closeOnPointerDown);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnPointerDown);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [pinMenuOpen]);
-
-  useEffect(() => {
-    if (pinMenuOpen) window.requestAnimationFrame(() => pinBuilderInputRef.current?.focus());
-  }, [pinMenuOpen]);
 
   function openPinBuilder() {
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
@@ -4366,7 +4223,6 @@ function InboxView({
 
   function closePinBuilder() {
     setPinMenuOpen(false);
-    pinMenuTriggerRef.current?.focus();
   }
 
   function savePinFilter(event: React.FormEvent) {
@@ -4520,9 +4376,7 @@ function InboxView({
             <span className="pinned-avatar">＋</span><small>Pin</small>
           </button>
           {pinMenuOpen ? (
-            <div className="pin-builder-layer">
-              <button aria-label="Close pin builder" className="pin-builder-backdrop" onClick={closePinBuilder} type="button" />
-              <section aria-labelledby="pin-builder-title" aria-modal="true" className="pin-builder" id="pin-builder" role="dialog">
+            <TopLayer ariaLabelledBy="pin-builder-title" as="section" backdropAriaLabel="Close pin builder" backdropClassName="pin-builder-backdrop" className="pin-builder" initialFocusRef={pinBuilderInputRef} layerClassName="pin-builder-layer" onClose={closePinBuilder} surfaceProps={{ id: "pin-builder" }}>
                 <header className="pin-builder-heading">
                   <div><p>Keep a filter</p><h2 id="pin-builder-title">Pin anything you can find.</h2><span>Build a slice of mail, preview it, and keep it one click away.</span></div>
                   <button aria-label="Close pin builder" onClick={closePinBuilder} type="button">×</button>
@@ -4573,8 +4427,7 @@ function InboxView({
                   </section>
                   <footer className="pin-builder-actions"><span>Saved as <strong>{pinFilterDisplayLabel}</strong></span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim()} type="submit">Pin this filter</button></footer>
                 </form>
-              </section>
-            </div>
+            </TopLayer>
           ) : null}
         </div>
         </nav>
@@ -5109,6 +4962,7 @@ export function MessageReader({
 export type ReaderMessageAction = "reply" | "reply_all" | "forward";
 
 function ThreadReplyComposer({ account, contacts, demoMode = false, detail, message, onSent }: { account: MailAccount; contacts: MailContact[]; demoMode?: boolean; detail: ThreadDetail; message?: ThreadDetailMessage; onSent: (result: DeliveryResult) => Promise<void> | void }) {
+  const topLayerActive = useTopLayerActive();
   const [action, setAction] = useState<ReaderMessageAction | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const [reconciliationError, setReconciliationError] = useState<string | null>(null);
@@ -5119,7 +4973,7 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
+      if (topLayerActive || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
       const next = event.key.toLowerCase() === "r" ? "reply" : event.key.toLowerCase() === "a" ? "reply_all" : event.key.toLowerCase() === "f" ? "forward" : null;
       if (!next) return;
       event.preventDefault();
@@ -5128,7 +4982,7 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [topLayerActive]);
 
   if (!action || !message) {
     return (
@@ -5676,36 +5530,6 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const organizerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const feedbackRoot = document.querySelector<HTMLElement>("[data-feedback-kit-root]");
-    feedbackRoot?.setAttribute("aria-hidden", "true");
-    feedbackRoot?.setAttribute("inert", "");
-    organizerRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      if (event.key !== "Tab" || !organizerRef.current) return;
-      const focusable = Array.from(organizerRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      window.removeEventListener("keydown", closeOnEscape);
-      feedbackRoot?.removeAttribute("aria-hidden");
-      feedbackRoot?.removeAttribute("inert");
-      previouslyFocused?.focus();
-    };
-  }, [onClose]);
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
   const savedCollectionCount = collections.filter((collection) => collection.threadIds.includes(message.threadId)).length;
@@ -5726,9 +5550,7 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
     }
   }
   return (
-    <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
-      <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-busy={Boolean(pendingAction)} aria-describedby="organizer-description" aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} ref={organizerRef} role="dialog" tabIndex={-1}>
+    <TopLayer ariaBusy={Boolean(pendingAction)} ariaDescribedBy="organizer-description" ariaLabelledBy="organizer-title" as="section" backdropAriaLabel="Close organizer" backdropClassName="organizer-backdrop" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} dismissible={!pendingAction && !closing} layerClassName={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} onClose={onClose}>
         <header className="organizer-heading">
           <div>
             <p>Keep close</p>
@@ -5802,8 +5624,7 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
           <span><span aria-hidden="true">{actionError ? "!" : pendingAction ? "…" : "✓"}</span> {actionError ? "Resolve the change above" : pendingAction ? "Saving changes…" : "Changes save automatically"}</span>
           <button className="organizer-done" disabled={Boolean(actionError || pendingAction)} onClick={onClose} type="button">Done</button>
         </footer>
-      </section>
-    </div>
+    </TopLayer>
   );
 }
 

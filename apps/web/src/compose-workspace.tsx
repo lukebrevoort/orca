@@ -11,6 +11,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject,
 } from "react";
+import { TopLayer } from "./top-layer";
 import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
@@ -1201,7 +1202,7 @@ export function ComposeWorkspace({
 
   if (variant === "zen") {
     return (
-      <section aria-label="Zen writing mode" aria-modal="true" className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); onExitZen?.("escape"); } }} role="dialog" {...dropHandlers}>
+      <TopLayer ariaLabel="Zen writing mode" as="section" backdrop={false} className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} dismissible={!closing} initialFocusSelector={'[contenteditable="true"]'} onClose={() => onExitZen?.("escape")} surfaceProps={dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={() => onExitZen?.("button")} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
           <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
@@ -1214,7 +1215,7 @@ export function ComposeWorkspace({
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
         </div>
-      </section>
+      </TopLayer>
     );
   }
 

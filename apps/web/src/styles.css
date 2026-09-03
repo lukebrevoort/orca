@@ -2602,6 +2602,17 @@ textarea {
   z-index: 100;
 }
 
+.orca-top-layer {
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 1000 !important;
+}
+
+.orca-top-layer > * {
+  pointer-events: auto;
+}
+
 .overlay-backdrop:not(.overlay-backdrop-closing) {
   animation: backdrop-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

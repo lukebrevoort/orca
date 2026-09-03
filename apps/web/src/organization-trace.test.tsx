@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 import type { OrcaEvaluationTrace } from "@orca/shared";
@@ -7,6 +7,7 @@ import type { OrcaEvaluationTrace } from "@orca/shared";
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
 import { OrganizationStudio } from "./desktop-switch";
+import { TopLayerProvider } from "./top-layer";
 
 const styles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
 const globals = ["window", "document", "navigator", "HTMLElement", "Node", "Element", "Event", "MouseEvent", "KeyboardEvent", "MutationObserver", "getComputedStyle", "fetch"] as const;
@@ -18,6 +19,10 @@ const trace = evaluateOrcaRules(reviewerEvaluationInput()).trace;
 const safetyTrace = evaluateOrcaRules(reviewerEvaluationInput({ safetyLock: true })).trace;
 
 let servedTrace: OrcaEvaluationTrace;
+
+function TestOrganizationStudio(props: ComponentProps<typeof OrganizationStudio>) {
+  return <TopLayerProvider><OrganizationStudio {...props} /></TopLayerProvider>;
+}
 
 function setGlobal(name: string, value: unknown) {
   Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
@@ -62,7 +67,7 @@ afterEach(() => {
 describe("Organization Glass Box Trace", () => {
   test("explains a live production-failure evaluation and opens its complete deterministic Trace", async () => {
     await act(async () => {
-      root!.render(<OrganizationStudio />);
+      root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -108,7 +113,7 @@ describe("Organization Glass Box Trace", () => {
   test("renders exact Safety Lock provenance and links the losing Manual Override", async () => {
     servedTrace = structuredClone(safetyTrace);
     await act(async () => {
-      root!.render(<OrganizationStudio />);
+      root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(browser.document.querySelector("#organization-title")?.textContent).toBe("Safety Lock");
@@ -136,7 +141,7 @@ describe("Organization Glass Box Trace", () => {
     });
 
     await act(async () => {
-      root!.render(<OrganizationStudio />);
+      root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -157,7 +162,7 @@ describe("Organization Glass Box Trace", () => {
     });
 
     await act(async () => {
-      root!.render(<OrganizationStudio />);
+      root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -189,10 +194,10 @@ describe("Organization Glass Box Trace", () => {
       return Response.json({ error: { code: "not_available" } }, { status: 503 });
     });
 
-    await act(async () => { root!.render(<OrganizationStudio />); await Promise.resolve(); });
-    await act(async () => { root!.render(<OrganizationStudio interactivePreview />); await Promise.resolve(); });
+    await act(async () => { root!.render(<TestOrganizationStudio />); await Promise.resolve(); });
+    await act(async () => { root!.render(<TestOrganizationStudio interactivePreview />); await Promise.resolve(); });
     await act(async () => {
-      root!.render(<OrganizationStudio />);
+      root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 

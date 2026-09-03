@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { StrictMode, act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import type { MessageDraft, UserPreferences } from "@orca/shared";
+import { TopLayerProvider } from "./top-layer";
 
 type FrameCallback = (timestamp: number) => void;
 type ScrollPosition = { x: number; y: number };
@@ -47,6 +48,10 @@ let cancelledFrameIds: number[];
 
 function setGlobal(name: string, value: unknown) {
   Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
+}
+
+function isSameNode(left: unknown, right: unknown) {
+  return left === right;
 }
 
 function installDom() {
@@ -148,7 +153,7 @@ async function renderApp(
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  const app = <InboxApp demoMode preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} />;
+  const app = <TopLayerProvider><InboxApp demoMode preferences={preferences} theme={options.theme ?? "light"} setTheme={() => {}} bulkAttentionClient={options.bulkAttentionClient} /></TopLayerProvider>;
   await act(async () => {
     root!.render(strict ? <StrictMode>{app}</StrictMode> : app);
   });
@@ -837,6 +842,132 @@ describe("Write shortcut", () => {
   });
 });
 
+describe("App top-layer contract", () => {
+  beforeEach(() => {
+    installDom();
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => root!.unmount());
+      root = null;
+    }
+    restoreDom();
+  });
+
+  test("keeps reader, Compose, and Zen in one topmost Escape stack", async () => {
+    const container = await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+    browserWindow.document.documentElement.dataset.motion = "reduced";
+    await openMessage("Mom");
+    const composeOpener = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement;
+    composeOpener.focus();
+    await act(async () => composeOpener.click());
+
+    const compose = browserWindow.document.querySelector('[role="dialog"][aria-label="Compose message"]') as unknown as HTMLElement;
+    expect(compose).not.toBeNull();
+    expect(compose.getAttribute("aria-modal")).toBe("true");
+    expect(container.inert).toBe(true);
+    expect(container.getAttribute("aria-hidden")).toBe("true");
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+
+    const zenOpener = compose.querySelector("button.panel-zen") as unknown as HTMLButtonElement;
+    zenOpener.focus();
+    await act(async () => zenOpener.click());
+    expect(browserWindow.document.querySelector('[role="dialog"][aria-label="Zen writing mode"]')).not.toBeNull();
+    const stacked = [...browserWindow.document.querySelectorAll("[data-top-layer]")] as unknown as HTMLElement[];
+    expect(stacked.map((layer) => layer.dataset.topLayer)).toEqual(["background", "active"]);
+    expect(stacked[0]?.inert).toBe(true);
+
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.document.querySelector('[aria-label="Zen writing mode"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).not.toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, zenOpener)).toBe(true);
+
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).toBeNull();
+    expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, composeOpener)).toBe(true);
+  });
+
+  test("gives Gmail permission the same focus, busy, and Escape behavior", async () => {
+    function PermissionHarness() {
+      const [open, setOpen] = useState(false);
+      const [status, setStatus] = useState<"idle" | "loading">("idle");
+      return <TopLayerProvider>
+        <button data-testid="permission-opener" onClick={() => { setStatus("idle"); setOpen(true); }} type="button">Request send access</button>
+        {open ? <GmailComposePermissionDialog error={null} onCancel={() => setOpen(false)} onContinue={() => setStatus("loading")} status={status} /> : null}
+      </TopLayerProvider>;
+    }
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<PermissionHarness />));
+    const opener = container.querySelector('[data-testid="permission-opener"]') as unknown as HTMLButtonElement;
+    opener.focus();
+    await act(async () => opener.click());
+    let permission = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="gmail-permission-title"]') as unknown as HTMLElement;
+    expect(permission.getAttribute("aria-modal")).toBe("true");
+    expect(browserWindow.document.activeElement?.textContent).toBe("Continue to Google");
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.document.querySelector('[aria-labelledby="gmail-permission-title"]')).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, opener)).toBe(true);
+
+    await act(async () => opener.click());
+    permission = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="gmail-permission-title"]') as unknown as HTMLElement;
+    const continueButton = [...permission.querySelectorAll("button")].find((button) => button.textContent === "Continue to Google") as unknown as HTMLButtonElement;
+    await act(async () => continueButton.click());
+    expect(permission.getAttribute("aria-busy")).toBe("true");
+    expect([...permission.querySelectorAll("button")].every((button) => button.disabled)).toBe(true);
+    await act(async () => { browserWindow.document.body.focus(); });
+    await escapeReader();
+    expect(isSameNode(browserWindow.document.querySelector('[aria-labelledby="gmail-permission-title"]'), permission)).toBe(true);
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true })); });
+    expect(isSameNode(browserWindow.document.activeElement, permission)).toBe(true);
+  });
+
+  test("suspends Compose and search shortcuts behind Manage spaces and Pin Builder", async () => {
+    await renderApp();
+    const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail, people, or rules"]') as unknown as HTMLInputElement;
+    const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage") as unknown as HTMLButtonElement;
+    manage.focus();
+    await act(async () => manage.click());
+    const manageDialog = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="manage-spaces-title"]') as unknown as HTMLElement;
+    expect(manageDialog).not.toBeNull();
+    const manageFocus = browserWindow.document.activeElement as unknown as HTMLElement;
+    await act(async () => {
+      manageFocus.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }) as unknown as Event);
+      manageFocus.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true, cancelable: true }) as unknown as Event);
+    });
+    expect(browserWindow.document.querySelector('[aria-label="Compose message"]')).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, manageFocus)).toBe(true);
+    expect(browserWindow.document.activeElement).not.toBe(globalSearch);
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+
+    const pinOpener = browserWindow.document.querySelector("button.pinned-person-add") as unknown as HTMLButtonElement;
+    pinOpener.focus();
+    await act(async () => pinOpener.click());
+    const pinBuilder = browserWindow.document.querySelector('[role="dialog"][aria-labelledby="pin-builder-title"]') as unknown as HTMLElement;
+    expect(pinBuilder).not.toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, pinBuilder.querySelector("input"))).toBe(true);
+    const pinBuilderFocus = browserWindow.document.activeElement as unknown as HTMLElement;
+    await act(async () => {
+      pinBuilderFocus.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }) as unknown as Event);
+      pinBuilderFocus.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true, cancelable: true }) as unknown as Event);
+    });
+    expect(browserWindow.document.querySelectorAll('[aria-label="Compose message"]')).toHaveLength(0);
+    expect(browserWindow.document.activeElement).not.toBe(globalSearch);
+    await escapeReader();
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.document.querySelector('[aria-labelledby="pin-builder-title"]')).toBeNull();
+    expect(isSameNode(browserWindow.document.activeElement, pinOpener)).toBe(true);
+  });
+});
+
 describe("Inbox row action affordances", () => {
   beforeEach(() => {
     installDom();
@@ -902,8 +1033,10 @@ describe("Inbox row action affordances", () => {
     expect(dialog).not.toBeNull();
     if (!dialog) throw new Error("Could not find the thread organizer dialog");
     expect(dialog.getAttribute("aria-describedby")).toBe("organizer-description");
-    expect(browserWindow.document.activeElement?.getAttribute("role")).toBe("dialog");
-    expect(browserWindow.document.querySelector("main.desktop-shell")?.hasAttribute("inert")).toBe(true);
+    expect(browserWindow.document.activeElement?.getAttribute("aria-label")).toBe("Close organizer");
+    const appContainer = browserWindow.document.querySelector("main.desktop-shell")?.parentElement?.parentElement;
+    expect(appContainer?.hasAttribute("inert")).toBe(true);
+    expect(appContainer?.getAttribute("aria-hidden")).toBe("true");
     expect(dialog.querySelector(".organizer-pin-section h3")?.textContent).toBe("Quick access");
     expect(dialog.querySelector(".organizer-collections h3")?.textContent).toBe("Collections");
 
@@ -984,7 +1117,7 @@ describe("Desktop evidence and navigation", () => {
     await act(async () => { trigger.click(); });
     const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Thread Lane controls"]') as unknown as HTMLElement;
     expect(dialog).not.toBeNull();
-    expect(dialog.parentElement?.parentElement?.tagName).toBe("BODY");
+    expect(dialog.closest("#orca-top-layer-root")?.parentElement?.tagName).toBe("BODY");
     const focus = [...dialog.querySelectorAll(".thread-lane-options button")].find((button) => button.textContent?.includes("Focus")) as unknown as HTMLButtonElement;
     await act(async () => { focus.click(); });
     expect(trigger.textContent).toContain("Focus");
