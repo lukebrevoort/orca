@@ -177,6 +177,43 @@ describe("Gmail push sync", () => {
     }
   });
 
+  test("records freshness when an incremental notification is already at the stored cursor", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const gmailClient: GmailClient = {
+      async getMessage() { throw new Error("not used"); },
+      async listInboxMessagePage() { return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return []; },
+      async listHistory() { throw new Error("already-current history must not be fetched"); },
+    };
+
+    try {
+      insertAccount(db, { historyId: "100", lastSyncedAt: new Date("2026-08-10T00:00:00.000Z") });
+      await storeProviderTokens(db, {
+        oauthAccountId: "acct_1",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        tokenExpiry: null,
+      });
+
+      const result = await syncGmailAccountHistory(db, {
+        accountId: "acct_1",
+        historyId: "100",
+        gmailClient,
+        config,
+        now: new Date("2026-08-11T00:00:00.000Z"),
+      });
+
+      assert.equal(result.usedBackfill, false);
+      assert.deepEqual(
+        sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get(),
+        { sync_history_id: "100", last_synced_at: Date.parse("2026-08-11T00:00:00.000Z") },
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("advances the cursor when a changed message disappears before fetch", async () => {
     setAuthEnv();
     const { db, sqlite } = createMigratedClient();
@@ -255,7 +292,13 @@ describe("Gmail push sync", () => {
         lastSyncedAt: "2026-08-11T00:00:00.000Z",
       });
       assert.equal((sqlite.query("select count(*) as count from emails where provider_message_id = 'message-1'").get() as { count: number }).count, 1);
-      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "110");
+      assert.deepEqual(
+        sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get(),
+        {
+          sync_history_id: "110",
+          last_synced_at: Date.parse("2026-08-11T00:00:00.000Z"),
+        },
+      );
     } finally {
       sqlite.close();
     }
@@ -325,7 +368,13 @@ describe("Gmail push sync", () => {
 
       assert.equal(result.usedBackfill, true);
       assert.equal(result.emailCount, 1);
-      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "300");
+      assert.deepEqual(
+        sqlite.query("select sync_history_id, last_synced_at from oauth_accounts where id = 'acct_1'").get(),
+        {
+          sync_history_id: "300",
+          last_synced_at: Date.parse("2026-08-11T00:00:00.000Z"),
+        },
+      );
     } finally {
       sqlite.close();
     }

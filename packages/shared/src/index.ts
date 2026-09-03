@@ -255,6 +255,8 @@ export type {
 } from "./mcp-contract.ts";
 
 export {
+  authProviderAvailabilitySchema,
+  authProviderUnavailableReasonSchema,
   authSessionSchema,
   authUserSchema,
   mcpConnectionAccountSchema,
@@ -269,6 +271,7 @@ export {
   inboxClassificationResponseSchema,
   inboxResponseSchema,
   attentionBehaviorSchema,
+  batchSenderAttentionChangeSchema,
   attentionViewSettingSchema,
   humanClassificationAssessmentSchema,
   humanClassificationEvidenceSchema,
@@ -315,6 +318,7 @@ export {
   normalizedMessageSchema,
   normalizedThreadPageSchema,
   normalizedThreadSchema,
+  outboundRecipientSchema,
   outboundErrorCodeSchema,
   outboundErrorSchema,
   providerPageShapeSchema,
@@ -335,6 +339,9 @@ export {
   threadQuerySchema,
   threadReadStateSchema,
   senderAttentionRuleSchema,
+  senderAttentionTargetSchema,
+  senderAttentionBatchOutcomeSchema,
+  senderAttentionBatchResultSchema,
   senderRuleScopeSchema,
   senderRuleSourceSchema,
   resolveSenderAttentionSchema,
@@ -467,6 +474,8 @@ export type {
 } from "./agent-contract.ts";
 
 export type {
+  AuthProviderAvailability,
+  AuthProviderUnavailableReason,
   AuthSession,
   AuthUser,
   McpConnection,
@@ -474,6 +483,7 @@ export type {
   McpConnectionPage,
   McpOAuthScope,
   AttentionBehavior,
+  BatchSenderAttentionChange,
   AttentionViewSetting,
   HumanClassification,
   HumanClassificationAssessment,
@@ -548,6 +558,9 @@ export type {
   ThreadQuery,
   ThreadReadState,
   SenderAttentionRule,
+  SenderAttentionTarget,
+  SenderAttentionBatchOutcome,
+  SenderAttentionBatchResult,
   SenderRuleScope,
   SenderRuleSource,
   ResolveSenderAttention,

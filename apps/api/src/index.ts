@@ -10,10 +10,10 @@ import { validator } from "hono/validator";
 import sanitizeHtml from "sanitize-html";
 import {
   type AttentionBehavior,
+  type ResolvedSenderAttention,
   type HumanClassificationResult,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
-  type InboxClassificationResponse,
   type InboxMessage,
   type CalendarAvailabilityResponse,
   type CalendarWorkingHours,
@@ -29,6 +29,7 @@ import {
   agentEventListPageSchema,
   agentPropagationMuteRuleSchema,
   attentionBehaviorSchema,
+  batchSenderAttentionChangeSchema,
   attentionViewSettingSchema,
   authSessionSchema,
   calendarWorkingHoursSchema,
@@ -67,6 +68,7 @@ import {
   reminderViewSettingsSchema,
   replyBriefOutputSchema,
   senderAttentionRuleSchema,
+  senderAttentionBatchResultSchema,
   syncStatusSchema,
   sendMessageDraftSchema,
   threadDetailSchema,
@@ -84,22 +86,22 @@ import {
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
+import { applySenderAttentionBatch } from "./attention/batch.ts";
 import { getMcpOAuthConfig, type McpOAuthConfig } from "./auth/mcp/config.ts";
 import { registerMcpOAuthRoutes } from "./auth/mcp/routes.ts";
 import { getServerConfig } from "./config/server.ts";
 import { createDatabaseClient } from "./db/client.ts";
 import { attentionViewSettings, calendarPreferences, collections, collectionThreads, emailAttachments, emailLabels, emails, gmailLabelCollectionImports, gmailLabelMigrations, humanClassificationOverrides, labels, mcpConnectionAccounts, mcpConnections, messageDrafts, oauthAccounts, organizationChangeSets, organizationSavedQueries, pins, reminderViewSettings, senderAttentionRules, threadReminders, threads, userPreferences, users } from "./db/schema.ts";
-import { GmailSyncError, resetGmailSyncState, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
+import { GmailSyncError, syncGmailAccountPage, withGmailSyncLock } from "./providers/gmail/sync.ts";
 import { createGmailClient, type GmailClient } from "./providers/gmail/client.ts";
 import { loadGmailPushConfig, type GmailPushConfig } from "./providers/gmail/push-config.ts";
 import {
-  backfillGmailAccount,
-  ensureGmailWatch,
   GmailPushError,
   parseGmailPubSubNotification,
-  syncGmailAccountHistory,
   verifyGmailPushToken,
 } from "./providers/gmail/push.ts";
+import type { GmailSyncCoordinator } from "./providers/gmail/sync-coordinator.ts";
+import { createDefaultGmailSyncCoordinator } from "./providers/gmail/sync-runtime.ts";
 import { startGmailSyncScheduler } from "./providers/gmail/scheduler.ts";
 import type { GmailDraftMirrorInput, GmailDraftMirrorResult } from "./providers/gmail/drafts.ts";
 import { GmailTransportError, type GmailTransport } from "./providers/gmail/transport.ts";
@@ -140,6 +142,7 @@ import { registerOrganizationContextRoutes } from "./organization/contexts/route
 import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
 import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
+import { createMailboxReader, MailboxCursorError, MailboxScopeError, type MailboxReadMetric } from "./mailbox/read.ts";
 import { createOrganizationViews } from "./organization/views/module.ts";
 import { createSqliteOrganizationViewsRepository } from "./organization/views/sqlite-repository.ts";
 import { createRuleRevisionService } from "./organization/rules/service.ts";
@@ -184,9 +187,9 @@ type CreateAppOptions = {
   calendarOAuthConfig?: GoogleCalendarOAuthConfig;
   calendarFetch?: CalendarFetch;
   replyBriefAvailability?: (input: { userId: string; request: ReplyBriefInvocationRequest; thread: ThreadDetail }) => Promise<CalendarAvailabilityResponse | null>;
+  mailboxReadObserver?: (metric: MailboxReadMetric) => void;
+  gmailSyncCoordinator?: GmailSyncCoordinator;
 };
-
-type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
 
 const defaultViewSettings = [
   { behavior: "notify", displayName: "Notify", icon: "bell", color: "#dc2626", position: 0 },
@@ -221,6 +224,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     ...(account.profileImageUrl ? { avatarUrl: `/v1/accounts/${encodeURIComponent(account.id)}/avatar` } : {}),
     capabilities: providerFor(account).detectCapabilities(account.scope),
   });
+  const mailboxCapabilitiesFor = (provider: MailProvider, scope: string | null) => providerRegistry.get(provider).detectCapabilities(scope);
   const transportFor = (account: ConnectedAccount) => {
     if (account.provider === "gmail" && options.gmailTransport) return options.gmailTransport;
     const existing = providerTransports.get(account.provider);
@@ -229,14 +233,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     providerTransports.set(account.provider, transport);
     return transport;
   };
-  const syncPageFor = (account: ConnectedAccount) => account.provider === "gmail" && options.syncPage
-    ? options.syncPage
-    : providerFor(account).syncPage;
   const capabilitiesFor = (account: ConnectedAccount) => providerFor(account).detectCapabilities(account.scope);
   const now = options.now ?? (() => new Date());
   const gmailClient = options.gmailClient ?? createGmailClient();
   const gmailPushConfig = options.gmailPushConfig ?? loadGmailPushConfig();
-  const syncStatuses = new Map<string, SyncStatusRecord>();
+  const gmailSyncCoordinator = options.gmailSyncCoordinator ?? createDefaultGmailSyncCoordinator({
+    dbFactory,
+    gmailClient,
+    config: gmailPushConfig,
+    now,
+    syncPage: options.syncPage ?? (providerRegistry.has("gmail")
+      ? providerRegistry.get("gmail").syncPage as typeof syncGmailAccountPage
+      : syncGmailAccountPage),
+  });
   const draftMirrorJobs = new Set<string>();
 
   const app = new Hono<{ Variables: AuthVariables }>();
@@ -554,21 +563,30 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       } finally { sqlite.close(); }
     },
     searchMail({ userId, allowedAccountIds, query }) {
-      const { db, sqlite } = dbFactory();
+      const { sqlite } = dbFactory();
       try {
-        const allowed = new Set(allowedAccountIds);
-        const accounts = getUnifiedInboxAccounts(db, userId).filter((account) => allowed.has(account.id));
-        if (accounts.length === 0) throw new McpReadError("account_denied", "No authorized mail account is connected");
-        return readUnifiedInbox(db, userId, accounts, accounts.map(serializeMailAccount), {
-          cursor: query.cursor,
-          limit: query.limit ?? 25,
-          view: query.attention,
-          classification: query.classification,
-          query: query.query,
-          sender: query.sender,
-          receivedAfter: query.receivedAfter,
-          receivedBefore: query.receivedBefore,
-        });
+        try {
+          return createMailboxReader(sqlite, {
+            capabilitiesFor: mailboxCapabilitiesFor,
+            observe: options.mailboxReadObserver,
+          }).read({
+            authorization: { userId, accountIds: allowedAccountIds },
+            query: {
+              cursor: query.cursor,
+              limit: query.limit ?? 25,
+              view: query.attention,
+              classification: query.classification,
+              query: query.query,
+              sender: query.sender,
+              receivedAfter: query.receivedAfter,
+              receivedBefore: query.receivedBefore,
+            },
+          }).response;
+        } catch (error) {
+          if (error instanceof MailboxCursorError) throw new McpReadError("invalid_cursor", error.message);
+          if (error instanceof MailboxScopeError) throw new McpReadError("account_denied", error.message);
+          throw error;
+        }
       } finally {
         sqlite.close();
       }
@@ -609,12 +627,21 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const { db, sqlite } = dbFactory();
       try {
         const allowed = new Set(allowedAccountIds);
-        return getUnifiedInboxAccounts(db, userId)
-          .filter((account) => allowed.has(account.id))
+        const connectedAccounts = getUnifiedInboxAccounts(db, userId)
+          .filter((account) => allowed.has(account.id));
+        const durableSyncJobs = new Map(gmailSyncCoordinator.jobsForAccounts(connectedAccounts.map((account) => account.id))
+          .map((job) => [job.accountId, job]));
+        return connectedAccounts
           .map((account) => {
-            const activeStatus = syncStatuses.get(account.id);
+            const durableStatus = durableSyncJobs.get(account.id);
             const authNeeded = !account.accessTokenEncrypted || !account.refreshTokenEncrypted;
-            const syncState = activeStatus?.state ?? (authNeeded ? "auth_needed" : "idle");
+            const syncState = authNeeded
+              ? "auth_needed"
+              : durableStatus?.lastError
+              ? "error"
+              : durableStatus?.state === "queued" || durableStatus?.state === "running"
+              ? "syncing"
+              : "idle";
             const serialized = serializeMailAccount(account);
             return {
               account: serialized,
@@ -897,34 +924,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         return c.body(null, 204);
       }
 
-      let failedError: unknown;
       for (const account of accounts) {
-        syncStatuses.set(account.id, { state: "syncing", error: null });
-        try {
-          await withGmailSyncLock(account.id, async () => {
-            await syncGmailAccountHistory(db, {
-              accountId: account.id,
-              historyId: notification.historyId,
-              gmailClient,
-              config: gmailPushConfig,
-              now: now(),
-              pageSize: gmailPushConfig.backfillPageSize,
-              maxPages: gmailPushConfig.backfillMaxPages,
-            });
-          });
-          syncStatuses.delete(account.id);
-        } catch (error) {
-          failedError ??= error;
-          const publicError = toPublicPushError(error);
-          syncStatuses.set(account.id, { state: "error", error: publicError.message });
-        }
+        gmailSyncCoordinator.enqueue({
+          accountId: account.id,
+          source: "push",
+          historyId: notification.historyId,
+          freshnessAt: notification.publishedAt ?? now(),
+        });
       }
 
-      if (failedError) {
-        const publicError = toPublicPushError(failedError);
-        return c.json({ error: { code: publicError.code, message: publicError.message } }, publicError.status);
-      }
-
+      for (const account of accounts) gmailSyncCoordinator.kick(account.id);
       return c.body(null, 204);
     } catch (error) {
       const publicError = toPublicPushError(error);
@@ -1144,7 +1153,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       if (!deleted) {
         return c.json({ error: { code: "not_found", message: "Connected account not found" } }, 404);
       }
-      syncStatuses.delete(deleted.id);
       return c.body(null, 204);
     } finally {
       sqlite.close();
@@ -1175,15 +1183,23 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     const { db, sqlite } = dbFactory();
     try {
       const accounts = getConnectedAccounts(db, c.get("auth").userId);
+      const durableSyncJobs = new Map(gmailSyncCoordinator.jobsForAccounts(accounts.map((account) => account.id))
+        .map((job) => [job.accountId, job]));
       return jsonWithSchema(c, syncStatusSchema, {
         accounts: accounts.map((account) => {
-          const activeStatus = syncStatuses.get(account.id);
+          const durableStatus = durableSyncJobs.get(account.id);
           const authNeeded = !account.accessTokenEncrypted || !account.refreshTokenEncrypted;
           return {
             ...serializeMailAccount(account),
-            state: activeStatus?.state ?? (authNeeded ? "auth_needed" : "idle"),
+            state: authNeeded
+              ? "auth_needed"
+              : durableStatus?.lastError
+              ? "error"
+              : durableStatus?.state === "queued" || durableStatus?.state === "running"
+              ? "syncing"
+              : "idle",
             lastSyncedAt: account.lastSyncedAt?.toISOString() ?? null,
-            error: activeStatus?.error ?? null,
+            error: durableStatus?.lastError ?? null,
           };
         }),
       });
@@ -1204,6 +1220,53 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       sqlite.close();
     }
   });
+
+  app.post(
+    "/v1/attention/rules/batch",
+    validator("json", (value, c) => validateJson(c, batchSenderAttentionChangeSchema, value)),
+    requireAuth({ dbFactory }),
+    async (c) => {
+      const { db, sqlite } = dbFactory();
+      try {
+        const input = c.req.valid("json");
+        const accountById = new Map(
+          getUnifiedInboxAccounts(db, c.get("auth").userId).map((account) => [account.id, account]),
+        );
+        if (input.targets.some((target) => !accountById.has(target.accountId))) {
+          return c.json({ error: { code: "not_found", message: "Mail account was not found" } }, 404);
+        }
+        const result = await applySenderAttentionBatch(input, {
+          write(targets, behavior) {
+            const updatedAt = new Date();
+            db.transaction((transaction) => {
+              for (const target of targets) {
+                const account = accountById.get(target.accountId)!;
+                transaction.insert(senderAttentionRules).values({
+                  id: `sender-rule:${crypto.randomUUID()}`,
+                  accountId: account.id,
+                  scope: "address",
+                  value: target.address,
+                  behavior,
+                  source: "user_choice",
+                  updatedAt,
+                }).onConflictDoUpdate({
+                  target: [senderAttentionRules.accountId, senderAttentionRules.scope, senderAttentionRules.value],
+                  set: { behavior, source: "user_choice", updatedAt },
+                }).run();
+              }
+            });
+          },
+          resolve(target) {
+            const account = accountById.get(target.accountId)!;
+            return resolveSenderAttention(db, account.id, target.address);
+          },
+        });
+        return jsonWithSchema(c, senderAttentionBatchResultSchema, result);
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
 
   app.post(
     "/v1/attention/rules",
@@ -1273,20 +1336,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const account = getConnectedAccountByProvider(db, c.get("auth").userId, "gmail");
         if (!account) return noConnectedAccount(c);
         const address = c.req.valid("query").address.toLowerCase();
-        const domain = address.split("@")[1]!;
-        const rule = db.select().from(senderAttentionRules).where(and(
-          eq(senderAttentionRules.accountId, account.id),
-          eq(senderAttentionRules.scope, "address"),
-          eq(senderAttentionRules.value, address),
-        )).get() ?? db.select().from(senderAttentionRules).where(and(
-          eq(senderAttentionRules.accountId, account.id),
-          eq(senderAttentionRules.scope, "domain"),
-          eq(senderAttentionRules.value, domain),
-        )).get();
-        return jsonWithSchema(c, resolvedSenderAttentionSchema, {
-          behavior: rule?.behavior ?? "normal",
-          rule: rule ? toSenderRule(rule) : null,
-        });
+        return jsonWithSchema(c, resolvedSenderAttentionSchema, resolveSenderAttention(db, account.id, address));
       } finally {
         sqlite.close();
       }
@@ -2161,28 +2211,30 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }),
     requireAuth({ dbFactory }),
     (c) => {
-      const { cursor, limit = defaultInboxLimit, view, classification } = c.req.valid("query");
+      const { cursor, limit = defaultInboxLimit, view, classification, query, sender, accountId, collectionId } = c.req.valid("query");
       const useClassificationResponse = classification !== undefined;
-      const { db, sqlite } = dbFactory();
+      const { sqlite } = dbFactory();
       try {
-        const accounts = getUnifiedInboxAccounts(db, c.get("auth").userId);
-        if (accounts.length === 0) {
-          return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
-        }
         try {
-          const result = readUnifiedInbox(db, c.get("auth").userId, accounts, accounts.map(serializeMailAccount), {
-            cursor,
-            limit,
-            view,
-            classification,
+          const { response: result, metric } = createMailboxReader(sqlite, {
+            capabilitiesFor: mailboxCapabilitiesFor,
+            observe: options.mailboxReadObserver,
+          }).read({
+            authorization: { userId: c.get("auth").userId, ...(accountId ? { accountIds: [accountId] } : {}) },
+            query: { cursor, limit, view, classification, query, sender, collectionId },
           });
+          c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
+          c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
           return jsonWithSchema(c, inboxResponseSchema, {
             ...result,
             counts: useClassificationResponse ? result.counts : result.counts.attention,
           });
         } catch (error) {
-          if (error instanceof McpReadError && error.code === "invalid_cursor") {
+          if (error instanceof MailboxCursorError) {
             return c.json({ error: { code: error.code, message: error.message } }, 400);
+          }
+          if (error instanceof MailboxScopeError) {
+            return c.json({ error: { code: "not_found", message: error.message } }, 404);
           }
           throw error;
         }
@@ -2373,26 +2425,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           return c.json({ error: { code: "not_found", message: "No Gmail account is connected for this user" } }, 404);
         }
 
-        const result = await withGmailSyncLock(account.id, async () => {
-          const watch = await ensureGmailWatch(db, {
-            accountId: account.id,
-            gmailClient,
-            config: gmailPushConfig,
-            now: now(),
-          });
-          const backfill = account.lastSyncedAt || account.syncCursor
-            ? null
-            : await backfillGmailAccount(db, {
-                accountId: account.id,
-                gmailClient,
-                now: now(),
-                pageSize: gmailPushConfig.backfillPageSize,
-                maxPages: gmailPushConfig.backfillMaxPages,
-              });
-          return { watch, backfill };
-        });
-
-        return c.json(result, 200);
+        gmailSyncCoordinator.enqueue({ accountId: account.id, source: "fallback", freshnessAt: now() });
+        const drained = await gmailSyncCoordinator.drainAccount(account.id);
+        if (drained.error) throw drained.error;
+        if (!drained.acquired) return c.json({ queued: true }, 202);
+        return c.json({
+          watch: drained.result?.watch ?? null,
+          backfill: drained.result?.backfill ?? null,
+        }, 200);
       } catch (error) {
         const publicError = toPublicPushError(error);
         return c.json({ error: { code: publicError.code, message: publicError.message } }, publicError.status);
@@ -2429,27 +2469,25 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
 
         const connectedAccount = account;
-        syncStatuses.set(connectedAccount.id, { state: "syncing", error: null });
-        const result = await withGmailSyncLock(connectedAccount.id, async () => {
-          const syncPage = syncPageFor(connectedAccount);
-          let pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
-          let pages = 1;
-          let emailCount = pageResult.emailCount;
-          let threadCount = pageResult.threadCount;
-          let labelCount = pageResult.labelCount;
-          let contactCount = pageResult.contactCount;
-          while (pageResult.nextCursor && pages < 20) {
-            pageResult = await syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
-            pages += 1;
-            emailCount += pageResult.emailCount;
-            threadCount += pageResult.threadCount;
-            labelCount += pageResult.labelCount;
-            contactCount += pageResult.contactCount;
-          }
-          return { ...pageResult, emailCount, threadCount, labelCount, contactCount, pages };
-        });
-        syncStatuses.delete(connectedAccount.id);
-        return c.json(result, 200);
+        if (connectedAccount.provider !== "gmail") {
+          await providerFor(connectedAccount).syncPage(db, { accountId: connectedAccount.id, pageSize: 25 });
+          throw new ProviderNotImplementedError(connectedAccount.provider, "sync");
+        }
+        gmailSyncCoordinator.enqueue({ accountId: connectedAccount.id, source: "manual", freshnessAt: now() });
+        const drained = await withGmailSyncLock(connectedAccount.id, () => gmailSyncCoordinator.drainAccount(connectedAccount.id));
+        if (drained.error) throw drained.error;
+        if (!drained.acquired) return c.json({ queued: true }, 202);
+        const result = drained.result ?? {};
+        return c.json({
+          accountId: String(result.accountId ?? connectedAccount.id),
+          emailCount: Number(result.emailCount ?? 0),
+          threadCount: Number(result.threadCount ?? 0),
+          labelCount: Number(result.labelCount ?? 0),
+          contactCount: Number(result.contactCount ?? 0),
+          nextCursor: typeof result.nextCursor === "string" ? result.nextCursor : null,
+          lastSyncedAt: typeof result.lastSyncedAt === "string" ? result.lastSyncedAt : now().toISOString(),
+          pages: Number(result.pages ?? result.pageCount ?? 0),
+        }, 200);
       } catch (error) {
         console.error(`${account?.provider ?? "mail"} sync failed`, {
           userId: auth.userId,
@@ -2457,10 +2495,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         });
 
         const publicError = toPublicSyncError(error);
-        if (account?.id) {
-          syncStatuses.set(account.id, { state: "error", error: publicError.message });
-        }
-
         return c.json(
           {
             error: {
@@ -2503,38 +2537,16 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         }
 
         const connectedAccount = account;
-        syncStatuses.set(connectedAccount.id, { state: "syncing", error: null });
-        const result = await withGmailSyncLock(connectedAccount.id, async () => {
-          const resetAt = now();
-          resetGmailSyncState(db, connectedAccount.id, resetAt);
-
-          let watch = null;
-          let watchError: string | null = null;
-          if (gmailPushConfig.topicName && gmailPushConfig.verificationToken) {
-            try {
-              watch = await ensureGmailWatch(db, {
-                accountId: connectedAccount.id,
-                gmailClient,
-                config: gmailPushConfig,
-                now: resetAt,
-                force: true,
-              });
-            } catch (error) {
-              watchError = toPublicPushError(error).message;
-            }
-          }
-
-          const backfill = await backfillGmailAccount(db, {
-            accountId: connectedAccount.id,
-            gmailClient,
-            now: resetAt,
-            pageSize: gmailPushConfig.backfillPageSize,
-            maxPages: gmailPushConfig.backfillMaxPages,
-          });
-          return { watch, watchError, backfill };
+        gmailSyncCoordinator.enqueue({
+          accountId: connectedAccount.id,
+          source: "reset",
+          fullResync: true,
+          freshnessAt: now(),
         });
-        syncStatuses.delete(connectedAccount.id);
-        return c.json(result, 200);
+        const drained = await gmailSyncCoordinator.drainAccount(connectedAccount.id);
+        if (drained.error) throw drained.error;
+        if (!drained.acquired) return c.json({ queued: true }, 202);
+        return c.json(drained.result ?? { queued: false }, 200);
       } catch (error) {
         console.error("Gmail full resync failed", {
           userId: auth.userId,
@@ -2543,10 +2555,6 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         });
 
         const publicError = toPublicSyncError(error);
-        if (account?.id) {
-          syncStatuses.set(account.id, { state: "error", error: publicError.message });
-        }
-
         return c.json(
           {
             error: {
@@ -2574,50 +2582,10 @@ type ConnectedAccount = {
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
   syncCursor: string | null;
+  syncHistoryId: string | null;
   lastSyncedAt: Date | null;
+  updatedAt: Date;
   scope: string | null;
-};
-
-type InboxDatabaseMessage = {
-  id: string;
-  accountId: string;
-  providerMessageId: string;
-  threadId: string;
-  fromAddress: string | null;
-  fromName: string | null;
-  subject: string | null;
-  snippet: string | null;
-  receivedAt: Date | null;
-  isRead: boolean;
-  humanSignal: number | null;
-  humanClassification: string | null;
-  humanClassificationReasons: string | null;
-  humanClassifierVersion: string | null;
-  labels: string[];
-};
-
-type ResolvedInboxMessage = Omit<InboxDatabaseMessage, "humanClassification"> & {
-  provider: ConnectedAccount["provider"];
-  attentionBehavior: AttentionBehavior;
-  humanClassification: ReturnType<typeof resolveHumanClassification>;
-};
-
-type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
-  view: "default" | "focus" | "normal" | "quiet" | "hidden" | "all";
-  classification: "human" | "tideline" | "uncertain" | "all";
-  accountIds: string[];
-  scope?: string;
-};
-
-type UnifiedInboxReadQuery = {
-  cursor?: string;
-  limit: number;
-  view?: "focus" | "normal" | "quiet" | "hidden" | "all";
-  classification?: "human" | "tideline" | "uncertain" | "all";
-  query?: string;
-  sender?: string;
-  receivedAfter?: string;
-  receivedBefore?: string;
 };
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -3008,203 +2976,21 @@ function listSenderRules(db: Database, accountId: string) {
     .orderBy(asc(senderAttentionRules.scope), asc(senderAttentionRules.value)).all();
 }
 
-function resolveAttentionBehavior(address: string | null, rules: SenderRuleRecord[]): AttentionBehavior {
-  const normalized = address?.trim().toLowerCase() ?? "";
-  const addressRule = rules.find((rule) => rule.scope === "address" && rule.value === normalized);
-  if (addressRule) return attentionBehaviorSchema.parse(addressRule.behavior);
-  const domain = normalized.split("@")[1];
-  return attentionBehaviorSchema.parse(rules.find((rule) => rule.scope === "domain" && rule.value === domain)?.behavior ?? "normal");
-}
-
-function matchesAttentionView(behavior: AttentionBehavior, view?: "focus" | "normal" | "quiet" | "hidden" | "all") {
-  if (!view) return behavior !== "quiet" && behavior !== "hidden";
-  if (view === "all") return true;
-  if (view === "focus") return behavior === "notify" || behavior === "focus";
-  return behavior === view;
-}
-
-function matchesHumanClassificationView(
-  classification: "likely_human" | "automated_or_bulk" | "uncertain" | "unclassified",
-  view: "human" | "tideline" | "uncertain" | "all",
-) {
-  if (view === "all") return true;
-  if (view === "human") return classification === "likely_human";
-  if (view === "tideline") return classification === "automated_or_bulk";
-  // Historical rows with no classifier result need a review surface too.
-  return classification === "uncertain" || classification === "unclassified";
-}
-
-const inboxAttentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
-
-function compareInboxMessages(a: ResolvedInboxMessage, b: ResolvedInboxMessage) {
-  return inboxAttentionRank[a.attentionBehavior] - inboxAttentionRank[b.attentionBehavior]
-    || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
-    || a.accountId.localeCompare(b.accountId)
-    || a.id.localeCompare(b.id);
-}
-
-function encodeInboxCursor(
-  message: Pick<ResolvedInboxMessage, "accountId" | "id">,
-  view: InboxCursor["view"],
-  classification: InboxCursor["classification"],
-  accountIds: string[],
-  scope?: string,
-) {
-  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification, accountIds, ...(scope ? { scope } : {}) } satisfies InboxCursor), "utf8").toString("base64url");
-}
-
-function decodeInboxCursor(value: string | undefined): InboxCursor | null {
-  if (!value) return null;
-
-  try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<InboxCursor>;
-    if (
-      typeof parsed.accountId === "string" && parsed.accountId.length > 0
-      && typeof parsed.id === "string" && parsed.id.length > 0
-      && ["default", "focus", "normal", "quiet", "hidden", "all"].includes(parsed.view ?? "")
-      && ["human", "tideline", "uncertain", "all"].includes(parsed.classification ?? "")
-      && Array.isArray(parsed.accountIds)
-      && parsed.accountIds.length > 0
-      && parsed.accountIds.every((accountId) => typeof accountId === "string" && accountId.length > 0)
-      && (parsed.scope === undefined || typeof parsed.scope === "string")
-    ) {
-      return parsed as InboxCursor;
-    }
-  } catch { /* Invalid cursors are rejected by the route. */ }
-
-  return null;
-}
-
-function readUnifiedInbox(
-  db: Database,
-  workspaceId: string,
-  accounts: ConnectedAccount[],
-  serializedAccounts: MailAccount[],
-  input: UnifiedInboxReadQuery,
-): InboxClassificationResponse {
-  const { cursor, limit, view, classification } = input;
-  const classificationFilter = classification ?? "all";
-  const accountIds = accounts.map((account) => account.id).sort();
-  const accountById = new Map(accounts.map((account) => [account.id, account]));
-  const attentionRulesByAccountId = new Map(accounts.map((account) => [account.id, listSenderRules(db, account.id)]));
-  const organization = createOrganization(createSqliteOrganizationRepository(db));
-  const scope = { actor: { id: workspaceId, type: "system" as const }, workspaceId, accountIds };
-  const organizationThreads = [] as ReturnType<typeof organization.query>["threads"];
-  let organizationCursor: string | undefined;
-  do {
-    const page = organization.query({
-      scope,
-      query: {
-        attention: "all",
-        classification: "all",
-        ...(input.query ? { text: input.query } : {}),
-        ...(input.sender ? { sender: input.sender } : {}),
-        ...(input.receivedAfter ? { receivedAfter: input.receivedAfter } : {}),
-        ...(input.receivedBefore ? { receivedBefore: input.receivedBefore } : {}),
-        limit: 100,
-        ...(organizationCursor ? { cursor: organizationCursor } : {}),
-      },
-    });
-    organizationThreads.push(...page.threads);
-    organizationCursor = page.nextCursor ?? undefined;
-  } while (organizationCursor);
-
-  const scoped: ResolvedInboxMessage[] = organizationThreads.flatMap((thread) => {
-    const account = accountById.get(thread.accountId);
-    if (!account) throw new OrganizationAccessError();
-    return thread.messages.map((message) => ({
-      id: message.id,
-      accountId: thread.accountId,
-      providerMessageId: message.sourceId,
-      threadId: thread.id,
-      fromAddress: message.from.email,
-      fromName: message.from.name,
-      subject: message.subject,
-      snippet: message.snippet,
-      receivedAt: new Date(message.receivedAt),
-      isRead: !message.unread,
-      humanSignal: message.humanSignal,
-      humanClassification: humanClassificationResultSchema.parse(message.humanClassification),
-      humanClassificationReasons: null,
-      humanClassifierVersion: null,
-      labels: message.labels,
-      provider: account.provider,
-      attentionBehavior: resolveAttentionBehavior(
-        message.from.email,
-        attentionRulesByAccountId.get(thread.accountId) ?? [],
-      ),
-    }));
+function resolveSenderAttention(db: Database, accountId: string, address: string): ResolvedSenderAttention {
+  const domain = address.split("@")[1]!;
+  const rule = db.select().from(senderAttentionRules).where(and(
+    eq(senderAttentionRules.accountId, accountId),
+    eq(senderAttentionRules.scope, "address"),
+    eq(senderAttentionRules.value, address),
+  )).get() ?? db.select().from(senderAttentionRules).where(and(
+    eq(senderAttentionRules.accountId, accountId),
+    eq(senderAttentionRules.scope, "domain"),
+    eq(senderAttentionRules.value, domain),
+  )).get();
+  return resolvedSenderAttentionSchema.parse({
+    behavior: rule?.behavior ?? "normal",
+    rule: rule ? toSenderRule(rule) : null,
   });
-  const counts = {
-    attention: {
-      focus: scoped.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
-      normal: scoped.filter((message) => message.attentionBehavior === "normal").length,
-      quiet: scoped.filter((message) => message.attentionBehavior === "quiet").length,
-      hidden: scoped.filter((message) => message.attentionBehavior === "hidden").length,
-      all: scoped.length,
-    },
-    classification: {
-      likely_human: scoped.filter((message) => message.humanClassification.effective.classification === "likely_human").length,
-      automated_or_bulk: scoped.filter((message) => message.humanClassification.effective.classification === "automated_or_bulk").length,
-      uncertain: scoped.filter((message) => message.humanClassification.effective.classification === "uncertain").length,
-      unclassified: scoped.filter((message) => message.humanClassification.effective.classification === "unclassified").length,
-      all: scoped.length,
-    },
-  };
-  const filtered = scoped.filter((message) =>
-    matchesAttentionView(message.attentionBehavior, view)
-    && matchesHumanClassificationView(message.humanClassification.effective.classification, classificationFilter),
-  );
-  filtered.sort(compareInboxMessages);
-  const cursorScope = input.query || input.sender || input.receivedAfter || input.receivedBefore
-    ? JSON.stringify({
-        query: input.query?.trim() ?? null,
-        sender: input.sender?.trim().toLocaleLowerCase() ?? null,
-        receivedAfter: input.receivedAfter ?? null,
-        receivedBefore: input.receivedBefore ?? null,
-      })
-    : undefined;
-  const cursorTarget = decodeInboxCursor(cursor);
-  if (cursor && (!cursorTarget
-    || cursorTarget.view !== (view ?? "default")
-    || cursorTarget.classification !== classificationFilter
-    || JSON.stringify(cursorTarget.accountIds) !== JSON.stringify(accountIds)
-    || cursorTarget.scope !== cursorScope
-    || !accounts.some((account) => account.id === cursorTarget.accountId))) {
-    throw new McpReadError("invalid_cursor", "The inbox cursor does not match this account set or filter");
-  }
-  const cursorIndex = cursorTarget
-    ? filtered.findIndex((message) => message.id === cursorTarget.id && message.accountId === cursorTarget.accountId)
-    : -1;
-  if (cursorTarget && cursorIndex < 0) {
-    throw new McpReadError("invalid_cursor", "The inbox cursor is not part of this filtered result");
-  }
-  const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-  const page = filtered.slice(start, start + limit);
-  const lastMessage = page.at(-1);
-  return {
-    accounts: serializedAccounts,
-    messages: page.map((message): InboxMessage => ({
-      id: message.id,
-      accountId: message.accountId,
-      provider: message.provider,
-      providerMessageId: message.providerMessageId,
-      threadId: message.threadId,
-      from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
-      subject: message.subject ?? "",
-      snippet: message.snippet ?? "",
-      receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
-      unread: !message.isRead,
-      labels: message.labels,
-      attentionBehavior: message.attentionBehavior,
-      humanSignal: message.humanSignal,
-      humanClassification: message.humanClassification,
-    })),
-    counts,
-    nextCursor: lastMessage && start + page.length < filtered.length
-      ? encodeInboxCursor(lastMessage, view ?? "default", classificationFilter, accountIds, cursorScope)
-      : null,
-  };
 }
 
 function readThreadDetail(
@@ -3584,7 +3370,9 @@ function getAccountById(db: ReturnType<typeof createDatabaseClient>["db"], accou
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
     syncCursor: oauthAccounts.syncCursor,
+    syncHistoryId: oauthAccounts.syncHistoryId,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
+    updatedAt: oauthAccounts.updatedAt,
     scope: oauthAccounts.scope,
   })
     .from(oauthAccounts)
@@ -3647,7 +3435,9 @@ function selectConnectedAccounts(
     profileImageUrl: oauthAccounts.profileImageUrl,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    syncHistoryId: oauthAccounts.syncHistoryId,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
+    updatedAt: oauthAccounts.updatedAt,
     scope: oauthAccounts.scope,
   })
     .from(oauthAccounts)

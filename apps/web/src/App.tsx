@@ -9,10 +9,11 @@ import {
   type MouseEvent,
   type ReactNode,
   type Ref,
+  type RefObject,
   type SetStateAction,
 } from "react";
-import type { AgentPropagationMuteRule, AttentionViewSetting, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoAgentEvents,
@@ -29,11 +30,27 @@ import { getContactIdentity, getContactSignature, type ContactSignature } from "
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { ClassificationBadge, ClassificationCorrection, classificationViewLabel, type ClassificationCorrectionTarget, type ClassificationCounts, type ClassificationView } from "./classification-ui";
 import { ReplyBriefPanel } from "./reply-brief";
-import { createPortal } from "react-dom";
 import { CalendarSettingsPage } from "./calendar-settings";
 import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel";
-import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
+import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
+import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
+import { TopLayer, useTopLayerActive } from "./top-layer";
+import { isMailSearchResultReader, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
+import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
+import {
+  SurfaceHistory,
+  canRestoreSurfaceFocus,
+  captureSurfaceReturnContext,
+  getDesktopWorkspace,
+  readInitialThreadSelection,
+  readSurfaceLocation,
+  restoreWorkspaceScroll,
+  type SurfaceLocation,
+  type SurfaceReturnContext,
+} from "./surface-history";
+
+export { readInitialThreadSelection } from "./surface-history";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -59,27 +76,6 @@ const readerDensityHint = "Calm gives each message more room. Compact fits more 
 type Mailbox = "inbox" | "focus" | "signals" | "quiet" | "hidden" | "all" | "later" | "drafts";
 type InboxFilter = "all" | "notify" | "focus" | "normal";
 type PinMailbox = PinFilter["mailbox"];
-
-type StoredSpacePreferences = {
-  revision: 1;
-  order: string[];
-  hidden: string[];
-  labels: Record<string, string>;
-};
-
-function spacePreferencesKey(accountId: string) {
-  return `orca:space-preferences:v1:${accountId}`;
-}
-
-function readSpacePreferences(accountId: string): StoredSpacePreferences | null {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(spacePreferencesKey(accountId)) ?? "null") as Partial<StoredSpacePreferences> | null;
-    if (!value || value.revision !== 1 || !Array.isArray(value.order) || !Array.isArray(value.hidden) || !value.labels || typeof value.labels !== "object") return null;
-    return { revision: 1, order: value.order.filter((id): id is string => typeof id === "string"), hidden: value.hidden.filter((id): id is string => typeof id === "string"), labels: Object.fromEntries(Object.entries(value.labels).filter((entry): entry is [string, string] => typeof entry[1] === "string")) };
-  } catch {
-    return null;
-  }
-}
 
 const pinMailboxOptions: Array<{ id: PinMailbox; label: string }> = [
   { id: "inbox", label: "Inbox" },
@@ -122,6 +118,17 @@ const pinColorOptions = [
   { name: "Berry", value: "#9b6e83" },
 ] as const;
 
+function readerOriginLabelForDestination(destination: DesktopDestination, spaces: readonly WorkflowSpace[]) {
+  const space = spaces.find((candidate) => destinationForSpace(candidate) === destination);
+  if (space) return space.label;
+  if (destination === "all") return "All Mail";
+  if (destination === "drafts") return "Drafts";
+  if (destination === "organization") return "Organization";
+  if (destination === "settings") return "Settings";
+  if (destination.startsWith("space:")) return "Workflow space";
+  return destination.charAt(0).toUpperCase() + destination.slice(1);
+}
+
 type PinInput = Pick<Pin, "kind" | "targetId" | "label"> & Partial<Pick<Pin, "icon" | "color">>;
 
 type MailboxItem = {
@@ -140,28 +147,30 @@ type PersonItem = {
 
 type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
-type SenderAttentionTarget = Pick<InboxMessage, "id" | "from">;
+type BulkAttentionClient = (input: BatchSenderAttentionChange) => Promise<SenderAttentionBatchResult>;
+type BulkAttentionTarget = BatchSenderAttentionChange["targets"][number];
+type SenderAttentionControlTarget = Pick<InboxMessage, "id" | "from">;
 type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "humanClassification" | "humanSignal">;
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
 type OAuthConnectStatus = "idle" | "loading" | "error";
+type OAuthAuthorizationStartResult = "started" | "provider_unavailable" | "failed";
+type OAuthProviderAvailabilityState =
+  | { status: "loading" | "error"; providers: null }
+  | { status: "ready"; providers: Record<OAuthProvider, AuthProviderAvailability> };
+type OAuthReturnErrorReason = "provider_error" | "compose_not_granted" | "account_mismatch" | "upgrade_account_missing" | "connect_account_missing" | "account_persistence_failed" | "missing_code" | "invalid_state" | "missing_state" | "token_exchange_failed" | "userinfo_failed" | "account_identity_missing" | "oauth_not_configured";
 type OAuthReturnStatus =
   | { provider: OAuthProvider; kind: "success"; email: string | null; intent: string | null }
-  | { provider: OAuthProvider; kind: "error"; reason: string | null; message: string | null; intent: string | null }
+  | { provider: OAuthProvider; kind: "error"; reason: OAuthReturnErrorReason | null; intent: string | null }
   | null;
+
+const oauthReturnErrorReasons = new Set<OAuthReturnErrorReason>(["provider_error", "compose_not_granted", "account_mismatch", "upgrade_account_missing", "connect_account_missing", "account_persistence_failed", "missing_code", "invalid_state", "missing_state", "token_exchange_failed", "userinfo_failed", "account_identity_missing", "oauth_not_configured"]);
 
 const PANEL_ANIM_MS = 650;
 const ZEN_ANIM_MS = 500;
 const MICRO_ANIM_MS = 180;
 
 type OrcaTransition = "reader-forward" | "reader-back" | "content" | "theme";
-
-type InboxViewportPosition = {
-  windowX: number;
-  windowY: number;
-  contentX: number | null;
-  contentY: number | null;
-};
 
 const demoAgentLifecycleStorageKey = "orca-demo-agent-event-lifecycles-v1";
 const demoAgentMuteStorageKey = "orca-demo-agent-event-mutes-v1";
@@ -249,28 +258,6 @@ function shouldReduceMotion() {
   const preference = document.documentElement.dataset.motion;
   return preference === "reduced"
     || (preference !== "full" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-}
-
-function getInboxContentPane() {
-  return document.querySelector<HTMLElement>(".content-pane:not(.content-pane-reader)");
-}
-
-function captureInboxViewport(): InboxViewportPosition {
-  const contentPane = getInboxContentPane();
-  return {
-    windowX: window.scrollX,
-    windowY: window.scrollY,
-    contentX: contentPane?.scrollLeft ?? null,
-    contentY: contentPane?.scrollTop ?? null,
-  };
-}
-
-function restoreInboxViewport(position: InboxViewportPosition) {
-  window.scrollTo({ left: position.windowX, top: position.windowY, behavior: "instant" });
-  const contentPane = getInboxContentPane();
-  if (!contentPane || position.contentX === null || position.contentY === null) return;
-  contentPane.scrollLeft = position.contentX;
-  contentPane.scrollTop = position.contentY;
 }
 
 function useExitPresence(visible: boolean, duration = MICRO_ANIM_MS) {
@@ -541,6 +528,106 @@ export async function revokeAllAgentConnections() {
   return response.json() as Promise<{ revoked: number }>;
 }
 
+type SettingsReadStatus = "loading" | "ready" | "error";
+type SettingsReadResource = "preferences" | "accounts" | "agents" | "sync";
+type SettingsRequestError = Error | null;
+type SettingsReadIssue = {
+  kind: "offline" | "auth" | "no-access" | "server";
+  title: string;
+  detail: string;
+  preserved: string;
+  effect: string;
+  actionLabel: string;
+  actionHref?: string;
+};
+
+const settingsReadCopy: Record<SettingsReadResource, {
+  serverTitle: string;
+  offlineTitle: string;
+  noAccessTitle: string;
+  retryLabel: string;
+  preserved: string;
+  effect: string;
+  accessHref: string;
+  accessLabel: string;
+}> = {
+  preferences: {
+    serverTitle: "Account choices are temporarily unavailable",
+    offlineTitle: "Account choices are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read account choices",
+    retryLabel: "Try loading account choices again",
+    preserved: "Nothing on your account was changed. Device-only reading choices still work.",
+    effect: "Account writing and reminder choices stay locked until Orca loads their saved values.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review account access",
+  },
+  accounts: {
+    serverTitle: "Connected accounts are temporarily unavailable",
+    offlineTitle: "Connected accounts are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read connected accounts",
+    retryLabel: "Try loading connected accounts again",
+    preserved: "Any account details already shown remain in place; no provider connection was changed.",
+    effect: "Connection details may be incomplete until this section loads again.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review provider access",
+  },
+  agents: {
+    serverTitle: "Agent connections are temporarily unavailable",
+    offlineTitle: "Agent connections are unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read agent connections",
+    retryLabel: "Try loading agent connections again",
+    preserved: "Existing ChatGPT and Codex permissions were not changed.",
+    effect: "This list may be incomplete; revocation remains unavailable until access is restored.",
+    accessHref: "/docs/bre-267-validation.html",
+    accessLabel: "Review connection setup",
+  },
+  sync: {
+    serverTitle: "Sync status is temporarily unavailable",
+    offlineTitle: "Sync status is unavailable while Orca is offline",
+    noAccessTitle: "Orca cannot read provider sync status",
+    retryLabel: "Try loading sync status again",
+    preserved: "Connected-account details remain visible and no mail was removed.",
+    effect: "Orca cannot confirm current provider health until this status loads again.",
+    accessHref: "/settings/integrations/gmail",
+    accessLabel: "Review provider access",
+  },
+};
+
+function isSettingsSessionExpired(error: unknown) {
+  return error instanceof ApiRequestError && (error.status === 401 || error.code === "unauthorized");
+}
+
+function buildSettingsReadIssue(resource: SettingsReadResource, error: unknown): SettingsReadIssue {
+  const copy = settingsReadCopy[resource];
+  const detail = getErrorMessage(error);
+  if (isSettingsSessionExpired(error)) {
+    return {
+      kind: "auth",
+      title: "Your Orca session expired",
+      detail: "Sign in again before Orca can safely load this account-scoped information.",
+      preserved: copy.preserved,
+      effect: copy.effect,
+      actionLabel: "Sign in again",
+      actionHref: "/login?returnTo=%2Fsettings",
+    };
+  }
+  if (error instanceof ApiRequestError && error.status === 403) {
+    return {
+      kind: "no-access",
+      title: copy.noAccessTitle,
+      detail,
+      preserved: copy.preserved,
+      effect: copy.effect,
+      actionLabel: copy.accessLabel,
+      actionHref: copy.accessHref,
+    };
+  }
+  if (error instanceof TypeError || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+    return { kind: "offline", title: copy.offlineTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
+  }
+  return { kind: "server", title: copy.serverTitle, detail, preserved: copy.preserved, effect: copy.effect, actionLabel: copy.retryLabel };
+}
+
 export function SettingsHome({ preferences, setPreferences, systemTheme, theme, setTheme, demoMode = false }: {
   preferences: ReaderPreferences;
   setPreferences: Dispatch<SetStateAction<ReaderPreferences>>;
@@ -550,77 +637,186 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   demoMode?: boolean;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const [accountPreferences, setAccountPreferences] = useState<UserPreferences>(defaultAccountPreferences);
-  const [accountStatus, setAccountStatus] = useState<"loading" | "ready" | "saving" | "error">(demoMode ? "ready" : "loading");
-  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountPreferences, setAccountPreferences] = useState<UserPreferences | null>(demoMode ? defaultAccountPreferences : null);
+  const [accountLoadStatus, setAccountLoadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [accountLoadError, setAccountLoadError] = useState<unknown>(null);
+  const [accountSaveStatus, setAccountSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [accountSaveError, setAccountSaveError] = useState<SettingsRequestError>(null);
+  const [accountSaveNotice, setAccountSaveNotice] = useState<string | null>(null);
+  const [accountDirty, setAccountDirty] = useState(false);
+  const accountEditVersionRef = useRef(0);
+  const accountLoadRequestRef = useRef(0);
+  const accountSaveRequestRef = useRef(0);
+  const accountLoadControllerRef = useRef<AbortController | null>(null);
   const [connectedAccounts, setConnectedAccounts] = useState<MailAccount[]>(demoMode ? [demoAccount] : []);
-  const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<"loading" | "ready" | "error">(demoMode ? "ready" : "loading");
-  const [connectedAccountsError, setConnectedAccountsError] = useState<string | null>(null);
+  const [connectedAccountsStatus, setConnectedAccountsStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [connectedAccountsError, setConnectedAccountsError] = useState<unknown>(null);
+  const connectedAccountsRequestRef = useRef(0);
+  const connectedAccountsControllerRef = useRef<AbortController | null>(null);
   const [settingsSyncStatus, setSettingsSyncStatus] = useState<SyncStatus | null>(null);
+  const [settingsSyncReadStatus, setSettingsSyncReadStatus] = useState<SettingsReadStatus>(demoMode ? "ready" : "loading");
+  const [settingsSyncError, setSettingsSyncError] = useState<unknown>(null);
+  const settingsSyncRequestRef = useRef(0);
+  const settingsSyncControllerRef = useRef<AbortController | null>(null);
   const [outlookAuthorizationStatus, setOutlookAuthorizationStatus] = useState<OAuthConnectStatus>("idle");
   const [outlookAuthorizationError, setOutlookAuthorizationError] = useState<string | null>(null);
   const [agentConnections, setAgentConnections] = useState<McpConnection[]>(demoMode ? demoAgentConnections : []);
   const [agentConnectionsStatus, setAgentConnectionsStatus] = useState<"loading" | "ready" | "disabled" | "error">(demoMode ? "ready" : "loading");
-  const [agentConnectionsError, setAgentConnectionsError] = useState<string | null>(null);
+  const [agentConnectionsError, setAgentConnectionsError] = useState<unknown>(null);
+  const agentConnectionsRequestRef = useRef(0);
+  const agentConnectionsControllerRef = useRef<AbortController | null>(null);
   const [revokingAgentConnection, setRevokingAgentConnection] = useState<string | "all" | null>(null);
-  const [saved, setSaved] = useState(false);
   const returnStatus = readOAuthReturnStatus();
 
   useEffect(() => { titleRef.current?.focus(); }, []);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/preferences", userPreferencesSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setAccountPreferences(value); setAccountStatus("ready"); } })
-      .catch((error) => { if (!controller.signal.aborted) { setAccountStatus("error"); setAccountError(getErrorMessage(error)); } });
-    return () => controller.abort();
+    void loadAccountPreferences();
+    return () => { accountLoadControllerRef.current?.abort(); accountLoadRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/mcp/connections", mcpConnectionPageSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setAgentConnections(value.items); setAgentConnectionsStatus("ready"); } })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        if (error instanceof ApiRequestError && error.status === 404) setAgentConnectionsStatus("disabled");
-        else { setAgentConnectionsStatus("error"); setAgentConnectionsError(getErrorMessage(error)); }
-      });
-    return () => controller.abort();
-  }, [demoMode]);
-  useEffect(() => {
-    if (demoMode) {
-      setConnectedAccounts([demoAccount]);
-      setConnectedAccountsStatus("ready");
-      setConnectedAccountsError(null);
-      return;
-    }
-    const controller = new AbortController();
-    fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) { setConnectedAccounts(value.items); setConnectedAccountsStatus("ready"); } })
-      .catch((error) => { if (!controller.signal.aborted) { setConnectedAccountsStatus("error"); setConnectedAccountsError(getErrorMessage(error)); } });
-    return () => controller.abort();
+    void loadAgentConnections();
+    return () => { agentConnectionsControllerRef.current?.abort(); agentConnectionsRequestRef.current += 1; };
   }, [demoMode]);
   useEffect(() => {
     if (demoMode) return;
-    const controller = new AbortController();
-    fetchJson("/v1/sync/status", syncStatusSchema, controller.signal)
-      .then((value) => { if (!controller.signal.aborted) setSettingsSyncStatus(value); })
-      .catch(() => { if (!controller.signal.aborted) setSettingsSyncStatus(null); });
-    return () => controller.abort();
+    void loadConnectedAccounts();
+    return () => { connectedAccountsControllerRef.current?.abort(); connectedAccountsRequestRef.current += 1; };
+  }, [demoMode]);
+  useEffect(() => {
+    if (demoMode) return;
+    void loadSettingsSyncStatus();
+    return () => { settingsSyncControllerRef.current?.abort(); settingsSyncRequestRef.current += 1; };
   }, [demoMode]);
 
+  async function loadAccountPreferences() {
+    if (demoMode) return;
+    const requestId = ++accountLoadRequestRef.current;
+    accountLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    accountLoadControllerRef.current = controller;
+    setAccountLoadStatus("loading");
+    setAccountLoadError(null);
+    try {
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
+      setAccountPreferences(value);
+      accountEditVersionRef.current = 0;
+      setAccountDirty(false);
+      setAccountLoadStatus("ready");
+      setAccountSaveStatus("idle");
+      setAccountSaveError(null);
+      setAccountSaveNotice(null);
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== accountLoadRequestRef.current) return;
+      setAccountLoadStatus("error");
+      setAccountLoadError(error);
+    }
+  }
+  async function loadConnectedAccounts() {
+    if (demoMode) return;
+    const requestId = ++connectedAccountsRequestRef.current;
+    connectedAccountsControllerRef.current?.abort();
+    const controller = new AbortController();
+    connectedAccountsControllerRef.current = controller;
+    setConnectedAccountsStatus("loading");
+    setConnectedAccountsError(null);
+    try {
+      const value = await fetchJson("/v1/accounts", mailAccountPageSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== connectedAccountsRequestRef.current) return;
+      setConnectedAccounts(value.items);
+      setConnectedAccountsStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== connectedAccountsRequestRef.current) return;
+      setConnectedAccountsStatus("error");
+      setConnectedAccountsError(error);
+    }
+  }
+  async function loadAgentConnections() {
+    if (demoMode) return;
+    const requestId = ++agentConnectionsRequestRef.current;
+    agentConnectionsControllerRef.current?.abort();
+    const controller = new AbortController();
+    agentConnectionsControllerRef.current = controller;
+    setAgentConnectionsStatus("loading");
+    setAgentConnectionsError(null);
+    try {
+      const value = await fetchJson("/v1/mcp/connections", mcpConnectionPageSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== agentConnectionsRequestRef.current) return;
+      setAgentConnections(value.items);
+      setAgentConnectionsStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== agentConnectionsRequestRef.current) return;
+      if (error instanceof ApiRequestError && error.status === 404) setAgentConnectionsStatus("disabled");
+      else { setAgentConnectionsStatus("error"); setAgentConnectionsError(error); }
+    }
+  }
+  async function loadSettingsSyncStatus() {
+    if (demoMode) return;
+    const requestId = ++settingsSyncRequestRef.current;
+    settingsSyncControllerRef.current?.abort();
+    const controller = new AbortController();
+    settingsSyncControllerRef.current = controller;
+    setSettingsSyncReadStatus("loading");
+    setSettingsSyncError(null);
+    try {
+      const value = await fetchJson("/v1/sync/status", syncStatusSchema, controller.signal);
+      if (controller.signal.aborted || requestId !== settingsSyncRequestRef.current) return;
+      setSettingsSyncStatus(value);
+      setSettingsSyncReadStatus("ready");
+    } catch (error) {
+      if (controller.signal.aborted || requestId !== settingsSyncRequestRef.current) return;
+      setSettingsSyncReadStatus("error");
+      setSettingsSyncError(error);
+    }
+  }
+
   const updateReader = <Key extends keyof ReaderPreferences>(key: Key, value: ReaderPreferences[Key]) => setPreferences((current) => ({ ...current, [key]: value }));
-  const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => { setSaved(false); setAccountPreferences((current) => ({ ...current, [key]: value })); };
+  const updateAccount = <Key extends keyof UserPreferences>(key: Key, value: UserPreferences[Key]) => {
+    if (accountLoadStatus !== "ready") return;
+    accountEditVersionRef.current += 1;
+    setAccountDirty(true);
+    setAccountSaveStatus((current) => current === "error" ? current : "idle");
+    setAccountSaveError((current: SettingsRequestError) => accountSaveStatus === "error" ? current : null);
+    setAccountSaveNotice(null);
+    setAccountPreferences((current) => current ? { ...current, [key]: value } : current);
+  };
   async function saveAccountPreferences() {
-    if (accountPreferences.signature.length > 10_000) { setAccountError("Your signature must be 10,000 characters or fewer."); return; }
-    if (demoMode) { setSaved(true); return; }
-    setAccountStatus("saving"); setAccountError(null);
-    try { setAccountPreferences(await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(accountPreferences) })); setSaved(true); setAccountStatus("ready"); }
-    catch (error) { setAccountError(`Could not save your preferences. ${getErrorMessage(error)}`); setAccountStatus("error"); }
+    if (accountLoadStatus !== "ready" || !accountPreferences || accountSaveStatus === "saving" || !accountDirty) return;
+    if (accountPreferences.signature.length > 10_000) { setAccountSaveError(new Error("Your signature must be 10,000 characters or fewer.")); setAccountSaveStatus("error"); return; }
+    const requestId = ++accountSaveRequestRef.current;
+    const editVersion = accountEditVersionRef.current;
+    const payload = accountPreferences;
+    if (demoMode) { setAccountDirty(false); setAccountSaveStatus("saved"); return; }
+    setAccountSaveStatus("saving");
+    setAccountSaveError(null);
+    setAccountSaveNotice(null);
+    try {
+      const value = await fetchJson("/v1/preferences", userPreferencesSchema, undefined, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      if (requestId !== accountSaveRequestRef.current) return;
+      if (editVersion === accountEditVersionRef.current) {
+        setAccountPreferences(value);
+        setAccountDirty(false);
+        setAccountSaveStatus("saved");
+      } else {
+        setAccountDirty(true);
+        setAccountSaveStatus("idle");
+        setAccountSaveNotice("Your earlier account choices were saved. Newer edits are still here and need saving.");
+      }
+    } catch (error) {
+      if (requestId !== accountSaveRequestRef.current) return;
+      setAccountSaveError(error instanceof Error ? error : new Error(getErrorMessage(error)));
+      setAccountSaveStatus("error");
+    }
   }
   const outlookReturnTo = typeof window === "undefined" ? "/settings" : `${window.location.origin}/settings`;
   function connectOutlook() {
-    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError);
+    void beginProviderAuthorization("outlook", "connect", outlookReturnTo, setOutlookAuthorizationStatus, setOutlookAuthorizationError).then((result) => {
+      if (result !== "provider_unavailable") return;
+      setOutlookAuthorizationStatus("error");
+      setOutlookAuthorizationError("Microsoft Outlook connection is unavailable here. Your existing mail access was not changed. Check with your Orca administrator before trying again.");
+    });
   }
   async function revokeConnection(connection: McpConnection) {
     if (!window.confirm(`Revoke ${connection.clientName}'s access to Orca?`)) return;
@@ -644,31 +840,38 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
   }
   const profileAccount = connectedAccounts[0] ?? null;
   const activeAgentConnections = agentConnections.filter((connection) => !connection.revokedAt);
-  const [settingsQuery, setSettingsQuery] = useState("");
-  const settingsSpaces: WorkflowSpace[] = [
-    { id: "focus", label: "Focus", description: "protected attention" },
-    { id: "signals", label: "Signals", description: "important changes" },
-    { id: "quiet", label: "Quiet", description: "low interruption" },
-    { id: "later", label: "Later", description: "held intentionally" },
-  ];
-  const settingsAccount = {
-    displayName: profileAccount?.displayName ?? profileAccount?.email ?? "Orca workspace",
-    email: profileAccount?.email ?? "",
-    accountCount: connectedAccounts.length,
-    health: (connectedAccountsStatus === "loading" ? "syncing" : connectedAccountsStatus === "error" ? "attention" : !settingsSyncStatus ? "unknown" : settingsSyncStatus.accounts.some((item) => item.state === "syncing") ? "syncing" : settingsSyncStatus.accounts.some((item) => item.state === "auth_needed" || item.state === "error") ? "attention" : "synced") as "synced" | "syncing" | "attention" | "unknown",
-    detail: demoMode ? "Preview route · account status unavailable" : !settingsSyncStatus ? "Account status unavailable" : undefined,
-  };
-  function navigateFromSettings(destination: DesktopDestination) {
-    if (destination === "settings") return;
-    if (destination === "organization") { window.location.assign("/?destination=organization"); return; }
-    if (destination.startsWith("space:")) { window.location.assign("/"); return; }
-    window.location.assign(`/?destination=${encodeURIComponent(destination)}`);
-  }
+  const displayedAccountPreferences = accountPreferences ?? defaultAccountPreferences;
+  const accountFieldsDisabled = accountLoadStatus !== "ready";
+  const accountLoadIssue = accountLoadStatus === "error" ? buildSettingsReadIssue("preferences", accountLoadError) : null;
+  const connectedAccountsIssue = connectedAccountsStatus === "error" ? buildSettingsReadIssue("accounts", connectedAccountsError) : null;
+  const agentConnectionsIssue = agentConnectionsStatus === "error" ? buildSettingsReadIssue("agents", agentConnectionsError) : null;
+  const syncStatusIssue = settingsSyncReadStatus === "error" ? buildSettingsReadIssue("sync", settingsSyncError) : null;
+  const settingsNavigationPreview = useMemo<SettingsNavigationPreview>(() => ({
+    account: {
+      displayName: (demoMode ? demoAccount.displayName : profileAccount?.displayName) ?? (demoMode ? demoAccount.email : profileAccount?.email) ?? "Orca workspace",
+      email: demoMode ? demoAccount.email : profileAccount?.email ?? "",
+      accountCount: demoMode ? 1 : connectedAccounts.length,
+      avatar: <ProfileAvatar account={demoMode ? demoAccount : profileAccount} variant="sidebar" />,
+      detail: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error") ? "Account status unavailable" : undefined,
+    },
+    accountId: demoMode ? demoAccount.id : profileAccount?.id ?? null,
+    attention: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error"))),
+    collections: demoMode ? demoCollections : [],
+    complete: demoMode,
+    counts: demoMode ? {
+      focus: getMessagesForMailbox(demoMailWithAgentSources, "focus").length,
+      signals: getMessagesForMailbox(demoMailWithAgentSources, "signals").length,
+      quiet: getMessagesForMailbox(demoMailWithAgentSources, "quiet").length,
+      later: new Set(demoReminders.filter((item) => item.status === "scheduled" || item.status === "resurfaced").map((item) => item.threadId)).size,
+    } : {},
+    draftCount: demoMode ? demoDrafts.length : undefined,
+    inboxCount: demoMode ? demoMailWithAgentSources.length : undefined,
+    known: demoMode || (connectedAccountsStatus === "ready" && settingsSyncReadStatus === "ready"),
+    labels: {},
+    syncing: !demoMode && (connectedAccountsStatus === "loading" || settingsSyncReadStatus === "loading" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "syncing"))),
+  }), [connectedAccounts.length, connectedAccountsStatus, demoMode, profileAccount, settingsSyncReadStatus, settingsSyncStatus]);
 
-  return <main className="desktop-shell settings-desktop-shell">
-    <AppSidebar account={settingsAccount} active="settings" onCompose={() => window.location.assign("/?compose=1")} onManageSpaces={() => window.location.assign("/settings/attention-views")} onNavigate={navigateFromSettings} spaces={settingsSpaces} theme={theme}/>
-    <section className="desktop-workspace">
-    <WorkspaceHeader health={settingsAccount.health} onQueryChange={setSettingsQuery} onQuerySubmit={(value) => window.location.assign(value.trim() ? `/?q=${encodeURIComponent(value.trim())}` : "/")} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} query={settingsQuery} theme={theme} title="Settings"/>
+  return <DesktopSettingsFrame navigationPreview={settingsNavigationPreview} onThemeChange={() => setTheme((current) => current === "dark" ? "light" : "dark")} theme={theme} title="Settings">
     <section className="settings-home-page">
     <div className="settings-home-layout">
       <aside className="settings-home-nav" aria-label="Settings sections"><p className="settings-eyebrow">Your workspace</p><a href="#account">Account</a><a href="#appearance">Appearance & reading</a><a href="#attention">Inbox & attention</a><a href="#writing">Writing</a><a href="#notifications">Notifications</a><a href="#connected">Connected accounts</a><a href="#agents">Agent connections</a><a href="#privacy">Privacy & data</a></aside>
@@ -684,18 +887,29 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
         </SettingsSection>
         <SettingsSection id="appearance" title="Appearance & reading" note="This device"><PreferenceChoice label="Appearance" hint={`System is currently ${systemTheme}.`} name="settings-theme" value={preferences.theme} onChange={(value) => updateReader("theme", value as ReaderPreferences["theme"])} options={[{ value: "system", label: "System" }, { value: "light", label: "Light" }, { value: "dark", label: "Dark" }]} /><PreferenceChoice label="Reader text" hint="Changes message text, not navigation." name="settings-size" value={preferences.textSize} onChange={(value) => updateReader("textSize", value as ReaderPreferences["textSize"])} options={[{ value: "standard", label: "Standard" }, { value: "large", label: "Large" }]} /><PreferenceChoice label="Inbox & conversation spacing" hint={readerDensityHint} name="settings-density" value={preferences.density} onChange={(value) => updateReader("density", value as ReaderPreferences["density"])} options={[{ value: "calm", label: "Calm" }, { value: "compact", label: "Compact" }]} /><PreferenceChoice label="Motion" hint="System follows your operating system preference." name="settings-motion" value={preferences.motion} onChange={(value) => updateReader("motion", value as ReaderPreferences["motion"])} options={[{ value: "system", label: "System" }, { value: "reduced", label: "Reduced" }, { value: "full", label: "Full" }]} /></SettingsSection>
         <SettingsSection id="attention" title="Inbox & attention" note="Account-level"><p className="settings-section-copy">Tune the names, colors, and order of the views that help you decide what deserves attention.</p><a className="settings-row-link" href="/settings/attention-views">Manage Attention Views →</a></SettingsSection>
-        <SettingsSection id="writing" title="Writing" note="Account + device"><label className="settings-field"><span>Default signature</span><textarea disabled={accountStatus === "loading" || accountStatus === "saving"} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={accountPreferences.signature} /></label><PreferenceChoice label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={accountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} /><PreferenceChoice label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={accountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} /><label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>Start every new draft in the distraction-free editor.</small></span></label></SettingsSection>
-        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={accountPreferences.notifyByDefault} disabled={accountStatus === "loading" || accountStatus === "saving"} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
+        <SettingsSection id="writing" title="Writing" note="Account + device">
+          <div aria-busy={accountLoadStatus === "loading" ? "true" : undefined}>
+            {accountLoadStatus === "loading" ? <p className="settings-account-status" role="status">Loading saved account choices before editing is enabled…</p> : null}
+            {accountLoadIssue ? <SettingsOperationalState issue={accountLoadIssue} onRetry={() => void loadAccountPreferences()} /> : null}
+            <label className="settings-field"><span>Default signature</span><textarea disabled={accountFieldsDisabled} maxLength={10_000} onChange={(event) => updateAccount("signature", event.target.value)} placeholder="A thoughtful sign-off, if you use one." value={displayedAccountPreferences.signature} /></label>
+            <PreferenceChoice disabled={accountFieldsDisabled} label="Compose format" hint="A starting point; you can still format each message." name="compose-format" value={displayedAccountPreferences.composeFormat} onChange={(value) => updateAccount("composeFormat", value as UserPreferences["composeFormat"])} options={[{ value: "plain", label: "Plain text" }, { value: "rich", label: "Rich text" }]} />
+            <PreferenceChoice disabled={accountFieldsDisabled} label="Reply behavior" hint="The default action when you choose Reply." name="reply-behavior" value={displayedAccountPreferences.replyBehavior} onChange={(value) => updateAccount("replyBehavior", value as UserPreferences["replyBehavior"])} options={[{ value: "reply", label: "Reply" }, { value: "reply_all", label: "Reply all" }]} />
+            <label className="preference-switch"><input checked={preferences.composeZenByDefault} onChange={(event) => updateReader("composeZenByDefault", event.target.checked)} type="checkbox" /><span><strong>Open new writing in Zen mode</strong><small>This device choice stays available even if account choices cannot load.</small></span></label>
+          </div>
+        </SettingsSection>
+        <SettingsSection id="notifications" title="Notifications & reminders" note="Account-level"><label className="preference-switch"><input checked={displayedAccountPreferences.notifyByDefault} disabled={accountFieldsDisabled} onChange={(event) => updateAccount("notifyByDefault", event.target.checked)} type="checkbox" /><span><strong>Notify me for new reminders</strong><small>Orca will ask your browser for permission only when it needs to show a reminder.</small></span></label><p className="settings-capability">Browser notification capability: {typeof Notification === "undefined" ? "Unavailable in this browser" : Notification.permission === "granted" ? "Allowed" : Notification.permission === "denied" ? "Blocked by browser or OS" : "Not requested"}.</p></SettingsSection>
         <SettingsSection id="connected" title="Connected accounts" note="Provider access">
           <p className="settings-section-copy">Gmail and Microsoft Outlook can live in the same Orca workspace. Each account stays separately permissioned and appears in the unified inbox when its sync is ready.</p>
           <div aria-live="polite" className="settings-account-list">
             {connectedAccountsStatus === "loading" ? <p className="settings-account-status">Checking connected accounts…</p> : null}
-            {connectedAccountsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load connected accounts. {connectedAccountsError}</p> : null}
+            {connectedAccountsIssue ? <SettingsOperationalState issue={connectedAccountsIssue} onRetry={() => void loadConnectedAccounts()} /> : null}
             {connectedAccountsStatus === "ready" && connectedAccounts.length === 0 ? <p className="settings-account-status">No mail provider is connected yet.</p> : null}
-            {connectedAccountsStatus === "ready" ? connectedAccounts.map((account) => <div className="settings-account-row" key={account.id}>
+            {connectedAccounts.map((account) => <div className="settings-account-row" key={account.id}>
               <div><span className="settings-account-provider">{mailProviderLabel(account.provider)}</span><strong>{account.email}</strong></div>
               <span className="settings-account-capability">{account.capabilities.read ? "Read-only" : "Needs attention"}</span>
-            </div>) : null}
+            </div>)}
+            {settingsSyncReadStatus === "loading" ? <p className="settings-account-status">Checking provider sync status…</p> : null}
+            {syncStatusIssue ? <SettingsOperationalState issue={syncStatusIssue} onRetry={() => void loadSettingsSyncStatus()} /> : null}
           </div>
           <div className="settings-outlook-connect">
             <div><strong>Add Microsoft Outlook</strong><span>Read-only Mail.Read access. Outlook mail will appear after the Outlook sync step is enabled.</span></div>
@@ -710,28 +924,37 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
           <p className="settings-section-copy">ChatGPT and Codex can connect to Orca through a scoped OAuth link. These connections never receive your provider tokens or an OpenAI API key.</p>
           {agentConnectionsStatus === "loading" ? <p className="settings-account-status">Checking agent connections…</p> : null}
           {agentConnectionsStatus === "disabled" ? <p className="settings-account-status">Agent connections are not enabled for this Orca environment.</p> : null}
-          {agentConnectionsStatus === "error" ? <p className="settings-account-status settings-account-status-error" role="alert">Could not load agent connections. {agentConnectionsError}</p> : null}
+          {agentConnectionsIssue ? <SettingsOperationalState issue={agentConnectionsIssue} onRetry={() => void loadAgentConnections()} /> : null}
           {agentConnectionsStatus === "ready" && agentConnections.length === 0 ? <p className="settings-account-status">No ChatGPT or Codex connection has access to this workspace.</p> : null}
-          {agentConnectionsStatus === "ready" && agentConnections.length > 0 ? <div className="agent-connection-list">
+          {agentConnections.length > 0 ? <div className="agent-connection-list">
             {agentConnections.map((connection) => <article className="agent-connection-row" data-revoked={connection.revokedAt ? "true" : "false"} key={connection.id}>
               <div className="agent-connection-main"><span className="agent-connection-status">{connection.revokedAt ? "Revoked" : "Active"}</span><strong>{connection.clientName}</strong><small>{connection.accounts.length > 0 ? connection.accounts.map((account) => account.email).join(", ") : "No connected mail accounts"}</small></div>
               <div className="agent-connection-detail"><span>{connection.scopes.map((scope) => scope === "mail:read" ? "Mail read" : "Agent events read").join(" · ")}</span><small>{connection.revokedAt ? `Revoked ${formatAgentConnectionTime(connection.revokedAt)}` : `Last used ${formatAgentConnectionTime(connection.lastUsedAt)}`}</small></div>
               {!connection.revokedAt ? <button className="agent-connection-revoke" disabled={revokingAgentConnection !== null} onClick={() => void revokeConnection(connection)} type="button">{revokingAgentConnection === connection.id ? "Revoking…" : "Revoke connection"}</button> : null}
             </article>)}
           </div> : null}
-          {agentConnectionsError && agentConnectionsStatus === "ready" ? <p className="settings-account-status settings-account-status-error" role="alert">{agentConnectionsError}</p> : null}
+          {agentConnectionsError && agentConnectionsStatus === "ready" ? <p className="settings-account-status settings-account-status-error" role="alert">{getErrorMessage(agentConnectionsError)}</p> : null}
           <div className="agent-connection-actions"><a className="settings-row-link" href="/docs/bre-267-validation.html">Connection setup & security →</a><button className="agent-connection-revoke-all" disabled={activeAgentConnections.length === 0 || revokingAgentConnection !== null} onClick={() => void revokeAllConnections()} type="button">{revokingAgentConnection === "all" ? "Revoking all…" : "Revoke all agent connections"}</button></div>
         </SettingsSection>
         <SettingsSection id="privacy" title="Privacy & data" note="Clear boundaries"><p className="settings-section-copy">Orca stores normalized mail locally and only requests the read-first permissions shown in Connected accounts. Signing out ends this browser session; revoking access in Google or Microsoft prevents future sync and delivery.</p><a className="settings-row-link" href="https://myaccount.google.com/permissions">Manage Google provider access →</a><a className="settings-row-link" href="https://myaccount.microsoft.com/organizations">Manage Microsoft provider access →</a></SettingsSection>
-        <footer className="settings-save-bar" aria-live="polite" data-status={accountError ? "error" : accountStatus === "saving" ? "saving" : saved ? "saved" : "idle"}>{accountError ? <p role="alert">{accountError} <button onClick={() => void saveAccountPreferences()} type="button">Try again</button></p> : <p>{saved ? "Account preferences saved." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}<button className="settings-save-button" disabled={accountStatus === "loading" || accountStatus === "saving"} onClick={() => void saveAccountPreferences()} type="button">{accountStatus === "saving" ? "Saving…" : saved ? "Saved" : "Save account choices"}</button></footer>
+        <footer className="settings-save-bar" aria-live="polite" data-status={accountSaveStatus}>
+          {accountSaveStatus === "error" ? <p role="alert">Could not save your preferences. {getErrorMessage(accountSaveError)} Your account choices are still here; device-only reading choices were not affected. {isSettingsSessionExpired(accountSaveError) ? <a href="/login?returnTo=%2Fsettings">Sign in again</a> : <button onClick={() => void saveAccountPreferences()} type="button">Try saving again</button>}</p> : accountSaveNotice ? <p>{accountSaveNotice}</p> : <p>{accountSaveStatus === "saved" ? "Account preferences saved." : accountLoadStatus !== "ready" ? "Account choices stay locked until Orca safely loads their saved values. Device-only reading choices remain available." : "Writing and reminder choices are saved separately: account choices here, reader choices on this device."}</p>}
+          <button className="settings-save-button" disabled={accountLoadStatus !== "ready" || accountSaveStatus === "saving" || !accountDirty} onClick={() => void saveAccountPreferences()} type="button">{accountSaveStatus === "saving" ? "Saving…" : accountSaveStatus === "saved" ? "Saved" : "Save account choices"}</button>
+        </footer>
       </section>
     </div>
   </section>
-  </section>
-  </main>;
+  </DesktopSettingsFrame>;
 }
 
 function SettingsSection({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) { return <section className="settings-section" id={id}><header><h2>{title}</h2><span>{note}</span></header><div>{children}</div></section>; }
+
+function SettingsOperationalState({ issue, onRetry }: { issue: SettingsReadIssue; onRetry: () => void }) {
+  return <div className="settings-operational-state" data-kind={issue.kind} role="alert">
+    <div className="settings-operational-copy"><strong>{issue.title}</strong><span>{issue.detail}</span><small><b>Preserved:</b> {issue.preserved}</small><small><b>Affected:</b> {issue.effect}</small></div>
+    {issue.actionHref ? <a className="settings-recovery-action" href={issue.actionHref}>{issue.actionLabel}</a> : <button className="settings-recovery-action" onClick={onRetry} type="button">{issue.actionLabel}</button>}
+  </div>;
+}
 
 export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme }: {
   preferences: ReaderPreferences;
@@ -779,8 +1002,8 @@ export function ReaderPreferencesPage({ preferences, setPreferences, systemTheme
   );
 }
 
-function PreferenceChoice({ label, hint, name, value, onChange, options }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }> }) {
-  return <fieldset className="preference-group"><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
+function PreferenceChoice({ label, hint, name, value, onChange, options, disabled = false }: { label: string; hint: string; name: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; disabled?: boolean }) {
+  return <fieldset className="preference-group" disabled={disabled}><legend>{label}</legend><p>{hint}</p><div className="preference-options">{options.map((option) => <label className={value === option.value ? "preference-option preference-option-selected" : "preference-option"} key={option.value}><input checked={value === option.value} disabled={disabled} name={name} onChange={() => onChange(option.value)} type="radio" value={option.value} /><span>{option.label}</span></label>)}</div></fieldset>;
 }
 
 const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
@@ -795,6 +1018,12 @@ const attentionViewSettingsSchema: JsonSchema<AttentionViewSetting[]> = {
 const resolvedSenderAttentionResponseSchema: JsonSchema<ResolvedSenderAttention> = {
   parse(value: unknown) {
     return resolvedSenderAttentionSchema.parse(value);
+  },
+};
+
+const senderAttentionBatchResponseSchema: JsonSchema<SenderAttentionBatchResult> = {
+  parse(value: unknown) {
+    return senderAttentionBatchResultSchema.parse(value);
   },
 };
 
@@ -1003,15 +1232,22 @@ export function InboxApp({
   preferences = defaultReaderPreferences,
   theme,
   setTheme,
+  bulkAttentionClient,
+  initialDemoMessages,
 }: {
   demoMode?: boolean;
   preferences?: ReaderPreferences;
   theme: Theme;
   setTheme: Dispatch<SetStateAction<Theme>>;
+  bulkAttentionClient?: BulkAttentionClient;
+  initialDemoMessages?: InboxMessage[];
 }) {
+  const topLayerActive = useTopLayerActive();
+  const online = useOnlineStatus();
+  const demoInboxMessages = initialDemoMessages ?? demoMailWithAgentSources;
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoMailWithAgentSources) : []);
-  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoMailWithAgentSources : []);
+  const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoInboxMessages) : []);
+  const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoInboxMessages : []);
   const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
@@ -1027,6 +1263,9 @@ export function InboxApp({
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
+  const [collectionsLoad, setCollectionsLoad] = useState<{ accountId: string | null; status: "loading" | "ready" | "error" }>(() => demoMode
+    ? { accountId: demoAccount.id, status: "ready" }
+    : { accountId: null, status: "loading" });
   const [pins, setPins] = useState<Pin[]>(demoMode ? demoPins : []);
   const [reminders, setReminders] = useState<Reminder[]>(demoMode ? demoReminders : []);
   const [drafts, setDrafts] = useState<MessageDraft[] | null>(demoMode ? demoDrafts : null);
@@ -1048,14 +1287,18 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationOpen, setOrganizationOpen] = useState(false);
-  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("destination") === "organization");
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && desktopDestinationFromLocation(window.location) === "organization");
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
     const requested = new URLSearchParams(window.location.search).get("bre320Evidence");
     const states = ["ready", "loading", "unavailable", "no_access", "offline", "transaction_failure", "conflict", "active", "reverted"] as const;
     return states.find((state) => state === requested) ?? null;
   }, []);
+  const bre358EvidenceState = useMemo(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("bre358Evidence") === "partial" ? "partial" : null;
+  }, []);
+  const bre358PartialServedRef = useRef(false);
   const [manageSpacesOpen, setManageSpacesOpen] = useState(false);
   const [spaceOperationStatus, setSpaceOperationStatus] = useState<"idle" | "saving">("idle");
   const [spaceOperationError, setSpaceOperationError] = useState<string | null>(null);
@@ -1063,57 +1306,79 @@ export function InboxApp({
   const [hiddenSpaceIds, setHiddenSpaceIds] = useState<string[]>([]);
   const [spaceOrder, setSpaceOrder] = useState<string[]>(["focus", "signals", "quiet", "later"]);
   const [spaceLabels, setSpaceLabels] = useState<Record<string, string>>({});
-  const [readerOriginLabel, setReaderOriginLabel] = useState("Inbox");
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    const destination = new URLSearchParams(window.location.search).get("destination");
+    const destination = desktopDestinationFromLocation(window.location);
     return destination?.startsWith("space:") ? destination.slice("space:".length) || null : null;
   });
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
     if (typeof window === "undefined") return "inbox";
-    const destination = new URLSearchParams(window.location.search).get("destination");
+    const destination = desktopDestinationFromLocation(window.location);
     return ["inbox", "focus", "signals", "quiet", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [personFilter, setPersonFilter] = useState<string | null>(null);
   const [streamQuery, setStreamQuery] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("q") ?? "");
-  const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("compose") === "1" ? "compose" : null);
-  const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>(() => typeof window !== "undefined" && readSurfaceLocation(window.location).composer ? "compose" : null);
+  const [composeDraftId, setComposeDraftId] = useState<string | null>(() => typeof window === "undefined" ? null : readSurfaceLocation(window.location).composer?.draftId ?? null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).threadId);
   const [selectedThreadAccountId, setSelectedThreadAccountId] = useState<string | null>(() => typeof window === "undefined" ? null : readInitialThreadSelection(window.location).accountId);
   const [threadDetail, setThreadDetail] = useState<ThreadDetail | null>(null);
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
-  const originMessageIdRef = useRef<string | null>(null);
-  const originAgentEventIdRef = useRef<string | null>(null);
-  const inboxViewportRef = useRef<InboxViewportPosition | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
+  const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
+  const surfaceHistoryRef = useRef<SurfaceHistory | null>(null);
+  if (typeof window !== "undefined" && !surfaceHistoryRef.current) surfaceHistoryRef.current = new SurfaceHistory(window);
+  const historySynchronizerRef = useRef<(location: SurfaceLocation) => void>(() => {});
+  historySynchronizerRef.current = synchronizeSurfaceLocation;
 
   useEffect(() => {
-    const onPopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const destination = params.get("destination") as DesktopDestination | null;
-      setStreamQuery(params.get("q") ?? "");
-      navigateDesktop(destination ?? "inbox", false);
+    const history = surfaceHistoryRef.current;
+    if (!history) return;
+    history.initialize({ defaultComposerZen: preferences.composeZenByDefault });
+    const synchronize = () => {
+      historySynchronizerRef.current(history.read());
     };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+    const onPageShow = () => synchronize();
+    const onMailSearchLocation = () => synchronize();
+    const onMailSearchResult = (event: Event) => {
+      const detail = (event as CustomEvent<MailSearchResultEventDetail>).detail;
+      if (!detail || typeof detail.url !== "string") return;
+      const target = new URL(detail.url, window.location.href);
+      if (target.origin !== window.location.origin || !readSurfaceLocation(target).reader) return;
+      event.preventDefault();
+      history.openReaderLocation(target, captureSurfaceReturnContext(null));
+      synchronize();
+    };
+    window.addEventListener("popstate", synchronize);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener(mailSearchLocationEvent, onMailSearchLocation);
+    window.addEventListener(mailSearchResultEvent, onMailSearchResult);
+    return () => {
+      window.removeEventListener("popstate", synchronize);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener(mailSearchLocationEvent, onMailSearchLocation);
+      window.removeEventListener(mailSearchResultEvent, onMailSearchResult);
+    };
+  }, [preferences.composeZenByDefault]);
   const demoDataInitializedRef = useRef(false);
   const classificationRequestRef = useRef(0);
   const classificationPageRequestRef = useRef(0);
   const allMailPageRequestRef = useRef(0);
   const loadedInboxRef = useRef(false);
   const lastGmailRefreshKeyRef = useRef<number | null>(null);
-  const gmailRefreshControllerRef = useRef<AbortController | null>(null);
   const gmailRefreshGenerationRef = useRef(0);
+  // Initial, manual, interval, focus, and visibility refreshes all await the
+  // same promise so "focus-to-fresh" cannot finish before the active sync.
+  const gmailRefreshPromiseRef = useRef<Promise<void> | null>(null);
+  const gmailBackgroundRefreshRef = useRef<(() => Promise<void>) | null>(null);
   const [isGmailRefreshing, setIsGmailRefreshing] = useState(false);
-  const composeReturnFocusRef = useRef<HTMLElement | null>(null);
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
   const messageRowRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -1121,7 +1386,8 @@ export function InboxApp({
   const composeDraft = useComposeDraft(account?.id ?? "preview", composeDraftId ? `draft:${composeDraftId}` : "new", demoMode, composeDraftId ? drafts?.find((draft) => draft.id === composeDraftId) : undefined, drafts);
   const [zen, setZen] = useState(() => {
     if (typeof window === "undefined") return false;
-    return new URLSearchParams(window.location.search).get("compose") === "1" && preferences.composeZenByDefault;
+    const composer = readSurfaceLocation(window.location).composer;
+    return Boolean(composer && (composer.zen || preferences.composeZenByDefault));
   });
   const [panelClosing, setPanelClosing] = useState(false);
   const [showSendPermission, setShowSendPermission] = useState(false);
@@ -1130,9 +1396,8 @@ export function InboxApp({
   const [zenClosing, setZenClosing] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const organizerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const libraryRef = useRef<HTMLElement>(null);
+  const composeTriggerRef = useRef<HTMLButtonElement>(null);
   const contentPaneRef = useRef<HTMLElement>(null);
-  const libraryReturnFocusRef = useRef<HTMLElement | null>(null);
   const pinOrderRef = useRef<Pin[]>(demoMode ? demoPins : []);
   const pinReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
 
@@ -1153,8 +1418,7 @@ export function InboxApp({
 
   useEffect(() => {
     if (!account?.id || !spacePreferencesReady) return;
-    const value: StoredSpacePreferences = { revision: 1, order: spaceOrder, hidden: hiddenSpaceIds, labels: spaceLabels };
-    window.localStorage.setItem(spacePreferencesKey(account.id), JSON.stringify(value));
+    writeSpacePreferences(account.id, { revision: 1, order: spaceOrder, hidden: hiddenSpaceIds, labels: spaceLabels });
   }, [account?.id, hiddenSpaceIds, spaceLabels, spaceOrder, spacePreferencesReady]);
 
   useEffect(() => {
@@ -1178,43 +1442,6 @@ export function InboxApp({
   }, []);
 
   useEffect(() => {
-    if (!organizationOpen) return;
-    if (!libraryReturnFocusRef.current) libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const drawer = libraryRef.current;
-    const getFocusable = () => drawer ? Array.from(drawer.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden")) : [];
-    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOrganizationOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = getFocusable();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      const returnFocus = libraryReturnFocusRef.current;
-      libraryReturnFocusRef.current = null;
-      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
-    };
-  }, [organizationOpen]);
-
-  useEffect(() => {
     const requestId = ++classificationRequestRef.current;
     classificationPageRequestRef.current += 1;
     allMailPageRequestRef.current += 1;
@@ -1222,7 +1449,7 @@ export function InboxApp({
     if (demoMode) {
       setAccount(demoAccount);
       const readThreadIds = readDemoReadState();
-      const readMessages = demoMailWithAgentSources.map((message) =>
+      const readMessages = demoInboxMessages.map((message) =>
         readThreadIds.has(message.threadId) ? { ...message, unread: false } : message,
       );
       const sourceMessages = demoDataInitializedRef.current ? allMailMessages : readMessages;
@@ -1252,7 +1479,6 @@ export function InboxApp({
       if (isInitialLoad) setStatus("loading");
       else if (shouldRefreshGmail) setStatus("syncing");
       setClassificationCursor(null);
-      setAllMailCursor(null);
       setClassificationLoading(true);
       setErrorMessage(null);
       setErrorStatus(null);
@@ -1270,26 +1496,22 @@ export function InboxApp({
         const inboxPath = classificationView === "all"
           ? "/v1/inbox?view=all&classification=all&limit=100"
           : `/v1/inbox?classification=${classificationView}&limit=100`;
-        const allInboxPath = "/v1/inbox?view=all&classification=all&limit=100";
-        const [inbox, allInbox] = await Promise.all([
-          fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal),
-          allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxClassificationResponseSchema, abortController.signal),
-        ]);
+        const inbox = await fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal);
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         const inboxAccount = inbox.accounts[0] ?? currentAccount;
         setAccount((current) => current && sameMailAccount(current, inboxAccount) ? current : inboxAccount);
         setMessages(inbox.messages);
-        setAllMailMessages(mergeMessages(allInbox?.messages ?? [], inbox.messages));
+        setAllMailMessages((current) => classificationView === "all" ? inbox.messages : mergeMessages(current, inbox.messages));
         setClassificationCounts(toClassificationCounts(inbox.counts.classification));
         setClassificationCursor(inbox.nextCursor);
-        setAllMailCursor(allInbox?.nextCursor ?? inbox.nextCursor);
+        if (classificationView === "all") setAllMailCursor(inbox.nextCursor);
         setClassificationLoading(false);
         setStatus("ready");
         loadedInboxRef.current = true;
 
         // Cached SQLite mail is now visible. Refresh Gmail without putting the
         // network round trip on the inbox's first-render path.
-        if (shouldRefreshGmail) void refreshGmailInBackground();
+        if (shouldRefreshGmail) void refreshGmailInBackground().catch(() => undefined);
       } catch (error) {
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         setClassificationLoading(false);
@@ -1306,95 +1528,131 @@ export function InboxApp({
       }
     }
 
-    async function refreshGmailInBackground() {
-      if (gmailRefreshControllerRef.current) return;
+    function refreshGmailInBackground(): Promise<void> {
+      if (gmailRefreshPromiseRef.current) return gmailRefreshPromiseRef.current;
       const refreshController = new AbortController();
       const refreshGeneration = ++gmailRefreshGenerationRef.current;
-      gmailRefreshControllerRef.current = refreshController;
-      setIsGmailRefreshing(true);
-      try {
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
-        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
-        const readInboxSnapshot = async (view: ClassificationView) => {
-          const refreshedPath = view === "all"
-            ? "/v1/inbox?view=all&classification=all&limit=100"
-            : `/v1/inbox?classification=${view}&limit=100`;
-          const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
-          const [refreshedInbox, refreshedAllInbox] = await Promise.all([
-            fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
-            refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
-          ]);
-          return { refreshedInbox, refreshedAllInbox };
-        };
-        let refreshedView = classificationViewRef.current;
-        let refreshedSnapshot: Awaited<ReturnType<typeof readInboxSnapshot>>;
-        while (true) {
+      const run = (async () => {
+        setIsGmailRefreshing(true);
+        try {
+          const readInboxSnapshot = async (view: ClassificationView) => {
+            const refreshedPath = view === "all"
+              ? "/v1/inbox?view=all&classification=all&limit=100"
+              : `/v1/inbox?classification=${view}&limit=100`;
+            return fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal);
+          };
+          const refreshed = await refreshMailboxThroughProvider({
+            readStatus: () => fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
+            sync: async () => { await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" }); },
+            readInbox: async () => {
+              while (true) {
+                if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) throw new DOMException("Refresh superseded", "AbortError");
+                const view = classificationViewRef.current;
+                const inbox = await readInboxSnapshot(view);
+                if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) throw new DOMException("Refresh superseded", "AbortError");
+                if (classificationViewRef.current === view) return { view, inbox };
+              }
+            },
+            onInitialStatus: setSyncStatus,
+          });
+          const refreshedView = refreshed.inbox.view;
+          const refreshedInbox = refreshed.inbox.inbox;
+          const nextStatus = refreshed.status;
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
+          classificationPageRequestRef.current += 1;
+          allMailPageRequestRef.current += 1;
+          setIsLoadingMoreMessages(false);
+          setSyncStatus(nextStatus);
+          setMessages(refreshedInbox.messages);
+          setAllMailMessages((current) => refreshedView === "all" ? refreshedInbox.messages : mergeMessages(current, refreshedInbox.messages));
+          setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
+          setClassificationCursor(refreshedInbox.nextCursor);
+          if (refreshedView === "all") setAllMailCursor(refreshedInbox.nextCursor);
+          setClassificationLoading(false);
+        } catch (error) {
           if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-          refreshedView = classificationViewRef.current;
-          refreshedSnapshot = await readInboxSnapshot(refreshedView);
-          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-          if (classificationViewRef.current === refreshedView) break;
+          if (isSessionUnauthorizedError(error)) {
+            setStatus("signedout");
+            throw error;
+          }
+          setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
+          setErrorStatus(error instanceof ApiRequestError ? error.status : null);
+          setClassificationError(getErrorMessage(error));
+          setClassificationLoading(false);
+          throw error;
+        } finally {
+          if (refreshGeneration === gmailRefreshGenerationRef.current) {
+            gmailRefreshPromiseRef.current = null;
+            setIsGmailRefreshing(false);
+          }
         }
-        const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
-          fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
-          Promise.resolve(refreshedSnapshot.refreshedInbox),
-          Promise.resolve(refreshedSnapshot.refreshedAllInbox),
-        ]);
-        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
-        classificationPageRequestRef.current += 1;
-        allMailPageRequestRef.current += 1;
-        setIsLoadingMoreMessages(false);
-        setSyncStatus(nextStatus);
-        setMessages(refreshedInbox.messages);
-        setAllMailMessages(mergeMessages(refreshedAllInbox?.messages ?? [], refreshedInbox.messages));
-        setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
-        setClassificationCursor(refreshedInbox.nextCursor);
-        setAllMailCursor(refreshedAllInbox?.nextCursor ?? refreshedInbox.nextCursor);
-        setClassificationLoading(false);
-      } catch (error) {
-        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-        if (isSessionUnauthorizedError(error)) {
-          setStatus("signedout");
-          return;
-        }
-        setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
-        setErrorStatus(error instanceof ApiRequestError ? error.status : null);
-        setClassificationError(getErrorMessage(error));
-        setClassificationLoading(false);
-      } finally {
-        if (refreshGeneration === gmailRefreshGenerationRef.current) {
-          gmailRefreshControllerRef.current = null;
-          setIsGmailRefreshing(false);
-        }
-      }
+      })();
+      gmailRefreshPromiseRef.current = run;
+      return run;
     }
 
+    gmailBackgroundRefreshRef.current = refreshGmailInBackground;
     void loadInbox();
 
     return () => {
       abortController.abort();
+      if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
   }, [classificationView, demoMode, refreshKey]);
 
   useEffect(() => {
+    if (demoMode || status !== "ready") return;
+    const revalidation = startVisibleMailboxRevalidation({
+      visibilitySource: document,
+      focusSource: window,
+      scheduler: {
+        setInterval: (handler, milliseconds) => window.setInterval(handler, milliseconds),
+        clearInterval: (id) => window.clearInterval(id as number),
+      },
+      load: async () => {
+        await gmailBackgroundRefreshRef.current?.();
+      },
+      observe: reportMailboxRevalidationMetric,
+    });
+    return () => revalidation.stop();
+  }, [demoMode, status]);
+
+  useEffect(() => {
     if (demoMode || !account || status !== "ready") return;
     const controller = new AbortController();
+    const accountId = account.id;
+    setCollectionsLoad((current) => current.accountId === accountId && current.status === "ready"
+      ? current
+      : { accountId, status: "loading" });
+    const collectionsRequest = fetchJson("/v1/collections", collectionsResponseSchema, controller.signal)
+      .then((nextCollections) => {
+        if (!controller.signal.aborted) {
+          setCollections(nextCollections);
+          setCollectionsLoad({ accountId, status: "ready" });
+        }
+        return nextCollections;
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setCollectionsLoad({ accountId, status: "error" });
+        throw error;
+      });
     void Promise.all([
-      fetchJson("/v1/collections", collectionsResponseSchema, controller.signal),
+      collectionsRequest,
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
       fetchJson("/v1/reminders", remindersResponseSchema, controller.signal),
       fetchJson("/v1/reminders/view-settings", reminderViewSettingsSchema, controller.signal),
       fetchJson("/v1/attention/view-settings", attentionViewSettingsSchema, controller.signal),
-    ]).then(([nextCollections, nextPins, nextReminders, viewSettings, attentionSettings]) => {
+    ]).then(([, nextPins, nextReminders, viewSettings, attentionSettings]) => {
       if (controller.signal.aborted) return;
-      setCollections(nextCollections);
       setPins(nextPins);
       setReminders(nextReminders);
       setLaterLabel(viewSettings.displayName);
       const ids = { focus: "focus", notify: "signals", quiet: "quiet" } as const;
       setSpaceLabels((current) => ({ ...current, ...Object.fromEntries(attentionSettings.filter((setting) => setting.behavior in ids).map((setting) => [ids[setting.behavior as keyof typeof ids], setting.displayName])) }));
     }).catch((error) => {
-      if (!controller.signal.aborted) setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
+      if (!controller.signal.aborted) {
+        setOrganizationError(`Your saved items could not load. ${getErrorMessage(error)}`);
+      }
     });
     return () => controller.abort();
   }, [account?.id, demoMode, status]);
@@ -1456,26 +1714,12 @@ export function InboxApp({
   }, [account?.id, agentEventsRefreshKey, demoMode, status]);
 
   useEffect(() => {
-    const addresses = [...new Set(messages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
-    if (demoMode) {
-      setAttentionByAddress(Object.fromEntries(addresses.map((address) => [
-        address,
-        messages.find((message) => message.from.email.trim().toLowerCase() === address)?.attentionBehavior ?? "normal",
-      ])));
-      return;
-    }
-    if (status !== "ready" || addresses.length === 0) return;
-    const controller = new AbortController();
-    void Promise.all(addresses.map(async (address) => {
-      const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal);
-      return [address, resolved.behavior] as const;
-    })).then((entries) => {
-      if (!controller.signal.aborted) setAttentionByAddress(Object.fromEntries(entries));
-    }).catch(() => {
-      // Inbox mail remains visible if attention preferences cannot be loaded.
-    });
-    return () => controller.abort();
-  }, [demoMode, messages, status]);
+    if (status !== "ready") return;
+    setAttentionByAddress(Object.fromEntries(messages.map((message) => [
+      senderAttentionTargetKey(senderAttentionTargetForMessage(message)),
+      message.attentionBehavior,
+    ])));
+  }, [messages, status]);
 
   const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
   const mailboxMessages = useMemo(
@@ -1498,44 +1742,68 @@ export function InboxApp({
       : mailboxMessages;
     if (!activeCollectionId && isClassificationMailbox) {
       filtered = filtered.filter((message) => classificationMatchesView(message, classificationView));
-      const latestRows = new Set(getLatestThreadRows(allMailMessages).map((message) => message.id));
-      filtered = filtered.filter((message) => latestRows.has(message.id));
+      const latestRows = new Set(getLatestThreadRows(allMailMessages).map(messageIdentityKey));
+      filtered = filtered.filter((message) => latestRows.has(messageIdentityKey(message)));
     }
     if (!activeCollectionId && activeMailbox === "inbox" && inboxFilter !== "all") {
       filtered = filtered.filter((message) => {
-        const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+        const behavior = getMessageAttentionBehavior(message, attentionByAddress);
         return behavior === inboxFilter;
       });
     }
     return sortMessagesByAttention(filtered, attentionByAddress).map((message) => ({
       ...message,
-      attentionBehavior: attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior,
+      attentionBehavior: getMessageAttentionBehavior(message, attentionByAddress),
     }));
   }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
-
-  const workflowSpaces = useMemo<WorkflowSpace[]>(() => {
-    const builtIn: Record<string, WorkflowSpace> = {
-      focus: { id: "focus", label: spaceLabels.focus ?? "Focus", description: "protected attention", count: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length },
-      signals: { id: "signals", label: spaceLabels.signals ?? "Signals", description: "important changes", count: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length },
-      quiet: { id: "quiet", label: spaceLabels.quiet ?? "Quiet", description: "low interruption", count: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length },
-      later: { id: "later", label: spaceLabels.later ?? laterLabel, description: "held intentionally", count: reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").length },
-    };
-    const custom = new Map(collections.map((collection) => [collection.id, {
-      id: collection.id,
-      label: spaceLabels[collection.id] ?? collection.name,
-      description: "custom collection",
-      count: collection.threadIds.length,
-      color: collection.color,
-      custom: true,
-    } satisfies WorkflowSpace]));
-    return spaceOrder.map((id) => builtIn[id] ?? custom.get(id)).filter((space): space is WorkflowSpace => Boolean(space)).map((space) => ({ ...space, hidden: hiddenSpaceIds.includes(space.id) }));
-  }, [allMailMessages, attentionByAddress, collections, hiddenSpaceIds, laterLabel, reminders, spaceLabels, spaceOrder]);
 
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
     ? "organization"
     : activeCollectionId
       ? `space:${activeCollectionId}`
       : activeMailbox === "hidden" ? "all" : activeMailbox;
+
+  const sidebarProjection = useMemo(() => createSidebarNavigationProjection({
+    account: {
+      displayName: account?.displayName ?? account?.email ?? "Orca workspace",
+      email: account?.email ?? "",
+      accountCount: Math.max(1, syncStatus?.accounts.length ?? 1),
+      avatar: <ProfileAvatar account={account} variant="sidebar" />,
+    },
+    active: activeDesktopDestination,
+    attention: status === "error" || Boolean(syncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error")),
+    collections,
+    counts: {
+      focus: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
+      signals: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length,
+      quiet: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length,
+      later: new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size,
+    },
+    draftCount: drafts?.length ?? 0,
+    hidden: hiddenSpaceIds,
+    inboxCount: messages.length,
+    known: status === "ready" || status === "syncing",
+    labels: { ...spaceLabels, later: spaceLabels.later ?? laterLabel },
+    online,
+    order: spaceOrder,
+    syncing: status === "syncing" || isGmailRefreshing,
+  }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, spaceLabels, spaceOrder, status, syncStatus]);
+  const workflowSpaces = sidebarProjection.spaces;
+  const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
+    ? "Search results"
+    : readerOriginLabelForDestination(activeDesktopDestination, workflowSpaces);
+
+  useEffect(() => {
+    if (!spacePreferencesReady || status !== "ready") return;
+    const customSpaceRequested = activeDesktopDestination.startsWith("space:");
+    const builtInSpaceRequested = ["focus", "signals", "quiet", "later"].includes(activeDesktopDestination);
+    const selectedSpace = workflowSpaces.find((space) => destinationForSpace(space) === activeDesktopDestination);
+    if ((!customSpaceRequested && !builtInSpaceRequested) || (selectedSpace && !selectedSpace.hidden)) return;
+    if (customSpaceRequested && (collectionsLoad.accountId !== account?.id || collectionsLoad.status !== "ready")) return;
+    const next = surfaceHistoryRef.current?.replaceDestination("inbox");
+    if (next) historySynchronizerRef.current(next);
+    else selectMailbox("inbox");
+  }, [account?.id, activeDesktopDestination, collectionsLoad, spacePreferencesReady, status, workflowSpaces]);
 
   const readerAccountId = getSelectedThreadAccountId(allMailMessages, selectedThreadId, selectedThreadAccountId);
 
@@ -1587,31 +1855,48 @@ export function InboxApp({
   useEffect(() => {
     if (!selectedThreadId) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
+      if (!topLayerActive && event.key === "Escape" && !event.defaultPrevented && !document.querySelector(".sender-attention-control-expanded")) {
         event.preventDefault();
         closeThread();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedThreadId]);
+  }, [selectedThreadId, topLayerActive]);
 
   useLayoutEffect(() => {
-    if (selectedThreadId || !inboxViewportRef.current) return;
-    const viewport = inboxViewportRef.current;
-    const originMessageId = originMessageIdRef.current;
-    const originAgentEventId = originAgentEventIdRef.current;
+    if (selectedThreadId || panelMode || !pendingReturnContextRef.current) return;
+    const returnContext = pendingReturnContextRef.current;
     const navigationGeneration = readerNavigationGenerationRef.current;
-    inboxViewportRef.current = null;
-    restoreInboxViewport(viewport);
-    readerFocusFrameRef.current = window.requestAnimationFrame(() => {
-      readerFocusFrameRef.current = null;
-      if (readerNavigationGenerationRef.current !== navigationGeneration) return;
-      const origin = originAgentEventId
-        ? agentEventSourceRefs.current.get(originAgentEventId)
-        : messageRowRefs.current.get(originMessageId ?? "");
-      origin?.focus({ preventScroll: true });
-    });
+    pendingReturnContextRef.current = null;
+    restoreWorkspaceScroll(returnContext);
+
+    const restoreFocus = (attempt: number) => {
+      readerFocusFrameRef.current = window.requestAnimationFrame(() => {
+        readerFocusFrameRef.current = null;
+        if (readerNavigationGenerationRef.current !== navigationGeneration) return;
+        const origin = returnContext.target?.kind === "agent-event"
+          ? agentEventSourceRefs.current.get(returnContext.target.id)
+          : returnContext.target?.kind === "message"
+            ? messageRowRefs.current.get(returnContext.target.id)
+            : null;
+        if (canRestoreSurfaceFocus(origin)) {
+          restoreWorkspaceScroll(returnContext);
+          origin!.focus({ preventScroll: true });
+          return;
+        }
+        if (attempt < 4) restoreFocus(attempt + 1);
+      });
+    };
+    restoreFocus(0);
+  }, [panelMode, selectedThreadId]);
+
+  useLayoutEffect(() => {
+    if (!selectedThreadId) return;
+    const workspace = getDesktopWorkspace();
+    if (!workspace) return;
+    workspace.scrollLeft = 0;
+    workspace.scrollTop = 0;
   }, [selectedThreadId]);
 
   useEffect(() => {
@@ -1625,6 +1910,7 @@ export function InboxApp({
         event.isComposing ||
         event.repeat ||
         (!legacyShortcut && !composeShortcut) ||
+        topLayerActive ||
         panelMode ||
         panelClosing ||
         (target instanceof HTMLElement && target.matches("input, textarea, [contenteditable=true]"))
@@ -1638,7 +1924,7 @@ export function InboxApp({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [panelClosing, panelMode, preferences.composeZenByDefault]);
+  }, [panelClosing, panelMode, preferences.composeZenByDefault, topLayerActive]);
 
   const mailboxItems = useMemo(
     () =>
@@ -1695,12 +1981,82 @@ export function InboxApp({
     return <LoginRequiredScreen />;
   }
 
+  function synchronizeSurfaceLocation(location: SurfaceLocation) {
+    readerNavigationGenerationRef.current += 1;
+    if (readerFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerFocusFrameRef.current);
+      readerFocusFrameRef.current = null;
+    }
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    const destination = parseDesktopDestination(location.destination) ?? "inbox";
+    if (destination === "settings") {
+      window.location.assign("/settings");
+      return;
+    }
+    setManageSpacesOpen(false);
+    setStreamQuery(location.query);
+    setOrganizationStudioOpen(destination === "organization");
+    if (destination.startsWith("space:")) {
+      setActiveCollectionId(destination.slice("space:".length) || null);
+    } else {
+      setActiveCollectionId(null);
+      if (destination !== "organization") setActiveMailbox(destination as Mailbox);
+    }
+
+    const history = surfaceHistoryRef.current;
+    const enteringReaderFromList = !selectedThreadId && !panelMode && Boolean(location.reader);
+    if (enteringReaderFromList && location.reader) {
+      const messageTarget = visibleMessages.find((message) => message.threadId === location.reader!.threadId
+        && (!location.reader!.accountId || message.accountId === location.reader!.accountId));
+      const eventTarget = agentEvents.find((event) => event.source.threadId === location.reader!.threadId
+        && event.source.accountId === location.reader!.accountId);
+      const messageTargetKey = messageTarget ? messageIdentityKey(messageTarget) : null;
+      const messageNode = messageTargetKey ? messageRowRefs.current.get(messageTargetKey) : null;
+      const eventNode = eventTarget ? agentEventSourceRefs.current.get(eventTarget.id) : null;
+      const focusedNode = document.activeElement;
+      const focusedTarget = eventTarget && eventNode?.isConnected && (eventNode === focusedNode || eventNode.contains(focusedNode))
+        ? { kind: "agent-event" as const, id: eventTarget.id }
+        : messageTargetKey && messageNode?.isConnected && (messageNode === focusedNode || messageNode.contains(focusedNode))
+          ? { kind: "message" as const, id: messageTargetKey }
+          : null;
+      const previousTarget = history?.lastReturnTarget() ?? null;
+      const preservedTarget = previousTarget?.kind === "agent-event" && previousTarget.id === eventTarget?.id && eventNode?.isConnected
+        ? previousTarget
+        : previousTarget?.kind === "message" && previousTarget.id === messageTargetKey && messageNode?.isConnected
+          ? previousTarget
+          : null;
+      const target = focusedTarget
+        ?? preservedTarget
+        ?? (messageTargetKey && messageNode?.isConnected ? { kind: "message" as const, id: messageTargetKey } : null)
+        ?? (eventTarget && eventNode?.isConnected ? { kind: "agent-event" as const, id: eventTarget.id } : null)
+        ?? (messageTargetKey ? { kind: "message" as const, id: messageTargetKey } : null)
+        ?? (eventTarget ? { kind: "agent-event" as const, id: eventTarget.id } : null);
+      history?.armReturnContext(captureSurfaceReturnContext(target));
+    }
+    const leavingReader = Boolean(selectedThreadId) && !location.reader && !location.composer;
+    pendingReturnContextRef.current = leavingReader
+      ? history?.consumeReturnContext() ?? null
+      : null;
+    setSelectedThreadId(location.reader?.threadId ?? null);
+    setSelectedThreadAccountId(location.reader?.accountId ?? null);
+    setPanelMode(location.composer ? "compose" : null);
+    setComposeDraftId(location.composer?.draftId ?? null);
+    setZen(Boolean(location.composer?.zen));
+    setPanelClosing(false);
+    setZenClosing(false);
+    if (!location.composer) setShowSendPermission(false);
+  }
+
   function openCompose(draftId: string | null = null) {
     if (panelClosing) {
       return;
     }
 
-    if (!panelMode) composeReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    surfaceHistoryRef.current?.openComposer({ draftId, zen: preferences.composeZenByDefault });
     setPanelClosing(false);
     setZenClosing(false);
     setComposeDraftId(draftId);
@@ -1708,22 +2064,9 @@ export function InboxApp({
     setZen(preferences.composeZenByDefault);
   }
 
-  function restoreComposeFocus() {
-    const target = composeReturnFocusRef.current;
-    composeReturnFocusRef.current = null;
-    window.requestAnimationFrame(() => {
-      if (target?.isConnected) target.focus({ preventScroll: true });
-    });
-  }
-
-  function openLibrary() {
-    libraryReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setOrganizationOpen(true);
-  }
-
-  function toggleLibrary() {
-    if (organizationOpen) setOrganizationOpen(false);
-    else openLibrary();
+  function changeStreamQuery(query: string) {
+    setStreamQuery(query);
+    surfaceHistoryRef.current?.replaceQuery(query);
   }
 
   function openOrganizer(message: InboxMessage) {
@@ -1759,15 +2102,11 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
-    if (!selectedThreadId && !inboxViewportRef.current) {
-      inboxViewportRef.current = captureInboxViewport();
-    }
-    setReaderOriginLabel(activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1)));
+    const returnContext = captureSurfaceReturnContext({ kind: "message", id: messageIdentityKey(message) });
+    surfaceHistoryRef.current?.openReader({ threadId: message.threadId, accountId: message.accountId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
-      originMessageIdRef.current = message.id;
-      originAgentEventIdRef.current = null;
       setSelectedThreadId(message.threadId);
       setSelectedThreadAccountId(message.accountId);
     });
@@ -1779,10 +2118,10 @@ export function InboxApp({
         writeDemoReadState(message.threadId);
       }
       setMessages((prev) =>
-        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
       setAllMailMessages((prev) =>
-        prev.map((m) => (m.threadId === message.threadId ? { ...m, unread: false } : m)),
+        prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
     }
   }
@@ -1794,12 +2133,11 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
-    if (!selectedThreadId && !inboxViewportRef.current) inboxViewportRef.current = captureInboxViewport();
+    const returnContext = captureSurfaceReturnContext({ kind: "agent-event", id: event.id });
+    surfaceHistoryRef.current?.openReader({ threadId: event.source.threadId, accountId: event.source.accountId }, returnContext);
     runUiTransition("reader-forward", () => {
       setPanelClosing(false);
       setZenClosing(false);
-      originMessageIdRef.current = null;
-      originAgentEventIdRef.current = event.id;
       setSelectedThreadId(event.source.threadId);
       setSelectedThreadAccountId(event.source.accountId);
     });
@@ -1892,6 +2230,10 @@ export function InboxApp({
       window.cancelAnimationFrame(readerFocusFrameRef.current);
       readerFocusFrameRef.current = null;
     }
+    const history = surfaceHistoryRef.current;
+    const dismissal = history?.dismiss("reader");
+    if (dismissal?.mode === "back") return;
+    pendingReturnContextRef.current = history?.consumeReturnContext() ?? null;
     runUiTransition("reader-back", () => {
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
@@ -1920,13 +2262,14 @@ export function InboxApp({
     }
 
     if (shouldReduceMotion()) {
+      setDraftRefreshKey((key) => key + 1);
+      const dismissal = surfaceHistoryRef.current?.dismiss("composer");
+      if (dismissal?.mode === "back") return;
       setPanelMode(null);
       setComposeDraftId(null);
-      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
-      restoreComposeFocus();
       return;
     }
 
@@ -1936,14 +2279,15 @@ export function InboxApp({
     }
 
     closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      setDraftRefreshKey((key) => key + 1);
+      const dismissal = surfaceHistoryRef.current?.dismiss("composer");
+      if (dismissal?.mode === "back") return;
       setPanelMode(null);
       setComposeDraftId(null);
-      setDraftRefreshKey((key) => key + 1);
       setZen(false);
       setPanelClosing(false);
       setZenClosing(false);
-      closeTimerRef.current = null;
-      restoreComposeFocus();
     }, PANEL_ANIM_MS);
   }
 
@@ -1963,6 +2307,8 @@ export function InboxApp({
     }
 
     if (shouldReduceMotion()) {
+      const dismissal = surfaceHistoryRef.current?.dismiss("zen");
+      if (dismissal?.mode === "back") return;
       setZen(false);
       setZenClosing(false);
       return;
@@ -1970,9 +2316,11 @@ export function InboxApp({
 
     setZenClosing(true);
     closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = null;
+      const dismissal = surfaceHistoryRef.current?.dismiss("zen");
+      if (dismissal?.mode === "back") return;
       setZen(false);
       setZenClosing(false);
-      closeTimerRef.current = null;
     }, ZEN_ANIM_MS);
   }
 
@@ -1982,6 +2330,7 @@ export function InboxApp({
     }
 
     setZenClosing(false);
+    surfaceHistoryRef.current?.openZen();
     setZen(true);
   }
 
@@ -1996,7 +2345,6 @@ export function InboxApp({
   }
 
   function selectMailbox(mailbox: Mailbox, focusDestination = false) {
-    if (focusDestination) libraryReturnFocusRef.current = null;
     runUiTransition("content", () => {
       setActiveMailbox(mailbox);
       if (mailbox === "inbox") setClassificationView("all");
@@ -2006,7 +2354,6 @@ export function InboxApp({
       setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
-      setOrganizationOpen(false);
     });
     if (focusDestination) {
       window.requestAnimationFrame(() => contentPaneRef.current?.focus({ preventScroll: true }));
@@ -2145,11 +2492,11 @@ export function InboxApp({
   function selectCollection(id: string) {
     runUiTransition("content", () => {
       setActiveCollectionId(id);
+      setActiveMailbox("inbox");
       setPersonFilter(null);
       setSelectedThreadId(null);
       setSelectedThreadAccountId(null);
       setInboxFilter("all");
-      setOrganizationOpen(false);
     });
   }
 
@@ -2192,7 +2539,7 @@ export function InboxApp({
     try {
       if (!demoMode) await fetchNoContent(`/v1/collections/${encodeURIComponent(collection.id)}`, { method: "DELETE" });
       setCollections((current) => current.filter((item) => item.id !== collection.id).map((item, position) => ({ ...item, position })));
-      if (activeCollectionId === collection.id) setActiveCollectionId(null);
+      if (activeCollectionId === collection.id) navigateDesktop("inbox");
     } catch (error) {
       setOrganizationError(getErrorMessage(error));
     }
@@ -2314,11 +2661,21 @@ export function InboxApp({
   }
 
   function selectPin(pin: Pin) {
-    if (pin.kind === "view") selectMailbox(pin.targetId as Mailbox);
+    if (pin.kind === "view") {
+      const mailbox = pin.targetId as Mailbox;
+      if (mailbox === "hidden") selectMailbox(mailbox);
+      else navigateDesktop(mailbox);
+    }
     if (pin.kind === "sender") togglePersonFilter(pin.targetId);
     if (pin.kind === "filter") {
       const filter = parsePinFilterTarget(pin.targetId);
       if (!filter) return;
+      if (filter.dataSource === "stored_mail") {
+        openMailSearchFilter(filter);
+        return;
+      }
+      surfaceHistoryRef.current?.navigate(filter.mailbox);
+      surfaceHistoryRef.current?.replaceQuery(filter.query);
       runUiTransition("content", () => {
         setActiveMailbox(filter.mailbox);
         if (filter.mailbox === "inbox" || filter.mailbox === "all") {
@@ -2330,7 +2687,6 @@ export function InboxApp({
         setStreamQuery(filter.query);
         setSelectedThreadId(null);
         setSelectedThreadAccountId(null);
-        setOrganizationOpen(false);
       });
     }
     if (pin.kind === "thread") {
@@ -2339,26 +2695,44 @@ export function InboxApp({
     }
   }
 
-  async function updateSelectedSenderAttention(selectedMessages: InboxMessage[], behavior: AttentionBehavior) {
-    const addresses = [...new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase()).filter(Boolean))];
-    if (!addresses.length) return;
-    if (!demoMode) {
-      await Promise.all(addresses.map(async (address) => {
-        const resolution = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
-        const existingRule = resolution.rule?.scope === "address" && resolution.rule.value === address
-          ? resolution.rule
-          : null;
-        await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
-          method: existingRule ? "PATCH" : "POST",
+  async function updateSelectedSenderAttention(selectedTargets: readonly BulkAttentionTarget[], behavior: AttentionBehavior) {
+    const targets = [...new Map(selectedTargets.map((target) => {
+      const normalized = { accountId: target.accountId, address: target.address.trim().toLowerCase() };
+      return [senderAttentionTargetKey(normalized), normalized] as const;
+    }).filter(([, target]) => Boolean(target.address))).values()];
+    if (!targets.length) throw new Error("Select at least one sender");
+    const input = { targets, behavior } satisfies BatchSenderAttentionChange;
+    const result = bulkAttentionClient
+      ? await bulkAttentionClient(input)
+      : demoMode
+        ? senderAttentionBatchResultSchema.parse({
+          behavior,
+          outcomes: targets.map((target, index) => {
+            if (bre358EvidenceState === "partial" && !bre358PartialServedRef.current && targets.length > 1 && index === targets.length - 1) {
+              return { status: "failed", target, retryable: true, error: { code: "temporarily_unavailable", message: "This sender could not be updated right now" }, resolution: { behavior: "normal", rule: null } };
+            }
+            return { status: "succeeded", target, resolution: { behavior, rule: null } };
+          }),
+        })
+        : await fetchJson("/v1/attention/rules/batch", senderAttentionBatchResponseSchema, undefined, {
+          method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
+          body: JSON.stringify(input),
         });
-      }));
-    }
-    setAttentionByAddress((current) => Object.fromEntries([
-      ...Object.entries(current),
-      ...addresses.map((address) => [address, behavior] as const),
-    ]));
+    if (bre358EvidenceState === "partial") bre358PartialServedRef.current = true;
+    setAttentionByAddress((current) => {
+      const next = { ...current };
+      for (const outcome of result.outcomes) {
+        delete next[outcome.target.address];
+        if (outcome.status === "succeeded") {
+          next[senderAttentionTargetKey(outcome.target)] = outcome.resolution.behavior;
+        } else if (outcome.resolution) {
+          next[senderAttentionTargetKey(outcome.target)] = outcome.resolution.behavior;
+        }
+      }
+      return next;
+    });
+    return result;
   }
 
   function selectInboxFilter(filter: InboxFilter) {
@@ -2410,20 +2784,13 @@ export function InboxApp({
     setLaterLabel(displayName);
   }
 
-  function navigateDesktop(destination: DesktopDestination, pushHistory = true) {
+  function navigateDesktop(destination: DesktopDestination) {
     setManageSpacesOpen(false);
     if (destination === "settings") {
       window.location.assign("/settings");
       return;
     }
-    if (pushHistory) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("destination", destination);
-      url.searchParams.delete("thread");
-      url.searchParams.delete("accountId");
-      url.searchParams.delete("compose");
-      window.history.pushState({ destination }, "", `${url.pathname}${url.search}${url.hash}`);
-    }
+    surfaceHistoryRef.current?.navigate(destination);
     if (destination === "organization") {
       runUiTransition("content", () => {
         setOrganizationStudioOpen(true);
@@ -2444,10 +2811,10 @@ export function InboxApp({
   async function createWorkflowSpace(name: string) {
     setSpaceOperationStatus("saving");
     setSpaceOperationError(null);
-    const created = await createCollection(name, true);
+    const created = await createCollection(name, false);
     if (created) {
       setSpaceOrder((current) => current.includes(created.id) ? current : [...current, created.id]);
-      setManageSpacesOpen(false);
+      navigateDesktop(`space:${created.id}`);
     } else {
       setSpaceOperationError("Could not create this space. Nothing was changed; try again.");
     }
@@ -2503,6 +2870,10 @@ export function InboxApp({
   function hideWorkflowSpace(space: WorkflowSpace) {
     setSpaceOperationError(null);
     setHiddenSpaceIds((current) => current.includes(space.id) ? current : [...current, space.id]);
+    if (activeDesktopDestination === destinationForSpace(space)) {
+      navigateDesktop("inbox");
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => contentPaneRef.current?.focus({ preventScroll: true })));
+    }
   }
 
   function restoreWorkflowSpace(space: WorkflowSpace) {
@@ -2510,37 +2881,26 @@ export function InboxApp({
     setHiddenSpaceIds((current) => current.filter((id) => id !== space.id));
   }
 
-  const sidebarAccount = {
-    displayName: account?.displayName ?? account?.email ?? "Orca workspace",
-    email: account?.email ?? "",
-    accountCount: Math.max(1, syncStatus?.accounts.length ?? 1),
-    health: (status === "syncing" || isGmailRefreshing ? "syncing" : status === "error" ? "attention" : typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "synced") as "synced" | "syncing" | "offline" | "attention",
-    avatar: <ProfileAvatar account={account} variant="sidebar" />,
-  };
-
   return (
     <div className="app-root">
-      <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`} inert={Boolean(organizerMessage) || undefined}>
+      <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
-          account={sidebarAccount}
-          active={activeDesktopDestination}
-          draftCount={drafts?.length ?? 0}
-          inboxCount={messages.length}
+          composeButtonRef={composeTriggerRef}
           onCompose={() => openCompose()}
           onManageSpaces={() => setManageSpacesOpen(true)}
           onNavigate={navigateDesktop}
-          spaces={workflowSpaces}
+          projection={sidebarProjection}
           theme={theme}
         />
         <section className="desktop-workspace">
           <WorkspaceHeader
-            health={sidebarAccount.health}
-            onQueryChange={setStreamQuery}
+            health={sidebarProjection.account.health}
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
             title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
+          <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
@@ -2601,7 +2961,7 @@ export function InboxApp({
               onSnoozeLater={(message, reminder) => saveReminder({ threadId: message.threadId, scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", notify: reminder?.notify ?? false }, reminder)}
               onRenameCollection={activeCollection ? () => { const name = window.prompt("Rename collection", activeCollection.name)?.trim(); if (name) void updateCollection(activeCollection, { name }); } : undefined}
               onRemoveFromCollection={activeCollection ? (message) => void toggleCollectionMembership(activeCollection, message.threadId) : undefined}
-              onSearchChange={setStreamQuery}
+              onSearchChange={changeStreamQuery}
               searchQuery={streamQuery}
               reminders={reminders}
               showInboxFilters={!activeCollectionId && activeMailbox === "inbox" && !personFilter}
@@ -2665,20 +3025,16 @@ export function InboxApp({
 
       {panelMode ? (
         <>
-          <button
-            aria-label="Close"
-            aria-hidden={zen || undefined}
-            className={`overlay-backdrop${panelClosing ? " overlay-backdrop-closing" : ""}`}
-            inert={zen || undefined}
-            onClick={closePanel}
-            type="button"
-          />
-
-          <aside
-            aria-hidden={zen || undefined}
-            aria-label="Compose message"
+          <TopLayer
+            ariaLabel="Compose message"
+            as="aside"
+            backdropAriaLabel="Close compose"
+            backdropClassName={`overlay-backdrop${panelClosing ? " overlay-backdrop-closing" : ""}`}
             className={`slide-panel slide-panel-open${panelClosing ? " slide-panel-closing" : ""}`}
-            inert={zen || undefined}
+            dismissible={!panelClosing}
+            initialFocusSelector=".compose-recipient-row input"
+            onClose={closePanel}
+            returnFocusRef={composeTriggerRef}
           >
             <header className="panel-header">
               <h2>New message</h2>
@@ -2709,7 +3065,7 @@ export function InboxApp({
                 onSent={closePanel}
               />
             </div>
-          </aside>
+          </TopLayer>
 
           {zen ? (
             <ComposeWorkspace
@@ -2965,18 +3321,17 @@ export function WelcomeOrientationPage({ onComplete, theme, setTheme }: {
   </main>;
 }
 
-function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
+export function GmailComposePermissionDialog({ error, onCancel, onContinue, status }: { error: string | null; onCancel: () => void; onContinue: () => void; status: "idle" | "loading" | "error" }) {
   const continueRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { continueRef.current?.focus(); }, []);
 
-  return <div className="gmail-permission-backdrop" role="presentation"><section aria-labelledby="gmail-permission-title" aria-modal="true" className="gmail-permission-dialog" onKeyDown={(event) => { if (event.key === "Escape") onCancel(); }} role="dialog">
+  return <TopLayer ariaBusy={status === "loading"} ariaLabelledBy="gmail-permission-title" as="section" backdrop={false} className="gmail-permission-dialog" dismissible={status !== "loading"} initialFocusRef={continueRef} layerClassName="gmail-permission-backdrop" onClose={onCancel}>
     <p className="settings-eyebrow">Before Google opens</p>
     <h2 id="gmail-permission-title">Enable drafts and sending?</h2>
     <p>Orca will request <code>gmail.compose</code> so it can create and update Gmail drafts, then send new messages, replies, and forwards. Reading continues even if you cancel or Google denies the request.</p>
     <ul><li>No deleting mail</li><li>No changing labels</li><li>No broader mailbox modification</li></ul>
     {error ? <p className="gmail-authorization-error" role="alert">{error}</p> : null}
     <div><button disabled={status === "loading"} onClick={onCancel} type="button">Not now</button><button className="gmail-permission-continue" disabled={status === "loading"} onClick={onContinue} ref={continueRef} type="button">{status === "loading" ? "Opening Google…" : "Continue to Google"}</button></div>
-  </section></div>;
+  </TopLayer>;
 }
 
 async function beginGmailAuthorization(
@@ -3132,28 +3487,75 @@ function OAuthLoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [returnStatus, setReturnStatus] = useState<OAuthReturnStatus>(() => readOAuthReturnStatus());
   const [activeProvider, setActiveProvider] = useState<OAuthProvider | null>(null);
+  const [availability, setAvailability] = useState<OAuthProviderAvailabilityState>({ status: "loading", providers: null });
   const connectInFlightRef = useRef(false);
+  const availabilityInFlightRef = useRef(false);
+  const availabilityRequestRef = useRef(0);
   const isLogin = typeof window !== "undefined" && window.location.pathname === "/login";
   const isOnboarding = typeof window !== "undefined" && window.location.pathname === "/onboarding";
   const returnProvider = returnStatus?.provider ?? "gmail";
+
+  async function refreshAvailability() {
+    if (connectInFlightRef.current || availabilityInFlightRef.current) return;
+    const requestId = ++availabilityRequestRef.current;
+    availabilityInFlightRef.current = true;
+    setAvailability({ status: "loading", providers: null });
+    setErrorMessage(null);
+    try {
+      const providers = await loadAuthProviderAvailability();
+      if (requestId !== availabilityRequestRef.current) return;
+      setAvailability({ status: "ready", providers });
+    } catch {
+      if (requestId !== availabilityRequestRef.current) return;
+      setAvailability({ status: "error", providers: null });
+    } finally {
+      if (requestId === availabilityRequestRef.current) availabilityInFlightRef.current = false;
+    }
+  }
+
+  useEffect(() => {
+    void refreshAvailability();
+  }, []);
 
   async function connectProvider(provider: OAuthProvider) {
     if (connectInFlightRef.current || connectStatus === "loading") {
       return;
     }
+    if (availability.status !== "ready" || !availability.providers[provider].available) {
+      return;
+    }
 
+    const providersAtStart = availability.providers;
     connectInFlightRef.current = true;
     setActiveProvider(provider);
     setReturnStatus(null);
     const returnTo = typeof window === "undefined"
       ? "/onboarding"
       : `${window.location.origin}${isLogin || isOnboarding ? "/onboarding" : "/"}`;
-    const started = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
-    if (!started) {
-      connectInFlightRef.current = false;
+    const result = await beginProviderAuthorization(provider, isLogin || isOnboarding ? "login" : "connect", returnTo, setConnectStatus, setErrorMessage);
+    if (result === "started") return;
+
+    connectInFlightRef.current = false;
+    if (result === "provider_unavailable") {
+      availabilityRequestRef.current += 1;
+      availabilityInFlightRef.current = false;
+      setAvailability({
+        status: "ready",
+        providers: {
+          ...providersAtStart,
+          [provider]: { provider, available: false, reason: "configuration_required" },
+        },
+      });
+      setConnectStatus("idle");
+      setErrorMessage(null);
       setActiveProvider(null);
     }
   }
+
+  const providerIsAvailable = (provider: OAuthProvider) => availability.status === "ready" && availability.providers[provider].available;
+  const unavailableProviders = availability.status === "ready"
+    ? (["gmail", "outlook"] as const).filter((provider) => !availability.providers[provider].available)
+    : [];
 
   return (
     <main className="oauth-page">
@@ -3187,32 +3589,48 @@ function OAuthLoginPage() {
             <div className="oauth-notice oauth-notice-error" role="alert">
               <strong>Connection could not start</strong>
               <span>{errorMessage}</span>
+              {activeProvider ? <button className="oauth-retry-button" onClick={() => void connectProvider(activeProvider)} type="button">Try {providerDisplayName(activeProvider)} again</button> : null}
             </div>
           ) : null}
 
           {isOnboarding && returnStatus?.kind === "success" ? (
             <a className="oauth-provider-button oauth-enter-button" href="/">Enter Orca <span aria-hidden="true">→</span></a>
           ) : (
-            <div aria-label="Choose a mail provider" className="oauth-provider-list">
+            <div aria-busy={availability.status === "loading"} aria-label="Choose a mail provider" className="oauth-provider-list">
               <button
                 className="oauth-google-button"
-                disabled={connectStatus === "loading"}
+                aria-describedby={!providerIsAvailable("gmail") && availability.status === "ready" ? "gmail-unavailable-reason" : undefined}
+                disabled={connectStatus === "loading" || !providerIsAvailable("gmail")}
                 onClick={() => void connectProvider("gmail")}
                 type="button"
               >
                 <GoogleGlyph />
-                <span>{connectStatus === "loading" && activeProvider === "gmail" ? "Opening Google…" : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
+                <span>{connectStatus === "loading" && activeProvider === "gmail" ? "Opening Google…" : returnStatus?.kind === "error" && returnStatus.provider === "gmail" ? "Try Google again" : isLogin ? "Continue with Google" : "Connect Gmail"}</span>
               </button>
               <div className="oauth-provider-separator" aria-hidden="true"><span>or</span></div>
               <button
                 className="oauth-outlook-button"
-                disabled={connectStatus === "loading"}
+                aria-describedby={!providerIsAvailable("outlook") && availability.status === "ready" ? "outlook-unavailable-reason" : undefined}
+                disabled={connectStatus === "loading" || !providerIsAvailable("outlook")}
                 onClick={() => void connectProvider("outlook")}
                 type="button"
               >
                 <OutlookGlyph />
-                <span>{connectStatus === "loading" && activeProvider === "outlook" ? "Opening Outlook…" : isLogin ? "Continue with Outlook" : "Connect Outlook"}</span>
+                <span>{connectStatus === "loading" && activeProvider === "outlook" ? "Opening Outlook…" : returnStatus?.kind === "error" && returnStatus.provider === "outlook" ? "Try Outlook again" : isLogin ? "Continue with Outlook" : "Connect Outlook"}</span>
               </button>
+              {availability.status === "loading" ? <p className="oauth-provider-status" role="status">Checking which sign-in choices are ready…</p> : null}
+              {availability.status === "error" ? (
+                <div className="oauth-provider-availability" role="alert">
+                  <p><strong>Sign-in choices could not be checked.</strong> Nothing in Orca or your mail accounts changed.</p>
+                  <button className="oauth-retry-button" onClick={() => void refreshAvailability()} type="button">Check again</button>
+                </div>
+              ) : null}
+              {availability.status === "ready" && unavailableProviders.length > 0 ? (
+                <div className="oauth-provider-availability" role="status">
+                  {unavailableProviders.map((provider) => <p id={`${provider}-unavailable-reason`} key={provider}><strong>{providerDisplayName(provider)} sign-in is unavailable here.</strong> Nothing in Orca or your mail account changed. Ask your Orca administrator to enable it.</p>)}
+                  <button className="oauth-retry-button" disabled={connectStatus === "loading"} onClick={() => void refreshAvailability()} type="button">Check availability again</button>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -3259,7 +3677,7 @@ async function beginProviderAuthorization(
   returnTo: string,
   setStatus: (status: OAuthConnectStatus) => void,
   setError: (message: string | null) => void,
-): Promise<boolean> {
+): Promise<OAuthAuthorizationStartResult> {
   setStatus("loading");
   setError(null);
   try {
@@ -3267,19 +3685,36 @@ async function beginProviderAuthorization(
     const response = await fetch(`/v1/auth/${provider}/${intent}?${query}`, { credentials: "include" });
     const body = await readJsonObject(response);
     if (!response.ok) {
-      throw new Error(getStringField(body, "message") ?? `Could not start ${providerDisplayName(provider)} OAuth (${response.status} ${response.statusText})`.trim());
+      const code = getNestedErrorCode(body);
+      if (code === "provider_unavailable") {
+        return "provider_unavailable";
+      }
+      setStatus("error");
+      setError(`${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
+      return "failed";
     }
     const authUrl = getStringField(body, "authUrl");
     if (!authUrl) {
-      throw new Error(`The ${providerDisplayName(provider)} OAuth response did not include an authUrl.`);
+      throw new Error("invalid_authorization_response");
     }
     window.location.assign(authUrl);
-    return true;
-  } catch (error) {
+    return "started";
+  } catch {
     setStatus("error");
-    setError(getErrorMessage(error));
-    return false;
+    setError(`${providerDisplayName(provider)} sign-in could not open. Nothing in Orca or your mail account changed. Try again.`);
+    return "failed";
   }
+}
+
+export async function loadAuthProviderAvailability(fetchImpl: typeof fetch = fetch): Promise<Record<OAuthProvider, AuthProviderAvailability>> {
+  const entries = await Promise.all((["gmail", "outlook"] as const).map(async (provider) => {
+    const response = await fetchImpl(`/v1/auth/${provider}/status`, { credentials: "include" });
+    if (!response.ok) throw new Error("provider_availability_unavailable");
+    const parsed = authProviderAvailabilitySchema.safeParse(await readJsonObject(response));
+    if (!parsed.success || parsed.data.provider !== provider) throw new Error("invalid_provider_availability");
+    return [provider, parsed.data] as const;
+  }));
+  return Object.fromEntries(entries) as Record<OAuthProvider, AuthProviderAvailability>;
 }
 
 function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
@@ -3314,14 +3749,17 @@ function OAuthReturnNotice({ status }: { status: OAuthReturnStatus }) {
 
 function oauthErrorMessage(reason: string | null, preserveReading: boolean, provider: OAuthProvider = "gmail") {
   const providerName = providerDisplayName(provider);
-  const suffix = preserveReading ? " Your read-only inbox still works." : "";
+  const suffix = preserveReading ? " Your read-only inbox still works." : " Nothing in Orca or your mail account changed.";
   switch (reason) {
     case "provider_error": return `${providerName} permission was not granted.${suffix}`;
     case "compose_not_granted": return `Google did not grant Gmail draft and send access.${suffix}`;
     case "account_mismatch": return `Choose the same ${providerName} account that is already connected to Orca.${suffix}`;
     case "upgrade_account_missing": return `Orca could not find the Gmail connection to upgrade.${suffix}`;
+    case "connect_account_missing": return `Orca could not find the ${providerName} connection to repair.${suffix}`;
+    case "account_persistence_failed": return `Orca could not safely update the ${providerName} connection.${suffix}`;
+    case "oauth_not_configured": return `${providerName} sign-in is unavailable in this Orca environment.${suffix}`;
     case "invalid_state":
-    case "missing_state": return "The authorization return could not be verified. Start again from Orca.";
+    case "missing_state": return `The authorization return could not be verified.${suffix} Start again from Orca.`;
     case "token_exchange_failed":
     case "userinfo_failed": return `${providerName} could not confirm the authorization. Try again.${suffix}`;
     default: return `The ${providerName} authorization flow did not complete.${suffix}`;
@@ -3553,10 +3991,11 @@ function WaveRail({ account, activeMailbox, libraryOpen, onOpenLibrary, onSelect
   </aside>;
 }
 
-function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
+function PinRail({ pins, pinnedPeople, classificationView, fallbackFocusRef, inboxFilter, personFilter, searchQuery, viewMode, onSelectPin, onRemovePin, onReorderPin, onUpdatePin }: {
   pins: Pin[];
   pinnedPeople: PersonItem[];
   classificationView: ClassificationView;
+  fallbackFocusRef: RefObject<HTMLButtonElement | null>;
   inboxFilter: InboxFilter;
   personFilter: string | null;
   searchQuery: string;
@@ -3710,11 +4149,12 @@ function PinRail({ pins, pinnedPeople, classificationView, inboxFilter, personFi
       {moveError ? <p className="pin-rail-error" role="alert">{moveError}</p> : null}
       <span aria-live="polite" className="visually-hidden">{moveMessage}</span>
     </div>
-    {editingPin ? <PinAppearanceEditor pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
+    {editingPin ? <PinAppearanceEditor fallbackFocusRef={fallbackFocusRef} pin={editingPin} onClose={() => setEditingPinId(null)} onRemove={onRemovePin} onSave={onUpdatePin} /> : null}
   </>;
 }
 
-function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
+function PinAppearanceEditor({ fallbackFocusRef, pin, onClose, onRemove, onSave }: {
+  fallbackFocusRef: RefObject<HTMLButtonElement | null>;
   pin: Pin;
   onClose: () => void;
   onRemove: (pin: Pin) => Promise<boolean>;
@@ -3725,53 +4165,6 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
   const [color, setColor] = useState<string>(pin.color);
   const [pendingAction, setPendingAction] = useState<"idle" | "saving" | "removing">("idle");
   const [error, setError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLElement>(null);
-  const onCloseRef = useRef(onClose);
-  const savingRef = useRef(pendingAction !== "idle");
-  onCloseRef.current = onClose;
-  savingRef.current = pendingAction !== "idle";
-
-  useEffect(() => {
-    const root = document.getElementById("root");
-    const previousRootInert = root?.inert ?? false;
-    if (root) root.inert = true;
-    const returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const getFocusable = () => dialogRef.current
-      ? Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')).filter((element) => !element.hasAttribute("hidden"))
-      : [];
-    const closeOnKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !savingRef.current) {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = getFocusable();
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (!dialogRef.current?.contains(document.activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", closeOnKeyDown);
-    window.requestAnimationFrame(() => getFocusable()[0]?.focus());
-    return () => {
-      document.removeEventListener("keydown", closeOnKeyDown);
-      if (root) root.inert = previousRootInert;
-      window.requestAnimationFrame(() => returnFocus?.isConnected && returnFocus.focus());
-    };
-  }, []);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -3803,9 +4196,7 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
 
   const busy = pendingAction !== "idle";
 
-  const dialog = <div className="pin-appearance-layer" role="presentation">
-    <button aria-label="Close pin customization" className="pin-appearance-backdrop" disabled={busy} onClick={onClose} type="button" />
-    <section aria-labelledby="pin-appearance-title" aria-modal="true" className="pin-appearance" ref={dialogRef} role="dialog">
+  return <TopLayer ariaBusy={busy} ariaLabelledBy="pin-appearance-title" as="section" backdropAriaLabel="Close pin customization" backdropClassName="pin-appearance-backdrop" className="pin-appearance" dismissible={!busy} layerClassName="pin-appearance-layer" onClose={onClose} returnFocusRef={fallbackFocusRef}>
       <header className="pin-appearance-heading">
         <div><p>Make it yours</p><h2 id="pin-appearance-title">Customize this pin</h2><span>Choose a mark and color so this shortcut is easy to spot.</span></div>
         <button aria-label="Close pin customization" data-dialog-initial-focus disabled={busy} onClick={onClose} type="button">×</button>
@@ -3836,9 +4227,7 @@ function PinAppearanceEditor({ pin, onClose, onRemove, onSave }: {
         {error ? <p className="pin-appearance-error" role="alert">{error}</p> : null}
         <footer className="pin-appearance-actions"><button className="pin-appearance-remove" disabled={busy} onClick={() => void remove()} type="button">{pendingAction === "removing" ? "Removing…" : "Remove pin"}</button><button disabled={busy} onClick={onClose} type="button">Cancel</button><button className="pin-appearance-save" disabled={busy} type="submit">{pendingAction === "saving" ? "Saving…" : "Save pin style"}</button></footer>
       </form>
-    </section>
-  </div>;
-  return typeof document === "undefined" ? dialog : createPortal(dialog, document.body);
+  </TopLayer>;
 }
 
 export function MessageSubject({ subject, unread }: { subject: string; unread: boolean }) {
@@ -3965,7 +4354,7 @@ function InboxView({
   onSelectPin: (pin: Pin) => void;
   onRefresh: () => void;
   onAttentionChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior>;
-  onBulkAttentionChange: (messages: InboxMessage[], behavior: AttentionBehavior) => Promise<void>;
+  onBulkAttentionChange: (targets: readonly BulkAttentionTarget[], behavior: AttentionBehavior) => Promise<SenderAttentionBatchResult>;
   onInboxFilterChange: (filter: InboxFilter) => void;
   onOpenOrganizer: (message: InboxMessage) => void;
   onFinishLater: (reminder: Reminder) => void;
@@ -3978,6 +4367,7 @@ function InboxView({
   viewMode: "collection" | Mailbox;
   rowRefs: React.MutableRefObject<Map<string, HTMLButtonElement>>;
 }) {
+  const topLayerActive = useTopLayerActive();
   const inboxFilters: Array<{ id: InboxFilter; label: string }> = [
     { id: "all", label: "Everything" },
     { id: "notify", label: "Notify me" },
@@ -4000,19 +4390,17 @@ function InboxView({
   const [pinFilterQuery, setPinFilterQuery] = useState("");
   const [pinFilterIcon, setPinFilterIcon] = useState<PinIcon>("search");
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
+  const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(() => new Set());
-  const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
+  const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
+  const [bulkPendingBehavior, setBulkPendingBehavior] = useState<AttentionBehavior | null>(null);
+  const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
-  const selectedMessages = useMemo(
-    () => displayMessages.filter((message) => selectedMessageIds.has(message.id)),
-    [displayMessages, selectedMessageIds],
-  );
-  const selectedSenderCount = useMemo(
-    () => new Set(selectedMessages.map((message) => message.from.email.trim().toLowerCase())).size,
-    [selectedMessages],
-  );
+  const visibleTargetKeys = useMemo(() => new Set(displayMessages.map((message) => senderAttentionTargetKey(senderAttentionTargetForMessage(message)))), [displayMessages]);
+  const selectedVisibleTargetCount = [...visibleTargetKeys].filter((key) => selectedTargets.has(key)).length;
+  const selectedSenderCount = selectedTargets.size;
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -4030,18 +4418,21 @@ function InboxView({
     classification: pinFilterMailbox === "inbox" ? pinFilterClassification : pinFilterMailbox === "all" ? "all" : undefined,
     person: pinFilterPerson,
     query: pinFilterQuery.trim(),
-  }), [pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
+    accountId: account?.id ?? null,
+    collectionId: collection?.id ?? null,
+  }), [account?.id, collection?.id, pinFilterAttention, pinFilterClassification, pinFilterMailbox, pinFilterPerson, pinFilterQuery]);
   const pinPreview = useMemo(() => {
     let candidates = getMessagesForMailbox(allMessages, pinFilter.mailbox, attentionByAddress);
     const signalView = pinFilterClassificationView(pinFilter);
     if (signalView) candidates = candidates.filter((message) => classificationMatchesView(message, signalView));
     if (pinFilter.mailbox === "inbox" && pinFilter.attention !== "all") {
-      candidates = candidates.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) === pinFilter.attention);
+      candidates = candidates.filter((message) => getMessageAttentionBehavior(message, attentionByAddress) === pinFilter.attention);
     }
     if (pinFilter.person) candidates = candidates.filter((message) => messageIncludesPerson(message, pinFilter.person!));
     const matchingMessages = getStreamMessages(candidates, pinFilter.mailbox, pinFilter.query);
     return { count: matchingMessages.length, messages: matchingMessages.slice(0, 3) };
   }, [allMessages, attentionByAddress, pinFilter]);
+  useEffect(() => setPinZeroMatchConfirmed(false), [pinFilter]);
   const selectedPinPerson = pinPeople.find((person) => person.email === pinFilter.person) ?? null;
   const pinFilterDisplayLabel = pinFilterLabel(pinFilter, selectedPinPerson?.name);
   const streamSectionLabels = useMemo(() => {
@@ -4053,7 +4444,7 @@ function InboxView({
   useEffect(() => {
     if (collection) return;
     const focusSearch = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (!topLayerActive && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
@@ -4061,37 +4452,14 @@ function InboxView({
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, [collection]);
+  }, [collection, topLayerActive]);
 
   useEffect(() => {
     setSelectionMode(false);
-    setSelectedMessageIds(new Set());
+    setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
-  }, [classificationView, personFilter, searchQuery, viewMode]);
-
-  useEffect(() => {
-    if (!pinMenuOpen) return;
-    const closeOnPointerDown = (event: PointerEvent) => {
-      if (!pinMenuRef.current?.contains(event.target as Node)) setPinMenuOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setPinMenuOpen(false);
-      pinMenuTriggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", closeOnPointerDown);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnPointerDown);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [pinMenuOpen]);
-
-  useEffect(() => {
-    if (pinMenuOpen) window.requestAnimationFrame(() => pinBuilderInputRef.current?.focus());
-  }, [pinMenuOpen]);
+  }, [classificationView, personFilter, viewMode]);
 
   function openPinBuilder() {
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
@@ -4101,17 +4469,20 @@ function InboxView({
     setPinFilterQuery(searchQuery);
     setPinFilterIcon("search");
     setPinFilterColor(pinColorOptions[pins.length % pinColorOptions.length]!.value);
+    setPinZeroMatchConfirmed(false);
     setPinMenuOpen(true);
   }
 
   function closePinBuilder() {
     setPinMenuOpen(false);
-    pinMenuTriggerRef.current?.focus();
   }
 
   function savePinFilter(event: React.FormEvent) {
     event.preventDefault();
-    if (!pinPreview.count) return;
+    if (!pinPreview.count && !pinZeroMatchConfirmed) {
+      setPinZeroMatchConfirmed(true);
+      return;
+    }
     onCreatePin({ kind: "filter", targetId: JSON.stringify(pinFilter), label: pinFilterDisplayLabel, icon: pinFilterIcon, color: pinFilterColor });
     closePinBuilder();
   }
@@ -4128,39 +4499,77 @@ function InboxView({
     }
   }
 
-  function toggleSelection(messageId: string) {
+  function toggleSelection(message: InboxMessage) {
+    if (bulkAttentionStatus === "saving") return;
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
-    setSelectedMessageIds((current) => {
-      const next = new Set(current);
-      if (next.has(messageId)) next.delete(messageId);
-      else next.add(messageId);
+    setBulkRetry(null);
+    setSelectedTargets((current) => {
+      const next = new Map(current);
+      const target = senderAttentionTargetForMessage(message);
+      const key = senderAttentionTargetKey(target);
+      if (next.has(key)) next.delete(key);
+      else next.set(key, target);
       return next;
     });
   }
 
   function closeSelectionMode() {
+    if (bulkAttentionStatus === "saving") return;
     setSelectionMode(false);
-    setSelectedMessageIds(new Set());
+    setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
+    setBulkRetry(null);
   }
 
-  async function applyBulkAttention(behavior: AttentionBehavior) {
-    if (!selectedMessages.length || bulkAttentionStatus === "saving") return;
-    const count = selectedSenderCount;
+  async function applyBulkAttention(behavior: AttentionBehavior, onlyTargets?: readonly BulkAttentionTarget[]) {
+    const attemptedTargets = [...new Map((onlyTargets ?? [...selectedTargets.values()]).map((target) => [senderAttentionTargetKey(target), target])).values()];
+    if (!attemptedTargets.length || bulkAttentionStatus === "saving") return;
+    const count = attemptedTargets.length;
     setBulkAttentionStatus("saving");
+    setBulkPendingBehavior(behavior);
     setBulkAttentionMessage("");
+    setBulkRetry(null);
     try {
-      await onBulkAttentionChange(selectedMessages, behavior);
-      setSelectedMessageIds(new Set());
-      setBulkAttentionStatus("saved");
-      setBulkAttentionMessage(`${count} ${count === 1 ? "sender" : "senders"} moved to ${behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : "Hidden"}.`);
+      const result = await onBulkAttentionChange(attemptedTargets, behavior);
+      const succeeded = result.outcomes.filter((outcome) => outcome.status === "succeeded");
+      const failed = result.outcomes.filter((outcome) => outcome.status === "failed");
+      const succeededTargets = new Set(succeeded.map((outcome) => senderAttentionTargetKey(outcome.target)));
+      const nextSelected = new Map([...selectedTargets].filter(([key]) => !succeededTargets.has(key)));
+      setSelectedTargets(nextSelected);
+      const retryable = failed.filter((outcome) => outcome.retryable).map((outcome) => outcome.target);
+      setBulkRetry(retryable.length ? { behavior, targets: retryable } : null);
+      const destination = behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : behavior === "hidden" ? "Hidden" : behavior === "focus" ? "Focus" : "Notify me";
+      if (!failed.length) {
+        if (!nextSelected.size) setSelectionMode(false);
+        setBulkAttentionStatus("saved");
+        setBulkAttentionMessage(`${succeeded.length} ${succeeded.length === 1 ? "sender" : "senders"} moved to ${destination}.`);
+      } else {
+        setBulkAttentionStatus(succeeded.length ? "partial" : "error");
+        const saved = succeeded.length ? `${succeeded.length} ${succeeded.length === 1 ? "sender" : "senders"} moved to ${destination}. ` : "";
+        const retry = retryable.length
+          ? ` ${retryable.length} ${retryable.length === 1 ? "sender is" : "senders are"} ready to retry.`
+          : " No automatic retry is available.";
+        setBulkAttentionMessage(`${saved}${failed.length} ${failed.length === 1 ? "sender" : "senders"} could not be updated.${retry}`);
+      }
     } catch (error) {
       setBulkAttentionStatus("error");
-      setBulkAttentionMessage(`Could not update the selected senders. ${getErrorMessage(error)}`);
+      setBulkRetry({ behavior, targets: attemptedTargets });
+      setBulkAttentionMessage(`Could not update ${count} ${count === 1 ? "sender" : "senders"}. ${count === 1 ? "The sender is" : "The senders are"} ready to retry. ${getErrorMessage(error)}`);
+    } finally {
+      setBulkPendingBehavior(null);
     }
   }
+  const inboxResultStatus = status === "loading"
+    ? `Loading ${inboxTitle}.`
+    : status === "syncing"
+      ? `Syncing ${inboxTitle}.`
+      : status === "error"
+        ? `${inboxTitle} could not be loaded.`
+        : searchQuery.trim()
+          ? `${displayMessages.length} ${displayMessages.length === 1 ? "result" : "results"} for ${searchQuery.trim()}.`
+          : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
       <header className="pane-header">
@@ -4177,8 +4586,8 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
-        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving"} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving"} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -4219,7 +4628,7 @@ function InboxView({
         {classificationError ? <p className="classification-action-error" role="alert">{classificationError}</p> : null}
 
         <nav aria-label="Saved pins" className="pinned-people">
-        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
+        <PinRail pins={pins} pinnedPeople={pinnedPeople} classificationView={classificationView} fallbackFocusRef={pinMenuTriggerRef} inboxFilter={inboxFilter} personFilter={personFilter} searchQuery={searchQuery} viewMode={viewMode} onRemovePin={onRemovePin} onReorderPin={onReorderPin} onSelectPin={onSelectPin} onUpdatePin={onUpdatePin} />
         <div className="pinned-person-add-wrap" ref={pinMenuRef}>
           <button
             aria-controls="pin-builder"
@@ -4233,9 +4642,7 @@ function InboxView({
             <span className="pinned-avatar">＋</span><small>Pin</small>
           </button>
           {pinMenuOpen ? (
-            <div className="pin-builder-layer">
-              <button aria-label="Close pin builder" className="pin-builder-backdrop" onClick={closePinBuilder} type="button" />
-              <section aria-labelledby="pin-builder-title" aria-modal="true" className="pin-builder" id="pin-builder" role="dialog">
+            <TopLayer ariaLabelledBy="pin-builder-title" as="section" backdropAriaLabel="Close pin builder" backdropClassName="pin-builder-backdrop" className="pin-builder" initialFocusRef={pinBuilderInputRef} layerClassName="pin-builder-layer" onClose={closePinBuilder} surfaceProps={{ id: "pin-builder" }}>
                 <header className="pin-builder-heading">
                   <div><p>Keep a filter</p><h2 id="pin-builder-title">Pin anything you can find.</h2><span>Build a slice of mail, preview it, and keep it one click away.</span></div>
                   <button aria-label="Close pin builder" onClick={closePinBuilder} type="button">×</button>
@@ -4279,15 +4686,14 @@ function InboxView({
                       <ul>
                         {pinPreview.messages.map((message) => {
                           const signature = getContactSignature(message.from);
-                          return <li key={message.id}><span aria-hidden="true" className="pin-preview-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{message.from.name ?? message.from.email}</strong><b>{message.subject || "(no subject)"}</b><small>{message.snippet}</small></span></li>;
+                          return <li key={messageIdentityKey(message)}><span aria-hidden="true" className="pin-preview-avatar" style={{ background: signature.palette.bg, color: signature.palette.fg }}>{(message.from.name ?? message.from.email).split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</span><span><strong>{message.from.name ?? message.from.email}</strong><b>{message.subject || "(no subject)"}</b><small>{message.snippet}</small></span></li>;
                         })}
                       </ul>
-                    ) : <p className="pin-builder-empty">No messages match yet. Try a broader search or another view.</p>}
+                    ) : <p className="pin-builder-empty">No messages match this exact scope. You can save it to watch for future mail, or broaden a filter.</p>}
                   </section>
-                  <footer className="pin-builder-actions"><span>Saved as <strong>{pinFilterDisplayLabel}</strong></span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim()} type="submit">Pin this filter</button></footer>
+                  <footer className="pin-builder-actions"><span>{!pinPreview.count && pinZeroMatchConfirmed ? "Confirm this zero-match scope" : <>Saved as <strong>{pinFilterDisplayLabel}</strong></>}</span><button onClick={closePinBuilder} type="button">Cancel</button><button className="pin-builder-save" disabled={!pinPreview.count && !pinFilterQuery.trim() && !pinFilterPerson} type="submit">{!pinPreview.count && pinZeroMatchConfirmed ? "Pin zero-match filter" : "Pin this filter"}</button></footer>
                 </form>
-              </section>
-            </div>
+            </TopLayer>
           ) : null}
         </div>
         </nav>
@@ -4311,28 +4717,39 @@ function InboxView({
         ) : null}
 
         {selectionMode ? (
-          <section aria-label="Bulk sender actions" className="bulk-action-bar">
+          <section aria-busy={bulkAttentionStatus === "saving"} aria-label="Bulk sender actions" className="bulk-action-bar">
             <div>
               <strong>{selectedSenderCount ? `${selectedSenderCount} ${selectedSenderCount === 1 ? "sender" : "senders"} selected` : "Select messages"}</strong>
               <span>Changes apply to future mail from each sender.</span>
             </div>
             <button
+              aria-pressed={visibleTargetKeys.size > 0 && selectedVisibleTargetCount === visibleTargetKeys.size}
               className="bulk-select-all"
-              onClick={() => setSelectedMessageIds(selectedMessages.length === displayMessages.length ? new Set() : new Set(displayMessages.map((message) => message.id)))}
+              disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
+              onClick={() => setSelectedTargets((current) => {
+                const next = new Map(current);
+                if (selectedVisibleTargetCount === visibleTargetKeys.size) visibleTargetKeys.forEach((key) => next.delete(key));
+                else displayMessages.forEach((message) => {
+                  const target = senderAttentionTargetForMessage(message);
+                  next.set(senderAttentionTargetKey(target), target);
+                });
+                return next;
+              })}
               type="button"
             >
-              {selectedMessages.length === displayMessages.length ? "Clear all" : "Select all visible"}
+              {selectedVisibleTargetCount === visibleTargetKeys.size ? "Clear visible" : "Select all visible"}
             </button>
             <div aria-label="Move selected senders" role="group">
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">Keep in inbox</button>
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">Quiet</button>
-              <button disabled={!selectedMessages.length || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">Hide</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
+              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
             </div>
-            {bulkAttentionMessage ? <p className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" ? "alert" : "status"}>{bulkAttentionMessage}</p> : null}
           </section>
         ) : null}
+        {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
 
-        <section className="inbox-body" aria-live="polite">
+        <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
+        <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
         {viewMode === "signals" && !searchQuery.trim() && !personFilter && !selectionMode ? (
           <AgentEventTimeline
             accountLabels={account ? { [account.id]: account.email } : {}}
@@ -4394,19 +4811,22 @@ function InboxView({
               const senderAddress = message.from.email.trim().toLowerCase();
               const senderPinned = pinnedSenderAddresses.has(senderAddress);
               const senderName = message.from.name ?? message.from.email;
+              const selected = selectedTargets.has(senderAttentionTargetKey(senderAttentionTargetForMessage(message)));
 
               return (
-                <li key={message.id}>
+                <li key={messageIdentityKey(message)}>
                   {index === 0 || streamSectionLabels[index] !== streamSectionLabels[index - 1] ? <div className="stream-section-label">{streamSectionLabels[index]}</div> : null}
-                  <div className={`message-row-wrap${selectedMessageIds.has(message.id) ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
+                  <div className={`message-row-wrap${selected ? " message-row-wrap-selected" : ""}${selectionMode ? " message-row-wrap-selecting" : ""}`}>
                     <button
-                      aria-label={selectionMode ? `${selectedMessageIds.has(message.id) ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
-                      aria-pressed={selectionMode ? selectedMessageIds.has(message.id) : undefined}
+                      aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
+                      aria-pressed={selectionMode ? selected : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                      onClick={() => selectionMode ? toggleSelection(message.id) : onOpenThread(message)}
+                      disabled={selectionMode && bulkAttentionStatus === "saving"}
+                      onClick={() => selectionMode ? toggleSelection(message) : onOpenThread(message)}
                       ref={(node) => {
-                        if (node) rowRefs.current.set(message.id, node);
-                        else rowRefs.current.delete(message.id);
+                        const key = messageIdentityKey(message);
+                        if (node) rowRefs.current.set(key, node);
+                        else rowRefs.current.delete(key);
                       }}
                       style={
                         {
@@ -4417,7 +4837,7 @@ function InboxView({
                       }
                       type="button"
                     >
-                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selectedMessageIds.has(message.id) ? "✓" : ""}</span></span> : null}
+                      {selectionMode ? <span aria-hidden="true" className="message-select-indicator"><span>{selected ? "✓" : ""}</span></span> : null}
                       <ContactMark
                         className={`stream-avatar stream-avatar-variant-${signature.variant}`}
                         contact={message.from}
@@ -4652,30 +5072,35 @@ export function MessageReader({
   const title = detail?.thread.subject || fallbackTitle;
 
   useEffect(() => {
-    if (status === "ready") headingRef.current?.focus();
+    if (status === "ready") headingRef.current?.focus({ preventScroll: true });
   }, [status]);
 
   useEffect(() => {
     if (status !== "ready") return;
-    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(window.scrollY, window.innerHeight));
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    if (!scrollport) return;
+    const updateJumpToTop = () => setShowJumpToTop(shouldShowReaderJumpToTop(scrollport.scrollTop, scrollport.clientHeight));
     updateJumpToTop();
-    window.addEventListener("scroll", updateJumpToTop, { passive: true });
-    return () => window.removeEventListener("scroll", updateJumpToTop);
+    scrollport.addEventListener("scroll", updateJumpToTop, { passive: true });
+    return () => scrollport.removeEventListener("scroll", updateJumpToTop);
   }, [status]);
 
   function jumpToNewest() {
     if (!jumpTarget) return;
-    const node = messageRefs.current.get(jumpTarget.id);
+    const node = messageRefs.current.get(messageIdentityKey(jumpTarget));
     node?.scrollIntoView({ behavior: shouldReduceMotion() ? "auto" : "smooth", block: "start" });
     node?.focus({ preventScroll: true });
   }
 
   function jumpToTop() {
     headingRef.current?.focus({ preventScroll: true });
-    window.scrollTo({
-      top: 0,
-      behavior: shouldReduceMotion() ? "auto" : "smooth",
-    });
+    const scrollport = headingRef.current?.closest<HTMLElement>(".desktop-workspace");
+    if (!scrollport) return;
+    if (typeof scrollport.scrollTo === "function") {
+      scrollport.scrollTo({ top: 0, behavior: shouldReduceMotion() ? "auto" : "smooth" });
+    } else {
+      scrollport.scrollTop = 0;
+    }
   }
 
   return (
@@ -4702,7 +5127,7 @@ export function MessageReader({
         <section className="reader-state" role="alert">
           <p>Message unavailable</p>
           <h1 id="reader-title">This conversation couldn’t open.</h1>
-          <span>{error ?? "Orca could not load the message body."}</span>
+          <span><strong>Your place in {originLabel} is preserved.</strong> {error ?? "Orca could not load the message body."}</span>
           <button onClick={onRetry} type="button">Try again</button>
         </section>
       ) : null}
@@ -4712,7 +5137,7 @@ export function MessageReader({
             <p className="reader-kicker">{originLabel} · {messages.length} {messages.length === 1 ? "message" : "messages"}</p>
             <h1 id="reader-title" ref={headingRef} tabIndex={-1}>{title}</h1>
             <p className="reader-participants">{formatThreadParticipants(detail.thread.participants, detail.account.email)} · you — over {messageGroups.length} {messageGroups.length === 1 ? "day" : "days"}</p>
-            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /><button aria-label="Star conversation" type="button">☆</button><button aria-label="More conversation actions" type="button">•••</button></div>
+            <div className="reader-top-actions"><ThreadLaneControls accountId={detail.account.id} demoMode={demoMode} threadId={detail.thread.id} /><RemindMeControl threadId={detail.thread.id} reminder={reminder} notifyByDefault={notifyByDefault} onSave={onSaveReminder} onFinish={onFinishReminder} /></div>
           </header>
 
           {messages.length >= 5 && jumpTarget ? (
@@ -4730,17 +5155,18 @@ export function MessageReader({
                   {group.messages.map((message, index) => {
                     const signature = getContactSignature(message.from);
                     const plainBody = !message.bodyHtml && message.bodyText?.trim() ? splitQuotedContent(message.bodyText) : null;
-                    const isNewest = message.id === newestMessage?.id;
-                    const isFirstUnread = message.id === firstUnreadMessage?.id;
+                    const messageKey = messageIdentityKey(message);
+                    const isNewest = newestMessage ? messageKey === messageIdentityKey(newestMessage) : false;
+                    const isFirstUnread = firstUnreadMessage ? messageKey === messageIdentityKey(firstUnreadMessage) : false;
                     const isFirstInGroup = index === 0;
                     return (
-                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={message.id}>
+                      <li className={`reader-message${message.unread ? " reader-message-unread" : ""}`} key={messageKey}>
                         {isFirstUnread ? <div className={`reader-unread-divider${isFirstInGroup ? " reader-unread-divider-first" : ""}`} role="separator"><span>Unread messages</span></div> : null}
                         <article
                           aria-labelledby={`reader-sender-${message.id}`}
                           ref={(node) => {
-                            if (node) messageRefs.current.set(message.id, node);
-                            else messageRefs.current.delete(message.id);
+                            if (node) messageRefs.current.set(messageKey, node);
+                            else messageRefs.current.delete(messageKey);
                           }}
                           tabIndex={-1}
                         >
@@ -4780,12 +5206,13 @@ export function MessageReader({
                         ) : null}
                       </>
                     ) : (
-                      <p className="reader-no-body">This message has no readable text body.</p>
+                      <p className="reader-no-body"><strong>Readable body unavailable.</strong><span>Orca synced this message’s details, but no readable text body was available. The rest of this conversation is still here.</span></p>
                     )}
                     {message.attachments.length ? (
-                      <section className="reader-attachments" aria-label={`${message.attachments.length} attachments`}>
-                        <h3>Attachments</h3>
-                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div></li>)}</ul>
+                      <section className="reader-attachments" aria-describedby={`reader-attachments-note-${message.id}`} aria-labelledby={`reader-attachments-title-${message.id}`}>
+                        <h3 id={`reader-attachments-title-${message.id}`}>Attachments</h3>
+                        <p className="reader-attachments-note" id={`reader-attachments-note-${message.id}`}><strong>Files aren’t available in Orca yet.</strong> Attachment details are synced safely. Open this conversation in {detail.account.provider === "gmail" ? "Gmail" : "Outlook"} to view or download them.</p>
+                        <ul>{message.attachments.map((attachment) => <li key={attachment.id}><span aria-hidden="true">↳</span><div><strong>{attachment.filename}</strong><small>{formatFileSize(attachment.size)} · {attachment.mimeType}</small></div><span className="reader-attachment-availability">Details only</span></li>)}</ul>
                       </section>
                     ) : null}
                         </article>
@@ -4815,6 +5242,7 @@ export function MessageReader({
 export type ReaderMessageAction = "reply" | "reply_all" | "forward";
 
 function ThreadReplyComposer({ account, contacts, demoMode = false, detail, message, onSent }: { account: MailAccount; contacts: MailContact[]; demoMode?: boolean; detail: ThreadDetail; message?: ThreadDetailMessage; onSent: (result: DeliveryResult) => Promise<void> | void }) {
+  const topLayerActive = useTopLayerActive();
   const [action, setAction] = useState<ReaderMessageAction | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   const [reconciliationError, setReconciliationError] = useState<string | null>(null);
@@ -4825,7 +5253,7 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
+      if (topLayerActive || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat || target?.matches("input, textarea, [contenteditable=true]")) return;
       const next = event.key.toLowerCase() === "r" ? "reply" : event.key.toLowerCase() === "a" ? "reply_all" : event.key.toLowerCase() === "f" ? "forward" : null;
       if (!next) return;
       event.preventDefault();
@@ -4834,7 +5262,7 @@ function ThreadReplyComposer({ account, contacts, demoMode = false, detail, mess
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [topLayerActive]);
 
   if (!action || !message) {
     return (
@@ -4999,7 +5427,7 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionControlTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
   const [expanded, setExpanded] = useState(false);
   const presence = useExitPresence(expanded);
   const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
@@ -5382,36 +5810,6 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
   const [creatingCollection, setCreatingCollection] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const organizerRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const feedbackRoot = document.querySelector<HTMLElement>("[data-feedback-kit-root]");
-    feedbackRoot?.setAttribute("aria-hidden", "true");
-    feedbackRoot?.setAttribute("inert", "");
-    organizerRef.current?.focus();
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      if (event.key !== "Tab" || !organizerRef.current) return;
-      const focusable = Array.from(organizerRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      window.removeEventListener("keydown", closeOnEscape);
-      feedbackRoot?.removeAttribute("aria-hidden");
-      feedbackRoot?.removeAttribute("inert");
-      previouslyFocused?.focus();
-    };
-  }, [onClose]);
   const senderPinned = pins.some((pin) => pin.kind === "sender" && pin.targetId === message.from.email);
   const threadPinned = pins.some((pin) => pin.kind === "thread" && pin.targetId === message.threadId);
   const savedCollectionCount = collections.filter((collection) => collection.threadIds.includes(message.threadId)).length;
@@ -5432,9 +5830,7 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
     }
   }
   return (
-    <div className={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} role="presentation">
-      <button aria-label="Close organizer" className="organizer-backdrop" onClick={onClose} type="button" />
-      <section aria-busy={Boolean(pendingAction)} aria-describedby="organizer-description" aria-labelledby="organizer-title" aria-modal="true" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} ref={organizerRef} role="dialog" tabIndex={-1}>
+    <TopLayer ariaBusy={Boolean(pendingAction)} ariaDescribedBy="organizer-description" ariaLabelledBy="organizer-title" as="section" backdropAriaLabel="Close organizer" backdropClassName="organizer-backdrop" className={`thread-organizer${closing ? " thread-organizer-closing" : ""}`} dismissible={!pendingAction && !closing} layerClassName={`organizer-layer${closing ? " organizer-layer-closing" : ""}`} onClose={onClose}>
         <header className="organizer-heading">
           <div>
             <p>Keep close</p>
@@ -5508,8 +5904,7 @@ function ThreadOrganizer({ closing, collections, message, onClose, onCreateColle
           <span><span aria-hidden="true">{actionError ? "!" : pendingAction ? "…" : "✓"}</span> {actionError ? "Resolve the change above" : pendingAction ? "Saving changes…" : "Changes save automatically"}</span>
           <button className="organizer-done" disabled={Boolean(actionError || pendingAction)} onClick={onClose} type="button">Done</button>
         </footer>
-      </section>
-    </div>
+    </TopLayer>
   );
 }
 
@@ -5663,26 +6058,6 @@ export function getSelectedThreadAccountId(
     ?? null;
 }
 
-export function readInitialThreadSelection(location: { pathname: string; search: string }) {
-  const query = new URLSearchParams(location.search);
-  const queryThreadId = query.get("thread");
-  const queryAccountId = query.get("accountId");
-  if (queryThreadId || queryAccountId) {
-    return { threadId: queryThreadId, accountId: queryAccountId };
-  }
-
-  const pathMatch = location.pathname.match(/^\/accounts\/([^/]+)\/threads\/([^/]+)$/);
-  if (!pathMatch) return { threadId: null, accountId: null };
-  try {
-    return {
-      accountId: decodeURIComponent(pathMatch[1]!),
-      threadId: decodeURIComponent(pathMatch[2]!),
-    };
-  } catch {
-    return { threadId: null, accountId: null };
-  }
-}
-
 function toClassificationCounts(counts: InboxClassificationResponse["counts"]["classification"]): ClassificationCounts {
   return {
     likely_human: counts.likely_human,
@@ -5760,12 +6135,13 @@ function shouldApplyClassificationTarget(
 export function getLatestThreadRows(messages: InboxMessage[]) {
   const latest = new Map<string, InboxMessage>();
   for (const message of messages) {
-    const current = latest.get(message.threadId);
+    const threadKey = accountScopedIdentityKey(message.accountId, message.threadId);
+    const current = latest.get(threadKey);
     if (!current || message.receivedAt.localeCompare(current.receivedAt) > 0 || (message.receivedAt === current.receivedAt && message.id.localeCompare(current.id) > 0)) {
-      latest.set(message.threadId, message);
+      latest.set(threadKey, message);
     }
   }
-  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || a.id.localeCompare(b.id));
+  return [...latest.values()].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || messageIdentityKey(a).localeCompare(messageIdentityKey(b)));
 }
 
 function sameMailAccount(left: MailAccount, right: MailAccount) {
@@ -5779,9 +6155,17 @@ function sameMailAccount(left: MailAccount, right: MailAccount) {
     && left.capabilities.send === right.capabilities.send;
 }
 
+function accountScopedIdentityKey(accountId: string, id: string) {
+  return JSON.stringify([accountId, id]);
+}
+
+export function messageIdentityKey(message: Pick<InboxMessage, "accountId" | "id">) {
+  return accountScopedIdentityKey(message.accountId, message.id);
+}
+
 export function mergeMessages(existing: InboxMessage[], incoming: InboxMessage[]) {
-  const merged = new Map(existing.map((message) => [message.id, message]));
-  for (const message of incoming) merged.set(message.id, message);
+  const merged = new Map(existing.map((message) => [messageIdentityKey(message), message]));
+  for (const message of incoming) merged.set(messageIdentityKey(message), message);
   return [...merged.values()];
 }
 
@@ -5789,10 +6173,25 @@ export function buildThreadDetailRequest(message: Pick<InboxMessage, "threadId" 
   return `/v1/threads/${encodeURIComponent(message.threadId)}?accountId=${encodeURIComponent(message.accountId)}`;
 }
 
+export function senderAttentionTargetForMessage(message: Pick<InboxMessage, "accountId" | "from">): BulkAttentionTarget {
+  return { accountId: message.accountId, address: message.from.email.trim().toLowerCase() };
+}
+
+export function senderAttentionTargetKey(target: BulkAttentionTarget) {
+  return JSON.stringify([target.accountId, target.address.trim().toLowerCase()]);
+}
+
+function getMessageAttentionBehavior(message: InboxMessage, attentionByAddress: Record<string, AttentionBehavior>) {
+  const target = senderAttentionTargetForMessage(message);
+  return attentionByAddress[target.address]
+    ?? attentionByAddress[senderAttentionTargetKey(target)]
+    ?? message.attentionBehavior;
+}
+
 export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox, attentionByAddress: Record<string, AttentionBehavior> = {}) {
   if (mailboxId === "all") return messages;
   return messages.filter((message) => {
-    const behavior = attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior;
+    const behavior = getMessageAttentionBehavior(message, attentionByAddress);
     if (mailboxId === "inbox") return behavior !== "quiet" && behavior !== "hidden";
     if (mailboxId === "signals") return behavior === "notify";
     return mailboxId === "focus" ? behavior === "notify" || behavior === "focus" : behavior === mailboxId;
@@ -5800,7 +6199,7 @@ export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailb
 }
 
 export function applySenderAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
-  return sortMessagesByAttention(messages.filter((message) => (attentionByAddress[message.from.email.trim().toLowerCase()] ?? message.attentionBehavior) !== "hidden"), attentionByAddress);
+  return sortMessagesByAttention(messages.filter((message) => getMessageAttentionBehavior(message, attentionByAddress) !== "hidden"), attentionByAddress);
 }
 
 export function sortMessagesByAttention(messages: InboxMessage[], attentionByAddress: Record<string, AttentionBehavior>) {
@@ -5808,8 +6207,8 @@ export function sortMessagesByAttention(messages: InboxMessage[], attentionByAdd
   return messages
     .map((message) => ({ message }))
     .sort((a, b) => {
-      const aBehavior = attentionByAddress[a.message.from.email.trim().toLowerCase()] ?? a.message.attentionBehavior;
-      const bBehavior = attentionByAddress[b.message.from.email.trim().toLowerCase()] ?? b.message.attentionBehavior;
+      const aBehavior = getMessageAttentionBehavior(a.message, attentionByAddress);
+      const bBehavior = getMessageAttentionBehavior(b.message, attentionByAddress);
       return rank[aBehavior] - rank[bBehavior]
         || b.message.receivedAt.localeCompare(a.message.receivedAt)
         || a.message.id.localeCompare(b.message.id);
@@ -6049,6 +6448,12 @@ function getStringField(value: Record<string, unknown>, key: string) {
   return typeof field === "string" && field.trim() ? field : null;
 }
 
+function getNestedErrorCode(value: Record<string, unknown>) {
+  const error = value.error;
+  if (!error || typeof error !== "object" || Array.isArray(error)) return null;
+  return getStringField(error as Record<string, unknown>, "code");
+}
+
 function isLoginRoute() {
   if (typeof window === "undefined") {
     return false;
@@ -6105,20 +6510,22 @@ function isDevPreviewRoute() {
     && isDevPreviewPath(window.location.pathname, import.meta.env.DEV, import.meta.env.VITE_ORCA_DEMO === "true");
 }
 
-function readOAuthReturnStatus(): OAuthReturnStatus {
+export function readOAuthReturnStatus(): OAuthReturnStatus {
   if (typeof window === "undefined") {
     return null;
   }
 
   const params = new URLSearchParams(window.location.search);
   const status = params.get("status");
-  const provider = params.get("provider") === "outlook" ? "outlook" : "gmail";
+  const providerParam = params.get("provider");
+  if (providerParam !== "gmail" && providerParam !== "outlook") return null;
+  const provider = providerParam;
 
   if (status === "success") {
     return {
       provider,
       kind: "success",
-      email: params.get("email"),
+      email: sanitizeOAuthEmail(params.get("email")),
       intent: params.get("intent"),
     };
   }
@@ -6127,13 +6534,22 @@ function readOAuthReturnStatus(): OAuthReturnStatus {
     return {
       provider,
       kind: "error",
-      reason: params.get("reason"),
-      message: params.get("message"),
+      reason: readOAuthReturnErrorReason(params.get("reason")),
       intent: params.get("intent"),
     };
   }
 
   return null;
+}
+
+function readOAuthReturnErrorReason(value: string | null): OAuthReturnErrorReason | null {
+  return value && oauthReturnErrorReasons.has(value as OAuthReturnErrorReason) ? value as OAuthReturnErrorReason : null;
+}
+
+function sanitizeOAuthEmail(value: string | null): string | null {
+  if (!value) return null;
+  const normalized = value.trim();
+  return normalized.length <= 320 && /^[^\s@]+@[^\s@]+$/.test(normalized) ? normalized : null;
 }
 
 export function readStoredPreferences(storage?: Pick<Storage, "getItem">): ReaderPreferences {

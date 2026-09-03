@@ -6,7 +6,9 @@ import { Window } from "happy-dom";
 import { organizationLaneConfigurationFixture, organizationViewsFixture } from "@orca/shared";
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
-import { OrganizationStudio } from "./desktop-switch";
+import { AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { acceptedOrcaV1Example } from "./tide-table";
+import { TopLayerProvider } from "./top-layer";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLTextAreaElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
@@ -54,6 +56,14 @@ async function flush() {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 }
 
+async function enterProductionTideSource(container: HTMLElement) {
+  const textarea = container.querySelector('textarea[aria-label="Tide Table rule source"]') as unknown as HTMLTextAreaElement;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(browserWindow.HTMLTextAreaElement.prototype, "value")?.set?.call(textarea, acceptedOrcaV1Example);
+    textarea.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true, data: acceptedOrcaV1Example, inputType: "insertText" }) as unknown as Event);
+  });
+}
+
 function compileSuccess(source: string, revision: number, workspaceSchemaRevision: number) {
   const createdAt = "2026-08-26T12:00:00.000Z";
   return {
@@ -93,6 +103,93 @@ function describeResponse(workspaceRevision: number) {
     laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision },
   };
 }
+
+describe("AppSidebar mobile navigation", () => {
+  test("keeps every destination, account, Compose, and space management keyboard reachable", async () => {
+    const destinations: DesktopDestination[] = [];
+    let composeCalls = 0;
+    let manageCalls = 0;
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><AppSidebar
+      onCompose={() => { composeCalls += 1; }}
+      onManageSpaces={() => { manageCalls += 1; }}
+      onNavigate={(destination) => { destinations.push(destination); }}
+      projection={{
+        account: { displayName: "Maya Chen", email: "maya@example.com", accountCount: 2, health: "synced" },
+        active: "quiet",
+        draftCount: 3,
+        inboxCount: 12,
+        online: true,
+        spaces: [
+          { id: "focus", label: "Focus", description: "protected attention", count: 2 },
+          { id: "signals", label: "Signals", description: "important changes", count: 4 },
+          { id: "quiet", label: "Quiet", description: "low interruption", count: 1 },
+          { id: "later", label: "Later", description: "held intentionally", count: 3 },
+          { id: "launch", label: "Orca launch", description: "custom collection", custom: true, count: 5 },
+        ],
+      }}
+      theme="dark"
+    /></TopLayerProvider>));
+
+    const mobile = container.querySelector('nav[aria-label="Mobile primary"]') as unknown as HTMLElement;
+    expect(mobile).not.toBeNull();
+    expect(container.querySelector("svg.desktop-orca-eye")).not.toBeNull();
+    expect(container.querySelector('img[src="/orca-black-mark.svg"]')).toBeNull();
+    expect(button(mobile, "Compose").getAttribute("aria-keyshortcuts")).toBe("c");
+    await click(button(mobile, "Compose"));
+    expect(composeCalls).toBe(1);
+
+    const more = [...mobile.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === "More") as unknown as HTMLButtonElement;
+    more.focus();
+    await click(more);
+    const dialog = browserWindow.document.querySelector('[role="dialog"][aria-label="Navigation menu"]') as unknown as HTMLElement;
+    const menu = dialog.querySelector('[role="menu"][aria-label="All Orca destinations"]') as unknown as HTMLElement;
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.closest("#orca-top-layer-root")).not.toBeNull();
+    expect(container.inert).toBe(true);
+    expect(menu).not.toBeNull();
+    const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
+    const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
+    const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Organization", "Settings", "Account · Maya Chen"]);
+    expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
+    expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
+
+    menu.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowDown" }) as unknown as Event);
+    expect(browserWindow.document.activeElement?.textContent).toContain("Later");
+    await act(async () => { browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" })); });
+    await flush();
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+
+    const expected = new Map<string, DesktopDestination>([
+      ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "organization"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+    ]);
+    for (const [label, destination] of expected) {
+      await click(more);
+      const openMenu = browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement;
+      const item = findItem(openMenu, label);
+      expect(item, label).toBeDefined();
+      await click(item!);
+      expect(destinations.at(-1)).toBe(destination);
+    }
+
+    await click(more);
+    const manage = findItem(browserWindow.document.querySelector('[role="menu"]') as unknown as HTMLElement, "Manage spaces")!;
+    manage.focus();
+    await click(manage);
+    expect(manageCalls).toBe(1);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
+    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
+    await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
+    await flush();
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    expect((browserWindow.document.activeElement as unknown as Element | null)?.textContent?.trim()).toBe("More");
+  });
+});
 
 describe("OrganizationStudio integration", () => {
   test("shows proposed, simulated, active, and reverted Rule states across Tide Table and Glass Box", async () => {
@@ -161,6 +258,7 @@ describe("OrganizationStudio integration", () => {
     await flush(); await flush();
 
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.querySelector('[data-lifecycle-state="proposed"]')).not.toBeNull();
@@ -340,6 +438,7 @@ describe("OrganizationStudio integration", () => {
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       const method = init?.method ?? "GET";
+      if (path === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
       if (path === "/v1/organization/describe" && method === "GET") return Response.json(describeResponse(workspaceRevision));
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace-demo", workspaceRevision, items: viewItems });
       if (path.includes("/results") && method === "GET") {
@@ -379,6 +478,7 @@ describe("OrganizationStudio integration", () => {
     await flush(); await flush();
 
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.textContent).toContain("Workspace r8");
@@ -399,25 +499,22 @@ describe("OrganizationStudio integration", () => {
     ]);
   });
 
-  test("ignores pre-compile View and Lane reads that resolve after the canonical refresh", async () => {
+  test("ignores a pre-compile View read after the shared authority snapshot refreshes", async () => {
     let resolveStaleViews!: (response: Response) => void;
-    let resolveStaleLanes!: (response: Response) => void;
     const staleViews = new Promise<Response>((resolve) => { resolveStaleViews = resolve; });
-    const staleLanes = new Promise<Response>((resolve) => { resolveStaleLanes = resolve; });
     let viewReads = 0;
-    let describeReads = 0;
     let workspaceRevision = 7;
     const canonicalViews = organizationViewsFixture.map((view, index) => index === 0 ? { ...view, name: "Canonical after compile" } : view);
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       const method = init?.method ?? "GET";
+      if (path === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
       if (path === "/v1/organization/views" && method === "GET") {
         viewReads += 1;
         return viewReads === 1 ? staleViews : Response.json({ workspaceId: "workspace-demo", workspaceRevision, items: canonicalViews });
       }
       if (path === "/v1/organization/describe" && method === "GET") {
-        describeReads += 1;
-        return describeReads === 1 ? staleLanes : Response.json(describeResponse(workspaceRevision));
+        return Response.json(describeResponse(workspaceRevision));
       }
       if (path.includes("/results")) {
         const viewId = /\/views\/([^/]+)\/results/.exec(path)?.[1] ?? canonicalViews[0]!.id;
@@ -437,6 +534,7 @@ describe("OrganizationStudio integration", () => {
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<OrganizationStudio />));
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.textContent).toContain("Canonical after compile");
@@ -444,7 +542,6 @@ describe("OrganizationStudio integration", () => {
 
     await act(async () => {
       resolveStaleViews(Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: organizationViewsFixture }));
-      resolveStaleLanes(Response.json(describeResponse(7)));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 

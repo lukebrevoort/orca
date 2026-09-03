@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { Window } from "happy-dom";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import { AppSidebar } from "./desktop-switch";
 
 const styles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
+const baseStyles = await Bun.file(new URL("./styles.css", import.meta.url)).text();
 
 function desktopShellStyles() {
   const browser = new Window({ height: 900, width: 1440 });
@@ -30,7 +35,130 @@ function desktopShellStyles() {
   return result;
 }
 
+function responsiveShellStyles(width: number, theme: "light" | "dark", view: "inbox" | "later" = "inbox", density: "calm" | "compact" = "calm") {
+  const browser = new Window({ height: 844, width });
+  browser.document.documentElement.dataset.theme = theme;
+  browser.document.documentElement.dataset.readerDensity = density;
+  const sheet = browser.document.createElement("style");
+  sheet.textContent = `${baseStyles}\n${styles}`;
+  browser.document.head.append(sheet);
+
+  const shell = browser.document.createElement("main");
+  shell.className = "desktop-shell";
+  const sidebar = browser.document.createElement("aside");
+  sidebar.className = "desktop-sidebar";
+  const desktopContent = browser.document.createElement("div");
+  desktopContent.className = "desktop-sidebar-content";
+  const mobileNavigation = browser.document.createElement("nav");
+  mobileNavigation.className = "desktop-mobile-navigation";
+  const mobileItem = browser.document.createElement("button");
+  mobileItem.className = "desktop-mobile-nav-item";
+  mobileItem.setAttribute("aria-current", "page");
+  mobileNavigation.append(mobileItem);
+  sidebar.append(desktopContent, mobileNavigation);
+
+  const workspace = browser.document.createElement("section");
+  workspace.className = "desktop-workspace";
+  const inbox = browser.document.createElement("section");
+  inbox.className = `inbox-view${view === "later" ? " inbox-view-later" : ""}`;
+  const body = browser.document.createElement("div");
+  body.className = "inbox-body";
+  const list = browser.document.createElement("ol");
+  list.className = "message-list";
+  const listItem = browser.document.createElement("li");
+  const wrap = browser.document.createElement("div");
+  wrap.className = "message-row-wrap";
+  const row = browser.document.createElement("button");
+  row.className = "message-row";
+  const avatar = browser.document.createElement("span");
+  avatar.className = "stream-avatar";
+  const copy = browser.document.createElement("div");
+  copy.className = "message-copy";
+  const meta = browser.document.createElement("div");
+  meta.className = "message-meta";
+  const sender = browser.document.createElement("strong");
+  const date = browser.document.createElement("span");
+  meta.append(sender, date);
+  const subject = browser.document.createElement("div");
+  subject.className = "message-subject-row";
+  const snippet = browser.document.createElement("p");
+  copy.append(meta, subject, snippet);
+  row.append(avatar, copy);
+  const evidence = browser.document.createElement("button");
+  evidence.className = "message-evidence-button";
+  const attention = browser.document.createElement("div");
+  attention.className = "sender-attention-control";
+  const attentionTrigger = browser.document.createElement("button");
+  attentionTrigger.className = "sender-attention-trigger";
+  attention.append(attentionTrigger);
+  const keep = browser.document.createElement("button");
+  keep.className = "keep-thread-button";
+  const laterActions = browser.document.createElement("div");
+  laterActions.className = "later-row-actions";
+  wrap.append(row, evidence, attention, ...(view === "later" ? [laterActions] : [keep]));
+  listItem.append(wrap);
+  list.append(listItem);
+  body.append(list);
+  inbox.append(body);
+  workspace.append(inbox);
+  shell.append(sidebar, workspace);
+  browser.document.body.append(shell);
+
+  const mobileStyle = browser.getComputedStyle(mobileNavigation);
+  const desktopContentStyle = browser.getComputedStyle(desktopContent);
+  const mobileItemStyle = browser.getComputedStyle(mobileItem);
+  const rowStyle = browser.getComputedStyle(row);
+  const copyStyle = browser.getComputedStyle(copy);
+  const dateStyle = browser.getComputedStyle(date);
+  const evidenceStyle = browser.getComputedStyle(evidence);
+  const attentionStyle = browser.getComputedStyle(attentionTrigger);
+  const attentionControlStyle = browser.getComputedStyle(attention);
+  const keepStyle = browser.getComputedStyle(keep);
+  const laterActionsStyle = browser.getComputedStyle(laterActions);
+  const result = {
+    desktopContentDisplay: desktopContentStyle.display,
+    mobileDisplay: mobileStyle.display,
+    mobileItem: { background: mobileItemStyle.backgroundColor, color: mobileItemStyle.color, minHeight: mobileItemStyle.minHeight },
+    row: { gridTemplateColumns: rowStyle.gridTemplateColumns, minHeight: rowStyle.minHeight, paddingBottom: rowStyle.paddingBottom, paddingRight: rowStyle.paddingRight },
+    copy: { gridTemplateColumns: copyStyle.gridTemplateColumns, gridTemplateRows: copyStyle.gridTemplateRows },
+    datePosition: dateStyle.position,
+    evidence: { bottom: evidenceStyle.bottom, minHeight: evidenceStyle.minHeight, right: evidenceStyle.right, top: evidenceStyle.top },
+    attention: { bottom: attentionControlStyle.bottom, minHeight: attentionStyle.minHeight },
+    keep: { height: keepStyle.height, width: keepStyle.width },
+    laterActionsBottom: laterActionsStyle.bottom,
+  };
+  browser.close();
+  return result;
+}
+
 describe("desktop application shell", () => {
+  test("exposes one named primary navigation landmark and one current destination", () => {
+    const html = renderToStaticMarkup(createElement(AppSidebar, {
+      projection: {
+        account: { displayName: "Luke Brevoort", email: "luke@example.com", accountCount: 1, health: "synced" },
+        active: "inbox",
+        inboxCount: 4,
+        draftCount: 2,
+        online: true,
+        spaces: [{ id: "focus", label: "Focus", description: "protected attention" }],
+      },
+      theme: "light",
+      onCompose: () => undefined,
+      onManageSpaces: () => undefined,
+      onNavigate: () => undefined,
+    }));
+    const browser = new Window();
+    browser.document.body.innerHTML = html;
+
+    const primary = browser.document.querySelector('nav[aria-label="Primary navigation"]');
+    const current = primary?.querySelectorAll('[aria-current="page"]') ?? [];
+    expect(primary).not.toBeNull();
+    expect(browser.document.querySelector('aside[aria-label="Primary"]')).toBeNull();
+    expect(current).toHaveLength(1);
+    expect(current[0]?.textContent).toContain("Inbox");
+    browser.close();
+  });
+
   test("keeps the sidebar in the viewport while the workspace owns long-page scrolling", () => {
     const computed = desktopShellStyles();
 
@@ -40,5 +168,55 @@ describe("desktop application shell", () => {
     expect(computed.workspace.height).toBe("100%");
     expect(computed.workspace.minHeight).toBe("0");
     expect(computed.workspace.overflowY).toBe("auto");
+  });
+
+  test("switches to complete, theme-safe mobile navigation only through 760px", () => {
+    for (const width of [320, 390, 760]) {
+      for (const theme of ["light", "dark"] as const) {
+        const computed = responsiveShellStyles(width, theme);
+        expect(computed.desktopContentDisplay).toBe("none");
+        expect(computed.mobileDisplay).toBe("grid");
+        expect(computed.mobileItem.minHeight).toBe("54px");
+        expect(computed.mobileItem.background).not.toBe("transparent");
+        expect(computed.mobileItem.color).not.toBe("transparent");
+      }
+    }
+
+    const desktop = responsiveShellStyles(1024, "light");
+    expect(desktop.desktopContentDisplay).toBe("flex");
+    expect(desktop.mobileDisplay).toBe("none");
+  });
+
+  test("reflows mobile message anatomy into content and 44px action bands", () => {
+    for (const width of [320, 390, 760]) {
+      for (const theme of ["light", "dark"] as const) {
+        const computed = responsiveShellStyles(width, theme);
+        expect(computed.row.gridTemplateColumns).toContain("minmax(0,1fr)");
+        expect(computed.row.minHeight).toBe("138px");
+        expect(computed.row.paddingBottom).toBe("64px");
+        expect(computed.row.paddingRight).toBe("12px");
+        expect(computed.copy.gridTemplateColumns).toContain("minmax(0,1fr)");
+        expect(computed.copy.gridTemplateRows).toBe("auto auto auto");
+        expect(computed.datePosition).toBe("static");
+        expect(computed.evidence).toEqual({ bottom: "10px", minHeight: "44px", right: "104px", top: "auto" });
+        expect(computed.attention.minHeight).toBe("44px");
+        expect(computed.keep).toEqual({ height: "44px", width: "44px" });
+      }
+    }
+
+    const desktop = responsiveShellStyles(1024, "light");
+    expect(desktop.mobileDisplay).toBe("none");
+    expect(desktop.row.paddingRight).toBe("252px");
+    expect(desktop.datePosition).toBe("absolute");
+  });
+
+  test("keeps compact Later evidence, attention, and reminder actions in separate bands", () => {
+    for (const theme of ["light", "dark"] as const) {
+      const computed = responsiveShellStyles(390, theme, "later", "compact");
+      expect(computed.evidence.bottom).toBe("64px");
+      expect(computed.attention.bottom).toBe("64px");
+      expect(computed.attention.minHeight).toBe("44px");
+      expect(computed.laterActionsBottom).toBe("10px");
+    }
   });
 });

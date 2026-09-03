@@ -42,13 +42,29 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
 
   const app = new Hono<{ Variables: AuthVariables }>();
 
+  app.get("/status", (c) => {
+    const available = validateGmailOAuthConfig(config).length === 0;
+    return c.json({
+      provider: "gmail" as const,
+      available,
+      reason: available ? null : "configuration_required" as const,
+    });
+  });
+
   app.get("/connect", authMiddleware, (c) => {
     const configErrors = validateGmailOAuthConfig(config);
     if (configErrors.length > 0) {
+      console.error("Gmail authorization is unavailable because its server configuration is incomplete", {
+        operation: "connect",
+        configurationIssues: configErrors,
+      });
       return c.json(
         {
-          error: "gmail_oauth_not_configured",
-          message: `Missing Gmail OAuth configuration: ${configErrors.join(", ")}`,
+          error: {
+            code: "provider_unavailable",
+            message: "Gmail sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.",
+            retryable: true,
+          },
         },
         503,
       );
@@ -70,7 +86,11 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
   app.get("/upgrade", authMiddleware, async (c) => {
     const configErrors = validateGmailOAuthConfig(config);
     if (configErrors.length > 0) {
-      return c.json({ error: "gmail_oauth_not_configured", message: `Missing Gmail OAuth configuration: ${configErrors.join(", ")}` }, 503);
+      console.error("Gmail authorization is unavailable because its server configuration is incomplete", {
+        operation: "upgrade",
+        configurationIssues: configErrors,
+      });
+      return c.json({ error: { code: "provider_unavailable", message: "Gmail draft and send access is unavailable in this Orca environment. Your existing mail access was not changed. Try again later.", retryable: true } }, 503);
     }
 
     const auth = c.get("auth");
@@ -96,7 +116,11 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
   app.get("/login", async (c) => {
     const configErrors = validateGmailOAuthConfig(config);
     if (configErrors.length > 0) {
-      return c.json({ error: "gmail_oauth_not_configured", message: `Missing Gmail OAuth configuration: ${configErrors.join(", ")}` }, 503);
+      console.error("Gmail authorization is unavailable because its server configuration is incomplete", {
+        operation: "login",
+        configurationIssues: configErrors,
+      });
+      return c.json({ error: { code: "provider_unavailable", message: "Gmail sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.", retryable: true } }, 503);
     }
 
     const { db, sqlite } = dbFactory();
@@ -118,7 +142,17 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
 
   app.get("/callback", pendingAuthMiddleware, async (c) => {
     const auth = c.get("auth");
-    const result = await service.handleCallback(new URLSearchParams(c.req.query()), auth.userId);
+    let result;
+    try {
+      result = await service.handleCallback(new URLSearchParams(c.req.query()), auth.userId);
+    } catch (error) {
+      console.error("Gmail authorization callback failed", { error });
+      return c.json({
+        ok: false,
+        error: "authorization_failed",
+        message: "Gmail sign-in could not be completed. Nothing in your account was changed. Try again from Orca.",
+      }, 502);
+    }
 
     const isInitialLogin = result.ok && result.initialLogin;
 
@@ -203,14 +237,24 @@ export function createGmailAuthApp(options: GmailAuthAppOptions = {}): Hono<{
     }
 
     if (result.redirectUrl) {
+      console.error("Gmail authorization was not completed", {
+        code: result.code,
+        diagnostic: result.message,
+      });
       return c.redirect(result.redirectUrl, 302);
     }
 
+    console.error("Gmail authorization was not completed", {
+      code: result.code,
+      diagnostic: result.message,
+    });
     return c.json(
       {
         ok: false,
         error: result.code,
-        message: result.message,
+        message: result.code === "oauth_not_configured"
+          ? "Gmail sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later."
+          : "Gmail sign-in could not be completed. Nothing in your account was changed. Try again from Orca.",
       },
       result.code === "oauth_not_configured" ? 503 : 400,
     );

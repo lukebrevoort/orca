@@ -27,17 +27,16 @@ function initializeRequiredFacetDefaults(
   }).from(organizationFacets)
     .where(eq(organizationFacets.workspaceId, account.workspaceId)).all()
     .filter((facet) => !facet.isOptional && facet.retiredAt === null && facet.defaultValue !== null);
-  for (const threadId of eligibleThreadIds) {
-    for (const facet of requiredFacets) {
-      db.insert(organizationThreadFacetValues).values({
+  const rows = [...eligibleThreadIds].flatMap((threadId) => requiredFacets.map((facet) => ({
         workspaceId: account.workspaceId,
         facetId: facet.id,
         accountId: input.accountId,
         threadId,
         value: facet.defaultValue!,
         updatedAt: input.now,
-      }).onConflictDoNothing().run();
-    }
+      })));
+  for (let index = 0; index < rows.length; index += 400) {
+    db.insert(organizationThreadFacetValues).values(rows.slice(index, index + 400)).onConflictDoNothing().run();
   }
 }
 
@@ -50,29 +49,35 @@ export function refreshThreadAggregates(
   db: DatabaseExecutor,
   input: { accountId: string; threadIds: readonly string[]; now: Date },
 ): void {
-  for (const threadId of new Set(input.threadIds)) {
-    const aggregate = db.select({
+  const requestedThreadIds = [...new Set(input.threadIds)];
+  if (requestedThreadIds.length === 0) return;
+  const aggregates = db.select({
       threadId: emails.threadId,
       messageCount: sql<number>`count(*)`,
       latestReceivedAt: sql<number>`max(${emails.receivedAt})`,
       unreadCount: sql<number>`sum(case when ${emails.isRead} = 0 then 1 else 0 end)`,
     }).from(emails)
-      .where(and(eq(emails.accountId, input.accountId), eq(emails.threadId, threadId)))
+      .where(and(eq(emails.accountId, input.accountId), inArray(emails.threadId, requestedThreadIds)))
       .groupBy(emails.threadId)
-      .get();
-    if (!aggregate) continue;
-
-    const latestEmail = db.select({ subject: emails.subject }).from(emails)
-      .where(and(eq(emails.accountId, input.accountId), eq(emails.threadId, threadId)))
-      .orderBy(desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id))
-      .get();
-    db.update(threads).set({
-      subject: latestEmail?.subject ?? null,
-      latestReceivedAt: aggregate.latestReceivedAt ? new Date(aggregate.latestReceivedAt) : null,
-      messageCount: aggregate.messageCount,
-      isRead: aggregate.unreadCount === 0,
-      updatedAt: input.now,
-    }).where(and(eq(threads.accountId, input.accountId), eq(threads.id, threadId))).run();
+      .all();
+  if (aggregates.length === 0) return;
+  const latestSubjects = new Map<string, string | null>();
+  for (const message of db.select({ threadId: emails.threadId, subject: emails.subject }).from(emails)
+    .where(and(eq(emails.accountId, input.accountId), inArray(emails.threadId, requestedThreadIds)))
+    .orderBy(asc(emails.threadId), desc(emails.receivedAt), desc(emails.createdAt), asc(emails.id)).all()) {
+    if (!latestSubjects.has(message.threadId)) latestSubjects.set(message.threadId, message.subject);
   }
+  const separator = sql.raw(" ");
+  db.update(threads).set({
+    subject: sql`CASE ${threads.id} ${sql.join(aggregates.map((aggregate) =>
+      sql`WHEN ${aggregate.threadId} THEN ${latestSubjects.get(aggregate.threadId) ?? null}`), separator)} ELSE ${threads.subject} END`,
+    latestReceivedAt: sql`CASE ${threads.id} ${sql.join(aggregates.map((aggregate) =>
+      sql`WHEN ${aggregate.threadId} THEN ${aggregate.latestReceivedAt}`), separator)} ELSE ${threads.latestReceivedAt} END`,
+    messageCount: sql`CASE ${threads.id} ${sql.join(aggregates.map((aggregate) =>
+      sql`WHEN ${aggregate.threadId} THEN ${aggregate.messageCount}`), separator)} ELSE ${threads.messageCount} END`,
+    isRead: sql`CASE ${threads.id} ${sql.join(aggregates.map((aggregate) =>
+      sql`WHEN ${aggregate.threadId} THEN ${aggregate.unreadCount === 0}`), separator)} ELSE ${threads.isRead} END`,
+    updatedAt: input.now,
+  }).where(and(eq(threads.accountId, input.accountId), inArray(threads.id, aggregates.map((aggregate) => aggregate.threadId)))).run();
   initializeRequiredFacetDefaults(db, input);
 }

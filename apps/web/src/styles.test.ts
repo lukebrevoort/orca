@@ -67,6 +67,12 @@ describe("compose panel surfaces", () => {
     expect(cssRuleWithDeclaration(".panel-body", "background: var(--orca-paper)")).toContain("background: var(--orca-paper)");
     expect(styles).toContain("backdrop-filter: blur(2px) saturate(.92)");
   });
+
+  test("keeps blocked delivery and invalid message states labeled in both themes", () => {
+    expect(styles).toContain("/* BRE-356: validation stays readable in both semantic theme palettes. */");
+    expect(styles).toContain('.compose-writing-area[aria-invalid="true"] { box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--orca-danger) 72%, var(--orca-border)); }');
+    expect(styles).toContain('.compose-send[aria-disabled="true"], .compose-send[aria-disabled="true"]:not(:disabled) { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);');
+  });
 });
 
 describe("Zen canvas surface", () => {
@@ -121,12 +127,35 @@ describe("profile avatar controls", () => {
   });
 });
 
+describe("OAuth login layout and provider states", () => {
+  test("reserves a brand row and keeps unavailable controls readable in both themes", () => {
+    expect(cssRuleWithDeclaration(".oauth-shell", "display: grid; gap: 28px 92px")).toContain('grid-template-areas: "brand brand" "hero setup"');
+    expect(cssRuleWithDeclaration(".oauth-brand", "align-self: start")).toContain("grid-area: brand");
+    expect(cssRuleWithDeclaration(".oauth-brand", "align-self: start")).toContain("position: static");
+    expect(latestCssRule(".oauth-hero .oauth-eyebrow")).toContain("position: static");
+    const disabled = latestCssRule(".oauth-provider-button:disabled, .oauth-google-button:disabled, .oauth-outlook-button:disabled");
+    expect(disabled).toContain("background: var(--orca-surface-hover)");
+    expect(disabled).toContain("border-color: var(--orca-border)");
+    expect(disabled).toContain("color: var(--orca-muted)");
+    expect(disabled).toContain("opacity: 1");
+    const retryDisabled = latestCssRule(".oauth-retry-button:disabled");
+    expect(retryDisabled).toContain("background: var(--orca-surface-hover)");
+    expect(retryDisabled).toContain("color: var(--orca-muted)");
+    expect(retryDisabled).toContain("cursor: not-allowed");
+    expect(styles).toContain(".oauth-google-button:focus-visible");
+    expect(styles).toContain("outline: 2px solid var(--orca-accent)");
+  });
+});
+
 describe("primary mobile navigation", () => {
   test("keeps Drafts selected states theme-safe and moves local feedback clear of the rail", () => {
     expect(styles).toContain('.wave-rail button[aria-current="page"]');
     expect(styles).toContain("background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink);");
     expect(styles).toContain(".feedback-kit-bottom-right { bottom: 84px; right: 16px; }");
     expect(styles).toContain(".feedback-kit-trigger span { display: none; }");
+    expect(styles).toContain('body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { opacity: 0; pointer-events: none; visibility: hidden; }');
+    expect(desktopStyles).toContain(".desktop-connectivity-notice button { min-height: 34px;");
+    expect(desktopStyles).toContain("background: var(--desktop-surface); color: var(--desktop-ink);");
   });
 });
 

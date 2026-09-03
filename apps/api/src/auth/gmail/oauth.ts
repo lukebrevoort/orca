@@ -442,7 +442,7 @@ async function exchangeCode(options: {
     return {
       ok: false,
       code: "oauth_not_configured",
-      message: "Gmail OAuth is not configured. Set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REDIRECT_URI.",
+      message: "Gmail OAuth is not configured for an authorization exchange.",
     };
   }
 
@@ -463,10 +463,11 @@ async function exchangeCode(options: {
       }),
     });
   } catch (error) {
+    console.error("Gmail authorization code exchange failed", { error });
     return {
       ok: false,
       code: "token_exchange_failed",
-      message: error instanceof Error ? error.message : "Failed to exchange Gmail OAuth code.",
+      message: "Google could not complete the Gmail authorization exchange.",
     };
   }
 
@@ -530,10 +531,11 @@ async function fetchUserInfo(
       },
     });
   } catch (error) {
+    console.error("Gmail account identity request failed", { error });
     return {
       ok: false,
       code: "userinfo_failed",
-      message: error instanceof Error ? error.message : "Failed to fetch Gmail account identity.",
+      message: "Google could not confirm the Gmail account identity.",
     };
   }
 

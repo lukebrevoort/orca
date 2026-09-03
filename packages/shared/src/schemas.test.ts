@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   authSessionSchema,
+  batchSenderAttentionChangeSchema,
   createCollectionSchema,
   createHumanClassificationOverrideSchema,
   createPinSchema,
@@ -14,6 +15,7 @@ import {
   inboxQuerySchema,
   inboxResponseSchema,
   pinFilterSchema,
+  senderAttentionBatchResultSchema,
   threadDetailSchema,
   updateMessageDraftSchema,
   updateCollectionSchema,
@@ -93,6 +95,20 @@ describe("shared API schemas", () => {
     assert.equal("classification" in parsed.counts, true);
   });
 
+  test("accepts a durable mailbox freshness token without rewriting legacy responses", () => {
+    const parsed = inboxResponseSchema.parse({
+      accounts: [accountFixture],
+      messages: inboxFixture,
+      counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+      freshness: {
+        revision: `mailbox-v2:${"a".repeat(64)}`,
+        lastSyncedAt: "2026-09-02T12:00:00.000Z",
+      },
+      nextCursor: null,
+    });
+    assert.equal(parsed.freshness?.revision, `mailbox-v2:${"a".repeat(64)}`);
+  });
+
   test("rejects blank inbox cursors", () => {
     const result = inboxQuerySchema.safeParse({ cursor: "" });
 
@@ -105,6 +121,65 @@ describe("shared API schemas", () => {
     assert.equal(inboxQuerySchema.safeParse({ limit: "0" }).success, false);
     assert.equal(inboxQuerySchema.safeParse({ limit: "101" }).success, false);
     assert.equal(inboxQuerySchema.safeParse({ classification: "machine" }).success, false);
+  });
+
+  test("validates bounded stored-mail search scope", () => {
+    assert.deepEqual(inboxQuerySchema.parse({
+      query: " launch notes ",
+      sender: " maya@example.com ",
+      accountId: "acct_work",
+      collectionId: "space_launch",
+      view: "all",
+      classification: "human",
+    }), {
+      query: "launch notes",
+      sender: "maya@example.com",
+      accountId: "acct_work",
+      collectionId: "space_launch",
+      view: "all",
+      classification: "human",
+    });
+    assert.equal(inboxQuerySchema.safeParse({ query: "" }).success, false);
+    assert.equal(inboxQuerySchema.safeParse({ query: "x".repeat(201) }).success, false);
+  });
+
+  test("normalizes unique batch sender changes and preserves canonical per-sender outcomes", () => {
+    assert.deepEqual(batchSenderAttentionChangeSchema.parse({
+      targets: [
+        { accountId: "account-a", address: " Maya@Example.com " },
+        { accountId: "account-b", address: "Maya@Example.com" },
+      ],
+      behavior: "quiet",
+    }), {
+      targets: [
+        { accountId: "account-a", address: "maya@example.com" },
+        { accountId: "account-b", address: "maya@example.com" },
+      ],
+      behavior: "quiet",
+    });
+    assert.equal(batchSenderAttentionChangeSchema.safeParse({
+      targets: [
+        { accountId: "account-a", address: "Maya@example.com" },
+        { accountId: "account-a", address: "maya@example.com" },
+      ],
+      behavior: "quiet",
+    }).success, false);
+
+    const result = senderAttentionBatchResultSchema.parse({
+      behavior: "quiet",
+      outcomes: [
+        { status: "succeeded", target: { accountId: "account-a", address: "Maya@Example.com" }, resolution: { behavior: "quiet", rule: null } },
+        {
+          status: "failed",
+          target: { accountId: "account-b", address: "Maya@Example.com" },
+          retryable: true,
+          error: { code: "temporarily_unavailable", message: "Try again" },
+          resolution: { behavior: "normal", rule: null },
+        },
+      ],
+    });
+    assert.deepEqual(result.outcomes[0]?.target, { accountId: "account-a", address: "maya@example.com" });
+    assert.equal(result.outcomes[1]?.status, "failed");
   });
 
   test("defines an explainable, bounded Human Signal contract", () => {

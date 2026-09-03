@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { FeedbackWidget } from "@feedback-kit/react";
 import "@feedback-kit/react/styles.css";
 import { App } from "./App";
+import { TopLayerProvider } from "./top-layer";
 import "./styles.css";
 import "./desktop-switch.css";
 import "./organization-lanes.css";
@@ -10,9 +11,10 @@ import "./organization-views.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
-    {import.meta.env.DEV ? (
-      <FeedbackWidget
+    <TopLayerProvider>
+      <App />
+      {import.meta.env.DEV ? (
+        <FeedbackWidget
         accentColor="#70867d"
         defaultScreenshot={false}
         endpoint="/v1/feedback"
@@ -30,7 +32,8 @@ createRoot(document.getElementById("root")!).render(
           version: "local",
           environment: import.meta.env.MODE,
         }}
-      />
-    ) : null}
+        />
+      ) : null}
+    </TopLayerProvider>
   </StrictMode>,
 );

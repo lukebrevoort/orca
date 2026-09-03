@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
-import { TideTableEditor } from "./tide-table";
+import { acceptedOrcaV1Example, TideTableEditor } from "./tide-table";
 
 let browser: Window;
 let root: Root;
@@ -67,6 +67,7 @@ describe("TideTableEditor", () => {
     browser.document.body.append(container);
     root = createRoot(container as unknown as Element);
     await act(async () => root.render(<TideTableEditor request={request} />));
+    await changeSource(container.querySelector("textarea") as unknown as HTMLTextAreaElement, acceptedOrcaV1Example);
     return container;
   }
 
@@ -109,6 +110,8 @@ describe("TideTableEditor", () => {
     expect(container.textContent).toContain("Accepted Orca language · version 1");
     expect(container.textContent).toContain("Compile creates an immutable revision. It does not activate or execute the rule.");
     const textarea = container.querySelector("textarea")!;
+    expect(textarea.value).toBe("");
+    await changeSource(textarea as unknown as HTMLTextAreaElement, acceptedOrcaV1Example);
     expect(textarea.value).toContain("orca 1");
     await act(async () => (container.querySelector("button[type=button]") as unknown as HTMLButtonElement).click());
 

@@ -9,8 +9,10 @@ import {
   type DragEvent,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
 } from "react";
-import { deliveryResultSchema, messageDraftSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
+import { TopLayer } from "./top-layer";
+import { deliveryResultSchema, messageDraftSchema, outboundRecipientSchema, type DeliveryResult, type InboxMessage, type MailContact, type MessageDraft, type OutboundContext } from "@orca/shared";
 
 export type RecipientKind = "to" | "cc" | "bcc";
 export type ComposeSaveStatus = "saved" | "saving" | "failed";
@@ -54,7 +56,7 @@ export type ComposeDraftController = {
   attachFiles: (files: Iterable<File>) => ComposeAttachmentAcceptance;
   removeAttachment: (attachmentId: string) => void;
   discardDraft: () => Promise<boolean> | void;
-  sendDraft?: () => Promise<DeliveryResult>;
+  sendDraft?: (deliveryFields?: Partial<ComposeDraftFields>) => Promise<DeliveryResult>;
   retrySave?: () => void;
   resolveConflict?: (choice: "server" | "local") => Promise<void>;
 };
@@ -77,7 +79,6 @@ export type ComposeAttachmentAcceptance = {
 export const MAX_COMPOSE_ATTACHMENTS = 25;
 export const MAX_COMPOSE_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
-const EMAIL_PATTERN = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 export const COMPOSE_AUTOSAVE_DELAY_MS = 420;
 const PROVIDER_POLL_DELAY_MS = 500;
 
@@ -331,26 +332,40 @@ function sentDeliveryResult(draft: MessageDraft): DeliveryResult {
 }
 
 export function isValidEmail(value: string) {
-  return EMAIL_PATTERN.test(value.trim());
+  return outboundRecipientSchema.safeParse({ name: null, email: value }).success;
 }
 
 export function parseRecipientText(value: string): MailContact[] {
+  return parseRecipientInput(value).contacts;
+}
+
+export function parseRecipientInput(value: string): { contacts: MailContact[]; invalid: string[] } {
   const seen = new Set<string>();
-  return value
+  const contacts: MailContact[] = [];
+  const invalid: string[] = [];
+  const tokens = value
     .split(/[\n,;]+/)
     .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => {
-      const match = part.match(/^(.*?)\s*<([^<>]+)>$/);
-      return match
-        ? { name: match[1]!.trim().replace(/^['"]|['"]$/g, "") || null, email: match[2]!.trim().toLowerCase() }
-        : { name: null, email: part.toLowerCase() };
-    })
-    .filter((contact) => {
-      if (!isValidEmail(contact.email) || seen.has(contact.email)) return false;
+    .filter(Boolean);
+
+  for (const token of tokens) {
+    const match = token.match(/^(.*?)\s*<([^<>]+)>$/);
+    const candidate = match
+      ? { name: match[1]!.trim().replace(/^['"]|['"]$/g, "") || null, email: match[2]!.trim().toLowerCase() }
+      : { name: null, email: token.toLowerCase() };
+    const parsed = outboundRecipientSchema.safeParse(candidate);
+    if (!parsed.success) {
+      invalid.push(token);
+      continue;
+    }
+    const contact = parsed.data;
+    if (!seen.has(contact.email)) {
+      contacts.push(contact);
       seen.add(contact.email);
-      return true;
-    });
+    }
+  }
+
+  return { contacts, invalid };
 }
 
 export function collectComposeContacts(messages: InboxMessage[], accountEmail: string) {
@@ -728,10 +743,18 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
     setRetryToken((current) => current + 1);
   }
 
-  async function sendDraft(): Promise<DeliveryResult> {
+  async function sendDraft(deliveryFields?: Partial<ComposeDraftFields>): Promise<DeliveryResult> {
+    const deliveryDraft = deliveryFields
+      ? { ...draft, ...deliveryFields, updatedAt: new Date().toISOString() }
+      : draft;
+    if (deliveryFields) setDraft(deliveryDraft);
+    pendingDraftRef.current = {
+      key: draftStorageKey(accountId, scope),
+      serialized: JSON.stringify(persistableDraft(deliveryDraft)),
+    };
     if (demoMode) {
       resetAfterSuccessfulSend();
-      return { draftId: draft.id, status: "sent", providerMessageId: `demo-${draft.id}`, providerThreadId: draft.context?.providerThreadId ?? null, error: null };
+      return { draftId: deliveryDraft.id, status: "sent", providerMessageId: `demo-${deliveryDraft.id}`, providerThreadId: deliveryDraft.context?.providerThreadId ?? null, error: null };
     }
     if (conflict) throw new Error("Resolve the saved draft conflict before sending.");
     sendingRef.current = true;
@@ -751,15 +774,15 @@ export function useComposeDraft(accountId: string, scope = "new", demoMode?: boo
         pollTimerRef.current = null;
       }
       const content: DurableDraftContent = {
-        to: draft.to,
-        cc: draft.cc,
-        bcc: draft.bcc,
-        subject: draft.subject,
-        body: { text: draft.body, html: draft.body.trim() ? markdownToEditorHtml(draft.body) : null },
-        context: draft.context,
+        to: deliveryDraft.to,
+        cc: deliveryDraft.cc,
+        bcc: deliveryDraft.bcc,
+        subject: deliveryDraft.subject,
+        body: { text: deliveryDraft.body, html: deliveryDraft.body.trim() ? markdownToEditorHtml(deliveryDraft.body) : null },
+        context: deliveryDraft.context,
       };
       if (attachmentsDirtyRef.current || serverIdRef.current === null) {
-        const localAttachments = await Promise.all(draft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
+        const localAttachments = await Promise.all(deliveryDraft.attachments.map(async ({ id, filename, mimeType, size, file }) => ({
           id,
           filename,
           mimeType,
@@ -885,6 +908,31 @@ const composeIntros = [
   { kicker: "A quiet place to begin", title: "Say the part that matters." },
 ] as const;
 
+const recipientKinds: RecipientKind[] = ["to", "cc", "bcc"];
+const recipientLabels: Record<RecipientKind, string> = { to: "To", cc: "Cc", bcc: "Bcc" };
+
+function emptyRecipientState() {
+  return { to: "", cc: "", bcc: "" } satisfies Record<RecipientKind, string>;
+}
+
+function recipientValidationMessage(invalid: string[]) {
+  const visible = invalid.map((token) => `“${token}”`).join(", ");
+  return `${visible} ${invalid.length === 1 ? "isn’t" : "aren’t"} complete. Choose a suggestion or enter a complete email address.`;
+}
+
+function mergeRecipients(existing: MailContact[], pending: MailContact[]) {
+  const merged = [...existing];
+  const seen = new Set(existing.map((recipient) => recipient.email.trim().toLowerCase()));
+  for (const recipient of pending) {
+    const email = recipient.email.trim().toLowerCase();
+    if (!seen.has(email)) {
+      merged.push({ ...recipient, email });
+      seen.add(email);
+    }
+  }
+  return merged;
+}
+
 export function ComposeWorkspace({
   controller,
   contacts,
@@ -932,13 +980,36 @@ export function ComposeWorkspace({
   const [editReplyDetails, setEditReplyDetails] = useState(actionLabel === "Forward");
   const [deliveryStatus, setDeliveryStatus] = useState<ComposeDeliveryStatus>("idle");
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [deliveryValidationError, setDeliveryValidationError] = useState<string | null>(null);
+  const [recipientQueries, setRecipientQueries] = useState<Record<RecipientKind, string>>(emptyRecipientState);
+  const [recipientErrors, setRecipientErrors] = useState<Record<RecipientKind, string>>(emptyRecipientState);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageBodyRef = useRef<HTMLDivElement>(null);
+  const recipientInputRefs = useRef<Record<RecipientKind, HTMLInputElement | null>>({ to: null, cc: null, bcc: null });
+  const deliveryReasonId = useId();
   const contactsLabel = contacts.length === 1 ? "1 contact" : `${contacts.length} contacts`;
   const intro = composeIntros[hashText(draft.id) % composeIntros.length]!;
-  const deliveryReason = draft.to.length === 0
+  const pendingRecipientKinds = recipientKinds.filter((kind) => recipientQueries[kind].trim());
+  const pendingRecipientResults = new Map(pendingRecipientKinds.map((kind) => [kind, parseRecipientInput(recipientQueries[kind])]));
+  const invalidPendingKinds = pendingRecipientKinds.filter((kind) => {
+    const parsed = pendingRecipientResults.get(kind)!;
+    return parsed.invalid.length > 0 || parsed.contacts.length === 0;
+  });
+  const hasPotentialTo = draft.to.length > 0 || (pendingRecipientResults.get("to")?.contacts.length ?? 0) > 0;
+  const hasDeliverableMessage = Boolean(draft.body.trim()) || draft.attachments.length > 0;
+  const deliveryReady = hasPotentialTo && invalidPendingKinds.length === 0 && hasDeliverableMessage;
+  const deliveryReason = invalidPendingKinds.length > 0
+    ? `Finish the visible ${invalidPendingKinds.map((kind) => recipientLabels[kind]).join("/")} address ${invalidPendingKinds.length === 1 ? "field" : "fields"}. Choose a suggestion or enter every complete email address.`
+    : !hasPotentialTo
     ? "Add at least one valid recipient to prepare this message."
+    : !hasDeliverableMessage
+      ? variant === "reply"
+        ? "Write a reply or add an attachment before sending. Attachment-only replies are supported when a file is attached."
+        : "Write a message or add an attachment before sending. Attachment-only messages are supported when a file is attached."
     : canSend
-      ? "Gmail has confirmed draft and send access. Orca will save the draft first, then deliver it once."
+      ? pendingRecipientKinds.length
+        ? "Every complete visible address will be added before Orca saves and delivers this message."
+        : "Gmail has confirmed draft and send access. Orca will save the draft first, then deliver it once."
       : "This account is read-only. Enable Gmail compose access before Orca can create drafts or send mail.";
 
   async function closeOrDiscard() {
@@ -952,11 +1023,79 @@ export function ComposeWorkspace({
     }
   }
 
-  async function sendCurrentDraft() {
+  function focusRecipient(kind: RecipientKind) {
+    if (kind !== "to") setShowCarbonCopy(true);
+    const input = recipientInputRefs.current[kind];
+    if (input) input.focus();
+    else window.requestAnimationFrame(() => recipientInputRefs.current[kind]?.focus());
+  }
+
+  function resolvePendingRecipients(): Partial<ComposeDraftFields> | null {
+    const parsed = new Map<RecipientKind, ReturnType<typeof parseRecipientInput>>();
+    const nextErrors = emptyRecipientState();
+    let firstInvalid: RecipientKind | null = null;
+    for (const kind of recipientKinds) {
+      const query = recipientQueries[kind];
+      if (!query.trim()) continue;
+      const result = parseRecipientInput(query);
+      parsed.set(kind, result);
+      if (result.invalid.length > 0 || result.contacts.length === 0) {
+        nextErrors[kind] = recipientValidationMessage(result.invalid.length ? result.invalid : [query.trim()]);
+        firstInvalid ??= kind;
+      }
+    }
+    if (firstInvalid) {
+      setRecipientErrors(nextErrors);
+      setDeliveryValidationError("Every visible recipient stays in your draft. Check the highlighted address before sending.");
+      focusRecipient(firstInvalid);
+      return null;
+    }
+
+    const deliveryFields: Partial<ComposeDraftFields> = {};
+    for (const kind of recipientKinds) {
+      const result = parsed.get(kind);
+      if (result) deliveryFields[kind] = mergeRecipients(draft[kind], result.contacts);
+    }
+    const deliveryTo = deliveryFields.to ?? draft.to;
+    if (deliveryTo.length === 0) {
+      nextErrors.to = "Add at least one valid recipient before sending.";
+      setRecipientErrors(nextErrors);
+      setDeliveryValidationError("Your draft is still here. Add a recipient before sending.");
+      focusRecipient("to");
+      return null;
+    }
+
+    setRecipientErrors(nextErrors);
+    if (parsed.size > 0) {
+      updateDraft(deliveryFields);
+      setRecipientQueries(emptyRecipientState());
+    }
+    return deliveryFields;
+  }
+
+  async function attemptDelivery() {
+    const deliveryFields = resolvePendingRecipients();
+    if (!deliveryFields) return;
+    if (!hasDeliverableMessage) {
+      setDeliveryValidationError(variant === "reply"
+        ? "Write a reply or add an attachment before sending. Your reply is still here."
+        : "Write a message or add an attachment before sending. Your draft is still here.");
+      messageBodyRef.current?.focus();
+      return;
+    }
+    setDeliveryValidationError(null);
+    if (!canSend) {
+      onRequestSendAccess?.();
+      return;
+    }
+    await sendCurrentDraft(deliveryFields);
+  }
+
+  async function sendCurrentDraft(deliveryFields: Partial<ComposeDraftFields>) {
     setDeliveryStatus("sending");
     setDeliveryError(null);
     try {
-      const result = await sendDraft();
+      const result = await sendDraft(deliveryFields);
       if (result.status !== "sent") throw new Error(result.error?.message ?? "Gmail did not confirm delivery. Check Drafts before retrying.");
       setDeliveryStatus("sent");
       try {
@@ -974,6 +1113,7 @@ export function ComposeWorkspace({
     const { accepted, rejected } = attachFiles(fileList);
     if (accepted.length || rejected.length) {
       setAttachmentError(rejected.length ? rejected.map((item) => `${item.filename}: ${item.reason}`).join(" ") : null);
+      if (accepted.length) setDeliveryValidationError(null);
     }
   }
 
@@ -1012,11 +1152,11 @@ export function ComposeWorkspace({
   const editor = (
     <>
       {variant !== "reply" || editReplyDetails ? <div className="compose-addressing">
-        <RecipientField autoFocus={autoFocusTo && variant === "panel"} contacts={contacts} kind="to" label="To" onChange={(to) => updateDraft({ to })} recipients={draft.to} />
+        <RecipientField autoFocus={autoFocusTo && variant === "panel"} contacts={contacts} error={recipientErrors.to} inputRef={(input) => { recipientInputRefs.current.to = input; }} kind="to" label="To" onChange={(to) => updateDraft({ to })} onErrorChange={(error) => setRecipientErrors((current) => ({ ...current, to: error }))} onQueryChange={(query) => { setRecipientQueries((current) => ({ ...current, to: query })); setDeliveryValidationError(null); }} query={recipientQueries.to} recipients={draft.to} />
         {showCarbonCopy ? (
           <>
-            <RecipientField contacts={contacts} kind="cc" label="Cc" onChange={(cc) => updateDraft({ cc })} recipients={draft.cc} />
-            <RecipientField contacts={contacts} kind="bcc" label="Bcc" onChange={(bcc) => updateDraft({ bcc })} recipients={draft.bcc} />
+            <RecipientField contacts={contacts} error={recipientErrors.cc} inputRef={(input) => { recipientInputRefs.current.cc = input; }} kind="cc" label="Cc" onChange={(cc) => updateDraft({ cc })} onErrorChange={(error) => setRecipientErrors((current) => ({ ...current, cc: error }))} onQueryChange={(query) => { setRecipientQueries((current) => ({ ...current, cc: query })); setDeliveryValidationError(null); }} query={recipientQueries.cc} recipients={draft.cc} />
+            <RecipientField contacts={contacts} error={recipientErrors.bcc} inputRef={(input) => { recipientInputRefs.current.bcc = input; }} kind="bcc" label="Bcc" onChange={(bcc) => updateDraft({ bcc })} onErrorChange={(error) => setRecipientErrors((current) => ({ ...current, bcc: error }))} onQueryChange={(query) => { setRecipientQueries((current) => ({ ...current, bcc: query })); setDeliveryValidationError(null); }} query={recipientQueries.bcc} recipients={draft.bcc} />
           </>
         ) : null}
         <button aria-expanded={showCarbonCopy} className="compose-carbon-toggle" onClick={() => setShowCarbonCopy((shown) => !shown)} type="button">
@@ -1034,8 +1174,11 @@ export function ComposeWorkspace({
         autoFocus={variant === "zen" || variant === "reply"}
         body={draft.body}
         canAttach={draft.attachments.length < MAX_COMPOSE_ATTACHMENTS}
+        describedBy={deliveryReasonId}
+        focusRef={messageBodyRef}
+        invalid={!hasDeliverableMessage && Boolean(deliveryValidationError)}
         onAttachClick={() => fileInputRef.current?.click()}
-        onChange={(body) => updateDraft({ body })}
+        onChange={(body) => { updateDraft({ body }); if (body.trim()) setDeliveryValidationError(null); }}
         onRemoveAttachment={onRemoveAttachment}
         placeholder={variant === "zen" ? "Say what you mean." : variant === "reply" ? actionLabel === "Forward" ? "Add a note above the forwarded message…" : "Write a reply…" : "Start with the human part…"}
       />
@@ -1059,7 +1202,7 @@ export function ComposeWorkspace({
 
   if (variant === "zen") {
     return (
-      <section aria-label="Zen writing mode" aria-modal="true" className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} onKeyDown={(event) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); onExitZen?.("escape"); } }} role="dialog" {...dropHandlers}>
+      <TopLayer ariaLabel="Zen writing mode" as="section" backdrop={false} className={`zen-canvas${closing ? " zen-canvas-closing" : ""}`} dismissible={!closing} initialFocusSelector={'[contenteditable="true"]'} onClose={() => onExitZen?.("escape")} surfaceProps={dropHandlers}>
         <header className="zen-header compose-zen-header">
           <button className="zen-back" onClick={() => onExitZen?.("button")} type="button"><span aria-hidden="true">←</span><span>Save &amp; close</span></button>
           <DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} />
@@ -1068,11 +1211,11 @@ export function ComposeWorkspace({
           <div className={`zen-column ${workspaceClass} compose-workspace-zen`}>
             {editor}
             {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
-            <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
+            <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
             {draggingFiles ? <ComposeDropOverlay /> : null}
           </div>
         </div>
-      </section>
+      </TopLayer>
     );
   }
 
@@ -1081,7 +1224,7 @@ export function ComposeWorkspace({
       <section aria-label="Reply to conversation" className={`${workspaceClass} compose-workspace-reply`} {...dropHandlers}>
         {editor}
         {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
-        <ComposeDeliveryBar actionLabel={actionLabel} canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
+        <ComposeDeliveryBar actionLabel={actionLabel} canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
         {draggingFiles ? <ComposeDropOverlay /> : null}
       </section>
     );
@@ -1095,7 +1238,7 @@ export function ComposeWorkspace({
       </div>
       {editor}
       {conflict ? <DraftConflictNotice conflict={conflict} onResolve={resolveConflict} /> : null}
-      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryError} deliveryReason={deliveryReason} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={sendCurrentDraft} />
+      <ComposeDeliveryBar canSend={canSend} controller={controller} deliveryError={deliveryValidationError ?? deliveryError} deliveryReady={deliveryReady} deliveryReason={deliveryReason} deliveryReasonId={deliveryReasonId} deliveryStatus={deliveryStatus} onDiscard={closeOrDiscard} onRequestSendAccess={onRequestSendAccess} onSend={attemptDelivery} />
       {draggingFiles ? <ComposeDropOverlay /> : null}
     </section>
   );
@@ -1106,6 +1249,9 @@ function RenderedBlockEditor({
   autoFocus,
   body,
   canAttach,
+  describedBy,
+  focusRef,
+  invalid,
   onAttachClick,
   onChange,
   onRemoveAttachment,
@@ -1115,6 +1261,9 @@ function RenderedBlockEditor({
   autoFocus: boolean;
   body: string;
   canAttach: boolean;
+  describedBy?: string;
+  focusRef: RefObject<HTMLDivElement | null>;
+  invalid: boolean;
   onAttachClick: () => void;
   onChange: (body: string) => void;
   onRemoveAttachment: (attachmentId: string) => void;
@@ -1247,6 +1396,8 @@ function RenderedBlockEditor({
         aria-activedescendant={slash && commands.length ? `${commandListId}-${commands[activeCommand]?.id}` : undefined}
         aria-autocomplete={slash && commands.length ? "list" : undefined}
         aria-controls={slash ? commandListId : undefined}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         aria-label="Message body"
         aria-multiline="true"
         className="compose-writing-area compose-block-editor"
@@ -1258,7 +1409,7 @@ function RenderedBlockEditor({
           event.preventDefault();
           document.execCommand("insertText", false, normalizePastedText(event.clipboardData.getData("text")));
         }}
-        ref={editorRef}
+        ref={(editor) => { editorRef.current = editor; focusRef.current = editor; }}
         role="textbox"
         spellCheck
         suppressContentEditableWarning
@@ -1305,8 +1456,7 @@ function ComposeDropOverlay() {
   );
 }
 
-function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliveryError, deliveryReason, deliveryStatus = "idle", onDiscard, onRequestSendAccess, onSend }: { actionLabel?: string; canSend: boolean; controller: ComposeDraftController; deliveryError?: string | null; deliveryReason: string; deliveryStatus?: ComposeDeliveryStatus; onDiscard: () => void; onRequestSendAccess?: () => void; onSend?: () => Promise<void> }) {
-  const reasonId = useId();
+function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliveryError, deliveryReady, deliveryReason, deliveryReasonId, deliveryStatus = "idle", onDiscard, onRequestSendAccess, onSend }: { actionLabel?: string; canSend: boolean; controller: ComposeDraftController; deliveryError?: string | null; deliveryReady: boolean; deliveryReason: string; deliveryReasonId: string; deliveryStatus?: ComposeDeliveryStatus; onDiscard: () => void; onRequestSendAccess?: () => void; onSend?: () => Promise<void> }) {
   const {
     draft,
     hasContent,
@@ -1314,20 +1464,26 @@ function ComposeDeliveryBar({ actionLabel = "Send", canSend, controller, deliver
     saveMessage = saveStatus === "saved" ? (draft.attachments.length ? "Text saved" : "Saved on this device") : saveStatus === "saving" ? "Saving…" : "Couldn’t save — keep this tab open",
     retrySave = () => {},
   } = controller;
+  const deliveryProgress = draft.body.trim()
+    ? `${draft.body.trim().split(/\s+/).length} words`
+    : draft.attachments.length
+      ? `Attachment-only ${actionLabel === "Send" ? "message" : actionLabel.toLowerCase()}`
+      : "A blank page";
   return (
     <footer className="compose-delivery-bar">
-      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{draft.body.trim() ? `${draft.body.trim().split(/\s+/).length} words` : "A blank page"}</span></div>
+      <div><DraftStatus hasSessionAttachments={draft.attachments.length > 0} message={saveMessage} onRetry={retrySave} status={saveStatus} /><span className={draft.body.trim() ? "compose-delivery-word-count" : "compose-delivery-empty"}>{deliveryProgress}</span></div>
       <div className="compose-delivery-actions">
         {hasContent ? <button className="compose-discard" onClick={onDiscard} type="button">Discard</button> : null}
         <button
-          aria-describedby={reasonId}
+          aria-describedby={deliveryReasonId}
+          aria-disabled={!deliveryReady || undefined}
           className="compose-send"
-          disabled={draft.to.length === 0 || deliveryStatus === "sending" || deliveryStatus === "sent" || (!canSend && !onRequestSendAccess)}
-          onClick={() => { if (canSend) void onSend?.(); else onRequestSendAccess?.(); }}
+          disabled={deliveryStatus === "sending" || deliveryStatus === "sent" || (!canSend && !onRequestSendAccess)}
+          onClick={() => void onSend?.()}
           type="button"
         >{deliveryStatus === "sending" ? "Sending…" : canSend ? actionLabel === "Send" ? "Send" : `Send ${actionLabel.toLowerCase()}` : "Enable sending"}</button>
       </div>
-      <p className={deliveryError ? "compose-delivery-error" : undefined} id={reasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? "Sent. The conversation is refreshing." : deliveryReason)}</p>
+      <p aria-live="polite" className={deliveryError ? "compose-delivery-error" : undefined} id={deliveryReasonId} role={deliveryError ? "alert" : undefined}>{deliveryError ?? (deliveryStatus === "sent" ? "Sent. The conversation is refreshing." : deliveryReason)}</p>
     </footer>
   );
 }
@@ -1456,20 +1612,24 @@ function inlineNodeToMarkdown(node: Node): string {
   }).join("");
 }
 
-function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients }: {
+function RecipientField({ autoFocus, contacts, error, inputRef, kind, label, onChange, onErrorChange, onQueryChange, query, recipients }: {
   autoFocus?: boolean;
   contacts: MailContact[];
+  error: string;
+  inputRef: (input: HTMLInputElement | null) => void;
   kind: RecipientKind;
   label: string;
   onChange: (recipients: MailContact[]) => void;
+  onErrorChange: (error: string) => void;
+  onQueryChange: (query: string) => void;
+  query: string;
   recipients: MailContact[];
 }) {
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const [suggestionsOpen, setSuggestionsOpen] = useState(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const localInputRef = useRef<HTMLInputElement>(null);
   const labelId = useId();
+  const errorId = useId();
   const suggestionListId = useId();
   const recipientEmails = useMemo(() => new Set(recipients.map((recipient) => recipient.email.toLowerCase())), [recipients]);
   const suggestions = query.trim().length === 0 ? [] : contacts.filter((contact) => {
@@ -1477,7 +1637,7 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
     return !recipientEmails.has(contact.email.toLowerCase()) && `${contact.name ?? ""} ${contact.email}`.toLowerCase().includes(needle);
   }).slice(0, 5);
 
-  useEffect(() => { if (autoFocus) inputRef.current?.focus(); }, [autoFocus]);
+  useEffect(() => { if (autoFocus) localInputRef.current?.focus(); }, [autoFocus]);
   useEffect(() => { setActiveSuggestion((current) => suggestions.length ? Math.min(current, suggestions.length - 1) : 0); }, [suggestions.length]);
   useEffect(() => {
     if (!suggestions.length || !suggestionsOpen) return;
@@ -1494,29 +1654,32 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
       }
     }
     onChange(merged);
-    setQuery("");
+    onQueryChange("");
     setActiveSuggestion(0);
     setSuggestionsOpen(false);
-    setError(null);
+    onErrorChange("");
   }
 
   function commitQuery() {
     if (!query.trim()) return;
-    const parsed = parseRecipientText(query);
-    if (parsed.length === 0) {
-      setError("Enter a complete email address, like maya@example.com.");
+    const parsed = parseRecipientInput(query);
+    if (parsed.invalid.length > 0 || parsed.contacts.length === 0) {
+      onErrorChange(recipientValidationMessage(parsed.invalid.length ? parsed.invalid : [query.trim()]));
       return;
     }
-    addContacts(parsed);
+    addContacts(parsed.contacts);
   }
 
   function onPaste(event: ClipboardEvent<HTMLInputElement>) {
     const pasted = event.clipboardData.getData("text");
     if (!/[\n,;]/.test(pasted)) return;
-    const parsed = parseRecipientText(pasted);
+    event.preventDefault();
+    const nextQuery = `${query}${pasted}`;
+    const parsed = parseRecipientInput(nextQuery);
+    onQueryChange(nextQuery);
     window.setTimeout(() => {
-      if (parsed.length === 0) setError("No valid email addresses were found in that paste.");
-      else addContacts(parsed);
+      if (parsed.invalid.length > 0 || parsed.contacts.length === 0) onErrorChange(recipientValidationMessage(parsed.invalid.length ? parsed.invalid : [nextQuery.trim()]));
+      else addContacts(parsed.contacts);
     }, 0);
   }
 
@@ -1535,12 +1698,13 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
           aria-autocomplete="list"
           aria-activedescendant={suggestionsOpen && suggestions.length ? `${suggestionListId}-${activeSuggestion}` : undefined}
           aria-controls={suggestionsOpen && suggestions.length ? suggestionListId : undefined}
+          aria-describedby={error ? errorId : undefined}
           aria-expanded={suggestionsOpen && suggestions.length > 0}
           aria-invalid={Boolean(error)}
           autoComplete="off"
           name={`${kind}-recipient`}
           onBlur={() => { if (query.trim() && suggestions.length === 0) commitQuery(); }}
-          onChange={(event) => { setQuery(event.target.value); setActiveSuggestion(0); setSuggestionsOpen(true); setError(null); }}
+          onInput={(event) => { onQueryChange(event.currentTarget.value); setActiveSuggestion(0); setSuggestionsOpen(true); onErrorChange(""); }}
           onKeyDown={(event) => {
             if (suggestionsOpen && suggestions.length && event.key === "ArrowDown") { event.preventDefault(); setActiveSuggestion((current) => (current + 1) % suggestions.length); return; }
             if (suggestionsOpen && suggestions.length && event.key === "ArrowUp") { event.preventDefault(); setActiveSuggestion((current) => (current - 1 + suggestions.length) % suggestions.length); return; }
@@ -1550,7 +1714,7 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
           }}
           onPaste={onPaste}
           placeholder={recipients.length ? "Add another…" : "maya@example.com…"}
-          ref={inputRef}
+          ref={(input) => { localInputRef.current = input; inputRef(input); }}
           role="combobox"
           spellCheck={false}
           type="email"
@@ -1562,7 +1726,7 @@ function RecipientField({ autoFocus, contacts, kind, label, onChange, recipients
           </div>
         ) : null}
       </div>
-      {error ? <p className="compose-recipient-error" role="alert">{error}</p> : null}
+      {error ? <p className="compose-recipient-error" id={errorId} role="alert">{error}</p> : null}
     </div>
   );
 }

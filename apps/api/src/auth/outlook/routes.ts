@@ -21,9 +21,24 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
   const auth = options.authMiddleware ?? requireAuth({ dbFactory });
   const app = new Hono<{ Variables: AuthVariables }>();
 
+  app.get("/status", (c) => {
+    const available = validateOutlookOAuthConfig(config).length === 0;
+    return c.json({
+      provider: "outlook" as const,
+      available,
+      reason: available ? null : "configuration_required" as const,
+    });
+  });
+
   const start = (initialLogin: boolean): Handler<{ Variables: AuthVariables }> => async (c) => {
     const missing = validateOutlookOAuthConfig(config);
-    if (missing.length) return c.json({ error: "outlook_oauth_not_configured", message: `Missing Outlook OAuth configuration: ${missing.join(", ")}` }, 503);
+    if (missing.length) {
+      console.error("Outlook authorization is unavailable because its server configuration is incomplete", {
+        operation: "connect",
+        configurationIssues: missing,
+      });
+      return c.json({ error: { code: "provider_unavailable", message: "Outlook sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.", retryable: true } }, 503);
+    }
     const result = service.getAuthorizationUrl(c.req.query("returnTo"), initialLogin);
     return c.json({ provider: "outlook", authUrl: result.url, state: result.state, redirectUri: config.redirectUri, scopes: result.scopes });
   };
@@ -31,7 +46,13 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
   app.get("/connect", auth, start(false));
   app.get("/login", async (c) => {
     const missing = validateOutlookOAuthConfig(config);
-    if (missing.length) return c.json({ error: "outlook_oauth_not_configured", message: `Missing Outlook OAuth configuration: ${missing.join(", ")}` }, 503);
+    if (missing.length) {
+      console.error("Outlook authorization is unavailable because its server configuration is incomplete", {
+        operation: "login",
+        configurationIssues: missing,
+      });
+      return c.json({ error: { code: "provider_unavailable", message: "Outlook sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.", retryable: true } }, 503);
+    }
     const { db, sqlite } = dbFactory();
     try {
       const userId = `user_${crypto.randomUUID()}`;
@@ -44,7 +65,13 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
   });
   app.get("/callback", auth, async (c) => {
     const current = c.get("auth");
-    const result = await service.handleCallback(new URLSearchParams(c.req.query()), current.userId);
+    let result;
+    try {
+      result = await service.handleCallback(new URLSearchParams(c.req.query()), current.userId);
+    } catch (error) {
+      console.error("Outlook authorization callback failed", { error });
+      return c.json({ ok: false, error: "authorization_failed", message: "Outlook sign-in could not be completed. Nothing in your account was changed. Try again from Orca." }, 502);
+    }
     if (result.ok && result.initialLogin) {
       const { db, sqlite } = dbFactory();
       try {
@@ -104,8 +131,13 @@ export function createOutlookAuthApp(options: Options = {}): Hono<{ Variables: A
         }
       } finally { sqlite.close(); }
     }
-    if (result.redirectUrl) return c.redirect(result.redirectUrl, 302);
-    return result.ok ? c.json({ ok: true, provider: "outlook", account: result.account }) : c.json({ ok: false, error: result.code, message: result.message }, 400);
+    if (result.redirectUrl) {
+      if (!result.ok) console.error("Outlook authorization was not completed", { code: result.code, diagnostic: result.message });
+      return c.redirect(result.redirectUrl, 302);
+    }
+    if (result.ok) return c.json({ ok: true, provider: "outlook", account: result.account });
+    console.error("Outlook authorization was not completed", { code: result.code, diagnostic: result.message });
+    return c.json({ ok: false, error: result.code, message: "Outlook sign-in could not be completed. Nothing in your account was changed. Try again from Orca." }, 400);
   });
   return app;
 }

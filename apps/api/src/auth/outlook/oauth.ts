@@ -49,7 +49,7 @@ export function createOutlookOAuthService(options: { config: OutlookOAuthConfig;
       const state = verify(params.get("state"), options.config.stateSecret);
       const redirect = state?.returnTo ?? options.config.errorRedirectUrl;
       if (!state) return failure("invalid_state", "Could not verify OAuth state.", redirect);
-      if (params.get("error")) return failure("provider_error", `Microsoft returned an OAuth error: ${params.get("error")}.`, redirect);
+      if (params.get("error")) return failure("provider_error", "Microsoft did not grant Outlook permission.", redirect);
       const code = params.get("code");
       if (!code) return failure("missing_code", "Missing OAuth authorization code.", redirect);
       const tokenResponse = await fetchImpl(
@@ -155,14 +155,15 @@ function safeReturnTo(value: string | null | undefined, origin: string) {
   }
 }
 
-function statusUrl(value: string | null, status: string) {
+function statusUrl(value: string | null, status: string, reason?: string) {
   if (!value) return null;
   const url = new URL(value);
   url.searchParams.set("provider", "outlook");
   url.searchParams.set("status", status);
+  if (reason) url.searchParams.set("reason", reason);
   return url.toString();
 }
 
 function failure(code: string, message: string, redirect: string | null) {
-  return { ok: false as const, code, message, redirectUrl: statusUrl(redirect, "error") };
+  return { ok: false as const, code, message, redirectUrl: statusUrl(redirect, "error", code) };
 }

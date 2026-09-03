@@ -26,6 +26,27 @@ const config: OutlookOAuthConfig = {
 };
 
 describe("Outlook auth routes", () => {
+  test("publishes safe configured and unavailable sign-in states", async () => {
+    const ready = await createOutlookAuthApp({ config }).request("/status");
+    expect(await ready.json()).toEqual({ provider: "outlook", available: true, reason: null });
+
+    const unavailable = createOutlookAuthApp({ config: { ...config, clientId: "", clientSecret: "", stateSecret: "" } });
+    const statusResponse = await unavailable.request("/status");
+    const statusText = await statusResponse.text();
+    expect(JSON.parse(statusText)).toEqual({ provider: "outlook", available: false, reason: "configuration_required" });
+    expect(statusText).not.toMatch(/OUTLOOK_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
+
+    const loginResponse = await unavailable.request("/login");
+    const loginText = await loginResponse.text();
+    expect(loginResponse.status).toBe(503);
+    expect(JSON.parse(loginText)).toEqual({ error: {
+      code: "provider_unavailable",
+      message: "Outlook sign-in is unavailable in this Orca environment. Nothing in your account was changed. Try again later.",
+      retryable: true,
+    } });
+    expect(loginText).not.toMatch(/OUTLOOK_|CLIENT_|SECRET|TOKEN_ENCRYPTION/i);
+  });
+
   test("merges a returning user onto the existing account and rotates the session", async () => {
     const previousSessionSecret = process.env.SESSION_SECRET;
     const previousTokenEncryptionKey = process.env.TOKEN_ENCRYPTION_KEY;

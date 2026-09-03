@@ -872,8 +872,8 @@ describe("Orca API", () => {
         { id: "user_2", email: "other@example.com", displayName: "Other" },
       ]).run();
       db.insert(oauthAccounts).values([
-        { id: "acct_primary", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-primary", createdAt: new Date("2026-07-01T00:00:00.000Z") },
-        { id: "acct_secondary", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-secondary", createdAt: new Date("2026-07-02T00:00:00.000Z") },
+        { id: "acct_primary", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-primary", syncHistoryId: "primary-42", lastSyncedAt: new Date("2026-07-08T16:00:00.000Z"), createdAt: new Date("2026-07-01T00:00:00.000Z") },
+        { id: "acct_secondary", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-secondary", syncHistoryId: "secondary-19", lastSyncedAt: new Date("2026-07-08T15:59:00.000Z"), createdAt: new Date("2026-07-02T00:00:00.000Z") },
         { id: "acct_private", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-private", createdAt: new Date("2026-07-03T00:00:00.000Z") },
       ]).run();
       db.insert(threads).values([
@@ -908,9 +908,18 @@ describe("Orca API", () => {
         { id: "rule_secondary_shared", accountId: "acct_secondary", scope: "address", value: "shared@example.com", behavior: "quiet", source: "user_choice", createdAt: now, updatedAt: now },
         { id: "rule_secondary_urgent", accountId: "acct_secondary", scope: "address", value: "urgent@secondary.example", behavior: "notify", source: "user_choice", createdAt: now, updatedAt: now },
       ]).run();
+      db.insert(collections).values({ id: "collection_primary", accountId: "acct_primary", name: "Primary project", color: "#70867d", position: 0 }).run();
+      db.insert(collectionThreads).values([
+        { id: "membership_primary_focus", collectionId: "collection_primary", threadId: "thread_primary_focus" },
+        { id: "membership_primary_normal", collectionId: "collection_primary", threadId: "thread_primary_normal" },
+      ]).run();
 
       const session = await createSession(db, "user_1");
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const mailboxMetrics: Array<{ returnedMessages: number; pageRowsProjected: number; labelAssociationRowsLoaded: number; durationMs: number }> = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        mailboxReadObserver: (metric) => mailboxMetrics.push(metric),
+      });
       const headers = { cookie: `orca_session=${session.token}` };
       const firstResponse = await testApp.request("/v1/inbox?view=all&limit=2", { headers });
       assert.equal(firstResponse.status, 200);
@@ -924,6 +933,14 @@ describe("Orca API", () => {
         { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
       ]);
       assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
+      assert.match(firstPage.freshness.revision, /^mailbox-v2:[0-9a-f]{64}$/);
+      assert.equal(firstPage.freshness.lastSyncedAt, "2026-07-08T15:59:00.000Z");
+      assert.equal(firstResponse.headers.get("x-orca-mailbox-revision"), firstPage.freshness.revision);
+      assert.match(firstResponse.headers.get("server-timing") ?? "", /^orca-mailbox;dur=[0-9.]+$/);
+      assert.equal(mailboxMetrics[0]?.returnedMessages, 2);
+      assert.equal(mailboxMetrics[0]?.pageRowsProjected, 3);
+      assert.equal(mailboxMetrics[0]?.labelAssociationRowsLoaded, 2);
+      assert.equal(typeof mailboxMetrics[0]?.durationMs, "number");
       assert.equal(typeof firstPage.nextCursor, "string");
 
       const secondResponse = await testApp.request(`/v1/inbox?view=all&limit=2&cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers });
@@ -942,6 +959,28 @@ describe("Orca API", () => {
       assert.deepEqual(normal.messages.map((message: { id: string }) => message.id), ["primary_normal"]);
       const quiet = await (await testApp.request("/v1/inbox?view=quiet", { headers })).json();
       assert.deepEqual(quiet.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+
+      const storedSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary", { headers })).json();
+      assert.deepEqual(storedSearch.messages.map((message: { id: string }) => message.id), ["secondary_notify", "secondary_quiet"]);
+      const defaultInboxSearchResponse = await testApp.request("/v1/inbox?classification=all&query=primary", { headers });
+      assert.equal(defaultInboxSearchResponse.status, 200);
+      const defaultInboxSearch = await defaultInboxSearchResponse.json();
+      assert.deepEqual(defaultInboxSearch.messages.map((message: { id: string }) => message.id), ["primary_focus", "primary_normal"]);
+      const accountSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=shared&accountId=acct_secondary", { headers })).json();
+      assert.deepEqual(accountSearch.messages.map((message: { id: string }) => message.id), ["secondary_quiet"]);
+      assert.deepEqual(accountSearch.accounts.map((item: { id: string }) => item.id), ["acct_secondary"]);
+      const collectionSearch = await (await testApp.request("/v1/inbox?view=all&classification=all&query=primary&collectionId=collection_primary", { headers })).json();
+      assert.deepEqual(collectionSearch.messages.map((message: { id: string }) => message.id), ["primary_focus", "primary_normal"]);
+      assert.equal((await testApp.request("/v1/inbox?view=all&classification=all&accountId=acct_private", { headers })).status, 404);
+      assert.equal((await testApp.request("/v1/inbox?view=all&classification=all&collectionId=missing", { headers })).status, 404);
+
+      const collectionPage = await (await testApp.request("/v1/inbox?view=all&classification=all&collectionId=collection_primary&limit=1", { headers })).json();
+      assert.equal(typeof collectionPage.nextCursor, "string");
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&limit=1&cursor=${encodeURIComponent(collectionPage.nextCursor)}`, { headers })).status, 400);
+
+      const scopedPage = await (await testApp.request("/v1/inbox?view=all&classification=all&query=secondary&limit=1", { headers })).json();
+      assert.equal(typeof scopedPage.nextCursor, "string");
+      assert.equal((await testApp.request(`/v1/inbox?view=all&classification=all&query=primary&limit=1&cursor=${encodeURIComponent(scopedPage.nextCursor)}`, { headers })).status, 400);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
@@ -1460,6 +1499,10 @@ describe("Orca API", () => {
         assert.ok(tables.some((table) => table.name === "gmail_label_migrations"));
         assert.ok(tables.some((table) => table.name === "gmail_label_collection_imports"));
         assert.ok(tables.some((table) => table.name === "message_drafts"));
+        assert.ok(tables.some((table) => table.name === "mailbox_revisions"));
+        assert.equal(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_page_idx'").get(), null);
+        assert.deepEqual(sqlite.query("select name from sqlite_master where type = 'index' and name = 'emails_mailbox_account_page_idx'").get(), { name: "emails_mailbox_account_page_idx" });
+        assert.deepEqual(sqlite.query("select account_id, revision from mailbox_revisions where account_id = 'upgrade-account'").get(), { account_id: "upgrade-account", revision: 1 });
         const emailColumns = sqlite.query("pragma table_info('emails')").all() as Array<{ name: string }>;
         assert.deepEqual(emailColumns.filter((column) => ["to_recipients", "cc_recipients", "bcc_recipients"].includes(column.name)).map((column) => column.name), ["to_recipients", "cc_recipients", "bcc_recipients"]);
         assert.deepEqual(emailColumns.filter((column) => ["internet_message_id", "references"].includes(column.name)).map((column) => column.name), ["internet_message_id", "references"]);
@@ -1659,7 +1702,23 @@ describe("Orca API", () => {
         accessTokenEncrypted: "access", refreshTokenEncrypted: "refresh", lastSyncedAt: new Date("2026-07-08T12:00:00.000Z"),
       }).run();
       const session = await createSession(db, "user_1");
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      let runHistoryReads = 0;
+      const dbFactory = () => {
+        const client = createDatabaseClient(dbPath);
+        const prepare = client.sqlite.prepare.bind(client.sqlite);
+        Object.defineProperty(client.sqlite, "prepare", {
+          configurable: true,
+          value(query: string) {
+            if (query.includes("gmail_sync_runs")) {
+              runHistoryReads += 1;
+              throw new Error("sync status must not read run history");
+            }
+            return prepare(query);
+          },
+        });
+        return client;
+      };
+      const testApp = createApp({ dbFactory });
 
       const response = await testApp.request("/api/sync/status", { headers: { cookie: `orca_session=${session.token}` } });
 
@@ -1671,6 +1730,7 @@ describe("Orca API", () => {
           state: "idle", lastSyncedAt: "2026-07-08T12:00:00.000Z", error: null,
         }],
       });
+      assert.equal(runHistoryReads, 0);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });
@@ -1780,6 +1840,131 @@ describe("Orca API", () => {
       assert.equal((await afterReset.json()).behavior, "quiet");
       const defaultRule = await testApp.request("/v1/attention/resolve?address=elsewhere%40other.example", { headers });
       assert.deepEqual(await defaultRule.json(), { behavior: "normal", rule: null });
+    } finally {
+      sqlite.close();
+      rmSync(tempDir, { recursive: true, force: true });
+      delete process.env.SESSION_SECRET;
+      delete process.env.TOKEN_ENCRYPTION_KEY;
+    }
+  });
+
+  test("validates, authorizes, and canonically reconciles account-scoped batch sender attention changes", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-attention-batch-test-"));
+    const dbPath = join(tempDir, "attention-batch.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+
+    try {
+      db.insert(users).values([
+        { id: "user_1", email: "luke@example.com" },
+        { id: "user_2", email: "other@example.com" },
+      ]).run();
+      db.insert(oauthAccounts).values([
+        { id: "acct_gmail", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-user-1" },
+        { id: "acct_outlook", userId: "user_1", provider: "outlook", providerEmail: "luke@outlook.example", providerId: "outlook-user-1" },
+        { id: "acct_other", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-user-2" },
+      ]).run();
+      const session = await createSession(db, "user_1");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targets: [{ accountId: "acct_gmail", address: "maya@example.com" }], behavior: "quiet" }),
+      })).status, 401);
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({ targets: [{ accountId: "acct_gmail", address: "not-an-email" }], behavior: "quiet" }),
+      })).status, 400);
+
+      const response = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "Maya@Example.com" },
+            { accountId: "acct_outlook", address: "Maya@Example.com" },
+          ],
+          behavior: "quiet",
+        }),
+      });
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.deepEqual(result.outcomes.map((outcome: { target: { accountId: string; address: string }; status: string; resolution: { behavior: string } }) => [outcome.target.accountId, outcome.target.address, outcome.status, outcome.resolution.behavior]), [
+        ["acct_gmail", "maya@example.com", "succeeded", "quiet"],
+        ["acct_outlook", "maya@example.com", "succeeded", "quiet"],
+      ]);
+      assert.deepEqual(
+        db.select().from(senderAttentionRules).all()
+          .map((rule) => [rule.accountId, rule.value, rule.behavior]).sort(),
+        [["acct_gmail", "maya@example.com", "quiet"], ["acct_outlook", "maya@example.com", "quiet"]],
+      );
+
+      const retry = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "maya@example.com" },
+            { accountId: "acct_outlook", address: "maya@example.com" },
+          ],
+          behavior: "quiet",
+        }),
+      });
+      assert.equal(retry.status, 200);
+      assert.deepEqual((await retry.json()).outcomes.map((outcome: { status: string }) => outcome.status), ["succeeded", "succeeded"]);
+      assert.equal(db.select().from(senderAttentionRules).all().length, 2);
+
+      assert.equal((await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "Maya@example.com" },
+            { accountId: "acct_gmail", address: "maya@example.com" },
+          ],
+          behavior: "hidden",
+        }),
+      })).status, 400);
+
+      sqlite.exec(`
+        CREATE TRIGGER fail_atomic_attention_write
+        BEFORE INSERT ON sender_attention_rules
+        WHEN NEW.value = 'fail-write@example.com'
+        BEGIN
+          SELECT RAISE(ABORT, 'forced batch write failure');
+        END;
+      `);
+      const writeFailure = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "would-partially-write@example.com" },
+            { accountId: "acct_outlook", address: "fail-write@example.com" },
+          ],
+          behavior: "hidden",
+        }),
+      });
+      assert.equal(writeFailure.status, 200);
+      assert.deepEqual((await writeFailure.json()).outcomes.map((outcome: { status: string; retryable: boolean }) => [outcome.status, outcome.retryable]), [
+        ["failed", true],
+        ["failed", true],
+      ]);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "would-partially-write@example.com")).get(), undefined);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "fail-write@example.com")).get(), undefined);
+
+      const unauthorized = await testApp.request("/v1/attention/rules/batch", {
+        method: "POST", headers,
+        body: JSON.stringify({
+          targets: [
+            { accountId: "acct_gmail", address: "jordan@example.com" },
+            { accountId: "acct_other", address: "private@example.com" },
+          ],
+          behavior: "hidden",
+        }),
+      });
+      assert.equal(unauthorized.status, 404);
+      assert.equal(db.select().from(senderAttentionRules).where(eq(senderAttentionRules.value, "jordan@example.com")).get(), undefined);
     } finally {
       sqlite.close();
       rmSync(tempDir, { recursive: true, force: true });

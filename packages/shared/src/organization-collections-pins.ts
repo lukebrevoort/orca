@@ -38,6 +38,9 @@ export const organizationSavedQueryDefinitionSchema = z.object({
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
     text: z.string().trim().min(1).max(200).optional(),
     sender: z.string().trim().min(1).max(320).optional(),
+    accountId: nonEmptyStringSchema.optional(),
+    collectionId: nonEmptyStringSchema.optional(),
+    dataSource: z.literal("stored_mail").optional(),
   }).strict().superRefine((filters, context) => {
     if ((filters.mailbox === undefined) !== (filters.attention === undefined)) {
       context.addIssue({ code: "custom", message: "Mailbox and attention must be provided together" });
@@ -62,6 +65,9 @@ export function organizationSavedQueryDefinitionFromLegacyPinFilter(input: unkno
       ...(legacy.classification ? { classification: legacy.classification } : {}),
       ...(legacy.person ? { sender: legacy.person } : {}),
       ...(legacy.query ? { text: legacy.query } : {}),
+      ...(legacy.accountId ? { accountId: legacy.accountId } : {}),
+      ...(legacy.collectionId ? { collectionId: legacy.collectionId } : {}),
+      ...(legacy.dataSource ? { dataSource: legacy.dataSource } : {}),
     },
   });
 }
@@ -83,6 +89,9 @@ export function legacyPinFilterFromOrganizationSavedQueryDefinition(
     ...(parsed.filters.classification ? { classification: parsed.filters.classification } : {}),
     person: parsed.filters.sender ?? null,
     query: parsed.filters.text ?? "",
+    ...(parsed.filters.accountId ? { accountId: parsed.filters.accountId } : {}),
+    ...(parsed.filters.collectionId ? { collectionId: parsed.filters.collectionId } : {}),
+    ...(parsed.filters.dataSource ? { dataSource: parsed.filters.dataSource } : {}),
   });
 }
 

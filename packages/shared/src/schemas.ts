@@ -16,6 +16,25 @@ const labelListSchema = z.array(nonEmptyStringSchema);
 export const mailProviderSchema = z.enum(["gmail", "outlook"]);
 export type MailProvider = z.infer<typeof mailProviderSchema>;
 
+export const authProviderUnavailableReasonSchema = z.enum([
+  "configuration_required",
+]);
+export type AuthProviderUnavailableReason = z.infer<typeof authProviderUnavailableReasonSchema>;
+
+export const authProviderAvailabilitySchema = z.discriminatedUnion("available", [
+  z.object({
+    provider: mailProviderSchema,
+    available: z.literal(true),
+    reason: z.null(),
+  }).strict(),
+  z.object({
+    provider: mailProviderSchema,
+    available: z.literal(false),
+    reason: authProviderUnavailableReasonSchema,
+  }).strict(),
+]);
+export type AuthProviderAvailability = z.infer<typeof authProviderAvailabilitySchema>;
+
 export const mailContactSchema = z
   .object({
     name: z.string().nullable(),
@@ -328,7 +347,7 @@ export const mailAttachmentSchema = z.object({
 }).strict();
 export type MailAttachment = z.infer<typeof mailAttachmentSchema>;
 
-const outboundRecipientSchema = z.object({
+export const outboundRecipientSchema = z.object({
   name: z.string().trim().min(1).max(200).nullable(),
   email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
 }).strict();
@@ -548,6 +567,10 @@ export const inboxQuerySchema = z
     // message belongs in a person's workflow, while classification answers how
     // Orca currently estimates the message was produced.
     classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
+    query: z.string().trim().min(1).max(200).optional(),
+    sender: z.string().trim().min(1).max(320).optional(),
+    accountId: nonEmptyStringSchema.optional(),
+    collectionId: nonEmptyStringSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -612,6 +635,54 @@ export const resolvedSenderAttentionSchema = z.object({
   rule: senderAttentionRuleSchema.nullable(),
 }).strict();
 export type ResolvedSenderAttention = z.infer<typeof resolvedSenderAttentionSchema>;
+
+const senderAddressSchema = z.string().trim().email().max(320).transform((value) => value.toLowerCase());
+
+export const senderAttentionTargetSchema = z.object({
+  accountId: nonEmptyStringSchema,
+  address: senderAddressSchema,
+}).strict();
+export type SenderAttentionTarget = z.infer<typeof senderAttentionTargetSchema>;
+
+export const batchSenderAttentionChangeSchema = z.object({
+  targets: z.array(senderAttentionTargetSchema).min(1).max(100),
+  behavior: attentionBehaviorSchema,
+}).strict().superRefine((input, context) => {
+  const seen = new Set<string>();
+  input.targets.forEach((target, index) => {
+    const key = JSON.stringify([target.accountId, target.address]);
+    if (seen.has(key)) {
+      context.addIssue({ code: "custom", path: ["targets", index], message: "Sender targets must be unique" });
+    }
+    seen.add(key);
+  });
+});
+export type BatchSenderAttentionChange = z.infer<typeof batchSenderAttentionChangeSchema>;
+
+export const senderAttentionBatchOutcomeSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("succeeded"),
+    target: senderAttentionTargetSchema,
+    resolution: resolvedSenderAttentionSchema,
+  }).strict(),
+  z.object({
+    status: z.literal("failed"),
+    target: senderAttentionTargetSchema,
+    retryable: z.boolean(),
+    error: z.object({
+      code: z.enum(["conflict", "temporarily_unavailable", "validation_error"]),
+      message: z.string().trim().min(1).max(240),
+    }).strict(),
+    resolution: resolvedSenderAttentionSchema.nullable(),
+  }).strict(),
+]);
+export type SenderAttentionBatchOutcome = z.infer<typeof senderAttentionBatchOutcomeSchema>;
+
+export const senderAttentionBatchResultSchema = z.object({
+  behavior: attentionBehaviorSchema,
+  outcomes: z.array(senderAttentionBatchOutcomeSchema).min(1).max(100),
+}).strict();
+export type SenderAttentionBatchResult = z.infer<typeof senderAttentionBatchResultSchema>;
 
 export const attentionViewSettingSchema = z.object({
   behavior: attentionBehaviorSchema,
@@ -690,6 +761,9 @@ export const pinFilterSchema = z.object({
   classification: z.enum(["human", "tideline", "uncertain", "all"]).optional(),
   person: z.string().trim().max(500).nullable(),
   query: z.string().trim().max(200),
+  accountId: nonEmptyStringSchema.nullable().optional(),
+  collectionId: nonEmptyStringSchema.nullable().optional(),
+  dataSource: z.literal("stored_mail").optional(),
 }).strict();
 export type PinFilter = z.infer<typeof pinFilterSchema>;
 
@@ -810,6 +884,10 @@ const inboxResponseBaseSchema = z.object({
   accounts: z.array(mailAccountSchema),
   messages: z.array(inboxMessageSchema),
   nextCursor: z.string().nullable(),
+  freshness: z.object({
+    revision: z.string().regex(/^mailbox-v[12]:[0-9a-f]{64}$/),
+    lastSyncedAt: isoDateTimeStringSchema.nullable(),
+  }).strict().optional(),
 }).strict();
 
 /**

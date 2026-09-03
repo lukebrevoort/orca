@@ -2,12 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { OrganizationLaneWorkspace, ThreadLaneControls } from "./organization-lanes";
+import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const styles = await Bun.file(new URL("./organization-lanes.css", import.meta.url)).text();
 
 describe("BRE-311 Organization Lane UI", () => {
   test("renders stable Lane management and every policy default without provider deletion", () => {
-    const html = renderToStaticMarkup(<OrganizationLaneWorkspace demoMode />);
+    const html = renderToStaticMarkup(<OrganizationAuthorityProvider previewMode><OrganizationLaneWorkspace demoMode /></OrganizationAuthorityProvider>);
     expect(html).toContain("Lanes set the current");
     expect(html).toContain("Workspace Fallback");
     expect(html).toContain("Default Lane Policy");
