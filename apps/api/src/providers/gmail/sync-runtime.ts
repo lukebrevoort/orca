@@ -52,6 +52,7 @@ export function createDefaultGmailSyncCoordinator(options: {
           });
           let watch = null;
           let watchError: string | null = null;
+          let watchFailure: Error | null = null;
           if (config.topicName && config.verificationToken) {
             try {
               watch = await ensureGmailWatch(db, {
@@ -64,7 +65,8 @@ export function createDefaultGmailSyncCoordinator(options: {
                 metrics: runtimeMetrics,
               });
             } catch (error) {
-              watchError = error instanceof Error ? error.message : "Gmail watch setup failed";
+              watchFailure = asError(error, "Gmail watch setup failed");
+              watchError = watchFailure.message;
             }
           }
           const backfill = await backfillGmailAccount(db, {
@@ -76,14 +78,14 @@ export function createDefaultGmailSyncCoordinator(options: {
             leaseGuard: claim.lease,
             metrics: runtimeMetrics,
           });
-          return withMetrics({
+          return withWatchOutcome({
             kind: "reset",
             watch,
             watchError,
             backfill,
             messageCount: backfill.emailCount,
             pageCount: backfill.pages,
-          }, runtimeMetrics);
+          }, runtimeMetrics, watchFailure, claim);
         }
 
         const fallback = claim.sources.includes("fallback");
@@ -113,6 +115,7 @@ export function createDefaultGmailSyncCoordinator(options: {
         const account = getGmailAccount(db, claim.accountId);
         let watch = null;
         let watchError: string | null = null;
+        let watchFailure: Error | null = null;
         let forceBackfill = false;
         if (fallback && config.topicName && config.verificationToken) {
           const wasLegacyAccount = !account.syncHistoryId;
@@ -131,7 +134,8 @@ export function createDefaultGmailSyncCoordinator(options: {
                 metrics: runtimeMetrics,
               });
             } catch (error) {
-              watchError = error instanceof Error ? error.message : "Gmail watch setup failed";
+              watchFailure = asError(error, "Gmail watch setup failed");
+              watchError = watchFailure.message;
             }
           }
           forceBackfill = wasLegacyAccount && Boolean(getGmailAccount(db, claim.accountId).syncHistoryId);
@@ -148,25 +152,25 @@ export function createDefaultGmailSyncCoordinator(options: {
             leaseGuard: claim.lease,
             metrics: runtimeMetrics,
           });
-          return withMetrics({
+          return withWatchOutcome({
             kind: "fallback",
             watch,
             watchError,
             backfill,
             messageCount: backfill.emailCount,
             pageCount: backfill.pages,
-          }, runtimeMetrics);
+          }, runtimeMetrics, watchFailure, claim);
         }
 
         if (history) {
-          return withMetrics({
+          return withWatchOutcome({
             kind: "fallback",
             history,
             watch,
             watchError,
             messageCount: history.emailCount,
             pageCount: history.usedBackfill ? 1 : 0,
-          }, runtimeMetrics);
+          }, runtimeMetrics, watchFailure, claim);
         }
 
         const pages = await syncIncrementalPages({
@@ -180,14 +184,14 @@ export function createDefaultGmailSyncCoordinator(options: {
           claim,
           metrics: runtimeMetrics,
         });
-        return withMetrics({
+        return withWatchOutcome({
           kind: fallback ? "fallback" : "manual",
           watch,
           watchError,
           ...pages,
           messageCount: pages.emailCount,
           pageCount: pages.pages,
-        }, runtimeMetrics);
+        }, runtimeMetrics, watchFailure, claim);
       } finally {
         restorePrepare();
         sqlite.close();
@@ -254,6 +258,32 @@ function withMetrics<T extends Record<string, unknown>>(result: T, metrics: Runt
     dbPrepareCount: metrics.dbPrepareCount,
     dbWriteMs: metrics.dbWriteMs,
   };
+}
+
+function withWatchOutcome<T extends Record<string, unknown>>(
+  result: T,
+  metrics: RuntimeMetrics,
+  watchFailure: Error | null,
+  claim: GmailSyncClaim,
+) {
+  const measured = withMetrics(result, metrics);
+  if (!watchFailure) return measured;
+  return {
+    ...measured,
+    partialFailure: {
+      error: watchFailure,
+      retry: {
+        sources: ["fallback"] as const,
+        historyId: null,
+        fullResync: false,
+        freshnessAt: claim.freshnessAt,
+      },
+    },
+  };
+}
+
+function asError(error: unknown, fallbackMessage: string): Error {
+  return error instanceof Error ? error : new Error(fallbackMessage);
 }
 
 function countPrepares(sqlite: Database, onPrepare: () => void): () => void {

@@ -187,7 +187,7 @@ describe("Gmail periodic sync scheduler", () => {
     }
   });
 
-  test("keeps polling when watch setup fails", async () => {
+  test("keeps polling but reports and persists failure when watch setup fails", async () => {
     setAuthEnv();
     const { db, sqlite, path } = createMigratedClient();
     const calls: string[] = [];
@@ -204,8 +204,24 @@ describe("Gmail periodic sync scheduler", () => {
       await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
 
       const result = await runGmailPeriodicSync({ dbFactory: () => createDatabaseClient(path), gmailClient, config, now: () => new Date("2026-08-11T00:00:00.000Z"), logger: { warn() {}, error() {} } });
-      assert.deepEqual(result.accounts[0], { accountId: "acct_1", ok: true, pages: 1, error: null });
+      assert.deepEqual(result.accounts[0], { accountId: "acct_1", ok: false, pages: 1, error: "topic is unavailable" });
       assert.deepEqual(calls, ["watch", "list"]);
+      const job = sqlite.query("select state, pending_sources, last_error from gmail_sync_jobs where account_id = 'acct_1'").get() as {
+        state: string;
+        pending_sources: number;
+        last_error: string | null;
+      };
+      assert.deepEqual(job, { state: "queued", pending_sources: 4, last_error: "topic is unavailable" });
+      const run = sqlite.query("select status, page_count, db_prepare_count, error from gmail_sync_runs where account_id = 'acct_1'").get() as {
+        status: string;
+        page_count: number;
+        db_prepare_count: number;
+        error: string | null;
+      };
+      assert.equal(run.status, "failed");
+      assert.equal(run.page_count, 1);
+      assert.ok(run.db_prepare_count > 0);
+      assert.equal(run.error, "topic is unavailable");
     } finally {
       sqlite.close();
     }

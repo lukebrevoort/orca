@@ -116,6 +116,77 @@ test("combined queued push and fallback runs history then renews the Gmail watch
   }
 });
 
+test("persists a combined history success and watch failure as a retryable partial failure", async () => {
+  const { sqlite, dbFactory } = await setup();
+  const calls: string[] = [];
+  const client = gmailClient(calls);
+  let watchAttempts = 0;
+  client.watch = async () => {
+    calls.push("watch");
+    watchAttempts += 1;
+    if (watchAttempts === 1) throw new Error("watch topic is unavailable");
+    return { historyId: "11", expiration: "1800000000000" };
+  };
+  let clock = new Date("2026-08-11T00:00:00.000Z");
+  const coordinator = createDefaultGmailSyncCoordinator({
+    dbFactory,
+    gmailClient: client,
+    config,
+    now: () => clock,
+  });
+  try {
+    coordinator.enqueue({ accountId: "account", source: "push", historyId: "11" });
+    coordinator.enqueue({ accountId: "account", source: "fallback" });
+
+    const result = await coordinator.drainAccount("account");
+
+    assert.equal(result.completed, false);
+    assert.equal((result.error as Error | null)?.message, "watch topic is unavailable");
+    assert.deepEqual(calls, ["history", "watch"]);
+    assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'account'").get() as { sync_history_id: string }).sync_history_id, "11");
+    const job = sqlite.query("select state, pending_sources, pending_history_id, last_error from gmail_sync_jobs where account_id = 'account'").get() as {
+      state: string;
+      pending_sources: number;
+      pending_history_id: string | null;
+      last_error: string | null;
+    };
+    assert.deepEqual(job, {
+      state: "queued",
+      pending_sources: 4,
+      pending_history_id: null,
+      last_error: "watch topic is unavailable",
+    });
+    const run = sqlite.query("select status, sources, history_id, db_prepare_count, error from gmail_sync_runs where account_id = 'account'").get() as {
+      status: string;
+      sources: number;
+      history_id: string | null;
+      db_prepare_count: number;
+      error: string | null;
+    };
+    assert.equal(run.status, "failed");
+    assert.equal(run.sources, 5);
+    assert.equal(run.history_id, "11");
+    assert.ok(run.db_prepare_count > 0);
+    assert.equal(run.error, "watch topic is unavailable");
+
+    clock = new Date(clock.getTime() + 1_000);
+    const retried = await coordinator.drainAccount("account");
+    assert.equal(retried.completed, true);
+    assert.deepEqual(calls, ["history", "watch", "watch", "inbox"]);
+    const runs = sqlite.query("select status, sources, history_id from gmail_sync_runs where account_id = 'account' order by finished_at, lease_version").all() as Array<{
+      status: string;
+      sources: number;
+      history_id: string | null;
+    }>;
+    assert.deepEqual(runs, [
+      { status: "failed", sources: 5, history_id: "11" },
+      { status: "succeeded", sources: 4, history_id: null },
+    ]);
+  } finally {
+    sqlite.close();
+  }
+});
+
 test("stale takeover runs recovered push history and fallback watch through the default runtime", async () => {
   const { sqlite, dbFactory } = await setup();
   const calls: string[] = [];

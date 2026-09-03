@@ -300,6 +300,71 @@ describe("Gmail push routes", () => {
     }
   });
 
+  test("watch endpoint reports a coalesced renewal failure after preserving history progress", async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    const calls: string[] = [];
+    const gmailClient: GmailClient = {
+      async getMessage() { throw new Error("not used"); },
+      async listInboxMessagePage() { calls.push("list"); return { messageIds: [], nextCursor: null }; },
+      async listLabels() { return []; },
+      async listHistory() {
+        calls.push("history");
+        return { messageIds: [], deletedMessageIds: [], nextCursor: null, historyId: "11" };
+      },
+      async watch() {
+        calls.push("watch");
+        throw new Error("watch topic is unavailable");
+      },
+    };
+
+    try {
+      db.insert(users).values({ id: "user_1", email: "luke@example.com" }).run();
+      db.insert(oauthAccounts).values({
+        id: "acct_1",
+        userId: "user_1",
+        provider: "gmail",
+        providerEmail: "luke@example.com",
+        providerId: "gmail-user-1",
+        syncHistoryId: "10",
+        lastSyncedAt: new Date("2026-08-10T00:00:00.000Z"),
+        watchExpirationAt: new Date("2026-08-10T00:00:00.000Z"),
+        watchTopic: pushConfig.topicName,
+      }).run();
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "access-token", refreshToken: "refresh-token", tokenExpiry: null });
+      const session = await createSession(db, "user_1");
+      const dbFactory = () => createDatabaseClient(join(tempDirs[0]!, "route.sqlite"));
+      const coordinator = createDefaultGmailSyncCoordinator({
+        dbFactory,
+        gmailClient,
+        config: pushConfig,
+        now: () => new Date("2026-08-11T00:00:00.000Z"),
+      });
+      const testApp = createApp({
+        dbFactory,
+        gmailClient,
+        gmailPushConfig: pushConfig,
+        gmailSyncCoordinator: coordinator,
+        now: () => new Date("2026-08-11T00:00:00.000Z"),
+      });
+      coordinator.enqueue({ accountId: "acct_1", source: "push", historyId: "11" });
+
+      const response = await testApp.request("/v1/gmail/watch", {
+        method: "POST",
+        headers: { cookie: `orca_session=${session.token}` },
+      });
+
+      assert.equal(response.status, 502);
+      assert.deepEqual(await response.json(), {
+        error: { code: "provider_error", message: "Gmail push sync is temporarily unavailable" },
+      });
+      assert.deepEqual(calls, ["history", "watch"]);
+      assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string }).sync_history_id, "11");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("full resync clears legacy checkpoints, rebuilds mail, and re-establishes the watch", async () => {
     setAuthEnv();
     const { db, sqlite } = createMigratedClient();

@@ -34,7 +34,26 @@ export type GmailSyncExecutionMetrics = {
   dbWriteMs?: number;
 };
 
-export type GmailSyncExecutionResult = GmailSyncExecutionMetrics & Record<string, unknown>;
+export type GmailSyncRetryIntent = {
+  sources: readonly [GmailSyncSource, ...GmailSyncSource[]];
+  historyId: string | null;
+  fullResync: boolean;
+  freshnessAt: Date;
+};
+
+/**
+ * A worker committed useful progress but could not complete every requested
+ * source. The coordinator records the attempt as failed with its metrics and
+ * durably queues only the unfinished intent described by `retry`.
+ */
+export type GmailSyncPartialFailure = {
+  error: Error;
+  retry: GmailSyncRetryIntent;
+};
+
+export type GmailSyncExecutionResult = GmailSyncExecutionMetrics & Record<string, unknown> & {
+  partialFailure?: GmailSyncPartialFailure;
+};
 
 export type GmailSyncLeaseGuard = {
   readonly accountId: string;
@@ -212,6 +231,17 @@ export function createGmailSyncCoordinator(options: {
       try {
         result = await options.worker(claim);
         claim.lease.assert();
+        if (result.partialFailure) {
+          fail(claim, result.partialFailure.error, result, result.partialFailure.retry);
+          return {
+            accountId,
+            acquired: true,
+            completed: false,
+            runs: runs + 1,
+            result,
+            error: result.partialFailure.error,
+          };
+        }
         const hasPending = finish(claim, "succeeded", result, null);
         if (!hasPending) return { accountId, acquired: true, completed: true, runs: runs + 1, result, error: null };
       } catch (error) {
@@ -428,7 +458,12 @@ export function createGmailSyncCoordinator(options: {
     }
   }
 
-  function fail(claim: GmailSyncClaim, error: unknown): void {
+  function fail(
+    claim: GmailSyncClaim,
+    error: unknown,
+    metrics: GmailSyncExecutionMetrics = {},
+    retry?: GmailSyncRetryIntent,
+  ): void {
     const failedAt = now();
     const { db, sqlite } = dbFactory();
     try {
@@ -445,6 +480,11 @@ export function createGmailSyncCoordinator(options: {
           historyId: job.activeHistoryId,
           fullResync: job.activeFullResync,
           status: "failed",
+          messageCount: Math.max(0, Math.trunc(metrics.messageCount ?? 0)),
+          pageCount: Math.max(0, Math.trunc(metrics.pageCount ?? 0)),
+          providerFetchMs: milliseconds(metrics.providerFetchMs),
+          dbPrepareCount: Math.max(0, Math.trunc(metrics.dbPrepareCount ?? 0)),
+          dbWriteMs: milliseconds(metrics.dbWriteMs),
           freshnessMs: Math.max(0, failedAt.getTime() - claim.freshnessAt.getTime()),
           startedAt: claim.startedAt,
           finishedAt: failedAt,
@@ -452,10 +492,14 @@ export function createGmailSyncCoordinator(options: {
         }).run();
         tx.update(gmailSyncJobs).set({
           state: "queued",
-          pendingSources: job.pendingSources | job.activeSources,
-          pendingHistoryId: laterHistoryId(job.pendingHistoryId, job.activeHistoryId),
-          pendingFullResync: job.pendingFullResync || job.activeFullResync,
-          pendingFreshnessAt: earliestDate(job.pendingFreshnessAt, job.activeFreshnessAt, failedAt),
+          pendingSources: job.pendingSources | (retry ? encodeSources(retry.sources) : job.activeSources),
+          pendingHistoryId: laterHistoryId(job.pendingHistoryId, retry ? retry.historyId : job.activeHistoryId),
+          pendingFullResync: job.pendingFullResync || (retry ? retry.fullResync : job.activeFullResync),
+          pendingFreshnessAt: earliestDate(
+            job.pendingFreshnessAt,
+            retry ? retry.freshnessAt : job.activeFreshnessAt,
+            failedAt,
+          ),
           activeSources: 0,
           activeHistoryId: null,
           activeFullResync: false,
@@ -551,6 +595,10 @@ function decodeSources(mask: number): GmailSyncSource[] {
   return (Object.entries(sourceBits) as Array<[GmailSyncSource, number]>)
     .filter(([, bit]) => (mask & bit) !== 0)
     .map(([source]) => source);
+}
+
+function encodeSources(sources: readonly GmailSyncSource[]): number {
+  return sources.reduce((mask, source) => mask | sourceBits[source], 0);
 }
 
 function laterHistoryId(left: string | null, right: string | null): string | null {
