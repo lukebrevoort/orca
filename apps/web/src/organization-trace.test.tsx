@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import type { OrcaEvaluationTrace } from "@orca/shared";
+import { organizationLaneConfigurationFixture, type OrcaEvaluationTrace } from "@orca/shared";
 
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
@@ -19,6 +19,15 @@ const trace = evaluateOrcaRules(reviewerEvaluationInput()).trace;
 const safetyTrace = evaluateOrcaRules(reviewerEvaluationInput({ safetyLock: true })).trace;
 
 let servedTrace: OrcaEvaluationTrace;
+
+function describeResponse() {
+  return {
+    workspaceId: "workspace-demo", accountIds: ["account-demo"],
+    workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
+    capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
+    workspaceRevision: 7, facetDefinitions: [], workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 7 },
+  };
+}
 
 function TestOrganizationStudio(props: ComponentProps<typeof OrganizationStudio>) {
   return <TopLayerProvider><OrganizationStudio {...props} /></TopLayerProvider>;
@@ -43,6 +52,7 @@ beforeEach(() => {
   setGlobal("MutationObserver", browser.MutationObserver);
   setGlobal("getComputedStyle", browser.getComputedStyle.bind(browser));
   setGlobal("fetch", async (input: RequestInfo | URL) => {
+    if (String(input) === "/v1/organization/describe") return Response.json(describeResponse());
     if (String(input) === "/v1/organization/evaluations/latest") return Response.json({ trace: servedTrace });
     return Response.json({ error: { code: "not_available" } }, { status: 503 });
   });
@@ -136,6 +146,7 @@ describe("Organization Glass Box Trace", () => {
 
   test("announces the exact empty Trace state without retaining compile-only wording", async () => {
     setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/describe") return Response.json(describeResponse());
       if (String(input) === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
       return Response.json({ error: { code: "not_available" } }, { status: 503 });
     });
@@ -151,10 +162,19 @@ describe("Organization Glass Box Trace", () => {
     expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
       "No complete Trace is available. No Rule evaluation has been recorded yet.",
     );
+    expect(browser.document.body.textContent).not.toContain("Sample messages");
+    expect(browser.document.body.textContent).not.toContain("Use Tide Table");
+    expect(browser.document.querySelector(".organization-heading h1")?.textContent).toBe("Organization");
+    expect(browser.document.body.textContent).toContain("No illustrative metrics are shown in production");
+    const tide = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Tide Table");
+    act(() => tide?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    expect((browser.document.querySelector('textarea[aria-label="Tide Table rule source"]') as unknown as HTMLTextAreaElement).value).toBe("");
+    expect(browser.document.body.textContent).not.toContain('rule "Production failures"');
   });
 
   test("announces the exact Trace error without retaining empty or success wording", async () => {
     setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/describe") return Response.json(describeResponse());
       if (String(input) === "/v1/organization/evaluations/latest") {
         return Response.json({ error: { code: "upstream_unavailable" } }, { status: 503 });
       }
@@ -170,7 +190,7 @@ describe("Organization Glass Box Trace", () => {
       "Trace unavailableOrca kept the interface honest: no causal claim is shown without its Trace.",
     );
     expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
-      "Complete Trace unavailable. Trace request failed (503). No causal claim is shown without evidence.",
+      "Complete Trace unavailable. Organization request failed (503). No causal claim is shown without evidence.",
     );
   });
 
@@ -187,6 +207,7 @@ describe("Organization Glass Box Trace", () => {
     currentTrace.event.threadId = "thread-current";
     let traceReads = 0;
     setGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (String(input) === "/v1/organization/describe") return Response.json(describeResponse());
       if (String(input) === "/v1/organization/evaluations/latest") {
         traceReads += 1;
         return traceReads === 1 ? olderResponse : Response.json({ trace: currentTrace });

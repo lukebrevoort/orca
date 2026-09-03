@@ -77,8 +77,8 @@ export function createTidePreviewRequest(): TideRequest {
   };
 }
 
-export function TideTableEditor({ onCompiled, previewMode = false, request = defaultRequest }: { onCompiled?: (success: TideCompileSuccess) => void; previewMode?: boolean; request?: TideRequest }) {
-  const [source, setSource] = useState(acceptedOrcaV1Example);
+export function TideTableEditor({ canCompile = true, disabledReason = "Current Organization authority does not allow Rule compilation.", onCompiled, previewMode = false, request = defaultRequest }: { canCompile?: boolean; disabledReason?: string; onCompiled?: (success: TideCompileSuccess) => void; previewMode?: boolean; request?: TideRequest }) {
+  const [source, setSource] = useState(previewMode ? acceptedOrcaV1Example : "");
   const [diagnostics, setDiagnostics] = useState<OrcaDiagnostic[]>([]);
   const [state, setState] = useState<"editing" | "compiling" | "queued" | "retry" | "compiled" | "error">("editing");
   const [ruleIdentity, setRuleIdentity] = useState<RuleIdentity | null>(null);
@@ -201,6 +201,16 @@ export function TideTableEditor({ onCompiled, previewMode = false, request = def
   }
 
   async function compile() {
+    if (!canCompile) {
+      setState("error");
+      setMessage(disabledReason);
+      return;
+    }
+    if (!sourceRef.current.trim()) {
+      setState("error");
+      setMessage("Write an Orca 1 Rule before compiling an immutable revision.");
+      return;
+    }
     const generation = generationRef.current;
     if (busyGeneration.current !== null) {
       if (generation !== busyGeneration.current) {
@@ -263,13 +273,14 @@ export function TideTableEditor({ onCompiled, previewMode = false, request = def
         }
       }}
       onKeyDown={onKeyDown}
+      placeholder={'orca 1\nrule "…"\nevent message.received\n…'}
       ref={textarea}
       spellCheck={false}
       value={source}
     />
     <footer>
       <p id="tide-table-help"><kbd>⌘/Ctrl + Enter</kbd> compile · comparisons against missing optional values are false unless <code>exists</code> or <code>missing</code> is explicit.</p>
-      <button disabled={(busyGeneration.current !== null && generationRef.current === busyGeneration.current) || (state === "queued" && queuedGeneration.current === generationRef.current)} onClick={() => void compile()} type="button">{
+      <button disabled={!canCompile || !source.trim() || (busyGeneration.current !== null && generationRef.current === busyGeneration.current) || (state === "queued" && queuedGeneration.current === generationRef.current)} onClick={() => void compile()} title={!canCompile ? disabledReason : !source.trim() ? "Write an Orca 1 Rule first." : undefined} type="button">{
         state === "retry" ? "Retry exact request"
           : busyGeneration.current !== null && generationRef.current !== busyGeneration.current && queuedGeneration.current !== generationRef.current ? "Queue next revision"
             : state === "queued" ? "Next revision queued"

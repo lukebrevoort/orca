@@ -2,12 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { OrganizationViewsWorkspace } from "./organization-views";
+import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const styles = await Bun.file(new URL("./organization-views.css", import.meta.url)).text();
 
 describe("BRE-313 Organization Views UI", () => {
   test("renders an accepted live Views surface with a cross-Lane weekly review", () => {
-    const html = renderToStaticMarkup(<OrganizationViewsWorkspace demoMode />);
+    const html = renderToStaticMarkup(<OrganizationAuthorityProvider previewMode><OrganizationViewsWorkspace demoMode /></OrganizationAuthorityProvider>);
     expect(html).toContain("Live Views");
     expect(html).toContain("Weekly production review");
     expect(html).toContain("Unresolved production failure");

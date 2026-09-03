@@ -606,6 +606,10 @@
 .desktop-create-space-button { width: 100%; min-height: 42px; border-style: dashed; color: var(--desktop-accent); }
 
 .organization-studio { position: relative; min-height: calc(100vh - 68px); padding: 34px 34px 72px; overflow: hidden; background: var(--desktop-paper); color: var(--desktop-ink); font-family: var(--desktop-sans); }
+.organization-recovery { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:0 0 24px; padding:16px 18px; border:1px solid var(--desktop-border-strong); border-left:4px solid var(--desktop-accent); border-radius:14px; background:var(--desktop-surface); color:var(--desktop-ink); box-shadow:0 14px 44px rgba(18,40,34,.06); }
+.organization-recovery > div { min-width:0; }.organization-recovery span { color:var(--desktop-accent); font:800 9px/12px var(--desktop-mono); letter-spacing:1px; text-transform:uppercase; }.organization-recovery h2 { margin:5px 0 4px; font:500 22px/26px var(--desktop-serif); }.organization-recovery p { margin:0; color:var(--desktop-muted); font-size:10px; line-height:16px; }.organization-recovery-safe { margin-top:5px!important; }.organization-recovery-safe strong { color:var(--desktop-ink); }
+.organization-recovery button,.organization-recovery a { flex:0 0 auto; display:inline-grid; place-items:center; min-height:38px; padding:0 13px; border:1px solid var(--desktop-border); border-radius:10px; background:var(--desktop-surface-hover); color:var(--desktop-ink); font-size:10px; font-weight:750; text-decoration:none; }.organization-recovery button:hover,.organization-recovery a:hover { border-color:var(--desktop-accent); color:var(--desktop-ink); }.organization-recovery button:focus-visible,.organization-recovery a:focus-visible { outline:2px solid var(--desktop-focus); outline-offset:2px; }
+.organization-recovery-offline,.organization-recovery-session_expired,.organization-recovery-no_access,.organization-recovery-partial,.organization-recovery-error { border-left-color:var(--desktop-warning); }.organization-recovery-offline span,.organization-recovery-session_expired span,.organization-recovery-no_access span,.organization-recovery-partial span,.organization-recovery-error span { color:var(--desktop-warning); }
 .organization-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .organization-heading h1 { margin: 7px 0 5px; font: 500 40px/42px var(--desktop-serif); letter-spacing: -2px; }
 .organization-heading p { margin: 0; color: var(--desktop-muted); font-size: 11px; }
@@ -723,6 +727,7 @@
 .simulation-card dd { margin: 0; font: 750 10px/10px var(--desktop-mono); }
 .simulation-card button { width: 100%; margin-top: 7px; }
 .simulation-card button:disabled { border-color: var(--desktop-control-disabled-border); background: var(--desktop-control-disabled-background); color: var(--desktop-control-disabled-ink); cursor: not-allowed; }
+.simulation-card-empty { margin:0; padding:12px; border:1px solid var(--desktop-border); border-radius:10px; background:var(--desktop-paper); color:var(--desktop-muted); font-size:10px; line-height:16px; }
 
 .trace-drawer { position: fixed; inset: 68px 0 0 auto; z-index: 40; width: 350px; padding: 22px; overflow-y: auto; border-left: 1px solid var(--desktop-border); background: var(--desktop-surface); box-shadow: -20px 0 70px rgba(0,0,0,.18); animation: desktop-drawer-in 200ms ease; }
 .trace-drawer-complete { width: min(590px, calc(100vw - 220px)); }
@@ -821,6 +826,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .desktop-workspace > .content-pane { min-height: calc(100vh - 128px); padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
   .organization-studio { min-height: calc(100vh - 128px); padding: 22px 14px calc(96px + env(safe-area-inset-bottom)); }
   .organization-heading { align-items: start; flex-direction: column; }
+  .organization-recovery { align-items:flex-start; flex-direction:column; }
   .organization-grid { grid-template-columns: 1fr; }
   .trace-drawer { inset: 58px 0 calc(70px + env(safe-area-inset-bottom)); width: 100%; }
   .desktop-space-row-actions { flex-wrap: wrap; }

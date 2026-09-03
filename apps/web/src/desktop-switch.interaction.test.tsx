@@ -7,6 +7,7 @@ import { organizationLaneConfigurationFixture, organizationViewsFixture } from "
 import { evaluateOrcaRules } from "../../api/src/organization/rules/evaluator.ts";
 import { reviewerEvaluationInput } from "../../api/src/organization/rules/evaluator-fixtures.ts";
 import { AppSidebar, OrganizationStudio, type DesktopDestination } from "./desktop-switch";
+import { acceptedOrcaV1Example } from "./tide-table";
 import { TopLayerProvider } from "./top-layer";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLTextAreaElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -53,6 +54,14 @@ async function click(target: HTMLButtonElement) {
 
 async function flush() {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+}
+
+async function enterProductionTideSource(container: HTMLElement) {
+  const textarea = container.querySelector('textarea[aria-label="Tide Table rule source"]') as unknown as HTMLTextAreaElement;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(browserWindow.HTMLTextAreaElement.prototype, "value")?.set?.call(textarea, acceptedOrcaV1Example);
+    textarea.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true, data: acceptedOrcaV1Example, inputType: "insertText" }) as unknown as Event);
+  });
 }
 
 function compileSuccess(source: string, revision: number, workspaceSchemaRevision: number) {
@@ -249,6 +258,7 @@ describe("OrganizationStudio integration", () => {
     await flush(); await flush();
 
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.querySelector('[data-lifecycle-state="proposed"]')).not.toBeNull();
@@ -428,6 +438,7 @@ describe("OrganizationStudio integration", () => {
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       const method = init?.method ?? "GET";
+      if (path === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
       if (path === "/v1/organization/describe" && method === "GET") return Response.json(describeResponse(workspaceRevision));
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace-demo", workspaceRevision, items: viewItems });
       if (path.includes("/results") && method === "GET") {
@@ -467,6 +478,7 @@ describe("OrganizationStudio integration", () => {
     await flush(); await flush();
 
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.textContent).toContain("Workspace r8");
@@ -487,25 +499,22 @@ describe("OrganizationStudio integration", () => {
     ]);
   });
 
-  test("ignores pre-compile View and Lane reads that resolve after the canonical refresh", async () => {
+  test("ignores a pre-compile View read after the shared authority snapshot refreshes", async () => {
     let resolveStaleViews!: (response: Response) => void;
-    let resolveStaleLanes!: (response: Response) => void;
     const staleViews = new Promise<Response>((resolve) => { resolveStaleViews = resolve; });
-    const staleLanes = new Promise<Response>((resolve) => { resolveStaleLanes = resolve; });
     let viewReads = 0;
-    let describeReads = 0;
     let workspaceRevision = 7;
     const canonicalViews = organizationViewsFixture.map((view, index) => index === 0 ? { ...view, name: "Canonical after compile" } : view);
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       const method = init?.method ?? "GET";
+      if (path === "/v1/organization/evaluations/latest") return Response.json({ trace: null });
       if (path === "/v1/organization/views" && method === "GET") {
         viewReads += 1;
         return viewReads === 1 ? staleViews : Response.json({ workspaceId: "workspace-demo", workspaceRevision, items: canonicalViews });
       }
       if (path === "/v1/organization/describe" && method === "GET") {
-        describeReads += 1;
-        return describeReads === 1 ? staleLanes : Response.json(describeResponse(workspaceRevision));
+        return Response.json(describeResponse(workspaceRevision));
       }
       if (path.includes("/results")) {
         const viewId = /\/views\/([^/]+)\/results/.exec(path)?.[1] ?? canonicalViews[0]!.id;
@@ -525,6 +534,7 @@ describe("OrganizationStudio integration", () => {
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<OrganizationStudio />));
     await click(button(container, "Tide Table"));
+    await enterProductionTideSource(container as unknown as HTMLElement);
     await click(button(container, "Compile immutable revision"));
     await flush(); await flush();
     expect(container.textContent).toContain("Canonical after compile");
@@ -532,7 +542,6 @@ describe("OrganizationStudio integration", () => {
 
     await act(async () => {
       resolveStaleViews(Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: organizationViewsFixture }));
-      resolveStaleLanes(Response.json(describeResponse(7)));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 

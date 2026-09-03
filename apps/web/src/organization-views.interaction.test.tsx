@@ -5,6 +5,7 @@ import { Window } from "happy-dom";
 
 import { organizationViewsFixture } from "@orca/shared";
 import { OrganizationViewsWorkspace } from "./organization-views";
+import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
@@ -41,7 +42,7 @@ async function renderWorkspace(demoMode = true) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  await act(async () => root!.render(<OrganizationViewsWorkspace demoMode={demoMode} />));
+  await act(async () => root!.render(<OrganizationAuthorityProvider previewMode><OrganizationViewsWorkspace demoMode={demoMode} /></OrganizationAuthorityProvider>));
   return container as unknown as HTMLElement;
 }
 
@@ -149,7 +150,7 @@ describe("BRE-313 Organization Views lifecycle interactions", () => {
     expect(reorderRequest).toMatchObject({ expectedWorkspaceRevision: 2, items: [{ id: "view_urgent_humans", expectedRevision: 2 }, { id: "view_orca_context", expectedRevision: 2 }] });
   });
 
-  test("keeps edit, reorder, and remove state unchanged when authority or revision errors fail closed", async () => {
+  test("keeps state unchanged and suppresses every later mutation after authority is denied", async () => {
     let submittedDefinition: unknown;
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
@@ -180,14 +181,9 @@ describe("BRE-313 Organization Views lifecycle interactions", () => {
     expect(orderedNames(container)[1]).toBe("Urgent humans");
     expect(submittedDefinition).toMatchObject({ humanSignal: { minimumScore: 7, classifications: ["likely_human"] } });
 
-    await click(container.querySelector('[aria-label="Move Weekly production review down"]') as unknown as HTMLButtonElement); await flush();
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("order changed");
+    expect((container.querySelector('[aria-label="Move Weekly production review down"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((button(container, "Remove View") as HTMLButtonElement).disabled).toBe(true);
     expect(orderedNames(container)).toEqual(["Weekly production review", "Urgent humans", "Orca launch context"]);
-
-    await click(button(container, "Remove View"));
-    await click(button(container, "Confirm remove")); await flush();
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Only a human");
-    expect(orderedNames(container)).toContain("Weekly production review");
   });
 
   test("refetches and renders the edited View revision without a selection switch", async () => {
