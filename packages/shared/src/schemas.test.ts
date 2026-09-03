@@ -95,6 +95,20 @@ describe("shared API schemas", () => {
     assert.equal("classification" in parsed.counts, true);
   });
 
+  test("accepts a durable mailbox freshness token without rewriting legacy responses", () => {
+    const parsed = inboxResponseSchema.parse({
+      accounts: [accountFixture],
+      messages: inboxFixture,
+      counts: { focus: 0, normal: 1, quiet: 0, hidden: 0, all: 1 },
+      freshness: {
+        revision: `mailbox-v1:${"a".repeat(64)}`,
+        lastSyncedAt: "2026-09-02T12:00:00.000Z",
+      },
+      nextCursor: null,
+    });
+    assert.equal(parsed.freshness?.revision, `mailbox-v1:${"a".repeat(64)}`);
+  });
+
   test("rejects blank inbox cursors", () => {
     const result = inboxQuerySchema.safeParse({ cursor: "" });
 

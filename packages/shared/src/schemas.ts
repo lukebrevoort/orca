@@ -851,6 +851,10 @@ const inboxResponseBaseSchema = z.object({
   accounts: z.array(mailAccountSchema),
   messages: z.array(inboxMessageSchema),
   nextCursor: z.string().nullable(),
+  freshness: z.object({
+    revision: z.string().regex(/^mailbox-v1:[0-9a-f]{64}$/),
+    lastSyncedAt: isoDateTimeStringSchema.nullable(),
+  }).strict().optional(),
 }).strict();
 
 /**

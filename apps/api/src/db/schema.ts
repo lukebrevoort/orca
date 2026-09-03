@@ -815,6 +815,11 @@ export const emails = sqliteTable(
       table.accountId,
       table.humanClassification,
     ),
+    mailboxPageIdx: index("emails_mailbox_page_idx").on(
+      sql`COALESCE(${table.receivedAt},0) DESC`,
+      table.accountId,
+      table.id,
+    ),
     accountThreadIdUniqueIdx: uniqueIndex("emails_account_thread_id_unique_idx").on(
       table.accountId,
       table.threadId,

@@ -15,6 +15,7 @@
     "typecheck": "bun --filter '*' typecheck",
     "test": "bun --filter '*' test",
     "test:smoke": "bun --filter @orca/api test:smoke",
+    "benchmark:mailbox": "bun apps/api/benchmarks/mailbox.ts",
     "lint": "bun --filter '*' lint"
   },
   "devDependencies": {

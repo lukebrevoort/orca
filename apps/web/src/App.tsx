@@ -35,6 +35,7 @@ import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel
 import { AppSidebar, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type DesktopDestination, type WorkflowSpace } from "./desktop-switch";
 import { ThreadLaneControls } from "./organization-lanes";
 import { TopLayer, useTopLayerActive } from "./top-layer";
+import { reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
 
 type Theme = "light" | "dark";
 export type ReaderPreferences = {
@@ -1357,8 +1358,11 @@ export function InboxApp({
   const allMailPageRequestRef = useRef(0);
   const loadedInboxRef = useRef(false);
   const lastGmailRefreshKeyRef = useRef<number | null>(null);
-  const gmailRefreshControllerRef = useRef<AbortController | null>(null);
   const gmailRefreshGenerationRef = useRef(0);
+  // Initial, manual, interval, focus, and visibility refreshes all await the
+  // same promise so "focus-to-fresh" cannot finish before the active sync.
+  const gmailRefreshPromiseRef = useRef<Promise<void> | null>(null);
+  const gmailBackgroundRefreshRef = useRef<(() => Promise<void>) | null>(null);
   const [isGmailRefreshing, setIsGmailRefreshing] = useState(false);
   const classificationViewRef = useRef(classificationView);
   classificationViewRef.current = classificationView;
@@ -1460,7 +1464,6 @@ export function InboxApp({
       if (isInitialLoad) setStatus("loading");
       else if (shouldRefreshGmail) setStatus("syncing");
       setClassificationCursor(null);
-      setAllMailCursor(null);
       setClassificationLoading(true);
       setErrorMessage(null);
       setErrorStatus(null);
@@ -1478,26 +1481,22 @@ export function InboxApp({
         const inboxPath = classificationView === "all"
           ? "/v1/inbox?view=all&classification=all&limit=100"
           : `/v1/inbox?classification=${classificationView}&limit=100`;
-        const allInboxPath = "/v1/inbox?view=all&classification=all&limit=100";
-        const [inbox, allInbox] = await Promise.all([
-          fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal),
-          allInboxPath === inboxPath ? Promise.resolve(null) : fetchJson(allInboxPath, inboxClassificationResponseSchema, abortController.signal),
-        ]);
+        const inbox = await fetchJson(inboxPath, inboxClassificationResponseSchema, abortController.signal);
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         const inboxAccount = inbox.accounts[0] ?? currentAccount;
         setAccount((current) => current && sameMailAccount(current, inboxAccount) ? current : inboxAccount);
         setMessages(inbox.messages);
-        setAllMailMessages(mergeMessages(allInbox?.messages ?? [], inbox.messages));
+        setAllMailMessages((current) => classificationView === "all" ? inbox.messages : mergeMessages(current, inbox.messages));
         setClassificationCounts(toClassificationCounts(inbox.counts.classification));
         setClassificationCursor(inbox.nextCursor);
-        setAllMailCursor(allInbox?.nextCursor ?? inbox.nextCursor);
+        if (classificationView === "all") setAllMailCursor(inbox.nextCursor);
         setClassificationLoading(false);
         setStatus("ready");
         loadedInboxRef.current = true;
 
         // Cached SQLite mail is now visible. Refresh Gmail without putting the
         // network round trip on the inbox's first-render path.
-        if (shouldRefreshGmail) void refreshGmailInBackground();
+        if (shouldRefreshGmail) void refreshGmailInBackground().catch(() => undefined);
       } catch (error) {
         if (abortController.signal.aborted || requestId !== classificationRequestRef.current || classificationViewRef.current !== classificationView) return;
         setClassificationLoading(false);
@@ -1514,75 +1513,89 @@ export function InboxApp({
       }
     }
 
-    async function refreshGmailInBackground() {
-      if (gmailRefreshControllerRef.current) return;
+    function refreshGmailInBackground(): Promise<void> {
+      if (gmailRefreshPromiseRef.current) return gmailRefreshPromiseRef.current;
       const refreshController = new AbortController();
       const refreshGeneration = ++gmailRefreshGenerationRef.current;
-      gmailRefreshControllerRef.current = refreshController;
-      setIsGmailRefreshing(true);
-      try {
-        setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
-        await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
-        const readInboxSnapshot = async (view: ClassificationView) => {
-          const refreshedPath = view === "all"
-            ? "/v1/inbox?view=all&classification=all&limit=100"
-            : `/v1/inbox?classification=${view}&limit=100`;
-          const refreshedAllPath = "/v1/inbox?view=all&classification=all&limit=100";
-          const [refreshedInbox, refreshedAllInbox] = await Promise.all([
-            fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal),
-            refreshedAllPath === refreshedPath ? Promise.resolve(null) : fetchJson(refreshedAllPath, inboxClassificationResponseSchema, refreshController.signal),
-          ]);
-          return { refreshedInbox, refreshedAllInbox };
-        };
-        let refreshedView = classificationViewRef.current;
-        let refreshedSnapshot: Awaited<ReturnType<typeof readInboxSnapshot>>;
-        while (true) {
+      const run = (async () => {
+        setIsGmailRefreshing(true);
+        try {
+          setSyncStatus(await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal));
+          await fetchJson("/v1/sync/gmail", { parse: (value: unknown) => value }, refreshController.signal, { method: "POST" });
+          const readInboxSnapshot = async (view: ClassificationView) => {
+            const refreshedPath = view === "all"
+              ? "/v1/inbox?view=all&classification=all&limit=100"
+              : `/v1/inbox?classification=${view}&limit=100`;
+            return fetchJson(refreshedPath, inboxClassificationResponseSchema, refreshController.signal);
+          };
+          let refreshedView = classificationViewRef.current;
+          let refreshedInbox: Awaited<ReturnType<typeof readInboxSnapshot>>;
+          while (true) {
+            if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+            refreshedView = classificationViewRef.current;
+            refreshedInbox = await readInboxSnapshot(refreshedView);
+            if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+            if (classificationViewRef.current === refreshedView) break;
+          }
+          const nextStatus = await fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal);
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
+          classificationPageRequestRef.current += 1;
+          allMailPageRequestRef.current += 1;
+          setIsLoadingMoreMessages(false);
+          setSyncStatus(nextStatus);
+          setMessages(refreshedInbox.messages);
+          setAllMailMessages((current) => refreshedView === "all" ? refreshedInbox.messages : mergeMessages(current, refreshedInbox.messages));
+          setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
+          setClassificationCursor(refreshedInbox.nextCursor);
+          if (refreshedView === "all") setAllMailCursor(refreshedInbox.nextCursor);
+          setClassificationLoading(false);
+        } catch (error) {
           if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-          refreshedView = classificationViewRef.current;
-          refreshedSnapshot = await readInboxSnapshot(refreshedView);
-          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-          if (classificationViewRef.current === refreshedView) break;
+          if (isSessionUnauthorizedError(error)) {
+            setStatus("signedout");
+            throw error;
+          }
+          setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
+          setErrorStatus(error instanceof ApiRequestError ? error.status : null);
+          setClassificationError(getErrorMessage(error));
+          setClassificationLoading(false);
+          throw error;
+        } finally {
+          if (refreshGeneration === gmailRefreshGenerationRef.current) {
+            gmailRefreshPromiseRef.current = null;
+            setIsGmailRefreshing(false);
+          }
         }
-        const [nextStatus, refreshedInbox, refreshedAllInbox] = await Promise.all([
-          fetchJson("/v1/sync/status", syncStatusSchema, refreshController.signal),
-          Promise.resolve(refreshedSnapshot.refreshedInbox),
-          Promise.resolve(refreshedSnapshot.refreshedAllInbox),
-        ]);
-        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
-        classificationPageRequestRef.current += 1;
-        allMailPageRequestRef.current += 1;
-        setIsLoadingMoreMessages(false);
-        setSyncStatus(nextStatus);
-        setMessages(refreshedInbox.messages);
-        setAllMailMessages(mergeMessages(refreshedAllInbox?.messages ?? [], refreshedInbox.messages));
-        setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
-        setClassificationCursor(refreshedInbox.nextCursor);
-        setAllMailCursor(refreshedAllInbox?.nextCursor ?? refreshedInbox.nextCursor);
-        setClassificationLoading(false);
-      } catch (error) {
-        if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
-        if (isSessionUnauthorizedError(error)) {
-          setStatus("signedout");
-          return;
-        }
-        setErrorMessage(`Could not refresh Gmail just now. Showing your last successful sync. ${getErrorMessage(error)}`);
-        setErrorStatus(error instanceof ApiRequestError ? error.status : null);
-        setClassificationError(getErrorMessage(error));
-        setClassificationLoading(false);
-      } finally {
-        if (refreshGeneration === gmailRefreshGenerationRef.current) {
-          gmailRefreshControllerRef.current = null;
-          setIsGmailRefreshing(false);
-        }
-      }
+      })();
+      gmailRefreshPromiseRef.current = run;
+      return run;
     }
 
+    gmailBackgroundRefreshRef.current = refreshGmailInBackground;
     void loadInbox();
 
     return () => {
       abortController.abort();
+      if (gmailBackgroundRefreshRef.current === refreshGmailInBackground) gmailBackgroundRefreshRef.current = null;
     };
   }, [classificationView, demoMode, refreshKey]);
+
+  useEffect(() => {
+    if (demoMode || status !== "ready") return;
+    const revalidation = startVisibleMailboxRevalidation({
+      visibilitySource: document,
+      focusSource: window,
+      scheduler: {
+        setInterval: (handler, milliseconds) => window.setInterval(handler, milliseconds),
+        clearInterval: (id) => window.clearInterval(id as number),
+      },
+      load: async () => {
+        await gmailBackgroundRefreshRef.current?.();
+      },
+      observe: reportMailboxRevalidationMetric,
+    });
+    return () => revalidation.stop();
+  }, [demoMode, status]);
 
   useEffect(() => {
     if (demoMode || !account || status !== "ready") return;

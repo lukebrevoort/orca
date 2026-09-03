@@ -872,8 +872,8 @@ describe("Orca API", () => {
         { id: "user_2", email: "other@example.com", displayName: "Other" },
       ]).run();
       db.insert(oauthAccounts).values([
-        { id: "acct_primary", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-primary", createdAt: new Date("2026-07-01T00:00:00.000Z") },
-        { id: "acct_secondary", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-secondary", createdAt: new Date("2026-07-02T00:00:00.000Z") },
+        { id: "acct_primary", userId: "user_1", provider: "gmail", providerEmail: "luke@example.com", providerId: "gmail-primary", syncHistoryId: "primary-42", lastSyncedAt: new Date("2026-07-08T16:00:00.000Z"), createdAt: new Date("2026-07-01T00:00:00.000Z") },
+        { id: "acct_secondary", userId: "user_1", provider: "gmail", providerEmail: "luke.work@example.com", providerId: "gmail-secondary", syncHistoryId: "secondary-19", lastSyncedAt: new Date("2026-07-08T15:59:00.000Z"), createdAt: new Date("2026-07-02T00:00:00.000Z") },
         { id: "acct_private", userId: "user_2", provider: "gmail", providerEmail: "other@example.com", providerId: "gmail-private", createdAt: new Date("2026-07-03T00:00:00.000Z") },
       ]).run();
       db.insert(threads).values([
@@ -910,7 +910,11 @@ describe("Orca API", () => {
       ]).run();
 
       const session = await createSession(db, "user_1");
-      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+      const mailboxMetrics: Array<{ returnedMessages: number; projectedRows: number; durationMs: number }> = [];
+      const testApp = createApp({
+        dbFactory: () => createDatabaseClient(dbPath),
+        mailboxReadObserver: (metric) => mailboxMetrics.push(metric),
+      });
       const headers = { cookie: `orca_session=${session.token}` };
       const firstResponse = await testApp.request("/v1/inbox?view=all&limit=2", { headers });
       assert.equal(firstResponse.status, 200);
@@ -924,6 +928,13 @@ describe("Orca API", () => {
         { id: "primary_focus", accountId: "acct_primary", attentionBehavior: "focus" },
       ]);
       assert.deepEqual(firstPage.counts, { focus: 2, normal: 1, quiet: 1, hidden: 0, all: 4 });
+      assert.match(firstPage.freshness.revision, /^mailbox-v1:[0-9a-f]{64}$/);
+      assert.equal(firstPage.freshness.lastSyncedAt, "2026-07-08T15:59:00.000Z");
+      assert.equal(firstResponse.headers.get("x-orca-mailbox-revision"), firstPage.freshness.revision);
+      assert.match(firstResponse.headers.get("server-timing") ?? "", /^orca-mailbox;dur=[0-9.]+$/);
+      assert.equal(mailboxMetrics[0]?.returnedMessages, 2);
+      assert.equal(mailboxMetrics[0]?.projectedRows, 6);
+      assert.equal(typeof mailboxMetrics[0]?.durationMs, "number");
       assert.equal(typeof firstPage.nextCursor, "string");
 
       const secondResponse = await testApp.request(`/v1/inbox?view=all&limit=2&cursor=${encodeURIComponent(firstPage.nextCursor)}`, { headers });

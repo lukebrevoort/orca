@@ -457,7 +457,10 @@ function updateHistoryCursor(db: DatabaseClient, accountId: string, historyId: s
 
   db
     .update(oauthAccounts)
-    .set({ syncHistoryId: nextHistoryId, updatedAt: now })
+    // A successful History drain is a freshness checkpoint even when Gmail
+    // returned no changed messages. Keep status and mailbox revision aligned
+    // with the completed incremental read, not only with backfill pages.
+    .set({ syncHistoryId: nextHistoryId, lastSyncedAt: now, updatedAt: now })
     .where(eq(oauthAccounts.id, accountId))
     .run();
 }

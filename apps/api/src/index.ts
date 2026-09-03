@@ -14,7 +14,6 @@ import {
   type HumanClassificationResult,
   type HumanClassificationAssessment,
   type HumanClassificationReasonCode,
-  type InboxClassificationResponse,
   type InboxMessage,
   type CalendarAvailabilityResponse,
   type CalendarWorkingHours,
@@ -144,6 +143,7 @@ import { registerOrganizationContextRoutes } from "./organization/contexts/route
 import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
 import { OrganizationLaneValidationError, OrganizationSafetyLockError } from "./organization/lanes/module.ts";
+import { createMailboxReader, MailboxCursorError, type MailboxReadAccount, type MailboxReadMetric } from "./mailbox/read.ts";
 import { createOrganizationViews } from "./organization/views/module.ts";
 import { createSqliteOrganizationViewsRepository } from "./organization/views/sqlite-repository.ts";
 import { createRuleRevisionService } from "./organization/rules/service.ts";
@@ -188,6 +188,7 @@ type CreateAppOptions = {
   calendarOAuthConfig?: GoogleCalendarOAuthConfig;
   calendarFetch?: CalendarFetch;
   replyBriefAvailability?: (input: { userId: string; request: ReplyBriefInvocationRequest; thread: ThreadDetail }) => Promise<CalendarAvailabilityResponse | null>;
+  mailboxReadObserver?: (metric: MailboxReadMetric) => void;
 };
 
 type SyncStatusRecord = { state: "syncing" | "error"; error: string | null };
@@ -225,6 +226,14 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     ...(account.profileImageUrl ? { avatarUrl: `/v1/accounts/${encodeURIComponent(account.id)}/avatar` } : {}),
     capabilities: providerFor(account).detectCapabilities(account.scope),
   });
+  const mailboxReadAccounts = (accounts: ConnectedAccount[]): MailboxReadAccount[] => accounts.map((account) => ({
+    id: account.id,
+    provider: account.provider,
+    syncHistoryId: account.syncHistoryId,
+    lastSyncedAt: account.lastSyncedAt,
+    updatedAt: account.updatedAt,
+    serialized: serializeMailAccount(account),
+  }));
   const transportFor = (account: ConnectedAccount) => {
     if (account.provider === "gmail" && options.gmailTransport) return options.gmailTransport;
     const existing = providerTransports.get(account.provider);
@@ -563,16 +572,24 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         const allowed = new Set(allowedAccountIds);
         const accounts = getUnifiedInboxAccounts(db, userId).filter((account) => allowed.has(account.id));
         if (accounts.length === 0) throw new McpReadError("account_denied", "No authorized mail account is connected");
-        return readUnifiedInbox(db, userId, accounts, accounts.map(serializeMailAccount), {
-          cursor: query.cursor,
-          limit: query.limit ?? 25,
-          view: query.attention,
-          classification: query.classification,
-          query: query.query,
-          sender: query.sender,
-          receivedAfter: query.receivedAfter,
-          receivedBefore: query.receivedBefore,
-        });
+        try {
+          return createMailboxReader(sqlite, { observe: options.mailboxReadObserver }).read({
+            accounts: mailboxReadAccounts(accounts),
+            query: {
+              cursor: query.cursor,
+              limit: query.limit ?? 25,
+              view: query.attention,
+              classification: query.classification,
+              query: query.query,
+              sender: query.sender,
+              receivedAfter: query.receivedAfter,
+              receivedBefore: query.receivedBefore,
+            },
+          }).response;
+        } catch (error) {
+          if (error instanceof MailboxCursorError) throw new McpReadError("invalid_cursor", error.message);
+          throw error;
+        }
       } finally {
         sqlite.close();
       }
@@ -2198,18 +2215,18 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
           return c.json({ error: { code: "not_found", message: "No mail account is connected" } }, 404);
         }
         try {
-          const result = readUnifiedInbox(db, c.get("auth").userId, accounts, accounts.map(serializeMailAccount), {
-            cursor,
-            limit,
-            view,
-            classification,
+          const { response: result, metric } = createMailboxReader(sqlite, { observe: options.mailboxReadObserver }).read({
+            accounts: mailboxReadAccounts(accounts),
+            query: { cursor, limit, view, classification },
           });
+          c.header("Server-Timing", `orca-mailbox;dur=${metric.durationMs.toFixed(2)}`);
+          c.header("X-Orca-Mailbox-Revision", result.freshness.revision);
           return jsonWithSchema(c, inboxResponseSchema, {
             ...result,
             counts: useClassificationResponse ? result.counts : result.counts.attention,
           });
         } catch (error) {
-          if (error instanceof McpReadError && error.code === "invalid_cursor") {
+          if (error instanceof MailboxCursorError) {
             return c.json({ error: { code: error.code, message: error.message } }, 400);
           }
           throw error;
@@ -2602,50 +2619,10 @@ type ConnectedAccount = {
   accessTokenEncrypted: string | null;
   refreshTokenEncrypted: string | null;
   syncCursor: string | null;
+  syncHistoryId: string | null;
   lastSyncedAt: Date | null;
+  updatedAt: Date;
   scope: string | null;
-};
-
-type InboxDatabaseMessage = {
-  id: string;
-  accountId: string;
-  providerMessageId: string;
-  threadId: string;
-  fromAddress: string | null;
-  fromName: string | null;
-  subject: string | null;
-  snippet: string | null;
-  receivedAt: Date | null;
-  isRead: boolean;
-  humanSignal: number | null;
-  humanClassification: string | null;
-  humanClassificationReasons: string | null;
-  humanClassifierVersion: string | null;
-  labels: string[];
-};
-
-type ResolvedInboxMessage = Omit<InboxDatabaseMessage, "humanClassification"> & {
-  provider: ConnectedAccount["provider"];
-  attentionBehavior: AttentionBehavior;
-  humanClassification: ReturnType<typeof resolveHumanClassification>;
-};
-
-type InboxCursor = Pick<ResolvedInboxMessage, "accountId" | "id"> & {
-  view: "default" | "focus" | "normal" | "quiet" | "hidden" | "all";
-  classification: "human" | "tideline" | "uncertain" | "all";
-  accountIds: string[];
-  scope?: string;
-};
-
-type UnifiedInboxReadQuery = {
-  cursor?: string;
-  limit: number;
-  view?: "focus" | "normal" | "quiet" | "hidden" | "all";
-  classification?: "human" | "tideline" | "uncertain" | "all";
-  query?: string;
-  sender?: string;
-  receivedAfter?: string;
-  receivedBefore?: string;
 };
 
 type Database = ReturnType<typeof createDatabaseClient>["db"];
@@ -3053,205 +3030,6 @@ function resolveSenderAttention(db: Database, accountId: string, address: string
   });
 }
 
-function resolveAttentionBehavior(address: string | null, rules: SenderRuleRecord[]): AttentionBehavior {
-  const normalized = address?.trim().toLowerCase() ?? "";
-  const addressRule = rules.find((rule) => rule.scope === "address" && rule.value === normalized);
-  if (addressRule) return attentionBehaviorSchema.parse(addressRule.behavior);
-  const domain = normalized.split("@")[1];
-  return attentionBehaviorSchema.parse(rules.find((rule) => rule.scope === "domain" && rule.value === domain)?.behavior ?? "normal");
-}
-
-function matchesAttentionView(behavior: AttentionBehavior, view?: "focus" | "normal" | "quiet" | "hidden" | "all") {
-  if (!view) return behavior !== "quiet" && behavior !== "hidden";
-  if (view === "all") return true;
-  if (view === "focus") return behavior === "notify" || behavior === "focus";
-  return behavior === view;
-}
-
-function matchesHumanClassificationView(
-  classification: "likely_human" | "automated_or_bulk" | "uncertain" | "unclassified",
-  view: "human" | "tideline" | "uncertain" | "all",
-) {
-  if (view === "all") return true;
-  if (view === "human") return classification === "likely_human";
-  if (view === "tideline") return classification === "automated_or_bulk";
-  // Historical rows with no classifier result need a review surface too.
-  return classification === "uncertain" || classification === "unclassified";
-}
-
-const inboxAttentionRank = { notify: 0, focus: 1, normal: 2, quiet: 3, hidden: 4 } as const;
-
-function compareInboxMessages(a: ResolvedInboxMessage, b: ResolvedInboxMessage) {
-  return inboxAttentionRank[a.attentionBehavior] - inboxAttentionRank[b.attentionBehavior]
-    || (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
-    || a.accountId.localeCompare(b.accountId)
-    || a.id.localeCompare(b.id);
-}
-
-function encodeInboxCursor(
-  message: Pick<ResolvedInboxMessage, "accountId" | "id">,
-  view: InboxCursor["view"],
-  classification: InboxCursor["classification"],
-  accountIds: string[],
-  scope?: string,
-) {
-  return Buffer.from(JSON.stringify({ accountId: message.accountId, id: message.id, view, classification, accountIds, ...(scope ? { scope } : {}) } satisfies InboxCursor), "utf8").toString("base64url");
-}
-
-function decodeInboxCursor(value: string | undefined): InboxCursor | null {
-  if (!value) return null;
-
-  try {
-    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<InboxCursor>;
-    if (
-      typeof parsed.accountId === "string" && parsed.accountId.length > 0
-      && typeof parsed.id === "string" && parsed.id.length > 0
-      && ["default", "focus", "normal", "quiet", "hidden", "all"].includes(parsed.view ?? "")
-      && ["human", "tideline", "uncertain", "all"].includes(parsed.classification ?? "")
-      && Array.isArray(parsed.accountIds)
-      && parsed.accountIds.length > 0
-      && parsed.accountIds.every((accountId) => typeof accountId === "string" && accountId.length > 0)
-      && (parsed.scope === undefined || typeof parsed.scope === "string")
-    ) {
-      return parsed as InboxCursor;
-    }
-  } catch { /* Invalid cursors are rejected by the route. */ }
-
-  return null;
-}
-
-function readUnifiedInbox(
-  db: Database,
-  workspaceId: string,
-  accounts: ConnectedAccount[],
-  serializedAccounts: MailAccount[],
-  input: UnifiedInboxReadQuery,
-): InboxClassificationResponse {
-  const { cursor, limit, view, classification } = input;
-  const classificationFilter = classification ?? "all";
-  const accountIds = accounts.map((account) => account.id).sort();
-  const accountById = new Map(accounts.map((account) => [account.id, account]));
-  const attentionRulesByAccountId = new Map(accounts.map((account) => [account.id, listSenderRules(db, account.id)]));
-  const organization = createOrganization(createSqliteOrganizationRepository(db));
-  const scope = { actor: { id: workspaceId, type: "system" as const }, workspaceId, accountIds };
-  const organizationThreads = [] as ReturnType<typeof organization.query>["threads"];
-  let organizationCursor: string | undefined;
-  do {
-    const page = organization.query({
-      scope,
-      query: {
-        attention: "all",
-        classification: "all",
-        ...(input.query ? { text: input.query } : {}),
-        ...(input.sender ? { sender: input.sender } : {}),
-        ...(input.receivedAfter ? { receivedAfter: input.receivedAfter } : {}),
-        ...(input.receivedBefore ? { receivedBefore: input.receivedBefore } : {}),
-        limit: 100,
-        ...(organizationCursor ? { cursor: organizationCursor } : {}),
-      },
-    });
-    organizationThreads.push(...page.threads);
-    organizationCursor = page.nextCursor ?? undefined;
-  } while (organizationCursor);
-
-  const scoped: ResolvedInboxMessage[] = organizationThreads.flatMap((thread) => {
-    const account = accountById.get(thread.accountId);
-    if (!account) throw new OrganizationAccessError();
-    return thread.messages.map((message) => ({
-      id: message.id,
-      accountId: thread.accountId,
-      providerMessageId: message.sourceId,
-      threadId: thread.id,
-      fromAddress: message.from.email,
-      fromName: message.from.name,
-      subject: message.subject,
-      snippet: message.snippet,
-      receivedAt: new Date(message.receivedAt),
-      isRead: !message.unread,
-      humanSignal: message.humanSignal,
-      humanClassification: humanClassificationResultSchema.parse(message.humanClassification),
-      humanClassificationReasons: null,
-      humanClassifierVersion: null,
-      labels: message.labels,
-      provider: account.provider,
-      attentionBehavior: resolveAttentionBehavior(
-        message.from.email,
-        attentionRulesByAccountId.get(thread.accountId) ?? [],
-      ),
-    }));
-  });
-  const counts = {
-    attention: {
-      focus: scoped.filter((message) => message.attentionBehavior === "notify" || message.attentionBehavior === "focus").length,
-      normal: scoped.filter((message) => message.attentionBehavior === "normal").length,
-      quiet: scoped.filter((message) => message.attentionBehavior === "quiet").length,
-      hidden: scoped.filter((message) => message.attentionBehavior === "hidden").length,
-      all: scoped.length,
-    },
-    classification: {
-      likely_human: scoped.filter((message) => message.humanClassification.effective.classification === "likely_human").length,
-      automated_or_bulk: scoped.filter((message) => message.humanClassification.effective.classification === "automated_or_bulk").length,
-      uncertain: scoped.filter((message) => message.humanClassification.effective.classification === "uncertain").length,
-      unclassified: scoped.filter((message) => message.humanClassification.effective.classification === "unclassified").length,
-      all: scoped.length,
-    },
-  };
-  const filtered = scoped.filter((message) =>
-    matchesAttentionView(message.attentionBehavior, view)
-    && matchesHumanClassificationView(message.humanClassification.effective.classification, classificationFilter),
-  );
-  filtered.sort(compareInboxMessages);
-  const cursorScope = input.query || input.sender || input.receivedAfter || input.receivedBefore
-    ? JSON.stringify({
-        query: input.query?.trim() ?? null,
-        sender: input.sender?.trim().toLocaleLowerCase() ?? null,
-        receivedAfter: input.receivedAfter ?? null,
-        receivedBefore: input.receivedBefore ?? null,
-      })
-    : undefined;
-  const cursorTarget = decodeInboxCursor(cursor);
-  if (cursor && (!cursorTarget
-    || cursorTarget.view !== (view ?? "default")
-    || cursorTarget.classification !== classificationFilter
-    || JSON.stringify(cursorTarget.accountIds) !== JSON.stringify(accountIds)
-    || cursorTarget.scope !== cursorScope
-    || !accounts.some((account) => account.id === cursorTarget.accountId))) {
-    throw new McpReadError("invalid_cursor", "The inbox cursor does not match this account set or filter");
-  }
-  const cursorIndex = cursorTarget
-    ? filtered.findIndex((message) => message.id === cursorTarget.id && message.accountId === cursorTarget.accountId)
-    : -1;
-  if (cursorTarget && cursorIndex < 0) {
-    throw new McpReadError("invalid_cursor", "The inbox cursor is not part of this filtered result");
-  }
-  const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-  const page = filtered.slice(start, start + limit);
-  const lastMessage = page.at(-1);
-  return {
-    accounts: serializedAccounts,
-    messages: page.map((message): InboxMessage => ({
-      id: message.id,
-      accountId: message.accountId,
-      provider: message.provider,
-      providerMessageId: message.providerMessageId,
-      threadId: message.threadId,
-      from: { name: message.fromName, email: message.fromAddress ?? "unknown@invalid" },
-      subject: message.subject ?? "",
-      snippet: message.snippet ?? "",
-      receivedAt: (message.receivedAt ?? new Date(0)).toISOString(),
-      unread: !message.isRead,
-      labels: message.labels,
-      attentionBehavior: message.attentionBehavior,
-      humanSignal: message.humanSignal,
-      humanClassification: message.humanClassification,
-    })),
-    counts,
-    nextCursor: lastMessage && start + page.length < filtered.length
-      ? encodeInboxCursor(lastMessage, view ?? "default", classificationFilter, accountIds, cursorScope)
-      : null,
-  };
-}
-
 function readThreadDetail(
   db: Database,
   account: ConnectedAccount,
@@ -3629,7 +3407,9 @@ function getAccountById(db: ReturnType<typeof createDatabaseClient>["db"], accou
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
     syncCursor: oauthAccounts.syncCursor,
+    syncHistoryId: oauthAccounts.syncHistoryId,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
+    updatedAt: oauthAccounts.updatedAt,
     scope: oauthAccounts.scope,
   })
     .from(oauthAccounts)
@@ -3692,7 +3472,9 @@ function selectConnectedAccounts(
     profileImageUrl: oauthAccounts.profileImageUrl,
     accessTokenEncrypted: oauthAccounts.accessTokenEncrypted,
     refreshTokenEncrypted: oauthAccounts.refreshTokenEncrypted,
+    syncHistoryId: oauthAccounts.syncHistoryId,
     lastSyncedAt: oauthAccounts.lastSyncedAt,
+    updatedAt: oauthAccounts.updatedAt,
     scope: oauthAccounts.scope,
   })
     .from(oauthAccounts)
