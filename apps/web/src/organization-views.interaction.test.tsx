@@ -7,7 +7,7 @@ import { organizationViewsFixture } from "@orca/shared";
 import { OrganizationViewsWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
-const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
+const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
 let browserWindow: InstanceType<typeof Window>;
@@ -17,7 +17,7 @@ beforeEach(() => {
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox?destination=organization" });
   const values: Record<string, unknown> = {
     window: browserWindow, document: browserWindow.document, navigator: browserWindow.navigator,
-    HTMLElement: browserWindow.HTMLElement, HTMLInputElement: browserWindow.HTMLInputElement,
+    HTMLElement: browserWindow.HTMLElement, HTMLInputElement: browserWindow.HTMLInputElement, HTMLButtonElement: browserWindow.HTMLButtonElement,
     Element: browserWindow.Element, Node: browserWindow.Node, Event: browserWindow.Event, InputEvent: browserWindow.InputEvent,
     MouseEvent: browserWindow.MouseEvent, KeyboardEvent: browserWindow.KeyboardEvent,
   };
@@ -79,19 +79,133 @@ function orderedNames(container: HTMLElement) {
   return [...container.querySelectorAll(".view-chip strong")].map((item) => item.textContent);
 }
 
-describe("BRE-313 Organization Views lifecycle interactions", () => {
+describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
     await click(button(container, "Edit definition"));
     expect(container.textContent).toContain("Edit live perspective");
     expect(input(container, "View name").value).toBe("Weekly production review");
-    expect(input(container, "Thread subject").value).toBe("production failure");
+    expect(input(container, "Subject contains").value).toBe("production failure");
     await change(input(container, "View name"), "Release blocker review");
-    await change(input(container, "Thread subject"), "release blocker");
+    await change(input(container, "Subject contains"), "release blocker");
     await click(button(container, "Save changes"));
     expect(container.textContent).not.toContain("Edit live perspective");
     expect(container.querySelector(".view-results h3")?.textContent).toBe("Release blocker review");
     expect(orderedNames(container)[0]).toBe("Release blocker review");
+  });
+
+  test("starts with a readable default, suggests a name, and adds, edits, and removes named clauses", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "+ New View"));
+    expect(container.textContent).toContain("Show messages from any account in any lane.");
+    expect(input(container, "View name").value).toBe("All messages");
+    expect(container.textContent).toContain("Any message can match.");
+
+    await click(button(container, "Add filter ＋"));
+    await click(button(container, "Read stateShow read or unread Threads"));
+    await flush();
+    expect(container.querySelector('[data-clause="read"]')).not.toBeNull();
+    expect(input(container, "View name").value).toBe("Unread messages");
+
+    await click(button(container, "Add filter ＋"));
+    await click(button(container, "LaneChoose where Threads are primarily placed"));
+    await flush();
+    expect(container.querySelector('[data-clause="lane"]')).not.toBeNull();
+    expect(input(container, "View name").value).toBe("Unread Focus messages");
+    await click(button(container, "Everything else"));
+    await click(button(container, "Focus"));
+    await flush();
+    expect(container.textContent).toContain("in Everything else");
+
+    await click(container.querySelector('[aria-label="Remove read state filter"]') as unknown as HTMLButtonElement);
+    await flush();
+    expect(container.querySelector('[data-clause="read"]')).toBeNull();
+    expect(browserWindow.document.activeElement?.textContent).toContain("Add filter");
+  });
+
+  test("operates the Add filter menu with Arrow keys, Enter, and Escape", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "+ New View"));
+    const trigger = button(container, "Add filter ＋");
+    trigger.focus();
+    await act(async () => trigger.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }) as unknown as Event));
+    await flush();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(browserWindow.document.activeElement?.textContent).toContain("Account");
+    await act(async () => browserWindow.document.activeElement?.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect(browserWindow.document.activeElement?.textContent).toContain("Lane");
+    await act(async () => browserWindow.document.activeElement?.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    await flush();
+    expect(container.querySelector('[data-clause="lane"]')).not.toBeNull();
+
+    trigger.focus();
+    await act(async () => trigger.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }) as unknown as Event));
+    await flush();
+    await act(async () => browserWindow.document.activeElement?.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(browserWindow.document.activeElement as unknown).toBe(trigger as unknown);
+  });
+
+  test("keeps every predicate family reachable while progressively disclosing infrequent filters", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "+ New View"));
+    await click(button(container, "Add filter ＋"));
+    const menu = container.querySelector('[role="menu"]') as HTMLElement;
+    expect(menu.textContent).toContain("Account");
+    expect(menu.textContent).toContain("Lane");
+    expect(menu.textContent).toContain("Human Signal");
+    expect(menu.textContent).toContain("Sender");
+    expect(menu.textContent).toContain("Subject");
+    expect(menu.textContent).not.toContain("Date range");
+    await click(button(menu, "More filtersWorkflow, Facet, Context, and date +"));
+    expect(menu.textContent).toContain("Workflow");
+    expect(menu.textContent).toContain("Facet");
+    expect(menu.textContent).toContain("Context");
+    expect(menu.textContent).toContain("Date range");
+    expect(container.querySelector(".view-composer")?.textContent).not.toContain("account_gmail");
+    expect(container.querySelector(".view-composer")?.textContent).not.toContain("lane_focus");
+  });
+
+  test("creates the exact existing wire envelope and labels validation and draft preview honestly", async () => {
+    let createPayload: Record<string, unknown> | null = null;
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
+      const method = init?.method ?? "GET";
+      if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes("/results")) return Response.json({ viewId: "view_weekly_production", viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/views" && method === "POST") {
+        createPayload = JSON.parse(String(init?.body));
+        const payload = createPayload as { name: string; description: string; color: string; position: number; definition: unknown };
+        return Response.json({ id: "view_created", workspaceId: "workspace_demo", name: payload.name, description: payload.description, color: payload.color, position: payload.position, definition: payload.definition, revision: 1, createdAt: "2026-09-04T17:00:00.000Z", updatedAt: "2026-09-04T17:00:00.000Z" });
+      }
+      throw new Error(`Unexpected request ${method} ${path}`);
+    }) as typeof fetch;
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "+ New View"));
+    await click(button(container, "Add filter ＋"));
+    await click(button(container, "SubjectMatch words in the Thread subject"));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Enter words to match in the subject.");
+    expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(true);
+    expect(container.textContent).toContain("No live query has run for this draft.");
+    await change(input(container, "Subject contains"), "release blocker");
+    await flush();
+    expect(input(container, "Subject contains").value).toBe("release blocker");
+    expect(container.querySelector('[role="alert"]')?.textContent ?? "no alert").toBe("no alert");
+    expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(false);
+    await click(button(container, "Save View"));
+    await flush();
+    expect(Object.keys(createPayload ?? {}).sort()).toEqual(["color", "definition", "description", "expectedWorkspaceRevision", "idempotencyKey", "name", "position"].sort());
+    expect(createPayload).toMatchObject({
+      expectedWorkspaceRevision: 4,
+      name: "release blocker messages",
+      description: "",
+      color: "#70867d",
+      position: 3,
+      definition: { revision: 1, thread: { subjectContains: "release blocker" } },
+    });
+    const savedPayload = createPayload as Record<string, unknown> | null;
+    expect(typeof savedPayload?.idempotencyKey).toBe("string");
   });
 
   test("reorders Views deterministically while preserving selection", async () => {
