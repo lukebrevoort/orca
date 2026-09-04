@@ -11,6 +11,12 @@ type LayoutMetrics = {
   documentClientWidth: number;
   documentScrollWidth: number;
   header: { left: number; right: number; width: number };
+  messageRows: Array<{
+    date: { left: number; right: number; width: number };
+    subject: { left: number; right: number; width: number };
+    subjectClipped: boolean;
+    subjectText: string;
+  }>;
   theme: string;
   title: { left: number; right: number; width: number };
   tools: { left: number; right: number; width: number };
@@ -62,6 +68,21 @@ const metricsExpression = `(() => {
     return { left: rect.left, right: rect.right, width: rect.width };
   };
   const action = required('.selection-mode-toggle');
+  const messageRows = [...document.querySelectorAll('.message-row')].map((row) => {
+    const subject = row.querySelector('.message-subject-row h2');
+    const date = row.querySelector('.message-meta > span:last-child');
+    if (!(subject instanceof HTMLElement) || !(date instanceof HTMLElement)) {
+      throw new Error('Message row is missing its subject or timestamp');
+    }
+    const subjectRect = subject.getBoundingClientRect();
+    const dateRect = date.getBoundingClientRect();
+    return {
+      date: { left: dateRect.left, right: dateRect.right, width: dateRect.width },
+      subject: { left: subjectRect.left, right: subjectRect.right, width: subjectRect.width },
+      subjectClipped: subject.scrollWidth > subject.clientWidth,
+      subjectText: subject.textContent.trim()
+    };
+  });
   return JSON.stringify({
     action: rectangle('.selection-mode-toggle'),
     actionLabel: action.textContent.trim(),
@@ -70,6 +91,7 @@ const metricsExpression = `(() => {
     documentClientWidth: document.documentElement.clientWidth,
     documentScrollWidth: document.documentElement.scrollWidth,
     header: rectangle('.pane-header'),
+    messageRows,
     theme: document.documentElement.dataset.theme || 'light',
     title: rectangle('.stream-title-line h1'),
     tools: rectangle('.stream-header-tools')
@@ -85,6 +107,8 @@ function parseMetrics(output: string): LayoutMetrics {
 
 function assertDesktopLayout(metrics: LayoutMetrics, width: number, expectedLabel: string) {
   const contentGap = metrics.action.left - Math.max(metrics.title.right, metrics.count.right);
+  const selectedRows = expectedLabel === "Done selecting" ? metrics.messageRows : [];
+  const longSubject = selectedRows.find((row) => row.subjectText === "Your annual plan renews September 3");
   const failures = [
     metrics.actionLabel === expectedLabel || `expected action label ${expectedLabel}, got ${metrics.actionLabel}`,
     metrics.header.left >= metrics.content.left - 0.5 || "header begins outside content pane",
@@ -93,6 +117,8 @@ function assertDesktopLayout(metrics: LayoutMetrics, width: number, expectedLabe
     metrics.tools.right <= metrics.header.right + 0.5 || "tools end outside header",
     contentGap >= 12 || `title/count overlaps actions (gap ${contentGap}px)`,
     metrics.documentScrollWidth <= metrics.documentClientWidth || "document has horizontal overflow",
+    expectedLabel !== "Done selecting" || Boolean(longSubject) || "long Figma subject fixture is missing",
+    ...selectedRows.map((row) => row.subject.right <= row.date.left - 8 || `${row.subjectText}: subject/timestamp lanes overlap by ${row.subject.right - row.date.left}px`),
   ].filter((result): result is string => result !== true);
   if (failures.length) {
     throw new Error(`${width}px ${metrics.theme} ${expectedLabel}: ${failures.join("; ")}\n${JSON.stringify(metrics, null, 2)}`);
@@ -115,7 +141,7 @@ async function measure() {
 
 async function clickButton(name: string) {
   await runBrowser(["find", "role", "button", "click", "--name", name, "--exact"]);
-  await runBrowser(["wait", "150"]);
+  await runBrowser(["wait", "300"]);
 }
 
 async function switchTheme(name: "Light" | "Orca Black") {
@@ -152,7 +178,7 @@ try {
     assertMobileGutter(await measure());
   }
 
-  console.log("BRE-374 browser layout check passed: 1024/1280/1440 Select + Done selecting, and 390px gutters in Light + Orca Black.");
+  console.log("BRE-374/BRE-376 browser layout check passed: 1024/1280/1440 Select + Done selecting with separated subject/timestamp lanes, and 390px gutters in Light + Orca Black.");
 } finally {
   await runBrowser(["close"]).catch(() => undefined);
   server.kill();

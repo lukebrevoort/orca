@@ -550,7 +550,7 @@
 }
 :root[data-reader-density="compact"] .desktop-shell .message-row-wrap-selecting .message-row {
   padding-left: 62px;
-  padding-right: 16px;
+  padding-right: 96px;
 }
 :root[data-reader-density="compact"] .desktop-shell .stream-avatar {
   width: 34px;
@@ -579,6 +579,11 @@
   background: var(--desktop-surface-hover);
 }
 :root[data-reader-density="compact"] .desktop-shell .message-meta > span:last-child { right: 150px; top: 14px; }
+@media (min-width: 761px) {
+  :root[data-reader-density="compact"] .desktop-shell .message-row-wrap-selecting .message-meta > span:last-child {
+    right: 16px;
+  }
+}
 :root[data-reader-density="compact"] .desktop-shell .keep-thread-button { top: 19px; }
 :root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { top: 20px; }
 
