@@ -426,7 +426,12 @@
   .global-mail-result-list a { min-height: 72px; }
 }
 
-.desktop-workspace > .content-pane { min-height: calc(100vh - 68px); }
+.desktop-workspace > .content-pane {
+  width: 100%;
+  max-width: 880px;
+  min-width: 0;
+  min-height: calc(100vh - 68px);
+}
 .desktop-workspace > .content-pane:not(.content-pane-reader) { padding-bottom: 72px; }
 .desktop-settings-frame .attention-settings-topbar { display: none; }
 .desktop-settings-frame .preferences-page,
@@ -450,7 +455,14 @@
 .desktop-shell .pinned-people:has(.pin-builder-layer) > :not(.pinned-person-add-wrap),
 .desktop-shell .pinned-people:has(.pin-builder-layer) .pinned-person-add { display: none; }
 .desktop-shell .pinned-people:has(.pin-builder-layer) .pinned-person-add-wrap { position: static; }
-.desktop-shell .pane-header { padding: 30px 34px 22px; border-bottom: 0; background: transparent; }
+.desktop-shell .pane-header {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 30px 34px 22px;
+  border-bottom: 0;
+  background: transparent;
+}
 .desktop-shell .stream-date { color: var(--desktop-accent); font: 800 9px/12px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
 .desktop-shell .stream-title-line h1 { color: var(--desktop-ink); font: 500 40px/42px var(--desktop-serif); letter-spacing: -2px; }
 .desktop-shell .stream-title-line > span,.desktop-shell .stream-context { color: var(--desktop-muted); }

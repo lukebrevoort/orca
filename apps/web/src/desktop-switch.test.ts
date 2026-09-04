@@ -147,6 +147,73 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   return result;
 }
 
+function responsiveInboxHeaderStyles(width: number, theme: "light" | "dark", density: "calm" | "compact") {
+  const browser = new Window({ height: 844, width });
+  browser.document.documentElement.dataset.theme = theme;
+  browser.document.documentElement.dataset.readerDensity = density;
+  const sheet = browser.document.createElement("style");
+  sheet.textContent = `${baseStyles}\n${styles}`;
+  browser.document.head.append(sheet);
+
+  const shell = browser.document.createElement("main");
+  shell.className = "desktop-shell";
+  const sidebar = browser.document.createElement("aside");
+  sidebar.className = "desktop-sidebar";
+  const workspace = browser.document.createElement("section");
+  workspace.className = "desktop-workspace";
+  const contentPane = browser.document.createElement("div");
+  contentPane.className = "content-pane";
+  const inbox = browser.document.createElement("section");
+  inbox.className = "inbox-view inbox-view-inbox";
+  const header = browser.document.createElement("header");
+  header.className = "pane-header";
+  const heading = browser.document.createElement("div");
+  const titleLine = browser.document.createElement("div");
+  titleLine.className = "stream-title-line";
+  const title = browser.document.createElement("h1");
+  title.textContent = "What deserves you now";
+  const count = browser.document.createElement("span");
+  count.textContent = "5 unread · 5 pins";
+  titleLine.append(title, count);
+  heading.append(titleLine);
+  const headerTools = browser.document.createElement("div");
+  headerTools.className = "stream-header-tools";
+  const select = browser.document.createElement("button");
+  select.className = "selection-mode-toggle";
+  select.textContent = "Select";
+  headerTools.append(select);
+  header.append(heading, headerTools);
+  inbox.append(header);
+  contentPane.append(inbox);
+  workspace.append(contentPane);
+  shell.append(sidebar, workspace);
+  browser.document.body.append(shell);
+
+  const contentPaneStyle = browser.getComputedStyle(contentPane);
+  const headerStyle = browser.getComputedStyle(header);
+  const headingStyle = browser.getComputedStyle(heading);
+  const headerToolsStyle = browser.getComputedStyle(headerTools);
+  const selectStyle = browser.getComputedStyle(select);
+  const sidebarWidth = width <= 1100 ? 220 : 246;
+  const workspaceWidth = width - sidebarWidth;
+  const contentWidth = Math.min(880, workspaceWidth);
+  const contentLeft = sidebarWidth + (workspaceWidth - contentWidth) / 2;
+  const contentRight = contentLeft + contentWidth;
+  const result = {
+    actionDisplay: selectStyle.display,
+    actionRegionRight: contentRight - Number.parseFloat(headerStyle.paddingRight || "0"),
+    actionMinHeight: selectStyle.minHeight,
+    contentMaxWidth: contentPaneStyle.maxWidth,
+    contentWidth: contentPaneStyle.width,
+    gridTemplateColumns: headerStyle.gridTemplateColumns,
+    headingMinWidth: headingStyle.minWidth,
+    toolsDisplay: headerToolsStyle.display,
+    workspaceRight: width,
+  };
+  browser.close();
+  return result;
+}
+
 describe("desktop application shell", () => {
   test("exposes one named primary navigation landmark and one current destination", () => {
     const html = renderToStaticMarkup(createElement(AppSidebar, {
@@ -225,6 +292,25 @@ describe("desktop application shell", () => {
     expect(desktop.row.paddingRight).toBe("252px");
     expect(desktop.datePosition).toBe("absolute");
   });
+
+  test("bounds Inbox heading actions to the desktop workspace at narrow and wide widths", () => {
+    for (const width of [1024, 1280, 1440]) {
+      for (const theme of ["light", "dark"] as const) {
+        for (const density of ["calm", "compact"] as const) {
+          const computed = responsiveInboxHeaderStyles(width, theme, density);
+
+          expect(computed.contentWidth).toBe("100%");
+          expect(computed.contentMaxWidth).toBe("880px");
+          expect(computed.gridTemplateColumns).toBe("minmax(0, 1fr) auto");
+          expect(computed.headingMinWidth).toBe("0");
+          expect(computed.toolsDisplay).toBe("flex");
+          expect(computed.actionDisplay).not.toBe("none");
+          expect(computed.actionMinHeight).toBe("38px");
+          expect(computed.actionRegionRight).toBeLessThanOrEqual(computed.workspaceRight);
+        }
+      }
+    }
+  }, 10_000);
 
   test("keeps compact Later evidence, attention, and reminder actions in separate bands", () => {
     for (const theme of ["light", "dark"] as const) {
