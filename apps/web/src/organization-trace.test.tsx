@@ -75,6 +75,34 @@ afterEach(() => {
 });
 
 describe("Organization Glass Box Trace", () => {
+  test("starts with a concise walkthrough and discloses each authority surface on request", async () => {
+    await act(async () => {
+      root!.render(<TestOrganizationStudio interactivePreview />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.document.querySelector("#organization-page-title")?.textContent).toBe("Make your inbox feel like yours.");
+    expect(browser.document.querySelector("#organization-overview")?.hasAttribute("hidden")).toBe(false);
+    expect(browser.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(true);
+    expect(browser.document.querySelector("#organization-lanes")?.hasAttribute("hidden")).toBe(true);
+    expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(true);
+    expect(browser.document.body.textContent).toContain("Lanes choose the current.");
+    expect(browser.document.body.textContent).toContain("Views collect perspectives.");
+    expect(browser.document.body.textContent).toContain("Rules explain the repeatable.");
+    expect(browser.document.body.textContent).toContain("Organization cannot send or delete provider mail");
+
+    const primary = [...browser.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review how a rule works"));
+    act(() => primary?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    expect(browser.document.querySelector("#organization-overview")?.hasAttribute("hidden")).toBe(true);
+    expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(false);
+    expect(browser.document.querySelector('.organization-section-nav button[aria-current="page"]')?.textContent).toBe("Rules");
+
+    const views = [...browser.document.querySelectorAll(".organization-section-nav button")].find((button) => button.textContent === "Views");
+    act(() => views?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    expect(browser.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
+    expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(true);
+  });
+
   test("explains a live production-failure evaluation and opens its complete deterministic Trace", async () => {
     await act(async () => {
       root!.render(<TestOrganizationStudio />);
@@ -126,7 +154,7 @@ describe("Organization Glass Box Trace", () => {
       root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(browser.document.querySelector("#organization-title")?.textContent).toBe("Safety Lock");
+    expect(browser.document.querySelector("#organization-rule-title")?.textContent).toBe("Safety Lock");
     expect(browser.document.querySelector(".glass-because strong")?.textContent).toBe("Hold the incident in Focus");
     expect(browser.document.querySelector(".glass-because small")?.textContent).toBe("human Actor · human-safety");
     const open = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Open complete Trace");
@@ -164,7 +192,7 @@ describe("Organization Glass Box Trace", () => {
     );
     expect(browser.document.body.textContent).not.toContain("Sample messages");
     expect(browser.document.body.textContent).not.toContain("Use Tide Table");
-    expect(browser.document.querySelector(".organization-heading h1")?.textContent).toBe("Organization");
+    expect(browser.document.querySelector(".organization-heading h2")?.textContent).toBe("Rules");
     expect(browser.document.body.textContent).toContain("No illustrative metrics are shown in production");
     const tide = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Tide Table");
     act(() => tide?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
@@ -247,6 +275,11 @@ describe("Organization Glass Box Trace", () => {
   });
 
   test("defines labeled default, hover, focus, selected, disabled, and Trace states with theme-safe tokens", () => {
+    expect(styles).toContain(".organization-section-nav button:hover");
+    expect(styles).toContain(".organization-section-nav button:focus-visible");
+    expect(styles).toContain('.organization-section-nav button[aria-current="page"]');
+    expect(styles).toContain(".organization-overview-primary:focus-visible");
+    expect(styles).toContain(".organization-primary:disabled");
     expect(styles).toContain(".organization-trace-trigger:hover");
     expect(styles).toContain(".organization-trace-trigger:focus-visible");
     expect(styles).toContain('.organization-editor nav button[aria-pressed="true"]');

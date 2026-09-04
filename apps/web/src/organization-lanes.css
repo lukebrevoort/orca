@@ -1,7 +1,7 @@
 .lane-workspace { margin: 0 0 28px; color: var(--desktop-ink); font-family: var(--desktop-sans); }
 .lane-workspace > header { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:18px; }
 .lane-workspace > header span,.lane-list-heading > span,.lane-policy-panel > span,.thread-lane-drawer header span,.thread-evidence-grid section > span,.thread-safety-lock > div > span,.thread-correction > div > span { color:var(--desktop-accent); font:800 9px/12px var(--desktop-mono); letter-spacing:1px; text-transform:uppercase; }
-.lane-workspace > header h1 { margin:7px 0 5px; font:500 40px/42px var(--desktop-serif); letter-spacing:-2px; }
+.lane-workspace > header h1,.lane-workspace > header h2 { margin:7px 0 5px; font:500 40px/42px var(--desktop-serif); letter-spacing:-2px; }
 .lane-workspace > header p { max-width:680px; margin:0; color:var(--desktop-muted); font-size:11px; line-height:18px; }
 .lane-workspace > header > strong { padding:7px 10px; border:1px solid var(--desktop-border); border-radius:999px; color:var(--desktop-muted); font:700 9px/1 var(--desktop-mono); }
 .lane-workspace-grid { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:16px; align-items:start; }

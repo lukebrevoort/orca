@@ -133,7 +133,7 @@ export function OrganizationLaneWorkspace({ demoMode = false, onWorkspaceMutatio
 
   const activeLanes = configuration?.lanes.filter((lane) => !lane.retiredAt) ?? [];
   return <section className="lane-workspace" aria-labelledby="lane-workspace-title" aria-busy={state === "loading" || state === "saving" || undefined}>
-    <header><div><span>{canMutate ? "Writable Organization" : "Read-only Organization snapshot"} · Workspace scope</span><h1 id="lane-workspace-title">Lanes set the current.</h1><p>One calm destination per Thread, across every connected Account. Names can change; Lane identity and audit history stay put.</p></div><strong>{configuration ? `Workspace r${configuration.workspaceRevision}` : "Loading…"}</strong></header>
+    <header><div><span>{canMutate ? "Writable Organization" : "Read-only Organization snapshot"} · Workspace scope</span><h2 id="lane-workspace-title">Lanes set the current.</h2><p>One calm destination per Thread, across every connected Account. Names can change; Lane identity and audit history stay put.</p></div><strong>{configuration ? `Workspace r${configuration.workspaceRevision}` : "Loading…"}</strong></header>
     {error ? <div className="lane-error" role="alert"><strong>Nothing changed.</strong><span>{error}</span></div> : null}
     {state === "loading" ? <div className="lane-loading" role="status">Getting Workspace Lanes…</div> : configuration ? <div className="lane-workspace-grid">
       <section className="lane-list" aria-label="Workspace Lanes"><div className="lane-list-heading"><span>Primary destinations</span><small>{activeLanes.length} active · exactly one fallback</small></div>
