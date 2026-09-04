@@ -3210,7 +3210,6 @@ textarea {
 .reader-back:hover { color: var(--orca-canvas-ink); transform: translateX(-2px); }
 .reader-back:focus-visible,
 .reader-state button:focus-visible,
-.reader-heading h1:focus-visible,
 .reader-sender summary:focus-visible { outline: 2px solid var(--orca-accent); outline-offset: 4px; }
 
 .reader-escape-hint {

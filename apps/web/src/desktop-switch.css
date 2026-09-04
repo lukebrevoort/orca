@@ -858,10 +858,11 @@
 .trace-drawer .trace-revert-actions { display: grid; grid-template-columns: .7fr 1.3fr; gap: 7px; }
 .trace-drawer .trace-revert-actions .trace-revert-apply { border-color: var(--desktop-warning); background: color-mix(in srgb, var(--desktop-warning) 12%, var(--desktop-surface)); }
 
-button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible {
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:not([tabindex="-1"]):focus-visible {
   outline: 2px solid var(--desktop-focus);
   outline-offset: 2px;
 }
+:where(h1,h2,h3,h4,h5,h6)[tabindex="-1"]:focus-visible { outline: none; }
 
 @keyframes desktop-drawer-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes desktop-pulse { 50% { opacity: .35; transform: scale(.75); } }
