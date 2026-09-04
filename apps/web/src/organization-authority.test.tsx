@@ -154,7 +154,7 @@ describe("BRE-369 shared Organization authority", () => {
     await act(async () => { root!.render(<OrganizationStudio />); await Promise.resolve(); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     expect(container.querySelector("[data-organization-authority]")?.getAttribute("data-organization-authority")).toBe("no_access");
-    expect((([...container.querySelectorAll("button")].find((button) => button.textContent === "+ Compose View")) as unknown as HTMLButtonElement).disabled).toBe(true);
+    expect((([...container.querySelectorAll("button")].find((button) => button.textContent === "+ New View")) as unknown as HTMLButtonElement).disabled).toBe(true);
     const tide = [...container.querySelectorAll("button")].find((button) => button.textContent === "Tide Table")!;
     await act(async () => { tide.click(); await Promise.resolve(); });
     expect((([...container.querySelectorAll("button")].find((button) => button.textContent === "Compile immutable revision")) as unknown as HTMLButtonElement).disabled).toBe(true);
