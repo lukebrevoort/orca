@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -p tsconfig.json && vite build",
+    "check:inbox-layout": "bun scripts/check-inbox-layout.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "bun test",
     "lint": "tsc -p tsconfig.json"
