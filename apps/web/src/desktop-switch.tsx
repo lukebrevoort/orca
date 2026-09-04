@@ -1033,8 +1033,8 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
     </nav>
     <section aria-labelledby="organization-overview-title" className="organization-overview" hidden={section !== "overview"} id="organization-overview">
       <div className="organization-overview-heading">
-        <div><span>Rule summary</span><h2 id="organization-overview-title">Production failures</h2></div>
-        <small>{interactivePreview ? "Local sample" : "Production"}</small>
+        <div><span>Example rule</span><h2 id="organization-overview-title">Production failures</h2></div>
+        <small>{interactivePreview ? "Local example" : "Illustration"}</small>
       </div>
       <ol aria-label="Example Organization rule" className="organization-overview-rule">
         <li className="organization-rule-when"><span>When</span><strong>A message arrives</strong></li>
