@@ -182,6 +182,7 @@
   .feedback-kit-field {
     display: block;
     margin-bottom: 14px;
+    position: relative;
   }
 
   .feedback-kit-field > span,
@@ -210,7 +211,21 @@
 
   .feedback-kit-field textarea {
     min-height: 104px;
+    padding-bottom: 26px;
     resize: vertical;
+  }
+
+  .feedback-kit-field input {
+    padding-right: 58px;
+  }
+
+  .feedback-kit-character-count {
+    bottom: 8px;
+    color: #aaa4af;
+    font: 500 9px/1 inherit;
+    pointer-events: none;
+    position: absolute;
+    right: 9px;
   }
 
   .feedback-kit-field input:focus,
@@ -532,8 +547,8 @@
   }
 
   .feedback-kit-scope-preview {
-    background: #f1faf5;
-    border: 1px solid #dcefe5;
+    background: #f6f4f8;
+    border: 1px solid #e5e0e8;
     border-radius: 11px;
     margin-bottom: 14px;
     padding: 11px 12px;
@@ -541,7 +556,7 @@
 
   .feedback-kit-scope-preview > div {
     align-items: center;
-    color: #3f9266;
+    color: var(--feedback-accent);
     display: flex;
     font-size: 9px;
     font-weight: 750;
@@ -571,6 +586,15 @@
     font-size: 9px;
   }
 
+  .feedback-kit-scope-preview.is-ready {
+    background: #f1faf5;
+    border-color: #dcefe5;
+  }
+
+  .feedback-kit-scope-preview.is-ready > div {
+    color: #3f9266;
+  }
+
   .feedback-kit-reply-form {
     position: relative;
   }
@@ -582,6 +606,12 @@
   .feedback-kit-reply-form textarea {
     min-height: 76px;
     padding-right: 92px;
+  }
+
+  .feedback-kit-reply-form textarea:disabled {
+    background: #f5f3f6;
+    color: #8c8690;
+    cursor: not-allowed;
   }
 
   .feedback-kit-agent-reply {
