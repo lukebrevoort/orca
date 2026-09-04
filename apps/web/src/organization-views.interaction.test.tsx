@@ -3,11 +3,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
-import { organizationViewsFixture } from "@orca/shared";
+import { organizationLaneConfigurationFixture, organizationViewsFixture, type OrganizationView } from "@orca/shared";
 import { OrganizationViewsWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
-const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
+const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
 let browserWindow: InstanceType<typeof Window>;
@@ -17,7 +17,7 @@ beforeEach(() => {
   browserWindow = new Window({ url: "http://localhost:5173/dev/inbox?destination=organization" });
   const values: Record<string, unknown> = {
     window: browserWindow, document: browserWindow.document, navigator: browserWindow.navigator,
-    HTMLElement: browserWindow.HTMLElement, HTMLInputElement: browserWindow.HTMLInputElement, HTMLButtonElement: browserWindow.HTMLButtonElement,
+    HTMLElement: browserWindow.HTMLElement, HTMLInputElement: browserWindow.HTMLInputElement, HTMLSelectElement: browserWindow.HTMLSelectElement, HTMLButtonElement: browserWindow.HTMLButtonElement,
     Element: browserWindow.Element, Node: browserWindow.Node, Event: browserWindow.Event, InputEvent: browserWindow.InputEvent,
     MouseEvent: browserWindow.MouseEvent, KeyboardEvent: browserWindow.KeyboardEvent,
   };
@@ -38,12 +38,26 @@ afterEach(async () => {
   browserWindow.close();
 });
 
-async function renderWorkspace(demoMode = true) {
+async function renderWorkspace(demoMode = true, previewMode = true) {
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
-  await act(async () => root!.render(<OrganizationAuthorityProvider previewMode><OrganizationViewsWorkspace demoMode={demoMode} /></OrganizationAuthorityProvider>));
+  await act(async () => root!.render(<OrganizationAuthorityProvider previewMode={previewMode}><OrganizationViewsWorkspace demoMode={demoMode} /></OrganizationAuthorityProvider>));
   return container as unknown as HTMLElement;
+}
+
+function selectField(container: HTMLElement, label: string) {
+  const field = container.querySelector(`select[aria-label="${label}"]`);
+  expect(field, `select ${label}`).toBeDefined();
+  return field as unknown as HTMLSelectElement;
+}
+
+async function choose(field: HTMLSelectElement, value: string) {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(browserWindow.HTMLSelectElement.prototype, "value")?.set;
+    setter?.call(field, value);
+    field.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event);
+  });
 }
 
 function button(container: HTMLElement, label: string) {
@@ -79,6 +93,23 @@ function orderedNames(container: HTMLElement) {
   return [...container.querySelectorAll(".view-chip strong")].map((item) => item.textContent);
 }
 
+const contextQueryFixture = {
+  workspaceId: "workspace_demo", accountIds: [], workspaceRevision: 4,
+  contextTypes: [
+    { id: "context_type_project", name: "Project", position: 0, retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+    { id: "context_type_customer", name: "Customer", position: 1, retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+  ],
+  relationshipTypes: [
+    { id: "relationship_concerns", contextTypeId: "context_type_project", name: "Concerns", inverseName: "Concerned by", direction: "thread_to_context", position: 0, maximumPerThread: 20, retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+    { id: "relationship_supports", contextTypeId: "context_type_customer", name: "Supports", inverseName: "Supported by", direction: "thread_to_context", position: 1, maximumPerThread: 20, retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+  ],
+  contexts: [
+    { id: "context_orca", contextTypeId: "context_type_project", name: "Orca launch", retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+    { id: "context_acme", contextTypeId: "context_type_customer", name: "Acme", retiredAt: null, revision: 1, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z" },
+  ],
+  relationships: [], threadRevisions: [],
+};
+
 describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
@@ -92,6 +123,121 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(container.textContent).not.toContain("Edit live perspective");
     expect(container.querySelector(".view-results h3")?.textContent).toBe("Release blocker review");
     expect(orderedNames(container)[0]).toBe("Release blocker review");
+  });
+
+  test("round-trips every preserved revision-1 constraint and derives the draft summary from the complete definition", async () => {
+    const preservedDefinition: OrganizationView["definition"] = {
+      revision: 1,
+      facetFilters: [
+        { facetId: "facet_urgency", operator: "equals", value: "urgent" },
+        { facetId: "facet_service", operator: "contains", value: "payments" },
+      ],
+      contextFilters: [
+        { context: { contextTypeId: "context_type_project", contextId: "context_orca" }, relationshipTypeId: "relationship_concerns" },
+        { context: { contextTypeId: "context_type_customer", contextId: "context_acme" }, relationshipTypeId: "relationship_supports" },
+      ],
+      humanSignal: { classifications: ["likely_human"], evidenceReasonCodes: ["direct_recipient"] },
+      date: { receivedBefore: "2026-08-26T14:37:22.123Z" },
+      thread: { ids: ["thread_alpha", "thread_beta"] },
+    };
+    const preservedView: OrganizationView = { ...organizationViewsFixture[0]!, id: "view_preserved", name: "Preserved review", definition: preservedDefinition };
+    let submittedDefinition: unknown;
+    let contextReads = 0;
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      const method = init?.method ?? "GET";
+      if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [preservedView] });
+      if (path.includes("/results")) return Response.json({ viewId: preservedView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/contexts/query?limit=100") {
+        contextReads += 1;
+        return Response.json(contextQueryFixture);
+      }
+      if (method === "PATCH") {
+        submittedDefinition = JSON.parse(String(init?.body)).patch.definition;
+        return Response.json({ ...preservedView, name: "Metadata only", definition: submittedDefinition, revision: 2 });
+      }
+      throw new Error(`Unexpected request ${method} ${path}`);
+    }) as typeof fetch;
+
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    await flush(); await flush();
+    expect(contextReads).toBe(1);
+    expect(selectField(container, "Minimum Human Signal").value).toBe("");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("5 predicate families · combined with AND");
+    expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("2 exact Threads");
+    expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Facet filter");
+    expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("1 additional Context filter");
+    expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("Likely human");
+    expect(selectField(container, "Named Context").textContent).toContain("Orca launch");
+    await change(input(container, "View name"), "Metadata only");
+    await click(button(container, "Save changes"));
+    await flush();
+    expect(submittedDefinition).toEqual(preservedDefinition);
+  });
+
+  test("exposes named Context loading failure and retry without losing the saved selection", async () => {
+    const contextView = organizationViewsFixture[2]!;
+    let contextReads = 0;
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [contextView] });
+      if (path.includes("/results")) return Response.json({ viewId: contextView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/contexts/query?limit=100") {
+        contextReads += 1;
+        return contextReads === 1 ? Response.json({ error: { message: "Context tide unavailable" } }, { status: 503 }) : Response.json(contextQueryFixture);
+      }
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    await flush(); await flush();
+    expect(container.querySelector(".view-context-error")?.textContent).toContain("Saved IDs remain preserved");
+    expect(selectField(container, "Named Context").value).toBe("context_orca");
+    await click(button(container, "Retry Contexts"));
+    await flush(); await flush();
+    expect(contextReads).toBe(2);
+    expect(container.querySelector(".view-context-error")).toBeNull();
+    expect(selectField(container, "Named Context").textContent).toContain("Orca launch");
+  });
+
+  test("restricts Facet conditions and editors by value type, validates with shared rules, and names enum values", async () => {
+    const facetView: OrganizationView = {
+      ...organizationViewsFixture[0]!,
+      definition: { revision: 1, facetFilters: [{ facetId: "facet_urgency", operator: "equals", value: "urgent" }] },
+    };
+    const facetDefinitions = [
+      { id: "facet_urgency", name: "Urgency", position: 0, valueType: { kind: "enum", options: [{ id: "urgent", label: "Urgent", position: 0, retiredAt: null }] }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1 },
+      { id: "facet_score", name: "Score", position: 1, valueType: { kind: "number", minimum: 0, maximum: 10, integer: true }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1 },
+    ];
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      if (path === "/v1/organization/describe") return Response.json({
+        workspaceId: "workspace_demo", accountIds: ["account_gmail"],
+        workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
+        capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
+        workspaceRevision: 4, facetDefinitions, workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
+      });
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [facetView] });
+      if (path.includes("/results")) return Response.json({ viewId: facetView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+
+    const container = await renderWorkspace(false, false);
+    await flush(); await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    expect(container.querySelector(".view-scope-sentence")?.textContent).toContain("Urgency is Urgent");
+    expect(selectField(container, "Facet condition").textContent).not.toContain("Contains");
+    await choose(selectField(container, "Facet"), "facet_score");
+    expect(selectField(container, "Facet condition").textContent).not.toContain("Contains");
+    const score = input(container, "Value");
+    expect(score.type).toBe("number");
+    await change(score, "11");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("must be at most 10");
+    expect(button(container, "Save changes").disabled).toBe(true);
   });
 
   test("starts with a readable default, suggests a name, and adds, edits, and removes named clauses", async () => {
@@ -111,6 +257,8 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "LaneChoose where Threads are primarily placed"));
     await flush();
     expect(container.querySelector('[data-clause="lane"]')).not.toBeNull();
+    expect(browserWindow.document.activeElement?.textContent).toBe("Focus");
+    expect(browserWindow.document.activeElement?.classList.contains("view-clause-remove")).toBe(false);
     expect(input(container, "View name").value).toBe("Unread Focus messages");
     await click(button(container, "Everything else"));
     await click(button(container, "Focus"));
@@ -185,6 +333,8 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "+ New View"));
     await click(button(container, "Add filter ＋"));
     await click(button(container, "SubjectMatch words in the Thread subject"));
+    await flush();
+    expect(browserWindow.document.activeElement as unknown).toBe(input(container, "Subject contains") as unknown);
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("Enter words to match in the subject.");
     expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(true);
     expect(container.textContent).toContain("No live query has run for this draft.");
@@ -206,6 +356,22 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     });
     const savedPayload = createPayload as Record<string, unknown> | null;
     expect(typeof savedPayload?.idempotencyKey).toBe("string");
+  });
+
+  test("clears stale demo results after save and persistently names the unevaluated preview state", async () => {
+    const container = await renderWorkspace();
+    expect(container.textContent).toContain("Unresolved production failure");
+    await click(button(container, "Edit definition"));
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("Local preview does not evaluate sample mail");
+    await change(input(container, "View name"), "Locally revised review");
+    await click(button(container, "Save changes"));
+    expect(container.querySelector(".view-thread-list")).toBeNull();
+    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-results")?.textContent).not.toContain("No Threads match right now");
+    await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Urgent humans")) as unknown as HTMLButtonElement);
+    await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Locally revised review")) as unknown as HTMLButtonElement);
+    expect(container.querySelector(".view-thread-list")).toBeNull();
+    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
   });
 
   test("reorders Views deterministically while preserving selection", async () => {

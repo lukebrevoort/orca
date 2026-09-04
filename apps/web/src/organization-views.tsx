@@ -7,7 +7,10 @@ import {
   organizationViewResultPageSchema,
   organizationViewsFixture,
   organizationWeeklyViewResultsFixture,
+  validateFacetScalarValue,
   type FacetDefinition,
+  type FacetFilter,
+  type FacetScalarValue,
   type OrganizationView,
   type OrganizationViewDefinition,
   type OrganizationViewResultItem,
@@ -64,6 +67,34 @@ function withCurrent(options: NamedOption[], ids: string[]) {
   return [...options, ...ids.filter((id) => !known.has(id)).map((id) => ({ id, label: humanizeId(id) }))];
 }
 function optionLabel(id: string, options: NamedOption[]) { return options.find((option) => option.id === id)?.label ?? humanizeId(id); }
+function humanClassificationLabel(value: string) { return value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase()); }
+function facetOperators(definition: FacetDefinition | undefined) {
+  const operators = ["equals", "present", "missing"] as const;
+  return definition && ["text", "email", "domain"].includes(definition.valueType.kind)
+    ? [operators[0], "contains" as const, operators[1], operators[2]]
+    : operators;
+}
+function facetOperatorLabel(operator: FacetFilter["operator"]) {
+  return operator === "equals" ? "is" : operator === "contains" ? "contains" : operator === "present" ? "is present" : "is missing";
+}
+function facetScalarFromInput(definition: FacetDefinition | undefined, value: string): FacetScalarValue {
+  if (definition?.valueType.kind === "number") return Number(value);
+  if (definition?.valueType.kind === "boolean") return value === "true";
+  return value;
+}
+function facetValueLabel(filter: FacetFilter, definition: FacetDefinition | undefined) {
+  if (!("value" in filter)) return "";
+  if (definition?.valueType.kind === "enum" && typeof filter.value === "string") {
+    return definition.valueType.options.find((option) => option.id === filter.value)?.label ?? humanizeId(filter.value);
+  }
+  if (definition?.valueType.kind === "boolean") return filter.value === true ? "Yes" : "No";
+  return String(filter.value);
+}
+function facetFilterSummary(filter: FacetFilter, definitions: readonly FacetDefinition[]) {
+  const definition = definitions.find((candidate) => candidate.id === filter.facetId);
+  const value = facetValueLabel(filter, definition);
+  return `${definition?.name ?? humanizeId(filter.facetId)} ${facetOperatorLabel(filter.operator)}${value ? ` ${value}` : ""}`;
+}
 function predicateCount(definition: OrganizationViewDefinition) {
   return [definition.accountIds, definition.laneIds, definition.facetFilters, definition.contextFilters, definition.workflowStateIds, definition.humanSignal, definition.sender, definition.date, definition.thread].filter(Boolean).length;
 }
@@ -123,7 +154,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
   const [contextTypeId, setContextTypeId] = useState("");
   const [contextId, setContextId] = useState("");
   const [relationshipTypeId, setRelationshipTypeId] = useState("");
-  const [minimumSignal, setMinimumSignal] = useState("7");
+  const [minimumSignal, setMinimumSignal] = useState("");
   const [senderAddress, setSenderAddress] = useState("");
   const [senderDomain, setSenderDomain] = useState("");
   const [receivedAfter, setReceivedAfter] = useState("");
@@ -134,6 +165,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [contextCatalog, setContextCatalog] = useState<ContextCatalog | null>(demoMode ? demoContexts : null);
   const [contextLoadState, setContextLoadState] = useState<"idle" | "loading" | "error">("idle");
+  const [unevaluatedDemoViewIds, setUnevaluatedDemoViewIds] = useState<Set<string>>(() => new Set());
   const resultRequest = useRef(0);
   const listRequest = useRef(0);
   const mutationRequest = useRef(0);
@@ -209,7 +241,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
   function selectView(view: OrganizationView) {
     resultRequest.current += 1;
     setActiveViewId(view.id); setError(null); setPageError(null); setPageStatus("idle"); setComposerMode(null); setPendingRemoveId(null);
-    if (demoMode) setResults(view.id === organizationWeeklyViewResultsFixture.viewId ? organizationWeeklyViewResultsFixture : emptyResults(view));
+    if (demoMode) setResults(unevaluatedDemoViewIds.has(view.id) ? null : view.id === organizationWeeklyViewResultsFixture.viewId ? organizationWeeklyViewResultsFixture : emptyResults(view));
   }
 
   async function loadMore() {
@@ -247,8 +279,9 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
     setAccountIds(definition?.accountIds ?? []); setLaneIds(definition?.laneIds ?? []); setWorkflowStateIds(definition?.workflowStateIds ?? []);
     const facet = definition?.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
     const context = definition?.contextFilters?.[0]; setContextTypeId(context?.context.contextTypeId ?? ""); setContextId(context?.context.contextId ?? ""); setRelationshipTypeId(context?.relationshipTypeId ?? "");
-    setMinimumSignal(definition?.humanSignal?.minimumScore?.toString() ?? "7"); setSenderAddress(definition?.sender?.addresses?.join(", ") ?? ""); setSenderDomain(definition?.sender?.domains?.join(", ") ?? "");
+    setMinimumSignal(definition?.humanSignal?.minimumScore?.toString() ?? ""); setSenderAddress(definition?.sender?.addresses?.join(", ") ?? ""); setSenderDomain(definition?.sender?.domains?.join(", ") ?? "");
     setReceivedAfter(dateValue(definition?.date?.receivedAfter)); setReceivedBefore(dateValue(definition?.date?.receivedBefore)); setSubjectContains(definition?.thread?.subjectContains ?? ""); setReadState(definition?.thread?.readState ?? "unread");
+    if (definition?.contextFilters?.length) void loadContextCatalog();
   }
 
   async function loadContextCatalog() {
@@ -274,6 +307,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
     if (kind === "account" && accountIds.length === 0 && accountOptions[0]) setAccountIds([accountOptions[0].id]);
     if (kind === "lane" && laneIds.length === 0 && laneOptions[0]) setLaneIds([laneOptions[0].id]);
     if (kind === "workflow" && workflowStateIds.length === 0 && workflowOptions[0]) setWorkflowStateIds([workflowOptions[0].id]);
+    if (kind === "human") setMinimumSignal("7");
     if (kind === "facet" && !facetId && facetDefinitions[0]) {
       setFacetId(facetDefinitions[0].id);
       const type = facetDefinitions[0].valueType;
@@ -289,7 +323,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
       if (relationship && !relationshipTypeId) setRelationshipTypeId(relationship.id);
     }
     setFilterMenuOpen(false); setMoreFiltersOpen(false);
-    window.setTimeout(() => (document.querySelector(`[data-clause="${kind}"] button, [data-clause="${kind}"] input, [data-clause="${kind}"] select`) as HTMLElement | null)?.focus(), 0);
+    window.setTimeout(() => (document.querySelector(`[data-clause="${kind}"] [data-clause-editor]`) as HTMLElement | null)?.focus(), 0);
   }
 
   async function addClause(kind: ClauseKind) {
@@ -313,8 +347,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
       const current = original?.facetFilters?.[0];
       let typedValue: string | number | boolean = facetValue;
       const selected = facetDefinitions.find((facet) => facet.id === facetId);
-      if (selected?.valueType.kind === "number") typedValue = Number(facetValue);
-      if (selected?.valueType.kind === "boolean") typedValue = facetValue === "true";
+      typedValue = facetScalarFromInput(selected, facetValue);
       const first = facetOperator === "missing" || facetOperator === "present"
         ? { facetId, operator: facetOperator }
         : { facetId, operator: facetOperator, value: typedValue };
@@ -335,8 +368,8 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
     }
     if (activeSet.has("date")) {
       const date = { ...(original?.date ?? {}) };
-      if (receivedAfter) date.receivedAfter = isoDate(receivedAfter); else delete date.receivedAfter;
-      if (receivedBefore) date.receivedBefore = isoDate(receivedBefore, true); else delete date.receivedBefore;
+      if (receivedAfter) date.receivedAfter = receivedAfter === dateValue(original?.date?.receivedAfter) ? original!.date!.receivedAfter : isoDate(receivedAfter); else delete date.receivedAfter;
+      if (receivedBefore) date.receivedBefore = receivedBefore === dateValue(original?.date?.receivedBefore) ? original!.date!.receivedBefore : isoDate(receivedBefore, true); else delete date.receivedBefore;
       if (Object.keys(date).length) definition.date = date;
     }
     const thread = { ...(original?.thread ?? {}) };
@@ -347,14 +380,23 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
   }
 
   const draft = draftDefinition();
+  const draftPredicateCount = predicateCount(draft);
+  const selectedFacet = facetDefinitions.find((facet) => facet.id === facetId);
+  const facetValidationMessage = (() => {
+    if (!activeSet.has("facet") || !selectedFacet || facetOperator === "missing" || facetOperator === "present" || !facetValue) return null;
+    if (facetOperator === "contains" && !["text", "email", "domain"].includes(selectedFacet.valueType.kind)) return `${selectedFacet.name} does not support Contains.`;
+    const issue = validateFacetScalarValue(selectedFacet.valueType, facetScalarFromInput(selectedFacet, facetValue));
+    return issue ? `${selectedFacet.name} ${issue}.` : null;
+  })();
   const validationMessage = (() => {
     if (!name.trim()) return "Give this View a short name before saving.";
     if (activeSet.has("account") && accountIds.length === 0) return "Choose at least one account.";
     if (activeSet.has("lane") && laneIds.length === 0) return "Choose at least one lane.";
     if (activeSet.has("workflow") && workflowStateIds.length === 0) return "Choose at least one workflow state.";
     if (activeSet.has("facet") && (!facetId || ((facetOperator === "equals" || facetOperator === "contains") && !facetValue))) return "Finish choosing the Facet condition.";
+    if (facetValidationMessage) return facetValidationMessage;
     if (activeSet.has("context") && (!contextTypeId || !contextId || !relationshipTypeId)) return contextLoadState === "error" ? "Named Contexts could not be loaded. Remove this filter or try again." : "Finish choosing the Context relationship.";
-    if (activeSet.has("human") && minimumSignal === "") return "Choose a minimum Human Signal score.";
+    if (activeSet.has("human") && !draft.humanSignal) return "Choose a minimum Human Signal score.";
     if (activeSet.has("sender") && !senderAddress.trim() && !senderDomain.trim()) return "Enter a sender address or domain.";
     if (activeSet.has("date") && !receivedAfter && !receivedBefore) return "Choose a start date, an end date, or both.";
     if (activeSet.has("subject") && !subjectContains.trim()) return "Enter words to match in the subject.";
@@ -364,20 +406,34 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
 
   const scopeSummary = (() => {
     const parts: string[] = [];
-    if (activeSet.has("read")) parts.push(readState === "unread" ? "that are unread" : "that are read");
-    if (activeSet.has("human")) parts.push(`with Human Signal ${minimumSignal || "…"}+`);
-    if (activeSet.has("sender")) {
-      const senders = [senderAddress.trim(), senderDomain.trim()].filter(Boolean).join(" or ");
-      parts.push(`from ${senders || "a chosen sender"}`);
-    }
-    if (activeSet.has("subject")) parts.push(`with “${subjectContains || "…"}” in the subject`);
-    parts.push(activeSet.has("account") ? `from ${accountIds.map((id) => optionLabel(id, accountOptions)).join(" or ") || "a chosen account"}` : "from any account");
-    parts.push(activeSet.has("lane") ? `in ${laneIds.map((id) => optionLabel(id, laneOptions)).join(" or ") || "a chosen lane"}` : "in any lane");
-    if (activeSet.has("workflow")) parts.push(`in ${workflowStateIds.map((id) => optionLabel(id, workflowOptions)).join(" or ")} workflow`);
-    if (activeSet.has("facet")) parts.push(`where ${facetDefinitions.find((item) => item.id === facetId)?.name ?? "a Facet"} ${facetOperator}${facetOperator === "equals" || facetOperator === "contains" ? ` ${facetValue || "…"}` : ""}`);
-    if (activeSet.has("context")) parts.push(`linked to ${optionLabel(contextId, contextOptions)}`);
-    if (activeSet.has("date")) parts.push(receivedAfter && receivedBefore ? `received ${receivedAfter} through ${receivedBefore}` : receivedAfter ? `received after ${receivedAfter}` : `received before ${receivedBefore || "…"}`);
+    if (draft.thread?.readState) parts.push(draft.thread.readState === "unread" ? "that are unread" : "that are read");
+    if (draft.humanSignal?.minimumScore !== undefined) parts.push(`with Human Signal ${draft.humanSignal.minimumScore}+`);
+    if (draft.humanSignal?.maximumScore !== undefined) parts.push(`with Human Signal at most ${draft.humanSignal.maximumScore}`);
+    if (draft.humanSignal?.classifications?.length) parts.push(`classified ${draft.humanSignal.classifications.map(humanClassificationLabel).join(" or ")}`);
+    if (draft.humanSignal?.evidenceReasonCodes?.length) parts.push(`with evidence ${draft.humanSignal.evidenceReasonCodes.map(humanizeId).join(" or ")}`);
+    if (draft.sender) parts.push(`from ${[...(draft.sender.addresses ?? []), ...(draft.sender.domains ?? [])].join(" or ")}`);
+    if (draft.thread?.subjectContains) parts.push(`with “${draft.thread.subjectContains}” in the subject`);
+    if (draft.thread?.ids?.length) parts.push(`among ${draft.thread.ids.length} exact Threads`);
+    parts.push(draft.accountIds ? `from ${draft.accountIds.map((id) => optionLabel(id, accountOptions)).join(" or ")}` : "from any account");
+    parts.push(draft.laneIds ? `in ${draft.laneIds.map((id) => optionLabel(id, laneOptions)).join(" or ")}` : "in any lane");
+    if (draft.workflowStateIds) parts.push(`in ${draft.workflowStateIds.map((id) => optionLabel(id, workflowOptions)).join(" or ")} workflow`);
+    for (const filter of draft.facetFilters ?? []) parts.push(`where ${facetFilterSummary(filter, facetDefinitions)}`);
+    for (const filter of draft.contextFilters ?? []) parts.push(`linked to ${optionLabel(filter.context.contextId, contextCatalog?.contexts ?? [])} as ${optionLabel(filter.relationshipTypeId, contextCatalog?.relationships ?? [])}${filter.direction ? ` (${humanizeId(filter.direction)})` : ""}`);
+    if (draft.date) parts.push(draft.date.receivedAfter && draft.date.receivedBefore ? `received ${dateValue(draft.date.receivedAfter)} through ${dateValue(draft.date.receivedBefore)}` : draft.date.receivedAfter ? `received after ${dateValue(draft.date.receivedAfter)}` : `received before ${dateValue(draft.date.receivedBefore)}`);
     return `Show messages ${parts.join(" ")}.`;
+  })();
+
+  const preservedConstraintDetails = (() => {
+    const details: string[] = [];
+    if (draft.thread?.ids?.length) details.push(`${draft.thread.ids.length} exact Threads · ${draft.thread.ids.map(humanizeId).join(", ")}`);
+    const additionalFacets = draft.facetFilters?.slice(1) ?? [];
+    if (additionalFacets.length) details.push(`${additionalFacets.length} additional Facet ${additionalFacets.length === 1 ? "filter" : "filters"} · ${additionalFacets.map((filter) => facetFilterSummary(filter, facetDefinitions)).join("; ")}`);
+    const additionalContexts = draft.contextFilters?.slice(1) ?? [];
+    if (additionalContexts.length) details.push(`${additionalContexts.length} additional Context ${additionalContexts.length === 1 ? "filter" : "filters"} · ${additionalContexts.map((filter) => `${optionLabel(filter.context.contextId, contextCatalog?.contexts ?? [])} · ${optionLabel(filter.relationshipTypeId, contextCatalog?.relationships ?? [])}${filter.direction ? ` · ${humanizeId(filter.direction)}` : ""}`).join("; ")}`);
+    if (draft.humanSignal?.maximumScore !== undefined) details.push(`Human Signal maximum · ${draft.humanSignal.maximumScore}`);
+    if (draft.humanSignal?.classifications?.length) details.push(`Human classifications · ${draft.humanSignal.classifications.map(humanClassificationLabel).join(", ")}`);
+    if (draft.humanSignal?.evidenceReasonCodes?.length) details.push(`Human evidence · ${draft.humanSignal.evidenceReasonCodes.map(humanizeId).join(", ")}`);
+    return details;
   })();
 
   const suggestedName = (() => {
@@ -423,7 +479,8 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
           : organizationViewListResponseSchema.shape.items.element.parse(await authority.request(`/v1/organization/views/${encodeURIComponent(activeView.id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: mutationKey("update"), expectedWorkspaceRevision: workspaceRevision, expectedRevision: activeView.revision, patch: { name: name.trim(), description: description.trim(), color, definition } }) }, { operation: "mutation", capability: "apply", hasReliableData: true }));
         if (requestId !== mutationRequest.current) return;
         setViews((current) => current.map((view) => view.id === updated.id ? updated : view)); setWorkspaceRevision((current) => current + 1);
-        setResults((current) => demoMode && current?.viewId === updated.id ? { ...current, viewRevision: updated.revision } : null);
+        setResults(null);
+        if (demoMode) setUnevaluatedDemoViewIds((current) => new Set(current).add(updated.id));
         setComposerMode(null); setStatus("ready");
         if (!demoMode) onWorkspaceMutation?.();
       } else {
@@ -432,6 +489,7 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
           : organizationViewListResponseSchema.shape.items.element.parse(await authority.request("/v1/organization/views", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: mutationKey("create"), expectedWorkspaceRevision: workspaceRevision, name: name.trim(), description: description.trim(), color, position: views.length, definition }) }, { operation: "mutation", capability: "apply", hasReliableData: true }));
         if (requestId !== mutationRequest.current) return;
         setViews((current) => [...current, created]); setWorkspaceRevision((current) => current + 1); setActiveViewId(created.id); setResults(null); setComposerMode(null); setName(""); setStatus("ready");
+        if (demoMode) setUnevaluatedDemoViewIds((current) => new Set(current).add(created.id));
         if (!demoMode) onWorkspaceMutation?.();
       }
     } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : `Could not ${composerMode === "edit" ? "update" : "create"} View`); } }
@@ -492,16 +550,16 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
     const selectedFacet = facetDefinitions.find((facet) => facet.id === facetId);
     return <article className="view-clause" data-clause={kind} key={kind}>
       <header><div><span>{meta.label}</span><small>{meta.description}</small></div><button aria-label={meta.removeLabel} className="view-clause-remove" onClick={() => removeClause(kind)} type="button">Remove</button></header>
-      {kind === "account" ? <div aria-label="Accounts" className="view-choice-list" role="group">{accountOptions.map((option) => <button aria-pressed={accountIds.includes(option.id)} key={option.id} onClick={() => setAccountIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
-      {kind === "lane" ? <div aria-label="Lanes" className="view-choice-list" role="group">{laneOptions.map((option) => <button aria-pressed={laneIds.includes(option.id)} key={option.id} onClick={() => setLaneIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
-      {kind === "read" ? <div aria-label="Read state" className="view-choice-list" role="group"><button aria-pressed={readState === "unread"} onClick={() => setReadState("unread")} type="button">Unread</button><button aria-pressed={readState === "read"} onClick={() => setReadState("read")} type="button">Read</button></div> : null}
-      {kind === "human" ? <label><span>Minimum score</span><select aria-label="Minimum Human Signal" onChange={(event) => setMinimumSignal(event.target.value)} value={minimumSignal}>{Array.from({ length: 11 }, (_, score) => <option key={score} value={score}>{score}{score === 7 ? " · recommended" : ""}</option>)}</select></label> : null}
-      {kind === "sender" ? <div className="view-inline-fields"><label><span>Email addresses</span><input aria-describedby="sender-hint" inputMode="email" onChange={(event) => setSenderAddress(event.target.value)} placeholder="maya@example.com" value={senderAddress}/></label><label><span>Domains</span><input aria-describedby="sender-hint" onChange={(event) => setSenderDomain(event.target.value)} placeholder="example.com" value={senderDomain}/></label><small className="view-field-hint" id="sender-hint">Separate multiple values with commas.</small></div> : null}
-      {kind === "subject" ? <label><span>Subject contains</span><input maxLength={200} onInput={(event) => setSubjectContains(event.currentTarget.value)} placeholder="production failure" value={subjectContains}/></label> : null}
-      {kind === "workflow" ? <div aria-label="Workflow states" className="view-choice-list" role="group">{workflowOptions.map((option) => <button aria-pressed={workflowStateIds.includes(option.id)} key={option.id} onClick={() => setWorkflowStateIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
-      {kind === "facet" ? <div className="view-inline-fields view-inline-fields-three"><label><span>Facet</span><select aria-label="Facet" onChange={(event) => { const next = facetDefinitions.find((item) => item.id === event.target.value); setFacetId(event.target.value); setFacetValue(next?.valueType.kind === "enum" ? next.valueType.options.find((item) => !item.retiredAt)?.id ?? "" : next?.valueType.kind === "boolean" ? "true" : ""); }} value={facetId}><option value="">Choose a Facet</option>{facetDefinitions.filter((facet) => !facet.retiredAt).map((facet) => <option key={facet.id} value={facet.id}>{facet.name}</option>)}</select></label><label><span>Condition</span><select aria-label="Facet condition" onChange={(event) => setFacetOperator(event.target.value as typeof facetOperator)} value={facetOperator}><option value="equals">Is</option><option value="contains">Contains</option><option value="present">Is present</option><option value="missing">Is missing</option></select></label>{facetOperator === "equals" || facetOperator === "contains" ? <label><span>Value</span>{selectedFacet?.valueType.kind === "enum" ? <select aria-label="Facet value" onChange={(event) => setFacetValue(event.target.value)} value={facetValue}>{selectedFacet.valueType.options.filter((item) => !item.retiredAt).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select> : selectedFacet?.valueType.kind === "boolean" ? <select aria-label="Facet value" onChange={(event) => setFacetValue(event.target.value)} value={facetValue}><option value="true">Yes</option><option value="false">No</option></select> : <input aria-label="Facet value" onChange={(event) => setFacetValue(event.target.value)} type={selectedFacet?.valueType.kind === "number" ? "number" : "text"} value={facetValue}/>}</label> : null}</div> : null}
-      {kind === "context" ? <div className="view-inline-fields view-inline-fields-three"><label><span>Type</span><select aria-label="Context type" onChange={(event) => { const nextType = event.target.value; setContextTypeId(nextType); setContextId((contextCatalog?.contexts ?? []).find((item) => item.contextTypeId === nextType)?.id ?? ""); setRelationshipTypeId((contextCatalog?.relationships ?? []).find((item) => item.contextTypeId === nextType)?.id ?? ""); }} value={contextTypeId}><option value="">Choose a type</option>{contextTypeOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label><label><span>Named context</span><select aria-label="Named Context" onChange={(event) => setContextId(event.target.value)} value={contextId}><option value="">Choose a Context</option>{contextOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label><label><span>Relationship</span><select aria-label="Context relationship" onChange={(event) => setRelationshipTypeId(event.target.value)} value={relationshipTypeId}><option value="">Choose a relationship</option>{relationshipOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label></div> : null}
-      {kind === "date" ? <div className="view-inline-fields"><label><span>Received after</span><input onChange={(event) => setReceivedAfter(event.target.value)} type="date" value={receivedAfter}/></label><label><span>Received before</span><input onChange={(event) => setReceivedBefore(event.target.value)} type="date" value={receivedBefore}/></label></div> : null}
+      {kind === "account" ? <div aria-label="Accounts" className="view-choice-list" role="group">{accountOptions.map((option, index) => <button aria-pressed={accountIds.includes(option.id)} data-clause-editor={index === 0 ? "" : undefined} key={option.id} onClick={() => setAccountIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
+      {kind === "lane" ? <div aria-label="Lanes" className="view-choice-list" role="group">{laneOptions.map((option, index) => <button aria-pressed={laneIds.includes(option.id)} data-clause-editor={index === 0 ? "" : undefined} key={option.id} onClick={() => setLaneIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
+      {kind === "read" ? <div aria-label="Read state" className="view-choice-list" role="group"><button aria-pressed={readState === "unread"} data-clause-editor onClick={() => setReadState("unread")} type="button">Unread</button><button aria-pressed={readState === "read"} onClick={() => setReadState("read")} type="button">Read</button></div> : null}
+      {kind === "human" ? <label><span>Minimum score</span><select aria-label="Minimum Human Signal" data-clause-editor onChange={(event) => setMinimumSignal(event.target.value)} value={minimumSignal}><option value="">No minimum · preserve classifications</option>{Array.from({ length: 11 }, (_, score) => <option key={score} value={score}>{score}{score === 7 ? " · recommended" : ""}</option>)}</select></label> : null}
+      {kind === "sender" ? <div className="view-inline-fields"><label><span>Email addresses</span><input aria-describedby="sender-hint" data-clause-editor inputMode="email" onChange={(event) => setSenderAddress(event.target.value)} placeholder="maya@example.com" value={senderAddress}/></label><label><span>Domains</span><input aria-describedby="sender-hint" onChange={(event) => setSenderDomain(event.target.value)} placeholder="example.com" value={senderDomain}/></label><small className="view-field-hint" id="sender-hint">Separate multiple values with commas.</small></div> : null}
+      {kind === "subject" ? <label><span>Subject contains</span><input data-clause-editor maxLength={200} onInput={(event) => setSubjectContains(event.currentTarget.value)} placeholder="production failure" value={subjectContains}/></label> : null}
+      {kind === "workflow" ? <div aria-label="Workflow states" className="view-choice-list" role="group">{workflowOptions.map((option, index) => <button aria-pressed={workflowStateIds.includes(option.id)} data-clause-editor={index === 0 ? "" : undefined} key={option.id} onClick={() => setWorkflowStateIds((current) => toggleValue(current, option.id))} type="button">{option.label}</button>)}</div> : null}
+      {kind === "facet" ? <div className="view-inline-fields view-inline-fields-three"><label><span>Facet</span><select aria-label="Facet" data-clause-editor onChange={(event) => { const next = facetDefinitions.find((item) => item.id === event.target.value); setFacetId(event.target.value); setFacetOperator("equals"); setFacetValue(next?.valueType.kind === "enum" ? next.valueType.options.find((item) => !item.retiredAt)?.id ?? "" : next?.valueType.kind === "boolean" ? "true" : ""); }} value={facetId}><option value="">Choose a Facet</option>{facetDefinitions.filter((facet) => !facet.retiredAt).map((facet) => <option key={facet.id} value={facet.id}>{facet.name}</option>)}</select></label><label><span>Condition</span><select aria-label="Facet condition" onChange={(event) => setFacetOperator(event.target.value as typeof facetOperator)} value={facetOperator}>{facetOperators(selectedFacet).map((operator) => <option key={operator} value={operator}>{facetOperatorLabel(operator).replace(/^./, (letter) => letter.toUpperCase())}</option>)}</select></label>{facetOperator === "equals" || facetOperator === "contains" ? <label><span>Value</span>{selectedFacet?.valueType.kind === "enum" ? <select aria-label="Facet value" onChange={(event) => setFacetValue(event.target.value)} value={facetValue}>{selectedFacet.valueType.options.filter((item) => !item.retiredAt).map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select> : selectedFacet?.valueType.kind === "boolean" ? <select aria-label="Facet value" onChange={(event) => setFacetValue(event.target.value)} value={facetValue}><option value="true">Yes</option><option value="false">No</option></select> : <input aria-label="Facet value" inputMode={selectedFacet?.valueType.kind === "number" ? "decimal" : selectedFacet?.valueType.kind === "email" ? "email" : "text"} max={selectedFacet?.valueType.kind === "number" ? selectedFacet.valueType.maximum : undefined} maxLength={selectedFacet?.valueType.kind === "text" ? selectedFacet.valueType.maxLength : undefined} min={selectedFacet?.valueType.kind === "number" ? selectedFacet.valueType.minimum : undefined} onInput={(event) => setFacetValue(event.currentTarget.value)} placeholder={selectedFacet?.valueType.kind === "datetime" ? "2026-09-04T14:30:00-06:00" : selectedFacet?.valueType.kind === "duration" ? "PT45M" : selectedFacet?.valueType.kind === "domain" ? "example.com" : undefined} step={selectedFacet?.valueType.kind === "number" && selectedFacet.valueType.integer ? 1 : undefined} type={selectedFacet?.valueType.kind === "number" ? "number" : selectedFacet?.valueType.kind === "email" ? "email" : "text"} value={facetValue}/>}</label> : null}</div> : null}
+      {kind === "context" ? <div className="view-context-editor"><div className="view-inline-fields view-inline-fields-three"><label><span>Type</span><select aria-label="Context type" data-clause-editor onFocus={() => void loadContextCatalog()} onChange={(event) => { const nextType = event.target.value; setContextTypeId(nextType); setContextId((contextCatalog?.contexts ?? []).find((item) => item.contextTypeId === nextType)?.id ?? ""); setRelationshipTypeId((contextCatalog?.relationships ?? []).find((item) => item.contextTypeId === nextType)?.id ?? ""); }} value={contextTypeId}><option value="">Choose a type</option>{contextTypeOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label><label><span>Named context</span><select aria-label="Named Context" onFocus={() => void loadContextCatalog()} onChange={(event) => setContextId(event.target.value)} value={contextId}><option value="">Choose a Context</option>{contextOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label><label><span>Relationship</span><select aria-label="Context relationship" onFocus={() => void loadContextCatalog()} onChange={(event) => setRelationshipTypeId(event.target.value)} value={relationshipTypeId}><option value="">Choose a relationship</option>{relationshipOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></label></div>{contextLoadState === "loading" ? <small className="view-context-status" role="status">Loading named Contexts…</small> : null}{contextLoadState === "error" ? <div className="view-context-status view-context-error" role="alert"><span>Named Contexts could not be loaded. Saved IDs remain preserved.</span><button className="view-action" onClick={() => void loadContextCatalog()} type="button">Retry Contexts</button></div> : null}</div> : null}
+      {kind === "date" ? <div className="view-inline-fields"><label><span>Received after</span><input data-clause-editor onChange={(event) => setReceivedAfter(event.target.value)} type="date" value={receivedAfter}/></label><label><span>Received before</span><input onChange={(event) => setReceivedBefore(event.target.value)} type="date" value={receivedBefore}/></label></div> : null}
     </article>;
   }
 
@@ -512,11 +570,11 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
       <header><div><span>Perspective builder</span><h3>{composerMode === "edit" ? "Edit live perspective" : "Build a live perspective"}</h3></div><div className="view-composer-actions"><button className="view-action" onClick={() => setComposerMode(null)} type="button">Cancel</button><button className="view-action view-save" disabled={!canMutate || status === "saving" || Boolean(validationMessage)} type="submit">{status === "saving" ? "Saving View…" : composerMode === "edit" ? "Save changes" : "Save View"}</button></div></header>
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
         <div className="view-identity"><label><span>View name</span><input autoFocus maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></div>
-        <section aria-live="polite" className="view-scope-sentence"><span>Current scope</span><p>{scopeSummary}</p></section>
+        <section aria-live="polite" className="view-scope-sentence"><span>Current scope</span><p>{scopeSummary}</p>{preservedConstraintDetails.length ? <details className="view-preserved-constraints" open><summary>Preserved constraints · {preservedConstraintDetails.length}</summary><ul>{preservedConstraintDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul></details> : null}</section>
         <div className="view-clause-heading"><div><span>Filters</span><small>Every filter narrows the same live result.</small></div><div className="view-add-filter"><button aria-expanded={filterMenuOpen} aria-haspopup="menu" className="view-action view-filter-trigger" onClick={() => { setFilterMenuOpen((open) => !open); setMoreFiltersOpen(false); window.setTimeout(() => filterMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0); }} onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setFilterMenuOpen(true); window.setTimeout(() => filterMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus(), 0); } }} ref={filterTriggerRef} type="button">Add filter <b aria-hidden="true">＋</b></button>{filterMenuOpen ? <div aria-label="Add a filter" className="view-filter-menu" onKeyDown={handleFilterMenuKeyDown} ref={filterMenuRef} role="menu"><span>Common filters</span>{primaryClauseKinds.map((kind) => <button disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} role="menuitem" type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>)}<button aria-expanded={moreFiltersOpen} className="view-more-filters" onClick={() => setMoreFiltersOpen((open) => !open)} role="menuitem" type="button"><strong>More filters</strong><small>Workflow, Facet, Context, and date <b aria-hidden="true">{moreFiltersOpen ? "−" : "+"}</b></small></button>{moreFiltersOpen ? advancedClauseKinds.map((kind) => <button disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} role="menuitem" type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>) : null}</div> : null}</div></div>
         {activeClauses.length ? <div className="view-clause-list">{activeClauses.map(renderClause)}</div> : <div className="view-no-clauses"><strong>Any message can match.</strong><span>Add a filter only when it helps this perspective.</span></div>}
       </fieldset>
-      <footer className="view-builder-footer"><div className="view-draft-preview"><span>{demoMode ? "Local preview" : "Definition preview"}</span><strong>{activeClauses.length ? `${activeClauses.length} filter${activeClauses.length === 1 ? "" : "s"} · combined with AND` : "All current and future messages"}</strong><small>{status === "saving" ? "Saving this definition…" : demoMode ? "No server query has run. Save to refresh the sample results." : "No live query has run for this draft. Save to refresh results."}</small></div><p aria-live="polite" className={validationMessage ? "view-validation" : "view-validation view-validation-ready"} role={validationMessage ? "alert" : "status"}>{!canMutate ? `Editing paused · ${authority.state.detail}` : validationMessage ? validationMessage : "Ready to save this perspective."}</p></footer>
+      <footer className="view-builder-footer"><div className="view-draft-preview"><span>{demoMode ? "Local preview" : "Definition preview"}</span><strong>{draftPredicateCount ? `${draftPredicateCount} predicate ${draftPredicateCount === 1 ? "family" : "families"} · combined with AND` : "All current and future messages"}</strong><small>{status === "saving" ? "Saving this definition…" : demoMode ? "Local preview does not evaluate sample mail. Saving preserves the definition and clears stale sample results." : "No live query has run for this draft. Save to refresh results."}</small></div><p aria-live="polite" className={validationMessage ? "view-validation" : "view-validation view-validation-ready"} role={validationMessage ? "alert" : "status"}>{!canMutate ? `Editing paused · ${authority.state.detail}` : validationMessage ? validationMessage : "Ready to save this perspective."}</p></footer>
       {error ? <p className="view-state view-state-error view-composer-error" role="alert">Could not change this View. {error}</p> : null}
     </form> : null}
     <div className="views-layout"><nav aria-label="Saved live Views" className="view-list">{views.map((view, index) => <div className="view-list-item" key={view.id}><button aria-pressed={view.id === activeViewId} className="view-chip" onClick={() => selectView(view)} type="button"><i aria-hidden="true" style={{ background: view.color }}/><span><strong>{view.name}</strong><small>{predicateCount(view.definition)} predicate families</small></span><b>›</b></button><div className="view-order-controls"><button aria-label={`Move ${view.name} up`} className="view-icon-action" disabled={!canMutate || index === 0 || status === "saving"} onClick={() => void moveView(view, -1)} type="button">↑</button><button aria-label={`Move ${view.name} down`} className="view-icon-action" disabled={!canMutate || index === views.length - 1 || status === "saving"} onClick={() => void moveView(view, 1)} type="button">↓</button></div></div>)}</nav>
@@ -524,7 +582,8 @@ export function OrganizationViewsWorkspace({ demoMode = false, onWorkspaceMutati
       {!composerMode && error ? <p className="view-state view-state-error" role="alert">Could not change this View. {error}</p> : null}
       {status === "loading" ? <p className="view-state" role="status">Running the current View…</p> : null}
       {status === "ready" && !activeView ? <p className="view-state">No saved Views yet. Build one when Organization change authority is available.</p> : null}
-      {status === "ready" && activeView && items.length === 0 ? <p className="view-state">No Threads match right now. The definition stays ready for the next underlying change.</p> : null}
+      {status === "ready" && activeView && demoMode && unevaluatedDemoViewIds.has(activeView.id) ? <p className="view-state">Sample results have not been evaluated for this saved local definition. Connect to Organization to run its current filters.</p> : null}
+      {status === "ready" && activeView && (!demoMode || !unevaluatedDemoViewIds.has(activeView.id)) && items.length === 0 ? <p className="view-state">No Threads match right now. The definition stays ready for the next underlying change.</p> : null}
       {items.length ? <div className="view-thread-list">{items.map((item) => <ViewThreadRow item={item} key={`${item.accountId}:${item.threadId}`}/>)}</div> : null}
       {items.length ? <div className="view-continuation"><button className="view-action" disabled={!results?.nextCursor || pageStatus === "loading"} onClick={() => void loadMore()} type="button">{pageStatus === "loading" ? "Loading more Threads…" : results?.nextCursor ? "Load more" : "All matching Threads loaded"}</button>{pageError ? <p className="view-state view-state-error" role="alert">Could not load more Threads. {pageError}</p> : null}</div> : null}
       </section></div>
