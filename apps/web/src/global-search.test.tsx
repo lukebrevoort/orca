@@ -20,6 +20,7 @@ import {
 import { SurfaceHistory, readSurfaceLocation } from "./surface-history";
 import { TopLayerProvider } from "./top-layer";
 
+const styles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "Element", "Node", "Event", "InputEvent", "KeyboardEvent", "Location"] as const;
 const originalGlobals = new Map(browserGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
 const originalFetch = globalThis.fetch;
@@ -27,7 +28,7 @@ let browserWindow: InstanceType<typeof Window>;
 let root: Root | null;
 
 beforeEach(() => {
-  browserWindow = new Window({ url: "http://localhost:5173/?destination=organization" });
+  browserWindow = new Window({ height: 768, width: 1024, url: "http://localhost:5173/?destination=organization" });
   for (const name of browserGlobals) {
     const value = name === "window" ? browserWindow : name === "document" ? browserWindow.document : name === "navigator" ? browserWindow.navigator : browserWindow[name];
     Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
@@ -60,6 +61,12 @@ function button(label: string) {
 
 function isSameNode(left: unknown, right: unknown) {
   return left === right;
+}
+
+function installSearchStyles() {
+  const sheet = browserWindow.document.createElement("style");
+  sheet.textContent = styles;
+  browserWindow.document.head.append(sheet);
 }
 
 function searchResponse(messages = inboxFixture) {
@@ -203,6 +210,85 @@ describe("GlobalMailSearch interaction", () => {
     expect(filterToggle.getAttribute("aria-expanded")).toBe("true");
     expect(filters.hidden).toBe(false);
     expect(filters.querySelectorAll("select").length).toBe(4);
+  });
+
+  test("keeps overflowing results in the shrinkable 1024px track when filters expand", async () => {
+    globalThis.fetch = (async (input) => {
+      const path = String(input);
+      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
+      if (path.startsWith("/v1/inbox?")) return searchResponse([...inboxFixture, ...inboxFixture.map((message) => ({ ...message, id: `${message.id}-second-page` }))]);
+      throw new Error(`Unexpected fetch: ${path}`);
+    }) as typeof fetch;
+    installSearchStyles();
+    openMailSearch("mail");
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    await flush();
+
+    await act(async () => (browserWindow.document.querySelector(".global-mail-filter-toggle") as unknown as HTMLButtonElement).click());
+    const dialog = browserWindow.document.querySelector(".global-mail-search")!;
+    const results = browserWindow.document.querySelector(".global-mail-search-results")!;
+    const dialogStyle = browserWindow.getComputedStyle(dialog);
+    const resultsStyle = browserWindow.getComputedStyle(results);
+    expect(dialogStyle.gridTemplateAreas).toContain("results");
+    expect(dialogStyle.gridTemplateRows).toContain("minmax(0,1fr)");
+    expect(resultsStyle.maxHeight).toBe("none");
+    expect(resultsStyle.overflowY).toBe("auto");
+    expect(results.querySelectorAll(".global-mail-result-list a").length).toBe(inboxFixture.length * 2);
+    expect((browserWindow.document.querySelector("#global-mail-search-filters") as unknown as HTMLElement).hidden).toBe(false);
+  });
+
+  test("wraps a maximum-length no-result query inside the compact state", async () => {
+    const query = "x".repeat(200);
+    globalThis.fetch = (async (input) => {
+      const path = String(input);
+      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
+      if (path.startsWith("/v1/inbox?")) return searchResponse([]);
+      throw new Error(`Unexpected fetch: ${path}`);
+    }) as typeof fetch;
+    installSearchStyles();
+    openMailSearch(query);
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    await flush();
+
+    const heading = browserWindow.document.querySelector(".global-mail-search-state h2")!;
+    const headingStyle = browserWindow.getComputedStyle(heading);
+    expect(heading.textContent).toContain(query);
+    expect(headingStyle.maxWidth).toBe("100%");
+    expect(headingStyle.overflowWrap).toBe("anywhere");
+  });
+
+  test("includes the year only when a result is outside the current year", async () => {
+    const currentYear = new Date().getFullYear();
+    const current = { ...structuredClone(inboxFixture[0]!), id: "current-year", receivedAt: `${currentYear}-07-03T12:00:00.000Z` };
+    const previous = { ...structuredClone(inboxFixture[0]!), id: "previous-year", receivedAt: `${currentYear - 1}-07-03T12:00:00.000Z` };
+    globalThis.fetch = (async (input) => {
+      const path = String(input);
+      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
+      if (path.startsWith("/v1/inbox?")) return searchResponse([current, previous]);
+      throw new Error(`Unexpected fetch: ${path}`);
+    }) as typeof fetch;
+    openMailSearch("same day");
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    await flush();
+
+    const times = [...browserWindow.document.querySelectorAll(".global-mail-result-list time")];
+    expect(times[0]?.textContent).not.toContain(String(currentYear));
+    expect(times[1]?.textContent).toContain(String(currentYear - 1));
   });
 
   test("moves from the query into results with ArrowDown and back with ArrowUp", async () => {
