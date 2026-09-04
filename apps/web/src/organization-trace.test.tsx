@@ -20,6 +20,28 @@ const safetyTrace = evaluateOrcaRules(reviewerEvaluationInput({ safetyLock: true
 
 let servedTrace: OrcaEvaluationTrace;
 
+function colorChannels(value: string) {
+  if (value.startsWith("#") && value.length === 7) {
+    return [value.slice(1, 3), value.slice(3, 5), value.slice(5, 7)].map((channel) => Number.parseInt(channel, 16));
+  }
+  const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+  if (!channels || channels.length !== 3) throw new Error(`Expected a rendered color, received: ${value}`);
+  return channels;
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (value: string) => {
+    const [red, green, blue] = colorChannels(value).map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+  };
+  const lighter = Math.max(luminance(foreground), luminance(background));
+  const darker = Math.min(luminance(foreground), luminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function describeResponse() {
   return {
     workspaceId: "workspace-demo", accountIds: ["account-demo"],
@@ -73,6 +95,9 @@ beforeEach(() => {
     return Response.json({ error: { code: "not_available" } }, { status: 503 });
   });
   setGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const sheet = browser.document.createElement("style");
+  sheet.textContent = styles;
+  browser.document.head.append(sheet);
   const container = browser.document.createElement("main");
   browser.document.body.append(container);
   root = createRoot(container as unknown as Element);
@@ -107,6 +132,8 @@ describe("Organization Glass Box Trace", () => {
     expect(overview.querySelector(".organization-overview-rule")?.tagName).toBe("OL");
     expect(overview.querySelectorAll(".organization-overview-rule li")).toHaveLength(4);
     expect(overview.querySelectorAll("button")).toHaveLength(1);
+    expect(overview.querySelector(".organization-overview-heading > div > span")?.textContent).toBe("Example rule");
+    expect(overview.querySelector(".organization-overview-heading > small")?.textContent).toBe("Local example");
     expect(overview.textContent).toContain("WhenA message arrives");
     expect(overview.textContent).toContain("IfProduction has failed");
     expect(overview.textContent).toContain("ThenPlace it in Focus");
@@ -140,6 +167,8 @@ describe("Organization Glass Box Trace", () => {
     });
 
     expect(browser.document.querySelector(".organization-intro-status")?.textContent).not.toContain("Organization is on");
+    expect(browser.document.querySelector(".organization-overview-heading > div > span")?.textContent).toBe("Example rule");
+    expect(browser.document.querySelector(".organization-overview-heading > small")?.textContent).toBe("Illustration");
     expect(browser.document.querySelector(".organization-overview-action p")?.textContent).toBe("Production changes require simulation and approval.");
     const rules = openSection("Rules");
     expect(rules.textContent).toContain("Rule · rule-production");
@@ -326,5 +355,22 @@ describe("Organization Glass Box Trace", () => {
     expect(styles).toContain("var(--desktop-border-strong)");
     expect(styles).toContain("var(--desktop-ink)");
     expect(styles).toContain(':root[data-theme="dark"] .glass-live-trace');
+  });
+
+  test("renders the compact When label at AA text contrast in both themes", async () => {
+    await act(async () => {
+      root!.render(<TestOrganizationStudio interactivePreview />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const label = browser.document.querySelector(".organization-rule-when > span");
+    const row = browser.document.querySelector(".organization-rule-when");
+    if (!label || !row) throw new Error("Expected the rendered example rule");
+    for (const theme of ["light", "dark"] as const) {
+      browser.document.documentElement.dataset.theme = theme;
+      const foreground = browser.getComputedStyle(label).color;
+      const background = browser.getComputedStyle(row).backgroundColor;
+      expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

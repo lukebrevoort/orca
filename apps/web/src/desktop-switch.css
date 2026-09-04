@@ -14,6 +14,7 @@
   --desktop-warning: #a56820;
   --desktop-danger: #a8463f;
   --desktop-focus: #087461;
+  --desktop-rule-context: #3f67b0;
   --desktop-control-selected-background: var(--desktop-surface-hover);
   --desktop-control-selected-border: var(--desktop-border-strong);
   --desktop-control-selected-ink: var(--desktop-ink);
@@ -44,6 +45,7 @@
   --desktop-warning: #d5b274;
   --desktop-danger: #ff8b87;
   --desktop-focus: #6aa9f5;
+  --desktop-rule-context: #7ea8f5;
   --desktop-message-unread-surface: #121212;
 
   /*
@@ -712,11 +714,10 @@
 .organization-overview-rule li:not(:last-child)::after { content: "↓"; grid-column: 3; color: var(--desktop-faint); font: 700 11px/1 var(--desktop-mono); text-align: center; }
 .organization-overview-rule li > span { color: var(--rule-color); font: 800 8px/11px var(--desktop-mono); letter-spacing: .8px; text-transform: uppercase; }
 .organization-overview-rule li > strong { color: var(--desktop-ink); font-size: 10px; line-height: 15px; }
-.organization-overview-rule .organization-rule-when { --rule-color: #4e78ca; }
+.organization-overview-rule .organization-rule-when { --rule-color: var(--desktop-rule-context); }
 .organization-overview-rule .organization-rule-if { --rule-color: var(--desktop-warning); }
 .organization-overview-rule .organization-rule-then { --rule-color: var(--desktop-accent); }
 .organization-overview-rule .organization-rule-because { --rule-color: #825ead; }
-:root[data-theme="dark"] .organization-overview-rule .organization-rule-when { --rule-color: #7ea8f5; }
 :root[data-theme="dark"] .organization-overview-rule .organization-rule-because { --rule-color: #b591e0; }
 .organization-overview-action { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 10px 12px 10px 16px; background: var(--desktop-paper); }
 .organization-overview-action p { margin: 0; color: var(--desktop-muted); font-size: 9px; line-height: 14px; }
