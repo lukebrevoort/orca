@@ -21,6 +21,7 @@
   --desktop-control-disabled-background: var(--desktop-surface-hover);
   --desktop-control-disabled-border: var(--desktop-border);
   --desktop-control-disabled-ink: var(--desktop-muted);
+  --desktop-message-unread-surface: color-mix(in srgb, var(--desktop-accent) 6%, var(--desktop-surface));
   --desktop-serif: Newsreader, Iowan Old Style, Georgia, serif;
   --desktop-sans: Sora, Avenir Next, ui-sans-serif, system-ui, sans-serif;
   --desktop-mono: SFMono-Regular, Consolas, monospace;
@@ -457,7 +458,7 @@
   transition: background 120ms ease;
 }
 .desktop-shell .message-row:hover { border: 0; border-radius: 0; background: var(--desktop-surface-hover); box-shadow: none; transform: none; }
-.desktop-shell .message-row-unread { background: color-mix(in srgb,var(--desktop-accent) 6%,var(--desktop-surface)); }
+.desktop-shell .message-row-unread { background: var(--desktop-message-unread-surface); }
 .desktop-shell .stream-avatar { width: 38px; height: 38px; flex-basis: 38px; font-size: 10px; }
 .desktop-shell .message-copy {
   display: grid;
@@ -494,11 +495,17 @@
 .desktop-shell .keep-thread-button { right: 12px; top: 41px; }
 .desktop-shell .message-row-wrap > .sender-attention-control { right: 52px; top: 40px; }
 
-/* Density changes vertical rhythm without collapsing the atlas row anatomy. */
+/* BRE-371: Compact is a quieter, information-dense version of the same row.
+   It preserves the fixed sender/content/evidence/action bands and communicates
+   unread state with a restrained surface shift plus weight, not alternating slabs. */
+:root[data-reader-density="compact"] {
+  --desktop-message-unread-surface: color-mix(in srgb, var(--desktop-ink) 2%, var(--desktop-surface));
+}
+
 :root[data-reader-density="compact"] .desktop-shell .message-row {
-  min-height: 76px;
+  min-height: 72px;
   grid-template-columns: 34px minmax(0, 1fr);
-  padding: 10px 252px 10px 16px;
+  padding: 8px 252px 8px 16px;
 }
 :root[data-reader-density="compact"] .desktop-shell .stream-avatar {
   width: 34px;
@@ -506,15 +513,19 @@
   flex-basis: 34px;
 }
 :root[data-reader-density="compact"] .desktop-shell .message-copy > p { display: block; }
+:root[data-reader-density="compact"] .desktop-shell .message-meta strong { font-weight: 560; }
+:root[data-reader-density="compact"] .desktop-shell .message-subject-row h2 { font-weight: 500; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-meta strong { font-weight: 650; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-subject-row h2 { font-weight: 600; opacity: 1; }
 :root[data-reader-density="compact"] .desktop-shell .message-meta > span:last-child { right: 150px; top: 14px; }
-:root[data-reader-density="compact"] .desktop-shell .keep-thread-button { top: 21px; }
-:root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { top: 22px; }
+:root[data-reader-density="compact"] .desktop-shell .keep-thread-button { top: 19px; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { top: 20px; }
 
 :root[data-theme="dark"] .desktop-shell .message-list {
   box-shadow: 0 22px 70px rgba(0, 0, 0, .26);
 }
 :root[data-theme="dark"] .desktop-shell .message-row-unread {
-  background: #121212;
+  background: var(--desktop-message-unread-surface);
 }
 :root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger,
 :root[data-theme="dark"] .desktop-shell .keep-thread-button {
