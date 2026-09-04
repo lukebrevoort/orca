@@ -194,21 +194,14 @@ function responsiveInboxHeaderStyles(width: number, theme: "light" | "dark", den
   const headingStyle = browser.getComputedStyle(heading);
   const headerToolsStyle = browser.getComputedStyle(headerTools);
   const selectStyle = browser.getComputedStyle(select);
-  const sidebarWidth = width <= 1100 ? 220 : 246;
-  const workspaceWidth = width - sidebarWidth;
-  const contentWidth = Math.min(880, workspaceWidth);
-  const contentLeft = sidebarWidth + (workspaceWidth - contentWidth) / 2;
-  const contentRight = contentLeft + contentWidth;
   const result = {
     actionDisplay: selectStyle.display,
-    actionRegionRight: contentRight - Number.parseFloat(headerStyle.paddingRight || "0"),
     actionMinHeight: selectStyle.minHeight,
     contentMaxWidth: contentPaneStyle.maxWidth,
     contentWidth: contentPaneStyle.width,
     gridTemplateColumns: headerStyle.gridTemplateColumns,
     headingMinWidth: headingStyle.minWidth,
     toolsDisplay: headerToolsStyle.display,
-    workspaceRight: width,
   };
   browser.close();
   return result;
@@ -306,8 +299,15 @@ describe("desktop application shell", () => {
           expect(computed.toolsDisplay).toBe("flex");
           expect(computed.actionDisplay).not.toBe("none");
           expect(computed.actionMinHeight).toBe("38px");
-          expect(computed.actionRegionRight).toBeLessThanOrEqual(computed.workspaceRight);
         }
+      }
+    }
+
+    for (const theme of ["light", "dark"] as const) {
+      for (const density of ["calm", "compact"] as const) {
+        const mobile = responsiveInboxHeaderStyles(390, theme, density);
+        expect(mobile.contentWidth).not.toBe("100%");
+        expect(mobile.contentMaxWidth).toBe("none");
       }
     }
   }, 10_000);

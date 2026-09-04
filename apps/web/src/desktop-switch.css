@@ -427,10 +427,19 @@
 }
 
 .desktop-workspace > .content-pane {
-  width: 100%;
-  max-width: 880px;
-  min-width: 0;
   min-height: calc(100vh - 68px);
+}
+@media (min-width: 761px) {
+  .desktop-workspace > .content-pane {
+    width: 100%;
+    max-width: 880px;
+    min-width: 0;
+  }
+  .desktop-shell .pane-header {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 .desktop-workspace > .content-pane:not(.content-pane-reader) { padding-bottom: 72px; }
 .desktop-settings-frame .attention-settings-topbar { display: none; }
@@ -456,9 +465,6 @@
 .desktop-shell .pinned-people:has(.pin-builder-layer) .pinned-person-add { display: none; }
 .desktop-shell .pinned-people:has(.pin-builder-layer) .pinned-person-add-wrap { position: static; }
 .desktop-shell .pane-header {
-  width: 100%;
-  min-width: 0;
-  grid-template-columns: minmax(0, 1fr) auto;
   padding: 30px 34px 22px;
   border-bottom: 0;
   background: transparent;
