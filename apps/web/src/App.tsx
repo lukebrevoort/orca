@@ -1330,6 +1330,7 @@ export function InboxApp({
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
+  const readerMailboxSnapshotRef = useRef<{ selectionKey: string; version: string } | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
@@ -1819,13 +1820,30 @@ export function InboxApp({
 
   const selectedThreadLatestMessage =
     selectedThreadMessages[selectedThreadMessages.length - 1] ?? null;
+  const selectedThreadVersion = useMemo(() => selectedThreadMessages.map((message) => JSON.stringify([
+    message.id,
+    message.providerMessageId,
+    message.receivedAt,
+    message.subject,
+    message.snippet,
+    message.unread,
+    message.labels,
+    message.humanSignal,
+    message.humanClassification,
+  ])).join("\n"), [selectedThreadMessages]);
 
   useEffect(() => {
     if (!selectedThreadId || !readerAccountId || !account) {
+      readerMailboxSnapshotRef.current = null;
       setThreadDetail(null);
       setReaderStatus("idle");
       return;
     }
+
+    readerMailboxSnapshotRef.current = {
+      selectionKey: accountScopedIdentityKey(readerAccountId, selectedThreadId),
+      version: selectedThreadVersion,
+    };
 
     if (demoMode) {
       setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
@@ -1850,7 +1868,30 @@ export function InboxApp({
         setReaderError(getErrorMessage(error));
       });
     return () => controller.abort();
-  }, [account, allMailMessages, demoMode, readerAccountId, readerRefreshKey, selectedThreadId, selectedThreadMessages]);
+  }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
+
+  useEffect(() => {
+    if (!selectedThreadId || !readerAccountId || !account) return;
+    const selectionKey = accountScopedIdentityKey(readerAccountId, selectedThreadId);
+    const previousSnapshot = readerMailboxSnapshotRef.current;
+    if (!previousSnapshot || previousSnapshot.selectionKey !== selectionKey || previousSnapshot.version === selectedThreadVersion) return;
+    readerMailboxSnapshotRef.current = { selectionKey, version: selectedThreadVersion };
+
+    if (demoMode) {
+      setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      return;
+    }
+
+    const controller = new AbortController();
+    fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
+      .then((detail) => {
+        if (!controller.signal.aborted) setThreadDetail(detail);
+      })
+      .catch(() => {
+        // Keep the already loaded conversation usable when background revalidation fails.
+      });
+    return () => controller.abort();
+  }, [demoMode, readerAccountId, selectedThreadId, selectedThreadVersion]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
