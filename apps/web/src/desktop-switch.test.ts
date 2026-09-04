@@ -219,4 +219,17 @@ describe("desktop application shell", () => {
       expect(computed.laterActionsBottom).toBe("10px");
     }
   });
+
+  test("keeps compact read and unread rows restrained, scannable, and aligned", () => {
+    expect(styles).toContain("/* BRE-371: Compact is a quieter, information-dense version of the same row.");
+    expect(styles).toContain('--desktop-message-unread-surface: color-mix(in srgb, var(--desktop-ink) 2%, var(--desktop-surface));');
+    expect(styles).toContain(".desktop-shell .message-row-unread { background: var(--desktop-message-unread-surface); }");
+    expect(styles).toContain('min-height: 72px;\n  grid-template-columns: 34px minmax(0, 1fr);\n  padding: 8px 252px 8px 16px;');
+    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-copy > p { display: block; }');
+    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-meta strong { font-weight: 560; }');
+    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-subject-row h2 { font-weight: 500; }');
+    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-meta strong { font-weight: 650; }');
+    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-subject-row h2 { font-weight: 600; opacity: 1; }');
+    expect(styles).toContain(':root[data-theme="dark"] .desktop-shell .message-row-unread {\n  background: var(--desktop-message-unread-surface);');
+  });
 });
