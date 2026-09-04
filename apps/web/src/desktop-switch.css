@@ -533,15 +533,14 @@
 .desktop-shell .keep-thread-button { right: 12px; top: 41px; }
 .desktop-shell .message-row-wrap > .sender-attention-control { right: 52px; top: 40px; }
 
-/* BRE-371: Compact is a quieter, information-dense version of the same row.
-   It preserves the fixed sender/content/evidence/action bands and communicates
-   unread state with a restrained surface shift plus weight, not alternating slabs. */
+/* BRE-371 / BRE-376: Compact is a quieter, information-dense version of the
+   same row. Unread mail keeps the neutral list surface and is distinguished by
+   a slim marker in the sender/content gutter plus a decisive type hierarchy. */
 :root[data-reader-density="compact"] {
-  /* Concrete equivalents of a 2% ink/surface mix keep computed-state tests deterministic. */
-  --desktop-message-unread-surface: #fafbfb;
+  --desktop-message-unread-surface: #ffffff;
 }
 :root[data-theme="dark"][data-reader-density="compact"] {
-  --desktop-message-unread-surface: #121212;
+  --desktop-message-unread-surface: #0d0d0d;
 }
 
 :root[data-reader-density="compact"] .desktop-shell .message-row {
@@ -549,16 +548,36 @@
   grid-template-columns: 34px minmax(0, 1fr);
   padding: 8px 252px 8px 16px;
 }
+:root[data-reader-density="compact"] .desktop-shell .message-row-wrap-selecting .message-row {
+  padding-left: 62px;
+  padding-right: 16px;
+}
 :root[data-reader-density="compact"] .desktop-shell .stream-avatar {
   width: 34px;
   height: 34px;
   flex-basis: 34px;
 }
 :root[data-reader-density="compact"] .desktop-shell .message-copy > p { display: block; }
-:root[data-reader-density="compact"] .desktop-shell .message-meta strong { font-weight: 560; }
-:root[data-reader-density="compact"] .desktop-shell .message-subject-row h2 { font-weight: 500; }
-:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-meta strong { font-weight: 650; }
-:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-subject-row h2 { font-weight: 600; opacity: 1; }
+:root[data-reader-density="compact"] .desktop-shell .message-meta strong { font-weight: 500; }
+:root[data-reader-density="compact"] .desktop-shell .message-subject-row { position: relative; }
+:root[data-reader-density="compact"] .desktop-shell .message-subject-row h2 { font-weight: 450; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-meta strong { font-weight: 700; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-subject-row h2 { font-weight: 650; opacity: 1; }
+:root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-unread-dot {
+  display: block;
+  width: 3px;
+  height: 14px;
+  left: -9px;
+  right: auto;
+  top: 50%;
+  border-radius: 2px;
+  background: var(--desktop-accent);
+  box-shadow: none;
+  transform: translateY(-50%);
+}
+:root[data-reader-density="compact"] .desktop-shell .message-row-wrap-selected .message-row-unread {
+  background: var(--desktop-surface-hover);
+}
 :root[data-reader-density="compact"] .desktop-shell .message-meta > span:last-child { right: 150px; top: 14px; }
 :root[data-reader-density="compact"] .desktop-shell .keep-thread-button { top: 19px; }
 :root[data-reader-density="compact"] .desktop-shell .message-row-wrap > .sender-attention-control { top: 20px; }
@@ -568,6 +587,9 @@
 }
 :root[data-theme="dark"] .desktop-shell .message-row-unread {
   background: var(--desktop-message-unread-surface);
+}
+:root[data-theme="dark"][data-reader-density="compact"] .desktop-shell .message-row-unread:hover {
+  background: var(--desktop-surface-hover);
 }
 :root[data-theme="dark"] .desktop-shell .message-row-wrap > .sender-attention-control > .sender-attention-trigger,
 :root[data-theme="dark"] .desktop-shell .keep-thread-button {

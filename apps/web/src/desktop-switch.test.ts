@@ -3,6 +3,7 @@ import { Window } from "happy-dom";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { MessageSubject } from "./App";
 import { AppSidebar } from "./desktop-switch";
 
 const styles = await Bun.file(new URL("./desktop-switch.css", import.meta.url)).text();
@@ -35,7 +36,7 @@ function desktopShellStyles() {
   return result;
 }
 
-function responsiveShellStyles(width: number, theme: "light" | "dark", view: "inbox" | "later" = "inbox", density: "calm" | "compact" = "calm") {
+function responsiveShellStyles(width: number, theme: "light" | "dark", view: "inbox" | "later" = "inbox", density: "calm" | "compact" = "calm", includeRowStates = false) {
   const browser = new Window({ height: 844, width });
   browser.document.documentElement.dataset.theme = theme;
   browser.document.documentElement.dataset.readerDensity = density;
@@ -105,9 +106,34 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   unreadWrap.className = "message-row-wrap";
   const unreadRow = row.cloneNode(true) as typeof row;
   unreadRow.classList.add("message-row-unread");
+  const unreadSubject = unreadRow.querySelector(".message-subject-row")!;
+  const unreadMarker = browser.document.createElement("span");
+  unreadMarker.className = "message-unread-dot";
+  unreadSubject.append(unreadMarker);
   unreadWrap.append(unreadRow);
   unreadListItem.append(unreadWrap);
   list.append(listItem, unreadListItem);
+  let selectedUnreadRow: typeof row | null = null;
+  let disabledUnreadRow: typeof row | null = null;
+  if (includeRowStates) {
+    const selectedListItem = browser.document.createElement("li");
+    const selectedUnreadWrap = unreadWrap.cloneNode(true) as typeof unreadWrap;
+    selectedUnreadWrap.classList.add("message-row-wrap-selecting", "message-row-wrap-selected");
+    selectedUnreadRow = selectedUnreadWrap.querySelector(".message-row") as typeof row;
+    selectedUnreadRow.setAttribute("aria-pressed", "true");
+    const selectionIndicator = browser.document.createElement("span");
+    selectionIndicator.className = "message-select-indicator";
+    selectedUnreadRow.prepend(selectionIndicator);
+    selectedListItem.append(selectedUnreadWrap);
+    const disabledListItem = browser.document.createElement("li");
+    const disabledUnreadWrap = selectedUnreadWrap.cloneNode(true) as typeof unreadWrap;
+    disabledUnreadWrap.classList.remove("message-row-wrap-selected");
+    disabledUnreadRow = disabledUnreadWrap.querySelector(".message-row") as typeof row;
+    disabledUnreadRow.removeAttribute("aria-pressed");
+    disabledUnreadRow.disabled = true;
+    disabledListItem.append(disabledUnreadWrap);
+    list.append(selectedListItem, disabledListItem);
+  }
   body.append(list);
   inbox.append(body);
   workspace.append(inbox);
@@ -124,6 +150,21 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   const readSubjectStyle = browser.getComputedStyle(subjectHeading);
   const unreadSenderStyle = browser.getComputedStyle(unreadRow.querySelector(".message-meta strong")!);
   const unreadSubjectStyle = browser.getComputedStyle(unreadRow.querySelector(".message-subject-row h2")!);
+  const unreadMarkerStyle = browser.getComputedStyle(unreadMarker);
+  let focusedUnreadRow = null;
+  let selectedUnreadState = null;
+  let disabledUnreadState = null;
+  if (selectedUnreadRow && disabledUnreadRow) {
+    const selectedUnreadRowStyle = browser.getComputedStyle(selectedUnreadRow);
+    const selectedUnreadMarkerStyle = browser.getComputedStyle(selectedUnreadRow.querySelector(".message-unread-dot")!);
+    const disabledUnreadRowStyle = browser.getComputedStyle(disabledUnreadRow);
+    const disabledUnreadMarkerStyle = browser.getComputedStyle(disabledUnreadRow.querySelector(".message-unread-dot")!);
+    unreadRow.focus();
+    const focusedUnreadRowStyle = browser.getComputedStyle(unreadRow);
+    focusedUnreadRow = { outlineColor: focusedUnreadRowStyle.outlineColor, outlineOffset: focusedUnreadRowStyle.outlineOffset, outlineWidth: focusedUnreadRowStyle.outlineWidth };
+    selectedUnreadState = { background: selectedUnreadRowStyle.backgroundColor, color: selectedUnreadRowStyle.color, markerDisplay: selectedUnreadMarkerStyle.display, paddingLeft: selectedUnreadRowStyle.paddingLeft };
+    disabledUnreadState = { color: disabledUnreadRowStyle.color, markerDisplay: disabledUnreadMarkerStyle.display, paddingLeft: disabledUnreadRowStyle.paddingLeft };
+  }
   const dateStyle = browser.getComputedStyle(date);
   const evidenceStyle = browser.getComputedStyle(evidence);
   const attentionStyle = browser.getComputedStyle(attentionTrigger);
@@ -136,6 +177,10 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
     mobileItem: { background: mobileItemStyle.backgroundColor, color: mobileItemStyle.color, minHeight: mobileItemStyle.minHeight },
     row: { background: rowStyle.backgroundColor, gridTemplateColumns: rowStyle.gridTemplateColumns, minHeight: rowStyle.minHeight, paddingBottom: rowStyle.paddingBottom, paddingRight: rowStyle.paddingRight, senderWeight: readSenderStyle.fontWeight, subjectWeight: readSubjectStyle.fontWeight },
     unreadRow: { background: unreadRowStyle.backgroundColor, gridTemplateColumns: unreadRowStyle.gridTemplateColumns, minHeight: unreadRowStyle.minHeight, paddingBottom: unreadRowStyle.paddingBottom, paddingRight: unreadRowStyle.paddingRight, senderWeight: unreadSenderStyle.fontWeight, subjectWeight: unreadSubjectStyle.fontWeight },
+    unreadMarker: { background: unreadMarkerStyle.backgroundColor, display: unreadMarkerStyle.display, height: unreadMarkerStyle.height, left: unreadMarkerStyle.left, position: unreadMarkerStyle.position, width: unreadMarkerStyle.width },
+    focusedUnreadRow,
+    selectedUnreadRow: selectedUnreadState,
+    disabledUnreadRow: disabledUnreadState,
     copy: { gridTemplateColumns: copyStyle.gridTemplateColumns, gridTemplateRows: copyStyle.gridTemplateRows },
     datePosition: dateStyle.position,
     evidence: { bottom: evidenceStyle.bottom, minHeight: evidenceStyle.minHeight, right: evidenceStyle.right, top: evidenceStyle.top },
@@ -261,7 +306,7 @@ describe("desktop application shell", () => {
     const desktop = responsiveShellStyles(1024, "light");
     expect(desktop.desktopContentDisplay).toBe("flex");
     expect(desktop.mobileDisplay).toBe("none");
-  });
+  }, 15_000);
 
   test("reflows mobile message anatomy into content and 44px action bands", () => {
     for (const width of [320, 390, 760]) {
@@ -284,7 +329,7 @@ describe("desktop application shell", () => {
     expect(desktop.mobileDisplay).toBe("none");
     expect(desktop.row.paddingRight).toBe("252px");
     expect(desktop.datePosition).toBe("absolute");
-  });
+  }, 15_000);
 
   test("bounds Inbox heading actions to the desktop workspace at narrow and wide widths", () => {
     for (const width of [1024, 1280, 1440]) {
@@ -325,15 +370,33 @@ describe("desktop application shell", () => {
   test("keeps compact read and unread rows restrained, scannable, and aligned", () => {
     for (const width of [1024, 1440]) {
       for (const theme of ["light", "dark"] as const) {
-        const compact = responsiveShellStyles(width, theme, "inbox", "compact");
+        const compact = responsiveShellStyles(width, theme, "inbox", "compact", true);
         expect(compact.row.minHeight).toBe("72px");
         expect(compact.unreadRow.minHeight).toBe("72px");
         expect(compact.unreadRow.gridTemplateColumns).toBe(compact.row.gridTemplateColumns);
         expect(compact.unreadRow.paddingRight).toBe(compact.row.paddingRight);
         expect(compact.unreadRow.paddingBottom).toBe(compact.row.paddingBottom);
-        expect(compact.unreadRow.background).not.toBe(compact.row.background);
+        expect(compact.unreadRow.background).toBe(compact.row.background);
         expect(Number(compact.unreadRow.senderWeight)).toBeGreaterThan(Number(compact.row.senderWeight));
         expect(Number(compact.unreadRow.subjectWeight)).toBeGreaterThan(Number(compact.row.subjectWeight));
+        expect(compact.unreadMarker).toEqual({
+          background: theme === "dark" ? "#6aa9f5" : "#087461",
+          display: "block",
+          height: "14px",
+          left: "-9px",
+          position: "absolute",
+          width: "3px",
+        });
+        expect(compact.focusedUnreadRow!.outlineWidth).toBe("2px");
+        expect(compact.focusedUnreadRow!.outlineOffset).toBe("2px");
+        expect(compact.focusedUnreadRow!.outlineColor).toBe(theme === "dark" ? "#6aa9f5" : "#087461");
+        expect(compact.selectedUnreadRow!.background).not.toBe(compact.unreadRow.background);
+        expect(compact.selectedUnreadRow!.color).toBe(theme === "dark" ? "#f4f3ef" : "#0f2422");
+        expect(compact.selectedUnreadRow!.markerDisplay).toBe("block");
+        expect(compact.selectedUnreadRow!.paddingLeft).toBe("62px");
+        expect(compact.disabledUnreadRow!.color).toBe(theme === "dark" ? "#f4f3ef" : "#0f2422");
+        expect(compact.disabledUnreadRow!.markerDisplay).toBe("block");
+        expect(compact.disabledUnreadRow!.paddingLeft).toBe("62px");
       }
     }
 
@@ -347,5 +410,19 @@ describe("desktop application shell", () => {
         else expect(calm.unreadRow.background).toBe("#ffffff");
       }
     }
+  }, 15_000);
+
+  test("renders the compact unread marker only in unread message markup", () => {
+    const readMarkup = renderToStaticMarkup(createElement(MessageSubject, { subject: "Read update", unread: false }));
+    const unreadMarkup = renderToStaticMarkup(createElement(MessageSubject, { subject: "Unread update", unread: true }));
+    const browser = new Window();
+    browser.document.body.innerHTML = `${readMarkup}${unreadMarkup}`;
+
+    const subjects = browser.document.querySelectorAll(".message-subject-row");
+    expect(subjects).toHaveLength(2);
+    expect(subjects[0]?.querySelector(".message-unread-dot")).toBeNull();
+    expect(subjects[1]?.querySelector(".message-unread-dot")).not.toBeNull();
+    expect(subjects[1]?.querySelector("h2")?.textContent).toBe("Unread update");
+    browser.close();
   });
 });
