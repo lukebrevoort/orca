@@ -83,7 +83,7 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   const subject = browser.document.createElement("div");
   subject.className = "message-subject-row";
   const subjectHeading = browser.document.createElement("h2");
-  subjectHeading.textContent = "A restrained subject line";
+  subjectHeading.textContent = "Your annual plan renews September 3";
   subject.append(subjectHeading);
   const snippet = browser.document.createElement("p");
   copy.append(meta, subject, snippet);
@@ -162,8 +162,10 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
     unreadRow.focus();
     const focusedUnreadRowStyle = browser.getComputedStyle(unreadRow);
     focusedUnreadRow = { outlineColor: focusedUnreadRowStyle.outlineColor, outlineOffset: focusedUnreadRowStyle.outlineOffset, outlineWidth: focusedUnreadRowStyle.outlineWidth };
-    selectedUnreadState = { background: selectedUnreadRowStyle.backgroundColor, color: selectedUnreadRowStyle.color, markerDisplay: selectedUnreadMarkerStyle.display, paddingLeft: selectedUnreadRowStyle.paddingLeft };
-    disabledUnreadState = { color: disabledUnreadRowStyle.color, markerDisplay: disabledUnreadMarkerStyle.display, paddingLeft: disabledUnreadRowStyle.paddingLeft };
+    const selectedUnreadDateStyle = browser.getComputedStyle(selectedUnreadRow.querySelector(".message-meta > span:last-child")!);
+    const disabledUnreadDateStyle = browser.getComputedStyle(disabledUnreadRow.querySelector(".message-meta > span:last-child")!);
+    selectedUnreadState = { background: selectedUnreadRowStyle.backgroundColor, color: selectedUnreadRowStyle.color, dateRight: selectedUnreadDateStyle.right, markerDisplay: selectedUnreadMarkerStyle.display, paddingLeft: selectedUnreadRowStyle.paddingLeft, paddingRight: selectedUnreadRowStyle.paddingRight };
+    disabledUnreadState = { color: disabledUnreadRowStyle.color, dateRight: disabledUnreadDateStyle.right, markerDisplay: disabledUnreadMarkerStyle.display, paddingLeft: disabledUnreadRowStyle.paddingLeft, paddingRight: disabledUnreadRowStyle.paddingRight };
   }
   const dateStyle = browser.getComputedStyle(date);
   const evidenceStyle = browser.getComputedStyle(evidence);
@@ -394,9 +396,13 @@ describe("desktop application shell", () => {
         expect(compact.selectedUnreadRow!.color).toBe(theme === "dark" ? "#f4f3ef" : "#0f2422");
         expect(compact.selectedUnreadRow!.markerDisplay).toBe("block");
         expect(compact.selectedUnreadRow!.paddingLeft).toBe("62px");
+        expect(compact.selectedUnreadRow!.paddingRight).toBe("96px");
+        expect(compact.selectedUnreadRow!.dateRight).toBe("16px");
         expect(compact.disabledUnreadRow!.color).toBe(theme === "dark" ? "#f4f3ef" : "#0f2422");
         expect(compact.disabledUnreadRow!.markerDisplay).toBe("block");
         expect(compact.disabledUnreadRow!.paddingLeft).toBe("62px");
+        expect(compact.disabledUnreadRow!.paddingRight).toBe("96px");
+        expect(compact.disabledUnreadRow!.dateRight).toBe("16px");
       }
     }
 
