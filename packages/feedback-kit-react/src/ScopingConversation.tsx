@@ -9,6 +9,7 @@ interface ScopingConversationProps {
   projectName: string;
   messages: FeedbackScopingMessage[];
   scope?: FeedbackScope;
+  complete: boolean;
   reply: string;
   busy: boolean;
   error?: string;
@@ -23,6 +24,7 @@ export function ScopingConversation({
   projectName,
   messages,
   scope,
+  complete,
   reply,
   busy,
   error,
@@ -81,10 +83,10 @@ export function ScopingConversation({
       </div>
 
       {scope ? (
-        <div className="feedback-kit-scope-preview">
+        <div className={`feedback-kit-scope-preview${complete ? " is-ready" : ""}`}>
           <div>
             <CheckIcon />
-            <span>Issue brief ready</span>
+            <span>{complete ? "Issue brief ready" : "Issue brief in progress"}</span>
           </div>
           <strong>{scope.title}</strong>
           <small>
@@ -97,11 +99,16 @@ export function ScopingConversation({
 
       <form className="feedback-kit-reply-form" onSubmit={onSubmit}>
         <label className="feedback-kit-field">
-          <span>Your reply</span>
+          <span>{complete ? "Scoping complete" : "Your reply"}</span>
           <textarea
+            disabled={complete}
             maxLength={4_000}
             onChange={(event) => onReplyChange(event.target.value)}
-            placeholder="Add the missing detail…"
+            placeholder={
+              complete
+                ? "The issue brief has enough detail to create."
+                : "Add the missing detail…"
+            }
             rows={3}
             value={reply}
           />
@@ -113,10 +120,10 @@ export function ScopingConversation({
         ) : null}
         <button
           className="feedback-kit-agent-reply"
-          disabled={!reply.trim() || busy}
+          disabled={complete || !reply.trim() || busy}
           type="submit"
         >
-          Send reply
+          {complete ? "Ready" : "Send reply"}
         </button>
       </form>
 
