@@ -824,6 +824,8 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
     : "Loading the latest complete Trace…");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const traceRequestGenerationRef = useRef(0);
+  const rulesNavigationRef = useRef<HTMLButtonElement>(null);
+  const focusRulesNavigationRef = useRef(false);
   const previewTideRequest = useMemo(() => createTidePreviewRequest(), []);
   const tideRequest = useCallback((path: string, init?: RequestInit) => organizationAuthority.response(path, init, {
     operation: init?.method && init.method !== "GET" ? "mutation" : "read",
@@ -834,6 +836,11 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
     if (!interactivePreview) organizationAuthority.retry();
   }, [interactivePreview, organizationAuthority]);
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(() => {
+    if (section !== "rules" || !focusRulesNavigationRef.current) return;
+    focusRulesNavigationRef.current = false;
+    rulesNavigationRef.current?.focus();
+  }, [section]);
   useEffect(() => {
     const requestGeneration = ++traceRequestGenerationRef.current;
     if (interactivePreview) return;
@@ -1007,8 +1014,11 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
   function activate() { if (!interactivePreview || simulation !== "ready") return; setActiveRevision((value) => value + 1); setSimulation("idle"); setStatus("Preview state changed for this local session. No revision was authorized, persisted, or audited."); setTraceTab("trace"); setTraceOpen(true); }
   function revert() { if (!interactivePreview) return; setActiveRevision((value) => value + 1); setRevertReview(false); setStatus("Local preview state restored. No server history or production behavior changed."); }
   const displayTrace = !interactivePreview ? liveTrace : null;
-  const authorityHeadline = organizationAuthority.state.kind === "ready" ? "Organization is on" : organizationAuthority.state.title;
-  const authorityDetail = organizationAuthority.state.kind === "ready" ? "Provider mail stays untouched"
+  const authorityHeadline = interactivePreview ? "Local preview"
+    : organizationAuthority.state.kind === "ready" ? "Organization controls available"
+    : organizationAuthority.state.title;
+  const authorityDetail = interactivePreview ? "Nothing is saved or applied"
+    : organizationAuthority.state.kind === "ready" ? "Authority is current · provider mail stays untouched"
     : organizationAuthority.state.kind === "loading" ? "Confirming Workspace authority"
     : organizationAuthority.state.canRead ? "Read-only · provider mail untouched"
     : "Changes are paused";
@@ -1019,12 +1029,12 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
       <div className="organization-intro-status" data-authority={organizationAuthority.state.kind}><span><i aria-hidden="true"/>{authorityHeadline}</span><small>{authorityDetail}</small></div>
     </header>
     <nav aria-label="Organization sections" className="organization-section-nav">
-      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => setSection(item)} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
+      {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => setSection(item)} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
     </nav>
     <section aria-labelledby="organization-overview-title" className="organization-overview" hidden={section !== "overview"} id="organization-overview">
       <div className="organization-overview-start">
         <div><span>Start here · about two minutes</span><h2 id="organization-overview-title">See one decision from start to finish.</h2><p>Rules are the easiest way to understand Organization: they notice something, check what is true, choose an outcome, and keep the reason beside it.</p></div>
-        <button className="organization-overview-primary" onClick={() => setSection("rules")} type="button"><span>Review how a rule works</span><small>Open the safe, local preview</small><b aria-hidden="true">→</b></button>
+        <button className="organization-overview-primary" onClick={() => { focusRulesNavigationRef.current = true; setSection("rules"); }} type="button"><span>Review how a rule works</span><small>{interactivePreview ? "Open the safe, local preview" : "Open live Rules · simulation and approval required"}</small><b aria-hidden="true">→</b></button>
       </div>
       <div aria-label="An example Organization rule" className="organization-overview-rule">
         <article className="organization-rule-when"><span>When</span><strong>A message arrives</strong><small>The moment Orca considers it</small></article><i aria-hidden="true">→</i>
