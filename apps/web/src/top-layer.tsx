@@ -46,6 +46,7 @@ const TopLayerContext = createContext<TopLayerManager | null>(null);
 function visibleFocusableElements(root: HTMLElement) {
   return [...root.querySelectorAll<HTMLElement>(focusableSelector)].filter((element) => (
     !element.hidden
+    && !element.closest("[hidden]")
     && element.getAttribute("aria-hidden") !== "true"
     && !element.closest("[inert]")
   ));
@@ -245,6 +246,7 @@ type TopLayerProps = AccessibleName & {
   ariaDescribedBy?: string;
   as?: "aside" | "div" | "section";
   backdrop?: boolean;
+  backdropAccessible?: boolean;
   backdropAriaLabel?: string;
   backdropClassName?: string;
   children: ReactNode;
@@ -266,6 +268,7 @@ export function TopLayer({
   ariaLabelledBy,
   as = "div",
   backdrop = true,
+  backdropAccessible = true,
   backdropAriaLabel,
   backdropClassName = "",
   children,
@@ -326,7 +329,8 @@ export function TopLayer({
       role="presentation"
     >
       {backdrop ? <button
-        aria-label={backdropAriaLabel ?? `Close ${ariaLabel ?? "dialog"}`}
+        aria-hidden={backdropAccessible ? undefined : "true"}
+        aria-label={backdropAccessible ? backdropAriaLabel ?? `Close ${ariaLabel ?? "dialog"}` : undefined}
         className={backdropClassName}
         disabled={!dismissible}
         onClick={dismissible ? onClose : undefined}
