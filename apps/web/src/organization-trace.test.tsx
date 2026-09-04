@@ -37,6 +37,22 @@ function setGlobal(name: string, value: unknown) {
   Object.defineProperty(globalThis, name, { configurable: true, writable: true, value });
 }
 
+function sectionButton(label: "Views" | "Lanes" | "Rules"): HTMLButtonElement {
+  const buttons = [...browser.document.querySelectorAll(".organization-section-nav button")] as unknown as HTMLButtonElement[];
+  return buttons.find((button) => button.textContent === label)!;
+}
+
+function openSection(label: "Views" | "Lanes" | "Rules"): HTMLElement {
+  const button = sectionButton(label);
+  act(() => {
+    button.focus();
+    button.click();
+  });
+  const section = browser.document.querySelector(`#organization-${label.toLowerCase()}`) as unknown as HTMLElement;
+  expect(section.hasAttribute("hidden")).toBe(false);
+  return section;
+}
+
 beforeEach(() => {
   servedTrace = structuredClone(trace);
   browser = new Window({ url: "http://localhost:5173/?destination=organization" });
@@ -90,15 +106,21 @@ describe("Organization Glass Box Trace", () => {
     expect(browser.document.body.textContent).toContain("Views collect perspectives.");
     expect(browser.document.body.textContent).toContain("Rules explain the repeatable.");
     expect(browser.document.body.textContent).toContain("Organization cannot send or delete provider mail");
+    expect(browser.document.querySelector(".organization-intro-status")?.textContent).toBe("Local previewNothing is saved or applied");
 
-    const primary = [...browser.document.querySelectorAll("button")].find((button) => button.textContent?.includes("Review how a rule works"));
-    act(() => primary?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    const primary = ([...browser.document.querySelectorAll("button")] as unknown as HTMLButtonElement[]).find((button) => button.textContent?.includes("Review how a rule works"))!;
+    expect(primary.textContent).toContain("Open the safe, local preview");
+    await act(async () => {
+      primary.focus();
+      primary.click();
+      await Promise.resolve();
+    });
     expect(browser.document.querySelector("#organization-overview")?.hasAttribute("hidden")).toBe(true);
     expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(false);
     expect(browser.document.querySelector('.organization-section-nav button[aria-current="page"]')?.textContent).toBe("Rules");
+    expect(browser.document.activeElement === (sectionButton("Rules") as unknown)).toBe(true);
 
-    const views = [...browser.document.querySelectorAll(".organization-section-nav button")].find((button) => button.textContent === "Views");
-    act(() => views?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    openSection("Views");
     expect(browser.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(false);
     expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(true);
   });
@@ -109,17 +131,20 @@ describe("Organization Glass Box Trace", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.document.body.textContent).toContain("Rule · rule-production");
-    expect(browser.document.body.textContent).toContain("message.received");
-    expect(browser.document.body.textContent).toContain("sender.domain = vercel.com");
-    expect(browser.document.body.textContent).toContain("Route to lane-focus");
-    expect(browser.document.body.textContent).toContain("A failed deploy blocks work");
-    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+    expect(browser.document.querySelector(".organization-intro-status")?.textContent).not.toContain("Organization is on");
+    expect(browser.document.querySelector(".organization-overview-primary")?.textContent).toContain("Open live Rules · simulation and approval required");
+    const rules = openSection("Rules");
+    expect(rules.textContent).toContain("Rule · rule-production");
+    expect(rules.textContent).toContain("message.received");
+    expect(rules.textContent).toContain("sender.domain = vercel.com");
+    expect(rules.textContent).toContain("Route to lane-focus");
+    expect(rules.textContent).toContain("A failed deploy blocks work");
+    expect(rules.querySelector(".organization-status")?.textContent).toBe(
       "Complete Trace evaluation:event-1:rules-1:7 loaded for Thread thread-1. 3 winners and 3 losers resolved deterministically.",
     );
-    const open = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Open complete Trace");
+    const open = [...rules.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Open complete Trace");
     expect(open?.disabled).toBe(false);
-    act(() => open?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    act(() => open?.click());
     expect(browser.document.body.textContent).toContain("Deterministic Trace");
     const content = browser.document.body.textContent ?? "";
     expect(content).toContain("Event ID · event-1");
@@ -154,11 +179,12 @@ describe("Organization Glass Box Trace", () => {
       root!.render(<TestOrganizationStudio />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(browser.document.querySelector("#organization-rule-title")?.textContent).toBe("Safety Lock");
-    expect(browser.document.querySelector(".glass-because strong")?.textContent).toBe("Hold the incident in Focus");
-    expect(browser.document.querySelector(".glass-because small")?.textContent).toBe("human Actor · human-safety");
-    const open = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Open complete Trace");
-    act(() => open?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    const rules = openSection("Rules");
+    expect(rules.querySelector("#organization-rule-title")?.textContent).toBe("Safety Lock");
+    expect(rules.querySelector(".glass-because strong")?.textContent).toBe("Hold the incident in Focus");
+    expect(rules.querySelector(".glass-because small")?.textContent).toBe("human Actor · human-safety");
+    const open = [...rules.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Open complete Trace");
+    act(() => open?.click());
     const content = browser.document.body.textContent ?? "";
     expect(content).toContain("message.received");
     expect(content).toContain("safety-lock:lane · Winner");
@@ -184,20 +210,21 @@ describe("Organization Glass Box Trace", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.document.querySelector(".glass-trace-state-empty")?.textContent).toBe(
+    const rules = openSection("Rules");
+    expect(rules.querySelector(".glass-trace-state-empty")?.textContent).toBe(
       "No evaluation yetA complete When → If → Then → Because explanation will appear after the first evaluation.",
     );
-    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+    expect(rules.querySelector(".organization-status")?.textContent).toBe(
       "No complete Trace is available. No Rule evaluation has been recorded yet.",
     );
-    expect(browser.document.body.textContent).not.toContain("Sample messages");
-    expect(browser.document.body.textContent).not.toContain("Use Tide Table");
-    expect(browser.document.querySelector(".organization-heading h2")?.textContent).toBe("Rules");
-    expect(browser.document.body.textContent).toContain("No illustrative metrics are shown in production");
-    const tide = [...browser.document.querySelectorAll("button")].find((button) => button.textContent === "Tide Table");
-    act(() => tide?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
-    expect((browser.document.querySelector('textarea[aria-label="Tide Table rule source"]') as unknown as HTMLTextAreaElement).value).toBe("");
-    expect(browser.document.body.textContent).not.toContain('rule "Production failures"');
+    expect(rules.textContent).not.toContain("Sample messages");
+    expect(rules.textContent).not.toContain("Use Tide Table");
+    expect(rules.querySelector(".organization-heading h2")?.textContent).toBe("Rules");
+    expect(rules.textContent).toContain("No illustrative metrics are shown in production");
+    const tide = [...rules.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Tide Table");
+    act(() => tide?.click());
+    expect((rules.querySelector('textarea[aria-label="Tide Table rule source"]') as unknown as HTMLTextAreaElement).value).toBe("");
+    expect(rules.textContent).not.toContain('rule "Production failures"');
   });
 
   test("announces the exact Trace error without retaining empty or success wording", async () => {
@@ -214,10 +241,11 @@ describe("Organization Glass Box Trace", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.document.querySelector(".glass-trace-state-error")?.textContent).toBe(
+    const rules = openSection("Rules");
+    expect(rules.querySelector(".glass-trace-state-error")?.textContent).toBe(
       "Trace unavailableOrca kept the interface honest: no causal claim is shown without its Trace.",
     );
-    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(
+    expect(rules.querySelector(".organization-status")?.textContent).toBe(
       "Complete Trace unavailable. Organization request failed (503). No causal claim is shown without evidence.",
     );
   });
@@ -250,19 +278,20 @@ describe("Organization Glass Box Trace", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+    const rules = openSection("Rules");
     const currentStatus = "Complete Trace evaluation:event-current:rules-1:7 loaded for Thread thread-current. 3 winners and 3 losers resolved deterministically.";
-    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(currentStatus);
-    expect(browser.document.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
+    expect(rules.querySelector(".organization-status")?.textContent).toBe(currentStatus);
+    expect(rules.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
 
     await act(async () => {
       resolveOlder(Response.json({ trace: olderTrace }));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.document.querySelector(".organization-status")?.textContent).toBe(currentStatus);
-    expect(browser.document.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
-    const open = [...browser.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Open complete Trace");
-    act(() => open?.dispatchEvent(new browser.MouseEvent("click", { bubbles: true })));
+    expect(rules.querySelector(".organization-status")?.textContent).toBe(currentStatus);
+    expect(rules.querySelector(".organization-heading p")?.textContent).toContain("Thread thread-current");
+    const open = [...rules.querySelectorAll<HTMLButtonElement>("button")].find((candidate) => candidate.textContent === "Open complete Trace");
+    act(() => open?.click());
     const content = browser.document.body.textContent ?? "";
     expect(content).toContain("Event ID · event-current");
     expect(content).toContain("Thread · thread-current");
