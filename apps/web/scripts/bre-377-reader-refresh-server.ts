@@ -162,7 +162,7 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return json({ ok: true });
-    if (url.pathname === "/__bre377/metrics") return json({ detailRequests, refreshGeneration, refreshDelayMs });
+    if (url.pathname === "/v1/__bre377/metrics") return json({ detailRequests, refreshGeneration, refreshDelayMs });
     if (url.pathname === "/v1/auth/session") return json(authSessionFixture);
     if (url.pathname === "/v1/organization/describe") return json(organizationDescribe);
     if (url.pathname === "/v1/organization/query") return json(organizationQuery);

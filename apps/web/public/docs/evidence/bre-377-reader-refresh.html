@@ -36,20 +36,20 @@
     <header>
       <div class="eyebrow">BRE-377 · Real Chromium · 2026-09-04</div>
       <h1>The Reader stays put while mail refreshes.</h1>
-      <p>A deterministic production-mode mailbox delayed provider sync by 5.5 seconds. After the long Reader settled, the harness scrolled its real <code>.desktop-workspace</code> to 1100px and watched the loaded document through the refresh.</p>
+      <p>A deterministic production-mode mailbox delayed provider sync by 5.5 seconds. After the long Reader settled, the harness armed its observers, captured the provider refresh generation, scrolled the real <code>.desktop-workspace</code> to 1100px, and waited for that generation to advance.</p>
       <div class="result">✓ No loading replay, remount, delayed entrance animation, or scroll loss</div>
     </header>
 
     <table>
-      <thead><tr><th>Mode</th><th>Observed</th><th>Detail reads</th><th>Scroll</th><th>Loaded node</th><th>Delayed animation</th></tr></thead>
+      <thead><tr><th>Mode</th><th>Observed</th><th>Provider refresh</th><th>Unrelated inbox value</th><th>Detail reads</th><th>Scroll</th><th>Loaded node</th><th>Delayed animation</th></tr></thead>
       <tbody>
-        <tr><td>Light · full motion</td><td>6813 ms</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0</td></tr>
-        <tr><td>Orca Black · full motion</td><td>6851 ms</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0</td></tr>
-        <tr><td>Orca Black · reduced</td><td>7097 ms</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0 · animation none</td></tr>
+        <tr><td>Light · full motion</td><td>6388 ms</td><td class="pass">0 → 1</td><td class="pass">Refreshed</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0</td></tr>
+        <tr><td>Orca Black · full motion</td><td>6486 ms</td><td class="pass">1 → 2</td><td class="pass">Refreshed</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0</td></tr>
+        <tr><td>Orca Black · reduced</td><td>6044 ms</td><td class="pass">2 → 3</td><td class="pass">Refreshed</td><td>2 → 2</td><td>1100 → 1100</td><td class="pass">Same</td><td class="pass">0 · animation none</td></tr>
       </tbody>
     </table>
 
-    <p class="note">The two detail reads shown above occur while an initial deep link and cached inbox settle. The assertion snapshots that stable count before the delayed provider refresh and proves the refresh adds no read. The red regression test separately proves the old broad dependency raised the count from 1 to 2 and replaced the loaded document with Reader loading.</p>
+    <p class="note">Each run installs removal, loading, and animation observers before recording its refresh-generation baseline. It then polls until the generation increments and asserts the unrelated mailbox row reads “Unrelated mailbox row — refreshed.” The two detail reads occur while the initial deep link and cached inbox settle; the measured provider refresh adds none. Deferred regression coverage separately proves a mailbox change cannot race the primary detail request, and a failed silent refresh retries on a later same-version mailbox refresh.</p>
 
     <section>
       <h2>Captured after the delayed refresh</h2>
