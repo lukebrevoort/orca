@@ -52,6 +52,14 @@ async function click(target: HTMLButtonElement) {
   await act(async () => { target.click(); await Promise.resolve(); });
 }
 
+async function openOrganizationSection(container: HTMLElement, label: "Views" | "Lanes" | "Rules") {
+  const navigation = container.querySelector('.organization-section-nav[aria-label="Organization sections"]') as HTMLElement;
+  await click(button(navigation, label));
+  const panel = container.querySelector(`#organization-${label.toLowerCase()}`) as HTMLElement;
+  expect(panel.hasAttribute("hidden")).toBe(false);
+  return panel;
+}
+
 async function flush() {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 }
@@ -257,40 +265,41 @@ describe("OrganizationStudio integration", () => {
     await act(async () => root!.render(<OrganizationStudio />));
     await flush(); await flush();
 
-    await click(button(container, "Tide Table"));
-    await enterProductionTideSource(container as unknown as HTMLElement);
-    await click(button(container, "Compile immutable revision"));
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    await click(button(rules, "Tide Table"));
+    await enterProductionTideSource(rules);
+    await click(button(rules, "Compile immutable revision"));
     await flush(); await flush();
-    expect(container.querySelector('[data-lifecycle-state="proposed"]')).not.toBeNull();
+    expect(rules.querySelector('[data-lifecycle-state="proposed"]')).not.toBeNull();
 
-    await click(button(container, "Simulate history"));
+    await click(button(rules, "Simulate history"));
     await flush(); await flush();
-    expect(container.querySelector('[data-lifecycle-state="conflicted"]')).not.toBeNull();
-    expect(container.querySelector('[data-operation-state="conflict"]')).not.toBeNull();
-    expect(container.textContent).toContain("candidate-manual");
+    expect(rules.querySelector('[data-lifecycle-state="conflicted"]')).not.toBeNull();
+    expect(rules.querySelector('[data-operation-state="conflict"]')).not.toBeNull();
+    expect(rules.textContent).toContain("candidate-manual");
 
-    await click(button(container, "Simulate history"));
+    await click(button(rules, "Simulate history"));
     await flush(); await flush();
-    expect(container.querySelector('[data-lifecycle-state="simulated"]')).not.toBeNull();
-    expect(container.textContent).toContain("2,418");
-    expect(container.textContent).toContain("Production checkout failed");
-    expect(container.textContent).toContain("Later production deploy failed");
-    expect(container.textContent).toContain("Exact winner");
-    expect(container.textContent).toContain("Losers");
+    expect(rules.querySelector('[data-lifecycle-state="simulated"]')).not.toBeNull();
+    expect(rules.textContent).toContain("2,418");
+    expect(rules.textContent).toContain("Production checkout failed");
+    expect(rules.textContent).toContain("Later production deploy failed");
+    expect(rules.textContent).toContain("Exact winner");
+    expect(rules.textContent).toContain("Losers");
 
-    await click(button(container, "Activate Change Set"));
+    await click(button(rules, "Activate Change Set"));
     await flush(); await flush();
-    expect(container.querySelector('[data-lifecycle-state="active"]')).not.toBeNull();
-    expect(container.textContent).toContain("1 complete Trace");
-    expect(container.textContent).toContain("activate_rule_revision");
-    expect(container.textContent).toContain("Authority & approval evidence");
-    expect(container.textContent).toContain("Resulting revisions");
+    expect(rules.querySelector('[data-lifecycle-state="active"]')).not.toBeNull();
+    expect(rules.textContent).toContain("1 complete Trace");
+    expect(rules.textContent).toContain("activate_rule_revision");
+    expect(rules.textContent).toContain("Authority & approval evidence");
+    expect(rules.textContent).toContain("Resulting revisions");
 
-    await click(button(container, "Review revert"));
-    await click(button(container, "Apply compensating revert"));
+    await click(button(rules, "Review revert"));
+    await click(button(rules, "Apply compensating revert"));
     await flush(); await flush();
-    expect(container.querySelector('[data-lifecycle-state="reverted"]')).not.toBeNull();
-    expect(container.textContent).toContain("Audit history preserved");
+    expect(rules.querySelector('[data-lifecycle-state="reverted"]')).not.toBeNull();
+    expect(rules.textContent).toContain("Audit history preserved");
     expect(requests).toContain("POST /v1/organization/change-sets/change-active/revert");
   });
 
@@ -306,14 +315,15 @@ describe("OrganizationStudio integration", () => {
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<OrganizationStudio interactivePreview />));
 
-    await click(button(container, "Tide Table"));
-    expect(container.textContent).toContain("Local demo adapter ready");
-    await click(button(container, "Compile local demo"));
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    await click(button(rules, "Tide Table"));
+    expect(rules.textContent).toContain("Local demo adapter ready");
+    await click(button(rules, "Compile local demo"));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 950)); });
 
     expect(requests).toEqual([]);
-    expect(container.textContent).toContain("Local demo revision 1 compiled");
-    expect(container.textContent).toContain("Not persisted or activated");
+    expect(rules.textContent).toContain("Local demo revision 1 compiled");
+    expect(rules.textContent).toContain("Not persisted or activated");
   });
 
   test("renders the deterministic active review and every distinct operational-state label", async () => {
@@ -328,17 +338,18 @@ describe("OrganizationStudio integration", () => {
     await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
     await flush(); await flush();
 
-    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    expect(rules.querySelector('[data-operation-state="active"]')).not.toBeNull();
     for (const label of ["ready", "loading", "unavailable", "no access", "offline", "transaction failure", "conflict", "active", "reverted"]) {
-      expect(container.querySelector(".bre320-state-matrix")?.textContent).toContain(label);
+      expect(rules.querySelector(".bre320-state-matrix")?.textContent).toContain(label);
     }
-    expect(container.textContent).toContain("Production checkout failed");
-    expect(container.textContent).toContain("Production payments failed");
-    expect(container.textContent).toContain("Exact winner");
-    expect(container.textContent).toContain("Ordered actions & audit");
-    expect(container.textContent).toContain("activate_rule_revision");
-    expect(container.textContent).toContain("Provider send · absent");
-    expect(container.textContent).toContain("Provider delete · absent");
+    expect(rules.textContent).toContain("Production checkout failed");
+    expect(rules.textContent).toContain("Production payments failed");
+    expect(rules.textContent).toContain("Exact winner");
+    expect(rules.textContent).toContain("Ordered actions & audit");
+    expect(rules.textContent).toContain("activate_rule_revision");
+    expect(rules.textContent).toContain("Provider send · absent");
+    expect(rules.textContent).toContain("Provider delete · absent");
   });
 
   test("keeps every non-success release state free of applied evidence and mutation controls", async () => {
@@ -360,7 +371,8 @@ describe("OrganizationStudio integration", () => {
     for (const [state, nextAction] of states) {
       await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState={state} />));
       await flush(); await flush();
-      const evidence = container.querySelector(`[data-operation-state="${state}"]`)!;
+      const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+      const evidence = rules.querySelector(`[data-operation-state="${state}"]`)!;
       expect(evidence.querySelector("[data-next-action]")?.textContent).toBe(`Next action · ${nextAction}`);
       expect(evidence.querySelector('[aria-label="Applied Change Set audit"]')).toBeNull();
       expect(evidence.querySelectorAll("button")).toHaveLength(0);
@@ -386,22 +398,23 @@ describe("OrganizationStudio integration", () => {
 
     await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
     await flush(); await flush();
-    const unavailable = container.querySelector('[data-evidence-load-state="unavailable"]')!;
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    const unavailable = rules.querySelector('[data-evidence-load-state="unavailable"]')!;
     expect(unavailable.textContent).toContain("Review evidence unavailable");
     expect(unavailable.textContent).toContain("Trace fixture request failed (503)");
     expect(unavailable.textContent).toContain("No simulated or applied claim is shown");
 
-    await click(button(container, "Retry review evidence"));
+    await click(button(rules, "Retry review evidence"));
     await flush(); await flush();
-    const error = container.querySelector('[data-evidence-load-state="error"]')!;
+    const error = rules.querySelector('[data-evidence-load-state="error"]')!;
     expect(error.textContent).toContain("Review evidence failed");
     expect(error.textContent).toContain("Network request failed");
     expect(error.textContent).toContain("No simulated or applied claim is shown");
 
-    await click(button(container, "Retry review evidence"));
+    await click(button(rules, "Retry review evidence"));
     await flush(); await flush();
-    expect(container.querySelector('[data-operation-state="active"]')).not.toBeNull();
-    expect(container.querySelector('[aria-label="Applied Change Set audit"]')).not.toBeNull();
+    expect(rules.querySelector('[data-operation-state="active"]')).not.toBeNull();
+    expect(rules.querySelector('[aria-label="Applied Change Set audit"]')).not.toBeNull();
     expect(attempts).toBe(3);
   });
 
@@ -422,7 +435,8 @@ describe("OrganizationStudio integration", () => {
     root = createRoot(container as unknown as Element);
 
     await act(async () => root!.render(<OrganizationStudio interactivePreview releaseEvidenceState="active" />));
-    expect(container.querySelector('[data-evidence-load-state="loading"]')).not.toBeNull();
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    expect(rules.querySelector('[data-evidence-load-state="loading"]')).not.toBeNull();
     await act(async () => root!.render(<OrganizationStudio interactivePreview />));
     await flush();
 
@@ -477,21 +491,23 @@ describe("OrganizationStudio integration", () => {
     await act(async () => root!.render(<OrganizationStudio />));
     await flush(); await flush();
 
-    await click(button(container, "Tide Table"));
-    await enterProductionTideSource(container as unknown as HTMLElement);
-    await click(button(container, "Compile immutable revision"));
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    await click(button(rules, "Tide Table"));
+    await enterProductionTideSource(rules);
+    await click(button(rules, "Compile immutable revision"));
     await flush(); await flush();
-    expect(container.textContent).toContain("Workspace r8");
+    expect(rules.textContent).toContain("Immutable revision 1 compiled");
 
-    await click(container.querySelector('[aria-label="Move Weekly production review down"]') as unknown as HTMLButtonElement);
+    const views = await openOrganizationSection(container as unknown as HTMLElement, "Views");
+    await click(views.querySelector('[aria-label="Move Weekly production review down"]') as unknown as HTMLButtonElement);
     await flush(); await flush();
-    expect(container.querySelector(".view-state-error")).toBeNull();
-    expect(container.textContent).toContain("Workspace r9");
+    expect(views.querySelector(".view-state-error")).toBeNull();
 
-    await click(button(container, "Make fallback"));
+    const lanes = await openOrganizationSection(container as unknown as HTMLElement, "Lanes");
+    await click(button(lanes, "Make fallback"));
     await flush(); await flush();
-    expect(container.querySelector(".lane-error")).toBeNull();
-    expect(container.textContent).toContain("Workspace r10");
+    expect(lanes.querySelector(".lane-error")).toBeNull();
+    expect(lanes.textContent).toContain("Workspace r10");
     expect(mutationRevisions).toEqual([
       { kind: "compile", expected: 7 },
       { kind: "view", expected: 8 },
@@ -533,20 +549,20 @@ describe("OrganizationStudio integration", () => {
     browserWindow.document.body.append(container);
     root = createRoot(container as unknown as Element);
     await act(async () => root!.render(<OrganizationStudio />));
-    await click(button(container, "Tide Table"));
-    await enterProductionTideSource(container as unknown as HTMLElement);
-    await click(button(container, "Compile immutable revision"));
+    const rules = await openOrganizationSection(container as unknown as HTMLElement, "Rules");
+    await click(button(rules, "Tide Table"));
+    await enterProductionTideSource(rules);
+    await click(button(rules, "Compile immutable revision"));
     await flush(); await flush();
-    expect(container.textContent).toContain("Canonical after compile");
-    expect(container.textContent).toContain("Workspace r8");
+    const views = await openOrganizationSection(container as unknown as HTMLElement, "Views");
+    expect(views.textContent).toContain("Canonical after compile");
 
     await act(async () => {
       resolveStaleViews(Response.json({ workspaceId: "workspace-demo", workspaceRevision: 7, items: organizationViewsFixture }));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(container.textContent).toContain("Canonical after compile");
-    expect(container.textContent).toContain("Workspace r8");
-    expect(container.textContent).not.toContain("Workspace r7");
+    expect(views.textContent).toContain("Canonical after compile");
+    expect(views.textContent).not.toContain("Weekly production review");
   });
 });
