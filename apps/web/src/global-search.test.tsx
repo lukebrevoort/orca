@@ -58,6 +58,10 @@ function button(label: string) {
   return match as unknown as HTMLButtonElement;
 }
 
+function isSameNode(left: unknown, right: unknown) {
+  return left === right;
+}
+
 function searchResponse(messages = inboxFixture) {
   return new Response(JSON.stringify({
     accounts: [demoAccount],
@@ -171,6 +175,62 @@ describe("global mail search location contract", () => {
 });
 
 describe("GlobalMailSearch interaction", () => {
+  test("keeps advanced scope controls collapsed and exposes one accessible close action", async () => {
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&demo=1");
+    openMailSearch();
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    await flush();
+
+    const input = browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement;
+    const filterToggle = browserWindow.document.querySelector(".global-mail-filter-toggle") as unknown as HTMLButtonElement;
+    const filters = browserWindow.document.querySelector("#global-mail-search-filters") as unknown as HTMLElement;
+    expect(isSameNode(browserWindow.document.activeElement, input)).toBe(true);
+    expect(filterToggle.getAttribute("aria-expanded")).toBe("false");
+    expect(filters.hidden).toBe(true);
+    expect(browserWindow.document.querySelectorAll('button[aria-label^="Close Search mail"]').length).toBe(1);
+    expect(browserWindow.document.querySelector(".global-mail-search-backdrop")?.getAttribute("aria-hidden")).toBe("true");
+    expect(button("Save this search").disabled).toBe(true);
+
+    filterToggle.focus();
+    await act(async () => filterToggle.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Tab" }) as unknown as KeyboardEvent));
+    expect((browserWindow.document.activeElement as unknown as Element).getAttribute("aria-label")).toStartWith("Close Search mail");
+
+    await act(async () => filterToggle.click());
+    expect(filterToggle.getAttribute("aria-expanded")).toBe("true");
+    expect(filters.hidden).toBe(false);
+    expect(filters.querySelectorAll("select").length).toBe(4);
+  });
+
+  test("moves from the query into results with ArrowDown and back with ArrowUp", async () => {
+    globalThis.fetch = (async (input) => {
+      const path = String(input);
+      if (path === "/v1/accounts") return new Response(JSON.stringify({ items: [demoAccount], nextCursor: null }), { status: 200 });
+      if (path === "/v1/organization/collections-pins/query") return new Response(JSON.stringify({ workspaceId: "workspace_1", accountIds: [demoAccount.id], collections: [], pins: [], queries: [] }), { status: 200 });
+      if (path.startsWith("/v1/inbox?")) return searchResponse();
+      throw new Error(`Unexpected fetch: ${path}`);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox");
+    openMailSearch("Launch");
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush();
+    await flush();
+
+    const input = browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement;
+    const result = browserWindow.document.querySelector(".global-mail-result-list a") as unknown as HTMLAnchorElement;
+    expect(result).not.toBeNull();
+    await act(async () => input.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowDown" }) as unknown as KeyboardEvent));
+    expect(isSameNode(browserWindow.document.activeElement, result)).toBe(true);
+    await act(async () => result.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowUp" }) as unknown as KeyboardEvent));
+    expect(isSameNode(browserWindow.document.activeElement, input)).toBe(true);
+  });
+
   async function verifyLateSaveSettlement(outcome: "resolve" | "reject") {
     let resolveSave!: (response: Response) => void;
     let rejectSave!: (reason: Error) => void;
@@ -231,7 +291,7 @@ describe("GlobalMailSearch interaction", () => {
     expect(new URL(browserWindow.location.href).searchParams.get("searchMailbox")).toBe("focus");
     const resultsRegion = browserWindow.document.querySelector(".global-mail-search-results") as unknown as HTMLElement;
     expect(resultsRegion.textContent).not.toContain(inboxFixture[0]!.subject);
-    expect(resultsRegion.textContent).toContain("Looking beyond this screen");
+    expect(resultsRegion.textContent).toContain("Looking through stored mail");
     expect(saveSignals[0]?.aborted).toBe(true);
     await act(async () => {
       resolveScopeB(searchResponse());
@@ -320,7 +380,7 @@ describe("GlobalMailSearch interaction", () => {
     await flush();
 
     expect(browserWindow.document.querySelector('[role="dialog"][aria-labelledby="global-mail-search-title"]')).not.toBeNull();
-    expect(browserWindow.document.querySelector(".global-mail-search-state")?.textContent).toContain("Nothing found in this scope");
+    expect(browserWindow.document.querySelector(".global-mail-search-state")?.textContent).toContain("Nothing found for “moonbase ledger”");
     expect(new URL(browserWindow.location.href).searchParams.get("searchQuery")).toBe("moonbase ledger");
     expect(new URL(browserWindow.location.href).searchParams.get("searchSource")).toBe("/?destination=organization");
 
