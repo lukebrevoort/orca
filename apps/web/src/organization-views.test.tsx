@@ -6,7 +6,7 @@ import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const styles = await Bun.file(new URL("./organization-views.css", import.meta.url)).text();
 
-describe("BRE-313 Organization Views UI", () => {
+describe("BRE-378 Organization Views UI", () => {
   test("renders an accepted live Views surface with a cross-Lane weekly review", () => {
     const html = renderToStaticMarkup(<OrganizationAuthorityProvider previewMode><OrganizationViewsWorkspace demoMode /></OrganizationAuthorityProvider>);
     expect(html).toContain("Live Views");
@@ -27,6 +27,8 @@ describe("BRE-313 Organization Views UI", () => {
     expect(styles).toContain("border-color: var(--desktop-border-strong)");
     expect(styles).toContain("color: var(--desktop-ink)");
     expect(styles).toContain(".view-action:disabled");
+    expect(styles).toContain('.view-choice-list button[aria-pressed="true"]');
+    expect(styles).toContain('.view-filter-trigger[aria-expanded="true"]');
     expect(styles).toContain(':root[data-theme="dark"] .views-workspace');
   });
 });
