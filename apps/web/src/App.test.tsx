@@ -181,6 +181,19 @@ describe("App", () => {
     expect(html).not.toContain("Import selected");
   });
 
+  test("keeps route announcement headings programmatically focusable but outside the tab order", () => {
+    const routeHeadings = [
+      ["settings-title", renderToStaticMarkup(<SettingsHome demoMode preferences={defaultReaderPreferences} setPreferences={() => {}} setTheme={() => {}} systemTheme="light" theme="light" />)],
+      ["gmail-settings-title", renderToStaticMarkup(<GmailConnectionSettingsPage setTheme={() => {}} theme="light" />)],
+      ["onboarding-title", renderToStaticMarkup(<WelcomeOrientationPage setTheme={() => {}} theme="light" />)],
+      ["reader-title", renderToStaticMarkup(<MessageReader detail={makeThreadDetail([makeThreadMessage("route-heading", "2026-07-12T18:00:00.000Z")])} error={null} fallbackMessages={[]} fallbackTitle="Route heading" onAttentionChange={async () => "normal"} onBack={() => {}} onRetry={() => {}} status="ready" />)],
+    ] as const;
+
+    for (const [id, html] of routeHeadings) {
+      expect(html).toContain(`<h1 id="${id}" tabindex="-1"`);
+    }
+  });
+
   test("defaults reader preferences to OS behavior and safely restores saved choices", () => {
     expect(readStoredPreferences({ getItem: () => null })).toEqual(defaultReaderPreferences);
     expect(readStoredPreferences({ getItem: (key) => key === "orca-theme" ? "dark" : null })).toEqual({ ...defaultReaderPreferences, theme: "dark" });

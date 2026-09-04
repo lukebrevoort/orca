@@ -58,6 +58,16 @@ function paletteFor(theme: "light" | "dark") {
 }
 
 describe("theme-safe semantic control states", () => {
+  test("separates programmatic route focus from interactive focus indicators", () => {
+    const interactiveFocus = cssRule(desktopStyles, 'button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:not([tabindex="-1"]):focus-visible');
+
+    expect(interactiveFocus).toContain("outline: 2px solid var(--desktop-focus)");
+    expect(interactiveFocus).toContain("outline-offset: 2px");
+    expect(cssRule(desktopStyles, ':where(h1,h2,h3,h4,h5,h6)[tabindex="-1"]:focus-visible')).toContain("outline: none");
+    expect(desktopStyles).not.toContain("[tabindex]:focus-visible");
+    expect(styles).not.toContain(".reader-heading h1:focus-visible");
+  });
+
   test("uses selected and disabled tokens instead of compounding muted colors with opacity", () => {
     expect(desktopStyles).toContain("--desktop-control-selected-background: var(--desktop-surface-hover);");
     expect(desktopStyles).toContain("--desktop-control-disabled-ink: var(--desktop-muted);");
