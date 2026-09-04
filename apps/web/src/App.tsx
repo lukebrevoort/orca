@@ -1330,7 +1330,9 @@ export function InboxApp({
   const [readerStatus, setReaderStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [readerError, setReaderError] = useState<string | null>(null);
   const [readerRefreshKey, setReaderRefreshKey] = useState(0);
+  const [mailboxRefreshGeneration, setMailboxRefreshGeneration] = useState(0);
   const readerMailboxSnapshotRef = useRef<{ selectionKey: string; version: string } | null>(null);
+  const readerSilentRequestRef = useRef<{ selectionKey: string; version: string } | null>(null);
   const readerNavigationGenerationRef = useRef(0);
   const readerFocusFrameRef = useRef<number | null>(null);
   const pendingReturnContextRef = useRef<SurfaceReturnContext | null>(null);
@@ -1570,6 +1572,7 @@ export function InboxApp({
           setClassificationCursor(refreshedInbox.nextCursor);
           if (refreshedView === "all") setAllMailCursor(refreshedInbox.nextCursor);
           setClassificationLoading(false);
+          setMailboxRefreshGeneration((generation) => generation + 1);
         } catch (error) {
           if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
           if (isSessionUnauthorizedError(error)) {
@@ -1871,27 +1874,39 @@ export function InboxApp({
   }, [account?.id, demoMode, readerAccountId, readerRefreshKey, selectedThreadId]);
 
   useEffect(() => {
-    if (!selectedThreadId || !readerAccountId || !account) return;
+    if (!selectedThreadId || !readerAccountId || !account || readerStatus !== "ready" || !threadDetail) return;
     const selectionKey = accountScopedIdentityKey(readerAccountId, selectedThreadId);
     const previousSnapshot = readerMailboxSnapshotRef.current;
     if (!previousSnapshot || previousSnapshot.selectionKey !== selectionKey || previousSnapshot.version === selectedThreadVersion) return;
-    readerMailboxSnapshotRef.current = { selectionKey, version: selectedThreadVersion };
+    const pendingRequest = readerSilentRequestRef.current;
+    if (pendingRequest?.selectionKey === selectionKey && pendingRequest.version === selectedThreadVersion) return;
 
     if (demoMode) {
       setThreadDetail(createDemoThreadDetail(account, selectedThreadId, selectedThreadMessages, allMailMessages));
+      readerMailboxSnapshotRef.current = { selectionKey, version: selectedThreadVersion };
       return;
     }
 
     const controller = new AbortController();
+    const request = { selectionKey, version: selectedThreadVersion };
+    readerSilentRequestRef.current = request;
     fetchJson(buildThreadDetailRequest({ threadId: selectedThreadId, accountId: readerAccountId }), threadDetailSchema, controller.signal)
       .then((detail) => {
-        if (!controller.signal.aborted) setThreadDetail(detail);
+        if (controller.signal.aborted || readerSilentRequestRef.current !== request) return;
+        setThreadDetail(detail);
+        readerMailboxSnapshotRef.current = request;
       })
       .catch(() => {
         // Keep the already loaded conversation usable when background revalidation fails.
+      })
+      .finally(() => {
+        if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
       });
-    return () => controller.abort();
-  }, [demoMode, readerAccountId, selectedThreadId, selectedThreadVersion]);
+    return () => {
+      controller.abort();
+      if (readerSilentRequestRef.current === request) readerSilentRequestRef.current = null;
+    };
+  }, [demoMode, mailboxRefreshGeneration, readerAccountId, readerStatus, selectedThreadId, selectedThreadVersion, threadDetail]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
