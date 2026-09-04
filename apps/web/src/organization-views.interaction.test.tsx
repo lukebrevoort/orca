@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
-import { organizationLaneConfigurationFixture, organizationViewsFixture, type OrganizationView } from "@orca/shared";
+import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView } from "@orca/shared";
 import { OrganizationViewsWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
@@ -109,6 +109,25 @@ const contextQueryFixture = {
   ],
   relationships: [], threadRevisions: [],
 };
+
+function installFacetWorkspace(facetDefinitions: FacetDefinition[], facetFilter: FacetFilter) {
+  const facetView: OrganizationView = {
+    ...organizationViewsFixture[0]!,
+    definition: { revision: 1, facetFilters: [facetFilter] },
+  };
+  globalThis.fetch = (async (request: string | URL | Request) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json({
+      workspaceId: "workspace_demo", accountIds: ["account_gmail"],
+      workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
+      capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
+      workspaceRevision: 4, facetDefinitions, workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
+    });
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [facetView] });
+    if (path.includes("/results")) return Response.json({ viewId: facetView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+}
 
 describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("edits the selected definition and display metadata", async () => {
@@ -240,6 +259,44 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(button(container, "Save changes").disabled).toBe(true);
   });
 
+  test("does not materialize or preview an incomplete numeric Facet predicate as equals zero", async () => {
+    installFacetWorkspace([{
+      id: "facet_score", name: "Score", position: 0,
+      valueType: { kind: "number", minimum: 0, maximum: 10, integer: true },
+      cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1,
+    }], { facetId: "facet_score", operator: "equals", value: 5 });
+
+    const container = await renderWorkspace(false, false);
+    await flush(); await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    const score = input(container, "Value");
+    await change(score, "");
+
+    expect(container.querySelector(".view-scope-sentence")?.textContent).not.toContain("Score is 0");
+    expect(container.querySelector(".view-draft-preview")?.textContent).toContain("All current and future messages");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Finish choosing the Facet condition.");
+    expect(button(container, "Save changes").disabled).toBe(true);
+  });
+
+  test("uses native input semantics compatible with display-name-enabled email Facets", async () => {
+    installFacetWorkspace([{
+      id: "facet_contact", name: "Contact", position: 0,
+      valueType: { kind: "email", allowDisplayName: true },
+      cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1,
+    }], { facetId: "facet_contact", operator: "equals", value: "Maya Chen <maya@example.com>" });
+
+    const container = await renderWorkspace(false, false);
+    await flush(); await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    const contact = input(container, "Value");
+
+    expect(contact.type).toBe("text");
+    expect(contact.inputMode).toBe("email");
+    expect(contact.checkValidity()).toBe(true);
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(button(container, "Save changes").disabled).toBe(false);
+  });
+
   test("starts with a readable default, suggests a name, and adds, edits, and removes named clauses", async () => {
     const container = await renderWorkspace();
     await click(button(container, "+ New View"));
@@ -292,6 +349,51 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await act(async () => browserWindow.document.activeElement?.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(browserWindow.document.activeElement as unknown).toBe(trigger as unknown);
+  });
+
+  test("uses roving menu focus and closes Add filter on Tab, focus-out, and outside click", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "+ New View"));
+    const trigger = button(container, "Add filter ＋");
+    await click(trigger);
+    await flush();
+    let menu = container.querySelector('[role="menu"]') as HTMLElement;
+    let enabledItems = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')];
+    expect(enabledItems.map((item) => item.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
+
+    enabledItems[0]!.focus();
+    await act(async () => enabledItems[0]!.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }) as unknown as Event));
+    expect(browserWindow.document.activeElement as unknown).toBe(enabledItems[1] as unknown);
+    expect(enabledItems.map((item) => item.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1, -1]);
+    await act(async () => enabledItems[1]!.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Tab", bubbles: true }) as unknown as Event));
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+    await click(trigger);
+    await flush();
+    menu = container.querySelector('[role="menu"]') as HTMLElement;
+    const nameField = input(container, "View name");
+    await act(async () => menu.dispatchEvent(new browserWindow.FocusEvent("focusout", { bubbles: true, relatedTarget: nameField as unknown as never }) as unknown as Event));
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+
+    await click(trigger);
+    await flush();
+    const outside = browserWindow.document.createElement("button");
+    browserWindow.document.body.append(outside);
+    await act(async () => { outside.dispatchEvent(new browserWindow.MouseEvent("mousedown", { bubbles: true })); });
+    expect(container.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  test("keeps the full changing scope out of aria-live while preserving concise save status", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "+ New View"));
+    const scope = container.querySelector(".view-scope-sentence") as HTMLElement;
+    const validation = container.querySelector(".view-validation") as HTMLElement;
+
+    expect(scope.hasAttribute("aria-live")).toBe(false);
+    expect(validation.getAttribute("aria-live")).toBe("polite");
+    expect(validation.getAttribute("role")).toBe("status");
+    expect(validation.textContent).toBe("Ready to save this perspective.");
   });
 
   test("keeps every predicate family reachable while progressively disclosing infrequent filters", async () => {
@@ -390,6 +492,22 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click(button(container, "Confirm remove"));
     expect(orderedNames(container)).not.toContain("Weekly production review");
     expect(container.querySelector('.view-chip[aria-pressed="true"] strong')?.textContent).toBe("Urgent humans");
+  });
+
+  test("does not restore canned results when deletion selects an unevaluated demo neighbor", async () => {
+    const container = await renderWorkspace();
+    await click(button(container, "Edit definition"));
+    await change(input(container, "View name"), "Locally revised review");
+    await click(button(container, "Save changes"));
+    await click(container.querySelector('[aria-label="Move Locally revised review down"]') as unknown as HTMLButtonElement);
+    await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Urgent humans")) as unknown as HTMLButtonElement);
+    await click(button(container, "Remove View"));
+    await click(button(container, "Confirm remove"));
+
+    expect(container.querySelector('.view-chip[aria-pressed="true"] strong')?.textContent).toBe("Locally revised review");
+    expect(container.querySelector(".view-results")?.textContent).toContain("Sample results have not been evaluated for this saved local definition");
+    expect(container.querySelector(".view-thread-list")).toBeNull();
+    expect(container.querySelector(".view-thread-row strong")?.textContent).not.toBe("Unresolved production failure");
   });
 
   test("reloads canonical positions and shifted revisions after an authorized removal", async () => {
