@@ -44,6 +44,7 @@
   --desktop-warning: #d5b274;
   --desktop-danger: #ff8b87;
   --desktop-focus: #6aa9f5;
+  --desktop-message-unread-surface: #121212;
 
   /*
    * The pre-switch Tidal stylesheet still powers the reader, composer, and
@@ -499,7 +500,11 @@
    It preserves the fixed sender/content/evidence/action bands and communicates
    unread state with a restrained surface shift plus weight, not alternating slabs. */
 :root[data-reader-density="compact"] {
-  --desktop-message-unread-surface: color-mix(in srgb, var(--desktop-ink) 2%, var(--desktop-surface));
+  /* Concrete equivalents of a 2% ink/surface mix keep computed-state tests deterministic. */
+  --desktop-message-unread-surface: #fafbfb;
+}
+:root[data-theme="dark"][data-reader-density="compact"] {
+  --desktop-message-unread-surface: #121212;
 }
 
 :root[data-reader-density="compact"] .desktop-shell .message-row {

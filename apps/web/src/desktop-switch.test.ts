@@ -81,6 +81,9 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   meta.append(sender, date);
   const subject = browser.document.createElement("div");
   subject.className = "message-subject-row";
+  const subjectHeading = browser.document.createElement("h2");
+  subjectHeading.textContent = "A restrained subject line";
+  subject.append(subjectHeading);
   const snippet = browser.document.createElement("p");
   copy.append(meta, subject, snippet);
   row.append(avatar, copy);
@@ -97,7 +100,14 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   laterActions.className = "later-row-actions";
   wrap.append(row, evidence, attention, ...(view === "later" ? [laterActions] : [keep]));
   listItem.append(wrap);
-  list.append(listItem);
+  const unreadListItem = browser.document.createElement("li");
+  const unreadWrap = browser.document.createElement("div");
+  unreadWrap.className = "message-row-wrap";
+  const unreadRow = row.cloneNode(true) as typeof row;
+  unreadRow.classList.add("message-row-unread");
+  unreadWrap.append(unreadRow);
+  unreadListItem.append(unreadWrap);
+  list.append(listItem, unreadListItem);
   body.append(list);
   inbox.append(body);
   workspace.append(inbox);
@@ -108,7 +118,12 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
   const desktopContentStyle = browser.getComputedStyle(desktopContent);
   const mobileItemStyle = browser.getComputedStyle(mobileItem);
   const rowStyle = browser.getComputedStyle(row);
+  const unreadRowStyle = browser.getComputedStyle(unreadRow);
   const copyStyle = browser.getComputedStyle(copy);
+  const readSenderStyle = browser.getComputedStyle(sender);
+  const readSubjectStyle = browser.getComputedStyle(subjectHeading);
+  const unreadSenderStyle = browser.getComputedStyle(unreadRow.querySelector(".message-meta strong")!);
+  const unreadSubjectStyle = browser.getComputedStyle(unreadRow.querySelector(".message-subject-row h2")!);
   const dateStyle = browser.getComputedStyle(date);
   const evidenceStyle = browser.getComputedStyle(evidence);
   const attentionStyle = browser.getComputedStyle(attentionTrigger);
@@ -119,7 +134,8 @@ function responsiveShellStyles(width: number, theme: "light" | "dark", view: "in
     desktopContentDisplay: desktopContentStyle.display,
     mobileDisplay: mobileStyle.display,
     mobileItem: { background: mobileItemStyle.backgroundColor, color: mobileItemStyle.color, minHeight: mobileItemStyle.minHeight },
-    row: { gridTemplateColumns: rowStyle.gridTemplateColumns, minHeight: rowStyle.minHeight, paddingBottom: rowStyle.paddingBottom, paddingRight: rowStyle.paddingRight },
+    row: { background: rowStyle.backgroundColor, gridTemplateColumns: rowStyle.gridTemplateColumns, minHeight: rowStyle.minHeight, paddingBottom: rowStyle.paddingBottom, paddingRight: rowStyle.paddingRight, senderWeight: readSenderStyle.fontWeight, subjectWeight: readSubjectStyle.fontWeight },
+    unreadRow: { background: unreadRowStyle.backgroundColor, gridTemplateColumns: unreadRowStyle.gridTemplateColumns, minHeight: unreadRowStyle.minHeight, paddingBottom: unreadRowStyle.paddingBottom, paddingRight: unreadRowStyle.paddingRight, senderWeight: unreadSenderStyle.fontWeight, subjectWeight: unreadSubjectStyle.fontWeight },
     copy: { gridTemplateColumns: copyStyle.gridTemplateColumns, gridTemplateRows: copyStyle.gridTemplateRows },
     datePosition: dateStyle.position,
     evidence: { bottom: evidenceStyle.bottom, minHeight: evidenceStyle.minHeight, right: evidenceStyle.right, top: evidenceStyle.top },
@@ -221,15 +237,29 @@ describe("desktop application shell", () => {
   });
 
   test("keeps compact read and unread rows restrained, scannable, and aligned", () => {
-    expect(styles).toContain("/* BRE-371: Compact is a quieter, information-dense version of the same row.");
-    expect(styles).toContain('--desktop-message-unread-surface: color-mix(in srgb, var(--desktop-ink) 2%, var(--desktop-surface));');
-    expect(styles).toContain(".desktop-shell .message-row-unread { background: var(--desktop-message-unread-surface); }");
-    expect(styles).toContain('min-height: 72px;\n  grid-template-columns: 34px minmax(0, 1fr);\n  padding: 8px 252px 8px 16px;');
-    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-copy > p { display: block; }');
-    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-meta strong { font-weight: 560; }');
-    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-subject-row h2 { font-weight: 500; }');
-    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-meta strong { font-weight: 650; }');
-    expect(styles).toContain(':root[data-reader-density="compact"] .desktop-shell .message-row-unread .message-subject-row h2 { font-weight: 600; opacity: 1; }');
-    expect(styles).toContain(':root[data-theme="dark"] .desktop-shell .message-row-unread {\n  background: var(--desktop-message-unread-surface);');
+    for (const width of [1024, 1440]) {
+      for (const theme of ["light", "dark"] as const) {
+        const compact = responsiveShellStyles(width, theme, "inbox", "compact");
+        expect(compact.row.minHeight).toBe("72px");
+        expect(compact.unreadRow.minHeight).toBe("72px");
+        expect(compact.unreadRow.gridTemplateColumns).toBe(compact.row.gridTemplateColumns);
+        expect(compact.unreadRow.paddingRight).toBe(compact.row.paddingRight);
+        expect(compact.unreadRow.paddingBottom).toBe(compact.row.paddingBottom);
+        expect(compact.unreadRow.background).not.toBe(compact.row.background);
+        expect(Number(compact.unreadRow.senderWeight)).toBeGreaterThan(Number(compact.row.senderWeight));
+        expect(Number(compact.unreadRow.subjectWeight)).toBeGreaterThan(Number(compact.row.subjectWeight));
+      }
+    }
+
+    for (const width of [1024, 1440]) {
+      for (const theme of ["light", "dark"] as const) {
+        const calm = responsiveShellStyles(width, theme, "inbox", "calm");
+        expect(calm.row.minHeight).toBe("92px");
+        expect(calm.unreadRow.minHeight).toBe("92px");
+        expect(calm.unreadRow.gridTemplateColumns).toBe(calm.row.gridTemplateColumns);
+        if (theme === "dark") expect(calm.unreadRow.background).toBe("#121212");
+        else expect(calm.unreadRow.background).toBe("#ffffff");
+      }
+    }
   });
 });
