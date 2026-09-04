@@ -91,25 +91,33 @@ afterEach(() => {
 });
 
 describe("Organization Glass Box Trace", () => {
-  test("starts with a concise walkthrough and discloses each authority surface on request", async () => {
+  test("starts with a scan-first rule summary and discloses each authority surface on request", async () => {
     await act(async () => {
       root!.render(<TestOrganizationStudio interactivePreview />);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.document.querySelector("#organization-page-title")?.textContent).toBe("Make your inbox feel like yours.");
-    expect(browser.document.querySelector("#organization-overview")?.hasAttribute("hidden")).toBe(false);
+    expect(browser.document.querySelector("#organization-page-title")?.textContent).toBe("Organization");
+    expect(browser.document.querySelector(".organization-intro p")?.textContent).toBe("See where messages go, then tune the rules behind each decision.");
+    const overview = browser.document.querySelector("#organization-overview") as unknown as HTMLElement;
+    expect(overview.hasAttribute("hidden")).toBe(false);
     expect(browser.document.querySelector("#organization-views")?.hasAttribute("hidden")).toBe(true);
     expect(browser.document.querySelector("#organization-lanes")?.hasAttribute("hidden")).toBe(true);
     expect(browser.document.querySelector("#organization-rules")?.hasAttribute("hidden")).toBe(true);
-    expect(browser.document.body.textContent).toContain("Lanes choose the current.");
-    expect(browser.document.body.textContent).toContain("Views collect perspectives.");
-    expect(browser.document.body.textContent).toContain("Rules explain the repeatable.");
-    expect(browser.document.body.textContent).toContain("Organization cannot send or delete provider mail");
+    expect(overview.querySelector(".organization-overview-rule")?.tagName).toBe("OL");
+    expect(overview.querySelectorAll(".organization-overview-rule li")).toHaveLength(4);
+    expect(overview.querySelectorAll("button")).toHaveLength(1);
+    expect(overview.textContent).toContain("WhenA message arrives");
+    expect(overview.textContent).toContain("IfProduction has failed");
+    expect(overview.textContent).toContain("ThenPlace it in Focus");
+    expect(overview.textContent).toContain("BecauseA person needs to respond now");
+    expect(overview.textContent).not.toContain("Lanes choose the current.");
+    expect(overview.textContent).not.toContain("Organization cannot send or delete provider mail");
     expect(browser.document.querySelector(".organization-intro-status")?.textContent).toBe("Local previewNothing is saved or applied");
 
-    const primary = ([...browser.document.querySelectorAll("button")] as unknown as HTMLButtonElement[]).find((button) => button.textContent?.includes("Review how a rule works"))!;
-    expect(primary.textContent).toContain("Open the safe, local preview");
+    const primary = overview.querySelector(".organization-overview-primary") as unknown as HTMLButtonElement;
+    expect(primary.textContent).toContain("Open Rules");
+    expect(overview.querySelector(".organization-overview-action p")?.textContent).toBe("Preview only · nothing is saved or applied.");
     await act(async () => {
       primary.focus();
       primary.click();
@@ -132,7 +140,7 @@ describe("Organization Glass Box Trace", () => {
     });
 
     expect(browser.document.querySelector(".organization-intro-status")?.textContent).not.toContain("Organization is on");
-    expect(browser.document.querySelector(".organization-overview-primary")?.textContent).toContain("Open live Rules · simulation and approval required");
+    expect(browser.document.querySelector(".organization-overview-action p")?.textContent).toBe("Production changes require simulation and approval.");
     const rules = openSection("Rules");
     expect(rules.textContent).toContain("Rule · rule-production");
     expect(rules.textContent).toContain("message.received");

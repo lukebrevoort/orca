@@ -1025,29 +1025,27 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
   return <section aria-label="Organization" className="organization-studio">
     <OrganizationRecoveryBanner />
     <header className="organization-intro">
-      <div><span>Your calm control room</span><h1 id="organization-page-title">Make your inbox feel like yours.</h1><p>Give every thread one clear home, collect useful perspectives, and let transparent rules handle the repeatable decisions.</p></div>
+      <div><h1 id="organization-page-title">Organization</h1><p>See where messages go, then tune the rules behind each decision.</p></div>
       <div className="organization-intro-status" data-authority={organizationAuthority.state.kind}><span><i aria-hidden="true"/>{authorityHeadline}</span><small>{authorityDetail}</small></div>
     </header>
     <nav aria-label="Organization sections" className="organization-section-nav">
       {(["overview", "views", "lanes", "rules"] as OrganizationSection[]).map((item) => <button aria-controls={`organization-${item}`} aria-current={section === item ? "page" : undefined} key={item} onClick={() => setSection(item)} ref={item === "rules" ? rulesNavigationRef : undefined} type="button">{item.charAt(0).toUpperCase() + item.slice(1)}</button>)}
     </nav>
     <section aria-labelledby="organization-overview-title" className="organization-overview" hidden={section !== "overview"} id="organization-overview">
-      <div className="organization-overview-start">
-        <div><span>Start here · about two minutes</span><h2 id="organization-overview-title">See one decision from start to finish.</h2><p>Rules are the easiest way to understand Organization: they notice something, check what is true, choose an outcome, and keep the reason beside it.</p></div>
-        <button className="organization-overview-primary" onClick={() => { focusRulesNavigationRef.current = true; setSection("rules"); }} type="button"><span>Review how a rule works</span><small>{interactivePreview ? "Open the safe, local preview" : "Open live Rules · simulation and approval required"}</small><b aria-hidden="true">→</b></button>
+      <div className="organization-overview-heading">
+        <div><span>Rule summary</span><h2 id="organization-overview-title">Production failures</h2></div>
+        <small>{interactivePreview ? "Local sample" : "Production"}</small>
       </div>
-      <div aria-label="An example Organization rule" className="organization-overview-rule">
-        <article className="organization-rule-when"><span>When</span><strong>A message arrives</strong><small>The moment Orca considers it</small></article><i aria-hidden="true">→</i>
-        <article className="organization-rule-if"><span>If</span><strong>Production has failed</strong><small>A condition Orca can explain</small></article><i aria-hidden="true">→</i>
-        <article className="organization-rule-then"><span>Then</span><strong>Place it in Focus</strong><small>One calm primary Lane</small></article>
-        <article className="organization-rule-because"><span>Because</span><strong>A person needs to respond now.</strong><small>The reason stays visible in Trace.</small></article>
-      </div>
-      <div className="organization-overview-model">
-        <article><span>01</span><div><strong>Lanes choose the current.</strong><p>Every thread has exactly one primary home. A fallback means nothing gets lost.</p></div></article>
-        <article><span>02</span><div><strong>Views collect perspectives.</strong><p>The same thread can appear in several useful views without being copied or moved.</p></div></article>
-        <article><span>03</span><div><strong>Rules explain the repeatable.</strong><p>Preview impact before activation, inspect Trace and Audit, and compensate with a revert.</p></div></article>
-      </div>
-      <aside className="organization-overview-safety"><span aria-hidden="true">✓</span><p><strong>You stay in control.</strong> Organization cannot send or delete provider mail. Activation is authority-gated, atomic, audited, and reversible.</p></aside>
+      <ol aria-label="Example Organization rule" className="organization-overview-rule">
+        <li className="organization-rule-when"><span>When</span><strong>A message arrives</strong></li>
+        <li className="organization-rule-if"><span>If</span><strong>Production has failed</strong></li>
+        <li className="organization-rule-then"><span>Then</span><strong>Place it in Focus</strong></li>
+        <li className="organization-rule-because"><span>Because</span><strong>A person needs to respond now</strong></li>
+      </ol>
+      <footer className="organization-overview-action">
+        <p>{interactivePreview ? "Preview only · nothing is saved or applied." : "Production changes require simulation and approval."}</p>
+        <button className="organization-overview-primary" onClick={() => { focusRulesNavigationRef.current = true; setSection("rules"); }} type="button"><span>Open Rules</span><b aria-hidden="true">→</b></button>
+      </footer>
     </section>
     <div hidden={section !== "views"} id="organization-views"><OrganizationViewsWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationAuthority.refreshToken} /></div>
     <div hidden={section !== "lanes"} id="organization-lanes"><OrganizationLaneWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationAuthority.refreshToken} /></div>
