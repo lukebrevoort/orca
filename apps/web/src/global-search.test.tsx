@@ -383,6 +383,99 @@ describe("GlobalMailSearch interaction", () => {
     expect(button("Save as View").disabled).toBe(false);
   });
 
+  for (const [index, label, value, expected] of [
+    [0, "Mailbox", "quiet", { mailbox: "quiet" }],
+    [1, "Evidence", "human", { evidence: "human" }],
+    [2, "Account", "", { accountId: null, collectionId: null }],
+    [3, "Space", "", { collectionId: null }],
+  ] as const) test(`pending input survives ${label} change, late responses and source return`, async () => {
+    installViewSearchApi();
+    const api = globalThis.fetch;
+    let finishOldSearch: (() => void) | undefined;
+    let preparation: { source: { returnTarget: string }; unsupportedClauses: { reason: string }[] } | undefined;
+    const requests: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+      const path = String(input);
+      if (path.startsWith("/v1/inbox?")) {
+        requests.push(path);
+        if (new URL(path, browserWindow.location.origin).searchParams.get("query") === "alpha") {
+          await new Promise<void>((resolve) => { finishOldSearch = resolve; });
+          return searchResponse([{ ...inboxFixture[0]!, subject: "Stale alpha result" }]);
+        }
+      }
+      if (path === "/v1/organization/views/prepare") preparation = JSON.parse(String(init?.body));
+      return api(input, init);
+    }) as typeof fetch;
+    openMailSearchFilter({ mailbox: "all", attention: "all", classification: "all", person: null, query: "alpha", accountId: demoAccount.id, collectionId: "space_launch", dataSource: "stored_mail" });
+    const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush(); await flush();
+    const field = browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(browserWindow.HTMLInputElement.prototype, "value")!.set!.call(field, "beta");
+      field.dispatchEvent(new browserWindow.InputEvent("input", { bubbles: true, data: "beta" }) as unknown as Event);
+    });
+    const select = browserWindow.document.querySelectorAll(".global-mail-search-filters select")[index] as unknown as HTMLSelectElement;
+    await act(async () => { select.value = value; select.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event); });
+    expect(field.value).toBe("beta");
+    expect(readMailSearchState(browserWindow.location as unknown as Location)).toMatchObject({ query: "beta", ...expected });
+    const sourceUrl = browserWindow.location.pathname + browserWindow.location.search;
+    await act(async () => { finishOldSearch?.(); await new Promise((resolve) => setTimeout(resolve, 350)); });
+    await flush();
+    expect(browserWindow.location.pathname + browserWindow.location.search).toBe(sourceUrl);
+    expect(requests).toHaveLength(2);
+    expect(new URL(requests[1]!, browserWindow.location.origin).searchParams.get("query")).toBe("beta");
+    expect(browserWindow.document.body.textContent).not.toContain("Stale alpha result");
+    await act(async () => button("Save as View").click()); await flush(); await flush();
+    expect(preparation?.source.returnTarget).toBe(sourceUrl);
+    expect(preparation?.unsupportedClauses[0]?.reason).toContain("“beta”");
+    await act(async () => button("Cancel").click()); await flush();
+    expect(field.value).toBe("beta");
+    expect(browserWindow.location.pathname + browserWindow.location.search).toBe(sourceUrl);
+  });
+
+  for (const departure of ["new Search", "popstate"] as const) test(`late View commit cannot replace ${departure} or its return snapshot`, async () => {
+    installViewSearchApi(); const api = globalThis.fetch;
+    let complete!: () => void;
+    let committedOnServer = false;
+    globalThis.fetch = (async (input, init) => {
+      const path = String(input);
+      if (path === "/v1/organization/views/preview") {
+        const request = JSON.parse(String(init?.body));
+        const digest = `sha256:${"b".repeat(64)}`;
+        return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4,
+          draft: { ...request.draft, definitionDigest: digest, definitionKind: "filtered", effectiveAccountIds: ["account_gmail"], summary: { text: "Likely human", clauses: ["Likely human"] }, saveEligibility: { allowed: true, code: null, detail: "Ready" } },
+          results: { accountIds: ["account_gmail"], items: [], nextCursor: "more", limit: request.page.limit, count: { kind: "shown", value: 1 }, state: "matches", provenance: { source: "stored_mail", definitionDigest: digest, authorizedScopeDigest: digest, evaluatedAt: "2026-09-06T18:00:00.000Z" } },
+        });
+      }
+      if (path === "/v1/organization/views/commit") {
+        const request = JSON.parse(String(init?.body));
+        await new Promise<void>((resolve) => { complete = resolve; }); committedOnServer = true;
+        return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 5, view: { id: "view_old", workspaceId: "workspace_demo", ...request.draft.identity, definition: request.draft.definition, revision: 1, createdAt: "2026-09-06T18:00:00.000Z", updatedAt: "2026-09-06T18:00:00.000Z" }, navigation: { destination: "view:view_old", href: "/?destination=view%3Aview_old" } });
+      }
+      return api(input, init);
+    }) as typeof fetch;
+    openMailSearchFilter({ mailbox: "all", attention: "all", classification: "human", person: null, query: "", accountId: null, collectionId: null, dataSource: "stored_mail" });
+    const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<TopLayerProvider><WorkspaceHeader health="synced" onThemeChange={() => {}} query="" theme="light" title="Inbox"/></TopLayerProvider>));
+    await flush(); await flush();
+    await act(async () => button("Save as View").click()); await flush(); await flush(); await flush();
+    await act(async () => button("Save View").click());
+    expect(complete).toBeDefined();
+    await act(async () => {
+      if (departure === "new Search") openMailSearch("beta");
+      else { browserWindow.history.replaceState({}, "", "/?destination=focus"); browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate")); }
+    }); await flush();
+    const destination = browserWindow.location.href;
+    browserWindow.sessionStorage.setItem("orca:search-view-return:v1", "new-source-snapshot");
+    await act(async () => complete()); await flush();
+    expect(committedOnServer).toBe(true);
+    expect(browserWindow.location.href).toBe(destination);
+    expect(browserWindow.sessionStorage.getItem("orca:search-view-return:v1")).toBe("new-source-snapshot");
+    expect(browserWindow.document.querySelector(".search-view-authoring")).toBeNull();
+    if (departure === "new Search") expect((browserWindow.document.querySelector('input[aria-label="Search stored mail"]') as unknown as HTMLInputElement).value).toBe("beta");
+  });
+
   test("ignores a late prepared draft when the Search scope changes", async () => {
     const writes = installViewSearchApi(); const api = globalThis.fetch;
     let finishPreparation: (() => void) | undefined;

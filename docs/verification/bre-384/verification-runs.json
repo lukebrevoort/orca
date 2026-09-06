@@ -115,5 +115,29 @@
     "manualContrastBlack": 9.02
   },
   "additional503Browser": "incomplete; daemon os35 after5 retries; commands/server stopped and browser closed",
-  "hostedCI": "Required full typecheck/test gate; consult PR terminal checks."
+  "hostedCI": "Required full typecheck/test gate; consult PR terminal checks.",
+  "independentReviewCorrection": {
+    "previousHead": "6e69f75aca704af90a301bc4cf807e242de15dc2",
+    "scopeRegression": {
+      "red": "4 fail: beta became alpha",
+      "green": "4 pass, 48 assertions"
+    },
+    "unmountRegression": {
+      "red": "1 fail: stale context callback",
+      "green": "1 pass, 4 assertions; server write still succeeds"
+    },
+    "combinedFocused": {
+      "pass": 59,
+      "fail": 2,
+      "seconds": 186.87,
+      "note": "Two new departure fixtures incorrectly used likely_human instead of PinFilter human; fixture corrected."
+    },
+    "correctedDepartureFocused": {
+      "pass": 2,
+      "fail": 0,
+      "assertions": 15,
+      "seconds": 15.79
+    },
+    "localFullGates": "Deferred under continuing host load around39; hosted CI required on additive head. No new live browser proof claimed."
+  }
 }

@@ -277,6 +277,11 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const previewRequest = useRef(0);
   const listRequest = useRef(0);
   const mutationRequest = useRef(0);
+  useEffect(() => () => {
+    // The server may already have accepted a write. Leaving this surface only
+    // invalidates its response callbacks; it does not roll back that write.
+    mutationRequest.current += 1;
+  }, []);
   const commitRetryKey = useRef<string | null>(null);
   const commitRetryDraftKey = useRef<string>("");
   const commitInFlight = useRef(false);

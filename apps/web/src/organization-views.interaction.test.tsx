@@ -167,6 +167,35 @@ const liveAuthorityDescription = {
   workspaceRevision: 4, facetDefinitions: [], workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
 };
 
+test("unmounted authoring suppresses a late successful commit callback without undoing the server write", async () => {
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", source: { kind: "search", label: "Search", returnTarget: "/?searchQuery=alpha" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
+  let complete!: () => void;
+  let committedOnServer = false;
+  const callbacks: unknown[] = [];
+  globalThis.fetch = (async (input, init) => {
+    const path = String(input);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, { revision: 1, accountIds: ["account_gmail"] }) });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      await new Promise<void>((resolve) => { complete = resolve; });
+      committedOnServer = true;
+      return committedResponse(init);
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { query: "alpha" } }} onCancel={() => {}} onCommitted={(_result, context) => callbacks.push(context)}/>));
+  await flush(); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  expect(complete).toBeDefined();
+  await act(async () => root!.render(null));
+  await act(async () => complete()); await flush();
+  expect(committedOnServer).toBe(true);
+  expect(callbacks).toEqual([]);
+});
+
 function preparedCreateDraft(input: OrganizationViewPreparationInput, definition: OrganizationViewDefinition, options: { unsupportedClauses?: OrganizationViewReviewedDraft["unsupportedClauses"]; preparationNotices?: OrganizationViewReviewedDraft["preparationNotices"] } = {}): OrganizationViewReviewedDraft {
   if (input.kind === "saved_view") throw new Error("Expected create preparation");
   return {
