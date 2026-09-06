@@ -194,6 +194,12 @@ describe("BRE-313 independent View lifecycle verification", () => {
     }) });
     assert.equal(blankCommit.status, 400);
 
+    const structurallyBlank = await app.request("/v1/organization/views/prepare", { method: "POST", headers, body: JSON.stringify({
+      kind: "typed_definition", source: { kind: "manual", label: "Manual View" }, identity,
+      definition: { revision: 1, humanSignal: {} }, unsupportedClauses: [],
+    }) });
+    assert.equal(structurallyBlank.status, 400);
+
     const unsupported = await prepare({ revision: 1, thread: { subjectContains: "A" } }, [{ id: "unsupported_1", label: "Attachment type", reason: "No evaluator predicate" }]);
     assert.equal(unsupported.draft.saveEligibility.code, "unsupported_clauses");
 
@@ -219,6 +225,42 @@ describe("BRE-313 independent View lifecycle verification", () => {
     }) });
     assert.equal(denied.status, 403);
     assert.equal((await denied.json()).error.code, "account_denied");
+  });
+
+  test("replays a committed draft before mutable zero-match evaluation and conflicts on changed payload", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const preparation = {
+      kind: "typed_definition",
+      source: { kind: "manual", label: "Manual View" },
+      identity: { name: "Replay-safe View", description: "", color: "#70867d", position: 0 },
+      definition: { revision: 1, thread: { subjectContains: "A /" } },
+      unsupportedClauses: [],
+    };
+    const preparedResponse = await app.request("/v1/organization/views/prepare", { method: "POST", headers, body: JSON.stringify(preparation) });
+    assert.equal(preparedResponse.status, 200, await preparedResponse.clone().text());
+    const prepared = await preparedResponse.json();
+    const commitRequest = {
+      draft: prepared.draft,
+      expectedRevisions: { workspace: prepared.workspaceRevision, view: null },
+      retryKey: "bre381-mailbox-independent-replay",
+      confirmedZeroMatchDigest: null,
+    };
+    const committedResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(commitRequest) });
+    assert.equal(committedResponse.status, 200, await committedResponse.clone().text());
+    const committed = await committedResponse.json();
+
+    const changedMailbox = createDatabaseClient(path);
+    changedMailbox.sqlite.query("UPDATE threads SET subject='No longer matches'").run();
+    changedMailbox.sqlite.close();
+
+    const replayResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(commitRequest) });
+    assert.equal(replayResponse.status, 200, await replayResponse.clone().text());
+    assert.deepEqual(await replayResponse.json(), committed);
+
+    const changedPayload = structuredClone(commitRequest);
+    changedPayload.draft.identity.name = "Different View name";
+    const conflictResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(changedPayload) });
+    assert.equal(conflictResponse.status, 409, await conflictResponse.clone().text());
   });
 
   test("keeps unlimited View ordering behind one bounded aggregate authority resource", { timeout: 30_000 }, async () => {

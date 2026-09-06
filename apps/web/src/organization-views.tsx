@@ -703,6 +703,16 @@ function ViewThreadRow({ item, onOpen }: { item: OrganizationViewResultItem; onO
   return onOpen ? <button className="view-thread-row view-thread-open" onClick={() => onOpen(item)} type="button">{content}</button> : <article className="view-thread-row">{content}</article>;
 }
 
+function appendUniqueViewResults(current: readonly OrganizationViewResultItem[], incoming: readonly OrganizationViewResultItem[]) {
+  const identities = new Set(current.map((item) => `${item.accountId}:${item.threadId}`));
+  return [...current, ...incoming.filter((item) => {
+    const identity = `${item.accountId}:${item.threadId}`;
+    if (identities.has(identity)) return false;
+    identities.add(identity);
+    return true;
+  })];
+}
+
 function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread, viewId }: { demoMode?: boolean; onManage: () => void; onOpenThread: (target: { accountId: string; threadId: string }) => void; viewId: string }) {
   const authority = useOrganizationAuthority();
   const previewView = demoMode ? organizationViewsFixture.find((candidate) => candidate.id === viewId) ?? null : null;
@@ -712,13 +722,18 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = useRef(0);
+  const continuation = useRef<AbortController | null>(null);
+  const activeViewId = useRef(viewId);
+  activeViewId.current = viewId;
 
   useEffect(() => {
     if (demoMode) return;
     if (!authority.snapshot && authority.state.kind !== "ready") return;
+    continuation.current?.abort();
+    continuation.current = null;
     const controller = new AbortController();
     const requestId = ++request.current;
-    setStatus("loading"); setError(null); setPage(null);
+    setStatus("loading"); setLoadingMore(false); setError(null); setPage(null);
     void authority.request("/v1/organization/views", { signal: controller.signal }, { operation: "read", capability: "query", hasReliableData: false }).then(async (body) => {
       const listed = organizationViewListResponseSchema.parse(body);
       const selected = listed.items.find((candidate) => candidate.id === viewId);
@@ -734,24 +749,40 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
     }).catch((reason) => {
       if (!controller.signal.aborted && requestId === request.current) { setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not open this View"); }
     });
-    return () => controller.abort();
+    return () => { controller.abort(); continuation.current?.abort(); };
   }, [authority.snapshot, demoMode, viewId]);
 
   async function loadMore() {
     if (!view || !page?.nextCursor || loadingMore) return;
+    const requestId = request.current;
+    const requestedViewId = view.id;
+    const requestedViewRevision = view.revision;
+    const controller = new AbortController();
+    continuation.current?.abort();
+    continuation.current = controller;
     setLoadingMore(true); setError(null);
     if (demoMode) {
       await Promise.resolve();
-      setPage((current) => current ? { ...current, items: [...current.items, demoContinuationItem], nextCursor: null } : current);
+      setPage((current) => current ? { ...current, items: appendUniqueViewResults(current.items, [demoContinuationItem]), nextCursor: null } : current);
+      continuation.current = null;
       setLoadingMore(false);
       return;
     }
     try {
-      const next = organizationViewResultPageSchema.parse(await authority.request(`/v1/organization/views/${encodeURIComponent(view.id)}/results?limit=${page.limit}&cursor=${encodeURIComponent(page.nextCursor)}`, undefined, { operation: "read", capability: "query", hasReliableData: true }));
-      if (next.viewRevision !== view.revision) throw new Error("This View changed. Reload it to continue.");
-      setPage((current) => current ? { ...next, items: [...current.items, ...next.items] } : next);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load more matches"); }
-    finally { setLoadingMore(false); }
+      const next = organizationViewResultPageSchema.parse(await authority.request(`/v1/organization/views/${encodeURIComponent(requestedViewId)}/results?limit=${page.limit}&cursor=${encodeURIComponent(page.nextCursor)}`, { signal: controller.signal }, { operation: "read", capability: "query", hasReliableData: true }));
+      if (controller.signal.aborted || requestId !== request.current || requestedViewId !== activeViewId.current) return;
+      if (next.viewId !== requestedViewId || next.viewRevision !== requestedViewRevision) throw new Error("This View changed. Reload it to continue.");
+      setPage((current) => current && current.viewId === requestedViewId && current.viewRevision === requestedViewRevision
+        ? { ...next, items: appendUniqueViewResults(current.items, next.items) }
+        : current);
+    } catch (reason) {
+      if (!controller.signal.aborted && requestId === request.current && requestedViewId === activeViewId.current) {
+        setError(reason instanceof Error ? reason.message : "Could not load more matches");
+      }
+    } finally {
+      if (continuation.current === controller) continuation.current = null;
+      if (requestId === request.current && requestedViewId === activeViewId.current) setLoadingMore(false);
+    }
   }
 
   return <section aria-busy={status === "loading" || undefined} aria-labelledby="saved-view-title" className="views-workspace saved-view-workspace">

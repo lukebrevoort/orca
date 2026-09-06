@@ -91,6 +91,21 @@ describe("BRE-381 reviewed View draft contracts", () => {
     assert.match(summarizeOrganizationViewDefinition(definition).text, /at least one unread message/);
   });
 
+  test("rejects structurally empty predicate objects instead of treating them as filters", () => {
+    assert.equal(organizationViewDefinitionSchema.safeParse({ revision: 1, humanSignal: {} }).success, false);
+    assert.equal(organizationViewDefinitionSchema.safeParse({ revision: 1, humanSignal: { minimumScore: undefined } }).success, false);
+  });
+
+  test("summarizes every maximum-size valid definition within the response contract", () => {
+    const maximumSenders = organizationViewDefinitionSchema.parse({
+      revision: 1,
+      sender: { addresses: Array.from({ length: 50 }, (_, index) => `sender${index}@example.com`) },
+    });
+    const summary = summarizeOrganizationViewDefinition(maximumSenders);
+    assert.match(summary.text, /50 sender addresses/);
+    assert.equal(summary.clauses.every((clause) => clause.length <= 500), true);
+  });
+
   test("binds reviewed drafts and zero-match confirmation to a definition digest", () => {
     const digest = `sha256:${"a".repeat(64)}`;
     const draft = organizationViewReviewedDraftSchema.parse({

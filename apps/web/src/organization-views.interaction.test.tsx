@@ -200,6 +200,63 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(opened[0]).toEqual({ accountId: "account_gmail", threadId: "thread_reloaded" });
   });
 
+  test("deduplicates saved continuation pages by account and Thread and discards stale generations", async () => {
+    const firstView = organizationViewsFixture[0]!;
+    const secondView = organizationViewsFixture[1]!;
+    const item = (accountId: string, threadId: string, subject: string) => ({
+      accountId, accountEmail: `${accountId}@example.com`, provider: "gmail", threadId, subject,
+      latestReceivedAt: "2026-09-06T18:00:00.000Z", messageCount: 1, readState: "unread", primaryLaneId: "lane_focus",
+      sender: { name: "Maya", email: "maya@example.com" }, humanSignal: 9, humanClassification: "likely_human",
+    });
+    let resolvePending!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { resolvePending = resolve; });
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes("cursor=dedupe")) return Response.json({
+        viewId: firstView.id, viewRevision: firstView.revision, accountIds: ["account_a", "account_b"],
+        items: [item("account_a", "thread_same", "Duplicate must be ignored"), item("account_b", "thread_same", "Same Thread ID, other account"), item("account_a", "thread_unique", "Unique continuation")],
+        nextCursor: "pending", limit: 25,
+      });
+      if (path.includes("cursor=pending")) return pending;
+      if (path.includes(`/views/${firstView.id}/results`)) return Response.json({
+        viewId: firstView.id, viewRevision: firstView.revision, accountIds: ["account_a"],
+        items: [item("account_a", "thread_same", "First saved page")], nextCursor: "dedupe", limit: 25,
+      });
+      if (path.includes(`/views/${secondView.id}/results`)) return Response.json({
+        viewId: secondView.id, viewRevision: secondView.revision, accountIds: ["account_a"],
+        items: [item("account_a", "thread_current", "Current View result")], nextCursor: null, limit: 25,
+      });
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    const renderSaved = async (viewId: string) => act(async () => root!.render(
+      <SavedOrganizationViewWorkspace onManage={() => {}} onOpenThread={() => {}} previewMode viewId={viewId}/>,
+    ));
+    await renderSaved(firstView.id);
+    await flush(); await flush(); await flush();
+    await click(button(container as unknown as HTMLElement, "Load more"));
+    await flush(); await flush();
+    expect(container.textContent).toContain("First saved page");
+    expect(container.textContent).not.toContain("Duplicate must be ignored");
+    expect(container.textContent).toContain("Same Thread ID, other account");
+    expect(container.querySelectorAll(".view-thread-row")).toHaveLength(3);
+
+    await click(button(container as unknown as HTMLElement, "Load more"));
+    await renderSaved(secondView.id);
+    await flush(); await flush(); await flush();
+    await act(async () => resolvePending(Response.json({
+      viewId: firstView.id, viewRevision: firstView.revision, accountIds: ["account_a"],
+      items: [item("account_a", "thread_stale", "Stale saved continuation")], nextCursor: null, limit: 25,
+    })));
+    await flush();
+    expect(container.textContent).toContain("Current View result");
+    expect(container.textContent).not.toContain("Stale saved continuation");
+  });
+
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
     await click(button(container, "Edit definition"));

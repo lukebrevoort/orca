@@ -380,42 +380,52 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         throw new OrganizationViewValidationError("The reviewed View draft no longer matches its canonical definition digest and scope");
       }
       if (!derived.saveEligibility.allowed) throw new OrganizationViewValidationError(derived.saveEligibility.detail);
-      const zeroCheck = repository.evaluate({
-        scope: input.scope,
-        definition: derived.definition,
-        definitionDigest: derived.definitionDigest,
-        resultSetKey: "draft",
-        query: { limit: 1 },
-        authorization: reviewed.authorization,
-      });
-      if (zeroCheck.count.kind === "exact" && zeroCheck.count.value === 0 && request.confirmedZeroMatchDigest !== derived.definitionDigest) {
-        throw new OrganizationViewValidationError("Confirm this exact zero-match definition before saving");
+      const mutation = derived.mode === "update"
+        ? (() => {
+            if (!derived.viewId || request.expectedRevisions.view === null) throw new OrganizationViewValidationError("An update draft requires its View identity and revision");
+            const mutationRequest = organizationViewUpdateRequestSchema.parse({
+              idempotencyKey: request.retryKey,
+              expectedWorkspaceRevision: request.expectedRevisions.workspace,
+              expectedRevision: request.expectedRevisions.view,
+              patch: { ...derived.identity, definition: derived.definition },
+            });
+            return { kind: "update" as const, viewId: derived.viewId, request: mutationRequest, boundRequest: { kind: "update", viewId: derived.viewId, request: mutationRequest } };
+          })()
+        : (() => {
+            const mutationRequest = organizationViewCreateRequestSchema.parse({
+              idempotencyKey: request.retryKey,
+              expectedWorkspaceRevision: request.expectedRevisions.workspace,
+              ...derived.identity,
+              definition: derived.definition,
+            });
+            return { kind: "create" as const, request: mutationRequest, boundRequest: { kind: "create", request: mutationRequest } };
+          })();
+      const existing = replay(input.scope, request.retryKey, mutation.boundRequest);
+      let saved = existing.found ? existing.response as OrganizationView : null;
+      if (!saved) {
+        const zeroCheck = repository.evaluate({
+          scope: input.scope,
+          definition: derived.definition,
+          definitionDigest: derived.definitionDigest,
+          resultSetKey: "draft",
+          query: { limit: 1 },
+          authorization: reviewed.authorization,
+        });
+        if (zeroCheck.count.kind === "exact" && zeroCheck.count.value === 0 && request.confirmedZeroMatchDigest !== derived.definitionDigest) {
+          throw new OrganizationViewValidationError("Confirm this exact zero-match definition before saving");
+        }
       }
 
-      let saved: OrganizationView;
-      if (derived.mode === "update") {
-        if (!derived.viewId || request.expectedRevisions.view === null) throw new OrganizationViewValidationError("An update draft requires its View identity and revision");
-        const current = repository.get(input.scope.workspaceId, derived.viewId);
-        if (!current) throw new OrganizationViewNotFoundError();
-        const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, definition: current.definition })
-          === canonicalOrganizationJson({ ...derived.identity, definition: derived.definition });
-        if (isNoOp && !repository.getAuthorityState(input.scope.workspaceId).reservedIdempotencyKeys.includes(request.retryKey)) {
-          throw new OrganizationViewValidationError("Change at least one View field before saving");
+      if (mutation.kind === "update") {
+        if (!saved) {
+          const current = repository.get(input.scope.workspaceId, mutation.viewId);
+          if (!current) throw new OrganizationViewNotFoundError();
+          const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, definition: current.definition })
+            === canonicalOrganizationJson({ ...derived.identity, definition: derived.definition });
+          if (isNoOp) throw new OrganizationViewValidationError("Change at least one View field before saving");
+          saved = module.update({ scope: input.scope, viewId: mutation.viewId, request: mutation.request });
         }
-        saved = module.update({ scope: input.scope, viewId: derived.viewId, request: {
-          idempotencyKey: request.retryKey,
-          expectedWorkspaceRevision: request.expectedRevisions.workspace,
-          expectedRevision: request.expectedRevisions.view,
-          patch: { ...derived.identity, definition: derived.definition },
-        } });
-      } else {
-        saved = module.create({ scope: input.scope, request: {
-          idempotencyKey: request.retryKey,
-          expectedWorkspaceRevision: request.expectedRevisions.workspace,
-          ...derived.identity,
-          definition: derived.definition,
-        } });
-      }
+      } else if (!saved) saved = module.create({ scope: input.scope, request: mutation.request });
       const canonical = module.list({ scope: input.scope });
       const view = canonical.items.find((candidate) => candidate.id === saved.id);
       if (!view) throw new OrganizationViewNotFoundError("The committed View could not be reloaded");

@@ -16,7 +16,8 @@
     section.wide { grid-column:1/-1; } .flow { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px; }
     .flow article { border:1px solid var(--line); border-radius:13px; padding:14px; } .flow strong { display:block; margin:3px 0 5px; font-size:1.05rem; } .flow small { color:var(--muted); }
     table { width:100%; border-collapse:collapse; } th,td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } th { color:var(--muted); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; }
-    code { background:var(--safe); border-radius:5px; padding:.1em .35em; } ul { margin:8px 0 0; padding-left:20px; } li+li { margin-top:7px; }
+    code { background:var(--safe); border-radius:5px; padding:.1em .35em; } ul,ol { margin:8px 0 0; padding-left:20px; } li+li { margin-top:7px; }
+    pre { margin:12px 0 0; padding:13px 15px; overflow:auto; background:var(--safe); border-radius:10px; } pre code { padding:0; }
     .pass { color:var(--accent); font-weight:800; } .callout { margin-top:16px; padding:14px 16px; background:var(--safe); border-left:3px solid var(--accent); border-radius:8px; }
     @media (max-width:760px) { .grid,.flow { grid-template-columns:1fr; } }
   </style>
@@ -42,15 +43,40 @@
       <li><code>match_all</code> is distinct from a filtered exact zero; zero requires a second digest-bound confirmation.</li>
       <li>Commit failures retain the same retry key; success opens the real persisted View.</li>
     </ul></section>
+    <section class="wide"><h2>Independent-review corrections</h2><ul>
+      <li>Structurally empty predicate objects such as <code>humanSignal: {}</code> are rejected as invalid instead of becoming saveable filtered Views.</li>
+      <li>Maximum-size sender definitions remain valid; summaries use bounded counts for multi-address/domain filters while the complete definition remains unchanged.</li>
+      <li>An exact successful commit replay is checked before mutable mailbox zero-match evaluation. A changed payload still conflicts, and live authority is still required.</li>
+      <li>Saved-result continuation pages deduplicate by <code>accountId:threadId</code>, abort superseded loads, and ignore responses from stale View generations.</li>
+    </ul></section>
     <section class="wide"><h2>Executable evidence</h2><table><thead><tr><th>Gate</th><th>Result</th><th>Coverage</th></tr></thead><tbody>
-      <tr><td><code>bun run test</code></td><td class="pass">911 pass · 0 fail</td><td>77 shared, 531 API, 303 web</td></tr>
+      <tr><td><code>bun run test</code></td><td class="pass">915 pass · 0 fail</td><td>79 shared, 532 API, 304 web</td></tr>
       <tr><td><code>bun run typecheck</code></td><td class="pass">Pass</td><td>All workspaces</td></tr>
       <tr><td><code>bun run build</code></td><td class="pass">Pass</td><td>Shared, API, production Vite client</td></tr>
       <tr><td><code>bun run lint</code></td><td class="pass">Pass</td><td>All workspaces</td></tr>
       <tr><td>Headless browser</td><td class="pass">0 axe violations</td><td>Light and Orca Black; 1440×900 and 1024×768; default, focus, selected, disabled, loading, error, exact-zero, ready, and durable reload states</td></tr>
     </tbody></table></section>
     <section><h2>Read-only preview proof</h2><p>Integration tests snapshot mail, Threads, placements, policies, Views, and Change Sets before and after preview. Preview produces zero writes and never changes provider, placement, notification, or policy state.</p><p class="callout"><strong>Evidence parity:</strong> message override wins address override, which wins domain override, which wins raw classification. Unsaved and saved pages exercise that same evaluator.</p></section>
-    <section><h2>Durable navigation proof</h2><p>Saved Views project beneath My spaces and resolve as <code>/?destination=view:&lt;viewId&gt;</code>. Reload refetches the canonical definition and live results. Opening a result adds both <code>thread</code> and <code>accountId</code>, preserving composite identity.</p><p class="callout">Browser-verified URL: <code>?destination=view%3Aview_weekly_production&amp;thread=thread_failure&amp;accountId=account_gmail</code></p></section>
+    <section><h2>Durable navigation proof</h2><p>Saved Views project beneath My spaces and resolve as <code>/?destination=view:&lt;viewId&gt;</code>. Reload refetches the canonical definition and live results. Opening a result adds both <code>thread</code> and <code>accountId</code>, preserving composite identity.</p><p class="callout"><strong>Fixture disclosure:</strong> the captured visual-state screenshots use the development fixture ID <code>view_weekly_production</code>. They prove layout, theme, focus, and state rendering—not persistence.</p></section>
+    <section class="wide"><h2>Reproduce the production scratch-DB contract</h2><p>The API verification test creates a new temporary SQLite database, runs production migrations, creates an authenticated session and owned Accounts, then calls the production prepare, preview, commit, list, and results boundaries. No developer fixture or browser mock is used.</p>
+      <pre><code>bun test apps/api/src/organization/views/verification.test.ts</code></pre>
+      <ol>
+        <li>Confirm <code>previews and commits one reviewed definition…</code> passes. The commit response supplies the real generated <code>view.id</code> and <code>view:&lt;id&gt;</code> navigation target.</li>
+        <li>Confirm saved-result reads using that returned ID match unsaved preview pages across Accounts and still include newly inserted future mail.</li>
+        <li>Confirm <code>replays a committed draft before mutable zero-match evaluation…</code> passes after the scratch mailbox is changed to zero matches.</li>
+        <li>Expected terminal result: <code>15 pass · 0 fail</code>.</li>
+      </ol>
+      <p class="callout"><strong>Independent production walkthrough:</strong> the verifier saved against a scratch database, copied the returned non-fixture View ID, reloaded its <code>/?destination=view%3A&lt;returned-id&gt;</code> route, and confirmed the same View appeared under Settings → My spaces. That production result—not the fixture screenshots—is the persistence proof.</p>
+    </section>
+    <section class="wide"><h2>Reproduce browser-visible states</h2><p>Start the normal development stack, then use these development-only fixture routes for deterministic visual review. The <code>bre381Evidence</code> values select presentation states only.</p>
+      <pre><code>bun run dev
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=ready'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=loading'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=error'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=zero'
+open 'http://localhost:5173/dev/inbox?destination=view%3Aview_weekly_production'</code></pre>
+      <p>Expected: ready enables the labeled Save action; loading and error keep it disabled; zero requires two digest-bound confirmations; the saved fixture route renders a reload-safe result surface. Repeat at 1440×900 and 1024×768 in light and Orca Black. These steps reproduce the screenshots, while the scratch-DB test and independent walkthrough above prove persistence.</p>
+    </section>
   </div>
 </main></body>
 </html>

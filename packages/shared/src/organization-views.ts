@@ -38,7 +38,7 @@ export const organizationViewDefinitionSchema = z.object({
     maximumScore: z.number().int().min(0).max(10).optional(),
     classifications: z.array(humanClassificationSchema).min(1).max(4).optional(),
     evidenceReasonCodes: z.array(humanClassificationReasonCodeSchema).min(1).max(12).optional(),
-  }).strict().superRefine((value, context) => {
+  }).strict().refine((value) => Object.values(value).some((predicate) => predicate !== undefined), "Expected at least one Human Signal predicate").superRefine((value, context) => {
     if (value.minimumScore !== undefined && value.maximumScore !== undefined && value.minimumScore > value.maximumScore) {
       context.addIssue({ code: "custom", path: ["minimumScore"], message: "minimumScore must not exceed maximumScore" });
     }
@@ -332,8 +332,12 @@ export function summarizeOrganizationViewDefinition(definition: OrganizationView
   if (definition.humanSignal?.maximumScore !== undefined) clauses.push(`Human Signal at most ${definition.humanSignal.maximumScore}`);
   if (definition.humanSignal?.classifications) clauses.push(`effective evidence: ${definition.humanSignal.classifications.join(" or ")}`);
   if (definition.humanSignal?.evidenceReasonCodes) clauses.push(`${definition.humanSignal.evidenceReasonCodes.length} evidence ${definition.humanSignal.evidenceReasonCodes.length === 1 ? "reason" : "reasons"}`);
-  if (definition.sender?.addresses) clauses.push(`from ${definition.sender.addresses.join(" or ")}`);
-  if (definition.sender?.domains) clauses.push(`from domain ${definition.sender.domains.join(" or ")}`);
+  if (definition.sender?.addresses) clauses.push(definition.sender.addresses.length === 1
+    ? `from ${definition.sender.addresses[0]}`
+    : `from ${definition.sender.addresses.length} sender addresses`);
+  if (definition.sender?.domains) clauses.push(definition.sender.domains.length === 1
+    ? `from domain ${definition.sender.domains[0]}`
+    : `from ${definition.sender.domains.length} sender domains`);
   if (definition.date?.receivedAfter) clauses.push(`received at or after ${definition.date.receivedAfter}`);
   if (definition.date?.receivedBefore) clauses.push(`received at or before ${definition.date.receivedBefore}`);
   return organizationViewDefinitionSummarySchema.parse({
