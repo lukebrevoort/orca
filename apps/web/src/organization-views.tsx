@@ -27,6 +27,7 @@ import {
   type OrganizationViewResultPage,
   type OrganizationViewDraftSource,
   type OrganizationViewUnsupportedClause,
+  type OrganizationViewPreparationNotice,
 } from "@orca/shared";
 import { OrganizationAuthorityProvider, useOrganizationAuthority } from "./organization-authority";
 
@@ -148,17 +149,26 @@ export type OrganizationViewAuthoringEntry<TContext = unknown> = {
 };
 
 function demoPreparationResponse(preparation: OrganizationViewPreparationInput): OrganizationViewPrepareResponse {
+  const showSelfOmissionEvidence = import.meta.env.DEV
+    && typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("bre383Evidence") === "self-omission"
+    && preparation.kind === "selected_senders";
   const saved = preparation.kind === "saved_view" ? organizationViewsFixture.find((view) => view.id === preparation.viewId) ?? organizationViewsFixture[0]! : null;
   const definition = preparation.kind === "typed_definition"
     ? preparation.definition
     : preparation.kind === "selected_senders"
-      ? { revision: 1 as const, accountIds: ["account_gmail"], sender: { addresses: unique([...organizationWeeklyViewResultsFixture.items, demoContinuationItem].slice(0, preparation.references.length).map((item) => item.sender.email.toLocaleLowerCase())) } }
+      ? { revision: 1 as const, accountIds: ["account_gmail"], sender: { addresses: showSelfOmissionEvidence ? ["maya@example.com"] : unique([...organizationWeeklyViewResultsFixture.items, demoContinuationItem].slice(0, preparation.references.length).map((item) => item.sender.email.toLocaleLowerCase())) } }
       : saved!.definition;
   const source = preparation.kind === "typed_definition" || preparation.kind === "selected_senders" ? preparation.source : { kind: "saved_view" as const, label: saved!.name };
   const identity = preparation.kind === "typed_definition" || preparation.kind === "selected_senders"
     ? preparation.identity
     : { name: saved!.name, description: saved!.description, color: saved!.color, position: saved!.position };
   const unsupportedClauses = preparation.kind === "typed_definition" ? preparation.unsupportedClauses : [];
+  const preparationNotices: OrganizationViewPreparationNotice[] = showSelfOmissionEvidence ? [{
+    code: "self_sender_omitted",
+    detail: "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.",
+    omittedCount: 1,
+  }] : [];
   const definitionKind = organizationViewDefinitionKind(definition);
   return organizationViewPrepareResponseSchema.parse({
     workspaceId: "workspace_demo",
@@ -166,10 +176,12 @@ function demoPreparationResponse(preparation: OrganizationViewPreparationInput):
     draft: {
       mode: saved ? "update" : "create",
       viewId: saved?.id ?? null,
+      viewRevision: saved?.revision ?? null,
       source,
       identity,
       definition,
       unsupportedClauses,
+      preparationNotices,
       definitionDigest: `sha256:${"d".repeat(64)}`,
       definitionKind,
       effectiveAccountIds: definition.accountIds ?? ["account_gmail"],
@@ -239,6 +251,8 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const [draftSource, setDraftSource] = useState<OrganizationViewDraftSource>({ kind: "manual", label: "Manual View" });
   const [unsupportedClauses, setUnsupportedClauses] = useState<OrganizationViewUnsupportedClause[]>([]);
   const [removedUnsupportedClauses, setRemovedUnsupportedClauses] = useState<OrganizationViewUnsupportedClause[]>([]);
+  const [preparationNotices, setPreparationNotices] = useState<OrganizationViewPreparationNotice[]>([]);
+  const [preparedViewIdentity, setPreparedViewIdentity] = useState<{ id: string; revision: number } | null>(null);
   const [preparationState, setPreparationState] = useState<{ status: "idle" | "loading" | "ready" | "error"; error: string | null }>({ status: authoringEntry ? "loading" : "idle", error: null });
   const resultRequest = useRef(0);
   const previewRequest = useRef(0);
@@ -392,7 +406,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     const definition = view?.definition;
     setComposerMode(view ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
     previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitRetryDraftKey.current = "";
-    setEditingDefinition(definition ?? null); setActiveClauses(clauseKinds(definition)); setDraftSource(view ? { kind: "saved_view", label: view.name } : { kind: "manual", label: "Manual View" }); setUnsupportedClauses([]); setRemovedUnsupportedClauses([]);
+    setEditingDefinition(definition ?? null); setActiveClauses(clauseKinds(definition)); setDraftSource(view ? { kind: "saved_view", label: view.name } : { kind: "manual", label: "Manual View" }); setUnsupportedClauses([]); setRemovedUnsupportedClauses([]); setPreparationNotices([]); setPreparedViewIdentity(view ? { id: view.id, revision: view.revision } : null);
     setName(view?.name ?? "All messages"); setNameTouched(Boolean(view)); setDescription(view?.description ?? ""); setColor(view?.color ?? "#70867d"); setDraftPosition(view?.position ?? views.length);
     setAccountIds(definition?.accountIds ?? []); setLaneIds(definition?.laneIds ?? []); setWorkflowStateIds(definition?.workflowStateIds ?? []);
     const facet = definition?.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
@@ -406,7 +420,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     const definition = prepared.definition;
     setComposerMode(prepared.mode === "update" ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
     previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitRetryDraftKey.current = "";
-    setEditingDefinition(definition); setActiveClauses(clauseKinds(definition)); setDraftSource(prepared.source); setUnsupportedClauses(prepared.unsupportedClauses); setRemovedUnsupportedClauses([]);
+    setEditingDefinition(definition); setActiveClauses(clauseKinds(definition)); setDraftSource(prepared.source); setUnsupportedClauses(prepared.unsupportedClauses); setRemovedUnsupportedClauses([]); setPreparationNotices(prepared.preparationNotices); setPreparedViewIdentity(prepared.mode === "update" ? { id: prepared.viewId!, revision: prepared.viewRevision! } : null);
     setName(prepared.identity.name); setNameTouched(true); setDescription(prepared.identity.description); setColor(prepared.identity.color); setDraftPosition(prepared.identity.position);
     setAccountIds(definition.accountIds ?? []); setLaneIds(definition.laneIds ?? []); setWorkflowStateIds(definition.workflowStateIds ?? []);
     const facet = definition.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
@@ -475,7 +489,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   function draftDefinition() {
-    const original = composerMode === "edit" ? editingDefinition : null;
+    const original = editingDefinition;
     const definition: OrganizationViewDefinition = { revision: 1 };
     if (activeSet.has("account") && accountIds.length) definition.accountIds = unique(accountIds);
     if (activeSet.has("lane") && laneIds.length) definition.laneIds = unique(laneIds);
@@ -591,7 +605,8 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
 
   const draftInput: OrganizationViewDraftInput | null = composerMode ? {
     mode: composerMode === "edit" ? "update" : "create",
-    viewId: composerMode === "edit" ? activeView?.id ?? null : null,
+    viewId: composerMode === "edit" ? preparedViewIdentity?.id ?? activeView?.id ?? null : null,
+    viewRevision: composerMode === "edit" ? preparedViewIdentity?.revision ?? activeView?.revision ?? null : null,
     source: draftSource,
     identity: { name: name.trim() || "Untitled View", description: description.trim(), color, position: draftPosition },
     definition: draft,
@@ -681,7 +696,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             draft: draftPreview.response!.draft,
-            expectedRevisions: { workspace: workspaceRevision, view: composerMode === "edit" ? activeView?.revision ?? null : null },
+            expectedRevisions: { workspace: workspaceRevision, view: composerMode === "edit" ? preparedViewIdentity?.revision ?? activeView?.revision ?? null : null },
             retryKey,
             confirmedZeroMatchDigest: previewIsZero ? confirmedZeroDigest : null,
           }),
@@ -781,15 +796,16 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   return <section className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}`} aria-labelledby="views-title">
-    <header className="views-header"><div><span>{authoringEntry ? draftSource.label : "Workspace queries · unlimited"}</span><h2 id="views-title">{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode === "create" ? setComposerMode(null) : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
+    <header className="views-header"><div><span>{authoringEntry ? draftSource.label : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode === "create" ? setComposerMode(null) : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
     <div className="views-live-note"><i aria-hidden="true"/><strong>Live from current Thread organization</strong><span>No membership list is stored.</span></div>
     {authoringEntry && preparationState.status === "loading" ? <section className="view-preparation-state" role="status"><strong>Preparing this live View…</strong><span>Orca is validating the source against current stored mail and Workspace authority.</span></section> : null}
     {authoringEntry && preparationState.status === "error" ? <section className="view-preparation-state view-preparation-error" role="alert"><strong>Could not prepare this View.</strong><span>{preparationState.error}</span><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
     {composerMode ? <form className="view-composer" data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
       <header><div><span>Perspective builder</span><h3>{composerMode === "edit" ? "Edit live perspective" : "Build a live perspective"}</h3></div><div className="view-composer-actions"><button className="view-action" onClick={cancelComposer} type="button">Cancel</button><button className="view-action view-save" disabled={!canMutate || status === "saving" || Boolean(validationMessage) || liveSaveBlocked} type="submit">{status === "saving" ? "Saving View…" : previewDisplayState === "loading" ? "Checking draft…" : previewIsZero && confirmedZeroDigest !== effectiveZeroDigest ? "Review zero matches" : previewIsZero ? "Confirm zero-match save" : composerMode === "edit" ? "Save changes" : "Save View"}</button></div></header>
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
-        <div className="view-identity"><label><span>View name</span><input autoFocus maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></div>
+        <div className="view-identity"><label><span>View name</span><input autoFocus={!authoringEntry} maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></div>
         <section className="view-scope-sentence"><span>Current scope</span><p>{scopeSummary}</p>{preservedConstraintDetails.length ? <details className="view-preserved-constraints" open><summary>Preserved constraints · {preservedConstraintDetails.length}</summary><ul>{preservedConstraintDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul></details> : null}</section>
+        {preparationNotices.length ? <section className="view-preparation-notices" aria-label="Preparation notices" role="status"><span>Selection adjusted</span>{preparationNotices.map((notice) => <div key={notice.code}><strong>{notice.detail}</strong>{notice.code === "self_sender_omitted" ? <small>Included external senders · {draft.sender?.addresses?.join(", ") ?? "None"}</small> : null}</div>)}</section> : null}
         {unsupportedClauses.length || removedUnsupportedClauses.length ? <section className="view-unsupported-clauses" aria-label="Unsupported source clauses"><header><div><span>Needs review</span><strong>{unsupportedClauses.length ? "Replace or remove unsupported clauses" : "Unsupported clauses resolved"}</strong></div>{removedUnsupportedClauses.length ? <button className="view-action" onClick={() => { setUnsupportedClauses((current) => [...current, ...removedUnsupportedClauses]); setRemovedUnsupportedClauses([]); }} type="button">Undo removed clauses</button> : null}</header>{unsupportedClauses.length ? <ul>{unsupportedClauses.map((clause) => <li key={clause.id}><div><strong>{clause.label}</strong><span>{clause.reason}</span></div><button className="view-action" onClick={() => { setUnsupportedClauses((current) => current.filter((item) => item.id !== clause.id)); setRemovedUnsupportedClauses((current) => [...current, clause]); }} type="button">Remove blocker</button></li>)}</ul> : <p>Add an equivalent supported filter if the removed meaning still matters.</p>}</section> : null}
         <div className="view-clause-heading"><div><span>Filters</span><small>Every filter narrows the same live result.</small></div><div className="view-add-filter"><button aria-controls={filterMenuOpen ? "view-filter-menu" : undefined} aria-expanded={filterMenuOpen} aria-haspopup="menu" className="view-action view-filter-trigger" onClick={() => { if (filterMenuOpen) { setFilterMenuOpen(false); setMoreFiltersOpen(false); } else { setMoreFiltersOpen(false); openFilterMenu(); } }} onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setMoreFiltersOpen(false); openFilterMenu(); } }} ref={filterTriggerRef} type="button">Add filter <b aria-hidden="true">＋</b></button>{filterMenuOpen ? <div aria-label="Add a filter" className="view-filter-menu" id="view-filter-menu" onBlur={(event) => { const next = event.relatedTarget; if (!(next instanceof Node) || (!filterMenuRef.current?.contains(next) && next !== filterTriggerRef.current)) { setFilterMenuOpen(false); setMoreFiltersOpen(false); } }} onKeyDown={handleFilterMenuKeyDown} ref={filterMenuRef} role="menu"><span>Common filters</span>{primaryClauseKinds.map((kind, index) => <button data-menu-index={index} disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} onFocus={() => setFilterMenuActiveIndex(index)} role="menuitem" tabIndex={!activeSet.has(kind) && filterMenuActiveIndex === index ? 0 : -1} type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>)}<button aria-expanded={moreFiltersOpen} className="view-more-filters" data-menu-index={primaryClauseKinds.length} onClick={() => setMoreFiltersOpen((open) => !open)} onFocus={() => setFilterMenuActiveIndex(primaryClauseKinds.length)} role="menuitem" tabIndex={filterMenuActiveIndex === primaryClauseKinds.length ? 0 : -1} type="button"><strong>More filters</strong><small>Workflow, Facet, Context, and date <b aria-hidden="true">{moreFiltersOpen ? "−" : "+"}</b></small></button>{moreFiltersOpen ? advancedClauseKinds.map((kind, index) => { const menuIndex = primaryClauseKinds.length + 1 + index; return <button data-menu-index={menuIndex} disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} onFocus={() => setFilterMenuActiveIndex(menuIndex)} role="menuitem" tabIndex={!activeSet.has(kind) && filterMenuActiveIndex === menuIndex ? 0 : -1} type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>; }) : null}</div> : null}</div></div>
         {activeClauses.length ? <div className="view-clause-list">{activeClauses.map(renderClause)}</div> : <div className="view-no-clauses"><strong>Any message can match.</strong><span>Add a filter only when it helps this perspective.</span></div>}

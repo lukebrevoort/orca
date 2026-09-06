@@ -61,7 +61,7 @@ describe("BRE-318 transaction-live agent replay authorization", () => {
     try {
       const service = createOrganizationViews(createSqliteOrganizationViewsRepository(f.sqlite), { agentCapabilitySource: f.source });
       const draft = {
-        mode: "create" as const, viewId: null, source: { kind: "manual" as const, label: "Agent prepared" },
+        mode: "create" as const, viewId: null, viewRevision: null, source: { kind: "manual" as const, label: "Agent prepared" },
         identity: { name: "Agent View", description: "", color: "#70867d", position: 0 },
         definition: { revision: 1 as const, thread: { subjectContains: "customer" } }, unsupportedClauses: [],
       };

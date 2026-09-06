@@ -42,6 +42,11 @@
 .view-color-field input { min-height: 36px; padding: 4px; }
 .view-scope-sentence { margin: 14px 0; padding: 13px 15px; border: 1px solid color-mix(in srgb,var(--desktop-accent) 36%,var(--desktop-border)); border-left: 3px solid var(--desktop-accent); border-radius: 4px 10px 10px 4px; background: color-mix(in srgb,var(--desktop-accent) 5%,var(--desktop-surface)); }
 .view-scope-sentence p { margin: 5px 0 0; color: var(--desktop-ink); font: 500 17px/23px var(--desktop-serif); letter-spacing: -.25px; }
+.view-preparation-notices { display: grid; gap: 7px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb,var(--desktop-accent) 42%,var(--desktop-border)); border-radius: 10px; background: color-mix(in srgb,var(--desktop-accent) 7%,var(--desktop-surface)); }
+.view-preparation-notices > span { color: var(--desktop-accent); font: 800 8px/1 var(--desktop-mono); letter-spacing: .7px; text-transform: uppercase; }
+.view-preparation-notices div { display: grid; gap: 4px; }
+.view-preparation-notices strong { color: var(--desktop-ink); font-size: 10px; line-height: 15px; }
+.view-preparation-notices small { color: var(--desktop-muted); font: 750 8px/13px var(--desktop-mono); }
 .view-preserved-constraints { margin-top: 10px; padding-top: 9px; border-top: 1px solid color-mix(in srgb,var(--desktop-accent) 22%,var(--desktop-border)); }
 .view-preserved-constraints summary { width: fit-content; cursor: pointer; color: var(--desktop-muted); font: 750 8px/12px var(--desktop-mono); letter-spacing: .35px; text-transform: uppercase; }
 .view-preserved-constraints summary:hover,.view-preserved-constraints summary:focus-visible { color: var(--desktop-ink); }

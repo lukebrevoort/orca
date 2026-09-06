@@ -2129,7 +2129,13 @@ describe("Pin navigation and bulk sender actions", () => {
     const focusCalls = trackFocus(useSenders);
     setScroll({ x: 12, y: 380 });
     await act(async () => { useSenders.click(); await Promise.resolve(); });
-    expect(browserWindow.document.querySelector(".selected-view-authoring")).not.toBeNull();
+    const authoringSurface = browserWindow.document.querySelector(".selected-view-authoring") as unknown as HTMLElement;
+    expect(authoringSurface).not.toBeNull();
+    expect(authoringSurface.style.position).toBe("relative");
+    expect(authoringSurface.style.zIndex).toBe("151");
+    const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
+    expect(authoringHeading.tabIndex).toBe(-1);
+    expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
     setScroll({ x: 0, y: 0 });
     const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
     await act(async () => { cancel.click(); });

@@ -46,7 +46,7 @@ async function setup() {
     { id: "thread_foreign", accountId: "account_foreign", providerThreadId: "foreign", subject: "Foreign", latestReceivedAt: tied, createdAt: tied },
   ]).run();
   client.db.insert(emails).values([
-    { id: "message_maya", accountId: "account_a", threadId: "thread_a", providerMessageId: "maya", fromAddress: " Maya@Example.com ", fromName: "Maya", subject: "A / A", receivedAt: tied },
+    { id: "message_maya", accountId: "account_a", threadId: "thread_a", providerMessageId: "maya", fromAddress: "\t Maya@Example.com \n", fromName: "Maya", subject: "A / A", receivedAt: tied },
     { id: "message_maya_duplicate", accountId: "account_a", threadId: "thread_b", providerMessageId: "maya-duplicate", fromAddress: "MAYA@example.com", fromName: "Maya", subject: "A / B", receivedAt: tied },
     { id: "message_self", accountId: "account_a", threadId: "thread_b", providerMessageId: "self", fromAddress: " A@example.com ", fromName: "Owner", subject: "A / B", receivedAt: tied },
     { id: "message_account_b", accountId: "account_b", threadId: "thread_c", providerMessageId: "account-b", fromAddress: "ari@example.com", fromName: "Ari", subject: "B / C", receivedAt: tied },
@@ -99,6 +99,11 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
 describe("BRE-313 independent View lifecycle verification", () => {
   test("prepares exact selected-message From addresses only after validating every reference", { timeout: 30_000 }, async () => {
     const { app, headers, path } = await setup();
+    const existing = createDatabaseClient(path);
+    const existingAt = new Date("2026-08-25T17:30:00.000Z");
+    existing.db.insert(threads).values({ id: "thread_unselected_sender", accountId: "account_a", providerThreadId: "unselected-sender", subject: "Unselected existing sender mail", latestReceivedAt: existingAt, createdAt: existingAt }).run();
+    existing.db.insert(emails).values({ id: "message_unselected_sender", accountId: "account_a", threadId: "thread_unselected_sender", providerMessageId: "unselected-sender", fromAddress: "maya@example.com", subject: "Unselected existing sender mail", receivedAt: existingAt }).run();
+    existing.sqlite.close();
     const prepare = (references: Array<{ accountId: string; threadId: string; messageId: string }>) => app.request("/v1/organization/views/prepare", {
       method: "POST",
       headers,
@@ -110,6 +115,35 @@ describe("BRE-313 independent View lifecycle verification", () => {
       }),
     });
 
+    const pureExternalResponse = await prepare([
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+    ]);
+    assert.equal(pureExternalResponse.status, 200, await pureExternalResponse.clone().text());
+    assert.deepEqual((await pureExternalResponse.json()).draft.preparationNotices, [], "pure external selections need no omission notice");
+
+    const duplicateExternalReferences = [
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+      { accountId: "account_a", threadId: "thread_b", messageId: "message_maya_duplicate" },
+    ];
+    assert.equal(duplicateExternalReferences.length, 2);
+    assert.notEqual(duplicateExternalReferences[0]!.messageId, duplicateExternalReferences[1]!.messageId, "distinct authoritative message rows must reach server validation independently");
+    const duplicateExternalResponse = await prepare(duplicateExternalReferences);
+    assert.equal(duplicateExternalResponse.status, 200, await duplicateExternalResponse.clone().text());
+    const duplicateExternalPrepared = await duplicateExternalResponse.json();
+    assert.deepEqual(duplicateExternalPrepared.draft.definition.sender.addresses, ["maya@example.com"], "dedupe happens only after both exact rows validate");
+    assert.deepEqual(duplicateExternalPrepared.draft.preparationNotices, []);
+
+    const mixedSelfResponse = await prepare([
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+      { accountId: "account_a", threadId: "thread_b", messageId: "message_self" },
+    ]);
+    assert.equal(mixedSelfResponse.status, 200, await mixedSelfResponse.clone().text());
+    assert.deepEqual((await mixedSelfResponse.json()).draft.preparationNotices, [{
+      code: "self_sender_omitted",
+      detail: "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.",
+      omittedCount: 1,
+    }]);
+
     const response = await prepare([
       { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
       { accountId: "account_a", threadId: "thread_b", messageId: "message_maya_duplicate" },
@@ -119,13 +153,18 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const prepared = await response.json();
     assert.deepEqual(prepared.draft.definition, { revision: 1, accountIds: ["account_a"], sender: { addresses: ["maya@example.com"] } });
     assert.deepEqual(prepared.draft.effectiveAccountIds, ["account_a"]);
+    assert.deepEqual(prepared.draft.preparationNotices, [{
+      code: "self_sender_omitted",
+      detail: "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.",
+      omittedCount: 1,
+    }], "sender dedupe must not erase the independently counted self omission");
     assert.equal("references" in prepared.draft, false);
 
-    const previewDraft = { mode: prepared.draft.mode, viewId: prepared.draft.viewId, source: prepared.draft.source, identity: prepared.draft.identity, definition: prepared.draft.definition, unsupportedClauses: prepared.draft.unsupportedClauses };
+    const previewDraft = { mode: prepared.draft.mode, viewId: prepared.draft.viewId, viewRevision: prepared.draft.viewRevision, source: prepared.draft.source, identity: prepared.draft.identity, definition: prepared.draft.definition, unsupportedClauses: prepared.draft.unsupportedClauses };
     const previewResponse = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: previewDraft, page: { limit: 25 } }) });
     assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
     const preview = await previewResponse.json();
-    assert.deepEqual(new Set(preview.results.items.map((item: { threadId: string }) => item.threadId)), new Set(["thread_a", "thread_b"]), "other stored mail from the exact sender matches without selected membership");
+    assert.deepEqual(new Set(preview.results.items.map((item: { threadId: string }) => item.threadId)), new Set(["thread_a", "thread_b", "thread_unselected_sender"]), "an unselected existing Thread from the exact sender matches without selected membership");
 
     const commitResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({
       draft: prepared.draft,
@@ -138,7 +177,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const future = createDatabaseClient(path);
     const futureAt = new Date("2026-08-26T18:00:00.000Z");
     future.db.insert(threads).values({ id: "thread_future_sender", accountId: "account_a", providerThreadId: "future-sender", subject: "Future sender mail", latestReceivedAt: futureAt, createdAt: futureAt }).run();
-    future.db.insert(emails).values({ id: "message_future_sender", accountId: "account_a", threadId: "thread_future_sender", providerMessageId: "future-sender", fromAddress: "maya@example.com", subject: "Future sender mail", receivedAt: futureAt }).run();
+    future.db.insert(emails).values({ id: "message_future_sender", accountId: "account_a", threadId: "thread_future_sender", providerMessageId: "future-sender", fromAddress: "\nMAYA@EXAMPLE.COM\t", subject: "Future sender mail", receivedAt: futureAt }).run();
     future.sqlite.close();
     const reloaded = await app.request(`/v1/organization/views/${committed.view.id}/results?limit=25`, { headers });
     assert.equal(reloaded.status, 200, await reloaded.clone().text());
@@ -155,6 +194,19 @@ describe("BRE-313 independent View lifecycle verification", () => {
     assert.equal(allSelf.status, 400);
     assert.equal((await allSelf.json()).error.code, "all_selected_senders_are_self");
 
+    const malformed = createDatabaseClient(path);
+    const malformedAt = new Date("2026-08-25T16:30:00.000Z");
+    malformed.db.insert(threads).values({ id: "thread_malformed_self", accountId: "account_a", providerThreadId: "malformed-self", subject: "Malformed self", latestReceivedAt: malformedAt, createdAt: malformedAt }).run();
+    malformed.db.insert(emails).values({ id: "message_malformed_self", accountId: "account_a", threadId: "thread_malformed_self", providerMessageId: "malformed-self", fromAddress: "malformed-self", subject: "Malformed self", receivedAt: malformedAt }).run();
+    malformed.sqlite.query("UPDATE oauth_accounts SET provider_email=? WHERE id=?").run("malformed-self", "account_a");
+    malformed.sqlite.close();
+    const malformedSelfWithExternal = await prepare([
+      { accountId: "account_a", threadId: "thread_malformed_self", messageId: "message_malformed_self" },
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+    ]);
+    assert.equal(malformedSelfWithExternal.status, 400, "invalid stored From must fail before self omission can narrow the request");
+    assert.equal((await malformedSelfWithExternal.json()).error.code, "selection_reference_unavailable");
+
     const mixed = await prepare([
       { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
       { accountId: "account_b", threadId: "thread_c", messageId: "message_account_b" },
@@ -165,6 +217,48 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const inaccessible = await prepare([{ accountId: "account_foreign", threadId: "thread_foreign", messageId: "message_foreign" }]);
     assert.equal(inaccessible.status, 400);
     assert.equal((await inaccessible.json()).error.code, "selection_reference_unavailable");
+  });
+
+  test("prepares and commits a saved View with its exact update identity and revision", { timeout: 30_000 }, async () => {
+    const { app, headers } = await setup();
+    const created = await createView(app, headers, {
+      name: "Saved before external authoring", description: "", color: "#0b9b84", position: 0,
+      definition: { revision: 1, accountIds: ["account_a"], thread: { readState: "unread" } },
+    });
+    const preparedResponse = await app.request("/v1/organization/views/prepare", {
+      method: "POST", headers, body: JSON.stringify({ kind: "saved_view", viewId: created.id }),
+    });
+    assert.equal(preparedResponse.status, 200, await preparedResponse.clone().text());
+    const prepared = await preparedResponse.json();
+    assert.equal(prepared.draft.mode, "update");
+    assert.equal(prepared.draft.viewId, created.id);
+    assert.equal(prepared.draft.viewRevision, created.revision);
+
+    const previewResponse = await app.request("/v1/organization/views/preview", {
+      method: "POST", headers, body: JSON.stringify({
+        draft: {
+          mode: prepared.draft.mode, viewId: prepared.draft.viewId, viewRevision: prepared.draft.viewRevision,
+          source: prepared.draft.source, identity: { ...prepared.draft.identity, name: "Saved after external authoring" },
+          definition: prepared.draft.definition, unsupportedClauses: prepared.draft.unsupportedClauses,
+        },
+        page: { limit: 5 },
+      }),
+    });
+    assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
+    const previewed = await previewResponse.json();
+    const commitResponse = await app.request("/v1/organization/views/commit", {
+      method: "POST", headers, body: JSON.stringify({
+        draft: previewed.draft,
+        expectedRevisions: { workspace: previewed.workspaceRevision, view: created.revision },
+        retryKey: "bre383-external-saved-update",
+        confirmedZeroMatchDigest: previewed.results.state === "zero" ? previewed.draft.definitionDigest : null,
+      }),
+    });
+    assert.equal(commitResponse.status, 200, await commitResponse.clone().text());
+    const committed = await commitResponse.json();
+    assert.equal(committed.view.id, created.id);
+    assert.equal(committed.view.revision, created.revision + 1);
+    assert.equal(committed.view.name, "Saved after external authoring");
   });
 
   test("previews and commits one reviewed definition with no preview writes and saved-page parity", { timeout: 30_000 }, async () => {
@@ -201,7 +295,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const previewPage = async (cursor?: string) => {
       const response = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
         draft: preparation.kind === "typed_definition" ? {
-          mode: "create", viewId: null, source: preparation.source, identity: preparation.identity,
+          mode: "create", viewId: null, viewRevision: null, source: preparation.source, identity: preparation.identity,
           definition: preparation.definition, unsupportedClauses: preparation.unsupportedClauses,
         } : null,
         page: { limit: 1, ...(cursor ? { cursor } : {}) },
@@ -245,7 +339,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
     future.db.insert(threads).values({ id: "thread_future", accountId: "account_b", providerThreadId: "future", subject: "A / Future", latestReceivedAt: receivedAt, createdAt: receivedAt }).run();
     future.sqlite.close();
     const futurePreview = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
-      draft: { mode: "create", viewId: null, source: preparation.source, identity: preparation.identity, definition, unsupportedClauses: [] },
+      draft: { mode: "create", viewId: null, viewRevision: null, source: preparation.source, identity: preparation.identity, definition, unsupportedClauses: [] },
       page: { limit: 25 },
     }) });
     const futureSaved = await app.request(`/v1/organization/views/${committed.view.id}/results?limit=25`, { headers });
@@ -282,7 +376,7 @@ describe("BRE-313 independent View lifecycle verification", () => {
 
     const zero = await prepare({ revision: 1, thread: { subjectContains: "definitely absent" } });
     const previewResponse = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
-      draft: { mode: "create", viewId: null, source: zero.draft.source, identity, definition: zero.draft.definition, unsupportedClauses: [] }, page: { limit: 25 },
+      draft: { mode: "create", viewId: null, viewRevision: null, source: zero.draft.source, identity, definition: zero.draft.definition, unsupportedClauses: [] }, page: { limit: 25 },
     }) });
     const preview = await previewResponse.json();
     assert.equal(preview.results.state, "zero");

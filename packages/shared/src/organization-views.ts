@@ -77,6 +77,13 @@ export const organizationViewUnsupportedClauseSchema = z.object({
 }).strict();
 export type OrganizationViewUnsupportedClause = z.infer<typeof organizationViewUnsupportedClauseSchema>;
 
+export const organizationViewPreparationNoticeSchema = z.object({
+  code: z.literal("self_sender_omitted"),
+  detail: nonEmptyStringSchema.max(500),
+  omittedCount: z.number().int().positive().max(organizationViewBounds.maximumPredicateItems),
+}).strict();
+export type OrganizationViewPreparationNotice = z.infer<typeof organizationViewPreparationNoticeSchema>;
+
 export const organizationViewDraftSourceSchema = z.object({
   kind: z.enum(["manual", "search", "sender_selection", "saved_view"]),
   label: nonEmptyStringSchema.max(120),
@@ -134,13 +141,16 @@ export type OrganizationViewPreparationInput = z.infer<typeof organizationViewPr
 export const organizationViewDraftInputSchema = z.object({
   mode: z.enum(["create", "update"]),
   viewId: identifierSchema.nullable(),
+  viewRevision: z.number().int().positive().nullable(),
   source: organizationViewDraftSourceSchema,
   identity: organizationViewDraftIdentitySchema,
   definition: organizationViewDefinitionSchema,
   unsupportedClauses: z.array(organizationViewUnsupportedClauseSchema).max(20),
 }).strict().superRefine((value, context) => {
-  if ((value.mode === "create") !== (value.viewId === null)) {
-    context.addIssue({ code: "custom", path: ["viewId"], message: "Create drafts omit a View ID; update drafts require one" });
+  const invalidCreateIdentity = value.mode === "create" && (value.viewId !== null || value.viewRevision !== null);
+  const invalidUpdateIdentity = value.mode === "update" && (value.viewId === null || value.viewRevision === null);
+  if (invalidCreateIdentity || invalidUpdateIdentity) {
+    context.addIssue({ code: "custom", path: ["viewId"], message: "Create drafts omit View identity and revision; update drafts require both" });
   }
 });
 export type OrganizationViewDraftInput = z.infer<typeof organizationViewDraftInputSchema>;
@@ -159,6 +169,7 @@ export const organizationViewSaveEligibilitySchema = z.object({
 export type OrganizationViewSaveEligibility = z.infer<typeof organizationViewSaveEligibilitySchema>;
 
 export const organizationViewReviewedDraftSchema = organizationViewDraftInputSchema.extend({
+  preparationNotices: z.array(organizationViewPreparationNoticeSchema).max(20).default([]),
   definitionDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
   definitionKind: organizationViewDefinitionKindSchema,
   effectiveAccountIds: uniqueIdentifiersSchema.min(1),

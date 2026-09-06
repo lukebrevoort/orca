@@ -1250,6 +1250,8 @@ export function InboxApp({
   const bre383Evidence = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("bre383Evidence") : null;
   const demoInboxMessages = initialDemoMessages ?? (bre383Evidence === "mixed-account"
     ? demoMailWithAgentSources.map((message) => message.from.name === "Jordan Bell" ? { ...message, accountId: "acct_demo_secondary" } : message)
+    : bre383Evidence === "self-omission"
+      ? demoMailWithAgentSources.map((message, index) => index === 0 ? { ...message, id: "message_self_evidence", from: { name: "You", email: demoAccount.email }, subject: "Self-sent status note" } : message)
     : demoMailWithAgentSources);
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoInboxMessages) : []);
@@ -4882,7 +4884,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => restoreFromViewAuthoring(viewAuthoringEntry.returnContext)}><OrganizationViewAuthoringWorkspace demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => restoreFromViewAuthoring(viewAuthoringEntry.returnContext)} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">

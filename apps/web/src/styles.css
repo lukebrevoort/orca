@@ -4544,7 +4544,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .bulk-view-action > span { color: var(--orca-danger); font-size: 9px; line-height: 1.25; max-width: 190px; }
 .selected-view-authoring-backdrop { background: color-mix(in srgb, var(--orca-ink) 24%, transparent); border: 0; inset: 0; position: fixed; z-index: 150; }
 .selected-view-authoring-layer { inset: 0; overflow: auto; padding: 32px max(24px, calc((100vw - 1080px) / 2)); position: fixed; z-index: 151; }
-.selected-view-authoring { display: block; margin: 0 auto; max-width: 1080px; width: 100%; }
+.selected-view-authoring { display: block; margin: 0 auto; max-width: 1080px; position: relative; width: 100%; z-index: 151; }
 .bulk-action-message { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 10px; color: var(--orca-ink); display: flex; font-size: 10px; gap: 10px; justify-content: space-between; margin: -8px 0 18px; padding: 9px 11px; }
 .bulk-action-message-error,
 .bulk-action-message-partial { background: color-mix(in srgb, var(--orca-danger) 8%, var(--orca-surface)); color: var(--orca-danger); }

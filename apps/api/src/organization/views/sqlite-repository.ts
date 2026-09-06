@@ -115,7 +115,9 @@ function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: strin
   return Buffer.from(JSON.stringify({ version: 2, fingerprint: cursorDigest(cursorFingerprint, key), ...key }), "utf8").toString("base64url");
 }
 
-function normalizedAddressSql(alias: string) { return `lower(trim(coalesce(${alias}.from_address, '')))`; }
+function normalizedAddressSql(alias: string) {
+  return `lower(trim(coalesce(${alias}.from_address, ''), ' ' || char(9) || char(10) || char(11) || char(12) || char(13)))`;
+}
 function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
 function effectiveClassificationSql(alias: string) {
   const address = normalizedAddressSql(alias);
@@ -582,11 +584,19 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         }
         const addresses: string[] = [];
         const seen = new Set<string>();
+        let omittedSelfCount = 0;
         for (const row of rows) {
           const address = row.fromAddress?.trim().toLocaleLowerCase() ?? "";
           const selfAddress = row.providerEmail.trim().toLocaleLowerCase();
           if (!address) throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
-          if (address === selfAddress || seen.has(address)) continue;
+          if (!organizationViewDefinitionSchema.safeParse({ revision: 1, sender: { addresses: [address] } }).success) {
+            throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
+          }
+          if (address === selfAddress) {
+            omittedSelfCount += 1;
+            continue;
+          }
+          if (seen.has(address)) continue;
           seen.add(address);
           addresses.push(address);
         }
@@ -596,7 +606,7 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         if (!organizationViewDefinitionSchema.safeParse({ revision: 1, accountIds, sender: { addresses } }).success) {
           throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
         }
-        return { accountId: accountIds[0]!, addresses };
+        return { accountId: accountIds[0]!, addresses, omittedSelfCount };
       })();
     },
     evaluate({ scope, definition, definitionDigest, resultSetKey, query, authorization }) {

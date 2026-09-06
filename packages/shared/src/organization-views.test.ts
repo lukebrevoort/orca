@@ -141,16 +141,27 @@ describe("BRE-381 reviewed View draft contracts", () => {
     const draft = organizationViewReviewedDraftSchema.parse({
       mode: "create",
       viewId: null,
+      viewRevision: null,
       source: { kind: "manual", label: "New View" },
       identity: { name: "Maya", description: "", color: "#0b9b84", position: 0 },
       definition,
       unsupportedClauses: [],
+      preparationNotices: [{
+        code: "self_sender_omitted",
+        detail: "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.",
+        omittedCount: 1,
+      }],
       definitionDigest: digest,
       definitionKind: "filtered",
       effectiveAccountIds: ["account_gmail"],
       summary: summarizeOrganizationViewDefinition(definition),
       saveEligibility: { allowed: true, code: null, detail: "Ready to save." },
     });
+    assert.deepEqual(draft.preparationNotices, [{
+      code: "self_sender_omitted",
+      detail: "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.",
+      omittedCount: 1,
+    }]);
     assert.equal(organizationViewCommitRequestSchema.parse({
       draft,
       expectedRevisions: { workspace: 2, view: null },
@@ -162,5 +173,23 @@ describe("BRE-381 reviewed View draft contracts", () => {
       expectedRevisions: { workspace: 2, view: 1 },
       retryKey: "retry-1",
     }).success, false);
+  });
+
+  test("binds prepared update identity to the saved View revision", () => {
+    const base = {
+      source: { kind: "saved_view", label: "Saved review" },
+      identity: { name: "Saved review", description: "", color: "#0b9b84", position: 0 },
+      definition,
+      unsupportedClauses: [],
+      preparationNotices: [],
+      definitionDigest: `sha256:${"b".repeat(64)}`,
+      definitionKind: "filtered",
+      effectiveAccountIds: ["account_gmail"],
+      summary: summarizeOrganizationViewDefinition(definition),
+      saveEligibility: { allowed: true, code: null, detail: "Ready to save." },
+    } as const;
+    assert.equal(organizationViewReviewedDraftSchema.safeParse({ ...base, mode: "update", viewId: "view_saved", viewRevision: null }).success, false);
+    assert.equal(organizationViewReviewedDraftSchema.safeParse({ ...base, mode: "update", viewId: "view_saved", viewRevision: 7 }).success, true);
+    assert.equal(organizationViewReviewedDraftSchema.safeParse({ ...base, mode: "create", viewId: null, viewRevision: 7 }).success, false);
   });
 });
