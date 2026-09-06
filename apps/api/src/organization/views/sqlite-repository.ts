@@ -159,15 +159,7 @@ function facetPredicate(filter: FacetFilter, params: SqlBinding[]) {
  * CROSS JOIN is deliberate: it keeps Threads as the outer loop at small limits,
  * where SQLite otherwise reorders the inner joins and adds a temporary B-tree.
  */
-export function buildOrganizationViewPageKeyQuery(input: {
-  scope: OrganizationViewScope;
-  definition: OrganizationViewDefinition;
-  definitionDigest: string;
-  resultSetKey: string;
-  authorizedScopeDigest: string;
-  query: OrganizationViewResultQuery;
-}) {
-  const { scope, query } = input;
+function viewPredicates(scope: OrganizationViewScope, input: { definition: OrganizationViewDefinition }) {
   const definition = organizationViewDefinitionSchema.parse(input.definition);
   const owned = new Set(scope.accountIds);
   const accountIds = [...(definition.accountIds ?? scope.accountIds)].sort();
@@ -203,6 +195,20 @@ export function buildOrganizationViewPageKeyQuery(input: {
   }
   if (definition.date?.receivedAfter) { emailConditions.push("e.received_at >= ?"); params.push(Date.parse(definition.date.receivedAfter)); }
   if (definition.date?.receivedBefore) { emailConditions.push("e.received_at <= ?"); params.push(Date.parse(definition.date.receivedBefore)); }
+
+  return { conditions, emailConditions, params, accountIds };
+}
+
+export function buildOrganizationViewPageKeyQuery(input: {
+  scope: OrganizationViewScope;
+  definition: OrganizationViewDefinition;
+  definitionDigest: string;
+  resultSetKey: string;
+  authorizedScopeDigest: string;
+  query: OrganizationViewResultQuery;
+}) {
+  const { scope, query } = input;
+  const { conditions, emailConditions, params, accountIds } = viewPredicates(scope, input);
   if (emailConditions.length > 2) conditions.push(`EXISTS (SELECT 1 FROM emails e WHERE ${emailConditions.join(" AND ")})`);
 
   const cursorFingerprint = fingerprint({ definitionDigest: input.definitionDigest, resultSetKey: input.resultSetKey, accountIds, authorizedScopeDigest: input.authorizedScopeDigest });
@@ -612,6 +618,24 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
           throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
         }
         return { accountId: accountIds[0]!, addresses, omittedSelfCount };
+      })();
+    },
+    senderCandidates({ scope, definition, target, authorization }) {
+      return sqlite.transaction(() => {
+        const authorizedScopeDigest = verifyQueryAuthorization(sqlite, scope, authorization);
+        assertOwnedDefinition(sqlite, scope.workspaceId, definition, scope.accountIds);
+        const { conditions, emailConditions, params, accountIds } = viewPredicates(scope, { definition });
+        const unavailable = (detail: string) => ({ status: "unavailable" as const, detail, accountId: accountIds.length === 1 ? accountIds[0]! : null, addresses: [], witnessAddresses: [], authorizedScopeDigest });
+        if (accountIds.length !== 1) return unavailable("Choose one account in Tune before correcting senders.");
+        if (target.accountId !== accountIds[0]) throw new OrganizationViewAccessError();
+        const from = `FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id JOIN emails e ON e.account_id=t.account_id AND e.thread_id=t.id WHERE ${[...conditions, ...emailConditions].join(" AND ")}`;
+        const rows = sqlite.query(`SELECT DISTINCT ${normalizedAddressSql("e")} AS address ${from} ORDER BY address LIMIT ?`).all(...params, organizationViewBounds.maximumPredicateItems + 1) as Array<{ address: string }>;
+        if (rows.length > organizationViewBounds.maximumPredicateItems) return { ...unavailable("More than 50 matching senders. Use exact sender controls in Tune; no partial list is applied."), status: "overflow" as const };
+        const addresses = rows.map((row) => row.address);
+        if (!organizationViewDefinitionSchema.safeParse({ revision: 1, sender: { addresses } }).success) return unavailable("A complete usable sender list is unavailable. Use manual filters in Tune.");
+        const witnesses = sqlite.query(`SELECT DISTINCT ${normalizedAddressSql("e")} AS address ${from} AND t.account_id=? AND t.id=? ORDER BY address`).all(...params, target.accountId, target.threadId) as Array<{ address: string }>;
+        if (!witnesses.length) return unavailable("This conversation no longer matches this draft. Refresh the preview or use Tune.");
+        return { status: "complete" as const, detail: "Complete distinct senders of matching stored messages in this account at the evaluated time.", accountId: accountIds[0]!, addresses, witnessAddresses: witnesses.map((row) => row.address), authorizedScopeDigest };
       })();
     },
     evaluate({ scope, definition, definitionDigest, resultSetKey, query, authorization }) {

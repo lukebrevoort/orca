@@ -351,6 +351,27 @@ export const organizationViewCommitResponseSchema = z.object({
 }).strict();
 export type OrganizationViewCommitResponse = z.infer<typeof organizationViewCommitResponseSchema>;
 
+const correctionTargetSchema = z.object({ accountId: identifierSchema, threadId: identifierSchema }).strict();
+export const organizationViewSenderCandidatesRequestSchema = z.object({
+  draft: organizationViewDraftInputSchema,
+  target: correctionTargetSchema,
+}).strict();
+export type OrganizationViewSenderCandidatesRequest = z.infer<typeof organizationViewSenderCandidatesRequestSchema>;
+export const organizationViewSenderCandidatesResponseSchema = z.object({
+  target: correctionTargetSchema,
+  accountId: identifierSchema.nullable(),
+  provenance: organizationViewResultProvenanceSchema,
+  status: z.enum(["complete", "overflow", "unavailable"]),
+  detail: nonEmptyStringSchema.max(500),
+  addresses: uniqueEmailsSchema.max(organizationViewBounds.maximumPredicateItems),
+  witnessAddresses: uniqueEmailsSchema.max(organizationViewBounds.maximumPredicateItems),
+}).strict().superRefine((value, context) => {
+  if (value.status === "complete" ? !value.accountId || value.accountId !== value.target.accountId || !value.addresses.length || !value.witnessAddresses.length || value.witnessAddresses.some((address) => !value.addresses.includes(address)) : value.addresses.length > 0 || value.witnessAddresses.length > 0) {
+    context.addIssue({ code: "custom", message: "Only a complete single-account census exposes candidates and matching row witnesses" });
+  }
+});
+export type OrganizationViewSenderCandidatesResponse = z.infer<typeof organizationViewSenderCandidatesResponseSchema>;
+
 export function summarizeOrganizationViewDefinition(definition: OrganizationViewDefinition): OrganizationViewDefinitionSummary {
   const clauses: string[] = [];
   if (definition.accountIds) clauses.push(`${definition.accountIds.length} explicit ${definition.accountIds.length === 1 ? "account" : "accounts"}`);

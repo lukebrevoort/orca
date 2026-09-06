@@ -39,6 +39,24 @@ afterEach(async () => {
 });
 
 async function renderWorkspace(demoMode = true, previewMode = true) {
+  if (!demoMode) {
+    const boundaryFetch = globalThis.fetch;
+    let listedViews: OrganizationView[] = [];
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname : new URL(request.url).pathname;
+      if (path === "/v1/organization/views/prepare") {
+        const preparation = JSON.parse(String(init?.body)) as OrganizationViewPreparationInput;
+        const saved = preparation.kind === "saved_view" ? listedViews.find((view) => view.id === preparation.viewId)! : null;
+        const typed: OrganizationViewPreparationInput = saved ? { kind: "typed_definition", source: { kind: "manual", label: "Saved View" }, identity: { name: saved.name, description: saved.description, color: saved.color, position: saved.position }, definition: saved.definition, unsupportedClauses: [] } : preparation;
+        const prepared = preparedCreateDraft(typed, typed.kind === "typed_definition" ? typed.definition : { revision: 1 });
+        return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: saved ? { ...prepared, mode: "update", viewId: saved.id, viewRevision: saved.revision } : prepared });
+      }
+      const response = await boundaryFetch(request, init);
+      if (path === "/v1/organization/views" && (!init?.method || init.method === "GET")) listedViews = (await response.clone().json() as { items: OrganizationView[] }).items;
+      return response;
+    }) as typeof fetch;
+  }
+
   const container = browserWindow.document.createElement("div");
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
@@ -104,7 +122,7 @@ async function change(field: HTMLInputElement, value: string) {
   });
 }
 
-async function click(target: HTMLButtonElement) {
+async function click(target: HTMLElement) {
   await act(async () => { target.click(); await Promise.resolve(); });
 }
 
@@ -1487,3 +1505,55 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(button(container, "Load more").disabled).toBe(false);
   });
 });
+
+test("BRE-385 saved editing keeps only the latest refinement undo and guards dirty cancel", async () => {
+  const container = await renderWorkspace();
+  await click(button(container, "Edit definition"));
+  await change(input(container, "Subject contains"), "First refinement");
+  await change(input(container, "View name"), "Renamed only in draft");
+  await click(button(container, "Cancel"));
+  expect(container.textContent).toContain("Discard changes to this draft?");
+  await click(button(container, "Keep editing"));
+  await click(button(container, "Undo draft change"));
+  expect(input(container, "Subject contains").value).toBe("production failure");
+  expect(input(container, "View name").value).toBe("Renamed only in draft");
+  expect([...container.querySelectorAll("button")].some((item) => item.textContent === "Undo draft change")).toBe(false);
+  await click(button(container, "Cancel"));
+  await click(button(container, "Discard draft"));
+  expect(container.querySelector(".view-results h3")?.textContent).toBe("Weekly production review");
+});
+
+test("BRE-385 correction uses complete census, blocks empty sets, replaces domains and undoes exact draft", async () => {
+  const selected = { ...organizationViewsFixture[0]!, definition: { revision: 1 as const, accountIds: ["account_gmail"], sender: { domains: ["example.com"] }, thread: { subjectContains: "Review" } } };
+  const item = { accountId: "account_gmail", accountEmail: "work@example.com", provider: "gmail", threadId: "review-thread", subject: "Review meeting", latestReceivedAt: "2026-09-06T18:00:00.000Z", messageCount: 2, readState: "unread", primaryLaneId: "lane_focus", sender: { name: "Latest", email: "latest@example.com" }, humanSignal: 8, humanClassification: "likely_human" };
+  const previews: OrganizationViewDraftInput[] = [];
+  const censusRequests: unknown[] = [];
+  globalThis.fetch = (async (request, init) => {
+    const path = String(request);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [selected] });
+    if (path.includes("/results")) return Response.json({ viewId: selected.id, viewRevision: selected.revision, accountIds: ["account_gmail"], items: [], nextCursor: null, limit: 25 });
+    if (path === "/v1/organization/views/preview") { previews.push(JSON.parse(String(init?.body)).draft); return previewResponse(init, { items: [item] }); }
+    if (path === "/v1/organization/views/sender-candidates") {
+      const body = JSON.parse(String(init?.body)); censusRequests.push(body);
+      return Response.json({ target: body.target, accountId: "account_gmail", status: "complete", detail: "All matching messages checked", addresses: ["witness@example.com", "elsewhere@example.com"], witnessAddresses: ["witness@example.com"], provenance: { source: "stored_mail", definitionDigest: testDigest(body.draft.definition), authorizedScopeDigest: `sha256:${"a".repeat(64)}`, evaluatedAt: "2026-09-06T18:00:00.000Z" } });
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = await renderWorkspace(false); await flush(); await flush();
+  await click(button(container, "Edit definition")); await flush(); await flush();
+  await click(button(container, "Correct senders for Review meeting")); await flush();
+  const panel = container.querySelector(".view-sender-correction") as HTMLElement;
+  expect(panel.textContent).toContain("review-thread");
+  expect(panel.textContent).toContain("Omitted and new senders");
+  expect(panel.textContent).toContain("witness@example.com");
+  expect(panel.textContent).not.toContain("latest@example.com");
+  expect(censusRequests[0]).toMatchObject({ target: { accountId: "account_gmail", threadId: "review-thread" } });
+  const boxes = [...panel.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+  expect(boxes.every((box) => box.checked)).toBe(true);
+  await click(boxes[0]!); await click(boxes[1]!);
+  expect(button(panel, "Preview these senders").disabled).toBe(true);
+  await click(boxes[1]!); await click(button(panel, "Preview these senders")); await flush();
+  expect(previews.at(-1)?.definition).toEqual({ ...selected.definition, sender: { addresses: ["elsewhere@example.com"] } });
+  await click(button(container, "Undo draft change")); await flush();
+  expect(previews.at(-1)?.definition).toEqual(selected.definition);
+}, 30000);

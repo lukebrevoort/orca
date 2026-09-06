@@ -9,6 +9,8 @@ import {
   organizationViewPreparationInputSchema,
   organizationViewPreviewResponseSchema,
   organizationViewResultPageSchema,
+  organizationViewSenderCandidatesResponseSchema,
+  type OrganizationViewSenderCandidatesResponse,
   organizationViewDefinitionKind,
   summarizeOrganizationViewDefinition,
   organizationViewsFixture,
@@ -30,12 +32,13 @@ import {
   type OrganizationViewUnsupportedClause,
   type OrganizationViewPreparationNotice,
 } from "@orca/shared";
+import { hydrateViewDraft, materializeViewDraft, type ViewDraftFields, type ClauseKind } from "./organization-view-draft";
 import { OrganizationAuthorityProvider, useOrganizationAuthority } from "./organization-authority";
 
 type LoadState = "loading" | "ready" | "saving" | "error";
 type ComposerMode = "create" | "edit";
 type DraftPreviewState = { status: "idle" | "loading" | "ready" | "error"; clientKey: string; response: OrganizationViewPreviewResponse | null; error: string | null };
-type ClauseKind = "account" | "lane" | "read" | "human" | "sender" | "subject" | "workflow" | "facet" | "context" | "date";
+
 type NamedOption = { id: string; label: string };
 type ContextCatalog = {
   types: NamedOption[];
@@ -201,6 +204,7 @@ export type OrganizationViewClauseReplacement = {
 };
 
 type OrganizationViewsWorkspaceProps<TContext = unknown> = {
+  correctionTarget?: OrganizationViewResultItem | null;
   compact?: boolean;
   dismissRef?: import("react").RefObject<(() => void) | null>;
   clauseReplacements?: readonly OrganizationViewClauseReplacement[];
@@ -213,7 +217,7 @@ type OrganizationViewsWorkspaceProps<TContext = unknown> = {
   refreshToken?: number;
 };
 
-export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry = null, clauseReplacements = [], compact = false, dismissRef, demoMode = false, onCancelAuthoring, onCommitted, onWorkspaceMutation, previewEvidenceState = null, refreshToken = 0 }: OrganizationViewsWorkspaceProps<TContext>) {
+export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry = null, correctionTarget = null, clauseReplacements = [], compact = false, dismissRef, demoMode = false, onCancelAuthoring, onCommitted, onWorkspaceMutation, previewEvidenceState = null, refreshToken = 0 }: OrganizationViewsWorkspaceProps<TContext>) {
   const [tuneOpen, setTuneOpen] = useState(!compact);
   const [discardPending, setDiscardPending] = useState(false);
   const [focusReplacement, setFocusReplacement] = useState(false);
@@ -221,9 +225,36 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const seedIdentity = useRef("");
   const seedDefinition = useRef("");
   const [preparationRetry, setPreparationRetry] = useState(0);
-  const [draftUndo, setDraftUndo] = useState<Array<{ definition: OrganizationViewDefinition; unsupported: OrganizationViewUnsupportedClause[] }>>([]);
+  const [draftUndo, setDraftUndo] = useState<Array<{ fields: ViewDraftFields; unsupported: OrganizationViewUnsupportedClause[]; focus: HTMLElement | null }>>([]);
+  const editingControl = useRef<EventTarget | null>(null);
+  const seedFields = useRef("");
+  const openerRef = useRef<HTMLElement | null>(null);
+  const exitAfterDiscard = useRef<(() => void) | null>(null);
+  const workspaceRef = useRef<HTMLElement | null>(null);
+  function focusEditor() { (workspaceRef.current?.querySelector<HTMLElement>(".view-composer h3") ?? tuneRef.current ?? workspaceRef.current?.querySelector<HTMLElement>(".view-chip[aria-pressed=true], .view-new"))?.focus(); }
+  function focusSoon(target: HTMLElement | null) { window.setTimeout(() => { if (target?.isConnected && !target.matches(":disabled")) target.focus({ preventScroll: true }); else focusEditor(); }, 0); }
   const authority = useOrganizationAuthority();
   const evidenceState = demoMode ? previewEvidenceState : null;
+  const [draftFields, setDraftFields] = useState<ViewDraftFields>(() => hydrateViewDraft(evidenceState ? { revision: 1, thread: { subjectContains: evidenceState === "zero" ? "no matching release" : "follow-up" } } : { revision: 1 }));
+  const { editingDefinition, activeClauses, accountIds, laneIds, workflowStateIds, facetId, facetOperator, facetValue, contextTypeId, contextId, relationshipTypeId, minimumSignal, senderAddress, senderDomain, receivedAfter, receivedBefore, subjectContains, readState } = draftFields;
+  const setEditingDefinition = (value: ViewDraftFields["editingDefinition"] | ((current: ViewDraftFields["editingDefinition"]) => ViewDraftFields["editingDefinition"])) => setDraftFields((current) => ({ ...current, editingDefinition: typeof value === "function" ? value(current.editingDefinition) : value }));
+  const setActiveClauses = (value: ViewDraftFields["activeClauses"] | ((current: ViewDraftFields["activeClauses"]) => ViewDraftFields["activeClauses"])) => setDraftFields((current) => ({ ...current, activeClauses: typeof value === "function" ? value(current.activeClauses) : value }));
+  const setAccountIds = (value: ViewDraftFields["accountIds"] | ((current: ViewDraftFields["accountIds"]) => ViewDraftFields["accountIds"])) => setDraftFields((current) => ({ ...current, accountIds: typeof value === "function" ? value(current.accountIds) : value }));
+  const setLaneIds = (value: ViewDraftFields["laneIds"] | ((current: ViewDraftFields["laneIds"]) => ViewDraftFields["laneIds"])) => setDraftFields((current) => ({ ...current, laneIds: typeof value === "function" ? value(current.laneIds) : value }));
+  const setWorkflowStateIds = (value: ViewDraftFields["workflowStateIds"] | ((current: ViewDraftFields["workflowStateIds"]) => ViewDraftFields["workflowStateIds"])) => setDraftFields((current) => ({ ...current, workflowStateIds: typeof value === "function" ? value(current.workflowStateIds) : value }));
+  const setFacetId = (value: ViewDraftFields["facetId"] | ((current: ViewDraftFields["facetId"]) => ViewDraftFields["facetId"])) => setDraftFields((current) => ({ ...current, facetId: typeof value === "function" ? value(current.facetId) : value }));
+  const setFacetOperator = (value: ViewDraftFields["facetOperator"] | ((current: ViewDraftFields["facetOperator"]) => ViewDraftFields["facetOperator"])) => setDraftFields((current) => ({ ...current, facetOperator: typeof value === "function" ? value(current.facetOperator) : value }));
+  const setFacetValue = (value: ViewDraftFields["facetValue"] | ((current: ViewDraftFields["facetValue"]) => ViewDraftFields["facetValue"])) => setDraftFields((current) => ({ ...current, facetValue: typeof value === "function" ? value(current.facetValue) : value }));
+  const setContextTypeId = (value: ViewDraftFields["contextTypeId"] | ((current: ViewDraftFields["contextTypeId"]) => ViewDraftFields["contextTypeId"])) => setDraftFields((current) => ({ ...current, contextTypeId: typeof value === "function" ? value(current.contextTypeId) : value }));
+  const setContextId = (value: ViewDraftFields["contextId"] | ((current: ViewDraftFields["contextId"]) => ViewDraftFields["contextId"])) => setDraftFields((current) => ({ ...current, contextId: typeof value === "function" ? value(current.contextId) : value }));
+  const setRelationshipTypeId = (value: ViewDraftFields["relationshipTypeId"] | ((current: ViewDraftFields["relationshipTypeId"]) => ViewDraftFields["relationshipTypeId"])) => setDraftFields((current) => ({ ...current, relationshipTypeId: typeof value === "function" ? value(current.relationshipTypeId) : value }));
+  const setMinimumSignal = (value: ViewDraftFields["minimumSignal"] | ((current: ViewDraftFields["minimumSignal"]) => ViewDraftFields["minimumSignal"])) => setDraftFields((current) => ({ ...current, minimumSignal: typeof value === "function" ? value(current.minimumSignal) : value }));
+  const setSenderAddress = (value: ViewDraftFields["senderAddress"] | ((current: ViewDraftFields["senderAddress"]) => ViewDraftFields["senderAddress"])) => setDraftFields((current) => ({ ...current, senderAddress: typeof value === "function" ? value(current.senderAddress) : value }));
+  const setSenderDomain = (value: ViewDraftFields["senderDomain"] | ((current: ViewDraftFields["senderDomain"]) => ViewDraftFields["senderDomain"])) => setDraftFields((current) => ({ ...current, senderDomain: typeof value === "function" ? value(current.senderDomain) : value }));
+  const setReceivedAfter = (value: ViewDraftFields["receivedAfter"] | ((current: ViewDraftFields["receivedAfter"]) => ViewDraftFields["receivedAfter"])) => setDraftFields((current) => ({ ...current, receivedAfter: typeof value === "function" ? value(current.receivedAfter) : value }));
+  const setReceivedBefore = (value: ViewDraftFields["receivedBefore"] | ((current: ViewDraftFields["receivedBefore"]) => ViewDraftFields["receivedBefore"])) => setDraftFields((current) => ({ ...current, receivedBefore: typeof value === "function" ? value(current.receivedBefore) : value }));
+  const setSubjectContains = (value: ViewDraftFields["subjectContains"] | ((current: ViewDraftFields["subjectContains"]) => ViewDraftFields["subjectContains"])) => setDraftFields((current) => ({ ...current, subjectContains: typeof value === "function" ? value(current.subjectContains) : value }));
+  const setReadState = (value: ViewDraftFields["readState"] | ((current: ViewDraftFields["readState"]) => ViewDraftFields["readState"])) => setDraftFields((current) => ({ ...current, readState: typeof value === "function" ? value(current.readState) : value }));
   const [views, setViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const [activeViewId, setActiveViewId] = useState(demoMode ? organizationViewsFixture[0]!.id : "");
   const [results, setResults] = useState<OrganizationViewResultPage | null>(demoMode ? organizationWeeklyViewResultsFixture : null);
@@ -233,30 +264,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const [pageError, setPageError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [composerMode, setComposerMode] = useState<ComposerMode | null>(evidenceState ? "create" : null);
-  const [editingDefinition, setEditingDefinition] = useState<OrganizationViewDefinition | null>(null);
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [name, setName] = useState(evidenceState ? "Needs reply this week" : "");
   const [nameTouched, setNameTouched] = useState(Boolean(evidenceState));
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#70867d");
   const [draftPosition, setDraftPosition] = useState(0);
-  const [activeClauses, setActiveClauses] = useState<ClauseKind[]>(evidenceState ? ["subject"] : []);
-  const [accountIds, setAccountIds] = useState<string[]>([]);
-  const [laneIds, setLaneIds] = useState<string[]>([]);
-  const [workflowStateIds, setWorkflowStateIds] = useState<string[]>([]);
-  const [facetId, setFacetId] = useState("");
-  const [facetOperator, setFacetOperator] = useState<"missing" | "present" | "equals" | "contains">("equals");
-  const [facetValue, setFacetValue] = useState("");
-  const [contextTypeId, setContextTypeId] = useState("");
-  const [contextId, setContextId] = useState("");
-  const [relationshipTypeId, setRelationshipTypeId] = useState("");
-  const [minimumSignal, setMinimumSignal] = useState("");
-  const [senderAddress, setSenderAddress] = useState("");
-  const [senderDomain, setSenderDomain] = useState("");
-  const [receivedAfter, setReceivedAfter] = useState("");
-  const [receivedBefore, setReceivedBefore] = useState("");
-  const [subjectContains, setSubjectContains] = useState(evidenceState === "zero" ? "no matching release" : evidenceState ? "follow-up" : "");
-  const [readState, setReadState] = useState<"read" | "unread">("unread");
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [filterMenuActiveIndex, setFilterMenuActiveIndex] = useState(0);
@@ -280,8 +293,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   useEffect(() => () => {
     // The server may already have accepted a write. Leaving this surface only
     // invalidates its response callbacks; it does not roll back that write.
-    mutationRequest.current += 1;
+    mutationRequest.current += 1; preparationRequest.current += 1; resultRequest.current += 1; previewRequest.current += 1;
   }, []);
+  const lifecycleEnvelope = useRef<{ key: string; url: string; body?: string } | null>(null);
+  const lifecycleInFlight = useRef(false);
+  function announceMutation() { window.dispatchEvent(new Event("orca:views-changed")); onWorkspaceMutation?.(); }
+  const commitEnvelope = useRef<string | null>(null);
   const commitRetryKey = useRef<string | null>(null);
   const commitRetryDraftKey = useRef<string>("");
   const commitInFlight = useRef(false);
@@ -387,7 +404,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     previewRequest.current += 1;
     mutationRequest.current += 1;
     commitInFlight.current = false;
-    commitRetryKey.current = null;
+    commitRetryKey.current = null; commitEnvelope.current = null;
     commitRetryDraftKey.current = "";
     setPreparedAuthoringKey(null);
     setComposerMode(null);
@@ -424,6 +441,11 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const activePredicates = useMemo(() => activeView ? predicateCount(activeView.definition) : 0, [activeView]);
 
   function selectView(view: OrganizationView) {
+    if (composerMode) { exitAfterDiscard.current = () => selectViewNow(view); cancelComposer(); return; }
+    selectViewNow(view);
+  }
+  function selectViewNow(view: OrganizationView) {
+    preparationRequest.current += 1; mutationRequest.current += 1;
     resultRequest.current += 1;
     setActiveViewId(view.id); setError(null); setPageError(null); setPageStatus("idle"); setComposerMode(null); setPendingRemoveId(null);
     if (demoMode) setResults(unevaluatedDemoViewIds.has(view.id) ? null : view.id === organizationWeeklyViewResultsFixture.viewId ? organizationWeeklyViewResultsFixture : emptyResults(view));
@@ -455,54 +477,48 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     }
   }
 
-  function loadComposer(view?: OrganizationView) {
-    if (!canMutate) return;
-    const definition = view?.definition;
-    setComposerMode(view ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
-    previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitRetryDraftKey.current = "";
-    setEditingDefinition(definition ?? null); setActiveClauses(clauseKinds(definition)); setDraftSource(view ? { kind: "saved_view", label: view.name } : { kind: "manual", label: "Manual View" }); setUnsupportedClauses([]); setRemovedUnsupportedClauses([]); setPreparationNotices([]); setPreparedViewIdentity(view ? { id: view.id, revision: view.revision } : null);
-    setName(view?.name ?? "All messages"); setNameTouched(Boolean(view)); setDescription(view?.description ?? ""); setColor(view?.color ?? "#70867d"); setDraftPosition(view?.position ?? views.length);
-    setAccountIds(definition?.accountIds ?? []); setLaneIds(definition?.laneIds ?? []); setWorkflowStateIds(definition?.workflowStateIds ?? []);
-    const facet = definition?.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
-    const context = definition?.contextFilters?.[0]; setContextTypeId(context?.context.contextTypeId ?? ""); setContextId(context?.context.contextId ?? ""); setRelationshipTypeId(context?.relationshipTypeId ?? "");
-    setMinimumSignal(definition?.humanSignal?.minimumScore?.toString() ?? ""); setSenderAddress(definition?.sender?.addresses?.join(", ") ?? ""); setSenderDomain(definition?.sender?.domains?.join(", ") ?? "");
-    setReceivedAfter(dateValue(definition?.date?.receivedAfter)); setReceivedBefore(dateValue(definition?.date?.receivedBefore)); setSubjectContains(definition?.thread?.subjectContains ?? ""); setReadState(definition?.thread?.readState ?? "unread");
-    if (definition?.contextFilters?.length) void loadContextCatalog();
+  async function loadComposer(view?: OrganizationView) {
+    if (!canMutate || commitInFlight.current) return;
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const generation = ++preparationRequest.current;
+    setError(null); setComposerMode(null); setStatus("loading");
+    const preparation: OrganizationViewPreparationInput = view ? { kind: "saved_view", viewId: view.id } : { kind: "typed_definition", source: { kind: "manual", label: "Manual View" }, identity: { name: "All messages", description: "", color: "#70867d", position: views.length }, definition: { revision: 1 }, unsupportedClauses: [] };
+    try {
+      const prepared = demoMode
+        ? view ? { workspaceRevision, draft: { ...demoPreparationResponse({ kind: "saved_view", viewId: view.id }).draft, viewId: view.id, viewRevision: view.revision, definition: view.definition, identity: { name: view.name, description: view.description, color: view.color, position: view.position } } } : demoPreparationResponse(preparation)
+        : organizationViewPrepareResponseSchema.parse(await authority.request("/v1/organization/views/prepare", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(preparation) }, { operation: "read", capability: "query", hasReliableData: true }));
+      if (generation !== preparationRequest.current) return;
+      setWorkspaceRevision(prepared.workspaceRevision); loadPreparedComposer(prepared.draft); setNameTouched(Boolean(view)); setStatus("ready");
+      focusSoon(null);
+    } catch (reason) { if (generation === preparationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not prepare this View. Try Edit again."); } }
   }
 
   function loadPreparedComposer(prepared: OrganizationViewPrepareResponse["draft"]) {
     const definition = prepared.definition;
-    setDraftUndo([]); setDiscardPending(false); seedIdentity.current = JSON.stringify(prepared.identity); seedDefinition.current = JSON.stringify([prepared.definition, prepared.unsupportedClauses]);
+    setDraftUndo([]); editingControl.current = null; seedFields.current = JSON.stringify(hydrateViewDraft(definition)); setDiscardPending(false); seedIdentity.current = JSON.stringify(prepared.identity); seedDefinition.current = JSON.stringify([prepared.definition, prepared.unsupportedClauses]);
     setComposerMode(prepared.mode === "update" ? "edit" : "create"); setPendingRemoveId(null); setError(null); setFilterMenuOpen(false); setMoreFiltersOpen(false);
-    previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitRetryDraftKey.current = "";
+    previewRequest.current += 1; setDraftPreview({ status: "idle", clientKey: "", response: null, error: null }); setConfirmedZeroDigest(null); commitRetryKey.current = null; commitEnvelope.current = null; commitRetryDraftKey.current = "";
     setEditingDefinition(definition); setActiveClauses(clauseKinds(definition)); setDraftSource(prepared.source); setUnsupportedClauses(prepared.unsupportedClauses); setRemovedUnsupportedClauses([]); setPreparationNotices(prepared.preparationNotices); setPreparedViewIdentity(prepared.mode === "update" ? { id: prepared.viewId!, revision: prepared.viewRevision! } : null);
     setName(prepared.identity.name); setNameTouched(true); setDescription(prepared.identity.description); setColor(prepared.identity.color); setDraftPosition(prepared.identity.position);
-    setAccountIds(definition.accountIds ?? []); setLaneIds(definition.laneIds ?? []); setWorkflowStateIds(definition.workflowStateIds ?? []);
-    const facet = definition.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
-    const context = definition.contextFilters?.[0]; setContextTypeId(context?.context.contextTypeId ?? ""); setContextId(context?.context.contextId ?? ""); setRelationshipTypeId(context?.relationshipTypeId ?? "");
-    setMinimumSignal(definition.humanSignal?.minimumScore?.toString() ?? ""); setSenderAddress(definition.sender?.addresses?.join(", ") ?? ""); setSenderDomain(definition.sender?.domains?.join(", ") ?? "");
-    setReceivedAfter(dateValue(definition.date?.receivedAfter)); setReceivedBefore(dateValue(definition.date?.receivedBefore)); setSubjectContains(definition.thread?.subjectContains ?? ""); setReadState(definition.thread?.readState ?? "unread");
+    restoreDefinition(definition ?? { revision: 1 });
     if (definition.contextFilters?.length) void loadContextCatalog();
   }
 
-  function rememberDraft() {
-    setDraftUndo((history) => [...history.slice(-19), { definition: draftDefinition(), unsupported: [...unsupportedClauses] }]);
+  function rememberDraft(control: EventTarget | null = null) {
+    if (control && editingControl.current === control) return;
+    editingControl.current = control;
+    const focus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDraftUndo([{ fields: draftFields, unsupported: [...unsupportedClauses], focus }]);
   }
   function restoreDefinition(definition: OrganizationViewDefinition) {
-    setEditingDefinition(definition); setActiveClauses(clauseKinds(definition));
-    setAccountIds(definition.accountIds ?? []); setLaneIds(definition.laneIds ?? []); setWorkflowStateIds(definition.workflowStateIds ?? []);
-    const facet = definition.facetFilters?.[0]; setFacetId(facet?.facetId ?? ""); setFacetOperator(facet?.operator ?? "equals"); setFacetValue(facet && "value" in facet ? String(facet.value) : "");
-    const context = definition.contextFilters?.[0]; setContextTypeId(context?.context.contextTypeId ?? ""); setContextId(context?.context.contextId ?? ""); setRelationshipTypeId(context?.relationshipTypeId ?? "");
-    setMinimumSignal(definition.humanSignal?.minimumScore?.toString() ?? ""); setSenderAddress(definition.sender?.addresses?.join(", ") ?? ""); setSenderDomain(definition.sender?.domains?.join(", ") ?? "");
-    setReceivedAfter(dateValue(definition.date?.receivedAfter)); setReceivedBefore(dateValue(definition.date?.receivedBefore)); setSubjectContains(definition.thread?.subjectContains ?? ""); setReadState(definition.thread?.readState ?? "unread");
-    setConfirmedZeroDigest(null);
+    setDraftFields(hydrateViewDraft(definition)); setConfirmedZeroDigest(null);
   }
   function undoDraft() {
     const previous = draftUndo.at(-1);
     if (!previous || status === "saving") return;
-    restoreDefinition(previous.definition); setUnsupportedClauses(previous.unsupported); setRemovedUnsupportedClauses([]);
-    setDraftUndo((history) => history.slice(0, -1));
-    window.setTimeout(() => tuneRef.current?.focus(), 0);
+    setDraftFields(previous.fields); setUnsupportedClauses(previous.unsupported); setRemovedUnsupportedClauses([]); setConfirmedZeroDigest(null);
+    setDraftUndo([]); editingControl.current = null;
+    focusSoon(previous.focus);
   }
   function replaceSourceClause(replacement: OrganizationViewClauseReplacement) {
     const next = organizationViewDefinitionSchema.parse(replacement.replace(draftDefinition()));
@@ -512,23 +528,30 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   function finishCancel() {
+    mutationRequest.current += 1; preparationRequest.current += 1; previewRequest.current += 1;
+    setDraftUndo([]); setDiscardPending(false); setComposerMode(null);
+    const action = exitAfterDiscard.current; exitAfterDiscard.current = null;
+    if (action) { action(); return; }
     if (authoringEntry && onCancelAuthoring) onCancelAuthoring(authoringEntry.returnContext);
-    else setComposerMode(null);
+    else focusSoon(openerRef.current);
   }
-
   function cancelComposer() {
     if (status === "saving") return;
-    if (compact && authoringEntry && seedDefinition.current && (seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current && seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition }))) { setDiscardPending(true); window.setTimeout(() => document.querySelector<HTMLElement>(".view-discard-keep")?.focus(), 0); return; }
+    if (composerMode && seedDefinition.current && (seedFields.current !== JSON.stringify(draftFields) || seedDefinition.current !== JSON.stringify([draftDefinition(), unsupportedClauses]) || seedIdentity.current !== JSON.stringify({ name, description, color, position: draftPosition }))) {
+      setDiscardPending(true); window.setTimeout(() => workspaceRef.current?.querySelector<HTMLElement>(".view-discard-keep")?.focus(), 0); return;
+    }
     finishCancel();
   }
-  if (dismissRef) dismissRef.current = () => {
+  function dismissComposer() {
     if (status === "saving") return;
-    if (discardPending) { setDiscardPending(false); window.setTimeout(() => tuneRef.current?.focus(), 0); return; }
+    if (discardPending) { setDiscardPending(false); exitAfterDiscard.current = null; focusSoon(null); return; }
+    if (correction) { censusGeneration.current += 1; setCorrection(null); focusSoon(null); return; }
     if (filterMenuOpen) { setFilterMenuOpen(false); filterTriggerRef.current?.focus(); return; }
+    if (confirmedZeroDigest) { setConfirmedZeroDigest(null); focusSoon(workspaceRef.current?.querySelector<HTMLElement>(".view-save") ?? null); return; }
     if (compact && tuneOpen) { setTuneOpen(false); tuneRef.current?.focus(); return; }
-    if (confirmedZeroDigest) { setConfirmedZeroDigest(null); return; }
     cancelComposer();
-  };
+  }
+  if (dismissRef) dismissRef.current = dismissComposer;
 
   async function loadContextCatalog() {
     if (demoMode || contextCatalog || contextLoadState === "loading") return contextCatalog;
@@ -585,47 +608,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     window.setTimeout(() => filterTriggerRef.current?.focus(), 0);
   }
 
-  function draftDefinition() {
-    const original = editingDefinition;
-    const definition: OrganizationViewDefinition = { revision: 1 };
-    if (activeSet.has("account") && accountIds.length) definition.accountIds = unique(accountIds);
-    if (activeSet.has("lane") && laneIds.length) definition.laneIds = unique(laneIds);
-    if (activeSet.has("workflow") && workflowStateIds.length) definition.workflowStateIds = unique(workflowStateIds);
-    if (activeSet.has("facet") && facetId && (facetOperator === "missing" || facetOperator === "present" || facetValue !== "")) {
-      const current = original?.facetFilters?.[0];
-      let typedValue: string | number | boolean = facetValue;
-      const selected = facetDefinitions.find((facet) => facet.id === facetId);
-      typedValue = facetScalarFromInput(selected, facetValue);
-      const first = facetOperator === "missing" || facetOperator === "present"
-        ? { facetId, operator: facetOperator }
-        : { facetId, operator: facetOperator, value: typedValue };
-      definition.facetFilters = [first, ...(current ? original?.facetFilters?.slice(1) ?? [] : [])];
-    }
-    if (activeSet.has("context") && contextTypeId && contextId && relationshipTypeId) {
-      definition.contextFilters = [{ context: { contextTypeId, contextId }, relationshipTypeId, ...(original?.contextFilters?.[0]?.direction ? { direction: original.contextFilters[0].direction } : {}) }, ...(original?.contextFilters?.slice(1) ?? [])];
-    }
-    if (activeSet.has("human")) {
-      const humanSignal = { ...(original?.humanSignal ?? {}) };
-      if (minimumSignal) humanSignal.minimumScore = Number(minimumSignal); else delete humanSignal.minimumScore;
-      if (Object.keys(humanSignal).length) definition.humanSignal = humanSignal;
-    }
-    if (activeSet.has("sender")) {
-      const addresses = unique(senderAddress.split(",").map((item) => item.trim()));
-      const domains = unique(senderDomain.split(",").map((item) => item.trim().toLocaleLowerCase()));
-      if (addresses.length || domains.length) definition.sender = { ...(addresses.length ? { addresses } : {}), ...(domains.length ? { domains } : {}) };
-    }
-    if (activeSet.has("date")) {
-      const date = { ...(original?.date ?? {}) };
-      if (receivedAfter) date.receivedAfter = receivedAfter === dateValue(original?.date?.receivedAfter) ? original!.date!.receivedAfter : isoDate(receivedAfter); else delete date.receivedAfter;
-      if (receivedBefore) date.receivedBefore = receivedBefore === dateValue(original?.date?.receivedBefore) ? original!.date!.receivedBefore : isoDate(receivedBefore, true); else delete date.receivedBefore;
-      if (Object.keys(date).length) definition.date = date;
-    }
-    const thread = { ...(original?.thread ?? {}) };
-    if (activeSet.has("subject") && subjectContains.trim()) thread.subjectContains = subjectContains.trim(); else delete thread.subjectContains;
-    if (activeSet.has("read")) thread.readState = readState; else delete thread.readState;
-    if (Object.keys(thread).length) definition.thread = thread;
-    return definition;
-  }
+  function draftDefinition() { return materializeViewDraft(draftFields, facetDefinitions); }
 
   const draft = draftDefinition();
   const draftPredicateCount = predicateCount(draft);
@@ -710,6 +693,37 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     unsupportedClauses,
   } : null;
   const draftClientKey = draftInput ? JSON.stringify(draftInput) : "";
+  const [correction, setCorrection] = useState<{ key: string; item: OrganizationViewResultItem; status: "loading" | "ready" | "error"; response: OrganizationViewSenderCandidatesResponse | null; selected: string[]; error: string | null } | null>(null);
+  const censusGeneration = useRef(0);
+  const censusKey = `${draftClientKey}:${JSON.stringify(authority.snapshot)}:${authoringPreparationKey}:${canMutate}`;
+  const currentCensusKey = useRef(censusKey); currentCensusKey.current = censusKey;
+  useEffect(() => () => { censusGeneration.current += 1; }, []);
+  async function correctSenders(item: OrganizationViewResultItem) {
+    if (!draftInput || !canMutate || demoMode || status === "saving") return;
+    const generation = ++censusGeneration.current;
+    const key = censusKey;
+    const expectedProvenance = draftPreview.response?.results.provenance;
+    if (!expectedProvenance || draftPreview.clientKey !== draftClientKey) return;
+    setCorrection({ key, item, status: "loading", response: null, selected: [], error: null });
+    try {
+      const response = organizationViewSenderCandidatesResponseSchema.parse(await authority.request("/v1/organization/views/sender-candidates", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ draft: draftInput, target: { accountId: item.accountId, threadId: item.threadId } }) }, { operation: "read", capability: "query", hasReliableData: true }));
+      if (generation !== censusGeneration.current || key !== currentCensusKey.current) return;
+      if (response.target.accountId !== item.accountId || response.target.threadId !== item.threadId) throw new Error("Correction target changed. Retry the current conversation.");
+      if (response.provenance.definitionDigest !== expectedProvenance.definitionDigest || response.provenance.authorizedScopeDigest !== expectedProvenance.authorizedScopeDigest) throw new Error("Definition or account access changed. Refresh the preview before correcting senders.");
+      // No latest-sender inference: every address starts selected for an explicit manual correction.
+      setCorrection({ key, item, status: "ready", response, selected: response.addresses, error: null });
+      window.setTimeout(() => workspaceRef.current?.querySelector<HTMLElement>(".view-sender-correction h4")?.focus(), 0);
+    } catch (reason) {
+      if (generation === censusGeneration.current && key === currentCensusKey.current) setCorrection({ key, item, status: "error", response: null, selected: [], error: reason instanceof Error ? reason.message : "Sender census unavailable" });
+    }
+  }
+  function applySenderCorrection() {
+    if (!correction || correction.key !== censusKey || correction.response?.status !== "complete" || !correction.selected.length || !canMutate || status === "saving") return;
+    if (correction.selected.some((address) => !correction.response!.addresses.includes(address))) return;
+    rememberDraft();
+    restoreDefinition({ ...draft, sender: { addresses: correction.selected } });
+    setCorrection(null); setTuneOpen(true); focusSoon(null);
+  }
   const preparationMatchesCurrentEntry = !authoringEntry || preparedAuthoringKey === authoringPreparationKey;
   const displayedPreparationState = authoringEntry && !preparationMatchesCurrentEntry && preparationState.status !== "error" ? { status: "loading" as const, error: null } : preparationState;
   const authoringSourceLabel = authoringPreparation && authoringPreparation.kind !== "saved_view" ? authoringPreparation.source.label : draftSource.label;
@@ -719,6 +733,15 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const previewIsZero = evidenceState === "zero" || previewMatchesCurrentDraft && draftPreview.response?.results.state === "zero";
   const effectiveZeroDigest = evidenceState === "zero" ? "sha256:evidence-zero-match" : draftPreview.response?.draft.definitionDigest ?? null;
   const previewDisplayState = evidenceState ?? draftPreview.status;
+  const invokedCorrectionTarget = useRef<string | null>(null);
+  useEffect(() => {
+    if (!correctionTarget || !previewMatchesCurrentDraft || !canMutate) return;
+    const targetKey = JSON.stringify([correctionTarget.accountId, correctionTarget.threadId]);
+    if (invokedCorrectionTarget.current === targetKey) return;
+    invokedCorrectionTarget.current = targetKey;
+    void correctSenders(correctionTarget);
+  }, [correctionTarget, previewMatchesCurrentDraft, canMutate]);
+
 
   useEffect(() => {
     if (demoMode || !composerMode || !draftInput || validationMessage || !canMutate) {
@@ -730,8 +753,9 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     const requestId = ++previewRequest.current;
     if (commitRetryDraftKey.current !== draftClientKey) {
       commitRetryDraftKey.current = draftClientKey;
-      commitRetryKey.current = null;
+      commitRetryKey.current = null; commitEnvelope.current = null;
     }
+    const previewFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setConfirmedZeroDigest(null);
     setDraftPreview({ status: "loading", clientKey: draftClientKey, response: null, error: null });
     void authority.request("/v1/organization/views/preview", {
@@ -743,6 +767,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
       const response = organizationViewPreviewResponseSchema.parse(body);
       if (controller.signal.aborted || requestId !== previewRequest.current) return;
       setDraftPreview({ status: "ready", clientKey: draftClientKey, response, error: null });
+      if (previewFocus && !previewFocus.isConnected && document.activeElement === document.body) focusSoon(null);
     }).catch((reason) => {
       if (controller.signal.aborted || requestId !== previewRequest.current) return;
       setDraftPreview({ status: "error", clientKey: draftClientKey, response: null, error: reason instanceof Error ? reason.message : "Could not preview this View" });
@@ -799,7 +824,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         const committed = organizationViewCommitResponseSchema.parse(await authority.request("/v1/organization/views/commit", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
+          body: commitEnvelope.current ??= JSON.stringify({
             draft: draftPreview.response!.draft,
             expectedRevisions: { workspace: workspaceRevision, view: composerMode === "edit" ? preparedViewIdentity?.revision ?? activeView?.revision ?? null : null },
             retryKey,
@@ -807,8 +832,8 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
           }),
         }, { operation: "mutation", capability: "apply", hasReliableData: true }));
         if (requestId !== mutationRequest.current || committingPreparationKey && currentAuthoringPreparationKey.current !== committingPreparationKey) return;
-        commitRetryKey.current = null;
-        onWorkspaceMutation?.();
+        commitRetryKey.current = null; commitEnvelope.current = null;
+        announceMutation();
         if (committingPreparationKey && committingAuthoringEntry && onCommitted) onCommitted(committed, committingAuthoringEntry.returnContext);
         else window.location.assign(committed.navigation.href);
         return;
@@ -820,13 +845,13 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         setResults(null);
         if (demoMode) setUnevaluatedDemoViewIds((current) => new Set(current).add(updated.id));
         setComposerMode(null); setStatus("ready");
-        if (!demoMode) onWorkspaceMutation?.();
+        if (!demoMode) announceMutation();
       } else {
         const created = { id: `view_demo_${views.length + 1}`, workspaceId: "workspace_demo", name: name.trim(), description: description.trim(), color, position: views.length, definition, revision: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as OrganizationView;
         if (requestId !== mutationRequest.current) return;
         setViews((current) => [...current, created]); setWorkspaceRevision((current) => current + 1); setActiveViewId(created.id); setResults(null); setComposerMode(null); setName(""); setStatus("ready");
         if (demoMode) setUnevaluatedDemoViewIds((current) => new Set(current).add(created.id));
-        if (!demoMode) onWorkspaceMutation?.();
+        if (!demoMode) announceMutation();
       }
     } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : `Could not ${composerMode === "edit" ? "update" : "create"} View`); } }
     finally { if (requestId === mutationRequest.current) commitInFlight.current = false; }
@@ -834,7 +859,9 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
 
   async function moveView(view: OrganizationView, direction: -1 | 1) {
     const index = views.findIndex((candidate) => candidate.id === view.id); const other = views[index + direction];
-    if (!other || status === "saving" || !canMutate) return;
+    if (!other || status === "saving" || !canMutate || lifecycleInFlight.current || composerMode) return;
+    lifecycleInFlight.current = true;
+    const focused = document.activeElement as HTMLElement | null;
     const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
@@ -842,22 +869,27 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         const updated = views.map((candidate) => candidate.id === view.id ? { ...candidate, position: other.position, revision: candidate.revision + 1 } : candidate.id === other.id ? { ...candidate, position: view.position, revision: candidate.revision + 1 } : candidate).sort((left, right) => left.position - right.position || left.id.localeCompare(right.id));
         setViews(updated);
       } else {
-        const body = await authority.request("/v1/organization/views/reorder", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idempotencyKey: mutationKey("reorder"), expectedWorkspaceRevision: workspaceRevision, items: [
+        const key = `reorder:${view.id}:${direction}`;
+        if (lifecycleEnvelope.current?.key !== key) lifecycleEnvelope.current = { key, url: "/v1/organization/views/reorder", body: JSON.stringify({ idempotencyKey: mutationKey("reorder"), expectedWorkspaceRevision: workspaceRevision, items: [
           { id: view.id, expectedRevision: view.revision, position: other.position },
           { id: other.id, expectedRevision: other.revision, position: view.position },
-        ] }) }, { operation: "mutation", capability: "apply", hasReliableData: true });
-        const parsed = organizationViewListResponseSchema.parse(body);
+        ] }) };
+        const envelope = lifecycleEnvelope.current;
+        await authority.request(envelope.url, { method: "POST", headers: { "content-type": "application/json" }, body: envelope.body }, { operation: "mutation", capability: "apply", hasReliableData: true });
+        const parsed = organizationViewListResponseSchema.parse(await authority.request("/v1/organization/views", undefined, { operation: "read", capability: "query", hasReliableData: true }));
         if (requestId !== mutationRequest.current) return;
         setViews(parsed.items); setWorkspaceRevision(parsed.workspaceRevision);
       }
       if (requestId !== mutationRequest.current) return;
-      setStatus("ready");
-      if (!demoMode) onWorkspaceMutation?.();
+      lifecycleEnvelope.current = null; setStatus("ready"); focusSoon(focused);
+      if (!demoMode) announceMutation();
     } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not reorder Views"); } }
+    finally { lifecycleInFlight.current = false; }
   }
 
   async function removeView(view: OrganizationView) {
-    if (!canMutate) return;
+    if (!canMutate || lifecycleInFlight.current || status === "saving" || composerMode) return;
+    lifecycleInFlight.current = true;
     const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
@@ -867,9 +899,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         setWorkspaceRevision((current) => current + 1);
         setUnevaluatedDemoViewIds((current) => { const next = new Set(current); next.delete(view.id); return next; });
       } else {
-        await authority.request(`/v1/organization/views/${encodeURIComponent(view.id)}?expectedRevision=${view.revision}&expectedWorkspaceRevision=${workspaceRevision}&idempotencyKey=${encodeURIComponent(mutationKey("remove"))}`, { method: "DELETE" }, { operation: "mutation", capability: "apply", hasReliableData: true });
+        const key = `remove:${view.id}`;
+        if (lifecycleEnvelope.current?.key !== key) lifecycleEnvelope.current = { key, url: `/v1/organization/views/${encodeURIComponent(view.id)}?expectedRevision=${view.revision}&expectedWorkspaceRevision=${workspaceRevision}&idempotencyKey=${encodeURIComponent(mutationKey("remove"))}` };
+        await authority.request(lifecycleEnvelope.current.url, { method: "DELETE" }, { operation: "mutation", capability: "apply", hasReliableData: true });
         const canonical = organizationViewListResponseSchema.parse(await authority.request("/v1/organization/views", undefined, { operation: "read", capability: "query", hasReliableData: true }));
         remaining = canonical.items;
+        if (requestId !== mutationRequest.current) return;
         setWorkspaceRevision(canonical.workspaceRevision);
       }
       if (requestId !== mutationRequest.current) return;
@@ -878,9 +913,11 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         const next = remaining[Math.min(views.indexOf(view), remaining.length - 1)] ?? null;
         setActiveViewId(next?.id ?? ""); setResults(next && demoMode && !unevaluatedDemoViewIds.has(next.id) ? (next.id === organizationWeeklyViewResultsFixture.viewId ? organizationWeeklyViewResultsFixture : emptyResults(next)) : null);
       }
-      setStatus("ready");
-      if (!demoMode) onWorkspaceMutation?.();
+      lifecycleEnvelope.current = null; setStatus("ready");
+      window.setTimeout(() => workspaceRef.current?.querySelector<HTMLElement>(".view-chip[aria-pressed=true], .view-new")?.focus(), 0);
+      if (!demoMode) announceMutation();
     } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : "Could not remove View"); } }
+    finally { lifecycleInFlight.current = false; }
   }
 
   function renderClause(kind: ClauseKind) {
@@ -901,31 +938,32 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     </article>;
   }
 
-  return <section className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}`} aria-labelledby="views-title">
-    <header className="views-header"><div><span>{authoringEntry ? authoringSourceLabel : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode === "create" ? setComposerMode(null) : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
-    {discardPending ? <section className="view-preparation-state" role="alert"><strong>Discard changes to this draft?</strong><span>Your original search and saved mail stay unchanged.</span><button className="view-action view-discard-keep" onClick={() => { setDiscardPending(false); window.setTimeout(() => tuneRef.current?.focus(), 0); }} type="button">Keep editing</button><button className="view-action" onClick={finishCancel} type="button">Discard draft</button></section> : null}
+  return <section ref={workspaceRef} onKeyDown={(event) => { if (event.key === "Escape" && composerMode && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); dismissComposer(); } }} className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}`} aria-labelledby="views-title">
+    <header className="views-header"><div><span>{authoringEntry ? authoringSourceLabel : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode ? cancelComposer() : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
+    {discardPending ? <section className="view-preparation-state" role="alert"><strong>Discard changes to this draft?</strong><span>Your saved View, source and mail stay unchanged.</span><button className="view-action view-discard-keep" onClick={() => { exitAfterDiscard.current = null; setDiscardPending(false); focusSoon(null); }} type="button">Keep editing</button><button className="view-action" onClick={finishCancel} type="button">Discard draft</button></section> : null}
     <div className="views-live-note"><i aria-hidden="true"/><strong>Live from current Thread organization</strong><span>No membership list is stored.</span></div>
-    {authoringEntry && !demoMode && !canMutate && authority.state.kind !== "loading" ? <section className="view-preparation-state" role="alert"><strong>{authority.state.title}</strong><span>{authority.state.detail}</span><button className="view-action" onClick={authority.retry} type="button">Retry connection</button><button className="view-action" onClick={finishCancel} type="button">Return to source</button></section> : null}
+    {authoringEntry && !demoMode && !canMutate && authority.state.kind !== "loading" ? <section className="view-preparation-state" role="alert"><strong>{authority.state.title}</strong><span>{authority.state.detail}</span><button className="view-action" onClick={authority.retry} type="button">Retry connection</button><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
     {authoringEntry && (demoMode || authority.snapshot || authority.state.kind === "loading") && displayedPreparationState.status === "loading" ? <section className="view-preparation-state" role="status"><strong>Preparing this live View…</strong><span>Orca is validating the source against current stored mail and Workspace authority.</span></section> : null}
     {authoringEntry && displayedPreparationState.status === "error" ? <section className="view-preparation-state view-preparation-error" role="alert"><strong>Could not prepare this View.</strong><span>{displayedPreparationState.error}</span><button className="view-action" onClick={() => setPreparationRetry((value) => value + 1)} type="button">Retry preparation</button><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
-    {composerMode && preparationMatchesCurrentEntry ? <form className="view-composer" hidden={discardPending} data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onChangeCapture={(event) => { if ((event.target as HTMLElement).closest("[data-clause]")) rememberDraft(); }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !(event.target as HTMLElement).matches('input,textarea,select,[contenteditable="true"]')) { event.preventDefault(); undoDraft(); } if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
-      <header><div><span>Perspective builder</span><h3>{composerMode === "edit" ? "Edit live perspective" : "Build a live perspective"}</h3></div><div className="view-composer-actions">{confirmedZeroDigest ? <button className="view-action" onClick={() => setConfirmedZeroDigest(null)} type="button">Cancel zero-match confirmation</button> : null}{draftUndo.length ? <button className="view-action" onClick={undoDraft} type="button">Undo draft change</button> : null}<button className="view-action" onClick={cancelComposer} type="button">Cancel</button><button className="view-action view-save" disabled={!canMutate || status === "saving" || Boolean(validationMessage) || liveSaveBlocked} type="submit">{status === "saving" ? "Saving View…" : previewDisplayState === "loading" ? "Checking draft…" : previewIsZero && confirmedZeroDigest !== effectiveZeroDigest ? "Review zero matches" : previewIsZero ? "Confirm zero-match save" : composerMode === "edit" ? "Save changes" : "Save View"}</button></div></header>
+    {composerMode && preparationMatchesCurrentEntry ? <form className="view-composer" hidden={discardPending} data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onInputCapture={(event) => { if ((event.target as HTMLElement).closest("[data-clause]")) rememberDraft(event.target); }} onChangeCapture={(event) => { if ((event.target as HTMLElement).matches("select") && (event.target as HTMLElement).closest("[data-clause]")) rememberDraft(); }} onBlurCapture={() => { editingControl.current = null; }} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !(event.target as HTMLElement).matches('input,textarea,select,[contenteditable="true"]')) { event.preventDefault(); undoDraft(); } if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
+      <header><div><span>Perspective builder</span><h3 tabIndex={-1}>{composerMode === "edit" ? "Edit live perspective" : "Build a live perspective"}</h3></div><div className="view-composer-actions">{confirmedZeroDigest ? <button className="view-action" onClick={() => setConfirmedZeroDigest(null)} type="button">Cancel zero-match confirmation</button> : null}{draftUndo.length ? <button className="view-action" onClick={undoDraft} type="button">Undo draft change</button> : null}<button className="view-action" onClick={cancelComposer} type="button">Cancel</button><button className="view-action view-save" disabled={!canMutate || status === "saving" || Boolean(validationMessage) || liveSaveBlocked} type="submit">{status === "saving" ? "Saving View…" : previewDisplayState === "loading" ? "Checking draft…" : previewIsZero && confirmedZeroDigest !== effectiveZeroDigest ? "Review zero matches" : previewIsZero ? "Confirm zero-match save" : composerMode === "edit" ? "Save changes" : "Save View"}</button></div></header>
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
         <div className="view-identity"><label><span>View name</span><input autoFocus={!authoringEntry} maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></div>
         <section className="view-scope-sentence"><span>Current scope</span><p>{scopeSummary}</p>{preservedConstraintDetails.length ? <details className="view-preserved-constraints" open><summary>Preserved constraints · {preservedConstraintDetails.length}</summary><ul>{preservedConstraintDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul></details> : null}</section>
         {preparationNotices.length ? <section className="view-preparation-notices" aria-label="Preparation notices" role="status"><span>Selection adjusted</span>{preparationNotices.map((notice) => <div key={notice.code}><strong>{notice.detail}</strong>{notice.code === "self_sender_omitted" ? <small>Included external senders · {draft.sender?.addresses?.join(", ") ?? "None"}</small> : null}</div>)}</section> : null}
-        {unsupportedClauses.length || removedUnsupportedClauses.length ? <section className="view-unsupported-clauses" aria-label="Unsupported source clauses"><header><div><span>Needs review</span><strong>{unsupportedClauses.length ? "Replace or remove unsupported clauses" : "Unsupported clauses resolved"}</strong></div>{removedUnsupportedClauses.length ? <button className="view-action" onClick={() => { setUnsupportedClauses((current) => [...current, ...removedUnsupportedClauses]); setRemovedUnsupportedClauses([]); }} type="button">Undo removed clauses</button> : null}</header>{unsupportedClauses.length ? <ul>{unsupportedClauses.map((clause) => <li key={clause.id}><div><strong>{clause.label}</strong><span>{clause.reason}</span></div>{clauseReplacements.filter((replacement) => replacement.clauseId === clause.id).map((replacement) => <button className="view-action" key={replacement.label} onClick={() => replaceSourceClause(replacement)} type="button">{replacement.label}</button>)}<button className="view-action" onClick={() => { rememberDraft(); setUnsupportedClauses((current) => current.filter((item) => item.id !== clause.id)); setRemovedUnsupportedClauses((current) => [...current, clause]); }} type="button">Remove blocker</button></li>)}</ul> : <p>Add an equivalent supported filter if the removed meaning still matters.</p>}</section> : null}
+        {unsupportedClauses.length || removedUnsupportedClauses.length ? <section className="view-unsupported-clauses" aria-label="Unsupported source clauses"><header><div><span>Needs review</span><strong>{unsupportedClauses.length ? "Replace or remove unsupported clauses" : "Unsupported clauses resolved"}</strong></div>{removedUnsupportedClauses.length ? <button className="view-action" onClick={undoDraft} type="button">Undo removed clauses</button> : null}</header>{unsupportedClauses.length ? <ul>{unsupportedClauses.map((clause) => <li key={clause.id}><div><strong>{clause.label}</strong><span>{clause.reason}</span></div>{clauseReplacements.filter((replacement) => replacement.clauseId === clause.id).map((replacement) => <button className="view-action" key={replacement.label} onClick={() => replaceSourceClause(replacement)} type="button">{replacement.label}</button>)}<button className="view-action" onClick={() => { rememberDraft(); setUnsupportedClauses((current) => current.filter((item) => item.id !== clause.id)); setRemovedUnsupportedClauses((current) => [...current, clause]); }} type="button">Remove blocker</button></li>)}</ul> : <p>Add an equivalent supported filter if the removed meaning still matters.</p>}</section> : null}
         {compact ? <button aria-expanded={tuneOpen} aria-controls="search-view-tune" className="view-action" ref={tuneRef} onClick={() => { setTuneOpen((value) => !value); if (!tuneOpen) window.setTimeout(() => document.querySelector<HTMLElement>('#search-view-tune [data-clause-editor], #search-view-tune button')?.focus(), 0); }} type="button">Tune</button> : null}
         <div hidden={compact && !tuneOpen} id={compact ? "search-view-tune" : undefined}>
         <div className="view-clause-heading"><div><span>Filters</span><small>Every filter narrows the same live result.</small></div><div className="view-add-filter"><button aria-controls={filterMenuOpen ? "view-filter-menu" : undefined} aria-expanded={filterMenuOpen} aria-haspopup="menu" className="view-action view-filter-trigger" onClick={() => { if (filterMenuOpen) { setFilterMenuOpen(false); setMoreFiltersOpen(false); } else { setMoreFiltersOpen(false); openFilterMenu(); } }} onKeyDown={(event) => { if (event.key === "ArrowDown") { event.preventDefault(); setMoreFiltersOpen(false); openFilterMenu(); } }} ref={filterTriggerRef} type="button">Add filter <b aria-hidden="true">＋</b></button>{filterMenuOpen ? <div aria-label="Add a filter" className="view-filter-menu" id="view-filter-menu" onBlur={(event) => { const next = event.relatedTarget; if (!(next instanceof Node) || (!filterMenuRef.current?.contains(next) && next !== filterTriggerRef.current)) { setFilterMenuOpen(false); setMoreFiltersOpen(false); } }} onKeyDown={handleFilterMenuKeyDown} ref={filterMenuRef} role="menu"><span>Common filters</span>{primaryClauseKinds.map((kind, index) => <button data-menu-index={index} disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} onFocus={() => setFilterMenuActiveIndex(index)} role="menuitem" tabIndex={!activeSet.has(kind) && filterMenuActiveIndex === index ? 0 : -1} type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>)}<button aria-expanded={moreFiltersOpen} className="view-more-filters" data-menu-index={primaryClauseKinds.length} onClick={() => setMoreFiltersOpen((open) => !open)} onFocus={() => setFilterMenuActiveIndex(primaryClauseKinds.length)} role="menuitem" tabIndex={filterMenuActiveIndex === primaryClauseKinds.length ? 0 : -1} type="button"><strong>More filters</strong><small>Workflow, Facet, Context, and date <b aria-hidden="true">{moreFiltersOpen ? "−" : "+"}</b></small></button>{moreFiltersOpen ? advancedClauseKinds.map((kind, index) => { const menuIndex = primaryClauseKinds.length + 1 + index; return <button data-menu-index={menuIndex} disabled={activeSet.has(kind)} key={kind} onClick={() => void addClause(kind)} onFocus={() => setFilterMenuActiveIndex(menuIndex)} role="menuitem" tabIndex={!activeSet.has(kind) && filterMenuActiveIndex === menuIndex ? 0 : -1} type="button"><strong>{clauseMeta[kind].label}</strong><small>{activeSet.has(kind) ? "Added" : clauseMeta[kind].description}</small></button>; }) : null}</div> : null}</div></div>
         {activeClauses.length ? <div className="view-clause-list">{activeClauses.map(renderClause)}</div> : <div className="view-no-clauses"><strong>Any message can match.</strong><span>Add a filter only when it helps this perspective.</span></div>}
       </div></fieldset>
       <footer className="view-builder-footer"><div className="view-draft-preview"><span>{demoMode && !evidenceState ? "Local preview" : "Stored-mail preview"}</span><strong>{draftPredicateCount ? `${draftPredicateCount} predicate ${draftPredicateCount === 1 ? "family" : "families"} · combined with AND` : "All current and future messages"}</strong><small>{status === "saving" ? "Saving this reviewed definition…" : evidenceState === "loading" ? "Checking the latest stored mail…" : evidenceState === "error" ? "Preview failed. Saving stays disabled until this exact draft is checked." : evidenceState === "zero" ? "0 exact matches · no preview state is persisted." : evidenceState === "ready" ? "5 shown · no preview state is persisted." : demoMode ? "Local preview does not evaluate sample mail. Saving preserves the definition and clears stale sample results." : draftPreview.status === "loading" ? "Checking the latest stored mail…" : draftPreview.status === "error" ? "Preview failed. Saving stays disabled until this exact draft is checked." : previewMatchesCurrentDraft ? `${draftPreview.response!.results.count.value} ${draftPreview.response!.results.count.kind === "shown" ? "shown" : "exact matches"} · no preview state is persisted.` : "Edit a complete filter to preview it."}</small>{previewDisplayState === "error" ? <button className="view-action view-preview-retry" onClick={() => setPreviewRetry((value) => value + 1)} type="button">Retry preview</button> : null}</div><p aria-live="polite" className={validationMessage || previewDisplayState === "error" ? "view-validation" : "view-validation view-validation-ready"} role={validationMessage || previewDisplayState === "error" ? "alert" : "status"}>{!canMutate ? `Editing paused · ${authority.state.detail}` : validationMessage ? validationMessage : evidenceState === "loading" ? "Waiting for the current preview. Saving is disabled." : evidenceState === "error" ? "The stored-mail preview could not be loaded. Retry this exact draft before saving." : evidenceState === "zero" && confirmedZeroDigest === effectiveZeroDigest ? "Zero matches confirmed for this exact definition. Save again to continue." : evidenceState === "zero" ? "This filtered View matches zero Threads. Review, then confirm if that is intentional." : evidenceState === "ready" ? "Preview is current. Ready to save this perspective." : demoMode ? "Ready to save this perspective." : draftPreview.status === "error" ? draftPreview.error : previewIsZero && confirmedZeroDigest === draftPreview.response?.draft.definitionDigest ? "Zero matches confirmed for this exact definition. Save again to continue." : previewIsZero ? "This filtered View matches zero Threads. Review, then confirm if that is intentional." : previewMatchesCurrentDraft ? "Preview is current. Ready to save this perspective." : "Waiting for a current preview."}</p></footer>
-      {!demoMode && previewMatchesCurrentDraft && draftPreview.response!.results.items.length ? <section aria-label="Draft View results" className="view-preview-results"><header><span>Unsaved result sample</span><strong>{draftPreview.response!.results.count.value} {draftPreview.response!.results.count.kind === "shown" ? "shown" : "matches"}</strong></header><div className="view-thread-list">{draftPreview.response!.results.items.map((item) => <ViewThreadRow item={item} key={`${item.accountId}:${item.threadId}`}/>)}</div></section> : null}
+      {correction && correction.key === censusKey ? <section className="view-sender-correction" aria-label="Correct matching senders"><h4 tabIndex={-1}>Keep only these senders</h4><p>Correcting “{correction.item.subject}” in {correction.item.accountEmail}. Conversation {correction.item.threadId}.</p><p>This is a positive allowlist. Omitted and new senders stay outside this View until you add them. Exact addresses replace any existing domain filters. Mail stays unchanged.</p>{correction.status === "loading" ? <p role="status">Checking all authorized matching messages…</p> : correction.status === "error" ? <p role="alert">{correction.error} Use the labeled filters for manual correction.</p> : correction.response ? <><p>{correction.response.detail}</p>{correction.response.status === "complete" ? <><p>Complete bounded set: {correction.response.addresses.length} addresses in {correction.item.accountEmail}, evaluated {correction.response.provenance.evaluatedAt}. Future mail is evaluated against the addresses you keep.</p><p>Proven matching senders in this conversation: {correction.response.witnessAddresses.join(", ")}. No sender is removed automatically; a conversation can contain more than one matching sender.</p><div>{correction.response.addresses.map((address) => <label key={address}><input type="checkbox" checked={correction.selected.includes(address)} onChange={(event) => setCorrection((current) => current ? { ...current, selected: event.target.checked ? current.response!.addresses.filter((candidate) => candidate === address || current.selected.includes(candidate)) : current.selected.filter((candidate) => candidate !== address) } : null)}/><span>{address}</span></label>)}</div>{!correction.selected.length ? <p role="alert">Keep at least one sender. An empty set cannot be applied.</p> : null}<button className="view-action" disabled={!canMutate || !correction.selected.length || status === "saving"} onClick={applySenderCorrection} type="button">Preview these senders</button></> : <p>No partial sender list can be applied. Use the labeled filters for manual correction.</p>}</> : null}<button className="view-action" onClick={() => { censusGeneration.current += 1; setCorrection(null); focusSoon(null); }} type="button">Cancel sender correction</button></section> : null}
+      {!demoMode && previewMatchesCurrentDraft && draftPreview.response!.results.items.length ? <section aria-label="Draft View results" className="view-preview-results"><header><span>Unsaved result sample</span><strong>{draftPreview.response!.results.count.value} {draftPreview.response!.results.count.kind === "shown" ? "shown" : "matches"}</strong></header><div className="view-thread-list">{draftPreview.response!.results.items.map((item) => <div key={`${item.accountId}:${item.threadId}`}><ViewThreadRow item={item}/><button className="view-action" disabled={!canMutate || status === "saving"} onClick={() => void correctSenders(item)} type="button">Correct senders for {item.subject}</button></div>)}</div></section> : null}
       {error ? <p className="view-state view-state-error view-composer-error" role="alert">Could not change this View. {error}</p> : null}
     </form> : null}
-    {!authoringEntry ? <div className="views-layout"><nav aria-label="Saved live Views" className="view-list">{views.map((view, index) => <div className="view-list-item" key={view.id}><button aria-pressed={view.id === activeViewId} className="view-chip" onClick={() => selectView(view)} type="button"><i aria-hidden="true" style={{ background: view.color }}/><span><strong>{view.name}</strong><small>{predicateCount(view.definition)} predicate families</small></span><b>›</b></button><div className="view-order-controls"><button aria-label={`Move ${view.name} up`} className="view-icon-action" disabled={!canMutate || index === 0 || status === "saving"} onClick={() => void moveView(view, -1)} type="button">↑</button><button aria-label={`Move ${view.name} down`} className="view-icon-action" disabled={!canMutate || index === views.length - 1 || status === "saving"} onClick={() => void moveView(view, 1)} type="button">↓</button></div></div>)}</nav>
-      <section aria-busy={status === "loading" || status === "saving" || undefined} className="view-results"><header><div><span>{accountCount} {accountCount === 1 ? "account" : "accounts"} · {activePredicates} predicate families</span><h3>{activeView?.name ?? "Choose a View"}</h3><p>{activeView?.description || "Results re-evaluate whenever the underlying Thread changes."}</p></div><div className="view-lifecycle-actions"><button className="view-action" disabled={!canMutate || !activeView || status !== "ready"} onClick={() => activeView && loadComposer(activeView)} type="button">Edit definition</button>{pendingRemoveId === activeView?.id ? <><button className="view-action" onClick={() => setPendingRemoveId(null)} type="button">Cancel</button><button className="view-action view-danger view-confirm" disabled={!canMutate || status === "saving"} onClick={() => activeView && void removeView(activeView)} type="button">Confirm remove</button></> : <button className="view-action view-danger" disabled={!canMutate || !activeView || status !== "ready"} onClick={() => activeView && setPendingRemoveId(activeView.id)} type="button">Remove View</button>}</div></header>
+    {!authoringEntry ? <div className="views-layout"><nav aria-label="Saved live Views" className="view-list">{views.map((view, index) => <div className="view-list-item" key={view.id}><button aria-pressed={view.id === activeViewId} className="view-chip" onClick={() => selectView(view)} type="button"><i aria-hidden="true" style={{ background: view.color }}/><span><strong>{view.name}</strong><small>{predicateCount(view.definition)} predicate families</small></span><b>›</b></button><div className="view-order-controls"><button aria-label={`Move ${view.name} up`} className="view-icon-action" disabled={!canMutate || Boolean(composerMode) || index === 0 || status === "saving"} onClick={() => void moveView(view, -1)} type="button">↑</button><button aria-label={`Move ${view.name} down`} className="view-icon-action" disabled={!canMutate || Boolean(composerMode) || index === views.length - 1 || status === "saving"} onClick={() => void moveView(view, 1)} type="button">↓</button></div></div>)}</nav>
+      <section aria-busy={status === "loading" || status === "saving" || undefined} className="view-results"><header><div><span>{accountCount} {accountCount === 1 ? "account" : "accounts"} · {activePredicates} predicate families</span><h3>{activeView?.name ?? "Choose a View"}</h3><p>{activeView?.description || "Results re-evaluate whenever the underlying Thread changes."}</p></div><div className="view-lifecycle-actions"><button className="view-action" disabled={!canMutate || Boolean(composerMode) || !activeView || status !== "ready"} onClick={() => activeView && loadComposer(activeView)} type="button">Edit definition</button>{pendingRemoveId === activeView?.id ? <><button className="view-action" onClick={() => setPendingRemoveId(null)} type="button">Cancel</button><button className="view-action view-danger view-confirm" disabled={!canMutate || status === "saving"} onClick={() => activeView && void removeView(activeView)} type="button">Confirm remove</button></> : <button className="view-action view-danger" disabled={!canMutate || Boolean(composerMode) || !activeView || status !== "ready"} onClick={() => activeView && setPendingRemoveId(activeView.id)} type="button">Remove View</button>}</div></header>
       {!composerMode && error ? <p className="view-state view-state-error" role="alert">Could not change this View. {error}</p> : null}
       {status === "loading" ? <p className="view-state" role="status">Running the current View…</p> : null}
       {status === "ready" && !activeView ? <p className="view-state">No saved Views yet. Build one when Organization change authority is available.</p> : null}
@@ -976,6 +1014,10 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
   const continuation = useRef<AbortController | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const focusedViewId = useRef<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [savedCorrectionTarget, setSavedCorrectionTarget] = useState<OrganizationViewResultItem | null>(null);
+  const [savedRefresh, setSavedRefresh] = useState(0);
+  const savedEditOpener = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (status !== "loading" && focusedViewId.current !== viewId) { headingRef.current?.focus(); focusedViewId.current = viewId; }
   }, [status, viewId]);
@@ -1006,7 +1048,7 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
       if (!controller.signal.aborted && requestId === request.current) { setStatus("error"); setError(reason instanceof Error ? reason.message : "Could not open this View"); }
     });
     return () => { controller.abort(); continuation.current?.abort(); };
-  }, [authority.snapshot, demoMode, viewId]);
+  }, [authority.snapshot, demoMode, viewId, savedRefresh]);
 
   async function loadMore() {
     if (!view || !page?.nextCursor || loadingMore) return;
@@ -1041,13 +1083,15 @@ function SavedOrganizationViewContent({ demoMode = false, onManage, onOpenThread
     }
   }
 
+  if (editing) return <OrganizationViewsWorkspace correctionTarget={savedCorrectionTarget} authoringEntry={{ preparation: { kind: "saved_view", viewId }, returnContext: viewId }} demoMode={demoMode} onCancelAuthoring={() => { setEditing(false); window.setTimeout(() => savedEditOpener.current?.focus(), 0); }} onCommitted={() => { setEditing(false); setSavedRefresh((value) => value + 1); focusedViewId.current = null; }}/>;
+
   return <section aria-busy={status === "loading" || undefined} aria-labelledby="saved-view-title" className="views-workspace saved-view-workspace">
-    <header className="views-header"><div><span>My spaces · live View</span><h2 id="saved-view-title" ref={headingRef} tabIndex={-1}>{view?.name ?? (status === "missing" ? "View unavailable" : "Opening View…")}</h2><p>{view?.description || (status === "missing" ? "This View no longer exists or is outside your current access." : "Evaluating current stored mail with the saved definition.")}</p></div><button className="view-action" onClick={onManage} type="button">Manage in Organization</button></header>
+    <header className="views-header"><div><span>My spaces · live View</span><h2 id="saved-view-title" ref={headingRef} tabIndex={-1}>{view?.name ?? (status === "missing" ? "View unavailable" : "Opening View…")}</h2><p>{view?.description || (status === "missing" ? "This View no longer exists or is outside your current access." : "Evaluating current stored mail with the saved definition.")}</p></div><div><button className="view-action" disabled={status !== "ready"} ref={savedEditOpener} onClick={() => { setSavedCorrectionTarget(null); setEditing(true); }} type="button">Edit or rename View</button><button className="view-action" onClick={onManage} type="button">Manage in Organization</button></div></header>
     {status === "loading" ? <p className="view-state" role="status">Loading the saved definition and current results…</p> : null}
     {status === "missing" ? <p className="view-state">The durable link is valid, but this View is not available to this workspace.</p> : null}
     {status === "error" ? <div className="view-state view-state-error" role="alert"><p>Could not open this View. {error}</p><button className="view-action" onClick={() => { request.current += 1; window.location.reload(); }} type="button">Reload View</button></div> : null}
     {status === "ready" && page ? <section className="view-results saved-view-results"><header><div><span>{page.accountIds.length} {page.accountIds.length === 1 ? "account" : "accounts"} · {page.nextCursor ? `${page.items.length} shown` : `${page.items.length} matches`}</span><h3>Current results</h3><p>Membership is evaluated live; opening a Thread preserves its account identity.</p></div></header>
-      {page.items.length ? <div className="view-thread-list">{page.items.map((item) => <ViewThreadRow item={item} key={`${item.accountId}:${item.threadId}`} onOpen={() => onOpenThread({ accountId: item.accountId, threadId: item.threadId })}/>)}</div> : <p className="view-state">No Threads match this filtered View right now. The View remains ready for future mail.</p>}
+      {page.items.length ? <div className="view-thread-list">{page.items.map((item) => <div key={`${item.accountId}:${item.threadId}`}><ViewThreadRow item={item} onOpen={() => onOpenThread({ accountId: item.accountId, threadId: item.threadId })}/><button className="view-action" onClick={() => { setSavedCorrectionTarget(item); setEditing(true); }} type="button">Correct senders for {item.subject}</button></div>)}</div> : <p className="view-state">No Threads match this filtered View right now. The View remains ready for future mail.</p>}
       {page.items.length ? <div className="view-continuation"><button className="view-action" disabled={!page.nextCursor || loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more Threads…" : page.nextCursor ? "Load more" : "All matching Threads loaded"}</button>{error ? <p className="view-state view-state-error" role="alert">{error}</p> : null}</div> : null}
     </section> : null}
   </section>;

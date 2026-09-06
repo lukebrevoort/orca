@@ -1272,6 +1272,13 @@ export function InboxApp({
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
+  const savedViewsRequest = useRef(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => { const generation = ++savedViewsRequest.current; if (!demoMode) void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal).then((listed) => { if (!controller.signal.aborted && generation === savedViewsRequest.current) setSavedViews(listed.items); }).catch(() => {}); };
+    window.addEventListener("orca:views-changed", refresh);
+    return () => { controller.abort(); window.removeEventListener("orca:views-changed", refresh); };
+  }, [demoMode]);
   const [collectionsLoad, setCollectionsLoad] = useState<{ accountId: string | null; status: "loading" | "ready" | "error" }>(() => demoMode
     ? { accountId: demoAccount.id, status: "ready" }
     : { accountId: null, status: "loading" });
@@ -1659,9 +1666,10 @@ export function InboxApp({
         if (!controller.signal.aborted) setCollectionsLoad({ accountId, status: "error" });
         throw error;
       });
+    const viewGeneration = ++savedViewsRequest.current;
     void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal)
-      .then((nextViews) => { if (!controller.signal.aborted) setSavedViews(nextViews.items); })
-      .catch(() => { if (!controller.signal.aborted) setSavedViews([]); });
+      .then((nextViews) => { if (!controller.signal.aborted && viewGeneration === savedViewsRequest.current) setSavedViews(nextViews.items); })
+      .catch(() => { if (!controller.signal.aborted && viewGeneration === savedViewsRequest.current) setSavedViews([]); });
     void Promise.all([
       collectionsRequest,
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
@@ -4501,6 +4509,7 @@ function InboxView({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
   const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
+  const selectedViewDismissRef = useRef<(() => void) | null>(null);
   const [viewAuthoringEntry, setViewAuthoringEntry] = useState<OrganizationViewAuthoringEntry<InboxViewAuthoringReturnContext> | null>(null);
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
@@ -4884,7 +4893,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
-        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => restoreFromViewAuthoring(viewAuthoringEntry.returnContext)} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
