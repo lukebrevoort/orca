@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   inboxClassificationResponseSchema,
+  prepareMailSearchView,
   mailAccountPageSchema,
   organizationCollectionPinQueryResponseSchema,
   pinFilterSchema,
@@ -14,6 +15,17 @@ import { demoAccount, demoMessages } from "./demo-data";
 import { parseDesktopDestination } from "./navigation";
 import { readSurfaceLocation } from "./surface-history";
 import { TopLayer } from "./top-layer";
+import { OrganizationViewAuthoringWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
+
+type SearchReturnContext = { url: string; draft: string; scrollTop: number; loaded: number; focusHref: string | null };
+const searchReturnKey = "orca:search-view-return:v1";
+function savedSearchReturn(): SearchReturnContext | null {
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(searchReturnKey) ?? "null");
+    if (!value || value.url !== locationPath(window.location) || typeof value.draft !== "string" || value.draft.length > 200 || !Number.isFinite(value.scrollTop) || value.scrollTop < 0 || !Number.isInteger(value.loaded) || value.loaded < 0 || value.loaded > 10000 || value.focusHref !== null && typeof value.focusHref !== "string") return null;
+    return value;
+  } catch { return null; }
+}
 
 export type MailSearchMailbox = "inbox" | "focus" | "quiet" | "hidden" | "all";
 export type MailSearchEvidence = "human" | "tideline" | "uncertain" | "all";
@@ -233,11 +245,6 @@ function scopeLabel(state: MailSearchState, accounts: MailAccount[], collections
   return [mailbox, evidence, account, collection].filter(Boolean).join(" · ");
 }
 
-function savedSearchLabel(state: MailSearchState, scope: string) {
-  const query = state.query.trim();
-  return (query ? `Search · ${query}` : scope).slice(0, 120);
-}
-
 function returnContextLabel(source: string) {
   const url = new URL(source, "http://orca.local");
   if (url.pathname.startsWith("/settings")) return "Settings";
@@ -292,47 +299,41 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "confirm-zero" | "saving" | "saved" | "error">("idle");
-  const [saveMessage, setSaveMessage] = useState("");
+  const [authoring, setAuthoring] = useState<OrganizationViewAuthoringEntry<SearchReturnContext> | null>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const authoringDismissRef = useRef<(() => void) | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(() => Boolean(state && (state.mailbox !== "all" || state.evidence !== "all" || state.accountId || state.collectionId)));
   const inputRef = useRef<HTMLInputElement>(null);
   const resultListRef = useRef<HTMLOListElement>(null);
+  const resultRegionRef = useRef<HTMLElement>(null);
+  const lastResultFocus = useRef<string | null>(null);
+  const restoringSearch = useRef<SearchReturnContext | null>(typeof window === "undefined" ? null : savedSearchReturn());
   const requestGenerationRef = useRef(0);
   const loadMoreControllerRef = useRef<AbortController | null>(null);
-  const saveGenerationRef = useRef(0);
-  const saveControllerRef = useRef<AbortController | null>(null);
-
-  function invalidateSave() {
-    saveGenerationRef.current += 1;
-    saveControllerRef.current?.abort();
-    saveControllerRef.current = null;
-    setSaveStatus("idle");
-    setSaveMessage("");
-  }
+  function invalidateSave() { setAuthoring(null); }
 
   useEffect(() => {
     const synchronize = () => {
       invalidateSave();
+      restoringSearch.current = savedSearchReturn();
       const next = readMailSearchState(window.location);
+      setStatus(next && hasMailSearchConstraint(next) ? "loading" : "idle");
       setState(next);
       if (next) {
         setDraft(next.query);
         setFiltersOpen(Boolean(next.mailbox !== "all" || next.evidence !== "all" || next.accountId || next.collectionId));
       }
     };
+    window.addEventListener("pageshow", synchronize);
     window.addEventListener("popstate", synchronize);
     window.addEventListener(mailSearchLocationEvent, synchronize);
     return () => {
+      window.removeEventListener("pageshow", synchronize);
       window.removeEventListener("popstate", synchronize);
       window.removeEventListener(mailSearchLocationEvent, synchronize);
     };
   }, []);
 
-  useEffect(() => () => {
-    saveGenerationRef.current += 1;
-    saveControllerRef.current?.abort();
-    saveControllerRef.current = null;
-  }, []);
 
   useEffect(() => {
     if (!state || isDemoSearch()) return;
@@ -362,8 +363,6 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
       setError(null);
       return;
     }
-    setSaveStatus("idle");
-    setSaveMessage("");
     setStatus("loading");
     setMessages([]);
     setNextCursor(null);
@@ -387,12 +386,32 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
         setStatus("ready");
       })
       .catch((caught) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
         setStatus("error");
         setError(caught instanceof Error ? caught.message : "Search could not be completed.");
       });
     return () => controller.abort();
   }, [state, retryKey]);
+
+  useEffect(() => {
+    if (!state || draft === state.query || authoring) return;
+    const timer = window.setTimeout(() => commit({ ...state, query: draft }), 300);
+    return () => window.clearTimeout(timer);
+  }, [draft, state, authoring]);
+
+  useEffect(() => {
+    const context = restoringSearch.current;
+    if (!context || status !== "ready" || authoring || loadingMore) return;
+    if (messages.length < context.loaded && nextCursor && !error) { void loadMore(); return; }
+    restoringSearch.current = null;
+    try { window.sessionStorage.removeItem(searchReturnKey); } catch { /* The source URL remains usable. */ }
+    setDraft(context.draft);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      if (resultRegionRef.current) resultRegionRef.current.scrollTop = context.scrollTop;
+      const anchor = [...(resultListRef.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [])].find((item) => item.getAttribute("href") === context.focusHref);
+      (anchor ?? saveButtonRef.current)?.focus({ preventScroll: true });
+    }));
+  }, [status, messages, nextCursor, loadingMore, error, authoring]);
 
   const scope = useMemo(() => state ? scopeLabel(state, accounts, collections) : "All mail", [accounts, collections, state]);
   if (!state) return null;
@@ -462,45 +481,24 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
     }
   }
 
-  async function saveSearch() {
-    const activeState = state;
-    if (!activeState || !hasMailSearchConstraint(activeState) || status !== "ready" || saveStatus === "saving") return;
-    if (messages.length === 0 && saveStatus !== "confirm-zero") {
-      setSaveStatus("confirm-zero");
-      setSaveMessage("This exact scope currently has zero matches. Saving it will keep watching for future mail.");
-      return;
-    }
-    setSaveStatus("saving");
-    setSaveMessage("");
-    const label = savedSearchLabel(activeState, scope);
-    const generation = ++saveGenerationRef.current;
-    saveControllerRef.current?.abort();
-    const controller = new AbortController();
-    saveControllerRef.current = controller;
-    try {
-      if (!isDemoSearch()) {
-        const response = await fetch("/v1/pins", {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({ kind: "filter", targetId: JSON.stringify(mailSearchPinFilter(activeState)), label, icon: "search", color: "#70867d" }),
-        });
-        await readJson(response);
-      }
-      if (controller.signal.aborted || generation !== saveGenerationRef.current) return;
-      setSaveStatus("saved");
-      setSaveMessage(`Saved “${label}” with this exact account, space, mailbox, and evidence scope.`);
-    } catch (caught) {
-      if (controller.signal.aborted || generation !== saveGenerationRef.current) return;
-      setSaveStatus("error");
-      setSaveMessage(caught instanceof Error ? caught.message : "This search could not be saved.");
-    } finally {
-      if (saveControllerRef.current === controller) saveControllerRef.current = null;
-    }
+  function saveSearch() {
+    if (!state || status !== "ready" || draft.trim() !== state.query.trim() || !hasMailSearchConstraint(state)) return;
+    loadMoreControllerRef.current?.abort();
+    const context: SearchReturnContext = { url: locationPath(window.location), draft, scrollTop: resultRegionRef.current?.scrollTop ?? 0, loaded: messages.length, focusHref: lastResultFocus.current };
+    setAuthoring({ preparation: prepareMailSearchView(state, context.url), returnContext: context });
   }
 
-  return <TopLayer
+  function returnFromAuthoring(context: SearchReturnContext) {
+    setAuthoring(null);
+    setDraft(context.draft);
+    window.requestAnimationFrame(() => {
+      const region = resultListRef.current?.closest(".global-mail-search-results");
+      if (region) region.scrollTop = context.scrollTop;
+      saveButtonRef.current?.focus({ preventScroll: true });
+    });
+  }
+
+  return <><TopLayer
     ariaBusy={status === "loading"}
     ariaLabelledBy="global-mail-search-title"
     as="section"
@@ -518,30 +516,38 @@ export function GlobalMailSearch({ returnFocusRef }: { returnFocusRef: RefObject
       <button aria-label={`Close Search mail and return to ${returnLabel}`} onClick={close} type="button">×</button>
     </header>
     <form className="global-mail-search-form" onSubmit={(event) => { event.preventDefault(); commit({ ...state, query: draft }); }} role="search">
-      <label><span aria-hidden="true">⌕</span><input aria-label="Search stored mail" autoComplete="off" maxLength={200} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "ArrowDown" && messages.length > 0) { event.preventDefault(); focusFirstResult(); } }} placeholder="Sender, subject, or phrase" ref={inputRef} value={draft}/><kbd>Enter</kbd></label>
+      <label><span aria-hidden="true">⌕</span><input aria-label="Search stored mail" autoComplete="off" maxLength={200} onInput={(event) => { const value = event.currentTarget.value; if (value === state.query) { setDraft(value); commit({ ...state }); return; } requestGenerationRef.current += 1; loadMoreControllerRef.current?.abort(); setDraft(value); setStatus("loading"); setMessages([]); setNextCursor(null); }} onKeyDown={(event) => { if (event.key === "ArrowDown" && messages.length > 0) { event.preventDefault(); focusFirstResult(); } }} placeholder="Sender, subject, or phrase" ref={inputRef} value={draft}/><kbd>Enter</kbd></label>
       <button type="submit">Search</button>
     </form>
     <div className="global-mail-search-toolbar">
       <div className="global-mail-search-scope"><span>Scope</span><strong>{scope}</strong></div>
       <button aria-controls="global-mail-search-filters" aria-expanded={filtersOpen} className="global-mail-filter-toggle" onClick={() => setFiltersOpen((open) => !open)} type="button"><span aria-hidden="true">≡</span> Filters{filterCount ? <b>{filterCount}</b> : null}</button>
-      <button className="global-mail-save" disabled={!hasMailSearchConstraint(state) || status !== "ready" || saveStatus === "saving" || saveStatus === "saved"} onClick={() => void saveSearch()} title="Keep this query and exact scope" type="button">{saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved" : saveStatus === "confirm-zero" ? "Save zero-match search" : "Save this search"}</button>
+      <button className="global-mail-save" ref={saveButtonRef} disabled={!hasMailSearchConstraint(state) || status !== "ready" || draft.trim() !== state.query.trim()} onClick={saveSearch} title="Review this search as a live conversation View" type="button">Save as View</button>
     </div>
     <div aria-label="Search scope filters" className="global-mail-search-filters" hidden={!filtersOpen} id="global-mail-search-filters" role="group">
-      <label><span>Mailbox</span><select onChange={(event) => commit({ ...state, mailbox: event.target.value as MailSearchMailbox })} value={state.mailbox}><option value="all">All mail</option><option value="inbox">Inbox</option><option value="focus">Focus</option><option value="quiet">Quiet</option><option value="hidden">Hidden</option></select></label>
-      <label><span>Evidence</span><select onChange={(event) => commit({ ...state, evidence: event.target.value as MailSearchEvidence })} value={state.evidence}><option value="all">Any evidence</option><option value="human">Likely human</option><option value="tideline">Automated or bulk</option><option value="uncertain">Needs review</option></select></label>
-      <label><span>Account</span><select onChange={(event) => commit({ ...state, accountId: event.target.value || null, collectionId: state.collectionId && collections.find((item) => item.id === state.collectionId)?.accountId !== event.target.value ? null : state.collectionId })} value={state.accountId ?? ""}><option value="">Every connected account</option>{selectedAccountMissing ? <option value={state.accountId!}>{state.accountId}</option> : null}{accounts.map((item) => <option key={item.id} value={item.id}>{item.email}</option>)}</select></label>
-      <label><span>Space</span><select onChange={(event) => { const collectionId = event.target.value || null; const selected = collections.find((item) => item.id === collectionId); commit({ ...state, collectionId, accountId: selected?.accountId ?? state.accountId }); }} value={state.collectionId ?? ""}><option value="">Every space</option>{selectedCollectionMissing ? <option value={state.collectionId!}>{state.collectionId}</option> : null}{collections.filter((item) => !state.accountId || item.accountId === state.accountId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label><span>Mailbox</span><select onChange={(event) => commit({ ...state, query: draft, mailbox: event.target.value as MailSearchMailbox })} value={state.mailbox}><option value="all">All mail</option><option value="inbox">Inbox</option><option value="focus">Focus</option><option value="quiet">Quiet</option><option value="hidden">Hidden</option></select></label>
+      <label><span>Evidence</span><select onChange={(event) => commit({ ...state, query: draft, evidence: event.target.value as MailSearchEvidence })} value={state.evidence}><option value="all">Any evidence</option><option value="human">Likely human</option><option value="tideline">Automated or bulk</option><option value="uncertain">Needs review</option></select></label>
+      <label><span>Account</span><select onChange={(event) => commit({ ...state, query: draft, accountId: event.target.value || null, collectionId: state.collectionId && collections.find((item) => item.id === state.collectionId)?.accountId !== event.target.value ? null : state.collectionId })} value={state.accountId ?? ""}><option value="">Every connected account</option>{selectedAccountMissing ? <option value={state.accountId!}>{state.accountId}</option> : null}{accounts.map((item) => <option key={item.id} value={item.id}>{item.email}</option>)}</select></label>
+      <label><span>Space</span><select onChange={(event) => { const collectionId = event.target.value || null; const selected = collections.find((item) => item.id === collectionId); commit({ ...state, query: draft, collectionId, accountId: selected?.accountId ?? state.accountId }); }} value={state.collectionId ?? ""}><option value="">Every space</option>{selectedCollectionMissing ? <option value={state.collectionId!}>{state.collectionId}</option> : null}{collections.filter((item) => !state.accountId || item.accountId === state.accountId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     </div>
-    <div className={`global-mail-search-actions global-mail-search-actions-${saveStatus}`} aria-live="polite" hidden={!saveMessage}><span>{saveMessage}</span></div>
-    <section aria-live="polite" className="global-mail-search-results">
+
+    <section aria-live="polite" className="global-mail-search-results" ref={resultRegionRef}>
       {status === "idle" ? <div className="global-mail-search-state"><p>Search all stored mail</p><h2>Find a person, subject, or phrase.</h2><span>Results open here without losing {returnLabel}.</span></div> : null}
       {status === "loading" ? <div className="global-mail-search-state global-mail-search-loading"><p>Searching</p><h2>Looking through stored mail…</h2><span>Your query and scope stay in place.</span><i aria-hidden="true" /></div> : null}
       {status === "error" ? <div className="global-mail-search-state global-mail-search-error" role="alert"><p>Search unavailable</p><h2>We couldn’t reach stored mail.</h2><span>{error} Your query and scope are unchanged.</span><button onClick={() => setRetryKey((key) => key + 1)} type="button">Try again</button></div> : null}
-      {status === "ready" && messages.length === 0 ? <div className="global-mail-search-state"><p>No matches</p><h2>Nothing found for “{state.query.trim() || scope}”.</h2><span>{filterCount ? "Try the full stored mailbox without changing your query." : "Try another person, subject, or phrase."}</span><button onClick={() => { if (filterCount) commit({ ...state, mailbox: "all", evidence: "all", accountId: null, collectionId: null }); else { setDraft(""); commit({ ...state, query: "" }); } }} type="button">{filterCount ? "Clear filters" : "Clear query"}</button></div> : null}
-      {status === "ready" && messages.length > 0 ? <><header className="global-mail-result-count"><strong>Results</strong><span>{messages.length}{nextCursor ? "+" : ""} {messages.length === 1 && !nextCursor ? "message" : "messages"} · ↓ to browse</span></header><ol className="global-mail-result-list" onKeyDown={moveResultFocus} ref={resultListRef}>{messages.map((message) => <li key={`${message.accountId}:${message.id}`}><a href={mailSearchReaderUrl(message)} onClick={(event) => { event.preventDefault(); openMailSearchResult(message); }}><span className="global-mail-result-sender">{message.from.name ?? message.from.email}</span><time dateTime={message.receivedAt}>{searchResultDate(message.receivedAt)}</time><strong>{message.subject || "(no subject)"}</strong><span className="global-mail-result-snippet">{message.snippet || "No preview available."}</span><small>{evidenceLabel(message)}</small></a></li>)}</ol>{nextCursor ? <button className="global-mail-load-more" disabled={loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more…" : "Load more matches"}</button> : null}</> : null}
+      {status === "ready" && messages.length === 0 ? <div className="global-mail-search-state"><p>No matches</p><h2>Nothing found for “{state.query.trim() || scope}”.</h2><span>{filterCount ? "Try the full stored mailbox without changing your query." : "Try another person, subject, or phrase."}</span><button onClick={() => { if (filterCount) commit({ ...state, query: draft, mailbox: "all", evidence: "all", accountId: null, collectionId: null }); else { setDraft(""); commit({ ...state, query: "" }); } }} type="button">{filterCount ? "Clear filters" : "Clear query"}</button></div> : null}
+      {status === "ready" && messages.length > 0 ? <><header className="global-mail-result-count"><strong>Results</strong><span>{messages.length}{nextCursor ? "+" : ""} {messages.length === 1 && !nextCursor ? "message" : "messages"} · ↓ to browse</span></header><ol className="global-mail-result-list" onFocus={(event) => { lastResultFocus.current = (event.target as HTMLElement).closest("a")?.getAttribute("href") ?? lastResultFocus.current; }} onKeyDown={moveResultFocus} ref={resultListRef}>{messages.map((message) => <li key={`${message.accountId}:${message.id}`}><a href={mailSearchReaderUrl(message)} onClick={(event) => { event.preventDefault(); openMailSearchResult(message); }}><span className="global-mail-result-sender">{message.from.name ?? message.from.email}</span><time dateTime={message.receivedAt}>{searchResultDate(message.receivedAt)}</time><strong>{message.subject || "(no subject)"}</strong><span className="global-mail-result-snippet">{message.snippet || "No preview available."}</span><small>{evidenceLabel(message)}</small></a></li>)}</ol>{nextCursor ? <button className="global-mail-load-more" disabled={loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? "Loading more…" : "Load more matches"}</button> : null}</> : null}
       {status === "ready" && error ? <p className="global-mail-search-inline-error" role="alert">{error}</p> : null}
     </section>
-  </TopLayer>;
+  </TopLayer>{authoring ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAccessible={false} backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring search-view-authoring" layerClassName="selected-view-authoring-layer" onClose={() => authoringDismissRef.current?.()} returnFocusRef={saveButtonRef}>
+    <p className="search-view-transition">Previewing conversations for this View. Search message order and counts may differ. Your original search stays unchanged.</p>
+    <OrganizationViewAuthoringWorkspace entry={authoring} demoMode={isDemoSearch()} dismissRef={authoringDismissRef} compact
+      clauseReplacements={authoring.preparation.kind === "typed_definition" && state.query.trim() ? [{ clauseId: "search.query", label: `Replace with subject contains “${state.query.trim()}”`, replace: (definition) => ({ ...definition, thread: { ...definition.thread, subjectContains: state.query.trim() } }) }] : []}
+      onCancel={returnFromAuthoring} onCommitted={(result, context) => {
+        try { window.sessionStorage.setItem(searchReturnKey, JSON.stringify(context)); } catch { /* Back still restores the Search URL if storage is unavailable. */ }
+        window.location.assign(result.navigation.href);
+      }}/>
+  </TopLayer> : null}</>;
 }
 
 export function stripMailSearchParams(url: URL) {

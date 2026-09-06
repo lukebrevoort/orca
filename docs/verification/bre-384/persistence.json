@@ -1,0 +1,15 @@
+{
+  "views": [
+    {
+      "id": "view_03aa3927-9662-4e4d-93e7-4fdc3f33c545",
+      "name": "Apartment subject",
+      "definition": "{\"revision\":1,\"thread\":{\"subjectContains\":\"apartment\"}}"
+    },
+    {
+      "id": "view_7de376e7-92cd-44f4-9342-63fa92b69655",
+      "name": "Search \u00b7 apartment",
+      "definition": "{\"revision\":1,\"thread\":{\"subjectContains\":\"apartment\"}}"
+    }
+  ],
+  "pins": 0
+}

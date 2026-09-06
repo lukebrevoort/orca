@@ -138,12 +138,63 @@ test("external authoring preserves typed source metadata, unsupported blockers, 
   expect(returns).toEqual([{ anchor: "result-12" }]);
 });
 
+test("an explicit source replacement preserves the account and Undo restores the unsupported clause", async () => {
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace demoMode entry={{ preparation: {
+    kind: "typed_definition", source: { kind: "search", label: "Search mail" },
+    identity: { name: "Apartment", description: "", color: "#70867d", position: 0 },
+    definition: { revision: 1, accountIds: ["account_gmail"] },
+    unsupportedClauses: [{ id: "search.query", label: "General text", reason: "apartment searches sender and snippet too" }],
+  }, returnContext: null }} onCancel={() => {}} onCommitted={() => {}}
+    clauseReplacements={[{ clauseId: "search.query", label: "Use subject only", replace: (definition) => ({ ...definition, thread: { ...definition.thread, subjectContains: "apartment" } }) }]}
+  />));
+  await flush();
+  const host = container as unknown as HTMLElement;
+  await click(button(host, "Use subject only"));
+  expect(host.querySelector('.view-scope-sentence')?.textContent).toContain("apartment");
+  expect(host.querySelector('.view-unsupported-clauses')?.textContent ?? '').not.toContain("General text");
+  await click(button(host, "Undo draft change"));
+  expect(host.querySelector('.view-unsupported-clauses')?.textContent).toContain("General text");
+  expect(button(host, "Save View").disabled).toBe(true);
+});
+
 const liveAuthorityDescription = {
   workspaceId: "workspace_demo", accountIds: ["account_gmail"],
   workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
   capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
   workspaceRevision: 4, facetDefinitions: [], workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
 };
+
+test("unmounted authoring suppresses a late successful commit callback without undoing the server write", async () => {
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", source: { kind: "search", label: "Search", returnTarget: "/?searchQuery=alpha" }, identity: { name: "Alpha", description: "", color: "#0b9b84", position: 0 }, definition: { revision: 1, accountIds: ["account_gmail"] }, unsupportedClauses: [] };
+  let complete!: () => void;
+  let committedOnServer = false;
+  const callbacks: unknown[] = [];
+  globalThis.fetch = (async (input, init) => {
+    const path = String(input);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, { revision: 1, accountIds: ["account_gmail"] }) });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      await new Promise<void>((resolve) => { complete = resolve; });
+      committedOnServer = true;
+      return committedResponse(init);
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { query: "alpha" } }} onCancel={() => {}} onCommitted={(_result, context) => callbacks.push(context)}/>));
+  await flush(); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  expect(complete).toBeDefined();
+  await act(async () => root!.render(null));
+  await act(async () => complete()); await flush();
+  expect(committedOnServer).toBe(true);
+  expect(callbacks).toEqual([]);
+});
 
 function preparedCreateDraft(input: OrganizationViewPreparationInput, definition: OrganizationViewDefinition, options: { unsupportedClauses?: OrganizationViewReviewedDraft["unsupportedClauses"]; preparationNotices?: OrganizationViewReviewedDraft["preparationNotices"] } = {}): OrganizationViewReviewedDraft {
   if (input.kind === "saved_view") throw new Error("Expected create preparation");
@@ -304,6 +355,38 @@ test("non-sender external preparation preserves its typed constraints through re
   await click(button(container as unknown as HTMLElement, "Save View"));
   await flush(); await flush();
   expect(committed).toEqual([refinedDefinition]);
+});
+
+test("external Search recovery retains edits and the exact commit retry after authority reconnect", async () => {
+  const definition: OrganizationViewDefinition = { revision: 1, accountIds: ["account_gmail"], thread: { subjectContains: "apartment" } };
+  const preparation: OrganizationViewPreparationInput = { kind: "typed_definition", source: { kind: "search", label: "Search" }, identity: { name: "Original", description: "", color: "#70867d", position: 0 }, definition, unsupportedClauses: [] };
+  let prepareCalls = 0; const commits: Array<Record<string, unknown>> = [];
+  globalThis.fetch = (async (request, init) => {
+    const path = String(request);
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views/prepare") { prepareCalls += 1; return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, definition) }); }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      commits.push(JSON.parse(String(init?.body)));
+      return commits.length === 1 ? Response.json({ error: { message: "Temporary server failure" } }, { status: 503 }) : committedResponse(init);
+    }
+    throw new Error(`Unexpected ${path}`);
+  }) as typeof fetch;
+  const container = browserWindow.document.createElement("div"); browserWindow.document.body.append(container); root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: null }} onCancel={() => {}} onCommitted={() => {}}/>));
+  await flush(); await flush(); await flush();
+  const host = container as unknown as HTMLElement;
+  await change(input(host, "View name"), "My edited name");
+  await change(input(host, "Subject contains"), "changed subject"); await flush(); await flush();
+  await click(button(host, "Save View")); await flush(); await flush();
+  expect(button(host, "Save View").disabled).toBe(true);
+  await click(button(host, "Retry connection")); await flush(); await flush(); await flush();
+  expect(input(host, "View name").value).toBe("My edited name");
+  expect(input(host, "Subject contains").value).toBe("changed subject");
+  expect(prepareCalls).toBe(1);
+  await click(button(host, "Save View")); await flush();
+  expect(commits).toHaveLength(2);
+  expect(commits[1]).toEqual(commits[0]);
 });
 
 test("external saved-view authoring carries prepared View identity and revision through preview and commit", async () => {
