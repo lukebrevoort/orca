@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView } from "@orca/shared";
-import { OrganizationViewsWorkspace } from "./organization-views";
+import { OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -93,6 +93,46 @@ function orderedNames(container: HTMLElement) {
   return [...container.querySelectorAll(".view-chip strong")].map((item) => item.textContent);
 }
 
+function testDigest(value: unknown) {
+  let hash = 2166136261;
+  for (const character of JSON.stringify(value)) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return `sha256:${(hash >>> 0).toString(16).padStart(8, "0").repeat(8)}`;
+}
+
+function previewResponse(init?: RequestInit, options: { state?: "matches" | "zero"; items?: unknown[] } = {}) {
+  const request = JSON.parse(String(init?.body)) as { draft: Record<string, unknown>; page: { limit: number } };
+  const definition = request.draft.definition as Record<string, unknown>;
+  const digest = testDigest(definition);
+  const items = options.items ?? [];
+  const zero = options.state === "zero";
+  return Response.json({
+    workspaceId: "workspace_demo", workspaceRevision: 4,
+    draft: {
+      ...request.draft,
+      definitionDigest: digest,
+      definitionKind: Object.keys(definition).some((key) => key !== "revision") ? "filtered" : "match_all",
+      effectiveAccountIds: ["account_gmail"],
+      summary: { text: "Test definition", clauses: ["test filter"] },
+      saveEligibility: { allowed: Object.keys(definition).some((key) => key !== "revision"), code: Object.keys(definition).some((key) => key !== "revision") ? null : "blank_definition", detail: "Reviewed in test" },
+    },
+    results: {
+      accountIds: ["account_gmail"], items, nextCursor: zero ? null : "more_test_results", limit: request.page.limit,
+      count: zero ? { kind: "exact", value: 0 } : { kind: "shown", value: Math.max(1, items.length) },
+      state: zero ? "zero" : "matches",
+      provenance: { source: "stored_mail", definitionDigest: digest, authorizedScopeDigest: `sha256:${"a".repeat(64)}`, evaluatedAt: "2026-09-06T18:00:00.000Z" },
+    },
+  });
+}
+
+function committedResponse(init?: RequestInit, viewId = "view_committed") {
+  const request = JSON.parse(String(init?.body)) as { draft: { identity: OrganizationView["definition"] & { name: string; description: string; color: string; position: number }; definition: OrganizationView["definition"] } };
+  return Response.json({
+    workspaceId: "workspace_demo", workspaceRevision: 5,
+    view: { id: viewId, workspaceId: "workspace_demo", ...request.draft.identity, definition: request.draft.definition, revision: 1, createdAt: "2026-09-06T18:00:00.000Z", updatedAt: "2026-09-06T18:00:00.000Z" },
+    navigation: { destination: `view:${viewId}`, href: `/?destination=view%3A${viewId}` },
+  });
+}
+
 const contextQueryFixture = {
   workspaceId: "workspace_demo", accountIds: [], workspaceRevision: 4,
   contextTypes: [
@@ -115,7 +155,7 @@ function installFacetWorkspace(facetDefinitions: FacetDefinition[], facetFilter:
     ...organizationViewsFixture[0]!,
     definition: { revision: 1, facetFilters: [facetFilter] },
   };
-  globalThis.fetch = (async (request: string | URL | Request) => {
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
     const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
     if (path === "/v1/organization/describe") return Response.json({
       workspaceId: "workspace_demo", accountIds: ["account_gmail"],
@@ -124,12 +164,42 @@ function installFacetWorkspace(facetDefinitions: FacetDefinition[], facetFilter:
       workspaceRevision: 4, facetDefinitions, workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
     });
     if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [facetView] });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
     if (path.includes("/results")) return Response.json({ viewId: facetView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
     throw new Error(`Unexpected request ${path}`);
   }) as typeof fetch;
 }
 
 describe("BRE-378 Organization Views lifecycle interactions", () => {
+  test("reloads a durable saved View and opens a composite account/thread target", async () => {
+    const selected = organizationViewsFixture[0]!;
+    const target = {
+      accountId: "account_gmail", accountEmail: "work@example.com", provider: "gmail", threadId: "thread_reloaded", subject: "Reload-safe result",
+      latestReceivedAt: "2026-09-06T18:00:00.000Z", messageCount: 2, readState: "unread", primaryLaneId: "lane_focus",
+      sender: { name: "Maya", email: "maya@example.com" }, humanSignal: 9, humanClassification: "likely_human",
+    };
+    globalThis.fetch = (async (request: string | URL | Request) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+      if (path === "/v1/organization/describe") return Response.json({
+        workspaceId: "workspace_demo", accountIds: ["account_gmail"], workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "view"], filters: ["thread"] },
+        capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
+        workspaceRevision: 4, facetDefinitions: [], workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
+      });
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes(`/views/${selected.id}/results`)) return Response.json({ viewId: selected.id, viewRevision: selected.revision, accountIds: [target.accountId], items: [target], nextCursor: null, limit: 25 });
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+    const opened: Array<{ accountId: string; threadId: string }> = [];
+    const container = browserWindow.document.createElement("div");
+    browserWindow.document.body.append(container);
+    root = createRoot(container as unknown as Element);
+    await act(async () => root!.render(<SavedOrganizationViewWorkspace onManage={() => {}} onOpenThread={(value) => { opened.push(value); }} previewMode viewId={selected.id}/>));
+    await flush(); await flush(); await flush();
+    expect(container.textContent).toContain("Reload-safe result");
+    await click(container.querySelector(".view-thread-open") as unknown as HTMLButtonElement);
+    expect(opened[0]).toEqual({ accountId: "account_gmail", threadId: "thread_reloaded" });
+  });
+
   test("edits the selected definition and display metadata", async () => {
     const container = await renderWorkspace();
     await click(button(container, "Edit definition"));
@@ -165,11 +235,16 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       const method = init?.method ?? "GET";
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [preservedView] });
       if (path.includes("/results")) return Response.json({ viewId: preservedView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
       if (path === "/v1/organization/contexts/query?limit=100") {
         contextReads += 1;
         return Response.json(contextQueryFixture);
+      }
+      if (path === "/v1/organization/views/commit") {
+        submittedDefinition = (JSON.parse(String(init?.body)) as { draft: { definition: unknown } }).draft.definition;
+        return committedResponse(init, preservedView.id);
       }
       if (method === "PATCH") {
         submittedDefinition = JSON.parse(String(init?.body)).patch.definition;
@@ -191,6 +266,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(container.querySelector(".view-preserved-constraints")?.textContent).toContain("Likely human");
     expect(selectField(container, "Named Context").textContent).toContain("Orca launch");
     await change(input(container, "View name"), "Metadata only");
+    await flush(); await flush();
     await click(button(container, "Save changes"));
     await flush();
     expect(submittedDefinition).toEqual(preservedDefinition);
@@ -199,9 +275,10 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
   test("exposes named Context loading failure and retry without losing the saved selection", async () => {
     const contextView = organizationViewsFixture[2]!;
     let contextReads = 0;
-    globalThis.fetch = (async (request: string | URL | Request) => {
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [contextView] });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path.includes("/results")) return Response.json({ viewId: contextView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
       if (path === "/v1/organization/contexts/query?limit=100") {
         contextReads += 1;
@@ -232,7 +309,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
       { id: "facet_urgency", name: "Urgency", position: 0, valueType: { kind: "enum", options: [{ id: "urgent", label: "Urgent", position: 0, retiredAt: null }] }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1 },
       { id: "facet_score", name: "Score", position: 1, valueType: { kind: "number", minimum: 0, maximum: 10, integer: true }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1 },
     ];
-    globalThis.fetch = (async (request: string | URL | Request) => {
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
       if (path === "/v1/organization/describe") return Response.json({
         workspaceId: "workspace_demo", accountIds: ["account_gmail"],
@@ -241,6 +318,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
         workspaceRevision: 4, facetDefinitions, workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
       });
       if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [facetView] });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path.includes("/results")) return Response.json({ viewId: facetView.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
       throw new Error(`Unexpected request ${path}`);
     }) as typeof fetch;
@@ -294,6 +372,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(contact.inputMode).toBe("email");
     expect(contact.checkValidity()).toBe(true);
     expect(container.querySelector('[role="alert"]')).toBeNull();
+    await flush(); await flush();
     expect(button(container, "Save changes").disabled).toBe(false);
   });
 
@@ -422,11 +501,11 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
       const method = init?.method ?? "GET";
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path.includes("/results")) return Response.json({ viewId: "view_weekly_production", viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
-      if (path === "/v1/organization/views" && method === "POST") {
+      if (path === "/v1/organization/views/commit" && method === "POST") {
         createPayload = JSON.parse(String(init?.body));
-        const payload = createPayload as { name: string; description: string; color: string; position: number; definition: unknown };
-        return Response.json({ id: "view_created", workspaceId: "workspace_demo", name: payload.name, description: payload.description, color: payload.color, position: payload.position, definition: payload.definition, revision: 1, createdAt: "2026-09-04T17:00:00.000Z", updatedAt: "2026-09-04T17:00:00.000Z" });
+        return committedResponse(init, "view_created");
       }
       throw new Error(`Unexpected request ${method} ${path}`);
     }) as typeof fetch;
@@ -439,25 +518,105 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(browserWindow.document.activeElement as unknown).toBe(input(container, "Subject contains") as unknown);
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("Enter words to match in the subject.");
     expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(true);
-    expect(container.textContent).toContain("No live query has run for this draft.");
+    expect(container.textContent).toContain("Edit a complete filter to preview it.");
     await change(input(container, "Subject contains"), "release blocker");
-    await flush();
+    await flush(); await flush();
     expect(input(container, "Subject contains").value).toBe("release blocker");
     expect(container.querySelector('[role="alert"]')?.textContent ?? "no alert").toBe("no alert");
     expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(false);
     await click(button(container, "Save View"));
     await flush();
-    expect(Object.keys(createPayload ?? {}).sort()).toEqual(["color", "definition", "description", "expectedWorkspaceRevision", "idempotencyKey", "name", "position"].sort());
+    expect(Object.keys(createPayload ?? {}).sort()).toEqual(["confirmedZeroMatchDigest", "draft", "expectedRevisions", "retryKey"].sort());
     expect(createPayload).toMatchObject({
-      expectedWorkspaceRevision: 4,
-      name: "release blocker messages",
-      description: "",
-      color: "#70867d",
-      position: 3,
-      definition: { revision: 1, thread: { subjectContains: "release blocker" } },
+      expectedRevisions: { workspace: 4, view: null },
+      draft: { identity: { name: "release blocker messages", description: "", color: "#70867d", position: 3 }, definition: { revision: 1, thread: { subjectContains: "release blocker" } } },
     });
     const savedPayload = createPayload as Record<string, unknown> | null;
-    expect(typeof savedPayload?.idempotencyKey).toBe("string");
+    expect(typeof savedPayload?.retryKey).toBe("string");
+  });
+
+  test("discards stale preview responses and only enables Save for the current draft generation", async () => {
+    const pending: Array<{ init?: RequestInit; resolve: (response: Response) => void }> = [];
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes("/results")) return Response.json({ viewId: organizationViewsFixture[0]!.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/views/preview") return new Promise<Response>((resolve) => pending.push({ init, resolve }));
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    await flush();
+    expect(pending.length).toBe(1);
+    await change(input(container, "Subject contains"), "first generation");
+    await flush();
+    await change(input(container, "Subject contains"), "current generation");
+    await flush();
+    expect(pending.length).toBe(3);
+    pending[2]!.resolve(previewResponse(pending[2]!.init, { items: [{
+      accountId: "account_gmail", accountEmail: "work@example.com", provider: "gmail", threadId: "thread_current", subject: "Current preview",
+      latestReceivedAt: "2026-09-06T18:00:00.000Z", messageCount: 1, readState: "unread", primaryLaneId: "lane_focus",
+      sender: { name: "Maya", email: "maya@example.com" }, humanSignal: 9, humanClassification: "likely_human",
+    }] }));
+    await flush(); await flush();
+    expect(container.textContent).toContain("Current preview");
+    expect(button(container, "Save changes").disabled).toBe(false);
+    pending[1]!.resolve(previewResponse(pending[1]!.init, { items: [] }));
+    pending[0]!.resolve(previewResponse(pending[0]!.init, { items: [] }));
+    await flush(); await flush();
+    expect(container.textContent).toContain("Current preview");
+    expect(button(container, "Save changes").disabled).toBe(false);
+  });
+
+  test("reuses one retry key after a commit failure", async () => {
+    const retryKeys: string[] = [];
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes("/results")) return Response.json({ viewId: organizationViewsFixture[0]!.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
+      if (path === "/v1/organization/views/commit") {
+        retryKeys.push((JSON.parse(String(init?.body)) as { retryKey: string }).retryKey);
+        return retryKeys.length === 1
+          ? Response.json({ error: { code: "revision_conflict", message: "Temporary conflict" } }, { status: 409 })
+          : committedResponse(init, organizationViewsFixture[0]!.id);
+      }
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "Edit definition"));
+    await change(input(container, "View name"), "Retry-safe edit");
+    await flush(); await flush();
+    await click(button(container, "Save changes")); await flush();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Temporary conflict");
+    await click(button(container, "Save changes")); await flush();
+    expect(retryKeys).toHaveLength(2);
+    expect(retryKeys[1]).toBe(retryKeys[0]);
+  });
+
+  test("requires a second digest-bound confirmation before committing an exact zero preview", async () => {
+    let commit: Record<string, unknown> | null = null;
+    globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+      const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
+      if (path === "/v1/organization/views") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: organizationViewsFixture });
+      if (path.includes("/results")) return Response.json({ viewId: organizationViewsFixture[0]!.id, viewRevision: 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
+      if (path === "/v1/organization/views/preview") return previewResponse(init, { state: "zero" });
+      if (path === "/v1/organization/views/commit") { commit = JSON.parse(String(init?.body)); return committedResponse(init, organizationViewsFixture[0]!.id); }
+      throw new Error(`Unexpected request ${path}`);
+    }) as typeof fetch;
+    const container = await renderWorkspace(false);
+    await flush(); await flush();
+    await click(button(container, "Edit definition")); await flush(); await flush();
+    await click(button(container, "Review zero matches"));
+    expect(commit).toBeNull();
+    expect(container.textContent).toContain("Zero matches confirmed for this exact definition");
+    await click(button(container, "Confirm zero-match save")); await flush();
+    expect(commit).not.toBeNull();
+    if (!commit) throw new Error("Expected a commit request");
+    const committedRequest = commit as { confirmedZeroMatchDigest: string; draft: { definitionDigest: string } };
+    expect(committedRequest.confirmedZeroMatchDigest).toBe(committedRequest.draft.definitionDigest);
   });
 
   test("clears stale demo results after save and persistently names the unevaluated preview state", async () => {
@@ -554,13 +713,14 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
       const method = init?.method ?? "GET";
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 1, items: organizationViewsFixture });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path.includes("/results")) {
         const viewId = /\/views\/([^/]+)\/results/.exec(path)?.[1] ?? "view_weekly_production";
         const view = organizationViewsFixture.find((candidate) => candidate.id === viewId);
         return Response.json({ viewId, viewRevision: view?.revision ?? 1, accountIds: [], items: [], nextCursor: null, limit: 25 });
       }
-      if (method === "PATCH") {
-        submittedDefinition = JSON.parse(String(init?.body)).patch.definition;
+      if (path === "/v1/organization/views/commit") {
+        submittedDefinition = (JSON.parse(String(init?.body)) as { draft: { definition: unknown } }).draft.definition;
         return Response.json({ error: { code: "resource_denied", message: "A referenced resource belongs to another Workspace" } }, { status: 403 });
       }
       if (path === "/v1/organization/views/reorder") return Response.json({ error: { code: "revision_conflict", message: "The View order changed" } }, { status: 409 });
@@ -574,6 +734,7 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     await click([...container.querySelectorAll("button.view-chip")].find((candidate) => candidate.textContent?.includes("Urgent humans")) as unknown as HTMLButtonElement);
     await click(button(container, "Edit definition"));
     await change(input(container, "View name"), "Unauthorized rename");
+    await flush(); await flush();
     await click(button(container, "Save changes")); await flush();
     expect(container.querySelector('[role="alert"]')?.textContent).toContain("another Workspace");
     expect(orderedNames(container)[1]).toBe("Urgent humans");
@@ -596,11 +757,12 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
       const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname;
       const method = init?.method ?? "GET";
       if (path === "/v1/organization/views" && method === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 1, items: organizationViewsFixture });
+      if (path === "/v1/organization/views/preview") return previewResponse(init);
       if (path.includes("/results")) {
         resultReads += 1;
         return Response.json({ viewId: "view_weekly_production", viewRevision: resultReads === 1 ? 1 : 2, accountIds: ["account_a"], items: [resultReads === 1 ? firstItem : refreshedItem], nextCursor: null, limit: 25 });
       }
-      if (method === "PATCH") return Response.json({ ...organizationViewsFixture[0]!, name: "Edited live", revision: 2 });
+      if (path === "/v1/organization/views/commit") return committedResponse(init, organizationViewsFixture[0]!.id);
       throw new Error(`Unexpected request ${method} ${path}`);
     }) as typeof fetch;
     const container = await renderWorkspace(false);
@@ -608,11 +770,11 @@ describe("BRE-378 Organization Views lifecycle interactions", () => {
     expect(container.textContent).toContain("Before edit");
     await click(button(container, "Edit definition"));
     await change(input(container, "View name"), "Edited live");
+    await flush(); await flush();
     await click(button(container, "Save changes"));
     await flush(); await flush();
-    expect(resultReads).toBe(2);
-    expect(container.textContent).toContain("Live refreshed result");
-    expect(container.textContent).not.toContain("Before edit");
+    expect(resultReads).toBe(1);
+    expect(browserWindow.location.search).toBe(`?destination=view%3A${organizationViewsFixture[0]!.id}`);
   });
 
   test("loads continuation pages, appends without duplicates, and exposes the terminal disabled state", async () => {

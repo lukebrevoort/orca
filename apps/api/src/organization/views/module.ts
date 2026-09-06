@@ -2,21 +2,33 @@ import { createHash } from "node:crypto";
 
 import {
   organizationViewCreateRequestSchema,
+  organizationViewCommitRequestSchema,
+  organizationViewDefinitionSchema,
+  organizationViewDefinitionKind,
+  organizationViewDraftInputSchema,
+  organizationViewPreparationInputSchema,
+  organizationViewPreviewRequestSchema,
   organizationViewRemoveRequestSchema,
   organizationViewReorderRequestSchema,
   organizationViewResultQuerySchema,
   organizationViewUpdateRequestSchema,
+  summarizeOrganizationViewDefinition,
   type OrganizationAuthorityTrace,
   type OrganizationCapabilitySnapshot,
   type OrganizationCommand,
   type OrganizationExecutionContext,
+  type OrganizationResourceFamily,
   type OrganizationView,
+  type OrganizationViewDefinition,
+  type OrganizationViewDraftInput,
   type OrganizationViewCreateRequest,
   type OrganizationViewRemoveRequest,
   type OrganizationViewReorderRequest,
   type OrganizationViewResultPage,
   type OrganizationViewResultQuery,
   type OrganizationViewUpdateRequest,
+  type OrganizationViewReviewedDraft,
+  type OrganizationViewResultCount,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
 import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
@@ -65,6 +77,21 @@ export type OrganizationViewMutationPlan = {
   expectedViews: Array<{ id: string; position: number; revision: number }>;
 };
 
+export type OrganizationViewQueryAuthorization = {
+  capabilitySnapshot: OrganizationCapabilitySnapshot;
+  requiredResourceFamilies: OrganizationResourceFamily[];
+  agentCapabilitySource?: OrganizationAgentCapabilitySource;
+};
+
+export type OrganizationViewEvaluationPage = {
+  accountIds: string[];
+  items: OrganizationViewResultPage["items"];
+  nextCursor: string | null;
+  limit: number;
+  count: OrganizationViewResultCount;
+  authorizedScopeDigest: string;
+};
+
 export type OrganizationViewsRepository = {
   list(workspaceId: string): OrganizationView[];
   get(workspaceId: string, viewId: string): OrganizationView | null;
@@ -75,7 +102,8 @@ export type OrganizationViewsRepository = {
   update(input: { workspaceId: string; viewId: string; request: OrganizationViewUpdateRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView;
   reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView[];
   remove(input: { workspaceId: string; viewId: string; request: OrganizationViewRemoveRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): void;
-  query(input: { scope: OrganizationViewScope; view: OrganizationView; query: OrganizationViewResultQuery }): OrganizationViewResultPage;
+  validateDefinition(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; authorization: OrganizationViewQueryAuthorization }): { accountIds: string[]; authorizedScopeDigest: string };
+  evaluate(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; resultSetKey: string; query: OrganizationViewResultQuery; authorization: OrganizationViewQueryAuthorization }): OrganizationViewEvaluationPage;
 };
 
 function authorizedAccountIds(scope: OrganizationViewScope, requested: readonly string[] | undefined) {
@@ -87,6 +115,22 @@ function authorizedAccountIds(scope: OrganizationViewScope, requested: readonly 
 
 function viewResourceId(viewId: string) { return `view:${viewId}`; }
 function digest(value: unknown) { return `sha256:${createHash("sha256").update(canonicalOrganizationJson(value)).digest("hex")}`; }
+
+export function digestOrganizationViewDefinition(definition: OrganizationViewDefinition) {
+  return digest(organizationViewDefinitionSchema.parse(definition));
+}
+
+function definitionResourceFamilies(definition: OrganizationViewDefinition): OrganizationResourceFamily[] {
+  return [...new Set<OrganizationResourceFamily>([
+    "mail",
+    "thread",
+    "view",
+    ...(definition.laneIds ? ["lane" as const] : []),
+    ...(definition.facetFilters ? ["facet" as const] : []),
+    ...(definition.contextFilters ? ["context" as const] : []),
+    ...(definition.workflowStateIds ? ["workflow_state" as const] : []),
+  ])];
+}
 
 export function organizationViewOrderResourceId(workspaceId: string) { return `view_order:${workspaceId}`; }
 export function digestOrganizationViewOrder(orderedViewIds: readonly string[]) { return digest(orderedViewIds); }
@@ -136,6 +180,58 @@ function firstPartyViewsCapability(scope: OrganizationViewScope): OrganizationCa
   };
 }
 
+function firstPartyViewQueryCapability(scope: OrganizationViewScope): OrganizationCapabilitySnapshot {
+  return {
+    id: `first_party:${scope.actor.type}:${scope.actor.id}`,
+    revision: 1,
+    actor: scope.actor,
+    scope: { workspaceId: scope.workspaceId, accountIds: [...scope.accountIds].sort() },
+    operations: ["query"],
+    resourceFamilies: ["mail", "thread", "view", "lane", "facet", "context", "workflow_state"],
+    actionFamilies: ["organization_read"],
+  };
+}
+
+function authorizeQuery(
+  scope: OrganizationViewScope,
+  definition: OrganizationViewDefinition,
+  agentCapabilitySource: OrganizationAgentCapabilitySource | undefined,
+): OrganizationViewQueryAuthorization {
+  let live;
+  try {
+    live = requireOrganizationCapability(scope, (actor) => firstPartyViewQueryCapability({ ...scope, actor }), agentCapabilitySource);
+  } catch (error) {
+    throw new OrganizationViewAccessError(error instanceof Error ? error.message : "View Actor is not authorized", "resource_denied");
+  }
+  const capability = live.snapshot;
+  const requiredResourceFamilies = definitionResourceFamilies(definition);
+  if (live.revokedAt !== null
+    || capability.actor.id !== scope.actor.id
+    || capability.actor.type !== scope.actor.type
+    || capability.scope.workspaceId !== scope.workspaceId
+    || canonicalOrganizationJson([...capability.scope.accountIds].sort()) !== canonicalOrganizationJson([...scope.accountIds].sort())
+    || !capability.operations.includes("query")
+    || !capability.actionFamilies.includes("organization_read")
+    || requiredResourceFamilies.some((family) => !capability.resourceFamilies.includes(family))) {
+    throw new OrganizationViewAccessError("The live Capability does not authorize this View query and every referenced resource family", "resource_denied");
+  }
+  return {
+    capabilitySnapshot: capability,
+    requiredResourceFamilies,
+    ...(scope.actor.type === "agent" ? { agentCapabilitySource } : {}),
+  };
+}
+
+function saveEligibility(definition: OrganizationViewDefinition, unsupportedClauses: readonly unknown[]) {
+  if (organizationViewDefinitionKind(definition) === "match_all") {
+    return { allowed: false as const, code: "blank_definition" as const, detail: "Add at least one complete filter before saving this View." };
+  }
+  if (unsupportedClauses.length > 0) {
+    return { allowed: false as const, code: "unsupported_clauses" as const, detail: "Replace or remove every unsupported clause before saving this View." };
+  }
+  return { allowed: true as const, code: null, detail: "This reviewed definition is ready to save." };
+}
+
 export function createOrganizationViews(repository: OrganizationViewsRepository, dependencies: { newViewId?: () => string; newChangeId?: () => string; now?: () => Date; agentCapabilitySource?: OrganizationAgentCapabilitySource } = {}) {
   const newViewId = dependencies.newViewId ?? (() => `view_${crypto.randomUUID()}`);
   const newChangeId = dependencies.newChangeId ?? (() => `change_${crypto.randomUUID()}`);
@@ -177,7 +273,160 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) };
   }
 
-  return {
+  function draftInput(scope: OrganizationViewScope, input: unknown): OrganizationViewDraftInput {
+    const parsed = organizationViewPreparationInputSchema.parse(input);
+    if (parsed.kind === "typed_definition") {
+      return organizationViewDraftInputSchema.parse({
+        mode: "create",
+        viewId: null,
+        source: parsed.source,
+        identity: parsed.identity,
+        definition: parsed.definition,
+        unsupportedClauses: parsed.unsupportedClauses,
+      });
+    }
+    const view = repository.get(scope.workspaceId, parsed.viewId);
+    if (!view) throw new OrganizationViewNotFoundError();
+    return organizationViewDraftInputSchema.parse({
+      mode: "update",
+      viewId: view.id,
+      source: { kind: "saved_view", label: view.name },
+      identity: { name: view.name, description: view.description, color: view.color, position: view.position },
+      definition: view.definition,
+      unsupportedClauses: [],
+    });
+  }
+
+  function reviewDraft(scope: OrganizationViewScope, input: unknown, validate = true): { draft: OrganizationViewReviewedDraft; authorization: OrganizationViewQueryAuthorization; workspaceRevision: number } {
+    const candidate = organizationViewDraftInputSchema.parse(input);
+    const definition = organizationViewDefinitionSchema.parse(candidate.definition);
+    const definitionDigest = digestOrganizationViewDefinition(definition);
+    const effectiveAccountIds = authorizedAccountIds(scope, definition.accountIds);
+    if (effectiveAccountIds.length === 0) throw new OrganizationViewAccessError("A View requires at least one currently authorized Account");
+    const authorization = authorizeQuery(scope, definition, dependencies.agentCapabilitySource);
+    if (validate) repository.validateDefinition({ scope, definition, definitionDigest, authorization });
+    return {
+      authorization,
+      workspaceRevision: repository.getWorkspaceRevision(scope.workspaceId),
+      draft: {
+        ...candidate,
+        definition,
+        definitionDigest,
+        definitionKind: organizationViewDefinitionKind(definition),
+        effectiveAccountIds,
+        summary: summarizeOrganizationViewDefinition(definition),
+        saveEligibility: saveEligibility(definition, candidate.unsupportedClauses),
+      },
+    };
+  }
+
+  function evaluateDraft(scope: OrganizationViewScope, input: unknown, query: OrganizationViewResultQuery) {
+    const reviewed = reviewDraft(scope, input, false);
+    const results = repository.evaluate({
+      scope,
+      definition: reviewed.draft.definition,
+      definitionDigest: reviewed.draft.definitionDigest,
+      resultSetKey: "draft",
+      query,
+      authorization: reviewed.authorization,
+    });
+    return { ...reviewed, results };
+  }
+
+  const module = {
+    prepare(input: { scope: OrganizationViewScope; input: unknown }) {
+      const reviewed = reviewDraft(input.scope, draftInput(input.scope, input.input));
+      return { workspaceId: input.scope.workspaceId, workspaceRevision: reviewed.workspaceRevision, draft: reviewed.draft };
+    },
+    preview(input: { scope: OrganizationViewScope; request: unknown }) {
+      const request = organizationViewPreviewRequestSchema.parse(input.request);
+      const evaluated = evaluateDraft(input.scope, request.draft, organizationViewResultQuerySchema.parse(request.page));
+      return {
+        workspaceId: input.scope.workspaceId,
+        workspaceRevision: evaluated.workspaceRevision,
+        draft: evaluated.draft,
+        results: {
+          accountIds: evaluated.results.accountIds,
+          items: evaluated.results.items,
+          nextCursor: evaluated.results.nextCursor,
+          limit: evaluated.results.limit,
+          count: evaluated.results.count,
+          state: evaluated.results.count.kind === "exact" && evaluated.results.count.value === 0 ? "zero" as const : "matches" as const,
+          provenance: {
+            source: "stored_mail" as const,
+            definitionDigest: evaluated.draft.definitionDigest,
+            authorizedScopeDigest: evaluated.results.authorizedScopeDigest,
+            evaluatedAt: now().toISOString(),
+          },
+        },
+      };
+    },
+    commit(input: { scope: OrganizationViewScope; request: unknown }) {
+      const request = organizationViewCommitRequestSchema.parse(input.request);
+      const reviewed = reviewDraft(input.scope, {
+        mode: request.draft.mode,
+        viewId: request.draft.viewId,
+        source: request.draft.source,
+        identity: request.draft.identity,
+        definition: request.draft.definition,
+        unsupportedClauses: request.draft.unsupportedClauses,
+      }, false);
+      const derived = reviewed.draft;
+      if (request.draft.definitionDigest !== derived.definitionDigest
+        || request.draft.definitionKind !== derived.definitionKind
+        || canonicalOrganizationJson(request.draft.effectiveAccountIds) !== canonicalOrganizationJson(derived.effectiveAccountIds)
+        || canonicalOrganizationJson(request.draft.summary) !== canonicalOrganizationJson(derived.summary)
+        || canonicalOrganizationJson(request.draft.saveEligibility) !== canonicalOrganizationJson(derived.saveEligibility)) {
+        throw new OrganizationViewValidationError("The reviewed View draft no longer matches its canonical definition digest and scope");
+      }
+      if (!derived.saveEligibility.allowed) throw new OrganizationViewValidationError(derived.saveEligibility.detail);
+      const zeroCheck = repository.evaluate({
+        scope: input.scope,
+        definition: derived.definition,
+        definitionDigest: derived.definitionDigest,
+        resultSetKey: "draft",
+        query: { limit: 1 },
+        authorization: reviewed.authorization,
+      });
+      if (zeroCheck.count.kind === "exact" && zeroCheck.count.value === 0 && request.confirmedZeroMatchDigest !== derived.definitionDigest) {
+        throw new OrganizationViewValidationError("Confirm this exact zero-match definition before saving");
+      }
+
+      let saved: OrganizationView;
+      if (derived.mode === "update") {
+        if (!derived.viewId || request.expectedRevisions.view === null) throw new OrganizationViewValidationError("An update draft requires its View identity and revision");
+        const current = repository.get(input.scope.workspaceId, derived.viewId);
+        if (!current) throw new OrganizationViewNotFoundError();
+        const isNoOp = canonicalOrganizationJson({ name: current.name, description: current.description, color: current.color, position: current.position, definition: current.definition })
+          === canonicalOrganizationJson({ ...derived.identity, definition: derived.definition });
+        if (isNoOp && !repository.getAuthorityState(input.scope.workspaceId).reservedIdempotencyKeys.includes(request.retryKey)) {
+          throw new OrganizationViewValidationError("Change at least one View field before saving");
+        }
+        saved = module.update({ scope: input.scope, viewId: derived.viewId, request: {
+          idempotencyKey: request.retryKey,
+          expectedWorkspaceRevision: request.expectedRevisions.workspace,
+          expectedRevision: request.expectedRevisions.view,
+          patch: { ...derived.identity, definition: derived.definition },
+        } });
+      } else {
+        saved = module.create({ scope: input.scope, request: {
+          idempotencyKey: request.retryKey,
+          expectedWorkspaceRevision: request.expectedRevisions.workspace,
+          ...derived.identity,
+          definition: derived.definition,
+        } });
+      }
+      const canonical = module.list({ scope: input.scope });
+      const view = canonical.items.find((candidate) => candidate.id === saved.id);
+      if (!view) throw new OrganizationViewNotFoundError("The committed View could not be reloaded");
+      const destination = `view:${view.id}`;
+      return {
+        workspaceId: input.scope.workspaceId,
+        workspaceRevision: canonical.workspaceRevision,
+        view,
+        navigation: { destination, href: `/?destination=${encodeURIComponent(destination)}` },
+      };
+    },
     list(input: { scope: OrganizationViewScope }) {
       authorizedAccountIds(input.scope, undefined);
       return { workspaceId: input.scope.workspaceId, workspaceRevision: repository.getWorkspaceRevision(input.scope.workspaceId), items: repository.list(input.scope.workspaceId) };
@@ -300,8 +549,25 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     results(input: { scope: OrganizationViewScope; viewId: string; query: unknown }) {
       const view = repository.get(input.scope.workspaceId, input.viewId);
       if (!view) throw new OrganizationViewNotFoundError();
+      const definitionDigest = digestOrganizationViewDefinition(view.definition);
       authorizedAccountIds(input.scope, view.definition.accountIds);
-      return repository.query({ scope: input.scope, view, query: organizationViewResultQuerySchema.parse(input.query) });
+      const evaluated = repository.evaluate({
+        scope: input.scope,
+        definition: view.definition,
+        definitionDigest,
+        resultSetKey: `saved:${view.id}:${view.revision}`,
+        query: organizationViewResultQuerySchema.parse(input.query),
+        authorization: authorizeQuery(input.scope, view.definition, dependencies.agentCapabilitySource),
+      });
+      return {
+        viewId: view.id,
+        viewRevision: view.revision,
+        accountIds: evaluated.accountIds,
+        items: evaluated.items,
+        nextCursor: evaluated.nextCursor,
+        limit: evaluated.limit,
+      };
     },
   };
+  return module;
 }

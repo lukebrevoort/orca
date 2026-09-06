@@ -5,13 +5,13 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { organizationViewBounds, type OrganizationView } from "@orca/shared";
+import { organizationViewBounds, organizationViewCommitRequestSchema, type OrganizationView } from "@orca/shared";
 
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
 import { oauthAccounts, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
-import { createOrganizationViews } from "./module.ts";
+import { createOrganizationViews, digestOrganizationViewDefinition } from "./module.ts";
 import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, type OrganizationViewPageKey } from "./sqlite-repository.ts";
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
@@ -90,6 +90,137 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
 }
 
 describe("BRE-313 independent View lifecycle verification", () => {
+  test("previews and commits one reviewed definition with no preview writes and saved-page parity", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const definition = { revision: 1, thread: { subjectContains: "A /" } } as const;
+    const preparation = {
+      kind: "typed_definition",
+      source: { kind: "manual", label: "Manual View" },
+      identity: { name: "A threads", description: "Stable preview", color: "#0b9b84", position: 0 },
+      definition,
+      unsupportedClauses: [],
+    };
+    const snapshot = () => {
+      const database = createDatabaseClient(path);
+      const value = {
+        mail: database.sqlite.query("SELECT id,account_id,thread_id,subject FROM emails ORDER BY account_id,id").all(),
+        threads: database.sqlite.query("SELECT id,account_id,subject,latest_received_at FROM threads ORDER BY account_id,id").all(),
+        placement: database.sqlite.query("SELECT workspace_id,account_id,thread_id,primary_lane_id,placement_source,source_id FROM organization_thread_lane_states ORDER BY workspace_id,account_id,thread_id").all(),
+        policies: database.sqlite.query("SELECT * FROM organization_lane_policies ORDER BY workspace_id,id").all(),
+        views: database.sqlite.query("SELECT id,revision FROM organization_views ORDER BY workspace_id,id").all(),
+        changes: database.sqlite.query("SELECT id,status FROM organization_change_sets ORDER BY workspace_id,id").all(),
+      };
+      database.sqlite.close();
+      return value;
+    };
+    const beforePreview = snapshot();
+    const prepareResponse = await app.request("/v1/organization/views/prepare", { method: "POST", headers, body: JSON.stringify(preparation) });
+    assert.equal(prepareResponse.status, 200, await prepareResponse.clone().text());
+    const prepared = await prepareResponse.json();
+    assert.equal(prepared.draft.definitionKind, "filtered");
+    assert.equal(prepared.draft.saveEligibility.allowed, true);
+    assert.deepEqual(prepared.draft.effectiveAccountIds, ["account_a", "account_b"]);
+
+    const previewPage = async (cursor?: string) => {
+      const response = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
+        draft: preparation.kind === "typed_definition" ? {
+          mode: "create", viewId: null, source: preparation.source, identity: preparation.identity,
+          definition: preparation.definition, unsupportedClauses: preparation.unsupportedClauses,
+        } : null,
+        page: { limit: 1, ...(cursor ? { cursor } : {}) },
+      }) });
+      assert.equal(response.status, 200, await response.clone().text());
+      return response.json();
+    };
+    const previewFirst = await previewPage();
+    assert.equal(previewFirst.results.count.kind, "shown");
+    assert.equal(previewFirst.results.count.value, 1);
+    assert.equal(typeof previewFirst.results.nextCursor, "string");
+    const previewSecond = await previewPage(previewFirst.results.nextCursor);
+    assert.deepEqual(previewSecond.results.count, { kind: "exact", value: 2 });
+    assert.equal(previewSecond.results.nextCursor, null);
+    assert.deepEqual(snapshot(), beforePreview, "prepare and every preview page must be read-only");
+
+    const commitRequest = {
+      draft: prepared.draft,
+      expectedRevisions: { workspace: prepared.workspaceRevision, view: null },
+      retryKey: "bre381-reviewed-create",
+      confirmedZeroMatchDigest: null,
+    };
+    assert.equal(organizationViewCommitRequestSchema.safeParse(commitRequest).success, true);
+    const committedResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(commitRequest) });
+    assert.equal(committedResponse.status, 200, await committedResponse.clone().text());
+    const committed = await committedResponse.json();
+    assert.equal(committed.navigation.destination, `view:${committed.view.id}`);
+    assert.equal(committed.navigation.href, `/?destination=view%3A${committed.view.id}`);
+    const replayResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(commitRequest) });
+    assert.equal(replayResponse.status, 200, await replayResponse.clone().text());
+    assert.deepEqual(await replayResponse.json(), committed);
+
+    const previewKeys = [...previewFirst.results.items, ...previewSecond.results.items].map((item: { accountId: string; threadId: string }) => [item.accountId, item.threadId]);
+    const savedFirst = await (await app.request(`/v1/organization/views/${committed.view.id}/results?limit=1`, { headers })).json();
+    const savedSecond = await (await app.request(`/v1/organization/views/${committed.view.id}/results?limit=1&cursor=${encodeURIComponent(savedFirst.nextCursor)}`, { headers })).json();
+    const savedKeys = [...savedFirst.items, ...savedSecond.items].map((item: { accountId: string; threadId: string }) => [item.accountId, item.threadId]);
+    assert.deepEqual(savedKeys, previewKeys, "saved and unsaved evaluation must preserve composite account/thread identity across pages");
+
+    const future = createDatabaseClient(path);
+    const receivedAt = new Date("2026-08-26T18:00:00.000Z");
+    future.db.insert(threads).values({ id: "thread_future", accountId: "account_b", providerThreadId: "future", subject: "A / Future", latestReceivedAt: receivedAt, createdAt: receivedAt }).run();
+    future.sqlite.close();
+    const futurePreview = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
+      draft: { mode: "create", viewId: null, source: preparation.source, identity: preparation.identity, definition, unsupportedClauses: [] },
+      page: { limit: 25 },
+    }) });
+    const futureSaved = await app.request(`/v1/organization/views/${committed.view.id}/results?limit=25`, { headers });
+    assert.deepEqual((await futurePreview.json()).results.items.map((item: { accountId: string; threadId: string }) => [item.accountId, item.threadId]),
+      (await futureSaved.json()).items.map((item: { accountId: string; threadId: string }) => [item.accountId, item.threadId]));
+  });
+
+  test("distinguishes blank and filtered zero drafts and binds zero confirmation to the reviewed digest", { timeout: 30_000 }, async () => {
+    const { app, headers } = await setup();
+    const identity = { name: "No matches", description: "", color: "#70867d", position: 0 };
+    const prepare = async (definition: unknown, unsupportedClauses: unknown[] = []) => {
+      const response = await app.request("/v1/organization/views/prepare", { method: "POST", headers, body: JSON.stringify({
+        kind: "typed_definition", source: { kind: "manual", label: "Manual View" }, identity, definition, unsupportedClauses,
+      }) });
+      assert.equal(response.status, 200, await response.clone().text());
+      return response.json();
+    };
+    const blank = await prepare({ revision: 1 });
+    assert.equal(blank.draft.definitionKind, "match_all");
+    assert.equal(blank.draft.saveEligibility.code, "blank_definition");
+    const blankCommit = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({
+      draft: blank.draft, expectedRevisions: { workspace: blank.workspaceRevision, view: null }, retryKey: "bre381-blank", confirmedZeroMatchDigest: null,
+    }) });
+    assert.equal(blankCommit.status, 400);
+
+    const unsupported = await prepare({ revision: 1, thread: { subjectContains: "A" } }, [{ id: "unsupported_1", label: "Attachment type", reason: "No evaluator predicate" }]);
+    assert.equal(unsupported.draft.saveEligibility.code, "unsupported_clauses");
+
+    const zero = await prepare({ revision: 1, thread: { subjectContains: "definitely absent" } });
+    const previewResponse = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({
+      draft: { mode: "create", viewId: null, source: zero.draft.source, identity, definition: zero.draft.definition, unsupportedClauses: [] }, page: { limit: 25 },
+    }) });
+    const preview = await previewResponse.json();
+    assert.equal(preview.results.state, "zero");
+    assert.deepEqual(preview.results.count, { kind: "exact", value: 0 });
+    const baseCommit = { draft: zero.draft, expectedRevisions: { workspace: zero.workspaceRevision, view: null }, retryKey: "bre381-zero" };
+    assert.equal(organizationViewCommitRequestSchema.safeParse({ ...baseCommit, confirmedZeroMatchDigest: zero.draft.definitionDigest }).success, true);
+    const unconfirmed = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({ ...baseCommit, confirmedZeroMatchDigest: null }) });
+    assert.equal(unconfirmed.status, 400);
+    const wrongDigest = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({ ...baseCommit, confirmedZeroMatchDigest: `sha256:${"0".repeat(64)}` }) });
+    assert.equal(wrongDigest.status, 400);
+    const confirmed = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({ ...baseCommit, confirmedZeroMatchDigest: zero.draft.definitionDigest }) });
+    assert.equal(confirmed.status, 200, await confirmed.clone().text());
+
+    const denied = await app.request("/v1/organization/views/prepare", { method: "POST", headers, body: JSON.stringify({
+      kind: "typed_definition", source: { kind: "manual", label: "Manual View" }, identity,
+      definition: { revision: 1, accountIds: ["account_foreign"], thread: { subjectContains: "Private" } }, unsupportedClauses: [],
+    }) });
+    assert.equal(denied.status, 403);
+    assert.equal((await denied.json()).error.code, "account_denied");
+  });
+
   test("keeps unlimited View ordering behind one bounded aggregate authority resource", { timeout: 30_000 }, async () => {
     const { app, headers, path } = await setup();
     const seeded = createDatabaseClient(path);
@@ -491,14 +622,18 @@ describe("BRE-313 independent View lifecycle verification", () => {
     assert.equal(first.status, 200);
     const cursor = (await first.json()).nextCursor as string;
     const valid = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as Record<string, unknown>;
+    const fingerprint = valid.fingerprint as string;
     const cases: Array<[string, unknown]> = [
       ["accountId", {}], ["accountId", []], ["accountId", null], ["accountId", 7], ["accountId", "x".repeat(201)],
       ["threadId", {}], ["threadId", []], ["threadId", null], ["threadId", 7], ["threadId", "x".repeat(201)],
       ["receivedAt", {}], ["receivedAt", []], ["receivedAt", null], ["receivedAt", "1724608800000"], ["receivedAt", 1.5], ["receivedAt", -1], ["receivedAt", Number.MAX_SAFE_INTEGER],
       ["fingerprint", {}], ["fingerprint", []], ["fingerprint", null], ["fingerprint", 7], ["fingerprint", "not-a-sha256"],
-      ["version", {}], ["version", []], ["version", null], ["version", "1"], ["version", 2],
+      ["shown", {}], ["shown", []], ["shown", null], ["shown", "1"], ["shown", 0], ["shown", 1.5],
+      ["version", {}], ["version", []], ["version", null], ["version", "2"], ["version", 1],
       ["unexpected", true],
     ];
+    cases.push(["fingerprint", `${fingerprint[0] === "a" ? "b" : "a"}${fingerprint.slice(1)}`]);
+    cases.push(["accountId", "account_b"], ["threadId", "tampered_thread"], ["receivedAt", Number(valid.receivedAt) + 1], ["shown", Number(valid.shown) + 1]);
     for (const [field, value] of cases) {
       const malformed = Buffer.from(JSON.stringify({ ...valid, [field]: value }), "utf8").toString("base64url");
       const response = await app.request(`/v1/organization/views/${view.id}/results?limit=1&cursor=${encodeURIComponent(malformed)}`, { headers });
@@ -515,13 +650,14 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const view = await createView(app, headers, { name: "All", definition: { revision: 1 } });
     const first = await app.request(`/v1/organization/views/${view.id}/results?limit=1`, { headers });
     const cursor = (await first.json()).nextCursor as string;
+    const canonicalShort = Buffer.from(JSON.stringify({ version: 2 }), "utf8").toString("base64url");
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    const lastIndex = alphabet.indexOf(cursor.at(-1)!);
-    const unusedBits = cursor.length % 4 === 2 ? 4 : cursor.length % 4 === 3 ? 2 : 0;
+    const lastIndex = alphabet.indexOf(canonicalShort.at(-1)!);
+    const unusedBits = canonicalShort.length % 4 === 2 ? 4 : canonicalShort.length % 4 === 3 ? 2 : 0;
     assert.notEqual(unusedBits, 0, "fixture cursor must expose unused terminal base64 bits");
     const nonCanonicalLast = alphabet[(lastIndex >> unusedBits << unusedBits) | 1]!;
-    const nonCanonical = `${cursor.slice(0, -1)}${nonCanonicalLast}`;
-    assert.deepEqual(Buffer.from(nonCanonical, "base64url"), Buffer.from(cursor, "base64url"));
+    const nonCanonical = `${canonicalShort.slice(0, -1)}${nonCanonicalLast}`;
+    assert.deepEqual(Buffer.from(nonCanonical, "base64url"), Buffer.from(canonicalShort, "base64url"));
 
     for (const malformed of [`${cursor}!`, `${cursor}$`, `${cursor}=`, ` ${cursor}`, `${cursor}\n`, nonCanonical]) {
       const response = await app.request(`/v1/organization/views/${view.id}/results?limit=1&cursor=${encodeURIComponent(malformed)}`, { headers });
@@ -579,31 +715,38 @@ describe("BRE-313 independent View lifecycle verification", () => {
 
     const scope = { workspaceId: "owner", accountIds: ["account_a", "account_b"], actor: { id: "owner", type: "human" as const } };
     const verify = createDatabaseClient(path);
+    const queryInput = {
+      scope,
+      definition: view.definition,
+      definitionDigest: digestOrganizationViewDefinition(view.definition),
+      resultSetKey: `saved:${view.id}:${view.revision}`,
+      authorizedScopeDigest: `sha256:${"a".repeat(64)}`,
+    };
     for (const limit of [1, 2, 3, 4, 9, 25, 50, 100]) {
-      const productionPageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query: { limit } });
+      const productionPageQuery = buildOrganizationViewPageKeyQuery({ ...queryInput, query: { limit } });
       const plan = verify.sqlite.query(`EXPLAIN QUERY PLAN ${productionPageQuery.sql}`).all(...productionPageQuery.params) as Array<{ detail: string }>;
       const evidence = plan.map((row) => row.detail).join("\n");
       assert.match(evidence, /SCAN t USING (?:COVERING )?INDEX threads_view_order_idx/, `limit + 1 = ${limit + 1}\n${evidence}`);
       assert.doesNotMatch(evidence, /USE TEMP B-TREE/, `limit + 1 = ${limit + 1}\n${evidence}`);
     }
 
-    const productionPageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query: { limit: organizationViewBounds.maximumResultsPerPage } });
+    const productionPageQuery = buildOrganizationViewPageKeyQuery({ ...queryInput, query: { limit: organizationViewBounds.maximumResultsPerPage } });
     const pageKeys = (verify.sqlite.query(productionPageQuery.sql).all(...productionPageQuery.params) as OrganizationViewPageKey[])
       .slice(0, organizationViewBounds.maximumResultsPerPage);
     const detailQuery = buildOrganizationViewDetailQuery(pageKeys);
     const detailPlan = verify.sqlite.query(`EXPLAIN QUERY PLAN ${detailQuery.sql}`).all(...detailQuery.params) as Array<{ detail: string }>;
     const detailRows = verify.sqlite.query(detailQuery.sql).all(...detailQuery.params) as Array<{ accountId: string; threadId: string; senderEmail: string; humanSignal: number | null }>;
     verify.sqlite.close();
-    assert.equal(detailQuery.params.length, pageKeys.length);
+    assert.equal(detailQuery.params.length, pageKeys.length * 2);
     const detailEvidence = detailPlan.map((row) => row.detail).join("\n");
     assert.match(detailEvidence, /(?:CO-ROUTINE|MATERIALIZE) requested/);
     assert.match(detailEvidence, new RegExp(`SCAN ${pageKeys.length} CONSTANT ROWS`));
-    assert.match(detailEvidence, /SEARCH t USING INDEX sqlite_autoindex_threads_1 \(id=\?\)/);
+    assert.match(detailEvidence, /SEARCH t USING INDEX .*threads.* \(account_id=\? AND id=\?\)/);
     assert.deepEqual(new Set(detailRows.map((row) => `${row.accountId}:${row.threadId}`)), new Set(ids));
     assert.ok(detailRows.every((row) => typeof row.senderEmail === "string" && (row.humanSignal === null || typeof row.humanSignal === "number")));
 
-    const maximumKeys = Array.from({ length: organizationViewBounds.maximumResultsPerPage }, (_, index) => ({ threadId: `thread_${index}` }));
-    assert.equal(buildOrganizationViewDetailQuery(maximumKeys).params.length, organizationViewBounds.maximumResultsPerPage);
-    assert.throws(() => buildOrganizationViewDetailQuery([...maximumKeys, { threadId: "thread_overflow" }]), /requires 1-100 page keys/);
+    const maximumKeys = Array.from({ length: organizationViewBounds.maximumResultsPerPage }, (_, index) => ({ accountId: "account_a", threadId: `thread_${index}` }));
+    assert.equal(buildOrganizationViewDetailQuery(maximumKeys).params.length, organizationViewBounds.maximumResultsPerPage * 2);
+    assert.throws(() => buildOrganizationViewDetailQuery([...maximumKeys, { accountId: "account_a", threadId: "thread_overflow" }]), /requires 1-100 page keys/);
   });
 });

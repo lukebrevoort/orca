@@ -3,9 +3,14 @@ import { describe, test } from "node:test";
 
 import {
   organizationViewCreateRequestSchema,
+  organizationViewCommitRequestSchema,
   organizationViewDefinitionSchema,
+  organizationViewDefinitionKind,
+  organizationViewPreparationInputSchema,
+  organizationViewReviewedDraftSchema,
   organizationViewReorderRequestSchema,
   organizationViewResultPageSchema,
+  summarizeOrganizationViewDefinition,
 } from "./organization-views.ts";
 
 describe("BRE-313 live View contracts", () => {
@@ -56,5 +61,61 @@ describe("BRE-313 live View contracts", () => {
       { id: "view_weekly", expectedRevision: 2, position: 0 },
       { id: "view_all", expectedRevision: 4, position: 0 },
     ] }).success, false);
+  });
+});
+
+describe("BRE-381 reviewed View draft contracts", () => {
+  const definition = organizationViewDefinitionSchema.parse({
+    revision: 1,
+    accountIds: ["account_gmail"],
+    sender: { addresses: ["Maya@Example.com"] },
+    thread: { readState: "unread" },
+  });
+
+  test("accepts typed adapter output without interpreting search or selection input", () => {
+    const input = organizationViewPreparationInputSchema.parse({
+      kind: "typed_definition",
+      source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/?destination=inbox" },
+      identity: { name: "Maya", description: "", color: "#0b9b84", position: 0 },
+      definition,
+      unsupportedClauses: [],
+    });
+    assert.equal(input.kind, "typed_definition");
+    if (input.kind === "typed_definition") assert.deepEqual(input.definition.sender?.addresses, ["maya@example.com"]);
+  });
+
+  test("distinguishes match-all definitions from filtered zero-result definitions", () => {
+    assert.equal(organizationViewDefinitionKind({ revision: 1 }), "match_all");
+    assert.equal(organizationViewDefinitionKind(definition), "filtered");
+    assert.match(summarizeOrganizationViewDefinition({ revision: 1 }).text, /All Threads/);
+    assert.match(summarizeOrganizationViewDefinition(definition).text, /at least one unread message/);
+  });
+
+  test("binds reviewed drafts and zero-match confirmation to a definition digest", () => {
+    const digest = `sha256:${"a".repeat(64)}`;
+    const draft = organizationViewReviewedDraftSchema.parse({
+      mode: "create",
+      viewId: null,
+      source: { kind: "manual", label: "New View" },
+      identity: { name: "Maya", description: "", color: "#0b9b84", position: 0 },
+      definition,
+      unsupportedClauses: [],
+      definitionDigest: digest,
+      definitionKind: "filtered",
+      effectiveAccountIds: ["account_gmail"],
+      summary: summarizeOrganizationViewDefinition(definition),
+      saveEligibility: { allowed: true, code: null, detail: "Ready to save." },
+    });
+    assert.equal(organizationViewCommitRequestSchema.parse({
+      draft,
+      expectedRevisions: { workspace: 2, view: null },
+      retryKey: "retry-1",
+      confirmedZeroMatchDigest: digest,
+    }).confirmedZeroMatchDigest, digest);
+    assert.equal(organizationViewCommitRequestSchema.safeParse({
+      draft,
+      expectedRevisions: { workspace: 2, view: 1 },
+      retryKey: "retry-1",
+    }).success, false);
   });
 });

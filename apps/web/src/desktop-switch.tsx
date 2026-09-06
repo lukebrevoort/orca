@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
-import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type Reminder, type SyncStatus } from "@orca/shared";
+import { attentionViewSettingSchema, collectionSchema, inboxClassificationResponseSchema, mailAccountPageSchema, messageDraftSchema, orcaEvaluationTraceSchema, orcaHistoricalSimulationResponseSchema, organizationViewListResponseSchema, reminderSchema, reminderViewSettingsSchema, syncStatusSchema, type Collection, type InboxMessage, type MailAccount, type MessageDraft, type OrcaCompiledAction, type OrcaEvaluationTrace, type OrcaHistoricalSimulationResponse, type OrganizationView, type Reminder, type SyncStatus } from "@orca/shared";
 import { DesktopDrawer } from "./desktop-drawer";
 import { GlobalMailSearch, openMailSearch } from "./global-search";
 import { createSidebarNavigationProjection, desktopDestinationHref, destinationForSpace, readSpacePreferences, useOnlineStatus, type DesktopDestination, type SidebarAccount, type SidebarNavigationProjection, type WorkflowSpace } from "./navigation";
 import { OrganizationAuthorityError, OrganizationAuthorityProvider, OrganizationRecoveryBanner, useOrganizationAuthority } from "./organization-authority";
 import { OrganizationLaneWorkspace } from "./organization-lanes";
-import { OrganizationViewsWorkspace } from "./organization-views";
+import { OrganizationViewsWorkspace, type ViewPreviewEvidenceState } from "./organization-views";
 import { createTidePreviewRequest, TideTableEditor, type TideCompileSuccess } from "./tide-table";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 
@@ -202,6 +202,7 @@ type SettingsNavigationSource = {
   accountId: string | null;
   attention: boolean;
   collections: Collection[];
+  views: OrganizationView[];
   counts: Partial<Record<"focus" | "signals" | "quiet" | "later", number>>;
   draftCount?: number;
   inboxCount?: number;
@@ -217,6 +218,7 @@ const emptySettingsNavigationSource: SettingsNavigationSource = {
   accountId: null,
   attention: false,
   collections: [],
+  views: [],
   counts: {},
   known: false,
   labels: {},
@@ -249,6 +251,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
       read("/v1/inbox?view=all&classification=all&limit=100"),
       read("/v1/drafts"),
       read("/v1/reminders"),
+      read("/v1/organization/views"),
     ]).then((results) => {
       if (controller.signal.aborted) return;
       const accounts = results[0]?.status === "fulfilled" ? mailAccountPageSchema.safeParse(results[0].value) : null;
@@ -267,6 +270,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
       const reminders: Reminder[] = results[7]?.status === "fulfilled" && Array.isArray(results[7].value)
         ? results[7].value.map((item) => reminderSchema.safeParse(item)).filter((item) => item.success).map((item) => item.data)
         : [];
+      const views = results[8]?.status === "fulfilled" ? organizationViewListResponseSchema.safeParse(results[8].value) : null;
       const accountItems: MailAccount[] = accounts?.success ? accounts.data.items : [];
       const syncValue: SyncStatus | null = sync?.success ? sync.data : null;
       const messages: InboxMessage[] = inbox?.success ? inbox.data.messages : [];
@@ -283,6 +287,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
         accountId: navigationPreview?.accountId ?? primary?.id ?? null,
         attention: navigationPreview?.attention ?? syncStates.some((state) => state === "auth_needed" || state === "error"),
         collections: collections.length ? collections : navigationPreview?.collections ?? [],
+        views: views?.success ? views.data.items : navigationPreview?.views ?? [],
         counts: {
           focus: inbox?.success ? messages.filter((message) => message.attentionBehavior === "focus").length : navigationPreview?.counts.focus,
           signals: inbox?.success ? messages.filter((message) => message.attentionBehavior === "notify").length : navigationPreview?.counts.signals,
@@ -310,6 +315,7 @@ export function DesktopSettingsFrame({ children, navigationPreview, theme, title
     active: "settings",
     attention: source.attention,
     collections: source.collections,
+    views: source.views,
     counts: source.counts,
     draftCount: source.draftCount,
     hidden: stored?.hidden,
@@ -801,7 +807,7 @@ function Bre320ReleaseEvidence({ operationState }: { operationState: LifecycleOp
   </section>;
 }
 
-function OrganizationStudioContent({ interactivePreview = false, releaseEvidenceState = null }: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null }) {
+function OrganizationStudioContent({ interactivePreview = false, releaseEvidenceState = null, viewPreviewEvidenceState = null }: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState }) {
   const organizationAuthority = useOrganizationAuthority();
   const [section, setSection] = useState<OrganizationSection>("overview");
   const [mode, setMode] = useState<OrganizationMode>("glass");
@@ -1047,7 +1053,7 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
         <button className="organization-overview-primary" onClick={() => { focusRulesNavigationRef.current = true; setSection("rules"); }} type="button"><span>Open Rules</span><b aria-hidden="true">→</b></button>
       </footer>
     </section>
-    <div hidden={section !== "views"} id="organization-views"><OrganizationViewsWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationAuthority.refreshToken} /></div>
+    <div hidden={section !== "views"} id="organization-views"><OrganizationViewsWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} previewEvidenceState={viewPreviewEvidenceState} refreshToken={organizationAuthority.refreshToken} /></div>
     <div hidden={section !== "lanes"} id="organization-lanes"><OrganizationLaneWorkspace demoMode={interactivePreview} onWorkspaceMutation={invalidateOrganization} refreshToken={organizationAuthority.refreshToken} /></div>
     <div hidden={section !== "rules"} id="organization-rules">
     {releaseEvidenceState ? <Bre320ReleaseEvidence operationState={releaseEvidenceState} /> : null}
@@ -1063,6 +1069,6 @@ function OrganizationStudioContent({ interactivePreview = false, releaseEvidence
   </section>;
 }
 
-export function OrganizationStudio(props: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null }) {
+export function OrganizationStudio(props: { interactivePreview?: boolean; releaseEvidenceState?: LifecycleOperationState | null; viewPreviewEvidenceState?: ViewPreviewEvidenceState }) {
   return <OrganizationAuthorityProvider previewMode={props.interactivePreview}><OrganizationStudioContent {...props} /></OrganizationAuthorityProvider>;
 }
