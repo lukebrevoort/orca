@@ -16,7 +16,8 @@
     "test": "bun --filter '*' test",
     "test:smoke": "bun --filter @orca/api test:smoke",
     "benchmark:mailbox": "bun apps/api/benchmarks/mailbox.ts",
-    "lint": "bun --filter '*' lint"
+    "lint": "bun --filter '*' lint",
+    "prototype:views": "bun --cwd apps/web dev --port 5188"
   },
   "devDependencies": {
     "@types/node": "^24.0.4",

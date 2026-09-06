@@ -25,6 +25,7 @@ import {
   messageBodies,
   messageHtmlBodies,
 } from "./demo-data";
+import { EffortlessViewsPrototype } from "./organization-views.prototype";
 import { AgentEventTimeline, type AgentEventControlAction } from "./agent-event-ui";
 import { getContactIdentity, getContactSignature, type ContactSignature } from "./contact-signature";
 import { collectComposeContacts, ComposeWorkspace, useComposeDraft, type ComposeDraftFields } from "./compose-workspace";
@@ -2957,7 +2958,7 @@ export function InboxApp({
             title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen ? (import.meta.env.DEV && demoMode && new URLSearchParams(window.location.search).get("prototype") === "views" ? <EffortlessViewsPrototype /> : <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} />) : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
