@@ -1524,7 +1524,7 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
 });
 
 test("BRE-385 correction uses complete census, blocks empty sets, replaces domains and undoes exact draft", async () => {
-  const selected = { ...organizationViewsFixture[0]!, definition: { revision: 1 as const, accountIds: ["account_gmail"], sender: { domains: ["example.com"] }, thread: { subjectContains: "Review" } } };
+  const selected = { ...organizationViewsFixture[0]!, definition: { revision: 1 as const, sender: { domains: ["example.com"] }, thread: { subjectContains: "Review" } } };
   const item = { accountId: "account_gmail", accountEmail: "work@example.com", provider: "gmail", threadId: "review-thread", subject: "Review meeting", latestReceivedAt: "2026-09-06T18:00:00.000Z", messageCount: 2, readState: "unread", primaryLaneId: "lane_focus", sender: { name: "Latest", email: "latest@example.com" }, humanSignal: 8, humanClassification: "likely_human" };
   const previews: OrganizationViewDraftInput[] = [];
   const censusRequests: unknown[] = [];
@@ -1553,7 +1553,7 @@ test("BRE-385 correction uses complete census, blocks empty sets, replaces domai
   await click(boxes[0]!); await click(boxes[1]!);
   expect(button(panel, "Preview these senders").disabled).toBe(true);
   await click(boxes[1]!); await click(button(panel, "Preview these senders")); await flush();
-  expect(previews.at(-1)?.definition).toEqual({ ...selected.definition, sender: { addresses: ["elsewhere@example.com"] } });
+  expect(previews.at(-1)?.definition).toEqual({ ...selected.definition, accountIds: ["account_gmail"], sender: { addresses: ["elsewhere@example.com"] } });
   await click(button(container, "Undo draft change")); await flush();
   expect(previews.at(-1)?.definition).toEqual(selected.definition);
 }, 30000);
