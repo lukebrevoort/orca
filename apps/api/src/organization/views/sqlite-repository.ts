@@ -123,8 +123,10 @@ function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: strin
 }
 
 function effectiveClassificationSql(alias: string) {
-  const address = normalizedAddressSql(alias);
-  const domain = normalizedDomainSql(alias);
+  // Classification follows the production mailbox override key semantics.
+  // Sender allowlists separately normalize ECMAScript whitespace for selected-row identity.
+  const address = `lower(trim(coalesce(${alias}.from_address, '')))`;
+  const domain = `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`;
   return `coalesce(
     (select override.classification from human_classification_overrides override where override.account_id=${alias}.account_id and override.target_type='message' and override.target_value=${alias}.id limit 1),
     (select override.classification from human_classification_overrides override where override.account_id=${alias}.account_id and override.target_type='sender_address' and override.target_value=${address} limit 1),

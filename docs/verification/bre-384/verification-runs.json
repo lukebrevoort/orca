@@ -1,0 +1,119 @@
+{
+  "base": "785a74865454f730a996d086dba50def09b37875",
+  "branch": "bre-384-save-search",
+  "typecheck": {
+    "api": "pass",
+    "shared": "pass",
+    "web": "pass after optional-revision guard fix"
+  },
+  "focusedWeb": {
+    "pass": 54,
+    "fail": 0,
+    "assertions": 432
+  },
+  "focusedSharedApi": {
+    "pass": 7,
+    "fail": 0,
+    "assertions": 76,
+    "note": "Before timestamp-only mixed-thread fixture clarification; final file is required in hosted CI."
+  },
+  "officialRootTests": {
+    "status": "failed",
+    "shared": {
+      "pass": 85,
+      "fail": 0
+    },
+    "api": {
+      "pass": 250,
+      "fail": 54,
+      "errors": 53
+    },
+    "web": {
+      "pass": 316,
+      "fail": 4,
+      "errors": 3
+    }
+  },
+  "serialApiSuite": {
+    "pass": 533,
+    "fail": 1,
+    "errors": 1,
+    "seconds": 637.67,
+    "failure": "Existing View REST case exceeded explicit20s timeout; late cleanup callback failed401."
+  },
+  "isolatedViewRest": {
+    "pass": 2,
+    "fail": 0,
+    "caseMilliseconds": 16169.23
+  },
+  "partialFreshProcessSweep": [
+    {
+      "workspace": "apps/api",
+      "file": "src/agent-events.routes.test.ts",
+      "exit": 0,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "workspace": "apps/api",
+      "file": "src/agents/boundary.test.ts",
+      "exit": 0,
+      "pass": 14,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "workspace": "apps/api",
+      "file": "src/agents/config.test.ts",
+      "exit": 0,
+      "pass": 3,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "workspace": "apps/api",
+      "file": "src/agents/g2-request-guards.test.ts",
+      "exit": 0,
+      "pass": 9,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "workspace": "apps/api",
+      "file": "src/agents/m6-latency.test.ts",
+      "exit": 0,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "workspace": "apps/api",
+      "file": "src/agents/m6-validation.test.ts",
+      "exit": 0,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0
+    }
+  ],
+  "freshProcessFileAtStop": {
+    "file": "apps/api/src/agents/mcp.test.ts",
+    "pass": 15,
+    "fail": 1,
+    "errors": 1,
+    "note": "Existing canonical fixture exceeded explicit60s timeout at71.15s."
+  },
+  "build": "deferred by coordinator due host resource contention",
+  "lint": "deferred by coordinator; same tsc scripts as successful workspace typechecks",
+  "diffCheck": "pass",
+  "browserMatrix": "Light/Orca Black1440x900 and1024x768; real initial save/reload/future/Back/Undo/zero proof completed",
+  "axe": {
+    "violations": 0,
+    "incomplete1440Each": 1,
+    "incomplete1024Each": 0,
+    "manualContrastLight": 6.3,
+    "manualContrastBlack": 9.02
+  },
+  "additional503Browser": "incomplete; daemon os35 after5 retries; commands/server stopped and browser closed",
+  "hostedCI": "Required full typecheck/test gate; consult PR terminal checks."
+}
