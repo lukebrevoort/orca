@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BRE-383 · Selected senders reviewer guide</title>
+  <style>
+    :root{color-scheme:light dark;font:15px/1.55 ui-sans-serif,system-ui;background:#edf3ef;color:#17302b}body{margin:0}.page{max-width:980px;margin:auto;padding:48px 24px 80px}header{padding:30px;border-radius:22px;background:#17302b;color:#f5faf7}h1{margin:4px 0 8px;font-size:34px}h2{margin-top:34px}p{max-width:75ch}.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#76cfba}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.card{padding:18px;border:1px solid #bed0c8;border-radius:14px;background:#fff;color:#17302b}.card strong{display:block;margin-bottom:6px}.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.flow div{padding:12px;border-radius:10px;background:#dceae4;text-align:center}.flow b{display:block;color:#087c68}code{padding:2px 5px;border-radius:5px;background:#dceae4;color:#17302b}pre{overflow:auto;padding:15px;border-radius:10px;background:#17302b;color:#eaf5f1;font:12px/1.55 ui-monospace,SFMono-Regular,monospace}.note{padding:14px 16px;border-left:4px solid #c47a19;border-radius:5px 12px 12px 5px;background:#fff3df;color:#5c370b}.proof{border-color:#75bba9}.proof code{white-space:nowrap}a{color:#087c68}li+li{margin-top:7px}.pass{color:#087c68;font-weight:700}@media(max-width:700px){.flow{grid-template-columns:1fr 1fr}}@media(prefers-color-scheme:dark){:root{background:#101b1a;color:#e4efeb}.card{background:#172523;color:#e4efeb;border-color:#38514b}.flow div,code{background:#243a35;color:#e4efeb}.note{background:#392b19;color:#f5d6a5}}
+  </style>
+</head>
+<body><main class="page">
+  <header><span class="eyebrow">Orca M9 · BRE-383</span><h1>Use selected message senders</h1><p>A focused review guide for the authoritative row-selection handoff, the shared View authoring path, and return behavior.</p></header>
+  <h2>Contract at a glance</h2>
+  <div class="flow"><div><b>1 · Select</b>visible message rows</div><div><b>2 · Prepare</b>IDs only</div><div><b>3 · Resolve</b>stored exact From</div><div><b>4 · Save</b>account + senders</div></div>
+  <div class="grid" style="margin-top:14px">
+    <section class="card"><strong>Client sends</strong><code>{accountId, threadId, messageId}</code> for every selected visible row. It never sends a sender address as authority.</section>
+    <section class="card"><strong>Server proves</strong>Every reference is workspace-owned and internally consistent in one transaction. Any unavailable reference fails the preparation.</section>
+    <section class="card"><strong>Server derives</strong>The exact stored <code>from_address</code>, excluding only normalized <code>provider_email</code> self rows, then deduplicating.</section>
+    <section class="card"><strong>View persists</strong>One <code>accountIds</code> value plus a positive sender allowlist. Selected Thread or message IDs are never persisted.</section>
+  </div>
+  <h2>Five-minute manual review</h2>
+  <p class="note"><strong>Visual evidence only.</strong> The <code>/dev/inbox</code> demo and its screenshots prove layout, stacking, focus, controls, and theme behavior. Its <code>demoPreparationResponse</code> uses fixture senders, so it is not persistence evidence. Use the production scratch-database proof below for authoritative sender resolution and saved-result behavior.</p>
+  <ol>
+    <li>Run <code>bun run dev</code>, then open <a href="http://localhost:5173/dev/inbox">the demo Inbox</a>.</li>
+    <li>Choose <strong>Select</strong>, pick one or more rows, then choose <strong>Use these senders</strong>. To inspect the self-omission notice visually, use <a href="http://localhost:5173/dev/inbox?bre383Evidence=self-omission">self-omission evidence</a>; this remains visual-only fixture state.</li>
+    <li>Confirm the builder shows one exact account and the normalized sender addresses. Edit them, preview, and save through the existing shared View flow.</li>
+    <li>Open the builder again, scroll the list first, then choose <strong>Cancel</strong> or press Escape. The same rows, scroll position, and <strong>Use these senders</strong> focus return.</li>
+    <li>Open <a href="http://localhost:5173/dev/inbox?bre383Evidence=mixed-account">mixed-account evidence</a>, select rows from both accounts, and confirm preparation stays disabled with explicit copy while the selection remains.</li>
+    <li>Switch between Light and Orca Black. Check default, hover, focus, selected, and disabled controls at 1440×900 and 1024×768.</li>
+  </ol>
+  <h2>Runnable production scratch-database proof</h2>
+  <p>This command runs the real migrated SQLite repository, Hono routes, shared request/response schemas, and commit path against a disposable database. No demo preparation helper participates.</p>
+  <pre># Run from the repository root.
+bun test apps/api/src/organization/views/verification.test.ts \
+  --test-name-pattern "prepares exact selected-message From"</pre>
+  <div class="grid">
+    <section class="card proof"><strong>Validated triples</strong><code>account_a/thread_a/message_maya</code> and <code>account_a/thread_b/message_maya_duplicate</code> remain two distinct authoritative references through the repository join, even though both resolve to Maya. A separate self triple proves the omission notice. The first stored From is wrapped at both edges by every character JavaScript <code>trim()</code> accepts.</section>
+    <section class="card proof"><strong>Exact prepared result</strong>The response is asserted as <code>accountIds:["account_a"]</code> plus <code>sender.addresses:["maya@example.com"]</code>. The duplicate external address is deduplicated only after validation; the self row produces a typed omission notice.</section>
+    <section class="card proof"><strong>Preview and save</strong>The unsaved preview must include both selected Threads plus <code>thread_unselected_sender</code>, an existing matching Thread never included in the preparation. Commit receives the same reviewed definition; no selected IDs are persisted.</section>
+    <section class="card proof"><strong>Reload and future mail</strong>After commit, the proof inserts a new Thread whose mixed-case From has the same full whitespace wrapper, reloads saved results through the production route, and asserts that future Thread matches. The same SQL edge-trim expression is exercised for exact-address and domain Views.</section>
+  </div>
+  <p>The exact trim set is U+0009–U+000D, U+0020, U+00A0, U+1680, U+2000–U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, and U+FEFF. SQLite trims only those characters from the edges—internal whitespace is not removed—then lowercases for preparation and sender address/domain evaluation. The test also proves pure-external selection has no omission notice, mixed external+self does, all-self fails recoverably, a malformed stored From fails the whole request even when it equals a malformed provider email, mixed-account fails whole-request, and foreign/mismatched references cannot narrow silently. The temporary database is removed after the run.</p>
+  <h2>Automated evidence</h2>
+  <ul>
+    <li><span class="pass">Shared:</span> strict bounded references, duplicate rejection, and no client-enriched From field.</li>
+    <li><span class="pass">API/repository:</span> single/multiple senders, normalized duplicate From, self/all-self, mixed account, bad/foreign references, dynamic existing and future mail, commit and reload.</li>
+    <li><span class="pass">Web:</span> IDs-only handoff, missing-selection disablement, mixed-account block, retained row selection, scroll/focus return, generic typed prepare entry, prepared update identity, complete advanced-predicate preservation, unsupported-clause remove and Undo. A schema-canonical semantic preparation identity synchronously hides an old draft and disables commit when a replacement entry is pending; delayed failure, delayed success, stale prepare/commit responses, duplicate submit, and Cmd/Ctrl+Enter are covered without crossing return contexts.</li>
+    <li><span class="pass">Browser:</span> real pointer clicks reached the name input, filter menu, Cancel, Save, and backdrop return control; heading-first focus and return focus passed. Light and Orca Black at 1440×900 and 1024×768 each reported zero axe WCAG A/AA violations or incomplete checks.</li>
+  </ul>
+  <h2>Expected failure codes</h2>
+  <div class="grid"><section class="card"><strong>selection_reference_unavailable</strong>At least one message/account/thread reference is missing, inaccessible, inconsistent, or lacks a usable stored From.</section><section class="card"><strong>mixed_account_selection</strong>The selected messages cross connected accounts; no cross-product View is prepared.</section><section class="card"><strong>all_selected_senders_are_self</strong>Every validated row exactly matches that account’s normalized provider email.</section></div>
+</main></body></html>

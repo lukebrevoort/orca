@@ -3,8 +3,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
-import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView } from "@orca/shared";
-import { OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
+import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView, type OrganizationViewDefinition, type OrganizationViewDraftInput, type OrganizationViewPreparationInput, type OrganizationViewReviewedDraft } from "@orca/shared";
+import { OrganizationViewAuthoringWorkspace, OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -43,6 +43,29 @@ async function renderWorkspace(demoMode = true, previewMode = true) {
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
   await act(async () => root!.render(<OrganizationAuthorityProvider previewMode={previewMode}><OrganizationViewsWorkspace demoMode={demoMode} /></OrganizationAuthorityProvider>));
+  return container as unknown as HTMLElement;
+}
+
+async function renderExternalAuthoring(onCancel: (context: { anchor: string }) => void) {
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace
+    demoMode
+    entry={{
+      preparation: {
+        kind: "typed_definition",
+        source: { kind: "search", label: "Search results", returnTarget: "/dev/inbox?q=moonbase" },
+        identity: { name: "Moonbase", description: "", color: "#70867d", position: 2 },
+        definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com", "ari@example.com"] } },
+        unsupportedClauses: [{ id: "attachment-pdf", label: "Has PDF", reason: "Attachment predicates are not available yet." }],
+      },
+      returnContext: { anchor: "result-12" },
+    }}
+    onCancel={onCancel}
+    onCommitted={() => {}}
+  />));
+  await flush();
   return container as unknown as HTMLElement;
 }
 
@@ -98,6 +121,482 @@ function testDigest(value: unknown) {
   for (const character of JSON.stringify(value)) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
   return `sha256:${(hash >>> 0).toString(16).padStart(8, "0").repeat(8)}`;
 }
+
+test("external authoring preserves typed source metadata, unsupported blockers, removal Undo, and opaque return context", async () => {
+  const returns: Array<{ anchor: string }> = [];
+  const container = await renderExternalAuthoring((context) => returns.push(context));
+  expect(container.querySelector(".views-header")?.textContent).toContain("Search results");
+  expect(input(container, "Email addresses").value).toBe("maya@example.com, ari@example.com");
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
+  expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(true);
+
+  await click(button(container, "Remove blocker"));
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Undo removed clauses");
+  await click(button(container, "Undo removed clauses"));
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
+  await click(button(container, "Cancel"));
+  expect(returns).toEqual([{ anchor: "result-12" }]);
+});
+
+const liveAuthorityDescription = {
+  workspaceId: "workspace_demo", accountIds: ["account_gmail"],
+  workspaceSchema: { revision: 4, aggregate: "thread", resources: ["account", "thread", "lane", "lane_policy", "facet", "workflow_state", "context", "context_relationship"], filters: ["account", "thread", "attention", "classification", "sender", "text", "received_at", "facet", "workflow_state", "context", "context_relationship", "lane"] },
+  capabilities: { operations: { describe: true, query: true, simulate: true, apply: true, revert: true }, surfaces: { rest: { describe: true, query: true, simulate: true, apply: true, revert: true, correct: true }, mcp: { describe: false, query: false, simulate: false, apply: false, revert: false, correct: false } }, authority: { sendMail: false, deleteProviderMail: false } },
+  workspaceRevision: 4, facetDefinitions: [], workflowStates: [], laneConfiguration: { ...structuredClone(organizationLaneConfigurationFixture), workspaceRevision: 4 },
+};
+
+function preparedCreateDraft(input: OrganizationViewPreparationInput, definition: OrganizationViewDefinition, options: { unsupportedClauses?: OrganizationViewReviewedDraft["unsupportedClauses"]; preparationNotices?: OrganizationViewReviewedDraft["preparationNotices"] } = {}): OrganizationViewReviewedDraft {
+  if (input.kind === "saved_view") throw new Error("Expected create preparation");
+  return {
+    mode: "create", viewId: null, viewRevision: null, source: input.source, identity: input.identity, definition,
+    unsupportedClauses: options.unsupportedClauses ?? [], preparationNotices: options.preparationNotices ?? [],
+    definitionDigest: testDigest(definition), definitionKind: "filtered", effectiveAccountIds: definition.accountIds ?? ["account_gmail"],
+    summary: { text: "Prepared definition", clauses: ["Prepared filters"] },
+    saveEligibility: options.unsupportedClauses?.length
+      ? { allowed: false, code: "unsupported_clauses", detail: "Replace or remove every unsupported clause before saving this View." }
+      : { allowed: true, code: null, detail: "This reviewed definition is ready to save." },
+  };
+}
+
+test("shows the authoritative consequence when self messages were omitted from selected senders", async () => {
+  const preparation: OrganizationViewPreparationInput = {
+    kind: "selected_senders",
+    source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/?destination=inbox" },
+    identity: { name: "Selected senders", description: "", color: "#0b9b84", position: 0 },
+    references: [
+      { accountId: "account_gmail", threadId: "thread_maya", messageId: "message_maya" },
+      { accountId: "account_gmail", threadId: "thread_self", messageId: "message_self" },
+    ],
+  };
+  const definition: OrganizationViewDefinition = { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com"] } };
+  const detail = "1 selected message was sent by this connected account and was omitted. The View will match only the external sender addresses shown below; your own address is not included.";
+  const prepared = preparedCreateDraft(preparation, definition, { preparationNotices: [{ code: "self_sender_omitted", detail, omittedCount: 1 }] });
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: prepared });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { anchor: "message_self" } }} onCancel={() => {}} onCommitted={() => {}}/>));
+  await flush(); await flush(); await flush();
+
+  expect(container.querySelector(".view-preparation-notices")?.textContent).toContain(detail);
+  expect(container.querySelector(".view-preparation-notices")?.textContent).toContain("maya@example.com");
+});
+
+test("create-mode external authoring preserves every prepared predicate through unsupported-clause Undo, preview, and commit", async () => {
+  const definition: OrganizationViewDefinition = {
+    revision: 1,
+    accountIds: ["account_gmail"],
+    laneIds: ["lane_focus"],
+    facetFilters: [
+      { facetId: "facet_urgency", operator: "equals", value: "urgent" },
+      { facetId: "facet_service", operator: "contains", value: "payments" },
+    ],
+    contextFilters: [
+      { context: { contextTypeId: "context_type_project", contextId: "context_orca" }, relationshipTypeId: "relationship_concerns", direction: "thread_to_context" },
+      { context: { contextTypeId: "context_type_customer", contextId: "context_acme" }, relationshipTypeId: "relationship_supports" },
+    ],
+    workflowStateIds: ["workflow_unresolved"],
+    humanSignal: { minimumScore: 4, maximumScore: 9, classifications: ["likely_human"], evidenceReasonCodes: ["direct_recipient"] },
+    sender: { addresses: ["maya@example.com"], domains: ["customer.example.com"] },
+    date: { receivedAfter: "2026-08-18T14:37:22.123Z", receivedBefore: "2026-08-26T14:37:22.123Z" },
+    thread: { ids: ["thread_alpha", "thread_beta"], subjectContains: "launch", readState: "unread" },
+  };
+  const unsupported = [{ id: "attachment-pdf", label: "Has PDF", reason: "Attachment predicates are not available yet." }];
+  const preparation: OrganizationViewPreparationInput = {
+    kind: "typed_definition", source: { kind: "search", label: "Advanced Search", returnTarget: "/dev/inbox?q=launch" },
+    identity: { name: "Launch evidence", description: "Prepared from Search", color: "#70867d", position: 3 },
+    definition, unsupportedClauses: unsupported,
+  };
+  const prepared = preparedCreateDraft(preparation, definition, { unsupportedClauses: unsupported });
+  const previewed: OrganizationViewDefinition[] = [];
+  const committed: OrganizationViewDefinition[] = [];
+  const returnedContexts: Array<{ searchUrl: string; anchor: string }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json({ ...liveAuthorityDescription, facetDefinitions: [{ id: "facet_urgency", name: "Urgency", position: 0, valueType: { kind: "text", maxLength: 200 }, cardinality: { kind: "single" }, isOptional: true, defaultValue: null, retiredAt: null, revision: 1 }] });
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: prepared });
+    if (path === "/v1/organization/contexts/query?limit=100") return Response.json(contextQueryFixture);
+    if (path === "/v1/organization/views/preview") {
+      previewed.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      return previewResponse(init);
+    }
+    if (path === "/v1/organization/views/commit") {
+      committed.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      return committedResponse(init, "view_advanced_search");
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace
+    entry={{ preparation, returnContext: { searchUrl: "/dev/inbox?q=launch", anchor: "result-42" } }}
+    onCancel={() => {}}
+    onCommitted={(_result, context) => returnedContexts.push(context)}
+  />));
+  await flush(); await flush(); await flush();
+
+  await click(button(container as unknown as HTMLElement, "Remove blocker"));
+  await flush(); await flush(); await flush();
+  expect(previewed.at(-1)).toEqual(definition);
+  await click(button(container as unknown as HTMLElement, "Undo removed clauses"));
+  expect((button(container as unknown as HTMLElement, "Save View") as HTMLButtonElement).disabled).toBe(true);
+  await click(button(container as unknown as HTMLElement, "Remove blocker"));
+  await flush(); await flush(); await flush();
+  expect(previewed.at(-1)).toEqual(definition);
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await flush(); await flush();
+  expect(committed).toEqual([definition]);
+  expect(returnedContexts).toEqual([{ searchUrl: "/dev/inbox?q=launch", anchor: "result-42" }]);
+});
+
+test("non-sender external preparation preserves its typed constraints through refinement and commit", async () => {
+  const definition: OrganizationViewDefinition = {
+    revision: 1,
+    accountIds: ["account_gmail"],
+    workflowStateIds: ["workflow_unresolved"],
+    humanSignal: { minimumScore: 4, maximumScore: 9, classifications: ["likely_human"], evidenceReasonCodes: ["direct_recipient"] },
+    thread: { ids: ["thread_alpha", "thread_beta"], readState: "unread" },
+  };
+  const preparation: OrganizationViewPreparationInput = {
+    kind: "typed_definition", source: { kind: "search", label: "Non-sender Search", returnTarget: "/dev/inbox?q=unread" },
+    identity: { name: "Unread evidence", description: "", color: "#70867d", position: 0 }, definition, unsupportedClauses: [],
+  };
+  const prepared = preparedCreateDraft(preparation, definition);
+  const previewed: OrganizationViewDefinition[] = [];
+  const committed: OrganizationViewDefinition[] = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: prepared });
+    if (path === "/v1/organization/views/preview") {
+      previewed.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      return previewResponse(init);
+    }
+    if (path === "/v1/organization/views/commit") {
+      committed.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      return committedResponse(init, "view_non_sender_search");
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { anchor: "result-9" } }} onCancel={() => {}} onCommitted={() => {}}/>));
+  await flush(); await flush(); await flush();
+  expect(previewed.at(-1)).toEqual(definition);
+  await choose(selectField(container as unknown as HTMLElement, "Minimum Human Signal"), "5");
+  await flush(); await flush(); await flush();
+  const refinedDefinition = { ...definition, humanSignal: { ...definition.humanSignal!, minimumScore: 5 } };
+  expect(previewed.at(-1)).toEqual(refinedDefinition);
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await flush(); await flush();
+  expect(committed).toEqual([refinedDefinition]);
+});
+
+test("external saved-view authoring carries prepared View identity and revision through preview and commit", async () => {
+  const view = { ...organizationViewsFixture[0]!, id: "view_external_update", revision: 7, definition: { revision: 1, accountIds: ["account_gmail"], thread: { readState: "unread" } } } as OrganizationView;
+  const preparation: OrganizationViewPreparationInput = { kind: "saved_view", viewId: view.id };
+  const prepared: OrganizationViewReviewedDraft = {
+    mode: "update", viewId: view.id, viewRevision: view.revision, source: { kind: "saved_view", label: view.name },
+    identity: { name: view.name, description: view.description, color: view.color, position: view.position }, definition: view.definition,
+    unsupportedClauses: [], preparationNotices: [], definitionDigest: testDigest(view.definition), definitionKind: "filtered", effectiveAccountIds: ["account_gmail"],
+    summary: { text: "Unread mail", clauses: ["Unread"] }, saveEligibility: { allowed: true, code: null, detail: "Ready to save." },
+  };
+  const previewIdentities: OrganizationViewDraftInput[] = [];
+  const commits: Array<{ draft: { viewId: string | null; viewRevision: number | null }; expectedRevisions: { view: number | null } }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: prepared });
+    if (path === "/v1/organization/views/preview") {
+      const requestBody = JSON.parse(String(init?.body)) as { draft: OrganizationViewDraftInput };
+      previewIdentities.push(requestBody.draft);
+      return previewResponse(init);
+    }
+    if (path === "/v1/organization/views/commit") {
+      const requestBody = JSON.parse(String(init?.body)) as { draft: { viewId: string | null; viewRevision: number | null }; expectedRevisions: { view: number | null } };
+      commits.push(requestBody);
+      return committedResponse(init, view.id);
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { viewId: view.id } }} onCancel={() => {}} onCommitted={() => {}}/>));
+  await flush(); await flush(); await flush();
+  expect(previewIdentities.at(-1)).toEqual({ mode: "update", viewId: view.id, viewRevision: 7, source: prepared.source, identity: prepared.identity, definition: view.definition, unsupportedClauses: [] });
+  await click(button(container as unknown as HTMLElement, "Save changes"));
+  await flush(); await flush();
+  expect(commits).toHaveLength(1);
+  expect(commits[0]!.draft.viewId).toBe(view.id);
+  expect(commits[0]!.draft.viewRevision).toBe(7);
+  expect(commits[0]!.expectedRevisions.view).toBe(7);
+});
+
+test("a stale first preparation cannot replace a newer external authoring entry", async () => {
+  const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
+    preparation: {
+      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      identity: { name: label, description: "", color: "#70867d", position: 0 },
+      definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
+    },
+    returnContext: { anchor: label },
+  });
+  const firstEntry = entry("First search", "first@example.com");
+  const secondEntry = entry("Second search", "second@example.com");
+  let resolveFirst!: (response: Response) => void;
+  const firstResponse = new Promise<Response>((resolve) => { resolveFirst = resolve; });
+  let prepareCalls = 0;
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") {
+      prepareCalls += 1;
+      if (prepareCalls === 1) return firstResponse;
+      const input = secondEntry.preparation;
+      return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 5, draft: preparedCreateDraft(input, input.kind === "typed_definition" ? input.definition : { revision: 1 }) });
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const renderEntry = async (current: typeof firstEntry) => act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={current} onCancel={() => {}} onCommitted={() => {}}/>));
+  await renderEntry(firstEntry);
+  await flush(); await flush();
+  expect(prepareCalls).toBe(1);
+  await renderEntry(secondEntry);
+  await flush(); await flush(); await flush();
+  expect(prepareCalls).toBe(2);
+  expect(input(container as unknown as HTMLElement, "Email addresses").value).toBe("second@example.com");
+  const firstInput = firstEntry.preparation;
+  await act(async () => resolveFirst(Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(firstInput, firstInput.kind === "typed_definition" ? firstInput.definition : { revision: 1 }) })));
+  await flush(); await flush();
+  expect(input(container as unknown as HTMLElement, "Email addresses").value).toBe("second@example.com");
+  expect(container.querySelector(".views-header")?.textContent).toContain("Second search");
+});
+
+test("a ready external draft cannot survive a replacement entry while its preparation is pending or failing", async () => {
+  const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
+    preparation: {
+      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      identity: { name: label, description: "", color: "#70867d", position: 0 },
+      definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
+    },
+    returnContext: { anchor: label },
+  });
+  const mayaEntry = entry("Maya search", "maya@example.com");
+  const ariEntry = entry("Ari search", "ari@example.com");
+  let rejectAriPreparation!: (reason: Error) => void;
+  const ariPreparation = new Promise<Response>((_resolve, reject) => { rejectAriPreparation = reject; });
+  let prepareCalls = 0;
+  let commitCalls = 0;
+  const committedDefinitions: OrganizationViewDefinition[] = [];
+  const committedContexts: Array<{ anchor: string }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") {
+      prepareCalls += 1;
+      if (prepareCalls === 1) return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(mayaEntry.preparation, mayaEntry.preparation.kind === "typed_definition" ? mayaEntry.preparation.definition : { revision: 1 }) });
+      return ariPreparation;
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      commitCalls += 1;
+      committedDefinitions.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      return committedResponse(init, "view_stale");
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const renderEntry = (current: typeof mayaEntry) => act(() => root!.render(<OrganizationViewAuthoringWorkspace entry={current} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+  await renderEntry(mayaEntry);
+  await flush(); await flush(); await flush();
+  expect(input(container as unknown as HTMLElement, "Email addresses").value).toBe("maya@example.com");
+  expect(button(container as unknown as HTMLElement, "Save View").disabled).toBe(false);
+
+  await renderEntry(ariEntry);
+  const showedPending = container.textContent?.includes("Preparing this live View") ?? false;
+  const staleForm = container.querySelector("form");
+  const staleFormWasAbsent = staleForm === null;
+  if (staleForm) await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => rejectAriPreparation(new Error("Ari preparation failed")));
+  await flush(); await flush();
+  expect(showedPending).toBe(true);
+  expect(staleFormWasAbsent).toBe(true);
+  expect(commitCalls).toBe(0);
+  expect(committedDefinitions).toEqual([]);
+  expect(committedContexts).toEqual([]);
+  expect(container.textContent).toContain("Ari preparation failed");
+  expect(container.querySelector("form")).toBeNull();
+});
+
+test("a stale commit response cannot use a replacement entry context or keep its saving state", async () => {
+  const entry = (label: string, address: string): { preparation: OrganizationViewPreparationInput; returnContext: { anchor: string } } => ({
+    preparation: {
+      kind: "typed_definition", source: { kind: "search", label, returnTarget: `/dev/inbox?q=${label}` },
+      identity: { name: label, description: "", color: "#70867d", position: 0 },
+      definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: [address] } }, unsupportedClauses: [],
+    },
+    returnContext: { anchor: label },
+  });
+  const mayaEntry = entry("Maya ready", "maya@example.com");
+  const ariEntry = entry("Ari pending", "ari@example.com");
+  let resolveAriPreparation!: (response: Response) => void;
+  const ariPreparation = new Promise<Response>((resolve) => { resolveAriPreparation = resolve; });
+  let resolveMayaCommit!: (response: Response) => void;
+  const mayaCommit = new Promise<Response>((resolve) => { resolveMayaCommit = resolve; });
+  let prepareCalls = 0;
+  let commitCalls = 0;
+  let mayaCommitRequest: RequestInit | undefined;
+  const committedDefinitions: OrganizationViewDefinition[] = [];
+  const committedContexts: Array<{ anchor: string }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") {
+      prepareCalls += 1;
+      if (prepareCalls === 1) return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(mayaEntry.preparation, mayaEntry.preparation.kind === "typed_definition" ? mayaEntry.preparation.definition : { revision: 1 }) });
+      return ariPreparation;
+    }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") {
+      commitCalls += 1;
+      committedDefinitions.push((JSON.parse(String(init?.body)) as { draft: { definition: OrganizationViewDefinition } }).draft.definition);
+      if (commitCalls === 1) mayaCommitRequest = init;
+      return commitCalls === 1 ? mayaCommit : committedResponse(init, "view_ari");
+    }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  const renderEntry = (current: typeof mayaEntry) => act(() => root!.render(<OrganizationViewAuthoringWorkspace entry={current} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+  await renderEntry(mayaEntry);
+  await flush(); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  expect(commitCalls).toBe(1);
+
+  await renderEntry(ariEntry);
+  expect(container.textContent).toContain("Ari pending");
+  expect(container.textContent).toContain("Preparing this live View");
+  expect(container.querySelector("form") === null).toBe(true);
+  await act(async () => resolveMayaCommit(committedResponse(mayaCommitRequest, "view_maya")));
+  await flush();
+  expect(committedContexts).toEqual([]);
+
+  await act(async () => resolveAriPreparation(Response.json({ workspaceId: "workspace_demo", workspaceRevision: 5, draft: preparedCreateDraft(ariEntry.preparation, ariEntry.preparation.kind === "typed_definition" ? ariEntry.preparation.definition : { revision: 1 }) })));
+  await flush(); await flush(); await flush();
+  expect(input(container as unknown as HTMLElement, "Email addresses").value).toBe("ari@example.com");
+  expect(button(container as unknown as HTMLElement, "Save View").disabled).toBe(false);
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await flush();
+  expect(commitCalls).toBe(2);
+  expect(committedDefinitions.map((definition) => definition.sender?.addresses)).toEqual([["maya@example.com"], ["ari@example.com"]]);
+  expect(committedContexts).toEqual([{ anchor: "Ari pending" }]);
+});
+
+test("an in-flight commit keeps its initiating context when an equal preparation gets a new return context", async () => {
+  const preparation: OrganizationViewPreparationInput = {
+    kind: "typed_definition", source: { kind: "search", label: "Stable search", returnTarget: "/dev/inbox?q=stable" },
+    identity: { name: "Stable search", description: "", color: "#70867d", position: 0 },
+    definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com"] } }, unsupportedClauses: [],
+  };
+  const firstEntry = { preparation, returnContext: { anchor: "first-result" } };
+  const secondEntry = { preparation: JSON.parse(JSON.stringify(preparation)) as OrganizationViewPreparationInput, returnContext: { anchor: "second-result" } };
+  let resolveCommit!: (response: Response) => void;
+  const pendingCommit = new Promise<Response>((resolve) => { resolveCommit = resolve; });
+  let prepareCalls = 0;
+  let commitRequest: RequestInit | undefined;
+  const committedContexts: Array<{ anchor: string }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") { prepareCalls += 1; return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, preparation.kind === "typed_definition" ? preparation.definition : { revision: 1 }) }); }
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") { commitRequest = init; return pendingCommit; }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={firstEntry} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+  await flush(); await flush(); await flush();
+  await click(button(container as unknown as HTMLElement, "Save View"));
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={secondEntry} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+  expect(prepareCalls).toBe(1);
+  await act(async () => resolveCommit(committedResponse(commitRequest, "view_stable")));
+  await flush();
+  expect(committedContexts).toEqual([{ anchor: "first-result" }]);
+});
+
+test("Cmd+Enter and duplicate form submissions share one in-flight external commit", async () => {
+  const preparation: OrganizationViewPreparationInput = {
+    kind: "typed_definition", source: { kind: "search", label: "Ari search", returnTarget: "/dev/inbox?q=ari" },
+    identity: { name: "Ari search", description: "", color: "#70867d", position: 0 },
+    definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["ari@example.com"] } }, unsupportedClauses: [],
+  };
+  const entry = { preparation, returnContext: { anchor: "ari-result" } };
+  let resolveCommit!: (response: Response) => void;
+  const pendingCommit = new Promise<Response>((resolve) => { resolveCommit = resolve; });
+  let commitCalls = 0;
+  let commitRequest: RequestInit | undefined;
+  const committedContexts: Array<{ anchor: string }> = [];
+  globalThis.fetch = (async (request: string | URL | Request, init?: RequestInit) => {
+    const path = typeof request === "string" ? request : request instanceof URL ? request.pathname + request.search : new URL(request.url).pathname + new URL(request.url).search;
+    if (path === "/v1/organization/describe") return Response.json(liveAuthorityDescription);
+    if (path === "/v1/organization/views" && (init?.method ?? "GET") === "GET") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, items: [] });
+    if (path === "/v1/organization/views/prepare") return Response.json({ workspaceId: "workspace_demo", workspaceRevision: 4, draft: preparedCreateDraft(preparation, preparation.definition) });
+    if (path === "/v1/organization/views/preview") return previewResponse(init);
+    if (path === "/v1/organization/views/commit") { commitCalls += 1; commitRequest = init; return pendingCommit; }
+    throw new Error(`Unexpected request ${path}`);
+  }) as typeof fetch;
+
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={entry} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+  await flush(); await flush(); await flush();
+  const form = container.querySelector("form") as unknown as HTMLFormElement;
+  await act(async () => {
+    form.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }) as unknown as Event);
+    form.dispatchEvent(new browserWindow.Event("submit", { bubbles: true, cancelable: true }) as unknown as Event);
+    form.dispatchEvent(new browserWindow.Event("submit", { bubbles: true, cancelable: true }) as unknown as Event);
+    await Promise.resolve();
+  });
+  expect(commitCalls).toBe(1);
+  await act(async () => resolveCommit(committedResponse(commitRequest, "view_ari")));
+  await flush();
+  expect(committedContexts).toEqual([{ anchor: "ari-result" }]);
+});
 
 function previewResponse(init?: RequestInit, options: { state?: "matches" | "zero"; items?: unknown[] } = {}) {
   const request = JSON.parse(String(init?.body)) as { draft: Record<string, unknown>; page: { limit: number } };

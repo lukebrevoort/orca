@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { StrictMode, act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
-import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
+import { App, GmailComposePermissionDialog, InboxApp, PROFILE_PHOTO_CHANGED_EVENT, PROFILE_PHOTO_FALLBACK_SRC, SettingsHome, defaultReaderPreferences, selectedSenderPreparation, type ReaderPreferences, writeStoredProfilePhoto } from "./App";
 import { ComposeWorkspace, createEmptyComposeDraft, useComposeDraft, type ComposeDraft, type ComposeDraftFields } from "./compose-workspace";
 import { accountFixture, inboxFixture, type Collection, type InboxMessage, type MessageDraft, type PropagatedAgentEvent, type ThreadDetail, type UserPreferences } from "@orca/shared";
 import { demoAccount, demoAgentEvents, demoMessages } from "./demo-data";
@@ -2084,6 +2084,65 @@ describe("Pin navigation and bulk sender actions", () => {
     await act(async () => { selectAll.click(); });
     expect(selectAll.getAttribute("aria-pressed")).toBe("false");
     expect([...browserWindow.document.querySelectorAll("button.message-row")].every((row) => row.getAttribute("aria-pressed") === "false")).toBe(true);
+  });
+
+  test("hands the server only exact selected row identities for sender preparation", () => {
+    const input = selectedSenderPreparation([
+      { id: "message-one", accountId: "account-a", threadId: "thread-one" },
+      { id: "message-two", accountId: "account-a", threadId: "thread-two" },
+    ], "/dev/inbox?q=maya");
+    expect(input).toEqual({
+      kind: "selected_senders",
+      source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/dev/inbox?q=maya" },
+      identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
+      references: [
+        { messageId: "message-one", accountId: "account-a", threadId: "thread-one" },
+        { messageId: "message-two", accountId: "account-a", threadId: "thread-two" },
+      ],
+    });
+    expect("sender" in input).toBe(false);
+  });
+
+  test("keeps mixed-account row selection and blocks sender View preparation", async () => {
+    const source = demoMessages[0]!;
+    const messages: InboxMessage[] = [
+      { ...source, id: "message-a", accountId: "account-a", threadId: "thread-a", from: { name: "Maya", email: "maya@example.com" }, subject: "Account A" },
+      { ...source, id: "message-b", accountId: "account-b", threadId: "thread-b", from: { name: "Ari", email: "ari@example.com" }, subject: "Account B", receivedAt: "2026-07-02T11:00:00.000Z" },
+    ];
+    await renderApp(defaultReaderPreferences, false, { theme: "light", initialDemoMessages: messages });
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => {
+      buttonByName("Select Maya: Account A").click();
+      buttonByName("Select Ari: Account B").click();
+    });
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    expect(useSenders.disabled).toBe(true);
+    expect(browserWindow.document.querySelector(".bulk-view-action")?.textContent).toContain("Choose messages from one account");
+    expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(2);
+  });
+
+  test("cancel returns to the selected rows, scroll position, and authoring trigger", async () => {
+    await renderApp();
+    await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+    await act(async () => { buttonByName("Select Mom: Dinner on Sunday?").click(); });
+    const useSenders = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Use these senders") as unknown as HTMLButtonElement;
+    const focusCalls = trackFocus(useSenders);
+    setScroll({ x: 12, y: 380 });
+    await act(async () => { useSenders.click(); await Promise.resolve(); });
+    const authoringSurface = browserWindow.document.querySelector(".selected-view-authoring") as unknown as HTMLElement;
+    expect(authoringSurface).not.toBeNull();
+    expect(authoringSurface.style.position).toBe("relative");
+    expect(authoringSurface.style.zIndex).toBe("151");
+    const authoringHeading = authoringSurface.querySelector("#views-title") as unknown as HTMLElement;
+    expect(authoringHeading.tabIndex).toBe(-1);
+    expect(isSameNode(browserWindow.document.activeElement, authoringHeading)).toBe(true);
+    setScroll({ x: 0, y: 0 });
+    const cancel = [...browserWindow.document.querySelectorAll(".selected-view-authoring button")].find((candidate) => candidate.textContent === "Cancel") as unknown as HTMLButtonElement;
+    await act(async () => { cancel.click(); });
+    flushAnimationFrames();
+    expect(scrollPosition).toEqual({ x: 12, y: 380 });
+    expect(focusCalls.at(-1)).toEqual({ preventScroll: true });
+    expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(1);
   });
 
   test("moves multiple selected senders to Quiet in one action", async () => {

@@ -29,6 +29,8 @@ import {
   type OrganizationViewUpdateRequest,
   type OrganizationViewReviewedDraft,
   type OrganizationViewResultCount,
+  type OrganizationViewSelectedMessageReference,
+  type OrganizationViewPreparationNotice,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
 import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
@@ -56,6 +58,11 @@ export class OrganizationViewQueryError extends Error {
 export class OrganizationViewValidationError extends Error {
   readonly code = "validation_error" as const;
   constructor(message: string) { super(message); this.name = "OrganizationViewValidationError"; }
+}
+
+export class OrganizationViewSelectionError extends Error {
+  readonly code: "selection_reference_unavailable" | "mixed_account_selection" | "all_selected_senders_are_self";
+  constructor(code: OrganizationViewSelectionError["code"], message: string) { super(message); this.code = code; this.name = "OrganizationViewSelectionError"; }
 }
 
 export type OrganizationViewScope = {
@@ -103,6 +110,7 @@ export type OrganizationViewsRepository = {
   reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView[];
   remove(input: { workspaceId: string; viewId: string; request: OrganizationViewRemoveRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): void;
   validateDefinition(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; authorization: OrganizationViewQueryAuthorization }): { accountIds: string[]; authorizedScopeDigest: string };
+  resolveSelectedSenders(input: { scope: OrganizationViewScope; references: OrganizationViewSelectedMessageReference[]; authorization: OrganizationViewQueryAuthorization }): { accountId: string; addresses: string[]; omittedSelfCount: number };
   evaluate(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; resultSetKey: string; query: OrganizationViewResultQuery; authorization: OrganizationViewQueryAuthorization }): OrganizationViewEvaluationPage;
 };
 
@@ -273,31 +281,50 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
     return { executionContext: decision.executionContext, trace: decision.trace, authorizationEnvelopeDigest: decision.authorizationEnvelopeDigest, command, ...(scope.actor.type === "agent" ? { agentCapabilitySource: dependencies.agentCapabilitySource } : {}) };
   }
 
-  function draftInput(scope: OrganizationViewScope, input: unknown): OrganizationViewDraftInput {
+  function draftInput(scope: OrganizationViewScope, input: unknown): { draft: OrganizationViewDraftInput; preparationNotices: OrganizationViewPreparationNotice[] } {
     const parsed = organizationViewPreparationInputSchema.parse(input);
     if (parsed.kind === "typed_definition") {
-      return organizationViewDraftInputSchema.parse({
+      return { draft: organizationViewDraftInputSchema.parse({
         mode: "create",
         viewId: null,
+        viewRevision: null,
         source: parsed.source,
         identity: parsed.identity,
         definition: parsed.definition,
         unsupportedClauses: parsed.unsupportedClauses,
-      });
+      }), preparationNotices: [] };
+    }
+    if (parsed.kind === "selected_senders") {
+      const authorization = authorizeQuery(scope, { revision: 1 }, dependencies.agentCapabilitySource);
+      const resolved = repository.resolveSelectedSenders({ scope, references: parsed.references, authorization });
+      return { draft: organizationViewDraftInputSchema.parse({
+        mode: "create",
+        viewId: null,
+        viewRevision: null,
+        source: parsed.source,
+        identity: parsed.identity,
+        definition: { revision: 1, accountIds: [resolved.accountId], sender: { addresses: resolved.addresses } },
+        unsupportedClauses: [],
+      }), preparationNotices: resolved.omittedSelfCount > 0 ? [{
+        code: "self_sender_omitted",
+        detail: `${resolved.omittedSelfCount} selected ${resolved.omittedSelfCount === 1 ? "message was" : "messages were"} sent by this connected account and ${resolved.omittedSelfCount === 1 ? "was" : "were"} omitted. The View will match only the external sender addresses shown below; your own address is not included.`,
+        omittedCount: resolved.omittedSelfCount,
+      }] : [] };
     }
     const view = repository.get(scope.workspaceId, parsed.viewId);
     if (!view) throw new OrganizationViewNotFoundError();
-    return organizationViewDraftInputSchema.parse({
+    return { draft: organizationViewDraftInputSchema.parse({
       mode: "update",
       viewId: view.id,
+      viewRevision: view.revision,
       source: { kind: "saved_view", label: view.name },
       identity: { name: view.name, description: view.description, color: view.color, position: view.position },
       definition: view.definition,
       unsupportedClauses: [],
-    });
+    }), preparationNotices: [] };
   }
 
-  function reviewDraft(scope: OrganizationViewScope, input: unknown, validate = true): { draft: OrganizationViewReviewedDraft; authorization: OrganizationViewQueryAuthorization; workspaceRevision: number } {
+  function reviewDraft(scope: OrganizationViewScope, input: unknown, validate = true, preparationNotices: OrganizationViewPreparationNotice[] = []): { draft: OrganizationViewReviewedDraft; authorization: OrganizationViewQueryAuthorization; workspaceRevision: number } {
     const candidate = organizationViewDraftInputSchema.parse(input);
     const definition = organizationViewDefinitionSchema.parse(candidate.definition);
     const definitionDigest = digestOrganizationViewDefinition(definition);
@@ -310,6 +337,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       workspaceRevision: repository.getWorkspaceRevision(scope.workspaceId),
       draft: {
         ...candidate,
+        preparationNotices,
         definition,
         definitionDigest,
         definitionKind: organizationViewDefinitionKind(definition),
@@ -335,7 +363,8 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
 
   const module = {
     prepare(input: { scope: OrganizationViewScope; input: unknown }) {
-      const reviewed = reviewDraft(input.scope, draftInput(input.scope, input.input));
+      const prepared = draftInput(input.scope, input.input);
+      const reviewed = reviewDraft(input.scope, prepared.draft, true, prepared.preparationNotices);
       return { workspaceId: input.scope.workspaceId, workspaceRevision: reviewed.workspaceRevision, draft: reviewed.draft };
     },
     preview(input: { scope: OrganizationViewScope; request: unknown }) {
@@ -366,6 +395,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
       const reviewed = reviewDraft(input.scope, {
         mode: request.draft.mode,
         viewId: request.draft.viewId,
+        viewRevision: request.draft.viewRevision,
         source: request.draft.source,
         identity: request.draft.identity,
         definition: request.draft.definition,
@@ -379,6 +409,7 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         || canonicalOrganizationJson(request.draft.saveEligibility) !== canonicalOrganizationJson(derived.saveEligibility)) {
         throw new OrganizationViewValidationError("The reviewed View draft no longer matches its canonical definition digest and scope");
       }
+      if (request.expectedRevisions.view !== derived.viewRevision) throw new OrganizationViewValidationError("The expected View revision must match the prepared draft identity");
       if (!derived.saveEligibility.allowed) throw new OrganizationViewValidationError(derived.saveEligibility.detail);
       const mutation = derived.mode === "update"
         ? (() => {

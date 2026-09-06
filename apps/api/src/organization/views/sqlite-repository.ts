@@ -15,12 +15,13 @@ import {
   type OrganizationViewReorderRequest,
   type OrganizationViewResultItem,
   type OrganizationViewResultQuery,
+  type OrganizationViewSelectedMessageReference,
 } from "@orca/shared";
 
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
 import { loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
-import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewQueryAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewSelectionError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewQueryAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
@@ -33,6 +34,35 @@ type OrganizationViewDetailRow = {
   messageCount: number; isRead: number; primaryLaneId: string; senderName: string | null; senderEmail: string;
   humanSignal: number | null; humanClassification: string | null;
 };
+type SelectedSenderRow = {
+  ordinal: number; accountId: string; threadId: string; messageId: string; fromAddress: string | null; providerEmail: string;
+};
+
+const ecmaScriptTrimCharacterSql = "char(9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279)";
+function normalizedEmailSql(valueSql: string) {
+  return `lower(trim(coalesce(${valueSql}, ''), ${ecmaScriptTrimCharacterSql}))`;
+}
+function normalizedAddressSql(alias: string) { return normalizedEmailSql(`${alias}.from_address`); }
+function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
+
+function selectedSenderRows(sqlite: Database, workspaceId: string, references: OrganizationViewSelectedMessageReference[]) {
+  return sqlite.query(`
+    SELECT CAST(reference.key AS INTEGER) AS ordinal,
+      email.account_id AS accountId,
+      email.thread_id AS threadId,
+      email.id AS messageId,
+      ${normalizedEmailSql("email.from_address")} AS fromAddress,
+      ${normalizedEmailSql("account.provider_email")} AS providerEmail
+    FROM json_each(?) reference
+    JOIN emails email
+      ON email.id=json_extract(reference.value,'$.messageId')
+      AND email.account_id=json_extract(reference.value,'$.accountId')
+      AND email.thread_id=json_extract(reference.value,'$.threadId')
+    JOIN threads thread ON thread.id=email.thread_id AND thread.account_id=email.account_id
+    JOIN oauth_accounts account ON account.id=email.account_id AND account.user_id=?
+    ORDER BY CAST(reference.key AS INTEGER)
+  `).all(JSON.stringify(references), workspaceId) as SelectedSenderRow[];
+}
 
 function iso(value: number) { return new Date(value).toISOString(); }
 function mapView(row: ViewRow): OrganizationView {
@@ -92,8 +122,6 @@ function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: strin
   return Buffer.from(JSON.stringify({ version: 2, fingerprint: cursorDigest(cursorFingerprint, key), ...key }), "utf8").toString("base64url");
 }
 
-function normalizedAddressSql(alias: string) { return `lower(trim(coalesce(${alias}.from_address, '')))`; }
-function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
 function effectiveClassificationSql(alias: string) {
   const address = normalizedAddressSql(alias);
   const domain = normalizedDomainSql(alias);
@@ -167,8 +195,8 @@ export function buildOrganizationViewPageKeyQuery(input: {
   if (signal?.evidenceReasonCodes) { emailConditions.push(`EXISTS (SELECT 1 FROM json_each(COALESCE(e.human_classification_reasons,'[]')) reason WHERE reason.value IN (${placeholders(signal.evidenceReasonCodes)}))`); params.push(...signal.evidenceReasonCodes); }
   if (definition.sender) {
     const senderParts: string[] = [];
-    if (definition.sender.addresses) { senderParts.push(`lower(e.from_address) IN (${placeholders(definition.sender.addresses)})`); params.push(...definition.sender.addresses); }
-    if (definition.sender.domains) { senderParts.push(`lower(substr(e.from_address,instr(e.from_address,'@')+1)) IN (${placeholders(definition.sender.domains)})`); params.push(...definition.sender.domains); }
+    if (definition.sender.addresses) { senderParts.push(`${normalizedAddressSql("e")} IN (${placeholders(definition.sender.addresses)})`); params.push(...definition.sender.addresses); }
+    if (definition.sender.domains) { senderParts.push(`${normalizedDomainSql("e")} IN (${placeholders(definition.sender.domains)})`); params.push(...definition.sender.domains); }
     emailConditions.push(`(${senderParts.join(" OR ")})`);
   }
   if (definition.date?.receivedAfter) { emailConditions.push("e.received_at >= ?"); params.push(Date.parse(definition.date.receivedAfter)); }
@@ -542,6 +570,46 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         const authorizedScopeDigest = verifyQueryAuthorization(sqlite, scope, authorization);
         assertOwnedDefinition(sqlite, scope.workspaceId, definition, scope.accountIds);
         return { accountIds: [...(definition.accountIds ?? scope.accountIds)].sort(), authorizedScopeDigest };
+      })();
+    },
+    resolveSelectedSenders({ scope, references, authorization }) {
+      return sqlite.transaction(() => {
+        verifyQueryAuthorization(sqlite, scope, authorization);
+        const rows = selectedSenderRows(sqlite, scope.workspaceId, references);
+        if (rows.length !== references.length || rows.some((row, ordinal) => row.ordinal !== ordinal)) {
+          throw new OrganizationViewSelectionError("selection_reference_unavailable", "One or more selected messages is no longer available in this Workspace. Your selection was kept; refresh and try again.");
+        }
+        const authorizedAccounts = new Set(scope.accountIds);
+        if (rows.some((row) => !authorizedAccounts.has(row.accountId))) throw new OrganizationViewAccessError();
+        const accountIds = [...new Set(rows.map((row) => row.accountId))];
+        if (accountIds.length !== 1) {
+          throw new OrganizationViewSelectionError("mixed_account_selection", "Use these senders supports one connected account at a time. Your selection was kept.");
+        }
+        const addresses: string[] = [];
+        const seen = new Set<string>();
+        let omittedSelfCount = 0;
+        for (const row of rows) {
+          const address = row.fromAddress ?? "";
+          const selfAddress = row.providerEmail;
+          if (!address) throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
+          if (!organizationViewDefinitionSchema.safeParse({ revision: 1, sender: { addresses: [address] } }).success) {
+            throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
+          }
+          if (address === selfAddress) {
+            omittedSelfCount += 1;
+            continue;
+          }
+          if (seen.has(address)) continue;
+          seen.add(address);
+          addresses.push(address);
+        }
+        if (addresses.length === 0) {
+          throw new OrganizationViewSelectionError("all_selected_senders_are_self", "Every selected message was sent by this connected account. Select at least one incoming sender.");
+        }
+        if (!organizationViewDefinitionSchema.safeParse({ revision: 1, accountIds, sender: { addresses } }).success) {
+          throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
+        }
+        return { accountId: accountIds[0]!, addresses, omittedSelfCount };
       })();
     },
     evaluate({ scope, definition, definitionDigest, resultSetKey, query, authorization }) {

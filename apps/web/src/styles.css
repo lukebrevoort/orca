@@ -4528,7 +4528,7 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .classification-tab:disabled { background: var(--orca-surface); color: var(--orca-muted); cursor: wait; opacity: .72; }
 .classification-tabs-status { color: var(--orca-muted); font-size: 10px; margin-left: auto; min-width: 68px; text-align: right; }
 .classification-panel { min-width: 0; }
-.bulk-action-bar { align-items: center; background: color-mix(in srgb, var(--orca-surface) 94%, transparent); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: 0 9px 28px rgb(15 36 34 / 7%); display: grid; gap: 8px 14px; grid-template-columns: minmax(180px, 1fr) auto auto; margin: -18px 0 20px; padding: 12px 14px; position: sticky; top: 12px; z-index: 30; }
+.bulk-action-bar { align-items: center; background: color-mix(in srgb, var(--orca-surface) 94%, transparent); border: 1px solid var(--orca-border); border-radius: 16px; box-shadow: 0 9px 28px rgb(15 36 34 / 7%); display: grid; gap: 8px 14px; grid-template-columns: minmax(170px, 1fr) auto auto auto; margin: -18px 0 20px; padding: 12px 14px; position: sticky; top: 12px; z-index: 30; }
 .bulk-action-bar > div:first-child { display: grid; gap: 2px; }
 .bulk-action-bar > div:first-child strong { color: var(--orca-ink); font-size: 12px; }
 .bulk-action-bar > div:first-child span { color: var(--orca-muted); font-size: 10px; }
@@ -4539,6 +4539,12 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .bulk-action-bar button:disabled { background: var(--orca-control-disabled-background); border-color: var(--orca-control-disabled-border); color: var(--orca-control-disabled-ink); cursor: not-allowed; opacity: 1; }
 .bulk-action-bar .bulk-select-all { background: transparent; color: var(--orca-ink); }
 .bulk-action-bar .bulk-select-all[aria-pressed="true"] { background: var(--orca-control-selected-background); border-color: var(--orca-control-selected-border); box-shadow: inset 0 -2px var(--orca-control-selected-indicator); color: var(--orca-control-selected-ink); }
+.bulk-view-action { display: grid; gap: 4px; justify-items: start; }
+.bulk-view-action > button { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); }
+.bulk-view-action > span { color: var(--orca-danger); font-size: 9px; line-height: 1.25; max-width: 190px; }
+.selected-view-authoring-backdrop { background: color-mix(in srgb, var(--orca-ink) 24%, transparent); border: 0; inset: 0; position: fixed; z-index: 150; }
+.selected-view-authoring-layer { inset: 0; overflow: auto; padding: 32px max(24px, calc((100vw - 1080px) / 2)); position: fixed; z-index: 151; }
+.selected-view-authoring { display: block; margin: 0 auto; max-width: 1080px; position: relative; width: 100%; z-index: 151; }
 .bulk-action-message { align-items: center; background: var(--orca-surface-hover); border: 1px solid var(--orca-border); border-radius: 10px; color: var(--orca-ink); display: flex; font-size: 10px; gap: 10px; justify-content: space-between; margin: -8px 0 18px; padding: 9px 11px; }
 .bulk-action-message-error,
 .bulk-action-message-partial { background: color-mix(in srgb, var(--orca-danger) 8%, var(--orca-surface)); color: var(--orca-danger); }
@@ -4546,6 +4552,10 @@ button, input, textarea { font-family: var(--orca-font-body); }
 .bulk-action-message button:hover:not(:disabled),
 .bulk-action-message button:focus-visible { background: var(--orca-surface); border-color: var(--orca-border); color: var(--orca-ink); outline: 2px solid var(--orca-accent-soft); outline-offset: 1px; }
 .bulk-action-message button:disabled { cursor: wait; opacity: .55; }
+@media (max-width: 1100px) {
+  .bulk-action-bar { grid-template-columns: minmax(180px, 1fr) auto; }
+  .bulk-action-bar > div[role="group"] { justify-self: end; }
+}
 .classification-action-message, .classification-action-error { border-radius: 10px; font-size: 11px; line-height: 1.45; margin: -5px 0 14px; padding: 9px 11px; }
 .classification-action-message { background: var(--orca-accent-soft); color: var(--orca-ink); }
 .classification-action-error { background: color-mix(in srgb, var(--orca-danger) 10%, var(--orca-surface)); color: var(--orca-danger); }
