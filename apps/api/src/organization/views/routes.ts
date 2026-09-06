@@ -34,6 +34,18 @@ export function registerOrganizationViewRoutes(app: OrganizationApp, options: { 
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.list({ scope: current.scope })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
   });
+  app.post("/v1/organization/views/prepare", requireAuth({ dbFactory }), async (c) => {
+    const current = open(c.get("auth").userId);
+    try { return c.json(current.organization.prepare({ scope: current.scope, input: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
+  });
+  app.post("/v1/organization/views/preview", requireAuth({ dbFactory }), async (c) => {
+    const current = open(c.get("auth").userId);
+    try { return c.json(current.organization.preview({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
+  });
+  app.post("/v1/organization/views/commit", requireAuth({ dbFactory }), async (c) => {
+    const current = open(c.get("auth").userId);
+    try { return c.json(current.organization.commit({ scope: current.scope, request: await c.req.json() })); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }
+  });
   app.post("/v1/organization/views", requireAuth({ dbFactory }), async (c) => {
     const current = open(c.get("auth").userId);
     try { return c.json(current.organization.create({ scope: current.scope, request: await c.req.json() }), 201); } catch (error) { return errorResponse(c, error); } finally { current.sqlite.close(); }

@@ -12,8 +12,8 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
-import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, organizationViewsFixture, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
   demoAgentEvents,
@@ -35,6 +35,7 @@ import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
 import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
+import { SavedOrganizationViewWorkspace } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { isMailSearchResultReader, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
@@ -857,6 +858,7 @@ export function SettingsHome({ preferences, setPreferences, systemTheme, theme, 
     accountId: demoMode ? demoAccount.id : profileAccount?.id ?? null,
     attention: !demoMode && (connectedAccountsStatus === "error" || settingsSyncReadStatus === "error" || Boolean(settingsSyncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error"))),
     collections: demoMode ? demoCollections : [],
+    views: demoMode ? organizationViewsFixture : [],
     complete: demoMode,
     counts: demoMode ? {
       focus: getMessagesForMailbox(demoMailWithAgentSources, "focus").length,
@@ -1263,6 +1265,7 @@ export function InboxApp({
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
+  const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
   const [collectionsLoad, setCollectionsLoad] = useState<{ accountId: string | null; status: "loading" | "ready" | "error" }>(() => demoMode
     ? { accountId: demoAccount.id, status: "ready" }
     : { accountId: null, status: "loading" });
@@ -1294,6 +1297,11 @@ export function InboxApp({
     const states = ["ready", "loading", "unavailable", "no_access", "offline", "transaction_failure", "conflict", "active", "reverted"] as const;
     return states.find((state) => state === requested) ?? null;
   }, []);
+  const bre381EvidenceState = useMemo(() => {
+    if (!import.meta.env.DEV || typeof window === "undefined") return null;
+    const requested = new URLSearchParams(window.location.search).get("bre381Evidence");
+    return requested === "loading" || requested === "ready" || requested === "error" || requested === "zero" ? requested : null;
+  }, []);
   const bre358EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("bre358Evidence") === "partial" ? "partial" : null;
@@ -1310,6 +1318,11 @@ export function InboxApp({
     if (typeof window === "undefined") return null;
     const destination = desktopDestinationFromLocation(window.location);
     return destination?.startsWith("space:") ? destination.slice("space:".length) || null : null;
+  });
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const destination = desktopDestinationFromLocation(window.location);
+    return destination.startsWith("view:") ? destination.slice("view:".length) || null : null;
   });
   const [organizerMessage, setOrganizerMessage] = useState<InboxMessage | null>(null);
   const [organizerClosing, setOrganizerClosing] = useState(false);
@@ -1640,6 +1653,9 @@ export function InboxApp({
         if (!controller.signal.aborted) setCollectionsLoad({ accountId, status: "error" });
         throw error;
       });
+    void fetchJson("/v1/organization/views", organizationViewListResponseSchema, controller.signal)
+      .then((nextViews) => { if (!controller.signal.aborted) setSavedViews(nextViews.items); })
+      .catch(() => { if (!controller.signal.aborted) setSavedViews([]); });
     void Promise.all([
       collectionsRequest,
       fetchJson("/v1/pins", pinsResponseSchema, controller.signal),
@@ -1763,6 +1779,8 @@ export function InboxApp({
 
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
     ? "organization"
+    : activeSavedViewId
+      ? `view:${activeSavedViewId}`
     : activeCollectionId
       ? `space:${activeCollectionId}`
       : activeMailbox === "hidden" ? "all" : activeMailbox;
@@ -1777,6 +1795,7 @@ export function InboxApp({
     active: activeDesktopDestination,
     attention: status === "error" || Boolean(syncStatus?.accounts.some((item) => item.state === "auth_needed" || item.state === "error")),
     collections,
+    views: savedViews,
     counts: {
       focus: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
       signals: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length,
@@ -1791,7 +1810,7 @@ export function InboxApp({
     online,
     order: spaceOrder,
     syncing: status === "syncing" || isGmailRefreshing,
-  }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, spaceLabels, spaceOrder, status, syncStatus]);
+  }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
@@ -2056,6 +2075,7 @@ export function InboxApp({
     setManageSpacesOpen(false);
     setStreamQuery(location.query);
     setOrganizationStudioOpen(destination === "organization");
+    setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
     if (destination.startsWith("space:")) {
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
@@ -2180,6 +2200,18 @@ export function InboxApp({
         prev.map((m) => (m.accountId === message.accountId && m.threadId === message.threadId ? { ...m, unread: false } : m)),
       );
     }
+  }
+
+  function openSavedViewThread(target: { accountId: string; threadId: string }) {
+    if (panelClosing) return;
+    readerNavigationGenerationRef.current += 1;
+    surfaceHistoryRef.current?.openReader(target, captureSurfaceReturnContext(null));
+    runUiTransition("reader-forward", () => {
+      setPanelClosing(false);
+      setZenClosing(false);
+      setSelectedThreadId(target.threadId);
+      setSelectedThreadAccountId(target.accountId);
+    });
   }
 
   function openAgentEventSource(event: PropagatedAgentEvent) {
@@ -2857,6 +2889,16 @@ export function InboxApp({
       return;
     }
     setOrganizationStudioOpen(false);
+    if (destination.startsWith("view:")) {
+      runUiTransition("content", () => {
+        setActiveSavedViewId(destination.slice("view:".length));
+        setSelectedThreadId(null);
+        setSelectedThreadAccountId(null);
+        setActiveCollectionId(null);
+      });
+      return;
+    }
+    setActiveSavedViewId(null);
     if (destination.startsWith("space:")) {
       selectCollection(destination.slice("space:".length));
       return;
@@ -2954,12 +2996,12 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={organizationStudioOpen ? "Organization" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
-            {activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               agentEventActionErrors={agentEventActionErrors}
               agentEvents={agentEvents}
@@ -3058,7 +3100,7 @@ export function InboxApp({
         onReorder={reorderWorkflowSpaces}
         onRename={renameWorkflowSpace}
         onRestore={restoreWorkflowSpace}
-        spaces={workflowSpaces}
+        spaces={workflowSpaces.filter((space) => space.kind !== "view")}
       /> : null}
 
       {organizerMessage ? (

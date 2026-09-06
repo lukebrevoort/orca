@@ -107,6 +107,31 @@ describe("BRE-313 live Views REST adapter", () => {
     const livePage = await app.request(`/v1/organization/views/${exact.id}/results?limit=25`, { headers });
     assert.deepEqual((await livePage.json()).items, []);
 
+    const overridden = createDatabaseClient(path);
+    overridden.sqlite.query("INSERT INTO human_classification_overrides (id,account_id,target_type,target_value,classification,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+      .run("override_domain", "account_gmail", "sender_domain", "status.example.com", "likely_human", "user_choice", timestamp, timestamp);
+    overridden.sqlite.query("INSERT INTO human_classification_overrides (id,account_id,target_type,target_value,classification,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+      .run("override_address", "account_gmail", "sender_address", "deploy@status.example.com", "uncertain", "user_choice", timestamp, timestamp);
+    overridden.sqlite.query("INSERT INTO human_classification_overrides (id,account_id,target_type,target_value,classification,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)")
+      .run("override_message", "account_gmail", "message", "email_failure", "likely_human", "user_choice", timestamp, timestamp);
+    overridden.sqlite.close();
+    const classificationDraft = {
+      mode: "create", viewId: null, source: { kind: "manual", label: "Classification parity" },
+      identity: { name: "Override-aware", description: "", color: "#70867d", position: 4 },
+      definition: { revision: 1, humanSignal: { classifications: ["likely_human"] }, thread: { subjectContains: "production failure" } }, unsupportedClauses: [],
+    };
+    const overridePreview = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: classificationDraft, page: { limit: 25 } }) });
+    assert.equal(overridePreview.status, 200, await overridePreview.clone().text());
+    assert.deepEqual((await overridePreview.json()).results.items.map((item: { threadId: string }) => item.threadId), ["thread_failure"], "message override must win over address and domain overrides");
+    const removedMessageOverride = createDatabaseClient(path);
+    removedMessageOverride.sqlite.query("DELETE FROM human_classification_overrides WHERE id='override_message'").run();
+    removedMessageOverride.sqlite.close();
+    assert.deepEqual((await (await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: classificationDraft, page: { limit: 25 } }) })).json()).results.items, [], "address override must win over the domain override");
+    const removedAddressOverride = createDatabaseClient(path);
+    removedAddressOverride.sqlite.query("DELETE FROM human_classification_overrides WHERE id='override_address'").run();
+    removedAddressOverride.sqlite.close();
+    assert.deepEqual((await (await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: classificationDraft, page: { limit: 25 } }) })).json()).results.items.map((item: { threadId: string }) => item.threadId), ["thread_failure"], "domain override must replace the raw classification when no narrower override exists");
+
     const firstPage = await app.request(`/v1/organization/views/${allWork.id}/results?limit=1`, { headers });
     const firstBody = await firstPage.json();
     assert.equal(firstBody.items[0].threadId, "thread_failure");
@@ -118,9 +143,19 @@ describe("BRE-313 live Views REST adapter", () => {
     const invalidCursor = await app.request(`/v1/organization/views/${allWork.id}/results?limit=1&cursor=not-a-cursor`, { headers });
     assert.equal(invalidCursor.status, 400);
 
+    const expandedScope = createDatabaseClient(path);
+    expandedScope.db.insert(oauthAccounts).values({ id: "account_new", userId: "owner", provider: "gmail", providerEmail: "new@gmail.example", providerId: "new" }).run();
+    expandedScope.sqlite.close();
+    const staleScopeCursor = await app.request(`/v1/organization/views/${allWork.id}/results?limit=1&cursor=${encodeURIComponent(firstBody.nextCursor)}`, { headers });
+    assert.equal(staleScopeCursor.status, 400);
+    assert.equal((await staleScopeCursor.json()).error.code, "invalid_cursor");
+
     const updated = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "routes-update", expectedWorkspaceRevision: 5, expectedRevision: 1, patch: { name: "All current work" } }) });
     assert.equal(updated.status, 200);
     assert.equal((await updated.json()).revision, 2);
+    const staleRevisionCursor = await app.request(`/v1/organization/views/${allWork.id}/results?limit=1&cursor=${encodeURIComponent(firstBody.nextCursor)}`, { headers });
+    assert.equal(staleRevisionCursor.status, 400);
+    assert.equal((await staleRevisionCursor.json()).error.code, "invalid_cursor");
     const staleUpdate = await app.request(`/v1/organization/views/${allWork.id}`, { method: "PATCH", headers, body: JSON.stringify({ idempotencyKey: "routes-stale-update", expectedWorkspaceRevision: 6, expectedRevision: 1, patch: { name: "Stale rename" } }) });
     assert.equal(staleUpdate.status, 409);
 

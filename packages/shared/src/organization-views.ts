@@ -38,7 +38,7 @@ export const organizationViewDefinitionSchema = z.object({
     maximumScore: z.number().int().min(0).max(10).optional(),
     classifications: z.array(humanClassificationSchema).min(1).max(4).optional(),
     evidenceReasonCodes: z.array(humanClassificationReasonCodeSchema).min(1).max(12).optional(),
-  }).strict().superRefine((value, context) => {
+  }).strict().refine((value) => Object.values(value).some((predicate) => predicate !== undefined), "Expected at least one Human Signal predicate").superRefine((value, context) => {
     if (value.minimumScore !== undefined && value.maximumScore !== undefined && value.minimumScore > value.maximumScore) {
       context.addIssue({ code: "custom", path: ["minimumScore"], message: "minimumScore must not exceed maximumScore" });
     }
@@ -62,6 +62,117 @@ export const organizationViewDefinitionSchema = z.object({
   }
 });
 export type OrganizationViewDefinition = z.infer<typeof organizationViewDefinitionSchema>;
+
+export const organizationViewDefinitionKindSchema = z.enum(["match_all", "filtered"]);
+export type OrganizationViewDefinitionKind = z.infer<typeof organizationViewDefinitionKindSchema>;
+
+export function organizationViewDefinitionKind(definition: OrganizationViewDefinition): OrganizationViewDefinitionKind {
+  return Object.keys(definition).some((key) => key !== "revision") ? "filtered" : "match_all";
+}
+
+export const organizationViewUnsupportedClauseSchema = z.object({
+  id: identifierSchema,
+  label: nonEmptyStringSchema.max(120),
+  reason: nonEmptyStringSchema.max(500),
+}).strict();
+export type OrganizationViewUnsupportedClause = z.infer<typeof organizationViewUnsupportedClauseSchema>;
+
+export const organizationViewDraftSourceSchema = z.object({
+  kind: z.enum(["manual", "search", "sender_selection", "saved_view"]),
+  label: nonEmptyStringSchema.max(120),
+  returnTarget: z.string().trim().min(1).max(2_048).optional(),
+}).strict();
+export type OrganizationViewDraftSource = z.infer<typeof organizationViewDraftSourceSchema>;
+
+const organizationViewDraftIdentitySchema = z.object({
+  name: nonEmptyStringSchema.max(120),
+  description: z.string().trim().max(500).default(""),
+  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).default("#0b9b84"),
+  position: z.number().int().nonnegative().default(0),
+}).strict();
+
+export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("typed_definition"),
+    source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
+      kind: z.enum(["manual", "search", "sender_selection"]),
+    }).strict(),
+    identity: organizationViewDraftIdentitySchema,
+    definition: organizationViewDefinitionSchema,
+    unsupportedClauses: z.array(organizationViewUnsupportedClauseSchema).max(20).default([]),
+  }).strict(),
+  z.object({
+    kind: z.literal("saved_view"),
+    viewId: identifierSchema,
+  }).strict(),
+]);
+export type OrganizationViewPreparationInput = z.infer<typeof organizationViewPreparationInputSchema>;
+
+export const organizationViewDraftInputSchema = z.object({
+  mode: z.enum(["create", "update"]),
+  viewId: identifierSchema.nullable(),
+  source: organizationViewDraftSourceSchema,
+  identity: organizationViewDraftIdentitySchema,
+  definition: organizationViewDefinitionSchema,
+  unsupportedClauses: z.array(organizationViewUnsupportedClauseSchema).max(20),
+}).strict().superRefine((value, context) => {
+  if ((value.mode === "create") !== (value.viewId === null)) {
+    context.addIssue({ code: "custom", path: ["viewId"], message: "Create drafts omit a View ID; update drafts require one" });
+  }
+});
+export type OrganizationViewDraftInput = z.infer<typeof organizationViewDraftInputSchema>;
+
+export const organizationViewDefinitionSummarySchema = z.object({
+  text: nonEmptyStringSchema.max(2_000),
+  clauses: z.array(nonEmptyStringSchema.max(500)).max(20),
+}).strict();
+export type OrganizationViewDefinitionSummary = z.infer<typeof organizationViewDefinitionSummarySchema>;
+
+export const organizationViewSaveEligibilitySchema = z.object({
+  allowed: z.boolean(),
+  code: z.enum(["blank_definition", "unsupported_clauses"]).nullable(),
+  detail: nonEmptyStringSchema.max(500),
+}).strict();
+export type OrganizationViewSaveEligibility = z.infer<typeof organizationViewSaveEligibilitySchema>;
+
+export const organizationViewReviewedDraftSchema = organizationViewDraftInputSchema.extend({
+  definitionDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  definitionKind: organizationViewDefinitionKindSchema,
+  effectiveAccountIds: uniqueIdentifiersSchema.min(1),
+  summary: organizationViewDefinitionSummarySchema,
+  saveEligibility: organizationViewSaveEligibilitySchema,
+}).strict();
+export type OrganizationViewReviewedDraft = z.infer<typeof organizationViewReviewedDraftSchema>;
+
+export const organizationViewPrepareResponseSchema = z.object({
+  workspaceId: identifierSchema,
+  workspaceRevision: z.number().int().positive(),
+  draft: organizationViewReviewedDraftSchema,
+}).strict();
+export type OrganizationViewPrepareResponse = z.infer<typeof organizationViewPrepareResponseSchema>;
+
+export const organizationViewPreviewRequestSchema = z.object({
+  draft: organizationViewDraftInputSchema,
+  page: z.object({
+    limit: z.number().int().min(1).max(organizationViewBounds.maximumResultsPerPage).default(organizationViewBounds.defaultResultsPerPage),
+    cursor: z.string().min(1).max(2_048).optional(),
+  }).strict().default({ limit: organizationViewBounds.defaultResultsPerPage }),
+}).strict();
+export type OrganizationViewPreviewRequest = z.infer<typeof organizationViewPreviewRequestSchema>;
+
+export const organizationViewResultCountSchema = z.object({
+  kind: z.enum(["shown", "exact"]),
+  value: z.number().int().nonnegative(),
+}).strict();
+export type OrganizationViewResultCount = z.infer<typeof organizationViewResultCountSchema>;
+
+export const organizationViewResultProvenanceSchema = z.object({
+  source: z.literal("stored_mail"),
+  definitionDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  authorizedScopeDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  evaluatedAt: isoDateTimeSchema,
+}).strict();
+export type OrganizationViewResultProvenance = z.infer<typeof organizationViewResultProvenanceSchema>;
 
 export const organizationViewSchema = z.object({
   id: identifierSchema,
@@ -163,3 +274,76 @@ export const organizationViewResultPageSchema = z.object({
   limit: z.number().int().min(1).max(organizationViewBounds.maximumResultsPerPage),
 }).strict();
 export type OrganizationViewResultPage = z.infer<typeof organizationViewResultPageSchema>;
+
+export const organizationViewPreviewResponseSchema = z.object({
+  workspaceId: identifierSchema,
+  workspaceRevision: z.number().int().positive(),
+  draft: organizationViewReviewedDraftSchema,
+  results: z.object({
+    accountIds: uniqueIdentifiersSchema.min(1),
+    items: z.array(organizationViewResultItemSchema).max(organizationViewBounds.maximumResultsPerPage),
+    nextCursor: z.string().max(2_048).nullable(),
+    limit: z.number().int().min(1).max(organizationViewBounds.maximumResultsPerPage),
+    count: organizationViewResultCountSchema,
+    state: z.enum(["matches", "zero"]),
+    provenance: organizationViewResultProvenanceSchema,
+  }).strict(),
+}).strict();
+export type OrganizationViewPreviewResponse = z.infer<typeof organizationViewPreviewResponseSchema>;
+
+export const organizationViewCommitRequestSchema = z.object({
+  draft: organizationViewReviewedDraftSchema,
+  expectedRevisions: z.object({
+    workspace: z.number().int().positive(),
+    view: z.number().int().positive().nullable(),
+  }).strict(),
+  retryKey: identifierSchema,
+  confirmedZeroMatchDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/).nullable().default(null),
+}).strict().superRefine((value, context) => {
+  if ((value.draft.mode === "update") !== (value.expectedRevisions.view !== null)) {
+    context.addIssue({ code: "custom", path: ["expectedRevisions", "view"], message: "Only update commits carry a View revision" });
+  }
+});
+export type OrganizationViewCommitRequest = z.infer<typeof organizationViewCommitRequestSchema>;
+
+export const organizationViewCommitResponseSchema = z.object({
+  workspaceId: identifierSchema,
+  workspaceRevision: z.number().int().positive(),
+  view: organizationViewSchema,
+  navigation: z.object({
+    destination: z.string().trim().min(6).max(256).regex(/^view:/),
+    href: z.string().regex(/^\/\?destination=view%3A/),
+  }).strict(),
+}).strict();
+export type OrganizationViewCommitResponse = z.infer<typeof organizationViewCommitResponseSchema>;
+
+export function summarizeOrganizationViewDefinition(definition: OrganizationViewDefinition): OrganizationViewDefinitionSummary {
+  const clauses: string[] = [];
+  if (definition.accountIds) clauses.push(`${definition.accountIds.length} explicit ${definition.accountIds.length === 1 ? "account" : "accounts"}`);
+  else clauses.push("all authorized accounts, including accounts authorized later");
+  if (definition.laneIds) clauses.push(`${definition.laneIds.length} primary ${definition.laneIds.length === 1 ? "Lane" : "Lanes"}`);
+  if (definition.workflowStateIds) clauses.push(`${definition.workflowStateIds.length} workflow ${definition.workflowStateIds.length === 1 ? "state" : "states"}`);
+  if (definition.facetFilters) clauses.push(`${definition.facetFilters.length} Facet ${definition.facetFilters.length === 1 ? "filter" : "filters"}`);
+  if (definition.contextFilters) clauses.push(`${definition.contextFilters.length} Context ${definition.contextFilters.length === 1 ? "relationship" : "relationships"}`);
+  if (definition.thread?.ids) clauses.push(`${definition.thread.ids.length} exact ${definition.thread.ids.length === 1 ? "Thread" : "Threads"}`);
+  if (definition.thread?.subjectContains) clauses.push(`subject contains “${definition.thread.subjectContains}”`);
+  if (definition.thread?.readState) clauses.push(definition.thread.readState === "unread" ? "at least one unread message" : "no unread messages");
+  if (definition.humanSignal?.minimumScore !== undefined) clauses.push(`Human Signal at least ${definition.humanSignal.minimumScore}`);
+  if (definition.humanSignal?.maximumScore !== undefined) clauses.push(`Human Signal at most ${definition.humanSignal.maximumScore}`);
+  if (definition.humanSignal?.classifications) clauses.push(`effective evidence: ${definition.humanSignal.classifications.join(" or ")}`);
+  if (definition.humanSignal?.evidenceReasonCodes) clauses.push(`${definition.humanSignal.evidenceReasonCodes.length} evidence ${definition.humanSignal.evidenceReasonCodes.length === 1 ? "reason" : "reasons"}`);
+  if (definition.sender?.addresses) clauses.push(definition.sender.addresses.length === 1
+    ? `from ${definition.sender.addresses[0]}`
+    : `from ${definition.sender.addresses.length} sender addresses`);
+  if (definition.sender?.domains) clauses.push(definition.sender.domains.length === 1
+    ? `from domain ${definition.sender.domains[0]}`
+    : `from ${definition.sender.domains.length} sender domains`);
+  if (definition.date?.receivedAfter) clauses.push(`received at or after ${definition.date.receivedAfter}`);
+  if (definition.date?.receivedBefore) clauses.push(`received at or before ${definition.date.receivedBefore}`);
+  return organizationViewDefinitionSummarySchema.parse({
+    text: organizationViewDefinitionKind(definition) === "match_all"
+      ? "All Threads in every currently authorized account."
+      : `Threads matching ${clauses.join("; ")}.`,
+    clauses,
+  });
+}
