@@ -122,6 +122,7 @@
     .pill.pending { background: var(--warning-soft); color: var(--warning); }
 
     .journey { display: grid; grid-template-columns: repeat(6, minmax(130px, 1fr)); gap: 6px; overflow-x: auto; margin: 0; padding: 0; list-style: none; }
+    .journey:focus-visible, .table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     .journey li { position: relative; min-height: 138px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
     .journey li:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; right: -12px; top: 52%; width: 18px; color: var(--accent); font-weight: 800; text-align: center; }
     .journey span { color: var(--accent); font: 800 9px/1 var(--mono); }
@@ -218,7 +219,7 @@
 
     <section id="journey">
       <div class="section-head"><span class="num">01</span><h2>One authoring journey</h2><p>The source differs; every step after preparation is shared. Create and Edit use the same layout and definition controls.</p></div>
-      <ol class="journey" aria-label="Shared authoring journey">
+      <ol class="journey" aria-label="Shared authoring journey" tabindex="0">
         <li><span>01 · Start</span><strong>Search or select</strong><p>Search shows mail first. Selection exposes “Use these senders.” Neither asks for a View name.</p></li>
         <li><span>02 · Prepare</span><strong>Typed draft</strong><p>The server validates scope and translates exact clauses or resolves selected row identities.</p></li>
         <li><span>03 · Preview</span><strong>Matching conversations</strong><p>Readable definition, result-count state, pagination, provenance, and unsupported clauses stay visible.</p></li>
@@ -231,6 +232,7 @@
         <div class="panel"><h3>Selected-row entry</h3><ol><li>Select one or more message/conversation rows from one connected account and activate “Use these senders.”</li><li>The server resolves only the <code>From</code> identity visibly represented by each selected row from authorized account/thread/message references.</li><li>The shared workspace opens with that account and its exact address allowlist plus preview results.</li><li>No selected thread ID becomes live membership; no hidden participant, historical correspondent, topic, or subject restriction is inferred.</li></ol></div>
       </div>
       <div class="panel"><h3>Create, edit, save, discard</h3><p><strong>Create</strong> and <strong>Edit</strong> share one draft representation and one evaluator. Edit seeds that draft from the complete saved definition, including advanced filters the compact controls do not modify. Cancel leaves the saved View untouched. Save rechecks workspace authority and expected revisions, is retry-safe, and changes no mail placement, provider state, notification, or routing policy. A save failure preserves the draft and names the next safe action. Discard affects only the local draft.</p></div>
+      <div class="panel decision"><h3>A valid zero-match View may be saved for future mail—with explicit confirmation.</h3><p>A blank draft, a draft containing only no-op scope, or a draft with any incomplete or unsupported clause is invalid: Save stays disabled and the first invalid control receives focus. When the shared View evaluator successfully returns zero current conversations for a complete, supported definition, show “No conversations match this View yet. Future matching mail will appear here.” Keep <strong>Review filters</strong> and <strong>Save for future mail</strong> available. The first Save action enters the existing confirm-zero state and says “This exact scope currently has zero matches. Saving it will keep watching for future mail.” Only a second, explicit <strong>Save zero-match View</strong> action commits. Canceling that confirmation preserves the entire draft, source query, and return snapshot, then restores focus to Save; Review filters focuses the first predicate without changing it. After confirmed Save, open the canonical empty View under My spaces with the same zero-result copy. A preview error is not a zero-match result and never permits blind Save.</p></div>
     </section>
 
     <section id="layout">
@@ -262,7 +264,7 @@
     <section id="identity">
       <div class="section-head"><span class="num">04</span><h2>Sender identity</h2><p>Each selected row contributes only the exact sender identity the row visibly represents. Hidden conversation history is never mined for additional people.</p></div>
       <div class="panel decision"><h3>Identity key: one account ID + normalized visible-row From address.</h3><p>The selection handoff contains stable <code>{ accountId, threadId, messageId }</code> row references—not client-asserted email addresses. <code>messageId</code> is the internal <code>InboxMessage.id</code>, never the provider message ID. A regular inbox conversation row is backed by the latest message selected by <code>getLatestThreadRows</code>; a global Search row is an individual message. In both cases, the server validates every triple, resolves and normalizes only that stored row’s <code>emails.from_address</code>, and then deduplicates addresses for the one-account View definition. The response displays the authoritative exact address for confirmation. A selected row contributes no other participant or earlier correspondent.</p></div>
-      <div class="table-wrap">
+      <div class="table-wrap" role="region" aria-label="Sender identity decisions" tabindex="0">
         <table>
           <thead><tr><th>Case</th><th>Recommendation</th><th>Visible truth</th><th>Validation</th></tr></thead>
           <tbody>
@@ -282,7 +284,7 @@
     <section id="translation">
       <div class="section-head"><span class="num">05</span><h2>Exact search translation</h2><p>Only explicit clauses with evaluator-equivalent View predicates can be saved. A page of IDs is never a live View.</p></div>
       <div class="panel"><h3>Current global Search → View</h3><p>Today’s <code>MailSearchState</code> exposes only general query, mailbox, evidence, account, collection, and return source. This table is exhaustive for that current entry surface.</p></div>
-      <div class="table-wrap">
+      <div class="table-wrap" role="region" aria-label="Current Search translation matrix" tabindex="0">
         <table>
           <thead><tr><th>Current Search state</th><th>Exact now?</th><th>Typed View meaning</th><th>M9 treatment</th></tr></thead>
           <tbody>
@@ -300,7 +302,7 @@
         </table>
       </div>
       <div class="panel"><h3>Tune-only View predicates</h3><p>These are valid BRE-378 definition controls, but they are <strong>not clauses in current global Search</strong>. Adding one is an explicit refinement. Replacing an unsupported Search clause with one is a visible meaning change followed by a fresh View preview.</p></div>
-      <div class="table-wrap">
+      <div class="table-wrap" role="region" aria-label="Tune-only View predicate matrix" tabindex="0">
         <table>
           <thead><tr><th>Tune control</th><th>View support</th><th>Exact meaning</th><th>Guardrail</th></tr></thead>
           <tbody>
@@ -343,7 +345,7 @@
 
     <section id="keyboard">
       <div class="section-head"><span class="num">08</span><h2>Keyboard, focus, return</h2><p>The flow follows BRE-321’s one-layer-at-a-time dismissal and safe-return grammar.</p></div>
-      <div class="table-wrap">
+      <div class="table-wrap" role="region" aria-label="Keyboard, focus, and return behavior" tabindex="0">
         <table>
           <thead><tr><th>Moment</th><th>Keyboard / focus behavior</th><th>Return context</th></tr></thead>
           <tbody>
@@ -353,7 +355,7 @@
             <tr><td>Enter authoring</td><td>Focus the authoring heading, then the readable definition. Do not auto-focus the optional name.</td><td>Keep an immutable source-location snapshot for Cancel/Back.</td></tr>
             <tr><td>Open Tune</td><td>The selected Tune button uses surface-hover + border + ink. Focus moves to the first editable filter; <kbd>Esc</kbd> collapses Tune and returns to its trigger.</td><td>No route change; preview and source context remain intact.</td></tr>
             <tr><td>Undo</td><td><kbd>⌘Z</kbd> invokes draft Undo only when focus is not in a text-editing control. A visible Undo button is always available when the stack is non-empty.</td><td>Focus returns to the control whose definition change was reversed.</td></tr>
-            <tr><td>Save</td><td><kbd>⌘Enter</kbd> is a discoverable shortcut while authoring and Save is enabled. On validation failure, focus the first invalid/unsupported clause.</td><td>Open the canonical saved View and focus its heading; Back restores the source snapshot.</td></tr>
+            <tr><td>Save</td><td><kbd>⌘Enter</kbd> is a discoverable shortcut while authoring and Save is enabled. On validation failure, focus the first invalid/unsupported clause. For a valid zero-match preview, the first invocation enters confirm-zero and focuses “Save zero-match View”; only a second invocation commits.</td><td>Canceling confirm-zero preserves the draft/query and returns focus to Save. Confirmed Save opens the canonical empty View and focuses its heading; Back restores the source snapshot.</td></tr>
             <tr><td>Escape / Cancel</td><td><kbd>Esc</kbd> closes only the top transient layer. If the draft differs from its seed, show a discard confirmation; otherwise return immediately.</td><td>Search source restores exact URL/filter/page anchor. Selection source restores rows where still present. Edit returns to the unchanged saved View.</td></tr>
             <tr><td>Async/error</td><td>Preview region uses <code>aria-busy</code>; result totals and correction outcomes use a polite live region; blocking errors use an alert without stealing focus.</td><td>Retry preserves the draft, source snapshot, and current focus target.</td></tr>
           </tbody>
@@ -397,10 +399,10 @@ preview(scope, reviewedDraft, page?) → {
 commit(scope, reviewedDraft, expectedRevisions, retryKey) → SavedView</pre>
       </div>
       <div class="grid2" style="margin-top:14px">
-        <div class="panel"><h3>Invariants behind the interface</h3><ul><li>Unsaved and saved definitions use one evaluator.</li><li>Draft preview never persists a temporary View.</li><li>Cursors bind to definition digest and authorized scope.</li><li>Account/thread ownership is resolved server-side.</li><li>Latest preview wins; failed work preserves input.</li><li>Commit rechecks live authority and revisions.</li></ul></div>
+        <div class="panel"><h3>Invariants behind the interface</h3><ul><li>Unsaved and saved definitions use one evaluator.</li><li>Draft preview never persists a temporary View.</li><li>Cursors bind to definition digest and authorized scope.</li><li>Account/thread ownership is resolved server-side.</li><li>Latest preview wins; failed work preserves input.</li><li>Confirm-zero is bound to the current definition digest and clears after any definition change.</li><li>Commit rechecks live authority and revisions.</li></ul></div>
         <div class="panel"><h3>Explicit non-goals</h3><ul><li>Natural-language intent or conversational refinement.</li><li>Topic, person, or similarity inference.</li><li>Railway/local-model/runtime decisions.</li><li>True sender/thread exclusion.</li><li>Notification or routing changes.</li><li>BRE-381 implementation in this artifact.</li></ul></div>
       </div>
-      <div class="panel"><h3>Risks and bounded fallbacks</h3><dl class="scope-key"><dt>Search mismatch</dt><dd>Block Save for unsupported clauses; never weaken the query.</dd><dt>Mixed-account selection</dt><dd>Require one account in M9; do not broaden through a global sender set.</dd><dt>Incomplete sender census</dt><dd>Hide quick positive narrowing and open Tune; never derive from one page.</dd><dt>Unavailable preview</dt><dd>Keep the draft and offer Retry or Cancel; do not permit blind Save.</dd><dt>Missing return target</dt><dd>Return to the nearest surviving source destination and explain what changed.</dd><dt>Human evidence pending</dt><dd>Keep BRE-387/M9 open and label the threshold as proposed.</dd></dl></div>
+      <div class="panel"><h3>Risks and bounded fallbacks</h3><dl class="scope-key"><dt>Search mismatch</dt><dd>Block Save for unsupported clauses; never weaken the query.</dd><dt>Mixed-account selection</dt><dd>Require one account in M9; do not broaden through a global sender set.</dd><dt>Incomplete sender census</dt><dd>Hide quick positive narrowing and open Tune; never derive from one page.</dd><dt>Blank or incomplete draft</dt><dd>Disable Save and focus the missing or unsupported predicate; confirm-zero is never offered.</dd><dt>Valid zero matches</dt><dd>Preserve the exact draft and allow Save only after explicit, digest-bound confirm-zero; the empty View remains live for future matching mail.</dd><dt>Unavailable preview</dt><dd>Keep the draft and offer Retry or Cancel; do not permit blind Save.</dd><dt>Missing return target</dt><dd>Return to the nearest surviving source destination and explain what changed.</dd><dt>Human evidence pending</dt><dd>Keep BRE-387/M9 open and label the threshold as proposed.</dd></dl></div>
     </section>
 
     <footer class="footer">
