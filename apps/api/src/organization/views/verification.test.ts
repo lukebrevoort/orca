@@ -16,6 +16,11 @@ import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, ty
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
 const temporaryDirectories: string[] = [];
+const ecmaScriptTrimCharacters = [
+  "\u0009", "\u000A", "\u000B", "\u000C", "\u000D", "\u0020", "\u00A0", "\u1680",
+  "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006", "\u2007",
+  "\u2008", "\u2009", "\u200A", "\u2028", "\u2029", "\u202F", "\u205F", "\u3000", "\uFEFF",
+].join("");
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
@@ -46,7 +51,7 @@ async function setup() {
     { id: "thread_foreign", accountId: "account_foreign", providerThreadId: "foreign", subject: "Foreign", latestReceivedAt: tied, createdAt: tied },
   ]).run();
   client.db.insert(emails).values([
-    { id: "message_maya", accountId: "account_a", threadId: "thread_a", providerMessageId: "maya", fromAddress: "\t Maya@Example.com \n", fromName: "Maya", subject: "A / A", receivedAt: tied },
+    { id: "message_maya", accountId: "account_a", threadId: "thread_a", providerMessageId: "maya", fromAddress: `${ecmaScriptTrimCharacters}Maya@Example.com${ecmaScriptTrimCharacters}`, fromName: "Maya", subject: "A / A", receivedAt: tied },
     { id: "message_maya_duplicate", accountId: "account_a", threadId: "thread_b", providerMessageId: "maya-duplicate", fromAddress: "MAYA@example.com", fromName: "Maya", subject: "A / B", receivedAt: tied },
     { id: "message_self", accountId: "account_a", threadId: "thread_b", providerMessageId: "self", fromAddress: " A@example.com ", fromName: "Owner", subject: "A / B", receivedAt: tied },
     { id: "message_account_b", accountId: "account_b", threadId: "thread_c", providerMessageId: "account-b", fromAddress: "ari@example.com", fromName: "Ari", subject: "B / C", receivedAt: tied },
@@ -99,10 +104,11 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
 describe("BRE-313 independent View lifecycle verification", () => {
   test("prepares exact selected-message From addresses only after validating every reference", { timeout: 30_000 }, async () => {
     const { app, headers, path } = await setup();
+    assert.equal(ecmaScriptTrimCharacters.trim(), "", "fixture covers only the complete ECMAScript trim character set");
     const existing = createDatabaseClient(path);
     const existingAt = new Date("2026-08-25T17:30:00.000Z");
     existing.db.insert(threads).values({ id: "thread_unselected_sender", accountId: "account_a", providerThreadId: "unselected-sender", subject: "Unselected existing sender mail", latestReceivedAt: existingAt, createdAt: existingAt }).run();
-    existing.db.insert(emails).values({ id: "message_unselected_sender", accountId: "account_a", threadId: "thread_unselected_sender", providerMessageId: "unselected-sender", fromAddress: "maya@example.com", subject: "Unselected existing sender mail", receivedAt: existingAt }).run();
+    existing.db.insert(emails).values({ id: "message_unselected_sender", accountId: "account_a", threadId: "thread_unselected_sender", providerMessageId: "unselected-sender", fromAddress: `${ecmaScriptTrimCharacters}maya@example.com${ecmaScriptTrimCharacters}`, subject: "Unselected existing sender mail", receivedAt: existingAt }).run();
     existing.sqlite.close();
     const prepare = (references: Array<{ accountId: string; threadId: string; messageId: string }>) => app.request("/v1/organization/views/prepare", {
       method: "POST",
@@ -177,11 +183,26 @@ describe("BRE-313 independent View lifecycle verification", () => {
     const future = createDatabaseClient(path);
     const futureAt = new Date("2026-08-26T18:00:00.000Z");
     future.db.insert(threads).values({ id: "thread_future_sender", accountId: "account_a", providerThreadId: "future-sender", subject: "Future sender mail", latestReceivedAt: futureAt, createdAt: futureAt }).run();
-    future.db.insert(emails).values({ id: "message_future_sender", accountId: "account_a", threadId: "thread_future_sender", providerMessageId: "future-sender", fromAddress: "\nMAYA@EXAMPLE.COM\t", subject: "Future sender mail", receivedAt: futureAt }).run();
+    future.db.insert(emails).values({ id: "message_future_sender", accountId: "account_a", threadId: "thread_future_sender", providerMessageId: "future-sender", fromAddress: `${ecmaScriptTrimCharacters}MAYA@EXAMPLE.COM${ecmaScriptTrimCharacters}`, subject: "Future sender mail", receivedAt: futureAt }).run();
     future.sqlite.close();
     const reloaded = await app.request(`/v1/organization/views/${committed.view.id}/results?limit=25`, { headers });
     assert.equal(reloaded.status, 200, await reloaded.clone().text());
-    assert.equal((await reloaded.json()).items.some((item: { threadId: string }) => item.threadId === "thread_future_sender"), true, "future mail from the exact sender matches the saved View");
+    assert.deepEqual(
+      new Set((await reloaded.json()).items.map((item: { threadId: string }) => item.threadId)),
+      new Set(["thread_a", "thread_b", "thread_unselected_sender", "thread_future_sender"]),
+      "selected, unselected existing, and future mail match the saved exact-address View after ECMAScript edge trimming",
+    );
+
+    const domainView = await createView(app, headers, {
+      name: "Exact normalized domain", description: "", color: "#0b9b84", position: 1,
+      definition: { revision: 1, accountIds: ["account_a"], sender: { domains: ["example.com"] } },
+    });
+    const domainResults = await app.request(`/v1/organization/views/${domainView.id}/results?limit=25`, { headers });
+    assert.equal(domainResults.status, 200, await domainResults.clone().text());
+    const domainThreadIds = new Set((await domainResults.json()).items.map((item: { threadId: string }) => item.threadId));
+    for (const threadId of ["thread_a", "thread_unselected_sender", "thread_future_sender"]) {
+      assert.equal(domainThreadIds.has(threadId), true, `${threadId} matches the domain evaluator after the same ECMAScript edge trimming`);
+    }
 
     const badReference = await prepare([
       { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },

@@ -6,6 +6,7 @@ import {
   organizationViewCommitResponseSchema,
   organizationViewListResponseSchema,
   organizationViewPrepareResponseSchema,
+  organizationViewPreparationInputSchema,
   organizationViewPreviewResponseSchema,
   organizationViewResultPageSchema,
   organizationViewDefinitionKind,
@@ -253,6 +254,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const [removedUnsupportedClauses, setRemovedUnsupportedClauses] = useState<OrganizationViewUnsupportedClause[]>([]);
   const [preparationNotices, setPreparationNotices] = useState<OrganizationViewPreparationNotice[]>([]);
   const [preparedViewIdentity, setPreparedViewIdentity] = useState<{ id: string; revision: number } | null>(null);
+  const [preparedAuthoringKey, setPreparedAuthoringKey] = useState<string | null>(null);
   const [preparationState, setPreparationState] = useState<{ status: "idle" | "loading" | "ready" | "error"; error: string | null }>({ status: authoringEntry ? "loading" : "idle", error: null });
   const resultRequest = useRef(0);
   const previewRequest = useRef(0);
@@ -260,7 +262,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   const mutationRequest = useRef(0);
   const commitRetryKey = useRef<string | null>(null);
   const commitRetryDraftKey = useRef<string>("");
+  const commitInFlight = useRef(false);
   const preparationRequest = useRef(0);
+  const authoringPreparation = authoringEntry ? organizationViewPreparationInputSchema.parse(authoringEntry.preparation) : null;
+  const authoringPreparationKey = authoringPreparation ? JSON.stringify(authoringPreparation) : "";
+  const currentAuthoringPreparationKey = useRef(authoringPreparationKey);
+  currentAuthoringPreparationKey.current = authoringPreparationKey;
   const filterMenuRef = useRef<HTMLDivElement | null>(null);
   const filterTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [canonicalGeneration, setCanonicalGeneration] = useState(0);
@@ -340,29 +347,42 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
 
   useEffect(() => {
     if (!authoringEntry) return;
-    if (!demoMode && !authority.snapshot && authority.state.kind !== "ready") return;
+    if (!demoMode && !authority.snapshot) return;
     const controller = new AbortController();
     const requestId = ++preparationRequest.current;
+    previewRequest.current += 1;
+    mutationRequest.current += 1;
+    commitInFlight.current = false;
+    commitRetryKey.current = null;
+    commitRetryDraftKey.current = "";
+    setPreparedAuthoringKey(null);
+    setComposerMode(null);
+    setDraftPreview({ status: "idle", clientKey: "", response: null, error: null });
+    setConfirmedZeroDigest(null);
+    setStatus("loading");
     setPreparationState({ status: "loading", error: null });
     const prepared = demoMode
-      ? Promise.resolve(demoPreparationResponse(authoringEntry.preparation))
+      ? Promise.resolve(demoPreparationResponse(authoringPreparation!))
       : authority.request("/v1/organization/views/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(authoringEntry.preparation),
+        body: JSON.stringify(authoringPreparation),
         signal: controller.signal,
       }, { operation: "read", capability: "query", hasReliableData: false }).then((body) => organizationViewPrepareResponseSchema.parse(body));
     void prepared.then((response) => {
       if (controller.signal.aborted || requestId !== preparationRequest.current) return;
       setWorkspaceRevision(response.workspaceRevision);
       loadPreparedComposer(response.draft);
+      setPreparedAuthoringKey(authoringPreparationKey);
+      setStatus("ready");
       setPreparationState({ status: "ready", error: null });
     }).catch((reason) => {
       if (controller.signal.aborted || requestId !== preparationRequest.current) return;
+      setStatus("ready");
       setPreparationState({ status: "error", error: reason instanceof Error ? reason.message : "Could not prepare this View" });
     });
     return () => controller.abort();
-  }, [authoringEntry, authority.snapshot, authority.state.kind, demoMode]);
+  }, [authoringPreparationKey, authority.snapshot, demoMode]);
 
   const activeDemoViewIsUnevaluated = Boolean(demoMode && activeView && unevaluatedDemoViewIds.has(activeView.id));
   const accountCount = results?.accountIds.length || activeView?.definition.accountIds?.length || (demoMode ? 2 : 0);
@@ -613,8 +633,12 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
     unsupportedClauses,
   } : null;
   const draftClientKey = draftInput ? JSON.stringify(draftInput) : "";
+  const preparationMatchesCurrentEntry = !authoringEntry || preparedAuthoringKey === authoringPreparationKey;
+  const displayedPreparationState = authoringEntry && !preparationMatchesCurrentEntry && preparationState.status !== "error" ? { status: "loading" as const, error: null } : preparationState;
+  const authoringSourceLabel = authoringPreparation && authoringPreparation.kind !== "saved_view" ? authoringPreparation.source.label : draftSource.label;
   const previewMatchesCurrentDraft = draftPreview.status === "ready" && draftPreview.clientKey === draftClientKey && draftPreview.response !== null;
-  const liveSaveBlocked = evidenceState === "loading" || evidenceState === "error" || !demoMode && (!previewMatchesCurrentDraft || draftPreview.response?.draft.saveEligibility.allowed !== true);
+  const externalPreparationBlocked = Boolean(authoringEntry && (!preparationMatchesCurrentEntry || displayedPreparationState.status !== "ready"));
+  const liveSaveBlocked = externalPreparationBlocked || evidenceState === "loading" || evidenceState === "error" || !demoMode && (!previewMatchesCurrentDraft || draftPreview.response?.draft.saveEligibility.allowed !== true);
   const previewIsZero = evidenceState === "zero" || previewMatchesCurrentDraft && draftPreview.response?.results.state === "zero";
   const effectiveZeroDigest = evidenceState === "zero" ? "sha256:evidence-zero-match" : draftPreview.response?.draft.definitionDigest ?? null;
   const previewDisplayState = evidenceState ?? draftPreview.status;
@@ -679,12 +703,15 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   async function saveView() {
-    if (!canMutate || validationMessage || !draftInput || liveSaveBlocked) return;
+    const committingPreparationKey = authoringEntry ? preparedAuthoringKey : null;
+    const committingAuthoringEntry = authoringEntry;
+    if (!canMutate || status === "saving" || commitInFlight.current || validationMessage || !draftInput || liveSaveBlocked || authoringEntry && committingPreparationKey !== authoringPreparationKey) return;
     const definition = organizationViewDefinitionSchema.parse(draft);
     if (previewIsZero && effectiveZeroDigest && confirmedZeroDigest !== effectiveZeroDigest) {
       setConfirmedZeroDigest(effectiveZeroDigest);
       return;
     }
+    commitInFlight.current = true;
     const requestId = ++mutationRequest.current;
     setStatus("saving"); setError(null);
     try {
@@ -701,10 +728,10 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
             confirmedZeroMatchDigest: previewIsZero ? confirmedZeroDigest : null,
           }),
         }, { operation: "mutation", capability: "apply", hasReliableData: true }));
-        if (requestId !== mutationRequest.current) return;
+        if (requestId !== mutationRequest.current || committingPreparationKey && currentAuthoringPreparationKey.current !== committingPreparationKey) return;
         commitRetryKey.current = null;
         onWorkspaceMutation?.();
-        if (authoringEntry && onCommitted) onCommitted(committed, authoringEntry.returnContext);
+        if (committingPreparationKey && committingAuthoringEntry && onCommitted) onCommitted(committed, committingAuthoringEntry.returnContext);
         else window.location.assign(committed.navigation.href);
         return;
       }
@@ -724,6 +751,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
         if (!demoMode) onWorkspaceMutation?.();
       }
     } catch (reason) { if (requestId === mutationRequest.current) { setStatus("ready"); setError(reason instanceof Error ? reason.message : `Could not ${composerMode === "edit" ? "update" : "create"} View`); } }
+    finally { if (requestId === mutationRequest.current) commitInFlight.current = false; }
   }
 
   async function moveView(view: OrganizationView, direction: -1 | 1) {
@@ -796,11 +824,11 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   return <section className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}`} aria-labelledby="views-title">
-    <header className="views-header"><div><span>{authoringEntry ? draftSource.label : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode === "create" ? setComposerMode(null) : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
+    <header className="views-header"><div><span>{authoringEntry ? authoringSourceLabel : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode === "create" ? setComposerMode(null) : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
     <div className="views-live-note"><i aria-hidden="true"/><strong>Live from current Thread organization</strong><span>No membership list is stored.</span></div>
-    {authoringEntry && preparationState.status === "loading" ? <section className="view-preparation-state" role="status"><strong>Preparing this live View…</strong><span>Orca is validating the source against current stored mail and Workspace authority.</span></section> : null}
-    {authoringEntry && preparationState.status === "error" ? <section className="view-preparation-state view-preparation-error" role="alert"><strong>Could not prepare this View.</strong><span>{preparationState.error}</span><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
-    {composerMode ? <form className="view-composer" data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
+    {authoringEntry && displayedPreparationState.status === "loading" ? <section className="view-preparation-state" role="status"><strong>Preparing this live View…</strong><span>Orca is validating the source against current stored mail and Workspace authority.</span></section> : null}
+    {authoringEntry && displayedPreparationState.status === "error" ? <section className="view-preparation-state view-preparation-error" role="alert"><strong>Could not prepare this View.</strong><span>{displayedPreparationState.error}</span><button className="view-action" onClick={cancelComposer} type="button">Return to source</button></section> : null}
+    {composerMode && preparationMatchesCurrentEntry ? <form className="view-composer" data-authority={canMutate ? "available" : "paused"} data-preview-evidence={evidenceState ?? undefined} onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); event.currentTarget.requestSubmit(); } }} onSubmit={(event) => { event.preventDefault(); void saveView(); }}>
       <header><div><span>Perspective builder</span><h3>{composerMode === "edit" ? "Edit live perspective" : "Build a live perspective"}</h3></div><div className="view-composer-actions"><button className="view-action" onClick={cancelComposer} type="button">Cancel</button><button className="view-action view-save" disabled={!canMutate || status === "saving" || Boolean(validationMessage) || liveSaveBlocked} type="submit">{status === "saving" ? "Saving View…" : previewDisplayState === "loading" ? "Checking draft…" : previewIsZero && confirmedZeroDigest !== effectiveZeroDigest ? "Review zero matches" : previewIsZero ? "Confirm zero-match save" : composerMode === "edit" ? "Save changes" : "Save View"}</button></div></header>
       <fieldset className="view-builder-fieldset" disabled={!canMutate || status === "saving"}>
         <div className="view-identity"><label><span>View name</span><input autoFocus={!authoringEntry} maxLength={120} onInput={(event) => { setNameTouched(true); setName(event.currentTarget.value); }} value={name}/><small>{composerMode === "create" && !nameTouched ? `Suggested from your filters · ${suggestedName}` : "A short name shown in your workspace."}</small></label><label><span>Description <i>optional</i></span><input maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="What this perspective is for" value={description}/></label><label className="view-color-field"><span>Color</span><input aria-label="View color" onChange={(event) => setColor(event.target.value)} type="color" value={color}/></label></div>

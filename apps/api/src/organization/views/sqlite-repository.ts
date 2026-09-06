@@ -38,14 +38,21 @@ type SelectedSenderRow = {
   ordinal: number; accountId: string; threadId: string; messageId: string; fromAddress: string | null; providerEmail: string;
 };
 
+const ecmaScriptTrimCharacterSql = "char(9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279)";
+function normalizedEmailSql(valueSql: string) {
+  return `lower(trim(coalesce(${valueSql}, ''), ${ecmaScriptTrimCharacterSql}))`;
+}
+function normalizedAddressSql(alias: string) { return normalizedEmailSql(`${alias}.from_address`); }
+function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
+
 function selectedSenderRows(sqlite: Database, workspaceId: string, references: OrganizationViewSelectedMessageReference[]) {
   return sqlite.query(`
     SELECT CAST(reference.key AS INTEGER) AS ordinal,
       email.account_id AS accountId,
       email.thread_id AS threadId,
       email.id AS messageId,
-      email.from_address AS fromAddress,
-      account.provider_email AS providerEmail
+      ${normalizedEmailSql("email.from_address")} AS fromAddress,
+      ${normalizedEmailSql("account.provider_email")} AS providerEmail
     FROM json_each(?) reference
     JOIN emails email
       ON email.id=json_extract(reference.value,'$.messageId')
@@ -115,10 +122,6 @@ function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: strin
   return Buffer.from(JSON.stringify({ version: 2, fingerprint: cursorDigest(cursorFingerprint, key), ...key }), "utf8").toString("base64url");
 }
 
-function normalizedAddressSql(alias: string) {
-  return `lower(trim(coalesce(${alias}.from_address, ''), ' ' || char(9) || char(10) || char(11) || char(12) || char(13)))`;
-}
-function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
 function effectiveClassificationSql(alias: string) {
   const address = normalizedAddressSql(alias);
   const domain = normalizedDomainSql(alias);
@@ -586,8 +589,8 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         const seen = new Set<string>();
         let omittedSelfCount = 0;
         for (const row of rows) {
-          const address = row.fromAddress?.trim().toLocaleLowerCase() ?? "";
-          const selfAddress = row.providerEmail.trim().toLocaleLowerCase();
+          const address = row.fromAddress ?? "";
+          const selfAddress = row.providerEmail;
           if (!address) throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
           if (!organizationViewDefinitionSchema.safeParse({ revision: 1, sender: { addresses: [address] } }).success) {
             throw new OrganizationViewSelectionError("selection_reference_unavailable", "A selected message no longer has a usable stored From address. Your selection was kept.");
