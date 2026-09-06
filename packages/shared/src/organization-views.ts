@@ -91,6 +91,21 @@ const organizationViewDraftIdentitySchema = z.object({
   position: z.number().int().nonnegative().default(0),
 }).strict();
 
+export const organizationViewSelectedMessageReferenceSchema = z.object({
+  accountId: identifierSchema,
+  threadId: identifierSchema,
+  messageId: identifierSchema,
+}).strict();
+export type OrganizationViewSelectedMessageReference = z.infer<typeof organizationViewSelectedMessageReferenceSchema>;
+
+const uniqueSelectedMessageReferencesSchema = z.array(organizationViewSelectedMessageReferenceSchema)
+  .min(1)
+  .max(organizationViewBounds.maximumPredicateItems)
+  .superRefine((references, context) => {
+    const identities = references.map((reference) => JSON.stringify([reference.accountId, reference.threadId, reference.messageId]));
+    if (new Set(identities).size !== identities.length) context.addIssue({ code: "custom", message: "Selected message references must be unique" });
+  });
+
 export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("typed_definition"),
@@ -104,6 +119,14 @@ export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind
   z.object({
     kind: z.literal("saved_view"),
     viewId: identifierSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal("selected_senders"),
+    source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
+      kind: z.literal("sender_selection"),
+    }).strict(),
+    identity: organizationViewDraftIdentitySchema,
+    references: uniqueSelectedMessageReferencesSchema,
   }).strict(),
 ]);
 export type OrganizationViewPreparationInput = z.infer<typeof organizationViewPreparationInputSchema>;

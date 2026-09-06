@@ -29,6 +29,7 @@ import {
   type OrganizationViewUpdateRequest,
   type OrganizationViewReviewedDraft,
   type OrganizationViewResultCount,
+  type OrganizationViewSelectedMessageReference,
 } from "@orca/shared";
 import { authorizeOrganizationOperation, canonicalOrganizationJson } from "../authority.ts";
 import { requireOrganizationCapability, type OrganizationAgentCapabilitySource } from "../agent-capability.ts";
@@ -56,6 +57,11 @@ export class OrganizationViewQueryError extends Error {
 export class OrganizationViewValidationError extends Error {
   readonly code = "validation_error" as const;
   constructor(message: string) { super(message); this.name = "OrganizationViewValidationError"; }
+}
+
+export class OrganizationViewSelectionError extends Error {
+  readonly code: "selection_reference_unavailable" | "mixed_account_selection" | "all_selected_senders_are_self";
+  constructor(code: OrganizationViewSelectionError["code"], message: string) { super(message); this.code = code; this.name = "OrganizationViewSelectionError"; }
 }
 
 export type OrganizationViewScope = {
@@ -103,6 +109,7 @@ export type OrganizationViewsRepository = {
   reorder(input: { workspaceId: string; request: OrganizationViewReorderRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): OrganizationView[];
   remove(input: { workspaceId: string; viewId: string; request: OrganizationViewRemoveRequest; boundRequest: unknown; plan: OrganizationViewMutationPlan; authorization: OrganizationViewMutationAuthorization; now: Date }): void;
   validateDefinition(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; authorization: OrganizationViewQueryAuthorization }): { accountIds: string[]; authorizedScopeDigest: string };
+  resolveSelectedSenders(input: { scope: OrganizationViewScope; references: OrganizationViewSelectedMessageReference[]; authorization: OrganizationViewQueryAuthorization }): { accountId: string; addresses: string[] };
   evaluate(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; definitionDigest: string; resultSetKey: string; query: OrganizationViewResultQuery; authorization: OrganizationViewQueryAuthorization }): OrganizationViewEvaluationPage;
 };
 
@@ -283,6 +290,18 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
         identity: parsed.identity,
         definition: parsed.definition,
         unsupportedClauses: parsed.unsupportedClauses,
+      });
+    }
+    if (parsed.kind === "selected_senders") {
+      const authorization = authorizeQuery(scope, { revision: 1 }, dependencies.agentCapabilitySource);
+      const resolved = repository.resolveSelectedSenders({ scope, references: parsed.references, authorization });
+      return organizationViewDraftInputSchema.parse({
+        mode: "create",
+        viewId: null,
+        source: parsed.source,
+        identity: parsed.identity,
+        definition: { revision: 1, accountIds: [resolved.accountId], sender: { addresses: resolved.addresses } },
+        unsupportedClauses: [],
       });
     }
     const view = repository.get(scope.workspaceId, parsed.viewId);

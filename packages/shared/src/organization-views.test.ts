@@ -84,6 +84,36 @@ describe("BRE-381 reviewed View draft contracts", () => {
     if (input.kind === "typed_definition") assert.deepEqual(input.definition.sender?.addresses, ["maya@example.com"]);
   });
 
+  test("accepts authoritative selected-message references without client-supplied senders", () => {
+    const input = organizationViewPreparationInputSchema.parse({
+      kind: "selected_senders",
+      source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/?destination=inbox" },
+      identity: { name: "Selected senders", description: "", color: "#0b9b84", position: 0 },
+      references: [
+        { accountId: "account_gmail", threadId: "thread_maya", messageId: "message_maya" },
+        { accountId: "account_gmail", threadId: "thread_ari", messageId: "message_ari" },
+      ],
+    });
+    assert.equal(input.kind, "selected_senders");
+    if (input.kind === "selected_senders") {
+      assert.deepEqual(input.references[0], { accountId: "account_gmail", threadId: "thread_maya", messageId: "message_maya" });
+      assert.equal("sender" in input, false);
+    }
+  });
+
+  test("rejects empty, duplicate, oversized, or client-enriched selected-message references", () => {
+    const base = {
+      kind: "selected_senders",
+      source: { kind: "sender_selection", label: "Selected message senders" },
+      identity: { name: "Selected senders", description: "", color: "#0b9b84", position: 0 },
+    } as const;
+    const reference = { accountId: "account_gmail", threadId: "thread_maya", messageId: "message_maya" };
+    assert.equal(organizationViewPreparationInputSchema.safeParse({ ...base, references: [] }).success, false);
+    assert.equal(organizationViewPreparationInputSchema.safeParse({ ...base, references: [reference, reference] }).success, false);
+    assert.equal(organizationViewPreparationInputSchema.safeParse({ ...base, references: Array.from({ length: 51 }, (_, index) => ({ ...reference, messageId: `message_${index}` })) }).success, false);
+    assert.equal(organizationViewPreparationInputSchema.safeParse({ ...base, references: [{ ...reference, fromAddress: "spoof@example.com" }] }).success, false);
+  });
+
   test("distinguishes match-all definitions from filtered zero-result definitions", () => {
     assert.equal(organizationViewDefinitionKind({ revision: 1 }), "match_all");
     assert.equal(organizationViewDefinitionKind(definition), "filtered");

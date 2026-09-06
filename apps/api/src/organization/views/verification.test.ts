@@ -9,7 +9,7 @@ import { organizationViewBounds, organizationViewCommitRequestSchema, type Organ
 
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { oauthAccounts, threads, users } from "../../db/schema.ts";
+import { emails, oauthAccounts, threads, users } from "../../db/schema.ts";
 import { createApp } from "../../index.ts";
 import { createOrganizationViews, digestOrganizationViewDefinition } from "./module.ts";
 import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, type OrganizationViewPageKey } from "./sqlite-repository.ts";
@@ -44,6 +44,13 @@ async function setup() {
     { id: "thread_c", accountId: "account_b", providerThreadId: "b-c", subject: "B / C", latestReceivedAt: tied, createdAt: tied },
     { id: "thread_created", accountId: "account_b", providerThreadId: "b-created", subject: "Created fallback", latestReceivedAt: null, createdAt: new Date("2026-08-24T18:00:00.000Z") },
     { id: "thread_foreign", accountId: "account_foreign", providerThreadId: "foreign", subject: "Foreign", latestReceivedAt: tied, createdAt: tied },
+  ]).run();
+  client.db.insert(emails).values([
+    { id: "message_maya", accountId: "account_a", threadId: "thread_a", providerMessageId: "maya", fromAddress: " Maya@Example.com ", fromName: "Maya", subject: "A / A", receivedAt: tied },
+    { id: "message_maya_duplicate", accountId: "account_a", threadId: "thread_b", providerMessageId: "maya-duplicate", fromAddress: "MAYA@example.com", fromName: "Maya", subject: "A / B", receivedAt: tied },
+    { id: "message_self", accountId: "account_a", threadId: "thread_b", providerMessageId: "self", fromAddress: " A@example.com ", fromName: "Owner", subject: "A / B", receivedAt: tied },
+    { id: "message_account_b", accountId: "account_b", threadId: "thread_c", providerMessageId: "account-b", fromAddress: "ari@example.com", fromName: "Ari", subject: "B / C", receivedAt: tied },
+    { id: "message_foreign", accountId: "account_foreign", threadId: "thread_foreign", providerMessageId: "foreign", fromAddress: "private@example.com", fromName: "Private", subject: "Foreign", receivedAt: tied },
   ]).run();
 
   const sqlite = client.sqlite;
@@ -90,6 +97,76 @@ async function createView(app: ReturnType<typeof createApp>, headers: Record<str
 }
 
 describe("BRE-313 independent View lifecycle verification", () => {
+  test("prepares exact selected-message From addresses only after validating every reference", { timeout: 30_000 }, async () => {
+    const { app, headers, path } = await setup();
+    const prepare = (references: Array<{ accountId: string; threadId: string; messageId: string }>) => app.request("/v1/organization/views/prepare", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        kind: "selected_senders",
+        source: { kind: "sender_selection", label: "Selected message senders", returnTarget: "/?destination=inbox" },
+        identity: { name: "Selected senders", description: "", color: "#0b9b84", position: 0 },
+        references,
+      }),
+    });
+
+    const response = await prepare([
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+      { accountId: "account_a", threadId: "thread_b", messageId: "message_maya_duplicate" },
+      { accountId: "account_a", threadId: "thread_b", messageId: "message_self" },
+    ]);
+    assert.equal(response.status, 200, await response.clone().text());
+    const prepared = await response.json();
+    assert.deepEqual(prepared.draft.definition, { revision: 1, accountIds: ["account_a"], sender: { addresses: ["maya@example.com"] } });
+    assert.deepEqual(prepared.draft.effectiveAccountIds, ["account_a"]);
+    assert.equal("references" in prepared.draft, false);
+
+    const previewDraft = { mode: prepared.draft.mode, viewId: prepared.draft.viewId, source: prepared.draft.source, identity: prepared.draft.identity, definition: prepared.draft.definition, unsupportedClauses: prepared.draft.unsupportedClauses };
+    const previewResponse = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: previewDraft, page: { limit: 25 } }) });
+    assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
+    const preview = await previewResponse.json();
+    assert.deepEqual(new Set(preview.results.items.map((item: { threadId: string }) => item.threadId)), new Set(["thread_a", "thread_b"]), "other stored mail from the exact sender matches without selected membership");
+
+    const commitResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify({
+      draft: prepared.draft,
+      expectedRevisions: { workspace: prepared.workspaceRevision, view: null },
+      retryKey: "bre383-selected-senders",
+      confirmedZeroMatchDigest: null,
+    }) });
+    assert.equal(commitResponse.status, 200, await commitResponse.clone().text());
+    const committed = await commitResponse.json();
+    const future = createDatabaseClient(path);
+    const futureAt = new Date("2026-08-26T18:00:00.000Z");
+    future.db.insert(threads).values({ id: "thread_future_sender", accountId: "account_a", providerThreadId: "future-sender", subject: "Future sender mail", latestReceivedAt: futureAt, createdAt: futureAt }).run();
+    future.db.insert(emails).values({ id: "message_future_sender", accountId: "account_a", threadId: "thread_future_sender", providerMessageId: "future-sender", fromAddress: "maya@example.com", subject: "Future sender mail", receivedAt: futureAt }).run();
+    future.sqlite.close();
+    const reloaded = await app.request(`/v1/organization/views/${committed.view.id}/results?limit=25`, { headers });
+    assert.equal(reloaded.status, 200, await reloaded.clone().text());
+    assert.equal((await reloaded.json()).items.some((item: { threadId: string }) => item.threadId === "thread_future_sender"), true, "future mail from the exact sender matches the saved View");
+
+    const badReference = await prepare([
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_account_b" },
+    ]);
+    assert.equal(badReference.status, 400);
+    assert.equal((await badReference.json()).error.code, "selection_reference_unavailable");
+
+    const allSelf = await prepare([{ accountId: "account_a", threadId: "thread_b", messageId: "message_self" }]);
+    assert.equal(allSelf.status, 400);
+    assert.equal((await allSelf.json()).error.code, "all_selected_senders_are_self");
+
+    const mixed = await prepare([
+      { accountId: "account_a", threadId: "thread_a", messageId: "message_maya" },
+      { accountId: "account_b", threadId: "thread_c", messageId: "message_account_b" },
+    ]);
+    assert.equal(mixed.status, 400);
+    assert.equal((await mixed.json()).error.code, "mixed_account_selection");
+
+    const inaccessible = await prepare([{ accountId: "account_foreign", threadId: "thread_foreign", messageId: "message_foreign" }]);
+    assert.equal(inaccessible.status, 400);
+    assert.equal((await inaccessible.json()).error.code, "selection_reference_unavailable");
+  });
+
   test("previews and commits one reviewed definition with no preview writes and saved-page parity", { timeout: 30_000 }, async () => {
     const { app, headers, path } = await setup();
     const definition = { revision: 1, thread: { subjectContains: "A /" } } as const;

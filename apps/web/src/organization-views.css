@@ -1,5 +1,6 @@
 .views-workspace { margin: 0 0 28px; padding: 20px; border: 1px solid var(--desktop-border); border-radius: 20px; background: var(--desktop-surface); box-shadow: 0 20px 60px rgba(18,40,34,.07); color: var(--desktop-ink); }
 :root[data-theme="dark"] .views-workspace { box-shadow: 0 20px 60px rgba(0,0,0,.32); }
+.views-workspace-external-authoring { margin: 0; }
 .views-header { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--desktop-border); }
 .views-header span,.view-composer > header span,.view-results > header span,.view-scope-sentence > span,.view-clause-heading > div > span,.view-draft-preview > span { color: var(--desktop-accent); font: 800 9px/12px var(--desktop-mono); letter-spacing: 1px; text-transform: uppercase; }
 .views-header h2 { margin: 6px 0 4px; font: 500 34px/36px var(--desktop-serif); letter-spacing: -1.4px; }
@@ -18,6 +19,11 @@
 .views-live-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--desktop-accent); box-shadow: 0 0 0 3px color-mix(in srgb,var(--desktop-accent) 18%,transparent); }
 .views-live-note strong { color: var(--desktop-ink); }
 .views-live-note span { color: var(--desktop-muted); }
+.view-preparation-state { display: grid; gap: 5px; margin: 16px 0 0; padding: 22px; border: 1px dashed var(--desktop-border-strong); border-radius: 13px; background: var(--desktop-paper); color: var(--desktop-muted); font-size: 10px; }
+.view-preparation-state strong { color: var(--desktop-ink); font: 500 20px/24px var(--desktop-serif); }
+.view-preparation-error { border-style: solid; border-color: color-mix(in srgb,var(--desktop-danger) 58%,var(--desktop-border)); }
+.view-preparation-error strong,.view-preparation-error span { color: var(--desktop-danger); }
+.view-preparation-error .view-action { justify-self: start; margin-top: 8px; }
 
 .view-composer { margin: 12px 0 16px; overflow: visible; border: 1px solid var(--desktop-border-strong); border-radius: 15px; background: var(--desktop-paper); }
 .view-composer[data-authority="paused"] { border-color: var(--desktop-control-disabled-border); }
@@ -42,6 +48,15 @@
 .view-preserved-constraints summary:focus-visible { outline: 2px solid var(--desktop-focus); outline-offset: 2px; }
 .view-preserved-constraints ul { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 0; padding: 0; list-style: none; }
 .view-preserved-constraints li { padding: 4px 7px; border: 1px solid var(--desktop-border); border-radius: 999px; background: var(--desktop-surface); color: var(--desktop-muted); font-size: 8px; line-height: 12px; }
+.view-unsupported-clauses { margin: 0 0 14px; padding: 12px 14px; border: 1px solid color-mix(in srgb,var(--desktop-danger) 48%,var(--desktop-border)); border-radius: 10px; background: color-mix(in srgb,var(--desktop-danger) 6%,var(--desktop-surface)); }
+.view-unsupported-clauses > header,.view-unsupported-clauses li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.view-unsupported-clauses > header > div,.view-unsupported-clauses li > div { display: grid; gap: 3px; }
+.view-unsupported-clauses > header span { color: var(--desktop-danger); font: 800 8px/1 var(--desktop-mono); letter-spacing: .7px; text-transform: uppercase; }
+.view-unsupported-clauses > header strong,.view-unsupported-clauses li strong { color: var(--desktop-ink); font-size: 10px; }
+.view-unsupported-clauses ul { display: grid; gap: 7px; margin: 11px 0 0; padding: 0; list-style: none; }
+.view-unsupported-clauses li { padding-top: 8px; border-top: 1px solid color-mix(in srgb,var(--desktop-danger) 22%,var(--desktop-border)); }
+.view-unsupported-clauses li span,.view-unsupported-clauses p { color: var(--desktop-muted); font-size: 9px; line-height: 14px; }
+.view-unsupported-clauses p { margin: 10px 0 0; }
 .view-clause-heading { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; }
 .view-clause-heading > div:first-child { display: grid; gap: 2px; }
 .view-add-filter { position: relative; }

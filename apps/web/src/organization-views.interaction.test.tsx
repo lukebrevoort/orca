@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Window } from "happy-dom";
 
 import { organizationLaneConfigurationFixture, organizationViewsFixture, type FacetDefinition, type FacetFilter, type OrganizationView } from "@orca/shared";
-import { OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
+import { OrganizationViewAuthoringWorkspace, OrganizationViewsWorkspace, SavedOrganizationViewWorkspace } from "./organization-views";
 import { OrganizationAuthorityProvider } from "./organization-authority";
 
 const browserGlobals = ["window", "document", "navigator", "HTMLElement", "HTMLInputElement", "HTMLSelectElement", "HTMLButtonElement", "Element", "Node", "Event", "InputEvent", "MouseEvent", "KeyboardEvent"] as const;
@@ -43,6 +43,29 @@ async function renderWorkspace(demoMode = true, previewMode = true) {
   browserWindow.document.body.append(container);
   root = createRoot(container as unknown as Element);
   await act(async () => root!.render(<OrganizationAuthorityProvider previewMode={previewMode}><OrganizationViewsWorkspace demoMode={demoMode} /></OrganizationAuthorityProvider>));
+  return container as unknown as HTMLElement;
+}
+
+async function renderExternalAuthoring(onCancel: (context: { anchor: string }) => void) {
+  const container = browserWindow.document.createElement("div");
+  browserWindow.document.body.append(container);
+  root = createRoot(container as unknown as Element);
+  await act(async () => root!.render(<OrganizationViewAuthoringWorkspace
+    demoMode
+    entry={{
+      preparation: {
+        kind: "typed_definition",
+        source: { kind: "search", label: "Search results", returnTarget: "/dev/inbox?q=moonbase" },
+        identity: { name: "Moonbase", description: "", color: "#70867d", position: 2 },
+        definition: { revision: 1, accountIds: ["account_gmail"], sender: { addresses: ["maya@example.com", "ari@example.com"] } },
+        unsupportedClauses: [{ id: "attachment-pdf", label: "Has PDF", reason: "Attachment predicates are not available yet." }],
+      },
+      returnContext: { anchor: "result-12" },
+    }}
+    onCancel={onCancel}
+    onCommitted={() => {}}
+  />));
+  await flush();
   return container as unknown as HTMLElement;
 }
 
@@ -98,6 +121,22 @@ function testDigest(value: unknown) {
   for (const character of JSON.stringify(value)) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
   return `sha256:${(hash >>> 0).toString(16).padStart(8, "0").repeat(8)}`;
 }
+
+test("external authoring preserves typed source metadata, unsupported blockers, removal Undo, and opaque return context", async () => {
+  const returns: Array<{ anchor: string }> = [];
+  const container = await renderExternalAuthoring((context) => returns.push(context));
+  expect(container.querySelector(".views-header")?.textContent).toContain("Search results");
+  expect(input(container, "Email addresses").value).toBe("maya@example.com, ari@example.com");
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
+  expect((button(container, "Save View") as HTMLButtonElement).disabled).toBe(true);
+
+  await click(button(container, "Remove blocker"));
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Undo removed clauses");
+  await click(button(container, "Undo removed clauses"));
+  expect(container.querySelector(".view-unsupported-clauses")?.textContent).toContain("Has PDF");
+  await click(button(container, "Cancel"));
+  expect(returns).toEqual([{ anchor: "result-12" }]);
+});
 
 function previewResponse(init?: RequestInit, options: { state?: "matches" | "zero"; items?: unknown[] } = {}) {
   const request = JSON.parse(String(init?.body)) as { draft: Record<string, unknown>; page: { limit: number } };
