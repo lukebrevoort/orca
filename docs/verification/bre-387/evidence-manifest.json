@@ -11392,9 +11392,1491 @@
         "providerRefreshNoop": false
       },
       "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:20.178Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; use hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-use-hover.png",
+      "sha256": "6a6985c2e1c4fdaec8def164e109a60c410ea8cfce1ed096ddb90d4dc4ab20b4",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:20.623Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; use focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-use-focus.png",
+      "sha256": "6a6985c2e1c4fdaec8def164e109a60c410ea8cfce1ed096ddb90d4dc4ab20b4",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:21.927Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-selected-hover.png",
+      "sha256": "2dfcac9cd25e9aedfaea08f092f3d1c6ef29216f0f7d08a2ce0e6a236c898ebe",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:29.433Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-selected-focus.png",
+      "sha256": "2d26d4f7ac6c69bc87d2f81b8f6f59eb975b5fcf52be611a1ba0ba39b7413cdb",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:31.708Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-unselected-hover.png",
+      "sha256": "fed3d5164912fde06803d00b14b91b24111ff52593ac068a5e77c14fd97ba39e",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:31:36.321Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-selection-unselected-focus.png",
+      "sha256": "ec056a1bd90cf26639b7eca6729eb8c8d589653f9648424d7e885e48523798d1",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:00.869Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; use hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-use-hover.png",
+      "sha256": "b5f3fe738186e687a2d03b9117a35cc4ee106aad099ef5cf18eaba76f7e333a8",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:04.177Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; use focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-use-focus.png",
+      "sha256": "8832fe006c4546f80c5d4e1b8d44ee3efed8665c739fa61ce9f83c3f6a6f636f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:06.118Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-selected-hover.png",
+      "sha256": "f98ffe8dea01282669c466b1ec528036f1c4984f092bed84af30412b354b8f86",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:07.924Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-selected-focus.png",
+      "sha256": "b773a01d61071fde6f4b8ee30d45f106da398334381da52dc1ec17cf584572f7",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:09.526Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-unselected-hover.png",
+      "sha256": "8b99a984d6f7e7da7f9cf751a15bb3ad17b0f825175eaa63f0740557c7541c77",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:10.857Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-selection-unselected-focus.png",
+      "sha256": "d44fc393bb72dfc02dd7b9b4e98596b4ec2ca1a104276744636304aef666a1cf",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:21.478Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; use hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-use-hover.png",
+      "sha256": "5e86a74d056ab0a08b70132f9b845dd6b875ad6fe6da215d7ee51c7ebc15755c",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:25.367Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; use focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-use-focus.png",
+      "sha256": "d534a8dd896464233372c7bf2c63b77196d1743fb18f39ac9634e0d12247ebe4",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:27.802Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-selected-hover.png",
+      "sha256": "225b17958534e6b76a9acd1e6f13534ebe694020fc75c52e07741776b2518743",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:29.947Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-selected-focus.png",
+      "sha256": "d7959f24c63eca082b1fc19d722afff465b3f3038327e51d67848caee9a203f0",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:31.780Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-unselected-hover.png",
+      "sha256": "98c5a98e06b1d0d2a73b517c5372064e757321a6f70dccd27e4d476bb18715e0",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:35.664Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-selection-unselected-focus.png",
+      "sha256": "7ccbabddeeb1d504ac15ca6bc9cc4a2791d8527f11bc963de0d7350a831946d0",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:40.392Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; use hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-use-hover.png",
+      "sha256": "f2c3b7b8e017f8c2124617f3b5bec8b0cbc3252b562f4a40b198d67635a50fae",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:41.041Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; use focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-use-focus.png",
+      "sha256": "0ddee4bc9f41d7e855977e4acc6a728f8e6b7a830eed8b0bc7036d225b48efc4",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:42.043Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-selected-hover.png",
+      "sha256": "76e297e876630d87218d83bb91455fa5d2651806e7ef2db7f48ace7a4c48d8be",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:45.039Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; selected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-selected-focus.png",
+      "sha256": "71c2de522e46942518917bbcab9e97779b71d64d2258061485d4c709b1a03b56",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:47.962Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected hover; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-unselected-hover.png",
+      "sha256": "bb1d4452eff8192b3d8dca201ecb78db1571a38a6ce305347e0e1b2b29fd22ef",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:32:49.990Z",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One exact Project correction 0 row selected; unselected focus; no Use activation or mail mutation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-selection-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-selection-unselected-focus.png",
+      "sha256": "c84bff322a4c3480da14e84784ef9eabea07177a6e9866fac5e1d1cc186d7dcd",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:34:37.652Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preparation hover with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preparation-hover.png",
+      "sha256": "00b7b9bc13faca51bff8aef65214ebfe5d41ade8ce9e543962a8ce1f9556370f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:34:40.564Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preparation focus with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preparation-focus.png",
+      "sha256": "454a052e5e0a5d764a659041a1eaf5221e94128aad87722284de621279bdb66f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:10.673Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preparation hover with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preparation-hover.png",
+      "sha256": "9cd68218769d035776d877f37a5c81dd98575200737656c367db13ac93099182",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:13.930Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preparation focus with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preparation-focus.png",
+      "sha256": "1b3792e80e80d7cbcc7fa0c050ee05ade7e1ddac4b2c9fed53d21a3c6340da56",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:23.043Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preparation hover with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preparation-hover.png",
+      "sha256": "06e8c56a8a06c99241bb8b4867d48c4fb4e72955cd9c9a9bf3aeb7dc6f4e8948",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:29.492Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preparation focus with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preparation-focus.png",
+      "sha256": "5556ccf2820cce793c9efef9fc862dad9c8877a57b20e5aa5343c11365292990",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:41.609Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preparation hover with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preparation-hover.png",
+      "sha256": "a9972ccb78c4fe80c97b6c395d66ab53c1540b5d9d40f29afb2e65ec57068c4e",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:35:46.907Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preparation focus with exact prepare endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preparation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preparation-focus.png",
+      "sha256": "8cfaf0cdde2befefbc80056924d8c3b7c7299cf7b20271de8bd03be9a0e13065",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:36:50.771Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preview hover with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preview-hover.png",
+      "sha256": "342444b83b43e10a40f068f01d304642ceebe66252c725e3cb73f3073ae92d5f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:36:57.257Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preview focus with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preview-focus.png",
+      "sha256": "bd91e63ea0e4e31597dcd2dd28907650de31f699d4f4f4e3c1e0e1d338bc6fcb",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:37:44.249Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preview hover with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preview-hover.png",
+      "sha256": "849345a08f85121b48c7e1b196389b404a614a5ae5faaa0d58561c2203072416",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:37:48.365Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry preview focus with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preview-focus.png",
+      "sha256": "7a848c4663a8099ee90c9477cc893f8ee76f9b2f4ba7c9308484846da1f99e26",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:38:11.543Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preview hover with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preview-hover.png",
+      "sha256": "1317ea816e0fc81543f7358549ebb0b42720ebbb205d43c6346beaf289b50db0",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:38:14.306Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preview focus with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preview-focus.png",
+      "sha256": "aa0ac797a710c0f9e4fc9d503d7d5d5d3cba4bc0e3baf63bfe8849f3a939eace",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:38:22.556Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preview hover with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preview-hover.png",
+      "sha256": "ba0689399f6eb15f59960f8660ceaaac018443a536128acfd92395bc08ac4505",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:38:29.466Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry preview focus with exact preview endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preview-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preview-focus.png",
+      "sha256": "be85cc24bc3b0760c78cbefd5408848fc0ed99ec95e3a43fbb41a5843dbd7350",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:41:52.042Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry guidance hover with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-guidance-hover.png",
+      "sha256": "262e29beb9a0537e8be90c0a7af109a664ce7ad49de7d56e57b003d23e654e68",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:41:54.406Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry guidance focus with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-guidance-focus.png",
+      "sha256": "87a38e18cd468871d69c543d3854bb03141bd695bc5ed7c9b79817ea6c11795e",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:22.000Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry guidance hover with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-guidance-hover.png",
+      "sha256": "cb2f212befa83f7b4fc5ded985f7fca7d6ed26257db0affee58bc1843bb56ea5",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:23.974Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry guidance focus with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-guidance-focus.png",
+      "sha256": "0d26980b1145b3905e74de3b8ac1ad1ec2012d14646ded2fec3acfdd55d2244d",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:32.126Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry guidance hover with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-guidance-hover.png",
+      "sha256": "7382a55c185f79d20743d28bb10f35f7f66c7e74c79439a383c919dc91edc72b",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:33.743Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry guidance focus with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-guidance-focus.png",
+      "sha256": "db94f7f0b52f4fb307127d56aa8616a306414ea9c39ec1eba8c200cd080d6d8c",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:43.051Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry guidance hover with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-guidance-hover.png",
+      "sha256": "b86db77cf7f213fa80f7496f24adb70a9648b7540b1835afffd4231aa83b410b",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:42:45.432Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry guidance focus with guidance preference-read endpoint intercepted body {}; simulated invalid response, not real backend error; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-guidance-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-guidance-focus.png",
+      "sha256": "5ccde12152120510193293c873492a879e6a09b18493e7bf0030c3826edcdfba",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:43:42.363Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry saving choice hover with harness fail-next-preference503 fixture; not provider/backend outage; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preference-hover.png",
+      "sha256": "cd6226cd50fb86fc43fc91e9c9d62c29a40f25967e656060ae1c974e721c81b6",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:43:44.831Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry saving choice focus with harness fail-next-preference503 fixture; not provider/backend outage; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-residual-retry-preference-focus.png",
+      "sha256": "f9979e8169f734af94d135b93412023cdc583241a94bc141274c94ed97b65cc3",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:46:16.228Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry saving choice hover with harness fail-next-preference503 fixture; not provider/backend outage; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preference-recovered-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preference-hover.png",
+      "sha256": "fd2bcb715c28ed9f5bb3efbb5d69da76a3b56bd1f0a298716a1249127f944a58",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:46:23.917Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real UI Retry saving choice focus with harness fail-next-preference503 fixture; not provider/backend outage; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-residual-retry-preference-recovered-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-residual-retry-preference-focus.png",
+      "sha256": "115b7bef1272bac222bcaf352932e6dd8d7560c18917ad40161bd2288557d7ce",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:47:13.762Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry saving choice hover with harness fail-next-preference503 fixture; not provider/backend outage; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preference-hover.png",
+      "sha256": "80dc297916689126b1bb3c8c062ec522e3c81b7fedb0ba5910154e33e051c449",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:47:15.072Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry saving choice focus with harness fail-next-preference503 fixture; not provider/backend outage; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-residual-retry-preference-focus.png",
+      "sha256": "586f4fd0ecdcb63d8e04401e805515130388e31b75861644b4538158d7d74f8f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:47:23.145Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry saving choice hover with harness fail-next-preference503 fixture; not provider/backend outage; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preference-hover.png",
+      "sha256": "3fb2edaca1bf7dd3c7005453b78595ac4535a41d366d31311c0eb8f006226d87",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:47:24.445Z",
+      "url": "http://127.0.0.1:5187/organization?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real UI Retry saving choice focus with harness fail-next-preference503 fixture; not provider/backend outage; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-residual-retry-preference-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-residual-retry-preference-focus.png",
+      "sha256": "340be54a95be5ec20c6549c80ea419b47523448471f48331ae226256a815ef11",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T14:49:00.108Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One authorized recreation: malformed POST preview200{}; two-frame footer geometry; no save",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands lifetime4-footer-geometry-reproduction-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/lifetime4-footer-geometry.png",
+      "sha256": "7b5a93f45ac0dc4c60dc686281570c7ec1addd5684b7964082e2d4de7b85ba1f",
+      "assetReceipt": "f03-assets-reuse.json",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessSha256": "5fcafbeda85a8a9669a319c7130e35e1c4fd71af90f642a918b68dba167fc1eb",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 4
     }
   ],
-  "visualStatus": "Partial live evidence; F01/F02/F03 bounded fixes verified. Finite residual controls, actual native Mac input Undo and human evidence remain open.",
+  "visualStatus": "Partial live evidence; F01/F02/F03 bounded fixes verified. F04 confirmed malformed-preview footer overlap remains open, with finite remaining control groups and native/human gates.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -12283,23 +13765,17 @@
   "findings": "findings.json",
   "fixPlan": "selection-overlap-plan.html",
   "currentBrowserLifetime": {
-    "lifetime": 3,
-    "session": "bre387-controls-7d021ab",
-    "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
-    "harnessSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+    "lifetime": 4,
+    "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+    "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+    "readiness": "lifetime4-readiness.json",
+    "servedReceipt": "lifetime4-served-build.json",
+    "assets": "f03-assets-reuse.json",
+    "serverExec": 2877,
+    "browserSession": "bre387-residual-a63d6da",
+    "status": "closed; browser/server exit0, scratch removed and ports released",
     "providerRefreshNoop": false,
-    "assetReceipt": "lifetime3-served-build.json",
-    "assetReuse": "f02-assets-reuse.json",
-    "readiness": "lifetime3-readiness.json",
-    "priorCleanup": "lifetime2-cleanup.json",
-    "status": "live; actual lifetime3 cleanup pending",
-    "documentLossHistory": [
-      "lifetime3-session-boundary.json",
-      "lifetime3-second-session-boundary.json",
-      "lifetime3-third-blank-boundary.json"
-    ],
-    "toolingDiagnosis": "lifetime3-tooling-diagnosis.json",
-    "plannedViewportIdentity": "lifetime3-planned-census-viewport.json"
+    "cleanup": "lifetime4-cleanup.json"
   },
   "browserActionLogs": [
     {
@@ -12393,9 +13869,28 @@
       "priorCleanup": "lifetime1-cleanup.json",
       "status": "closed; cleanup verified",
       "cleanup": "lifetime2-cleanup.json"
+    },
+    {
+      "lifetime": 3,
+      "session": "bre387-controls-7d021ab",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "providerRefreshNoop": false,
+      "assetReceipt": "lifetime3-served-build.json",
+      "assetReuse": "f02-assets-reuse.json",
+      "readiness": "lifetime3-readiness.json",
+      "priorCleanup": "lifetime2-cleanup.json",
+      "status": "closed; browser/server exit0 and scratch removed",
+      "documentLossHistory": [
+        "lifetime3-session-boundary.json",
+        "lifetime3-second-session-boundary.json",
+        "lifetime3-third-blank-boundary.json"
+      ],
+      "toolingDiagnosis": "lifetime3-tooling-diagnosis.json",
+      "plannedViewportIdentity": "lifetime3-planned-census-viewport.json",
+      "cleanup": "lifetime3-cleanup.json"
     }
   ],
-  "previousBrowserLifetimes": [],
   "lifetime3Cleanup": "lifetime3-cleanup.json",
   "nextRuntime": {
     "sha": "d0b05f8d20992e76276283c63c843119291b6bb6",

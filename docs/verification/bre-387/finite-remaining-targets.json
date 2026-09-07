@@ -1,7 +1,7 @@
 {
-  "at": "2026-09-07T13:53:28.215293+00:00",
+  "at": "2026-09-07T14:29:12.655165+00:00",
   "runtime": "d0b05f8d20992e76276283c63c843119291b6bb6",
-  "harness": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "harness": "a63d6da1182e485a2c382554914398a579ccb385",
   "purpose": "Finite consolidation after source inventory; missing observation is not a product defect. Reuse actual historical evidence before captures; no persistence replays.",
   "requiredGroups": [
     {
@@ -135,5 +135,15 @@
     ],
     "boundary": "No PASS for deferred branches; existing compatibility/evaluator tests remain separately attributed. Return when mail arrives may reuse actual sample default plus identical Skip treatment, explicitly without separate target hover/focus."
   },
-  "summaryResolution": "../summary-focus/fix-guide.html; independent bounded PASS; no repeated summary checks"
+  "summaryResolution": "../summary-focus/fix-guide.html; independent bounded PASS; no repeated summary checks",
+  "originalPlanAt": "2026-09-07T13:53:28.215293+00:00",
+  "provenanceBoundary": "Current planned lifetime4 identity. Historical evidence retains original tested runtime/harness and timestamps; no retrospective relabeling.",
+  "completedLifetime4": [
+    "Selection24target states independently reviewed",
+    "Retry preparation8target states independently reviewed; real recovery separately recorded",
+    "Retry preview8target states independently reviewed; confirmedF04 whole-footer layout remains open; real recovery recorded",
+    "Retry guidance8target states independently reviewed; real recovery recorded",
+    "Retry savingchoice8target states independently reviewed; actual retry+completion timestamp recorded"
+  ],
+  "currentGate": "F04 confirmed malformed-response footer overlap; freeze for separate layout owner. Remaining destruction-confirmation/saved-route/pagination/applicableSearch chrome/usedselect groups remain open."
 }

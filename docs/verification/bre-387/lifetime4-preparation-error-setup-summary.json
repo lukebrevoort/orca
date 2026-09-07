@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:33:55.716333+00:00",
+  "completedAt": "2026-09-07T14:34:17.042878+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-preparation-error-setup-commands.json",
+  "raw": "lifetime4-preparation-error-setup-raw.json",
+  "stderr": "lifetime4-preparation-error-setup-stderr.txt",
+  "parsedRecords": 0
+}

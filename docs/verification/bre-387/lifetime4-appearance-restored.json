@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-07T14:50:20.203Z",
+  "method": "Real Appearance Dark radio; prior explicit Dark restored",
+  "priorReceipt": "lifetime4-theme-before-system.json",
+  "scenario": "lifetime4-appearance-restored",
+  "selected": "dark",
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/settings/reading",
+  "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+  "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "providerRefreshNoop": false
+}

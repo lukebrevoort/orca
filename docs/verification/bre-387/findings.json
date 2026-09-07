@@ -107,6 +107,36 @@
         "ci": "https://github.com/lukebrevoort/orca/actions/runs/34132680933",
         "boundary": "Eight keyboard and eight hover cases plus bounded wrap/Escape; reuse without replay. Wider finite residuals remain."
       }
+    },
+    {
+      "id": "F04",
+      "status": "confirmed open; malformed preview response causes settled footer text overlap",
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "summary": "Raw preview schema-validation error overlaps footer summary copy in1024 captures;1440 summary compressed",
+      "fixture": "Browser route intercepts exact POST /v1/organization/views/preview with200 {}. Not a real backend outage. Interception removed before successful real retry.",
+      "evidence": [
+        "screenshots/light-1024-residual-retry-preview-hover.png",
+        "screenshots/black-1024-residual-retry-preview-hover.png",
+        "lifetime4-preparation-recovery-preview-error-raw.json",
+        "lifetime4-preview-recovery-raw.json",
+        "lifetime4-footer-geometry-reproduction-raw.json",
+        "screenshots/lifetime4-footer-geometry.png"
+      ],
+      "boundary": "Read-only two-frame geometry confirms failure in scoped malformed200{} response fixture. Interception removed and real retry restored enabled Save; no commit. No runtime edits; separate layout-only owner.",
+      "geometry": {
+        "receipt": "lifetime4-footer-two-frame-geometry.json",
+        "first": "2026-09-07T14:48:59.688Z",
+        "second": "2026-09-07T14:49:00.047Z",
+        "both": {
+          "textOverlap": true,
+          "previewEscapes": true,
+          "gridTemplateColumns": "0px 882px",
+          "previewClientWidth": 0,
+          "previewScrollWidth": 64,
+          "transition": null
+        }
+      }
     }
   ]
 }

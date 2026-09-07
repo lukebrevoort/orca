@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:43:03.592234+00:00",
+  "completedAt": "2026-09-07T14:43:13.182307+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-guidance-recovery-preference-error-commands.json",
+  "raw": "lifetime4-guidance-recovery-preference-error-raw.json",
+  "stderr": "lifetime4-guidance-recovery-preference-error-stderr.txt",
+  "parsedRecords": 0
+}

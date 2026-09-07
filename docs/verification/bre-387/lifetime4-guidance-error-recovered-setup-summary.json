@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:41:03.090475+00:00",
+  "completedAt": "2026-09-07T14:41:27.490007+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-guidance-error-recovered-setup-commands.json",
+  "raw": "lifetime4-guidance-error-recovered-setup-raw.json",
+  "stderr": "lifetime4-guidance-error-recovered-setup-stderr.txt",
+  "parsedRecords": 0
+}

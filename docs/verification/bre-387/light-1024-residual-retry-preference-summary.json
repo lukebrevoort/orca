@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:47:18.589539+00:00",
+  "completedAt": "2026-09-07T14:47:26.702640+00:00",
+  "exitCode": 0,
+  "commands": "light-1024-residual-retry-preference-commands.json",
+  "raw": "light-1024-residual-retry-preference-raw.json",
+  "stderr": "light-1024-residual-retry-preference-stderr.txt",
+  "parsedRecords": 4
+}

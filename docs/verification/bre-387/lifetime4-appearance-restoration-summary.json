@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:50:04.642347+00:00",
+  "completedAt": "2026-09-07T14:50:20.717833+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-appearance-restoration-commands.json",
+  "raw": "lifetime4-appearance-restoration-raw.json",
+  "stderr": "lifetime4-appearance-restoration-stderr.txt",
+  "parsedRecords": 1
+}

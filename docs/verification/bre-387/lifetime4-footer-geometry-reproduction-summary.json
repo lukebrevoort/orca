@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:48:33.618272+00:00",
+  "completedAt": "2026-09-07T14:49:02.837233+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-footer-geometry-reproduction-commands.json",
+  "raw": "lifetime4-footer-geometry-reproduction-raw.json",
+  "stderr": "lifetime4-footer-geometry-reproduction-stderr.txt",
+  "parsedRecords": 2
+}

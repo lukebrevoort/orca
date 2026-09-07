@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:42:20.051011+00:00",
+  "completedAt": "2026-09-07T14:42:26.605872+00:00",
+  "exitCode": 0,
+  "commands": "black-1440-residual-retry-guidance-commands.json",
+  "raw": "black-1440-residual-retry-guidance-raw.json",
+  "stderr": "black-1440-residual-retry-guidance-stderr.txt",
+  "parsedRecords": 4
+}

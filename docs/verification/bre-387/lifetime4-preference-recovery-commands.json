@@ -1,0 +1,25 @@
+[
+  [
+    "eval",
+    "fetch(\"/v1/review/inspection\").then(r=>r.json()).then(value=>({controlObservation:{scenario:\"lifetime4-before-preference-retry\",at:new Date().toISOString(),value}}))"
+  ],
+  [
+    "click",
+    ".first-view-save-state button"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\".first-view-save-state\")"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/preferences?include=first_view_guidance\").then(r=>r.json()).then(value=>({controlObservation:{scenario:\"lifetime4-after-preference-retry\",at:new Date().toISOString(),value}}))"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "include=first_view_guidance"
+  ]
+]

@@ -15,8 +15,8 @@
     {
       "family": "Selection",
       "controls": "Done selecting; Select all visible; selected/unselected mail row; Use these senders",
-      "covered": "Four-way no-selection/mixed disabled Use guard and selected rows. Fixed F01 settled all4 pointer/focus. Smoke Space selects/clears and pressed hover exists in both themes.",
-      "missing": "Use these senders enabled hover/focus at exact selected row not explicitly mapped. Row selected/unselected hover and row keyboard ring all4 not individually linked. Smoke pressed-hover width coverage must be retained as observed, not inferred all4.",
+      "covered": "Four-way no-selection/mixed disabled Use guard and selected rows. Fixed F01 settled all4 pointer/focus. Smoke Space selects/clears and pressed hover exists in both themes. Lifetime4 d0/a63 all24 actual selected/unselected row and enabled Use hover/focus PNG/JSON independently reviewed; exact Project correction0 sole selection preserved.",
+      "missing": "No remaining six-target-state styling gap; no new Use activation or persistence claimed.",
       "minimumActions": "Use one exact row in current fixture; hover/focus row and Use these senders, retaining selection. Reuse F01 geometry/Space proof.",
       "evidence": "visual-observations.json *no-selection/*mixed; ../selection-header/settled; ../selection-header/smoke/pressed-theme-preservation.json"
     },
@@ -55,8 +55,8 @@
     {
       "family": "Unsupported/correction fallback",
       "controls": "Replace subject; Remove blocker; Correct senders; Tune fallback",
-      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures. Correct trigger all4 hover/focus captured in *controls-correct-trigger; all8 images independently reviewed.",
-      "missing": "No separate overflow Tune fallback control exists: source966 renders manual-filter explanatory copy and existing Cancel sender correction. Tune and Cancel states already reviewed all4. Distinct Retry preview (.view-preview-retry, source965) on preview error still requires direct hover/focus all4; other Retry controls do not substitute.",
+      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures. Correct trigger all4 hover/focus captured in *controls-correct-trigger; all8 images independently reviewed. Retry preparation/preview eight target states each independently reviewed; unroute precedes real recovery. Malformedpreview whole-footer overlap remains F04-candidate, separate from target PASS.",
+      "missing": "No separate overflow Tune button. F04 confirmed footer geometry assessment pending; exact recovery target states covered.",
       "minimumActions": "Inspect these actual controls in retained ready drafts; do not replay save or census mutations solely for styling.",
       "evidence": "*unsupported; *overflow-panel; browser-actions.json"
     },
@@ -103,8 +103,8 @@
     {
       "family": "Help auxiliary controls",
       "controls": "Close; Skip; Retry saving choice; sample return/start buttons",
-      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated. Current all4 Close/Skip hover and actual keyboard focus target PNG/JSON complete; all16 images independently reviewed.",
-      "missing": "Retry saving choice hover/focus remains. Stable disabled Retry visual is not applicable: dismiss sets saveError=false with saving=true (first-view-guidance.tsx67), removing the banner/button at121\u2013122 while pending. Skip has no disabled state. Observe retry settlement without inventing a pending button.",
+      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated. Current all4 Close/Skip hover and actual keyboard focus target PNG/JSON complete; all16 images independently reviewed. Lifetime4 Retry guidance eight target states independently reviewed; Retry saving choice eight captured (Black1440 recovered group only), independent review passed. Both real recovery paths separately recorded; preference completion at14:48:11.573Z.",
+      "missing": "Retry buttons disappear during pending; no stable disabled visual applies. Preference eight-target independent review passed; Return when mail arrives uses existing default frame plus shared Skip treatment, no independent target hover/focus claimed.",
       "minimumActions": "Reuse ready help for Close/Skip/Retry targets; inspect genuine pending preference state before considering any harness change. Reuse completed ce1 sample4/16 evidence; do not reset historical user.",
       "evidence": "*fixed-empty-sample; *fixed-arrival-help; *fixed-preference-error; first-view-guidance.css8\u201310"
     }
@@ -113,5 +113,5 @@
     "Native Mac input history Undo",
     "Owner protocol approval and real usability sessions (zero completed)"
   ],
-  "next": "On verified d0 runtime, resume finite residual recovery, removal confirmation, saved-route/pagination, Selection and applicable Search chrome/used selects. Reuse summary evidence and all prior reviewed groups."
+  "next": "F04 confirmed footer text overlap; freeze for separate layout owner. After verified integration resume finite remaining groups, reusing all completed target states."
 }

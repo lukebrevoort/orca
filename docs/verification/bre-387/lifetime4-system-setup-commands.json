@@ -1,0 +1,40 @@
+[
+  [
+    "click",
+    ".selection-mode-toggle"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/settings/reading"
+  ],
+  [
+    "wait",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime4-theme-before-system\",at:new Date().toISOString(),priorSelected:document.querySelector(\"input[name=theme]:checked\")?.value}})"
+  ],
+  [
+    "click",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "set",
+    "media",
+    "dark"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime4-theme-system\",at:new Date().toISOString(),systemChecked:document.querySelector(\"input[name=theme][value=system]\").checked,theme:document.documentElement.dataset.theme,mediaDark:matchMedia(\"(prefers-color-scheme: dark)\").matches}})"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".desktop-theme-toggle\")"
+  ]
+]

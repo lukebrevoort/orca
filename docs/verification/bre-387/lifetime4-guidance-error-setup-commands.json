@@ -1,0 +1,59 @@
+[
+  [
+    "click",
+    ".view-composer-actions button:nth-last-child(2)"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-discard-keep\")"
+  ],
+  [
+    "click",
+    ".view-preparation-state button:last-of-type"
+  ],
+  [
+    "network",
+    "route",
+    "**/v1/preferences?include=first_view_guidance",
+    "--body",
+    "{}"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/organization"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\"button[aria-controls=organization-views]\")"
+  ],
+  [
+    "click",
+    "button[aria-controls=organization-views]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\"#organization-views\").hidden"
+  ],
+  [
+    "click",
+    "#organization-views .views-workspace > button.view-action"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".first-view-help .first-view-guidance > button\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "include=first_view_guidance"
+  ]
+]

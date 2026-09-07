@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-07T14:48:11.614Z",
+  "scenario": "lifetime4-after-preference-retry",
+  "value": {
+    "composeFormat": "plain",
+    "firstViewGuidanceCompletedAt": "2026-09-07T14:48:11.573Z",
+    "notifyByDefault": false,
+    "replyBehavior": "reply",
+    "signature": ""
+  },
+  "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+  "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "providerRefreshNoop": false
+}
