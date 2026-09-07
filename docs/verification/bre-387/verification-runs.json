@@ -144,5 +144,17 @@
     "exitCode": 0,
     "testedSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
     "log": "logs/2026-09-07T01-52-38.162422+00-00.txt"
+  },
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "startedAt": "2026-09-07T01:54:34.060166+00:00",
+    "durationSeconds": 20.71,
+    "exitCode": 0,
+    "testedSha": "0d29558b261a9ab3f3232272524fa637b584c4d7",
+    "log": "logs/2026-09-07T01-54-34.060166+00-00.txt"
   }
 ]

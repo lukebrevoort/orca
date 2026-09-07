@@ -373,5 +373,23 @@
     "source": "apps/web/src/first-view-guidance.test.tsx",
     "test": "manual reopen refreshes empty mail readiness after real mail arrives",
     "line": 120
+  },
+  {
+    "group": "P04",
+    "criterion": "No selected mail rows cannot start sender authoring",
+    "category": "live visual",
+    "status": "pending",
+    "source": null,
+    "test": null,
+    "gap": "Distinct from empty correction allowlist; inspect disabled/no-selection state in live selection toolbar."
+  },
+  {
+    "group": "P03",
+    "criterion": "Production advanced lane/facet/context/workflow/evidence/sender/date/read conjunction and live post-save facet changes",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/routes.test.ts",
+    "test": "creates unlimited definitions, evaluates them live across authorized Accounts, and paginates stably",
+    "line": 22
   }
 ]

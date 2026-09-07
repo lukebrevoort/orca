@@ -1,9 +1,9 @@
 {
   "status": "pass",
-  "harnessSha256": "6828c463071a41bd12ebc59c0b8ae36e748e9315a50fc1d1e304f91b3de8f384",
-  "testedSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+  "harnessSha256": "f52ada2bf68e4c6ffa24ad0c2e2eb8f24fe8cf38eee065c52f670afbdf4a1091",
+  "testedSha": "0d29558b261a9ab3f3232272524fa637b584c4d7",
   "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
-  "timestamp": "2026-09-07T01:47:40.772Z",
+  "timestamp": "2026-09-07T01:54:54.731Z",
   "category": "production-scratch",
   "tool": "1.3.14",
   "results": [
@@ -79,7 +79,7 @@
     {
       "scenario": "exact selected row → real preview → commit → identical replay → reopened SQLite → canonical list; mail unchanged",
       "status": "pass",
-      "viewId": "view_f1e0c735-37c8-4dcb-9db8-1e0198ad85b0",
+      "viewId": "view_7153e1c2-16c3-4c57-af6e-14508b0bbe30",
       "definition": {
         "revision": 1,
         "accountIds": [

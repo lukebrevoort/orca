@@ -92,7 +92,9 @@ if (process.argv.includes("--check")) {
     results.push({ scenario: "prepare and preview are read-only before commit", status: "pass", checkedTables: tables });
     const envelope = { draft: preview.draft, expectedRevisions: { workspace: preview.workspaceRevision, view: null }, retryKey: "bre387-route-proof" };
     const saved = await request("/v1/organization/views/commit", envelope);
+    const beforeReplay = snapshot(tables);
     const replay = await request("/v1/organization/views/commit", envelope);
+    assert.deepEqual(snapshot(tables), beforeReplay, "identical replay must not write any table, revision or change set");
     assert.deepEqual(replay, saved, "identical replay returns the complete original response");
     const reopened = createDatabaseClient(path);
     const stored = reopened.sqlite.query("SELECT id,definition FROM organization_views WHERE id=?").get(saved.view.id) as { id: string; definition: string };
@@ -102,7 +104,7 @@ if (process.argv.includes("--check")) {
     const listed = await request("/v1/organization/views");
     assert.ok(listed.items.some((v: { id: string }) => v.id === saved.view.id));
     assert.deepEqual(snapshot(immutableTables), before, "commit and replay preserve mail, provider, placement, policy, classification and notification data");
-    results.push({ scenario: "exact selected row → real preview → commit → identical replay → reopened SQLite → canonical list; mail unchanged", status: "pass", viewId: saved.view.id, definition: saved.view.definition, unchangedTables: immutableTables });
+    results.push({ scenario: "exact selected row → real preview → commit → identical replay → reopened SQLite → canonical list; mail unchanged", status: "pass", viewId: saved.view.id, definition: saved.view.definition, replayCheckedTables: tables, unchangedTables: immutableTables });
     mail("future-allowed", "work", "Future matching mail", "maya@example.com", "Stored after save");
     mail("future-other", "work", "Future nonmatching mail", "other@example.com", "Stored after save");
     const allItems: Array<{ accountId: string; threadId: string }> = [];
