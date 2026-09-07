@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-07T06:47:40.091670+00:00",
+  "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+  "sourceWorktree": "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix",
+  "buildReceipt": "../selection-header/fixed-build.json",
+  "buildLog": "../selection-header/logs/build.log",
+  "files": {
+    "apps/web/src/desktop-switch.css": "9a55d19a8ae8adab68341e46014d7f6605dab2c20e86f730a0443133a75fd3c4",
+    "apps/web/dist/index.html": "6ddee6ee16354fb01016f3c09febc4fff20d1cba27aec1026cb687f340f69f77",
+    "apps/web/dist/assets/index-DcPuaZRQ.js": "ce496add9d8bf2d4549d63b0b7babfe41b756bf84f14ad15e74b9d6b23ec01f2",
+    "apps/web/dist/assets/index-CdNnB39U.css": "8590fb10553f5999cd2d63bce7b139c18d9c5c59289a306d5a0cdbd8eba9f224"
+  },
+  "copiedWithoutRebuild": true,
+  "originalBackup": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/bre387-original-dist-a63ae626/dist",
+  "note": "Receipt binds retained bytes to recorded successful build; source ancestry and file hashes verified, not a cryptographic build attestation.",
+  "additionalOriginalBackup": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/bre387-original-dist-second-_dvmq5ql/dist"
+}

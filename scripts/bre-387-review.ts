@@ -21,9 +21,18 @@ let closeDatabase: (() => void) | undefined;
 let api: ReturnType<typeof Bun.serve> | undefined;
 let web: { close: () => Promise<unknown> } | undefined;
 let cleaned = false;
+// Reviewer-only pending response control. Never changes the production response body.
+let holdNextPreview = false;
+let releasePreview: (() => void) | undefined;
+let previewHeldAt: string | undefined;
+let previewHoldReceipt: { id: string; heldAt: string; responseStatus?: number; responseBodySha256?: string; releasedAt?: string; releaseReason?: string } | undefined;
+const previewHoldTimeoutMs = 240_000;
+const providerRefreshNoop = process.argv.includes("--provider-refresh-noop");
 async function cleanup() {
   if (cleaned) return;
   cleaned = true;
+  holdNextPreview = false;
+  releasePreview?.();
   try { api?.stop(true); await web?.close(); }
   finally { try { closeDatabase?.(); } finally { rmSync(directory, { recursive: true, force: true }); } }
 }
@@ -158,24 +167,70 @@ if (process.argv.includes("--check")) {
   }
   process.exit(0);
 }
-api = Bun.serve({ hostname: "127.0.0.1", port: 3087, fetch: (request) => {
+api = Bun.serve({ hostname: "127.0.0.1", port: 3087, idleTimeout: 255, fetch: async (request) => {
   const pathname = new URL(request.url).pathname;
+  if (pathname === "/v1/review/hold-next-preview" && request.method === "POST") {
+    if (holdNextPreview || releasePreview) return Response.json({ error: "A preview hold is already active" }, { status: 409 });
+    previewHoldReceipt = undefined;
+    holdNextPreview = true; return Response.json({ armed: true, timeoutMs: previewHoldTimeoutMs });
+  }
+  if (pathname === "/v1/review/pending-preview" && request.method === "GET") return Response.json({ armed: holdNextPreview, held: Boolean(releasePreview), heldAt: previewHeldAt ?? null, timeoutMs: previewHoldTimeoutMs, receipt: previewHoldReceipt ?? null });
+  if (pathname === "/v1/review/release-preview" && request.method === "POST") {
+    const released = Boolean(releasePreview); holdNextPreview = false; releasePreview?.(); return Response.json({ released });
+  }
+  if (providerRefreshNoop && pathname === "/v1/sync/gmail" && request.method === "POST") return Response.json({ reviewFixture: "provider-refresh-noop" });
   if (pathname === "/v1/review/fail-next-preference" && request.method === "POST") { failNextPreference = true; return Response.json({ armed: true }); }
   if (pathname === "/v1/review/toggle-list-failure" && request.method === "POST") { failViewList = !failViewList; return Response.json({ failViewList }); }
   if (pathname === "/v1/organization/views" && request.method === "GET" && failViewList) return new Response("Review list unavailable", { status: 503 });
   if (pathname === "/v1/preferences" && request.method === "PATCH" && failNextPreference) { failNextPreference = false; return new Response("Review preference unavailable", { status: 503 }); }
   if (pathname === "/v1/review/fail-next-commit" && request.method === "POST") { failNextCommit = true; return Response.json({ armed: true }); }
   if (pathname === "/v1/organization/views/commit" && failNextCommit) { failNextCommit = false; return Response.json({ error: { code: "review_injected_failure", message: "Reviewer-injected temporary server failure. Retry preserves this draft." } }, { status: 503 }); }
-  return app.fetch(request);
+  // Reserve one hold before the real handler runs; concurrent requests stay independent.
+  let held: Promise<void> | undefined;
+  let finishHeld: ((reason?: string) => void) | undefined;
+  let receipt: NonNullable<typeof previewHoldReceipt> | undefined;
+  if (holdNextPreview && pathname === "/v1/organization/views/preview" && request.method === "POST") {
+    holdNextPreview = false;
+    previewHeldAt = new Date().toISOString();
+    receipt = { id: crypto.randomUUID(), heldAt: previewHeldAt }; previewHoldReceipt = receipt;
+    held = new Promise<void>((resolveHeld) => {
+      let finished = false;
+      const finish = (reason = "explicit") => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer); request.signal.removeEventListener("abort", abort);
+        if (receipt) { receipt.releasedAt = new Date().toISOString(); receipt.releaseReason = cleaned ? "cleanup" : reason; }
+        if (releasePreview === finish) { releasePreview = undefined; previewHeldAt = undefined; }
+        resolveHeld();
+      };
+      const abort = () => finish("abort");
+      const timer = setTimeout(() => finish("timeout"), previewHoldTimeoutMs);
+      releasePreview = finish; finishHeld = finish;
+      request.signal.addEventListener("abort", abort, { once: true });
+      if (request.signal.aborted || cleaned) finish("abort");
+    });
+  }
+  try {
+    const response = await app.fetch(request);
+    if (receipt) {
+      receipt.responseStatus = response.status;
+      receipt.responseBodySha256 = createHash("sha256").update(Buffer.from(await response.clone().arrayBuffer())).digest("hex");
+    }
+    if (held) await held;
+    return response;
+  } catch (error) {
+    finishHeld?.("handler-error");
+    throw error;
+  } finally { finishHeld?.("handler-finally"); }
 } });
 if (process.argv.includes("--built")) {
   const dist = resolve("apps/web/dist");
   const files = readdirSync(dist, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => resolve(entry.parentPath, entry.name)).sort();
   const assets = files.map(filename => ({ filename: filename.slice(dist.length + 1), sha256: createHash("sha256").update(readFileSync(filename)).digest("hex") }));
   assert.ok(assets.some(asset => asset.filename === "index.html"), "Run the web build before --built review");
-  const receipt = { mode: "built-SPA", productSourceBaseSha: "0e7762cf1977f77151a422963f73e9a10188b866", assetTreeSha256: createHash("sha256").update(JSON.stringify(assets)).digest("hex"), assets };
+  const receipt = { mode: "built-SPA", harnessFixtureControls: { providerRefreshNoop, previewHoldTimeoutMs }, productAncestorSha: "0e7762cf1977f77151a422963f73e9a10188b866", runtimeSourceSha: "44edbf2f5033f5d5e0b4ffa29169120482d22c47", harnessCheckoutSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), harnessSha256: createHash("sha256").update(readFileSync(import.meta.path)).digest("hex"), buildReceipt: "docs/verification/selection-header/fixed-build.json", buildReceiptSha256: createHash("sha256").update(readFileSync("docs/verification/selection-header/fixed-build.json")).digest("hex"), assetTreeSha256: createHash("sha256").update(JSON.stringify(assets)).digest("hex"), assets };
   app.get("/v1/review/build", c => c.json(receipt));
-  const built = Bun.serve({ hostname: "127.0.0.1", port: 5187, async fetch(request) {
+  const built = Bun.serve({ hostname: "127.0.0.1", port: 5187, idleTimeout: 255, async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/v1/") || url.pathname === "/health") return fetch(new Request(`http://127.0.0.1:3087${url.pathname}${url.search}`, request), { redirect: "manual" });
     const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
