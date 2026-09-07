@@ -1,0 +1,2025 @@
+{
+  "checkboxes": [
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 409
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "LABEL",
+          "text": "maya@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": true,
+      "label": "maya@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 459
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 456
+          },
+          "tag": "LABEL",
+          "text": "sender0@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": true,
+      "label": "sender0@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 509
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 506
+          },
+          "tag": "LABEL",
+          "text": "sender1@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": true,
+      "label": "sender1@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 559
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 556
+          },
+          "tag": "LABEL",
+          "text": "sender2@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": true,
+      "label": "sender2@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 609
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 606
+          },
+          "tag": "LABEL",
+          "text": "sender3@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": true,
+      "label": "sender3@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 659
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 656
+          },
+          "tag": "LABEL",
+          "text": "sender4@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": false,
+      "label": "sender4@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 709
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 706
+          },
+          "tag": "LABEL",
+          "text": "sender5@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": false,
+      "label": "sender5@example.com"
+    },
+    {
+      "ancestors": [
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 36,
+            "w": 18,
+            "x": 265,
+            "y": 759
+          },
+          "tag": "INPUT",
+          "text": ""
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 722,
+            "x": 261,
+            "y": 756
+          },
+          "tag": "LABEL",
+          "text": "sender6@example.com"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 722,
+            "x": 261,
+            "y": 406
+          },
+          "tag": "DIV",
+          "text": "maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Correct matching senders",
+          "background": "rgb(237, 245, 242)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 710,
+            "w": 760,
+            "x": 242,
+            "y": 29
+          },
+          "tag": "SECTION",
+          "text": "Keep only these sendersCorrecting “Project correction 0” in work@example.com. Co"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1789,
+            "w": 762,
+            "x": 241,
+            "y": -523
+          },
+          "tag": "FORM",
+          "text": "Perspective builderEdit live perspectiveCancelSave changesView nameA short name "
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2005,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "DIV",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": "Inbox",
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": -702
+          },
+          "tag": "SECTION",
+          "text": "Project review evidenceReview this live ViewConfirm the exact account and filter"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 768,
+            "w": 804,
+            "x": 220,
+            "y": 0
+          },
+          "tag": "SECTION",
+          "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(246, 250, 247)",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY",
+          "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+        },
+        {
+          "ariaHidden": null,
+          "ariaLabel": null,
+          "background": "rgb(247, 250, 248)",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 768,
+            "w": 1024,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML",
+          "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+        }
+      ],
+      "hit": false,
+      "label": "sender6@example.com"
+    }
+  ],
+  "glyph": [
+    {
+      "ariaHidden": "true",
+      "ariaLabel": null,
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(81, 100, 94)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 21,
+        "w": 9.640625,
+        "x": 254,
+        "y": 23
+      },
+      "tag": "SPAN",
+      "text": "⌕"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(81, 100, 94)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "LABEL",
+      "text": "⌕⌘ K"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(81, 100, 94)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 40,
+        "w": 633.234375,
+        "x": 240,
+        "y": 13.5
+      },
+      "tag": "FORM",
+      "text": "⌕⌘ K"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "color(srgb 0.964706 0.980392 0.968627 / 0.94)",
+      "color": "rgb(16, 37, 34)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 68,
+        "w": 804,
+        "x": 220,
+        "y": 0
+      },
+      "tag": "HEADER",
+      "text": "⌕⌘ KProject review evidenceattentionBlack"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(246, 250, 247)",
+      "color": "rgb(16, 37, 34)",
+      "opacity": "1",
+      "overflow": "auto",
+      "rect": {
+        "h": 768,
+        "w": 804,
+        "x": 220,
+        "y": 0
+      },
+      "tag": "SECTION",
+      "text": "⌕⌘ KProject review evidenceattentionBlackProject review evidenceReview this live"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(246, 250, 247)",
+      "color": "rgb(16, 37, 34)",
+      "opacity": "1",
+      "overflow": "hidden",
+      "rect": {
+        "h": 768,
+        "w": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "MAIN",
+      "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(247, 250, 248)",
+      "color": "rgb(15, 36, 34)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 768,
+        "w": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "DIV",
+      "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(15, 36, 34)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 768,
+        "w": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "DIV",
+      "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(247, 250, 248)",
+      "color": "rgb(15, 36, 34)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 768,
+        "w": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "BODY",
+      "text": "orcapersonalComposeCAnchorsInbox100Drafts0My spacesManageFocus0Notify0Quiet0Late"
+    },
+    {
+      "ariaHidden": null,
+      "ariaLabel": null,
+      "background": "rgb(247, 250, 248)",
+      "color": "rgb(15, 36, 34)",
+      "opacity": "1",
+      "overflow": "visible",
+      "rect": {
+        "h": 768,
+        "w": 1024,
+        "x": 0,
+        "y": 0
+      },
+      "tag": "HTML",
+      "text": "Orca\n    \n      (() => {\n        const systemTheme = typeof window.matchMedia =="
+    }
+  ],
+  "searchInput": {
+    "ariaHidden": null,
+    "ariaLabel": "Search mail",
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(16, 37, 34)",
+    "opacity": "1",
+    "overflow": "clip",
+    "rect": {
+      "h": 22,
+      "w": 547.140625,
+      "x": 273.640625,
+      "y": 22.5
+    },
+    "tag": "INPUT",
+    "text": ""
+  },
+  "theme": "light",
+  "timestamp": "2026-09-07T02:55:42.306Z",
+  "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4"
+}

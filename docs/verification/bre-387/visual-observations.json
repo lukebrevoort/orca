@@ -1,0 +1,2563 @@
+[
+  {
+    "scenario": "light-1024-onboarding",
+    "timestamp": "2026-09-07T02:17:13.524958+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Use selected mailSelect conversations from one account, then choose Use these senders.",
+        "outline": "rgb(15, 36, 34) solid 2px",
+        "outlineOffset": "3px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Overview",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Views",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Lanes",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Rules",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Getting started",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(15, 36, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mailFind mail, then choose Save as View.",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(15, 36, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Use selected mailSelect conversations from one account, then choose Use these senders.",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(15, 36, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Skip for now",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(8, 116, 97)",
+          "disabled": false,
+          "hit": true,
+          "label": "+ New View",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  },
+  {
+    "scenario": "help-escape-restores-trigger",
+    "timestamp": "2026-09-07T02:17:52.300187+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Getting started",
+        "outline": "rgb(8, 116, 97) solid 2px",
+        "outlineOffset": "2px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Overview",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Views",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Lanes",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Rules",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Getting started",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(8, 116, 97)",
+          "disabled": false,
+          "hit": true,
+          "label": "+ New View",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": true,
+          "hit": true,
+          "label": "Edit definition",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": true,
+          "hit": true,
+          "label": "Remove View",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  },
+  {
+    "scenario": "light-1024-saved",
+    "timestamp": "2026-09-07T02:50:19.400724+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Project review evidence",
+        "outline": "rgb(16, 37, 34) none 3px",
+        "outlineOffset": "0px",
+        "tag": "H2"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 syncing\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Edit or rename View",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage in Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 0Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 1Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 1",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 2Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 2",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 3Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 3",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 4Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project update 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 4Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  },
+  {
+    "scenario": "light-1440-saved",
+    "timestamp": "2026-09-07T02:50:47.562997+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Project review evidence",
+        "outline": "rgb(16, 37, 34) none 3px",
+        "outlineOffset": "0px",
+        "tag": "H2"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Edit or rename View",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage in Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 0Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 1Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 1",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 2Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 2",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 3Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 3",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 4Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project update 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 4Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 5Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    }
+  },
+  {
+    "scenario": "black-1440-saved",
+    "timestamp": "2026-09-07T02:51:34.139793+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Switch to Light",
+        "outline": "rgb(244, 243, 239) none 3px",
+        "outlineOffset": "0px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(244, 243, 239)",
+          "color": "rgb(5, 5, 5)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 syncing\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Light",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Edit or rename View",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage in Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 0Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 1Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 1",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 2Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 2",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 3Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 3",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 4Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project update 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 4Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 5Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "dark",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    }
+  },
+  {
+    "scenario": "black-1024-saved",
+    "timestamp": "2026-09-07T02:52:12.223297+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Switch to Light",
+        "outline": "rgb(244, 243, 239) none 3px",
+        "outlineOffset": "0px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(244, 243, 239)",
+          "color": "rgb(5, 5, 5)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Light",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Edit or rename View",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage in Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 0Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 1Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 1",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 2Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 2",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 3Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project correction 3",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project update 4Maya Chen \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Correct senders for Project update 4",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "8Project correction 4Juniper Studio \u00b7 work@example.comSaved selectionSep 6",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "dark",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  },
+  {
+    "scenario": "black-1024-saved-correction",
+    "timestamp": "2026-09-07T02:53:31.854503+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Keep only these senders",
+        "outline": "rgb(244, 243, 239) none 3px",
+        "outlineOffset": "0px",
+        "tag": "H4"
+      },
+      "controls": [
+        {
+          "background": "rgb(244, 243, 239)",
+          "color": "rgb(5, 5, 5)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Light",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Preview these senders",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Cancel sender correction",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "dark",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  },
+  {
+    "scenario": "black-1440-saved-correction",
+    "timestamp": "2026-09-07T02:53:59.158539+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Keep only these senders",
+        "outline": "rgb(244, 243, 239) none 3px",
+        "outlineOffset": "0px",
+        "tag": "H4"
+      },
+      "controls": [
+        {
+          "background": "rgb(244, 243, 239)",
+          "color": "rgb(5, 5, 5)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(177, 177, 171)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Light",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Preview these senders",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "color": "rgb(244, 243, 239)",
+          "disabled": false,
+          "hit": true,
+          "label": "Cancel sender correction",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "dark",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    }
+  },
+  {
+    "scenario": "light-1440-saved-correction",
+    "timestamp": "2026-09-07T02:54:40.992176+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Switch to Orca Black",
+        "outline": "rgb(16, 37, 34) none 3px",
+        "outlineOffset": "0px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Preview these senders",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Cancel sender correction",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    }
+  },
+  {
+    "scenario": "light-1024-saved-correction",
+    "timestamp": "2026-09-07T02:55:13.400277+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "toolVersion": "agent-browser 0.34.0",
+    "observation": {
+      "active": {
+        "label": "Switch to Orca Black",
+        "outline": "rgb(16, 37, 34) none 3px",
+        "outlineOffset": "0px",
+        "tag": "BUTTON"
+      },
+      "controls": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "color": "rgb(255, 255, 255)",
+          "disabled": false,
+          "hit": true,
+          "label": "ComposeC",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Inbox100",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Drafts0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Manage",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Focus0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Notify0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Quiet0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Later0",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(232, 241, 236)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Project review evidence",
+          "opacity": "1",
+          "selected": "page"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "All Mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Organization",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(81, 100, 94)",
+          "disabled": false,
+          "hit": true,
+          "label": "Settings",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Orca reviewer2 accounts \u00b7 attention\u203a",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Search mail",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Switch to Orca Black",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": false,
+          "label": "",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Preview these senders",
+          "opacity": "1",
+          "selected": null
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "color": "rgb(16, 37, 34)",
+          "disabled": false,
+          "hit": true,
+          "label": "Cancel sender correction",
+          "opacity": "1",
+          "selected": null
+        }
+      ],
+      "documentOverflow": false,
+      "theme": "light",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      }
+    }
+  }
+]

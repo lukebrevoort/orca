@@ -213,5 +213,31 @@
     "toolVersion": "agent-browser 0.34.0",
     "log": "logs/browser-2026-09-07T02-02-10.330924+00-00.txt",
     "logSha256": "7b6df3d55d43203cadbfcf966c168fb8c40fcd4653461c98f3b6c02abf9b5605"
+  },
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "startedAt": "2026-09-07T02:07:51.002766+00:00",
+    "durationSeconds": 11.98,
+    "exitCode": 0,
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "log": "logs/2026-09-07T02-07-51.002766+00-00.txt"
+  },
+  {
+    "command": [
+      "/opt/homebrew/bin/agent-browser",
+      "--session",
+      "bre387-built-623e5fc",
+      "open",
+      "http://127.0.0.1:5187/v1/review/login"
+    ],
+    "startedAt": "2026-09-07T02:09:10.991042+00:00",
+    "durationSeconds": 43.14,
+    "exitCode": 0,
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "log": "logs/2026-09-07T02-09-10.991042+00-00.txt"
   }
 ]
