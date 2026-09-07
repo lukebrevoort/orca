@@ -1,0 +1,20 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/first-view-guidance.test.tsx:
+(pass) first invitation waits for canonical reads, dismisses durably and reopens without creating a View [4400.55ms]
+(pass) a failed View list never becomes an invitation or empty-mail sample [671.58ms]
+(pass) empty mail offers only a noninteractive example and skipping never prepares or saves a View [547.61ms]
+(pass) selected mail starts production selection without writing preferences or a View [302.73ms]
+(pass) a dismissed user gets manual help without resetting their stored preference [207.78ms]
+(pass) failed dismissal stays locally hidden and explicitly retries persistence [159.10ms]
+(pass) manual help owns Escape and restores focus to Getting started [612.63ms]
+(pass) no invitation flashes while the canonical View list is still pending [448.49ms]
+(pass) a selected-mail invitation is consumed once instead of reselecting after later navigation [417.30ms]
+(pass) manual reopen refreshes empty mail readiness after real mail arrives [845.46ms]
+(pass) confirmed server completion clears a failed dismissal without another write [2094.35ms]
+(pass) a late dismissal failure cannot revive an alert after confirmed completion [736.54ms]
+
+ 12 pass
+ 0 fail
+ 68 expect() calls
+Ran 12 tests across 1 file. [19.28s]

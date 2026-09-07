@@ -1,0 +1,13 @@
+{
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "theme": "dark",
+  "viewport": [
+    1440,
+    900
+  ],
+  "active": "<input aria-label=\"Search stored mail\" autocomplete=\"off\" maxlength=\"200\" placeholder=\"Sender, subject, or phrase\" value=\"\">",
+  "help": false,
+  "search": true,
+  "bulk": false,
+  "selected": []
+}

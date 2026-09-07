@@ -1,0 +1,13 @@
+{
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "theme": "dark",
+  "viewport": [
+    1440,
+    900
+  ],
+  "active": "<button class=\"view-action\" type=\"button\">Getting started</button>",
+  "help": false,
+  "search": false,
+  "bulk": false,
+  "selected": []
+}
