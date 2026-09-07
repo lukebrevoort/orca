@@ -1,0 +1,5 @@
+{
+  "status": "PASS",
+  "cases": 12,
+  "fixture": "Browser transport POST preview200{}; real recovery after unroute; no save; source and error text unchanged."
+}

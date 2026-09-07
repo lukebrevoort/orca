@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-07T15:25:01.186005+00:00",
+  "browserExec": 77749,
+  "browserExit": 0,
+  "serverExec": 42153,
+  "serverExit": 0,
+  "signal": "SIGINT via owned handle",
+  "scratch": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-ORZWwn",
+  "scratchExists": false,
+  "listeners": "",
+  "listenerExit": 1,
+  "routes": "finally unroute succeeded in matrix-commands.json",
+  "appearance": "Fresh disposable session starts Light, toggled Black by real header; disposed with scratch. No external preference restoration claimed."
+}

@@ -1,0 +1,18 @@
+{
+  "initialReadinessProbes": "Two curl connection failures before server listened; subsequent served-build curl exit0.",
+  "browserStartup": {
+    "exec": 31724,
+    "exit": 1,
+    "error": "OS35 after5 internal retries"
+  },
+  "sameSessionTabList": {
+    "exec": 5714,
+    "exit": 0
+  },
+  "sameSessionSnapshot": {
+    "exec": 32547,
+    "exit": 0,
+    "authenticated": "Orca reviewer with populated Inbox"
+  },
+  "recovery": "No second browser/relaunch/rebuild; existing session usable and matrix completed."
+}

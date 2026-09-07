@@ -1,0 +1,8 @@
+{
+  "checkpoint": "c4192528b0eb1844466a1f0771fd1d2988b6108d",
+  "runtime": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "cssSha256": "7cd9c6c1b4a4ece97dd301d5cce880b59e8c7cfcd627690ffe33f4852cf29ad1",
+  "assetReceipt": "../summary-focus/final-provenance.json",
+  "fixture": "POST preview HTTP200{} browser interception, not backend outage",
+  "red": "Preserved immutable two-frame geometry; durable baseline checker exit1 before CSS edit; no duplicate baseline browser"
+}
