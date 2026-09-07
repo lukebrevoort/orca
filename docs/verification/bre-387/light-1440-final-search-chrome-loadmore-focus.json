@@ -1,0 +1,125 @@
+{
+  "at": "2026-09-07T16:02:01.300Z",
+  "fixture": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants",
+  "scenario": "light-1440-final-search-chrome-loadmore-focus",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(210, 221, 215)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "global-mail-load-more",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(8, 116, 97) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(210, 221, 215) rgb(16, 37, 34) rgb(16, 37, 34)",
+          "borderWidth": "1px 0px 0px",
+          "boxShadow": "none",
+          "class": "global-mail-search-results",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "auto",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(14, 35, 29, 0.18) 0px 28px 84px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Load more matches",
+      "pressed": null,
+      "rect": {
+        "bottom": 822,
+        "height": 38,
+        "left": 660.53125,
+        "right": 779.46875,
+        "top": 784,
+        "width": 118.9375,
+        "x": 660.53125,
+        "y": 784
+      },
+      "value": ""
+    }
+  ],
+  "theme": "light",
+  "themeMechanism": "System Appearance/media light",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "viewport": [
+    1440,
+    900
+  ],
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

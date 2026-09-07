@@ -1,0 +1,358 @@
+[
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"light\""
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-workspace > header > div:last-child button:first-child"
+  ],
+  [
+    "focus",
+    "#saved-view-title"
+  ],
+  [
+    "hover",
+    ".saved-view-workspace > header > div:last-child button:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-workspace > header > div:last-child button:first-child\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-workspace > header > div:last-child button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-edit-hover\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit hover; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-edit-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-edit-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-workspace > header > div:last-child button:first-child"
+  ],
+  [
+    "focus",
+    ".saved-view-workspace > header > div:last-child button:first-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-workspace > header > div:last-child button:first-child\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-workspace > header > div:last-child button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-edit-focus\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit focus; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-edit-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-edit-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-workspace > header > div:last-child button:last-child"
+  ],
+  [
+    "focus",
+    "#saved-view-title"
+  ],
+  [
+    "hover",
+    ".saved-view-workspace > header > div:last-child button:last-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-workspace > header > div:last-child button:last-child\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-workspace > header > div:last-child button:last-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-manage-hover\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage hover; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-manage-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-manage-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-workspace > header > div:last-child button:last-child"
+  ],
+  [
+    "focus",
+    ".saved-view-workspace > header > div:last-child button:last-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-workspace > header > div:last-child button:last-child\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-workspace > header > div:last-child button:last-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-manage-focus\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage focus; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-manage-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-manage-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-thread-list > div:first-child .view-thread-open"
+  ],
+  [
+    "focus",
+    "#saved-view-title"
+  ],
+  [
+    "hover",
+    ".saved-view-results .view-thread-list > div:first-child .view-thread-open"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-thread-list > div:first-child .view-thread-open\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-thread-list > div:first-child .view-thread-open\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-row-hover\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row hover; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-row-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-row-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-thread-list > div:first-child .view-thread-open"
+  ],
+  [
+    "focus",
+    ".saved-view-results .view-thread-list > div:first-child .view-thread-open"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-thread-list > div:first-child .view-thread-open\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-thread-list > div:first-child .view-thread-open\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-row-focus\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row focus; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-row-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-row-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-thread-list > div:first-child button.view-action"
+  ],
+  [
+    "focus",
+    "#saved-view-title"
+  ],
+  [
+    "hover",
+    ".saved-view-results .view-thread-list > div:first-child button.view-action"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-thread-list > div:first-child button.view-action\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-thread-list > div:first-child button.view-action\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-correct-hover\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct hover; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-correct-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-correct-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-thread-list > div:first-child button.view-action"
+  ],
+  [
+    "focus",
+    ".saved-view-results .view-thread-list > div:first-child button.view-action"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-thread-list > div:first-child button.view-action\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-thread-list > div:first-child button.view-action\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-correct-focus\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct focus; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-correct-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-correct-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "focus",
+    "#saved-view-title"
+  ],
+  [
+    "hover",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-continuation button\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-load-more-hover\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more hover; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-load-more-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-load-more-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "focus",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".saved-view-results .view-continuation button\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-saved-controls-load-more-focus\", \"fixture\": \"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more focus; System/media light\",filename:\"screenshots/light-1440-final-saved-controls-load-more-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-saved-controls-load-more-focus.png"
+  ]
+]

@@ -1,0 +1,45 @@
+[
+  [
+    "click",
+    ".view-composer-actions button:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector('.view-composer')"
+  ],
+  [
+    "press",
+    "Escape"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/settings/reading"
+  ],
+  [
+    "wait",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "click",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector('input[name=theme]:checked').value==='system'&&document.documentElement.dataset.theme==='light'"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:'lifetime5-appearance-restored',at:new Date().toISOString(),url:location.href,selected:document.querySelector('input[name=theme]:checked').value,theme:document.documentElement.dataset.theme,mediaDark:matchMedia('(prefers-color-scheme: dark)').matches,boundary:'Original recorded System preference preserved; light emulation restored to recorded light appearance; browser closure ends emulation'}})"
+  ],
+  [
+    "network",
+    "unroute"
+  ]
+]

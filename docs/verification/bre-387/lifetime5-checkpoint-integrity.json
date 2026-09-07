@@ -1,0 +1,5121 @@
+{
+  "at": "2026-09-07T16:21:37.253721+00:00",
+  "runtime": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "harness": "0128377589d072555e1c6131e280561347789f75",
+  "captures": 639,
+  "mismatches": [],
+  "checks": [
+    {
+      "filename": "screenshots/light-1440-inbox-sync-error.png",
+      "sha256": "cbb8eddb208c3cc2cad2c9bf95ee927cd247c533692deb51e8dc2634e6f446b0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-onboarding.png",
+      "sha256": "cda5203ef5982b591b0d853f08d780fd0b15c036edc87ec1a5768772b227fedb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-onboarding.png",
+      "sha256": "ccd682070304e24b73ce649f96d525932ba29f3b71a6f2adc521228c1c7cff88",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-onboarding.png",
+      "sha256": "dd166f8c3a79bcb776b8b398d2561a1ffb9a7315e3f2f72a92a4f3bce6a7a157",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-onboarding.png",
+      "sha256": "342cce3dbdd8ae7ac4f057b800622bec72d0e293d7cba9dafe40b5e9aa026c2c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-help.png",
+      "sha256": "4681ec8a28019ca03c86bd595c01017dac828419ca91d5755d4fae82746e5196",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-unsupported.png",
+      "sha256": "a8ceddc387564aa16220e1024f343453c629acc7e2c4b53279ecb0ffb3359f65",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-multi-account-correction.png",
+      "sha256": "9f3abdf78154c4d3b712985468bb1bb868e97ab46a99119310369c18991f81db",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-account-preview.png",
+      "sha256": "7201655d203b642fad516223c89091596d7d41b6541749a09e2de0e3955f82dd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-correction-census.png",
+      "sha256": "0f0af85f6a47fb65b950e7d39589d93a50c76db3d6b5b5021631ebcb700d0dfd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-corrected-preview.png",
+      "sha256": "5c97b3f0137173043dde85b5333c4589ec1fc874c0d0200559348c664d187423",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-saved-opening.png",
+      "sha256": "a0dc1b121b10c48b5f255ef8ecae7a7af52cb11729b1c2d2435a7989bb381917",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-saved.png",
+      "sha256": "a0dc1b121b10c48b5f255ef8ecae7a7af52cb11729b1c2d2435a7989bb381917",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-saved.png",
+      "sha256": "71abd3230b99f1bd7952afc97539709d1057a0af35cf1e79b25c6d16026bd9c2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-saved.png",
+      "sha256": "ff234be79c562b46e00fab9f2c1267fe84e3147356034d0c3d2110017b159502",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-saved.png",
+      "sha256": "d1c980359eb805d1e1013f2ef8ae9c879482d1906ea6bfb3c86cc0e8a70da22d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-saved-correction.png",
+      "sha256": "7c4db5bd07a3e46743dd1b2f33dc4e52d745b54a59d68696f1f9410889fbd30b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-saved-correction.png",
+      "sha256": "dc8a8089aca05101cfb0ad3fdd9ecc7352c649228b9fefe82bbe7188af57f650",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-saved-correction.png",
+      "sha256": "f1eb731c36a3beb889ff52f8740fd030c69738decc37a2e2f3e4294feebac063",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-saved-correction.png",
+      "sha256": "cf52d3aad5b34d3343f55584e6e281563c420bed506bd54550c3719ef7896097",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-empty-correction.png",
+      "sha256": "b828ba330ab6b3149731d434d151808174f47adf23972fe279f794a967e8cf96",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-persisted-allowlist.png",
+      "sha256": "4e2feb135d2cd1ccb621c7d6fc2cd2dbb181b70a2720bd7abe154a33e2fc7c5d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-organization.png",
+      "sha256": "54eea41b209f62f97181866fea533b39c1e6dfa4b440c5c0f9a8d0bff0cb832a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-dirty-dismissal.png",
+      "sha256": "00ae0f08649c5dcbc45156228da1a55f6d4d4d71ae62635cc6aa48766b8dd3f3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-no-selection.png",
+      "sha256": "a2dd8663ef3cde26244460eea357f47a8c751f7b572f63c31bef047fcb8bad72",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-mixed-selection.png",
+      "sha256": "3b1585257e48b1c24f7a5632c1fdeba81ba7ce62bb717e9ca8d78d2b1f149db6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-selected-authoring.png",
+      "sha256": "d659c3d104c88763b404e91e9f815ff5b9b7268b6dbaa2ff33d558730e9fa96f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-commit-error.png",
+      "sha256": "956cc113695c228852b53edf66f520858af15d83efd78fd345124afe34a75afe",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-reordered.png",
+      "sha256": "a5145e632c276f59ef548dc3f44665dcec469199bc14cc3767fbe306936de4e5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-empty-onboarding.png",
+      "sha256": "e5ee3d862fd78ff71d607540cce4043622f91b6bed6093f69d9f605b2df84e01",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-preference-error.png",
+      "sha256": "0afe818cb8722cd7702bd7014bb108d7f3a781c3a1a1878e46f806862de6e02a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-arrival-help.png",
+      "sha256": "36f289dbf4da7270281134aff473d4038fda741317ba38ed31805da08e706bb4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-list-error.png",
+      "sha256": "fed29f5d88d0b23dc8239fa243cb317675f8ee2cb90d03f9c91345e8d8a3da87",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-overflow-correction.png",
+      "sha256": "d270d5241ce15e0b844a63f392a9ed461f6070b72be7de231a7685eb2c5bf1b0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-zero-confirmation.png",
+      "sha256": "48b6a0de7d67e60f37ae224623364c3cbd84c1b3512d0a45f588f8e87cdd9c47",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-zero-saved.png",
+      "sha256": "17dc3ed93e5cf6188bcf2b2dd4cb922b1dc72d513690adcaf2d35249f8455913",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/native-undo-control.png",
+      "sha256": "b0c2c06664e154766bd6d1bb743d4cd68136a6f839a8e88486c1a2cb5572d432",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-census-keyboard.png",
+      "sha256": "172f6f90f70c8fc90c9ecefedb79c69731810405500384b63ef5150668bd1b01",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-census-keyboard.png",
+      "sha256": "9b134f9b0da7a015312ea0fa37b8f448bc4e3ffde1bff341683f7a650149a36e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-census-keyboard.png",
+      "sha256": "8cd80751f804b95eb6a608705be40024b1707e6dc58f4695e0f9beb58d1d2f33",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-census-keyboard.png",
+      "sha256": "c32cfba8e5752b00a3a5b3e40f2ea3397afd0743d639fcc29b703403609153cf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-form-error.png",
+      "sha256": "f693406185710c6e033dfb72290f7b3e780a652c0001cefad3386b64e8b13dc7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-form-error.png",
+      "sha256": "6390ad04a4227bc9c4487304f42740a8696101fd992847b92a419c7d96d5a9d2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-form-error.png",
+      "sha256": "9c28939d4bf039f183fc7b52d36e5de6fef90a15b2bfa1031acae61df20f1ef5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-form-error.png",
+      "sha256": "4e082776eee0d5b66e18fa093b3c6a7ae0d8e8adbcfa6e0ba2f23ee3982f4ac0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-dirty-guard.png",
+      "sha256": "00b7af36e167d92cceafc1737546788d3839dd8f00f602cfe531cf0cc61b6b62",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-dirty-guard.png",
+      "sha256": "05d669a719c517f3f2fff44c915214811169d409dfce96c643d4bf621858cf57",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-dirty-guard.png",
+      "sha256": "817733c8beba83c46149ecd755672d5391a6c1b8038fc5a2ec85639f253a7d62",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-dirty-guard.png",
+      "sha256": "12ab3d97b4b81e829c0e6b042fbf9ad4f544be35cbc369ae0377c491ce2c2e21",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-prepare-transition.png",
+      "sha256": "3b54acc3d251bc5c69fdf9406734b5537086627f8aa70c531af6b8e8227ef81d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-unsupported.png",
+      "sha256": "42dd49afdc921f09c72809c55cd001c10682a2c69d84945ce18117eb5f948f22",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-unsupported.png",
+      "sha256": "b577707153017a05c6aa26766424ccee7d551283cda2b14cec55dda9986f6ede",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-unsupported.png",
+      "sha256": "f7fdebc1afd47932684cf4667a1677875fd882a2513701f58381bee2e92422c4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-multi-account-unavailable.png",
+      "sha256": "1b58b9132c20a7a9a4331c9613c6948c7e03e584952951135c6996a5d18b5025",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-multi-account-unavailable.png",
+      "sha256": "29510c2dc7517cda1394cb05898c78032414029af899e8a1080bfbe91027218d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-multi-account-unavailable.png",
+      "sha256": "0ef3add50cdcaa5f4bc7f6aa4342e9084cc4d3fea8894699d291d9aae2929356",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-overflow-state.png",
+      "sha256": "ccb8bb85e800a014436378c101882ec802e1a8a0096fd6532c86841f5e17e621",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-overflow-state.png",
+      "sha256": "a19103146deaa3d7c9952d91f47f00d376e31ee40274dd02f9f8c4f0328b20cd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-overflow-state.png",
+      "sha256": "6d507c6f65af705ae665078e23fb2723c836cab9c67d465efd9f00bc44e1c2b0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-overflow-state.png",
+      "sha256": "edd9c6884fb99c2e732f1fb3f1a349d397f3c903be5925d5d65ae13b3a22823d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-overflow-panel.png",
+      "sha256": "8ae7d8519ad6dbe9dac9fb79aa9333c2f7b6910d42c7ab373045161bc650bdf8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-overflow-panel.png",
+      "sha256": "4e1b015331bbf8c5f8840696201a08dee64fe31a3ee59e825b6785293f933dd7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-overflow-panel.png",
+      "sha256": "0c384489f29edc0987904a2edeb5cc346d87cafddadadd4d799103b0b5615981",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-overflow-panel.png",
+      "sha256": "62a28f0ca2c8f8c865277af4fdf2efb20949d86fc2c4ce726ac1acb2b0928ab2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-zero-confirm-state.png",
+      "sha256": "54e7ff4d19695cc2340441f2930cf769d4d8f1680832fd7508bf1ae853b1803a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-zero-confirm-state.png",
+      "sha256": "154421f780e0d3013c2e282f5740ef5c932695349b8779ef8018c5efaec858ec",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-zero-confirm-state.png",
+      "sha256": "22ff9de43f831c7bbf0d177bce76f91aeeaa49549baa73815fa31c39aa960968",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-zero-confirm-state.png",
+      "sha256": "3f6ed6db5b685fec4547c6524ab6ef18dd7d198aba770e32a00ea92657c823c6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-zero-results-state.png",
+      "sha256": "a227ad8929d1c7c3d689766f68169943a24c585dfa4b208211104a632265d5ea",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-zero-results-state.png",
+      "sha256": "633750cfa948a9b942b1aba67911ebc318339cef130c35b35b95b2ecf3a94098",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-zero-results-state.png",
+      "sha256": "afa1e40f643dc8d0931f82f30d9d6b434f80bd9d33f9da5291fac6982ea11522",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-zero-results-state.png",
+      "sha256": "8660106782b143d6322398160aff940e65a2a3f29cf651b707d14b2b683a9c16",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-no-selection-state.png",
+      "sha256": "1f872674527d186a076aa38044240c3fa7b7236e5a32dac67d1e6f69e758cbfc",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-no-selection-state.png",
+      "sha256": "c5969e8cc44d07a2f51022cd7b9531fdc8f7ee20f5a7460aad39b8bbbe60d4b3",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-no-selection-state.png",
+      "sha256": "75fdad22dd8d0100a89fb0b44a6a1ce97f4b3b76dabe72fceb06d4d2ea508b10",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-no-selection-state.png",
+      "sha256": "39aa6c0be96e6d9ce2aae97331950413c5c4c372ecc9a576ec1e20a66f35131b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-mixed-scrolled.png",
+      "sha256": "31c1359fa11634b0375d0ca5d926ee3a2d63eda7232ea1aba9359256b3342997",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-mixed-selection-state.png",
+      "sha256": "5603001f0b16c5957f56650457a794e32df6c2bd7ede6782a0b938a5f824daf9",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-mixed-selection-state.png",
+      "sha256": "98dc127bc8a94d7e97f64439baac92abbe9ec8a73c206d4aa7821e3fd4843fbd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-mixed-selection-state.png",
+      "sha256": "8dda548e0d37ea8e8f7944a1a1988c243e11feba84dbfe596255cb4643842fe7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-mixed-selection-state.png",
+      "sha256": "9387658361f6d1e9df422fce7af498a970be065698f28c1e0fd4614989040fdf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-empty-sample.png",
+      "sha256": "74e17b9e84aa88c2808cafe4770572885a868dcff4fc8aca63da4ba1694d013d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-empty-sample.png",
+      "sha256": "8892176e6cee6b0d1d6f96a642915d26f7bff091d27706afa5be74bbad95ac60",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-empty-sample.png",
+      "sha256": "09f24ba4042bf676e47d2d4a9f61bd7ecc6a98c00adc6067d6490bdd6952af6a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-empty-sample.png",
+      "sha256": "51bdc7d6376bf0807d05100d42e5a9471d9d3542f35bf233d5583df7cc79b8ea",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-arrival-help.png",
+      "sha256": "0419b06a565e852879911b85e56a54c709b02e26871ad27ae394b329a58f945d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-arrival-help.png",
+      "sha256": "06e09ee6e69595c65791904f0c3e03d1ad602103a988496756f0bb5f14b88278",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-arrival-help.png",
+      "sha256": "ccf32a2723035b4d45b7376a7c80c7d5ff72a1ad7abbf46ece14183fa5f4ffef",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-arrival-help.png",
+      "sha256": "dde70d8f88c3f33f3ad1872c559176de1758e2ad2c619b582f40b6800b890531",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-preference-error.png",
+      "sha256": "df0ed6574a78520730df91f77615f8d46ed7136fa1d63c0bf5340c35357e9ee2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-preference-error.png",
+      "sha256": "ba0730ea0b6ee6621289c34df88da08712a5a88c5a8d0ccb0046806e0b965595",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-preference-error.png",
+      "sha256": "0bafad3f7f3aaac9ea05276945ffb629912614a7d5ac91f19a621c8d90be6639",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-preference-error.png",
+      "sha256": "05b5bb3a6766cf2912a13d2bc719e6e5d602026446730352159e54b3314b7dbb",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-list-error.png",
+      "sha256": "166855165d9a206bdcf86d55c003c3565ae577840108b830d0cd5191de3d5355",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-list-error.png",
+      "sha256": "2b716cd7b9d83fc08317546afa316627294a18fd870ee3cd484eef928c67aae1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-list-error.png",
+      "sha256": "7fd7a5852843f396bf3b8d25896e0db7a5d81c28167c2786bf4292085ed49698",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-list-error.png",
+      "sha256": "84477889e4977fc8a374faf0073886bee28d9f015972f98cafc6c3fd94f13cdd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-loading.png",
+      "sha256": "34614b6c090265296f17dbb3923df84f73c113788078792ddddeca2f54679af9",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-loading.png",
+      "sha256": "5f7a8414ec3f1b5bc0c028fc43cdb4304ea24340868b3c30e08fbd12554c298f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-loading.png",
+      "sha256": "2ffb635cb30c1996bfde11416c2b68c6170042a14e6064f1fcfcece0f8a3254e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-loading.png",
+      "sha256": "38be7aaa62267ce15aa8576b620cb49796535b243031618a42811852fd540e8c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-empty-correction.png",
+      "sha256": "1db4aac7ef7f3b13a1096eceea7b750fa2e9cf1caf80d5a8b9e2cf68842ef202",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-empty-correction.png",
+      "sha256": "0eff7beb44a563b16c529fe01465e2c2f806371e2f4554f77dfbf817af92fbed",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-empty-correction.png",
+      "sha256": "163a028e768f6bba834590ffe6eff0babac5f20329e205c6e09e7b2abc79916d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-empty-correction.png",
+      "sha256": "3bca51d8fa72ee8b32c6199c9138f4051e6fd80e638b5e3a41d23211f39973fe",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-selected-authoring.png",
+      "sha256": "68c59052452af1e85975b6f1d4ff1f43268c5581e9e3e1bece6102e5ba8ccee2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-selected-authoring-focus.png",
+      "sha256": "febec77b0057cb52b5c05b551b3465dbb13d65d1aa350b9171a216851047f6f8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-selected-authoring.png",
+      "sha256": "cca35c3c78ecac5557f281b5e5007fac0e9af984ea47294f2fa30568c49b35ab",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-selected-authoring-focus.png",
+      "sha256": "5c7f75b8f9db3a5845f869d962596576a6415470f6f62936fea16e12cf52f150",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-selected-authoring.png",
+      "sha256": "2e79ddaf6e0cbdc0285cf10bc4ec9c917dbbcd3f1613864040cdb0bfd28719d2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-selected-authoring-focus.png",
+      "sha256": "dc7c7594a91e67efc39b0e972f35882fac82595efc28ab0b59902c69db1ba02e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-selected-authoring.png",
+      "sha256": "dc62392265495becd37317c80987bc641dbd561c9c30c67d0b54271eaf904a81",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-selected-authoring-focus.png",
+      "sha256": "a72a77ac798377dab4bc026b94c4930b84b7f3dc867377dcb81ee6e2f0f87b62",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-selected-account-controls.png",
+      "sha256": "f4b1f00e5fb28122ad8452de09318f75789d894d734da08a27f08c58c134e04b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-selected-account-controls.png",
+      "sha256": "d2bfa33a9bf0b3684bf5c5e6f8dcc18c0c15f0e80dfba26d5c9d2be46daf020b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-organization.png",
+      "sha256": "9c789511b314fcf7a22b9c2d11e067a4902f62441a2b5cdc0d85f62c8dc0a577",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-organization-focus.png",
+      "sha256": "be121d3220fab11f895a10cbc5591c9da6fa3161d4a409c1c08b33175bdd82c3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-organization.png",
+      "sha256": "c9d08cc0bd4484759131c0937f379fe85df8485d6aa488167f542c60aa8974ef",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-organization-focus.png",
+      "sha256": "c9d08cc0bd4484759131c0937f379fe85df8485d6aa488167f542c60aa8974ef",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-organization.png",
+      "sha256": "3e457bd0a46b4a81f76183e7b3c31a44fd97dfc4bc2f51a4255abfca126de5ea",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-organization-focus.png",
+      "sha256": "3e30df2b35c127c0f9e9f94e18af164b2925f53dfe5971b1329ed443a768ebfb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-organization.png",
+      "sha256": "8d3897d51cea7d5abc75c638886b3ed01e415ec5527232c18399c3f756f5eb04",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-organization-focus.png",
+      "sha256": "d484e38804d13f0b01e95a2646793c2eea40ab7bd9ae6dbae12ff73255dd7e27",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-reordered-reload.png",
+      "sha256": "5cd5e250335166964ac3119037a84b2b5c8687df4802904dfec12e195124152c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-fixed-guidance-controls.png",
+      "sha256": "339f98323bc107988a6943bb9fb03f04d27e09c5039d146bfa6490bb15d533d3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-fixed-guidance-controls.png",
+      "sha256": "e0c4432e845d7d7c56607e9624eb6b3c81d341d4f55d737889572225c5746d95",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-fixed-guidance-controls.png",
+      "sha256": "5c76aa5713ac0a3b10343dd131c40761e16f659c567c341226ad150d789a901b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-fixed-guidance-controls.png",
+      "sha256": "c896c18436661ef4c4b7f32fb8f9b9d21e9fb2dfcc530c6ba8f89c136af6ef7f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-search.png",
+      "sha256": "57351d8265985cd3cdfe8a8419a942c3507243dcdfe0a371dbc13d24adff3be3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-search.png",
+      "sha256": "9059b7936a2c87d9d6cfdb51d2e86233f17dd8766b1008b1509ecc4aecfee896",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-search.png",
+      "sha256": "2eeaf3a92201ab2c5407c35d865f28c73583228c600270835b32940fac6b9feb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-search.png",
+      "sha256": "6b7cdb7d9e11c504f81b38800684e7f1f1d0982b7d9c4bd34cc7ac27901643b1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-search-result-focus.png",
+      "sha256": "effa5de6fe65763d25366ccada8d36124a3b50a2187ee724a1d9a09636e8f8b4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-search-input-focus.png",
+      "sha256": "c449b70977eef0cb8888813776198b9382ced517eef86f01a1a2e65d4e9c7f23",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-search-keyboard-only-result.png",
+      "sha256": "3d6574414afac12714e8e007241e0d83c6f08a4d37a4c06e138a1d912fe1435a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-search-keyboard-only-input.png",
+      "sha256": "857d3852da716a029a142bf3d060667c7c0252a2ad2a237a03e2bfa41c254b85",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-search-keyboard-only-result.png",
+      "sha256": "b21d6d362041baec9463529c2b038ef81fff5deabc93cb5710854c32fa5333a5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-search-keyboard-only-input.png",
+      "sha256": "7b51b14fca7c7a5af8fe08f61a27899b52d69e420429a84ede36901578fe1549",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-search-keyboard-only-result.png",
+      "sha256": "e9ea2ec07918de319b699fb886fed3f612868a689c53e1b7981e77972cfbbd66",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-search-keyboard-only-input.png",
+      "sha256": "2c0f71b95f1b54485bf92db4d832a1fb7f03eec842eb2ba409c5aff3c490ae18",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-draft-name-focus.png",
+      "sha256": "8ee111c650cbec514ca2387740683480efa6fe7d5f230696c0bc2760fa26e9f9",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-draft-color-focus.png",
+      "sha256": "d8081319209fcd852bfccd120b1f9b108ed6bcb1c4cec9b87dba515200570122",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-draft-menu-keyboard.png",
+      "sha256": "cdae80ae3ded55c2fac1128e2ddc3469b57e8fa31c0f76381392e5bb02d1f311",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-draft-name-focus.png",
+      "sha256": "1d91559aebcb1af9e3e767c333e8e79d25a78c17b3bdde1a6a86480f78567273",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-draft-color-focus.png",
+      "sha256": "b451107ed9acdf2f9f965faecd5f0ae758546a53e8d6f10b016288bacb25b12c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-draft-menu-keyboard.png",
+      "sha256": "c0670bf3a615e40e4b75e708b686d6b6edeb1a8bb3190a2c21fb783ec919314f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-draft-name-focus.png",
+      "sha256": "ad40e4ebf7f9539024d69aec26078fc0dfbec05a2ba9dd1d73a14ccf6004f5a0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-draft-color-focus.png",
+      "sha256": "6e63b875ba11d73d191a35b6ba0615135f27be4ebe1e5de233f1e172525764c8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-draft-menu-keyboard.png",
+      "sha256": "9845ab559289388afbc11d0e17a47495040fc09219f1e4861eeba3dd5b3d127d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-draft-name-focus.png",
+      "sha256": "3d119ce1fbf1aac4900ba48a3e9691cd2baeaff1aa492c9e51a9175f27dd9a42",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-draft-color-focus.png",
+      "sha256": "c83788835d82cc244d6335b64833922e9999998714238b11c7f23da94b4d4d38",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-draft-menu-keyboard.png",
+      "sha256": "00988fca8eae0d45900c097f65bbe3b261a5d7cf129ae79f34d485218eaff9b5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-cancel-hover.png",
+      "sha256": "f418dbd4c8e87d5c9b9c09cf873b6493e272b86c695fdd2413778520b95c8f71",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-cancel-focus.png",
+      "sha256": "68b4e3ef759e7b53bb4107b1b929cc8d7315b44aa897ce1b3886182866cea0a3",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-undo-hover.png",
+      "sha256": "58661ad2d88b8e3eaffbad4f691f19525e36cddb194ac1dfe854e18908af59f3",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-undo-focus.png",
+      "sha256": "60ec7d9144506121f9d03e90cd535a61a10d556d80bbe013e18a943426ff5912",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-remove-hover.png",
+      "sha256": "7be49a5b29d077ffb429affbae72363366038d55e978c69f03d9d844268709a1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-remove-focus.png",
+      "sha256": "56cecf0c7eb11ed804e277ec2503a911c8b7aeff249326dc8b42849a3ba3c8c2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-add-hover.png",
+      "sha256": "be171eddaaf833502d4c299cd631d155630974daac92dd82b4216b9934fc5d56",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-action-visual-add-focus.png",
+      "sha256": "b7f0173e59f59000ce52c2cadf8f7dca479c250d18c205d3740c1d486202d4e0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-cancel-hover.png",
+      "sha256": "85b6a0741320495bd9589a25fdbc3b89bdfff0e27828614e89d7cd98bd8f26f8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-cancel-focus.png",
+      "sha256": "5a072075b67123e03394e5753ac2db32267ebe809b7cfcac5eff6f4d36a2f0b1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-undo-hover.png",
+      "sha256": "9159b51fd5a1a0ef349d9c103a0eed4313280804b993fd495fa8b3be2b7a5660",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-undo-focus.png",
+      "sha256": "1b58f0bd2d2c6750f74a7db6ee12a203f1457465d3e0d4d52b0195156fad9a91",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-remove-hover.png",
+      "sha256": "e8c348cce8121aaae8b86641594e0a98970faba0c1200132fca2f2f14a0ba259",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-remove-focus.png",
+      "sha256": "5b58dc97b0874934f78f487e207febad7a94f67eb342a74a4c14e8109596acec",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-add-hover.png",
+      "sha256": "92eb309b2b88d19f45b9ff715a8f691b5c0720341e6ee9a554c7042a2505fa7e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-action-visual-add-focus.png",
+      "sha256": "9c6b13d66e3c2ecfaa372f8b031910f6cb6f37d9ac217759bdae091de99e63d7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-cancel-hover.png",
+      "sha256": "aa8c8cc8cbd10532198ed06fb708249d79470071b3892930ec1db20df25e5f5d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-cancel-focus.png",
+      "sha256": "2e4477f0f84a36c9c6b7bca0a49cea4bc09011fceafb078eae7c212d64939162",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-undo-hover.png",
+      "sha256": "70b70f15c19b98dcec916cc36362ea0c981abf7d7db38a4c575de3b8b387bb20",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-undo-focus.png",
+      "sha256": "188c4f09f4e6b84fb6b712403e99dee9dcf00479bd253ce5259fd7d5684034a0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-remove-hover.png",
+      "sha256": "f3bee75c27b1f09d51441131ee83dad9c9dbf3c293ef275e7b922f1b8552424a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-remove-focus.png",
+      "sha256": "52b545525923c5aa9c8c8076f18f6cc00db2941e3e5f7a9f9d5b328f7673bc91",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-add-hover.png",
+      "sha256": "e28a52fb6e7584259caa58ac8f86f463c960f9b33f6a566240bb119be5e7017a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-add-focus.png",
+      "sha256": "36418fec005c669040301adb0400a9442c7457ccdb3ed61bc49e6ddfd1f5012a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-cancel-hover.png",
+      "sha256": "1abe76969d548838980a3811df1df8b787d5a4069934fbd837ac18d056fbb226",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-cancel-focus.png",
+      "sha256": "32174969adb2495f151b77f046a25d67734989079b7f094981f73585d1119677",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-undo-hover.png",
+      "sha256": "7c6b65adea6704bb281453a4a14eb5a2ae10b3cc66776a2273b9a6fb4483357d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-undo-focus.png",
+      "sha256": "eade93c781acfe1cacdc7b8d2c5c9b760ac9c314236b7198e98061b95161d1fe",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-remove-hover.png",
+      "sha256": "567e5abc36a16d878ce18d7b279e58a514c7ade19901f41781c0badf8e2bc41b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-remove-focus.png",
+      "sha256": "83a4c16eb01c8bff3f8694cf3fd3edbe3df2366ca0074bee065aaff77c11a7e8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-add-hover.png",
+      "sha256": "4a60a8c06ba3f4e96ff7dbc23897c28a696a5849e3481453c80f1796f5a39045",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-action-visual-add-focus.png",
+      "sha256": "6041d35096f0c246a3b54b1e9b74fc38414fc9e53f2cdff5fc13e9ec4af82e7f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-action-visual-cancel-hover-exposed.png",
+      "sha256": "000bbb9f26f81309635fbbb8d676f76b5c295aa9a1cb8dfa0c07cd5fd0a35767",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-checkbox-hover.png",
+      "sha256": "9b834ed03640103d148c701c5b0e9ca1b89377c69274001f648b6d15de1b1157",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-checkbox-keyboard.png",
+      "sha256": "a361201d014a9acffb89f3ced14bc9e2d866cd2cf833004e0fcced02bce1937c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-preview-hover.png",
+      "sha256": "cd371eba24398f399fd17870450c3b7a44bd055ac25e0abd60d4e2728f478514",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-preview-focus.png",
+      "sha256": "48effb1f8dd21b834a394acadd445047d84efbb540eb9a6f9c99d8d50f0d3c6c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-cancel-hover.png",
+      "sha256": "99ade2fa69d00e6231a1f7b1d7f4bd0aed77169f6a592eb5b0ecca21286d333e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-census-cancel-focus.png",
+      "sha256": "04eae4e25f639f9092219be459fe06ccda7e0f5b4fbd3c004b8459598a254468",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-checkbox-hover.png",
+      "sha256": "eedbb43fa96e278eab761ec76d820c5117b76521f199c4eddef83b664ee95cae",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-checkbox-keyboard.png",
+      "sha256": "a768110936b549c73e15566bb4c6c8fcc467fe27066e448d79926f95923a02d4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-preview-hover.png",
+      "sha256": "369ea03126ec9b155253287405158c104389ce4e692eec83c1a2158984626baf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-preview-focus.png",
+      "sha256": "ab963a888b776251b09a4e7a95167fd065e85c3b13203a5aacaa107d20e720f8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-cancel-hover.png",
+      "sha256": "5a462a823fa63d29014cda870ff092ae1776ed219050114e4a9172c4c279248c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-census-cancel-focus.png",
+      "sha256": "b0bfb9bdc512c7c6d2b8f0eae125b7d8423e13233c6651835945cd1340aa851c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-checkbox-hover.png",
+      "sha256": "7666561ee7dad4c63994258bbf7294c8e574d50df97e55d16a27159b2a70b3ee",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-checkbox-keyboard.png",
+      "sha256": "014b651a25b3c52115571c14aa4b4a8bbfdb08d9987039fffffb770e4e110889",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-preview-hover.png",
+      "sha256": "7b18c87619b5f536253e94f8dae1a5df751408fe50f6a284cdec8fa6ba8f556f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-preview-focus.png",
+      "sha256": "a1fe6c8a280b8fc72a7a8d0b832128e74ae224ed19f4aadde2c04a86f9c659b2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-cancel-hover.png",
+      "sha256": "95c63e71dc7bdcf66adb81c1680f894e6d925e321fb5c0ab4f2aada59b1a8d2e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-cancel-focus.png",
+      "sha256": "81832475ed7cc54118486ccf5d36655c43a445d4557b2ccfea7e55abf6c3835b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-checkbox-hover.png",
+      "sha256": "5f829599bfe8fae3a8f04941b9af33f4b99c2211ef4ba29697b3e2f3da71aebc",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-checkbox-keyboard.png",
+      "sha256": "c5638077e910be59dd3e2d1a7dcef6b76e4ffd1dc5172a900e114fb204bc15fd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-preview-hover.png",
+      "sha256": "d5b7de9308f35b6c00ee4601887cc047b567727cff0388395e1057c4046e71a2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-preview-focus.png",
+      "sha256": "edaaa1b5425d3f400fecef75a34ef7df5a6fc75a1c70a5bc3f1925baed07efe5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-cancel-hover.png",
+      "sha256": "5cd0c7fd7d8d072e5d44eb63849f1d8acd675abe26ba3bbfd30cfc36c362d126",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-census-cancel-focus.png",
+      "sha256": "e62558242add75ae288be13ebb9511169c340924e937e48203be9bb00bf30dd2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-census-checkbox-hover-exposed.png",
+      "sha256": "3fecc4caeec386b6effb9c832bb0aeda8f71b54fb891a4bb2c71aace81b75d77",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-dirty-keep-hover.png",
+      "sha256": "5d738a9062204efa63bf717e2e18363a127c59bef5a0a0171c2650997586132c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-dirty-keep-focus.png",
+      "sha256": "6f6ca2e0cd0fc9d398583e01e5a9b0baab81925feef3f5d4f8445a3691a0eb44",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-dirty-discard-hover.png",
+      "sha256": "f9241bbcd3124a0612722834ca3968a82b3a0b4d80f43ff1e68a6af252ca331a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-dirty-discard-focus.png",
+      "sha256": "2a9a7992741242ce1ad05e9b48accc203bbe48ec314a5b5738e2f30e45612682",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-dirty-keep-hover.png",
+      "sha256": "76658b8317147480bf8eddda24545b06d8f4966630e88cddc5d5cb4eb22fbcd4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-dirty-keep-focus.png",
+      "sha256": "90905ab780879fe24a0c05802e611da2efcd6e692212851cc734cc7f95e59936",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-dirty-discard-hover.png",
+      "sha256": "cd49bc3ae9e3b1f861f6926bd163a51c9b6898faa8909efc0efb4899ea740d19",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-dirty-discard-focus.png",
+      "sha256": "6f2cb8e7bacbabc896c015cbdd8f93c2a3dcf435277c1a9073fbc4b531b0eb29",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-dirty-keep-hover.png",
+      "sha256": "df667ddfac93fc6a416ba52a3ef62698ef96a177bf72b7d9e27f1d30b4ae139d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-dirty-keep-focus.png",
+      "sha256": "6e3386ef7b29b95d628eecad104ada7a731b5546084a022c06fda184691e55c0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-dirty-discard-hover.png",
+      "sha256": "6a1ab37dc48d8d0b1bac147c1b696018a7e77b1a0e78742e21151ea16d569905",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-dirty-discard-focus.png",
+      "sha256": "fb5e313d865acfcb2c0751e336fb4416ad660631bcbe53bbff575b165bacafc1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-dirty-keep-hover.png",
+      "sha256": "aceb0e0d4c62b892ef03fa7d05c96aec4daaf3d4be1ef4e26dfe03904e3d3a24",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-dirty-keep-focus.png",
+      "sha256": "093e450e92f2c929f3a0680f4c498cb48bb18ca4e72d1beb7b49ef01747ae8ce",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-dirty-discard-hover.png",
+      "sha256": "010b456c35f8363b9c09fcf6fcc2e71d6d69ed662bf127555f78db8fb362cd46",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-dirty-discard-focus.png",
+      "sha256": "f89d463bed86fcd484cb6384f46972f098ba4b4c52050eb3ee4781dee76955ad",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-zero-confirm-hover.png",
+      "sha256": "5775f2f4daa69988251290fa68970d8c969cfe71bcb77618837eb19039432ec0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-zero-confirm-focus.png",
+      "sha256": "1a938c1d2caf6045dcec8a062e2311e8197d8ea6bb7c05cb24bb11c14cb5d423",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-zero-cancel-hover.png",
+      "sha256": "37afefeddb7a113233ad462d59253dacfbd2c5a1fc5f6341baacc6e48674749c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-zero-cancel-focus.png",
+      "sha256": "a43d10eed215476afeeea0c6cdc805427f2c20d2b37f61fd4b6220a3a5f87f86",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-zero-confirm-hover.png",
+      "sha256": "b9808409c262486b2c0e18a57fbb3a04fe07ae5a7f79e917a3165b2c50437cd8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-zero-confirm-focus.png",
+      "sha256": "646db1ab79698563f119a8cc768f2f13552932cce1950c79fb0ee560c80c2946",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-zero-cancel-hover.png",
+      "sha256": "0365ec2e18a03d5818b27a03fecabe8fb13eeddb768f999e4b626988b05ea01c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-zero-cancel-focus.png",
+      "sha256": "414e651389c0821679a748e5537e05b597ed3ca70651b56bcf8f375482116f47",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-zero-confirm-hover.png",
+      "sha256": "67c11fc51c1558c75cf582afd335c662421e02e4a5f7c107402590b948ea4b26",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-zero-confirm-focus.png",
+      "sha256": "9452d5269d9ed63ca0db8cb9a95068d67fd3ae0968f3ce6cd425ce25de86fdd0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-zero-cancel-hover.png",
+      "sha256": "f44b9689d2b2d7db1f4085859c4fd499d4ea9f37e753d22f5d0a32209eb84081",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-zero-cancel-focus.png",
+      "sha256": "d0b49d6c275005f9701c3c2c2c34de72d4ccdf537cfc3ba935688f01b10a323b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-zero-confirm-hover.png",
+      "sha256": "66bd9b2d7105cd3278b982c05e530dfe2c0c1ac6c089a10adc78afcc91423c94",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-zero-confirm-focus.png",
+      "sha256": "acdabe91eb6e768888fc1e6ec12a6fe4a8f584b56ebcbf104e8f57590bdbf645",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-zero-cancel-hover.png",
+      "sha256": "023aac3afa07a7a5b43a327da45e2e9540317b74de46abccb1b274135d378bcf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-zero-cancel-focus.png",
+      "sha256": "20b2e4d92f4b8f123cdcabb6d86a5a54d643522441c6c11d32ac5b6d56474af1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-fields-name-hover.png",
+      "sha256": "58734b90f96441bdce0c5db97ac1007d722eab45bc3962f94f752def3993c7b1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-fields-description-hover.png",
+      "sha256": "c5f4ae2c86cb4b2dfab5d2f4717ac3f2c8bb0228bba9ec012a05c36a9e9903a3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-fields-description-focus.png",
+      "sha256": "36825e401d67a3efdecc37733efe71fcb7620a086b822b08866b0f81e1fc9eab",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-fields-color-hover.png",
+      "sha256": "a1bec72639218c003752761c80aa3e6e2fd3ba5ff87251b818e81bfee17e5bd7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-fields-subject-hover.png",
+      "sha256": "73802a67eaedb048cd0f435006052c7595768dc23671f7f3a8894f35000c7b97",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-name-hover.png",
+      "sha256": "f9f5f7d269fce1762e333333209cf684a5677b4b974f9553f41fcd7ea9855d7d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-description-hover.png",
+      "sha256": "c30ff09d0578e0d7cdffbe583bab40aed4ec517e4f0d53e254bbe6087c88814b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-description-focus.png",
+      "sha256": "cc6d48dc3f4acd9272507b432fabc042c55b6fc7bc3dcabb2ad297e282bfee6b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-color-hover.png",
+      "sha256": "1146a99210afe175c2dc3de241dbe13e2e1f8a2b0a2dd5fd6dfa3d439ff8d38c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-subject-hover.png",
+      "sha256": "be976eb16511c758fb3cb0f235bf22af1997240102690a15d6b89e400670dc6c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-fields-name-hover.png",
+      "sha256": "86b00a335eb81d8a26a08b40a768bdf551ac50ab9fc1d37c9f3b466db3c60e43",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-fields-description-hover.png",
+      "sha256": "8f76a36ed998c8d5d0ff35de510b0af963a4fe0d3b2b7c126fca1fb5db6eb103",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-fields-description-focus.png",
+      "sha256": "2a0b6bed3fd881fe59fa03b5d35914151bcf05cee0289d72ca51c5c9ac82c4ec",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-fields-color-hover.png",
+      "sha256": "3caa774cb16214600a2dd5aba5980d3d975f74274487b886f37e3fc2b038eaa8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-fields-subject-hover.png",
+      "sha256": "8496c9a8032032b53dd30bd706d311f6c15f7ab210753b2b08a789d18bd753b1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-name-hover.png",
+      "sha256": "7daafc510bd12d145b3cd5c066ceb648ca183676dbe404a7a18935c1b79adfca",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-description-hover.png",
+      "sha256": "7ecdc5d52c3adba483c5190ed1e87192cac45da16a1ec49c03f2315bdf7acad1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-description-focus.png",
+      "sha256": "3ef9935abe88c82637fe46f17313de63bcf280f8feae2d46305dfd96b3e9313d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-color-hover.png",
+      "sha256": "80c2b15e87a356e5cc95673be930e90a9f8d6e3e93cc19a9d4fd932664f23f15",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-subject-hover.png",
+      "sha256": "207a83b06f0d03d0ff7a53d8c24ca6f1fb77cd6e683c0cda10c421d5729c5bc4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-new-hover.png",
+      "sha256": "34d684337648cd94dc71e0b5cdec6dac14000da16882978ddff051e4adb18d52",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-new-focus.png",
+      "sha256": "b3bfc5d93fd6940db682a5a3f00e7661487a3a3db518bac27319170b6d9f7f2f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-edit-hover.png",
+      "sha256": "a490178630a1fc605aac1a9b6e1d264fadff2fbd34a26271433607a7fbd8bb3b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-edit-focus.png",
+      "sha256": "a106b8d1d425a900b6e22ffa69c1d8f0af9cdd81a78e76310e50eb69692a5a62",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-remove-hover.png",
+      "sha256": "6b915d04e258b46f25ce8928a455a38e7af24a26d19e4aa781c711c74c5d6186",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-remove-focus.png",
+      "sha256": "4381a117c909723a69c51c34d52d9da2c2dc77389e00395b624b8a03c03ef32a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-selected-chip-hover.png",
+      "sha256": "4381a117c909723a69c51c34d52d9da2c2dc77389e00395b624b8a03c03ef32a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-selected-chip-focus.png",
+      "sha256": "eee5fe7ae858f3d5a23e13da49780bb27b1860dd0f8cb17c72ea8072bf7f4a55",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-unselected-chip-hover.png",
+      "sha256": "eb1f5762635824b32c31cdf9ad2a06d852b113d25a58c40e339ece65320bb061",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-unselected-chip-focus.png",
+      "sha256": "436d2bd8d36f7e5d06b77956caab2b13fa04ed0782ca8b0864374d031f9c0fba",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-move-down-hover.png",
+      "sha256": "f5774fb35ada72737a97f3a69cd5cf57241fe3074216b340f60897202c6fc9f5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-move-down-focus.png",
+      "sha256": "7ca5eba17122ef298bc6e3cf62b60a8f566d08bf87fee52286ef47c08f0698ac",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-move-up-hover.png",
+      "sha256": "9aedbb8e0182022595f7832b51916e30ee2a42e34b2d69f536888597a67dd98f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-lifecycle-move-up-focus.png",
+      "sha256": "6dc4deb91154f073cbd02965cc6294191929dbf95ca2de16cd1b2989c5f71b51",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-new-hover.png",
+      "sha256": "828e1ea0f378d4eecbb2394e570e55222d8aa20caf88740bef36a0f30ad40047",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-new-focus.png",
+      "sha256": "e36f7059ed712ec04b73ad961cab3ffaeaac87616a3f6ee3c3e22779dbf0c4ac",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-edit-hover.png",
+      "sha256": "2e6e2b70487a908985393fe3cfa561192d2997cce0d83d216fd3a6433d6d75c7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-edit-focus.png",
+      "sha256": "c640cae6e58b7ba82d4692f5e7daf4374ab60b25bde6344d7e943b56af4228fb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-remove-hover.png",
+      "sha256": "c4c9edf4d427e4ab332beb80b3f5b9b5618636eac8ea959100d7907cfd6221bf",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-remove-focus.png",
+      "sha256": "3c90c8d29aa939c395aa02abe7f42ed8089cf08e4edf2d824126d9a927d48cf4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-selected-chip-hover.png",
+      "sha256": "1ee4f830665302c932a6a78c7b7be6739d3f59477056658c9b5f141f65a7c995",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-selected-chip-focus.png",
+      "sha256": "e42276ac4a16ec9088f07e9c504f042989611b42091458cad0a30b2eeda73aa7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-unselected-chip-hover.png",
+      "sha256": "ca1f9d3bc8620f552be3f558c2e61392363baf4a4cfd5b72be575d420d7f0206",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-unselected-chip-focus.png",
+      "sha256": "31c3de3198ff3ba6aacfb434be8025640bca9ef3ff98e704837cfaca55cf51ab",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-move-down-hover.png",
+      "sha256": "1972ec8fa04f8194c01e2997932656d30c948c0d89b9dc58f97db0c950df74c8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-move-down-focus.png",
+      "sha256": "d20506cf01a246f9d2885a26ee9c54600a2b8af3c7c15d2292c1f6f95151515a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-move-up-hover.png",
+      "sha256": "9fbc3a82a183d408db02224da080c41f9b68414ab7d2fbce14538adfe1f179fb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-lifecycle-move-up-focus.png",
+      "sha256": "0e4f144886b0f303ede8d1bb879873a124f69668907fdffb3d39927a4f6b3f9d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-new-hover.png",
+      "sha256": "31cae4b2e1c442e21e0cdfd25b251303ee9d89ca11cc35e371c8130cd988b99b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-new-focus.png",
+      "sha256": "b95d6da221c1ba0606a8093e35b0879704550b0d232761feccfe6b95e18d0728",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-edit-hover.png",
+      "sha256": "37e08e599a19709886c42c52a30adbdd21ce9dc13a08698a090525faf0558016",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-edit-focus.png",
+      "sha256": "f46b2a5d72969c0dcc752e3b2807ac65bfc1f88ba2bbdb66d686f6f550d45a6b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-remove-hover.png",
+      "sha256": "84a2a88fd2a0cb0dfce952c774ddf0cb913ac11bed39b04c9f8817b25114c95d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-remove-focus.png",
+      "sha256": "4a39dcbbacbf7a8a533de6fd60c4deb63b62b0c957e827fefb910469ff5503b1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-selected-chip-hover.png",
+      "sha256": "4a39dcbbacbf7a8a533de6fd60c4deb63b62b0c957e827fefb910469ff5503b1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-selected-chip-focus.png",
+      "sha256": "ce3e4bc8d3a5d6309db703748b3b5aff93beec9be808c36385f4229c36444c98",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-unselected-chip-hover.png",
+      "sha256": "38d48136ac342eedba0c8ed62dd235e6d3f051dcf3c9ac84f00c9be11dacf30a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-unselected-chip-focus.png",
+      "sha256": "27d52dcfa77908e7b0f6365f9ab2337ffe6a50d8d99dc88b731f1ad562cfb8a4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-move-down-hover.png",
+      "sha256": "a4de2dd35cbcd79ce5454d8bec153e1055e9777dfe919d84d33df6d66bfd0da3",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-move-down-focus.png",
+      "sha256": "18a533d0f7d660b104c80872f2196129c07c0a697433acc2ddcb2b5bd5c5717f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-move-up-hover.png",
+      "sha256": "18366ba47d488f83fc7785a18a66af50850ce31870c401446a7afdc59ddf078c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-lifecycle-move-up-focus.png",
+      "sha256": "6a5ed3a5601f6b601931b1fd3eeeedc3ab8838b8b5c8a24d2dab94ded9cda459",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-new-hover.png",
+      "sha256": "3e85c6f8e5bf73b4a2281e6ca1aa203b0270a04080ba69a9f94516eb768f52b5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-new-focus.png",
+      "sha256": "d7b48f4731c4f9b5974ba48f1cff3ff69465bbbd6ad20aa38efa9dcc6edd6e83",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-edit-hover.png",
+      "sha256": "16520b0573542e000d9d4c8bb919c77c7276ba20e8f5eb69b2d82d0bd34a5e06",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-edit-focus.png",
+      "sha256": "3fddae2e0240eba28448791653fef665549a443b7ee346aacc9f6342f7cf372f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-remove-hover.png",
+      "sha256": "9c4802087c75e1706f3fd59dfb52e0e142247d78ba46cd99446bf9e3c04e1c05",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-remove-focus.png",
+      "sha256": "0ced06a25e1c0f8ecc4ca78693eda6fa44ecabb1a257326f3ed89a84bc04c316",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-selected-chip-hover.png",
+      "sha256": "612287291099c93d34066b016b53d288039fe9904065fdfc55bdd3798d24d6bd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-selected-chip-focus.png",
+      "sha256": "b1dee0ff7e2e14bd3f28a9746ba1d68a0406f34e9e88feae0628d63cf56fb791",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-unselected-chip-hover.png",
+      "sha256": "3d41fc861754f8c0555173c1d4023af32ba82de472285fe530a2d1726e2e90fc",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-unselected-chip-focus.png",
+      "sha256": "6ab1e643156675f6350f0358e84822654c543a4643901b813673c0998ed40af0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-move-down-hover.png",
+      "sha256": "3de52fbcb69d6eb0cf76276991f3a5be53382c9515a1b1c12335fe4d6d77a77f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-move-down-focus.png",
+      "sha256": "749c084c45783092d4e23cc6bbc53d98356ec09b3c724d5a961b58c38f5701f8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-move-up-hover.png",
+      "sha256": "3e340855efad49b5532f876806fd5b3c915be127ea405a54362d52bfe58f9d1a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-lifecycle-move-up-focus.png",
+      "sha256": "5a09443e652352e36de2cc8730d4e8aa018f944698e1e05e74e57d14155a93a6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-views-tab-hover.png",
+      "sha256": "caf9bf817c841e02e7a13ca54db236927ed76ef764ce4aa6e14bb41a8f18eeea",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-views-tab-focus.png",
+      "sha256": "af3d614d3057c8985721d2d2e422c4163f982891755c7d43a67c601186b76c53",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-help-hover.png",
+      "sha256": "fd482fe2081770f9e1e27cac8f56d808ac26b91334d6088ea4fea2a45e97c3ef",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-help-focus.png",
+      "sha256": "7f09e2e8662d106cc22e47522119d1b3ac079b59ee5713b25e8a6e61d668ce09",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-sidebar-view-hover.png",
+      "sha256": "c4c86240e5645dd063218de1e97fc65cfe08a0b62a0546553581b02912780d45",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-navigation-sidebar-view-focus.png",
+      "sha256": "97171c48267b88076a95a728b6565b0eaf745f25c8932642e70aebdf3eb44c5c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-views-tab-hover.png",
+      "sha256": "e0635d4062c4a3f8f4e992be1e7fd641b819becd3e6c7bea03cf2a52f2d30a70",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-views-tab-focus.png",
+      "sha256": "bbd29f152100a17def66b32072cff4dc21488d232169308fdd7917b0c11b1a2b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-help-hover.png",
+      "sha256": "3b438347ceb347ed09b6790c579f9af14b6a1058f0676cce3e2e16ec72e2f9d8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-help-focus.png",
+      "sha256": "1766ffbdefc966d7d3f93e58d180396405debe9b4fea8c3daf87481e4378895c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-sidebar-view-hover.png",
+      "sha256": "f9ea62c3fc4e443ae8138c496b23fc767d410de23ccdb60f9e4cb9b467d9f60d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-navigation-sidebar-view-focus.png",
+      "sha256": "f83b788afde7305a0af1dfd900867f2156dd4c7485f117138e7166920a18f692",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-views-tab-hover.png",
+      "sha256": "b534ea60a724dcdb90d4baa9500f5ad784002a593bf16b4913a4b27e7831be42",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-views-tab-focus.png",
+      "sha256": "d21476ecfdc9436a8d5b7d18cf0f2ede32c718a586a29b968a64348572302dca",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-help-hover.png",
+      "sha256": "4640d900866807a4ac42a8026f7c35b826cf40cde4d75145a29f2a27f1f005bf",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-help-focus.png",
+      "sha256": "653d9ed72e91c569bf563279fdda3ed57d6f5d5cdf51c6f975c5fe1f2fd448cb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-sidebar-view-hover.png",
+      "sha256": "e6a84320ff6d133a72d1359dda675352415dbc77dac5a67e41e25bc9adf5ff0a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-navigation-sidebar-view-focus.png",
+      "sha256": "92cffca44588c07e4b8fafe97eb0e29fb26707a1f075f49a4560649333adb4c6",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-views-tab-hover.png",
+      "sha256": "4f82a92229518a2cf9251110cd6b9fa2f99235814c69ffb91d6ea2792e1422b0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-views-tab-focus.png",
+      "sha256": "07bcf9628ba805a54f971142d20d0bc1be3680d70a84e8da21822d6fdff11ef6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-help-hover.png",
+      "sha256": "4970d4fb3250896121960ab9dbc798d4534c9d1d1dbcb2cfb3f9b542e7086502",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-help-focus.png",
+      "sha256": "29b82edcc533b6216f50ae639ce5507e281d29e668c6cc51ddbec423d2983225",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-sidebar-view-hover.png",
+      "sha256": "18ef8ef7d14a097325fcef15af39d65ff379ef9f6edf95d364156409d3d71529",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-navigation-sidebar-view-focus.png",
+      "sha256": "6e60584fa9791392e1eb65b0464be1e3b1ab4be65ed1bc0c5db264d414380dc7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-fields-description-hover-only.png",
+      "sha256": "dbcf263ad1bc139131a3476269af7534f24ef46b18e3146fe4dabf4bb3771949",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-fields-description-hover-only.png",
+      "sha256": "ec684a745ecd08cd2cb59ae24e455877fc1585877526164fad2efcdcf9b27222",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-help-auxiliary-close-hover.png",
+      "sha256": "164bcbcc8005228cacf5f534df0a8791a353c42124cb6aa0098222edb65e3ef3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-help-auxiliary-close-focus.png",
+      "sha256": "dbcd57bbcbaf7db37bc22e0286a63113a4ab76fa9b2bd30d93aa68e36bf5fcfc",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-help-auxiliary-skip-hover.png",
+      "sha256": "4e482475824aafb1ed980431866908758e5adcd3572b0f6376c804ee91ae00eb",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-help-auxiliary-skip-focus.png",
+      "sha256": "28d5849f01db16c96a0ce1c1f843f422132625376842a5f4fe92719975194bc1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-help-auxiliary-close-hover.png",
+      "sha256": "ff37cbb2d933eb5d9d24fc2d4be65485aec24d70c7bba55b4d710398d4240200",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-help-auxiliary-close-focus.png",
+      "sha256": "8f77945c8c98333f6fa7cd5d8cbbda44275465969d0059893152e58787d48b1a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-help-auxiliary-skip-hover.png",
+      "sha256": "151966278bc6697c5db10ff3492b4255727ae31f8abc6ffe6fcc21854d655430",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-help-auxiliary-skip-focus.png",
+      "sha256": "8e9e93b516c8ed45ea152b59c901a7a437e6027d962bdb34e66e05e617429f9f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-help-auxiliary-close-hover.png",
+      "sha256": "db5eef3eee47371be17addede21aa54e21e4c5301a45acf41d8e0344a1476ad0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-help-auxiliary-close-focus.png",
+      "sha256": "b1f4ca05b3e41aa0d5d1029915347e7655114ffaabae149316399501f2fd1c8f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-help-auxiliary-skip-hover.png",
+      "sha256": "8b50a76b7c236c996649a0728890b28054e290e0deb5687bf9621b73b05afd2f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-help-auxiliary-skip-focus.png",
+      "sha256": "0ebacaabeef8736ae034464f271a78dc079d49f75b4516a26a01b35ee9f4fbad",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-help-auxiliary-close-hover.png",
+      "sha256": "3d5a0612050098bddda2a18dbd8e28627590497d8ab89faa58061f32af4a0781",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-help-auxiliary-close-focus.png",
+      "sha256": "e8141bfe31fba9c5270541e2fe773d57751abfbffbb70d705885b4612a2f17f8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-help-auxiliary-skip-hover.png",
+      "sha256": "aee78ba34b1c4bc084a900656da6ee33c1fc30a1750346dbdcc551b9a8563631",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-help-auxiliary-skip-focus.png",
+      "sha256": "d47f1d210528b20ef740eedc2af890f60d60bac76874d987a4a7eb495583016b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-paused-retry-hover.png",
+      "sha256": "61303397383186698a708cfd0029c0bb3f9e618368563816b44b829ec87daad4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-paused-retry-focus.png",
+      "sha256": "1cdef6de4cfb985a696f691665b3c082e39b4f3e24586eb921af83bbf5bfe2c6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-paused-field-hover.png",
+      "sha256": "19c6d30e4ae6f7db338c0050958afe6d0386607c252de56c1122d8a51b04fcc5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-paused-remove-hover.png",
+      "sha256": "a3a541d7bd8023d4892e47f33855623ee36f189289218d10004511f77ccf4997",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-paused-retry-hover.png",
+      "sha256": "df97c6b8af13dbd8d3eb059ca315572aa78c6a20a9a86a1726e4fd357629a78b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-paused-retry-focus.png",
+      "sha256": "3c5161e5992392c5d897f20790aefa5b37e16705d27c7f674cac553436c9b821",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-paused-field-hover.png",
+      "sha256": "398b2e8edef2bdac7993974d728ffa6215a306763ca60338fa5b5d8f4ca41fbe",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-paused-remove-hover.png",
+      "sha256": "a144a87918a3f6d6371c08e8b61d05ada091813beddbacb1776d2a2e225f4ead",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-paused-retry-hover.png",
+      "sha256": "768d6608b6106f96cd683838ade1f2cc46510c806da7ce95f8c46c16c2ebd8fe",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-paused-retry-focus.png",
+      "sha256": "da27870ec84ec302e612658e1b482db2133f3f559149bfc7ce742b0d2a4e9a2b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-paused-field-hover.png",
+      "sha256": "a4fbad1405706cc22b8ddb764f847c1f3418fd090e62773ea39ef73b3ec79cf7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-paused-remove-hover.png",
+      "sha256": "22d662093056c2d043e1099d983e76840253da26bbfd2a77f6e4ed101ba2b1df",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-paused-retry-hover.png",
+      "sha256": "4a81dc40efb8ad958eb2c466de528d53b75e85264c7b2a69f222e3c663209aef",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-paused-retry-focus.png",
+      "sha256": "10cec73deb3254d5de670c1e30a3d94aa18ab8ab8285e58265bf4d6ef5122463",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-paused-field-hover.png",
+      "sha256": "7de37bf262fb5145bc799437a4c1c079729a0ed9bc2223994276cf995c197b3b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-paused-remove-hover.png",
+      "sha256": "15d66db32be509474a3e010078354cb6dcd78c0f360ef29ace718bbbaf533536",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-replace-hover.png",
+      "sha256": "fcc0537b83f5873dde5f7456f5936e6a75a56d9bb3bed786e04a5b8bb1408bd5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-replace-focus.png",
+      "sha256": "8b3cde25a39201853662124eb592a2d2c9d467f7cec984156cb597b5d5b2294c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-remove-hover.png",
+      "sha256": "8ca8030588b56aac44b56503582fea4ec8348fd52dc88d89704bba258b375017",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-remove-focus.png",
+      "sha256": "29a93872f6f0f76e900e3dd8bb13aa1fb7d49380fde757e00ad211278811fdfd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-tune-collapsed-hover.png",
+      "sha256": "2f9dbdacf755a417828f8db3098dd7ef83ef8bf00c9238ccb32e40af025198f4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-tune-collapsed-focus.png",
+      "sha256": "2ad232e9202cf0ce924f914eeb154f2174806126436e54be18fbffa6e62db737",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-tune-expanded-hover.png",
+      "sha256": "f95029d0006e327cd5ff9f8ccc992ac15a7e37c9135c92076245627e0a30f459",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-unsupported-tune-expanded-focus.png",
+      "sha256": "c3f738346a6972a0b0203ddf711cf1bf5ece62750b824560a6b1f2d8eed94248",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-replace-hover.png",
+      "sha256": "676492b7cf737e00ff871b8ef6e57d77dff9cfd246b83f200ca41faf86408d24",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-replace-focus.png",
+      "sha256": "0446c516baac2d554befbe84c86f6e1024b00122dc55ad6e7b8d65f0ad64976b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-remove-hover.png",
+      "sha256": "b53f525c32eb9db00977ce100cbaedd00d3aa41e4f5030e81ac243623798ec08",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-remove-focus.png",
+      "sha256": "8e857de916e600018b95b71d4f3cd917c6f47c5180a1699284c0e6d8b732513c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-tune-collapsed-hover.png",
+      "sha256": "f7420a1709f95c7293a761d7d1b5fa2c2bd3368018e2e77382ecd9624ba6bc91",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-tune-collapsed-focus.png",
+      "sha256": "a13be62dd7c1e651d1c84745c25a41dc0623e8fad9af70484ff89d953ef39d39",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-tune-expanded-hover.png",
+      "sha256": "fec9b0f8691259d45dcaf62b3b1d40403ff932c6a4de75e0d02425eb05479bb2",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-unsupported-tune-expanded-focus.png",
+      "sha256": "3859465e2b3b485303b7e10f94a07508be34d157488f72897a27c9b19ff8ce68",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-replace-hover.png",
+      "sha256": "d251fe8a83c7d9ac910155a84cc855eaec05ea2f207445f2ae6e00296608dbf9",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-replace-focus.png",
+      "sha256": "f438115699aa1d18911454c20d262a410b85eb53082a2ff68cae05c74bd15db8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-remove-hover.png",
+      "sha256": "24dfddd236d713c1cf82056746f34ef4409a1cd1bd6af30ced7ef2bb639e505d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-remove-focus.png",
+      "sha256": "79d482bf2f71760d70382bc63c4c196b08e8a9909fc6f021c86639006ebb213d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-tune-collapsed-hover.png",
+      "sha256": "bf89a083a1ac94d5c07e89380f2dba9e61d1c52e24a0f0977fa11f3d3cfbc233",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-tune-collapsed-focus.png",
+      "sha256": "8ad355713ef40316310ebaac4552bfb27372926d8760beda6a1af46315da4657",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-tune-expanded-hover.png",
+      "sha256": "06bcd9ceac1b36857b77ae83f454f9bcd0ac1f4d9f1c6489c862314999e60084",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-unsupported-tune-expanded-focus.png",
+      "sha256": "50f450e6895cc81c848d5d0535be2b5fbab569f8cdc0aadf267d06829edf7db0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-replace-hover.png",
+      "sha256": "42698fff06222f2d6471c79b0aa4e171e46c37a2c37356d0d8f1970c68d0e0f2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-replace-focus.png",
+      "sha256": "b12ac164f6043a6c81aa14ac3982d5c754658ef2e0f6e3b21cccdc11093d907c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-remove-hover.png",
+      "sha256": "0972a27775284a5cc8c6281b1e8e24513eaf7e853688b168555d5b809ad98194",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-remove-focus.png",
+      "sha256": "749b538f8f25770eff0f14ff7526b92fd73c353f031c5f97a7e4c00055a76bf8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-tune-collapsed-hover.png",
+      "sha256": "ae871169814f49e020a9c6866750a0ab0c4ecf107940b0c24ad83421d231af45",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-tune-collapsed-focus.png",
+      "sha256": "44ecbc508358b6fd0fbf2c27bb92b325a19f724008e4bbdb82c5b33d73df4633",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-tune-expanded-hover.png",
+      "sha256": "e6ce85a0113890cc03a04a9d7d7ab1fc76ee9d55e5df70b88bbc590b8d115457",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-unsupported-tune-expanded-focus.png",
+      "sha256": "90f77e3bd62109b0f11d1c29b9794f10f01726d6ef49aeddb5d42228498142d7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/lifetime3-system-theme-setup.png",
+      "sha256": "ab53c4526d34e35495a0a729b8350e6d29236784eeedd972e19831633719816c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-return-retry-hover.png",
+      "sha256": "1643c9c47b6da674113df10bf7ed61f4a0bac4ffa6e2b9b2c15a41a072ebcd98",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-return-retry-focus.png",
+      "sha256": "dbef0e47fc4ecc5c774756f5cbb674d7c62d54011bca6181d22f37e894f81492",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-return-return-hover.png",
+      "sha256": "c31b00e0ebfa3db394d4f9eb7f34d84068cf2e719b33fac1b52bb3ad6b449f2c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-return-return-focus.png",
+      "sha256": "5f6b0cf1a36854210e774fc10cc634d54c1635732fd4f539cb358d42a7110b2e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-return-retry-hover.png",
+      "sha256": "807c1e0ebff2bfc74427be1af0e36d9fe3bf2392fa0a81c2515dc7c0a96e425f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-return-retry-focus.png",
+      "sha256": "17f2405d283b726fa71cf3c9bdf0759ebf9fc4c60d193735284840db05673bb0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-return-return-hover.png",
+      "sha256": "018a12410a7491881aabbd2a2c9c53f34945b03a745a99a80097b22865e91682",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-return-return-focus.png",
+      "sha256": "c6fdeb3f38e0b425f07474dbc4fc7c4fd9a2e70530dc0658b2e9536c83e9b0b6",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-return-retry-hover.png",
+      "sha256": "765cc7525db0bdad7482a7d25c22e8cbf8c3d4b100c57b7a8ca5f126be70c464",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-return-retry-focus.png",
+      "sha256": "6c9139fa4377aec791ee1a3cc611a96b65174edbaa5a1777dc50247a6a3967af",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-return-return-hover.png",
+      "sha256": "e2431b6b2fcf9429e8c7a57b6116ddc8f72ac87adefd11630ba7aa07a7bb74bc",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-return-return-focus.png",
+      "sha256": "45c8ab49278b902e38ba80d786ac031c3f0de881fba04cb981279c67da693b8a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-return-retry-hover.png",
+      "sha256": "b3a8e276cefe6729e328fd9c51590b92aa37c16bcfd881ba4f9300afe13f2e58",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-return-retry-focus.png",
+      "sha256": "459d1e97a8e5fab6d9c69287b4177b9bb5e6c7d253e99b8c47287f6665d1c73c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-return-return-hover.png",
+      "sha256": "f32c1e71bf8eaf68f1c8136c526c6b6d0955a2cd6b40a0c4c5f8dd25fb17100c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-return-return-focus.png",
+      "sha256": "03e8d99ba231d35340d85cdec9880294ac28a4da11f7ad741b5ce0ef94f8dbf3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-correct-trigger-correct-hover.png",
+      "sha256": "a240e96cea80993d5c1a1570d2c2d138613229fac600aaac2b9651491d010a4f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-controls-correct-trigger-correct-focus.png",
+      "sha256": "477f63de48d6f62d469164e6c5a6369e215fdcc2ccdf168f5002e60f86bac121",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-correct-trigger-correct-hover.png",
+      "sha256": "0acf8e6c0d0bea29e217d7a0017b39a09c31d801f94927520a74075c26520dcc",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-controls-correct-trigger-correct-focus.png",
+      "sha256": "8627a98a186841ddbbca2a63bd3b2102cb9663ca1533bfdcc313b5474d114a8f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-correct-trigger-correct-hover.png",
+      "sha256": "0de74d5b903518e86c0fb91af9b4146e2643d61c636fed26abf3d7ada8d27596",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-controls-correct-trigger-correct-focus.png",
+      "sha256": "0db71b605c9d3b9610918c9afe7f1b8723a48d0779e03dc7a88c7029ce1da219",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-correct-trigger-correct-hover.png",
+      "sha256": "b9da930194aace8c75f56deb058cd32b33cad8f3336ab9bfaa156fe1136bd6c1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-correct-trigger-correct-focus.png",
+      "sha256": "f926f1f086d51ae58d46c74b3872394d493bb88be1164b2ec13678c83544e8a8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-controls-advanced-summary-open-hover.png",
+      "sha256": "54f4a329f3b6dfa73fa5eb51e158d40a639fd1390fcb262a908ce46986ff9e20",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-use-hover.png",
+      "sha256": "6a6985c2e1c4fdaec8def164e109a60c410ea8cfce1ed096ddb90d4dc4ab20b4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-use-focus.png",
+      "sha256": "6a6985c2e1c4fdaec8def164e109a60c410ea8cfce1ed096ddb90d4dc4ab20b4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-selected-hover.png",
+      "sha256": "2dfcac9cd25e9aedfaea08f092f3d1c6ef29216f0f7d08a2ce0e6a236c898ebe",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-selected-focus.png",
+      "sha256": "2d26d4f7ac6c69bc87d2f81b8f6f59eb975b5fcf52be611a1ba0ba39b7413cdb",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-unselected-hover.png",
+      "sha256": "fed3d5164912fde06803d00b14b91b24111ff52593ac068a5e77c14fd97ba39e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-selection-unselected-focus.png",
+      "sha256": "ec056a1bd90cf26639b7eca6729eb8c8d589653f9648424d7e885e48523798d1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-use-hover.png",
+      "sha256": "b5f3fe738186e687a2d03b9117a35cc4ee106aad099ef5cf18eaba76f7e333a8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-use-focus.png",
+      "sha256": "8832fe006c4546f80c5d4e1b8d44ee3efed8665c739fa61ce9f83c3f6a6f636f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-selected-hover.png",
+      "sha256": "f98ffe8dea01282669c466b1ec528036f1c4984f092bed84af30412b354b8f86",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-selected-focus.png",
+      "sha256": "b773a01d61071fde6f4b8ee30d45f106da398334381da52dc1ec17cf584572f7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-unselected-hover.png",
+      "sha256": "8b99a984d6f7e7da7f9cf751a15bb3ad17b0f825175eaa63f0740557c7541c77",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-selection-unselected-focus.png",
+      "sha256": "d44fc393bb72dfc02dd7b9b4e98596b4ec2ca1a104276744636304aef666a1cf",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-use-hover.png",
+      "sha256": "5e86a74d056ab0a08b70132f9b845dd6b875ad6fe6da215d7ee51c7ebc15755c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-use-focus.png",
+      "sha256": "d534a8dd896464233372c7bf2c63b77196d1743fb18f39ac9634e0d12247ebe4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-selected-hover.png",
+      "sha256": "225b17958534e6b76a9acd1e6f13534ebe694020fc75c52e07741776b2518743",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-selected-focus.png",
+      "sha256": "d7959f24c63eca082b1fc19d722afff465b3f3038327e51d67848caee9a203f0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-unselected-hover.png",
+      "sha256": "98c5a98e06b1d0d2a73b517c5372064e757321a6f70dccd27e4d476bb18715e0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-selection-unselected-focus.png",
+      "sha256": "7ccbabddeeb1d504ac15ca6bc9cc4a2791d8527f11bc963de0d7350a831946d0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-use-hover.png",
+      "sha256": "f2c3b7b8e017f8c2124617f3b5bec8b0cbc3252b562f4a40b198d67635a50fae",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-use-focus.png",
+      "sha256": "0ddee4bc9f41d7e855977e4acc6a728f8e6b7a830eed8b0bc7036d225b48efc4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-selected-hover.png",
+      "sha256": "76e297e876630d87218d83bb91455fa5d2651806e7ef2db7f48ace7a4c48d8be",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-selected-focus.png",
+      "sha256": "71c2de522e46942518917bbcab9e97779b71d64d2258061485d4c709b1a03b56",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-unselected-hover.png",
+      "sha256": "bb1d4452eff8192b3d8dca201ecb78db1571a38a6ce305347e0e1b2b29fd22ef",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-selection-unselected-focus.png",
+      "sha256": "c84bff322a4c3480da14e84784ef9eabea07177a6e9866fac5e1d1cc186d7dcd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preparation-hover.png",
+      "sha256": "00b7b9bc13faca51bff8aef65214ebfe5d41ade8ce9e543962a8ce1f9556370f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preparation-focus.png",
+      "sha256": "454a052e5e0a5d764a659041a1eaf5221e94128aad87722284de621279bdb66f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preparation-hover.png",
+      "sha256": "9cd68218769d035776d877f37a5c81dd98575200737656c367db13ac93099182",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preparation-focus.png",
+      "sha256": "1b3792e80e80d7cbcc7fa0c050ee05ade7e1ddac4b2c9fed53d21a3c6340da56",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preparation-hover.png",
+      "sha256": "06e8c56a8a06c99241bb8b4867d48c4fb4e72955cd9c9a9bf3aeb7dc6f4e8948",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preparation-focus.png",
+      "sha256": "5556ccf2820cce793c9efef9fc862dad9c8877a57b20e5aa5343c11365292990",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preparation-hover.png",
+      "sha256": "a9972ccb78c4fe80c97b6c395d66ab53c1540b5d9d40f29afb2e65ec57068c4e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preparation-focus.png",
+      "sha256": "8cfaf0cdde2befefbc80056924d8c3b7c7299cf7b20271de8bd03be9a0e13065",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preview-hover.png",
+      "sha256": "342444b83b43e10a40f068f01d304642ceebe66252c725e3cb73f3073ae92d5f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preview-focus.png",
+      "sha256": "bd91e63ea0e4e31597dcd2dd28907650de31f699d4f4f4e3c1e0e1d338bc6fcb",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preview-hover.png",
+      "sha256": "849345a08f85121b48c7e1b196389b404a614a5ae5faaa0d58561c2203072416",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preview-focus.png",
+      "sha256": "7a848c4663a8099ee90c9477cc893f8ee76f9b2f4ba7c9308484846da1f99e26",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preview-hover.png",
+      "sha256": "1317ea816e0fc81543f7358549ebb0b42720ebbb205d43c6346beaf289b50db0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preview-focus.png",
+      "sha256": "aa0ac797a710c0f9e4fc9d503d7d5d5d3cba4bc0e3baf63bfe8849f3a939eace",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preview-hover.png",
+      "sha256": "ba0689399f6eb15f59960f8660ceaaac018443a536128acfd92395bc08ac4505",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preview-focus.png",
+      "sha256": "be85cc24bc3b0760c78cbefd5408848fc0ed99ec95e3a43fbb41a5843dbd7350",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-guidance-hover.png",
+      "sha256": "262e29beb9a0537e8be90c0a7af109a664ce7ad49de7d56e57b003d23e654e68",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-guidance-focus.png",
+      "sha256": "87a38e18cd468871d69c543d3854bb03141bd695bc5ed7c9b79817ea6c11795e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-guidance-hover.png",
+      "sha256": "cb2f212befa83f7b4fc5ded985f7fca7d6ed26257db0affee58bc1843bb56ea5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-guidance-focus.png",
+      "sha256": "0d26980b1145b3905e74de3b8ac1ad1ec2012d14646ded2fec3acfdd55d2244d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-guidance-hover.png",
+      "sha256": "7382a55c185f79d20743d28bb10f35f7f66c7e74c79439a383c919dc91edc72b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-guidance-focus.png",
+      "sha256": "db94f7f0b52f4fb307127d56aa8616a306414ea9c39ec1eba8c200cd080d6d8c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-guidance-hover.png",
+      "sha256": "b86db77cf7f213fa80f7496f24adb70a9648b7540b1835afffd4231aa83b410b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-guidance-focus.png",
+      "sha256": "5ccde12152120510193293c873492a879e6a09b18493e7bf0030c3826edcdfba",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preference-hover.png",
+      "sha256": "cd6226cd50fb86fc43fc91e9c9d62c29a40f25967e656060ae1c974e721c81b6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-residual-retry-preference-focus.png",
+      "sha256": "f9979e8169f734af94d135b93412023cdc583241a94bc141274c94ed97b65cc3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preference-hover.png",
+      "sha256": "fd2bcb715c28ed9f5bb3efbb5d69da76a3b56bd1f0a298716a1249127f944a58",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-residual-retry-preference-focus.png",
+      "sha256": "115b7bef1272bac222bcaf352932e6dd8d7560c18917ad40161bd2288557d7ce",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preference-hover.png",
+      "sha256": "80dc297916689126b1bb3c8c062ec522e3c81b7fedb0ba5910154e33e051c449",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-residual-retry-preference-focus.png",
+      "sha256": "586f4fd0ecdcb63d8e04401e805515130388e31b75861644b4538158d7d74f8f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preference-hover.png",
+      "sha256": "3fb2edaca1bf7dd3c7005453b78595ac4535a41d366d31311c0eb8f006226d87",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-residual-retry-preference-focus.png",
+      "sha256": "340be54a95be5ec20c6549c80ea419b47523448471f48331ae226256a815ef11",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/lifetime4-footer-geometry.png",
+      "sha256": "7b5a93f45ac0dc4c60dc686281570c7ec1addd5684b7964082e2d4de7b85ba1f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-remove-confirmation-confirm-hover.png",
+      "sha256": "cec4a340048d7e3b3ff96fc250e89a6e7fecffd924e7254de2e13b0d7f84eb14",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-remove-confirmation-confirm-focus.png",
+      "sha256": "77a2f4838506a31c56ed3db9c518220fcde5d9b973642d7e1e696013f8e5adb2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-remove-confirmation-cancel-hover.png",
+      "sha256": "d3f3bade152e8f82b0cdbba10026a289b50293aab8cfacce5603eadfdbb4ad29",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-remove-confirmation-cancel-focus.png",
+      "sha256": "3bd2e42941c49e43fe06eec08279e64fd389602efcd83dcc3a8ca5daf8bb72ae",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-remove-confirmation-confirm-hover.png",
+      "sha256": "9d121ee6cf830902f1bb5e66092454da95afc00aa1befe8c2e79c782f79611ab",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-remove-confirmation-confirm-focus.png",
+      "sha256": "2ef156e280f4343394a6afeb729cef0be68798b92882eb8ffdb273a638b464f4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-remove-confirmation-cancel-hover.png",
+      "sha256": "2e1989f87e1fc04ecd378d54937f2a73df0a73798eda31f253346998b91cd11d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-remove-confirmation-cancel-focus.png",
+      "sha256": "70c53d9c525a4c0d1d714f3e0f6a0b968e83a83dacc4502efb55c4d3410cd2e7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-remove-confirmation-confirm-hover.png",
+      "sha256": "04728e99288da91559737107a23a0cdc0d95edac668aa0574ff7e40a5bc3a44f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-remove-confirmation-confirm-focus.png",
+      "sha256": "91032d1838580af464e7d3ba4ae6805175a357b67ab599582da09f420cc62fdb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-remove-confirmation-cancel-hover.png",
+      "sha256": "5118763daf827253313ff383d9ca29dcb04d70448e21cf4ee929aeb5ef7507c6",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-remove-confirmation-cancel-focus.png",
+      "sha256": "2d4878ad19c98450278e55c33a978e9318ec1e1923a61a07f462edb7c9b513e9",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-remove-confirmation-confirm-hover.png",
+      "sha256": "952565d5d83f9487c1195d17ec3a9526c6ec31941f025583e4a738050edf90e0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-remove-confirmation-confirm-focus.png",
+      "sha256": "18536d043de4e9951380558ec2994438ddb1c90c781f6784d5a6d705122aeb89",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-remove-confirmation-cancel-hover.png",
+      "sha256": "9ef1d9c7b797e15a5642c936b05e17d2e772b5a221239578df9a92d97f1db6da",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-remove-confirmation-cancel-focus.png",
+      "sha256": "e4f2f71890b9e0cfd74cf0196025e473c2fff8ca55aa8a98e18623c869f1d939",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-edit-hover.png",
+      "sha256": "73365df52b590930210ed8a508fe3c3e218b5d9a202dd8b82a6694d3d8e50e5a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-edit-focus.png",
+      "sha256": "4051f8ca4fef97a4062466163bb666a44797c5c6fbbf69ac741eea72f70c93d7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-manage-hover.png",
+      "sha256": "0a0f2b078c66c9d81cbeb43818d9f26119ef2a482e96a7013f3dcea6feb3c45e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-manage-focus.png",
+      "sha256": "1ef6b4e32ebcfbf6c42627b5dcee70894a033e3840318568dd0c6f6920bce342",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-row-hover.png",
+      "sha256": "c0c039e3ca5b269f5ad08dceef5f4cd9d24d99f1bb516225ac21803d5b2df536",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-row-focus.png",
+      "sha256": "c0c039e3ca5b269f5ad08dceef5f4cd9d24d99f1bb516225ac21803d5b2df536",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-correct-hover.png",
+      "sha256": "7d0629a8fe51e9d97ad95b24f71da1d4e6c211f1e1281f7777fb00718e973902",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-correct-focus.png",
+      "sha256": "de9c5576d93a9cb43271cabf765dabfa8a10db229abd63169d48f66a8885db57",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-load-more-hover.png",
+      "sha256": "b57831c700e847d8ae1f8bd5d2c5ef05130ac4d2bd3db9b69d5d986d13a3b6bd",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-controls-load-more-focus.png",
+      "sha256": "fb1d2ae472d5dc5ab9a4e16ecf71ea89fab8d5ba7ea3809fd7e24ee94a184c4d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-edit-hover.png",
+      "sha256": "20fe7a81b7b25783533f85318655ccd6d2fc158fa5483da303d3f1f8794b95cf",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-edit-focus.png",
+      "sha256": "520b4e248ac5a16a2152386fd4ad60b0539ce71021b9fbebe01043910692adec",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-manage-hover.png",
+      "sha256": "2f7d47b276bfcf9a72e431206e4a03869a3b0aef3b8aa2c217210c5dbf98bcd3",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-manage-focus.png",
+      "sha256": "d5bba1f30863ee60a92425b5c2a5307fc695632a4f1d3356a837bbcda4535964",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-row-hover.png",
+      "sha256": "056d01cbdf2fd7184191b3f7197465acda23d13fefbfaa381bb56ef673c617eb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-row-focus.png",
+      "sha256": "056d01cbdf2fd7184191b3f7197465acda23d13fefbfaa381bb56ef673c617eb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-correct-hover.png",
+      "sha256": "bda836c5708fbb057d9d9ebc6faf914dd08da5488ab93d106c0e9036bcbaf7bc",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-correct-focus.png",
+      "sha256": "ef12b5ac4a896ca5ae5e563dbc326048f79a6fadc6bf2e38fbda3586b07d1f6c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-load-more-hover.png",
+      "sha256": "428f5f9991327bf7c09c654b730b4c7358e32310dae58c266fc269ad2cc3900e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-controls-load-more-focus.png",
+      "sha256": "60d61e81707599bdbfe091b32960546148b45e327085342f7c5519ac1c700165",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-edit-hover.png",
+      "sha256": "761450a5b4aa85017cc339c6c2cfe57ab7f0e82dcca79e884bbd4474f800ecce",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-edit-focus.png",
+      "sha256": "aa9462a3c0497d180d71ebffed8daf112df40885df62791d55993a776ec2e8a8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-manage-hover.png",
+      "sha256": "2b75fa40cda138dcede102a7883e0b3dd42cf62e4f73bbcfd9bfe40423e70bbf",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-manage-focus.png",
+      "sha256": "74ee2491a74c390aeff35b1b247eb54390fba37798ee70565fc02bf278520292",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-row-hover.png",
+      "sha256": "a0fe2dc98648a5d478c45cb883d6e115f4d223b3d95155ad9f7a03786b2a3277",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-row-focus.png",
+      "sha256": "a0fe2dc98648a5d478c45cb883d6e115f4d223b3d95155ad9f7a03786b2a3277",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-correct-hover.png",
+      "sha256": "1dd4c5bdfd45a9f44429d1ce30183bdf05deb0fdb8730a1069740142c55db84f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-correct-focus.png",
+      "sha256": "752f73075aa641a39acfdb27eaafbc7b037fc990e8a32ddd9a2447c70d6accbb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-load-more-hover.png",
+      "sha256": "59418fe8cdd868c540ee307def14fc6ad6f50b8b22270c72c2309303cd125ab0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-controls-load-more-focus.png",
+      "sha256": "9ce73aac302db696781e2d46de538fe2a19d37a57cbd1f286d17362c5e4ab46b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-edit-hover.png",
+      "sha256": "44e2ef9cc8cb4405010bcc1bfc72b17747a66f18fa9c419a49ccda8a31aef381",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-edit-focus.png",
+      "sha256": "c6ba411c6291ff3eeb3c33e8da12ebb3c0609092d367c754b9b7e590f5dad316",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-manage-hover.png",
+      "sha256": "926f555369762b70edb930fe6bd0493d62bdf438659989e61248854d589f35a4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-manage-focus.png",
+      "sha256": "6127f9abc6ac48f3947b2a5267dcc4cb78c6bc1c55219f1c024c7f2756ce3925",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-row-hover.png",
+      "sha256": "73b3bac26f22e3e1754d1bc8a6374d0e8dbe94742d5722354e6724c536f50ea3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-row-focus.png",
+      "sha256": "73b3bac26f22e3e1754d1bc8a6374d0e8dbe94742d5722354e6724c536f50ea3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-correct-hover.png",
+      "sha256": "6e26b2b618b790390cfa9399a7d522fe7b124357c169c279e830ef72f79e47c2",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-correct-focus.png",
+      "sha256": "b54d5bba7ca45488fd01b351a4c9d86484d12863dfb56b3ac2f3318e17370247",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-load-more-hover.png",
+      "sha256": "57f8d1a09000ecef9bb87ffc11731a9d13b679d3d8e4a498aca4d99c6c99671e",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-controls-load-more-focus.png",
+      "sha256": "fb631b81caf4aea6cf8890ea1f66df982d4afa6a1494307b503a16807bdf5ad5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/lifetime5-saved-loadmore-attempt.png",
+      "sha256": "b7addd772aa0bc01c0f2007eaf49271c607175b3bbe170666042584c56e91e55",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-reload-reload-hover.png",
+      "sha256": "7c1732868b2078d3f24f865898ee8daae645129e30367d0d256faae3d06d2442",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-saved-reload-reload-focus.png",
+      "sha256": "fdab5883ab4507873643a217759ff5e4c8057ed6971159c009bbf6544ca3ecff",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-reload-reload-hover.png",
+      "sha256": "67365a80035efb7045f6b7a35d500b9a990567edf040edf13fbfcf71dea265cc",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-saved-reload-reload-focus.png",
+      "sha256": "f021b435e58644ce004a03478060954bc09c65268930441a43ad8f5044163c3e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-reload-reload-hover.png",
+      "sha256": "64617c08d74003176f392fc5a6d9ab58cf73e48be1ed0b1296377d826b272fa8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-saved-reload-reload-focus.png",
+      "sha256": "768ae67c169726285dce1db132da4d79e60946ff051e2e74f878f6e7e620f0b8",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-reload-reload-hover.png",
+      "sha256": "58d5f4171f88d70014e6f71ee93987b6a94dbc29fe441a5a750a892905fce8b0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-saved-reload-reload-focus.png",
+      "sha256": "495930f6f5ee3eda29ae5fc334ef408526837e38e2089bb9a81ae500da331f14",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-saved-pending.png",
+      "sha256": "4f2467234eeff23f50f763b1a189a43cde20f1da79be99fb7d1427cf5420abff",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-saved-pending.png",
+      "sha256": "f2130975e24395b83f125883e36fa5f1bf4d53d6198a1bad2bd108aff5904bdb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/dark-1440-saved-pending.png",
+      "sha256": "1142d1477d5164b4d43cccb3b60314475038a4befb76cf0b4d7d39c18ab8bd92",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-saved-end.png",
+      "sha256": "1f55e835b8c07cbc15f5444ea36346004059281ce17db830de30bfe44d661918",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-saved-end.png",
+      "sha256": "a676347f358504769675beeec0086dd629c9c7c673607d94acef8802c514d448",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/dark-1440-saved-end.png",
+      "sha256": "c99606480cc715d8f2ff1a8d14433ca4616e34b4db7f2c880863b73a7403f068",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/dark-1024-saved-end.png",
+      "sha256": "38e3236456ca52b7d8edc3b9287ef30eba8cd5ccc72e4000191c3abc09470d35",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-org-end.png",
+      "sha256": "c2d794c026d3d1744f12f5bd526e747f909838a7cee4419a27c03d00fe024948",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-org-end.png",
+      "sha256": "9109ecdeea64807a34e2dffb604c47394b1c2563b2a40fa6db73fa35ce621aa0",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/dark-1440-org-end.png",
+      "sha256": "7d46ca954e5d8f6a7f98d4389435f68b990b92ff83a33f005d9c70b3a8cd9ab5",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/dark-1024-org-end.png",
+      "sha256": "b3eca81cbd72ac27f98127632f8249f0f59942801be4b72036e3617114f9d5b3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-org-loadmore-loadmore-hover.png",
+      "sha256": "a94b68bb00a71ba161af9f156f74b04dcbaabf08eaad4597e032cc8e24a194a3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-org-loadmore-loadmore-focus.png",
+      "sha256": "4e151bdb9d53ef8c30e3c8a37e5638d8850f43c88ecde8c3dd0ddafd6889a4f5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-org-loadmore-loadmore-hover.png",
+      "sha256": "2ff2beeb0e8f3e6083e178ca9807a05c43f7d8e90d923c8f12b85bbabea38aad",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-org-loadmore-loadmore-focus.png",
+      "sha256": "4a593c32477052833cf0216bf2d0febec7fc9a6e723d6f6b552dc2f74239a292",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-org-loadmore-loadmore-hover.png",
+      "sha256": "1a11b5b852ac2fef50d765872a316e8e7c577e2234ace6f1cc92a7eaccbccd8e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-org-loadmore-loadmore-focus.png",
+      "sha256": "541c06b4ac48138b534998c056f1a4817c2e4f32b4ccf4aa5c4b77cc743ff15d",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-org-loadmore-loadmore-hover.png",
+      "sha256": "2cb2336ffbca44f13496be2e8fdc544d9801319ffc95a6b3a44e81ada3617fd6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-org-loadmore-loadmore-focus.png",
+      "sha256": "94fde565396f22e810a6cd0a4cb1678448ca04fdf14d69f0843b2d70ef00f03c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-close-hover.png",
+      "sha256": "4252b54c7b27e029a5ea83173128680794e4e38740e6c243bc80c2131fb261bc",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-close-focus.png",
+      "sha256": "b2f243b61cb90adc222a0f926552d2413b25ec7f2c202bcbd14217055652a00a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-submit-hover.png",
+      "sha256": "1078598f7497a689afa02bf5f49c4de9d4e8454c0f5984f0852d5e0c0981e451",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-submit-focus.png",
+      "sha256": "3126e78cf6999da4723263e6adaa2125c303114c9fd0aacf8e02ea12a7bc4fc3",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "29a93aab30fc8a6687502d77f190845687b8a67c004a7ca7a7a48e4d9b7337bf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "6d9d1fc27986b231cb0aa9c29f1767f91fb59a53bb97af677c514bec9f5ebb2b",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-loadmore-hover.png",
+      "sha256": "29a93aab30fc8a6687502d77f190845687b8a67c004a7ca7a7a48e4d9b7337bf",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-chrome-loadmore-focus.png",
+      "sha256": "f8e04ef9da2d3f5169ecacdcd2a02df8797b1fb7b22c35a2ec8440d133afbd9c",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-close-hover.png",
+      "sha256": "e1bb6b7848af4f6384bbe67532842fb37b2ea83f11cce1965f8efc039c33047b",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-close-focus.png",
+      "sha256": "e30f4ae37075ba6777aa4b1cbf5d6dac6e71b7cc24de97d74ce73f7896372efa",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-submit-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-submit-focus.png",
+      "sha256": "2a7da3097420dff7750bb5b7f5afe9442cd6e7ad9219be78fc36e4458009348c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "775d9cacd436fe7846f68f2ee27cb9bb9723a2fa974fef402233aea6758dae66",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-loadmore-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-chrome-loadmore-focus.png",
+      "sha256": "ab2cabb6d9e9f8e0229ff959edd8410865091f82531f62681f6081dcf58a15f4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-close-hover.png",
+      "sha256": "b3d996900f78e4c6be83f269357a74ac414d017fc10f94bbb9efdef262e1042a",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-close-focus.png",
+      "sha256": "a901545d40fdce85b87b7eb0c5ad7c42616287710ddad93f5494d7bab3fed015",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-submit-hover.png",
+      "sha256": "44ab2081c8a69fc211493ac65068ffc56595fdad131f0f9a6eec634811a6e267",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-submit-focus.png",
+      "sha256": "35d71d849f613d654d6af699d1bed6046f4ae8a719ed458269b77076dc75b81c",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "a21cad7785ce503a926c27214e7b0819e6c4f8ad255c1db50fde8ab408e5e85e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "84fc1df903f3be5a268455ae2f67b66c2993db4c1ff4c178566a124bcac4a4a7",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-loadmore-hover.png",
+      "sha256": "a21cad7785ce503a926c27214e7b0819e6c4f8ad255c1db50fde8ab408e5e85e",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-chrome-loadmore-focus.png",
+      "sha256": "2259b1c1efa25c15f52f4807f5a5acd35d544f69a2b0acd4a4094ce1044e24ea",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-close-hover.png",
+      "sha256": "1040526025c377ecb41dc1aafbbdf2aad03a053c94f46df445a7b93581cd892a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-close-focus.png",
+      "sha256": "8a5433c487360bbec6678808e0258fea538336e464fb7fed1205251c65f4398f",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-submit-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-submit-focus.png",
+      "sha256": "8619a517c54820ee689f0aeb80a6867fbac499307af06f632916fbf9bbbabddc",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "f65d5b8c88930574a35a8a265a8f58bfdfd9d29878868c924d8728e8378aa8aa",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-loadmore-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-chrome-loadmore-focus.png",
+      "sha256": "3085506f9d792fe89367070244d5c29ed8bede12841b30804d56a7661960d1e5",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-filters-expanded-hover.png",
+      "sha256": "75a8afe26ff163bb80fc99413bc9955480c5bbe32d70e5d2c1868bfd24b1a849",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-filters-expanded-focus.png",
+      "sha256": "8271c61d687dfb938f95b5a3375caf33ac10caaac8258633a81a1397fd5954e6",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-evidence-human-hover.png",
+      "sha256": "75a8afe26ff163bb80fc99413bc9955480c5bbe32d70e5d2c1868bfd24b1a849",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-evidence-human-focus.png",
+      "sha256": "2c27fea830e996832b181e954b85cd7dfdd0df9f37ab5fd59efc285c16bb18c4",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-account-work-hover.png",
+      "sha256": "f59b7822cec72cf524df033343ddd2ce1def852addaecd5cc579d1f72984e519",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-search-filters-account-work-focus.png",
+      "sha256": "83027e88ad89a5f717cf7bc03496beafbd3016cd885c3bc6ecde0265d43e620a",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-filters-expanded-hover.png",
+      "sha256": "33cacc8b408f9e011e7ad017e05267d0632e370b4b4c7fdbdbb654aefbf34480",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-filters-expanded-focus.png",
+      "sha256": "6af383ad43af634cf4d60bfa9daf8e9763c2075ed5f2e12e049a8f2538af50ef",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-evidence-human-hover.png",
+      "sha256": "a6eda88502e6a3e208f4848e9de2dbe4620708060a4363f804ac4cff626dfb18",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-evidence-human-focus.png",
+      "sha256": "f6c89167500638c8836e338f5c6d7e6ba2febb2f074a50ad845e3ad23324fddb",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-account-work-hover.png",
+      "sha256": "baf5cd97567cb8ef1949fe0c365c9296a46290d5134e1244302f6dfa9a79eba1",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-search-filters-account-work-focus.png",
+      "sha256": "05edb9c043701a26f1cdf891fc77a927b6abba15d4e0250fbf8ea1ba9dc3b90f",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-filters-expanded-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-filters-expanded-focus.png",
+      "sha256": "1e08643f0239be78bd7363d9dd88535c8a648c4b44ca037bb1a40f215294ea22",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-evidence-human-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-evidence-human-focus.png",
+      "sha256": "3998d3dcee24fe26e24f0a680c9b80c1fdf6f6f988549ea5fdfb11381be46096",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-account-work-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-search-filters-account-work-focus.png",
+      "sha256": "7c01c3e3e15a5d48e71464947c7cb4548100a4e45e9b0dc398f8ca1ee9089880",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-filters-expanded-hover.png",
+      "sha256": "0564a7af6b3646f93f835718208d9cdce9e3ae266df5f4b68109aabe5f9f0869",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-filters-expanded-focus.png",
+      "sha256": "2a2d5159796566682029462fae9a44b5a09cab27a1943dd37f542a80dca5a4c8",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-evidence-human-hover.png",
+      "sha256": "c077f5627ae6a39fd07cdc966ef8049d179970761836782d124924ec22127b68",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-evidence-human-focus.png",
+      "sha256": "b608e9c402b69d1086decf06239aa91b93b0aa2748ae4e7df17c1599188082e7",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-account-work-hover.png",
+      "sha256": "0564a7af6b3646f93f835718208d9cdce9e3ae266df5f4b68109aabe5f9f0869",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-search-filters-account-work-focus.png",
+      "sha256": "e12d3fc672ac415fb754be1822eedce5749bd0522e7266f9a4c21abc4eb2fed1",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-human-signal-minimum-hover.png",
+      "sha256": "486b8b1264fc279a6f5dc663db5f984e1126a8a12afaba308992f3e290373dd0",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1024-final-human-signal-minimum-focus.png",
+      "sha256": "c79018515815a92fd2e6c03d042944aa3f4d822c4075027784cce9a131a7fe25",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-human-signal-minimum-hover.png",
+      "sha256": "af08662680b6eeecb67efe9dd854bd77c2ce42b6b917bf5d74d046567fe1acff",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/light-1440-final-human-signal-minimum-focus.png",
+      "sha256": "0ddde62746c5d54ed66786b2114bec2880613c6592fd4246f334020de94e87b9",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-human-signal-minimum-hover.png",
+      "sha256": "b46f5ab53d11d017ab2b76244ed2883e7399d4641c55977038c4d73cb26b9401",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1440-final-human-signal-minimum-focus.png",
+      "sha256": "0141e6753ee0468d160d6b5e2c33caabc32bd4b3c7087fd6fecd365204088e42",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-human-signal-minimum-hover.png",
+      "sha256": "61456f5abe0daf98c56d459136c5608bc226f864d29fdbcf41656467ec5f8500",
+      "dimensions": [
+        1024,
+        768
+      ]
+    },
+    {
+      "filename": "screenshots/black-1024-final-human-signal-minimum-focus.png",
+      "sha256": "e421bf2fdb0ffee841bb705c746e9fe6751a590ec23cb7549f364d3c166c405d",
+      "dimensions": [
+        1024,
+        768
+      ]
+    }
+  ]
+}

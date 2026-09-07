@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:05:16.396095+00:00",
+  "completedAt": "2026-09-07T16:05:42.408302+00:00",
+  "exitCode": 0,
+  "commands": "light-1024-final-search-filters-commands.json",
+  "raw": "light-1024-final-search-filters-raw.json",
+  "stderr": "light-1024-final-search-filters-stderr.txt",
+  "parsedRecords": 12
+}

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:54:00.936801+00:00",
+  "completedAt": "2026-09-07T15:54:06.953516+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-final-saved-reload-commands.json",
+  "raw": "light-1440-final-saved-reload-raw.json",
+  "stderr": "light-1440-final-saved-reload-stderr.txt",
+  "parsedRecords": 4
+}

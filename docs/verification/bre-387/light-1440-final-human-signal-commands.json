@@ -1,0 +1,86 @@
+[
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"light\""
+  ],
+  [
+    "scrollintoview",
+    "select[aria-label=\"Minimum Human Signal\"]"
+  ],
+  [
+    "focus",
+    ".view-composer input"
+  ],
+  [
+    "hover",
+    "select[aria-label=\"Minimum Human Signal\"]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\"select[aria-label=\\\"Minimum Human Signal\\\"]\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\"select[aria-label=\\\"Minimum Human Signal\\\"]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-human-signal-minimum-hover\", \"fixture\": \"Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum hover; System/media light\",filename:\"screenshots/light-1440-final-human-signal-minimum-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-human-signal-minimum-hover.png"
+  ],
+  [
+    "scrollintoview",
+    "select[aria-label=\"Minimum Human Signal\"]"
+  ],
+  [
+    "focus",
+    "select[aria-label=\"Minimum Human Signal\"]"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\"select[aria-label=\\\"Minimum Human Signal\\\"]\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\"select[aria-label=\\\"Minimum Human Signal\\\"]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-final-human-signal-minimum-focus\", \"fixture\": \"Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits\", \"themeMechanism\": \"System Appearance/media light\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum focus; System/media light\",filename:\"screenshots/light-1440-final-human-signal-minimum-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-final-human-signal-minimum-focus.png"
+  ]
+]

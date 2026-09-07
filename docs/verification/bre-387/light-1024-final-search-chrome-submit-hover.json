@@ -1,0 +1,125 @@
+{
+  "at": "2026-09-07T16:01:06.127Z",
+  "fixture": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants",
+  "scenario": "light-1024-final-search-chrome-submit-hover",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(8, 116, 97)",
+          "borderColor": "rgb(8, 116, 97)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(246, 250, 247)",
+          "opacity": "1",
+          "outline": "rgb(246, 250, 247) none 3px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "global-mail-search-form",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "FORM"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(14, 35, 29, 0.18) 0px 28px 84px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": false,
+      "focusVisible": false,
+      "hit": true,
+      "hover": true,
+      "label": "Search",
+      "pressed": null,
+      "rect": {
+        "bottom": 166.75,
+        "height": 48,
+        "left": 816.90625,
+        "right": 877,
+        "top": 118.75,
+        "width": 60.09375,
+        "x": 816.90625,
+        "y": 118.75
+      },
+      "value": ""
+    }
+  ],
+  "theme": "light",
+  "themeMechanism": "System Appearance/media light",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "viewport": [
+    1024,
+    768
+  ],
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

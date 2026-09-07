@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:01:38.782413+00:00",
+  "completedAt": "2026-09-07T16:02:04.872767+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-final-search-chrome-commands.json",
+  "raw": "light-1440-final-search-chrome-raw.json",
+  "stderr": "light-1440-final-search-chrome-stderr.txt",
+  "parsedRecords": 16
+}

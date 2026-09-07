@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:59:18.401581+00:00",
+  "completedAt": "2026-09-07T15:59:21.177175+00:00",
+  "exitCode": 0,
+  "commands": "dark-1024-org-end-commands.json",
+  "raw": "dark-1024-org-end-raw.json",
+  "stderr": "dark-1024-org-end-stderr.txt",
+  "parsedRecords": 2
+}

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:47:08.031196+00:00",
+  "completedAt": "2026-09-07T15:47:23.609698+00:00",
+  "exitCode": 0,
+  "commands": "black-1440-final-saved-controls-commands.json",
+  "raw": "black-1440-final-saved-controls-raw.json",
+  "stderr": "black-1440-final-saved-controls-stderr.txt",
+  "parsedRecords": 20
+}

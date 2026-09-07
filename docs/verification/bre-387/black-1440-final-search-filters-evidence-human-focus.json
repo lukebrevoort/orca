@@ -1,0 +1,137 @@
+{
+  "at": "2026-09-07T16:08:40.812Z",
+  "fixture": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope",
+  "scenario": "black-1440-final-search-filters-evidence-human-focus",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(153, 200, 255) auto 1px",
+          "overflow": "clip",
+          "tag": "SELECT"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "LABEL"
+        },
+        {
+          "background": "rgb(8, 8, 8)",
+          "borderColor": "rgb(36, 36, 36) rgb(244, 243, 239) rgb(244, 243, 239)",
+          "borderWidth": "1px 0px 0px",
+          "boxShadow": "none",
+          "class": "global-mail-search-filters",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(0, 0, 0, 0.72) 0px 34px 110px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "EvidenceAny evidenceLikely humanAutomated or bulkNeeds review",
+      "pressed": null,
+      "rect": {
+        "bottom": 298,
+        "height": 38,
+        "left": 539.5,
+        "right": 716,
+        "top": 260,
+        "width": 176.5,
+        "x": 539.5,
+        "y": 260
+      },
+      "value": "human"
+    }
+  ],
+  "theme": "dark",
+  "themeMechanism": "System Appearance/media dark",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+  "viewport": [
+    1440,
+    900
+  ],
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

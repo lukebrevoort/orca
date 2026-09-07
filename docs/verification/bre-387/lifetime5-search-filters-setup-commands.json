@@ -1,0 +1,29 @@
+[
+  [
+    "click",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector('.global-mail-filter-toggle').getAttribute('aria-expanded')==='true'"
+  ],
+  [
+    "select",
+    ".global-mail-search-filters label:nth-child(2) select",
+    "human"
+  ],
+  [
+    "select",
+    ".global-mail-search-filters label:nth-child(3) select",
+    "work"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector('.global-mail-search-loading')&&document.querySelector('.global-mail-search-filters label:nth-child(2) select').value==='human'&&document.querySelector('.global-mail-search-filters label:nth-child(3) select').value==='work'"
+  ],
+  [
+    "snapshot"
+  ]
+]

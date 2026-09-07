@@ -1,0 +1,154 @@
+[
+  [
+    "set",
+    "media",
+    "dark"
+  ],
+  [
+    "set",
+    "viewport",
+    "1024",
+    "768"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"dark\""
+  ],
+  [
+    "scrollintoview",
+    ".view-confirm"
+  ],
+  [
+    "focus",
+    ".view-new"
+  ],
+  [
+    "hover",
+    ".view-confirm"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-confirm\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-confirm\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-remove-confirmation-confirm-hover\", \"fixture\": \"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm hover; System/media dark\",filename:\"screenshots/black-1024-final-remove-confirmation-confirm-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-remove-confirmation-confirm-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-confirm"
+  ],
+  [
+    "focus",
+    ".view-confirm"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-confirm\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-confirm\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-remove-confirmation-confirm-focus\", \"fixture\": \"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm focus; System/media dark\",filename:\"screenshots/black-1024-final-remove-confirmation-confirm-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-remove-confirmation-confirm-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions button:nth-child(2)"
+  ],
+  [
+    "focus",
+    ".view-new"
+  ],
+  [
+    "hover",
+    ".view-lifecycle-actions button:nth-child(2)"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions button:nth-child(2)\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions button:nth-child(2)\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-remove-confirmation-cancel-hover\", \"fixture\": \"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel hover; System/media dark\",filename:\"screenshots/black-1024-final-remove-confirmation-cancel-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-remove-confirmation-cancel-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions button:nth-child(2)"
+  ],
+  [
+    "focus",
+    ".view-lifecycle-actions button:nth-child(2)"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions button:nth-child(2)\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions button:nth-child(2)\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-remove-confirmation-cancel-focus\", \"fixture\": \"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel focus; System/media dark\",filename:\"screenshots/black-1024-final-remove-confirmation-cancel-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-remove-confirmation-cancel-focus.png"
+  ]
+]

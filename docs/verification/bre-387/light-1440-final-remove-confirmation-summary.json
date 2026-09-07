@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:43:38.230661+00:00",
+  "completedAt": "2026-09-07T15:43:48.719238+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-final-remove-confirmation-commands.json",
+  "raw": "light-1440-final-remove-confirmation-raw.json",
+  "stderr": "light-1440-final-remove-confirmation-stderr.txt",
+  "parsedRecords": 8
+}

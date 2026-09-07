@@ -1,0 +1,11 @@
+{
+  "at": "2026-09-07T16:03:34.213Z",
+  "continuation": null,
+  "count": "Results116 messages \u00b7 \u2193 to browse",
+  "rows": 116,
+  "scenario": "lifetime5-search-page-after",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

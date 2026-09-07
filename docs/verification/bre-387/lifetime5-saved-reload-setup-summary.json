@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:53:20.394081+00:00",
+  "completedAt": "2026-09-07T15:53:28.521203+00:00",
+  "exitCode": 0,
+  "commands": "lifetime5-saved-reload-setup-commands.json",
+  "raw": "lifetime5-saved-reload-setup-raw.json",
+  "stderr": "lifetime5-saved-reload-setup-stderr.txt",
+  "parsedRecords": 0
+}

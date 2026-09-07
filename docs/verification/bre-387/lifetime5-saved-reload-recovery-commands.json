@@ -1,0 +1,26 @@
+[
+  [
+    "network",
+    "unroute",
+    "**/v1/organization/views/view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750/results?limit=25"
+  ],
+  [
+    "click",
+    ".saved-view-workspace .view-state-error button"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelectorAll('.saved-view-results .view-thread-open').length===25&&!document.querySelector('.saved-view-workspace .view-state-error')"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:'lifetime5-saved-reload-recovery',at:new Date().toISOString(),url:location.href,heading:document.querySelector('#saved-view-title')?.textContent,rows:document.querySelectorAll('.saved-view-results .view-thread-open').length,errorPresent:!!document.querySelector('.saved-view-workspace .view-state-error')}})"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "results"
+  ]
+]

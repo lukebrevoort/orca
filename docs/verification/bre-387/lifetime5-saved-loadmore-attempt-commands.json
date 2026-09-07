@@ -1,0 +1,26 @@
+[
+  [
+    "eval",
+    "(()=>{window.__bre387Pending=null;window.__bre387Observer=new MutationObserver(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");if(e?.disabled&&e.textContent.includes(\"Loading\")){window.__bre387Pending={at:new Date().toISOString(),text:e.textContent,disabled:e.disabled,rect:e.getBoundingClientRect().toJSON(),theme:document.documentElement.dataset.theme};window.__bre387Observer.disconnect()}});window.__bre387Observer.observe(document.querySelector(\".saved-view-results\"),{subtree:true,childList:true,attributes:true,characterData:true});return {armed:true,rows:document.querySelectorAll(\".view-thread-open\").length}})()"
+  ],
+  [
+    "click",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Immediate post actual saved Load more click; frame state must be inspected, no assumed loading visual\",filename:\"screenshots/lifetime5-saved-loadmore-attempt.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/lifetime5-saved-loadmore-attempt.png"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime5-saved-loadmore-pending-observation\",at:new Date().toISOString(),pending:window.__bre387Pending,rows:document.querySelectorAll(\".view-thread-open\").length,currentButton:document.querySelector(\".saved-view-results .view-continuation button\")?.outerHTML}})"
+  ],
+  [
+    "eval",
+    "window.__bre387Observer?.disconnect()"
+  ]
+]

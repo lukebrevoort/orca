@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:13:28.332187+00:00",
+  "completedAt": "2026-09-07T16:16:14.186614+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-final-human-signal-commands.json",
+  "raw": "light-1440-final-human-signal-raw.json",
+  "stderr": "light-1440-final-human-signal-stderr.txt",
+  "parsedRecords": 4
+}

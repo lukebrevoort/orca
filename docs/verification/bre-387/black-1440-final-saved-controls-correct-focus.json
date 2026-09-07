@@ -1,0 +1,197 @@
+{
+  "at": "2026-09-07T15:47:19.265Z",
+  "fixture": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation",
+  "scenario": "black-1440-final-saved-controls-correct-focus",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-action",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(106, 169, 245) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(36, 36, 36) rgb(244, 243, 239) rgb(244, 243, 239)",
+          "borderWidth": "1px 0px 0px",
+          "boxShadow": "none",
+          "class": "view-thread-list",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-results saved-view-results",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(0, 0, 0, 0.32) 0px 20px 60px 0px",
+          "class": "views-workspace saved-view-workspace",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "auto",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "content-pane",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "desktop-workspace",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "auto",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "desktop-shell",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "hidden",
+          "tag": "MAIN"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "app-root",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Correct senders for Apartment viewing 1",
+      "pressed": null,
+      "rect": {
+        "bottom": 380,
+        "height": 36,
+        "left": 441,
+        "right": 654.765625,
+        "top": 344,
+        "width": 213.765625,
+        "x": 441,
+        "y": 344
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "themeMechanism": "System Appearance/media dark",
+  "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+  "viewport": [
+    1440,
+    900
+  ],
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

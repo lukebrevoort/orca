@@ -6,9 +6,9 @@
   "rows": [
     {
       "family": "Search",
-      "controls": "Header Search trigger; search input; Save as View; result links; Load more",
-      "covered": "Cmd+K/open/Escape return and actual results/save flow; Historical saved-View (not Search) Load more25\u219250 stable identities is separately attributed. Header theme/bulk geometry separately fixed44ed. Historical lifetime3 7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
-      "missing": "Load more hover/focus and genuine request-pending disabled target remain separate pending observations. No whole-Search accessibility approval inferred.",
+      "controls": "Header Search trigger; search input; Save as View; result links; Load more; Close Search; Search submit; Filters collapsed/expanded; used Evidence/Account selects",
+      "covered": "Cmd+K/open/Escape return and actual results/save flow; Historical saved-View (not Search) Load more25\u219250 stable identities is separately attributed. Header theme/bulk geometry separately fixed44ed. Historical lifetime3 7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow. Lifetime5 Search chrome32 target states captured with guards, independent image review pending; actual Search100\u2192116 end removes continuation (lifetime5-search-page-before/after.json), not composite-identity proof. Searchchrome32 and expanded Filters/used Evidence and Account selected faces24 independently reviewed. Actual closed select face evidence only, no native popup claim.",
+      "missing": "Search actual pending visual4 variants remains; unrelated legacy filter branches outside bounded scope, no PASS inferred.",
       "minimumActions": "Reuse one ready Search and saved results; inspect actual controls without committing. Do not repeat pagination mutation proof.",
       "evidence": "browser-actions.json; keyboard-native-control.txt; browser-actions.json (saved Load more chronology); desktop-switch.css360\u2013408; *controls-search*.json/PNG; lifetime3-session-boundary.json; search-focus-reopen-snapshot.txt"
     },
@@ -31,7 +31,7 @@
     {
       "family": "Authoring fields",
       "controls": "Name, description, subject, native color input",
-      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient). Current name hover and keyboard-focus frame, actual native color-input keyboard-focus frame all4; no select control exists. Current all4 exact name/description/color/subject hover and description keyboard focus images+target state/hit checks; no values changed. Two isolated Description hover-only replacements Black1440/Light1024 independently reviewed; originals combined focus retained and excluded from isolated-hover proof.",
+      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient). Current name hover and keyboard-focus frame, actual native color-input keyboard-focus frame all4; no select control exists. Current all4 exact name/description/color/subject hover and description keyboard focus images+target state/hit checks; no values changed. Two isolated Description hover-only replacements Black1440/Light1024 independently reviewed; originals combined focus retained and excluded from isolated-hover proof. Lifetime5 Minimum Human Signal preserved-classification native select face8 independently reviewed, no predicate edits/save or option-popup claim.",
       "missing": "All remaining actual disabled-fieldset semantics and disabled namehover independently reviewed in controls-paused group. No target styling omission identified; native picker behavior not claimed.",
       "minimumActions": "Read actual :disabled/computed fields in existing pending/authority fixture; do not infer disabled from child.disabled alone.",
       "evidence": "*fixed-loading; *form-error; organization-views.css10\u201311,38"
@@ -62,11 +62,11 @@
     },
     {
       "family": "Dialogs",
-      "controls": "Keep editing; Discard draft; zero confirmation; cancel zero confirmation",
-      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven. Historical lifetime3 ce1/7d all4 exact Keep/Discard and Confirm zero/Cancel zero hover+keyboard focus target JSON/PNG pass explicit state/hit/targettransition waits. No new save/discard persistence claimed.",
+      "controls": "Keep editing; Discard draft; zero confirmation; cancel zero confirmation; Confirm remove and Cancel removal",
+      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven. Historical lifetime3 ce1/7d all4 exact Keep/Discard and Confirm zero/Cancel zero hover+keyboard focus target JSON/PNG pass explicit state/hit/targettransition waits. No new save/discard persistence claimed. Lifetime5 removal-confirmation16 exact target images independently reviewed, no destructive activation.",
       "missing": "All32 dirty/zero control images independently reviewed; no remaining targeted styling gap in this group. No outcome inferred from captures.",
       "minimumActions": "Open each existing draft dialog once; hover/Tab both actions; cancel/keep without another zero save.",
-      "evidence": "*dirty-guard; *zero-confirm-state; organization-views.css15\u201316"
+      "evidence": "*dirty-guard; *zero-confirm-state; organization-views.css15\u201316; *final-remove-confirmation*"
     },
     {
       "family": "Lifecycle selected View",
@@ -78,11 +78,11 @@
     },
     {
       "family": "Lifecycle actions",
-      "controls": "New View; Edit definition; Remove View; Organization retry",
-      "covered": "Default enabled and list-error disabled all4; retry behavior, rename/remove side-effect route invariants separately proven. Current all4 New/Edit/Remove hover and actual keyboard focus PNG/JSON with enabled state/hit checks; no activation.",
-      "missing": "Retry Organization and disabled Remove hover now independently reviewed all4 in controls-paused group. No targeted styling omission identified; no lifecycle outcome inferred.",
+      "controls": "New View; Edit definition; Remove View; Organization retry; saved Edit or rename/Manage/Reload/interactive Thread/Correct; saved and Organization continuation",
+      "covered": "Default enabled and list-error disabled all4; retry behavior, rename/remove side-effect route invariants separately proven. Current all4 New/Edit/Remove hover and actual keyboard focus PNG/JSON with enabled state/hit checks; no activation. Lifetime5 saved controls40, Reload8 and exhausted4 independently reviewed; real unroute/Reload25rows separately reviewed. Organization enabled8/end4 independently reviewed, no activation. Saved Black1024 actual pending disabled frame independently reviewed.",
+      "missing": "Saved pending visual3 variants and Organization pending visual4 remain; other three saved timing attempts settled and excluded. No new persistence or whole-route approval inferred.",
       "minimumActions": "Hover/Tab actions in ready/error existing Organization; do not perform destructive remove.",
-      "evidence": "*fixed-list-error; *fixed-organization; organization-views.css9\u201316; desktop-switch.css740"
+      "evidence": "*fixed-list-error; *fixed-organization; organization-views.css9\u201316; desktop-switch.css740; *final-saved-controls*; *final-saved-reload*; lifetime5-saved-reload-recovery.json; *saved-end*; *org-end*; *final-org-loadmore*; lifetime5-saved-loadmore-pending-observation.json"
     },
     {
       "family": "Organization navigation",
@@ -113,5 +113,5 @@
     "Native Mac input history Undo",
     "Owner protocol approval and real usability sessions (zero completed)"
   ],
-  "next": "Resume remaining removal confirmation, saved-route/pagination and applicable Search chrome/used-select groups on465be988 with new receipt-only harness. Reuse F04 and other completed evidence; native/human remain open."
+  "next": "Lifetime5 closed; apply reviewed exact-query continuation hold after evidence checkpoint, validate runtime controls, capture only missing saved3/Organization4/Search4 pending frames. Final native/human gates remain."
 }

@@ -1,0 +1,222 @@
+[
+  [
+    "set",
+    "media",
+    "dark"
+  ],
+  [
+    "set",
+    "viewport",
+    "1024",
+    "768"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"dark\""
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "focus",
+    ".global-mail-search-form input"
+  ],
+  [
+    "hover",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-filter-toggle\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-filter-toggle\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-filters-expanded-hover\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded hover; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-filters-expanded-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-filters-expanded-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "focus",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-filter-toggle\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-filter-toggle\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-filters-expanded-focus\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded focus; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-filters-expanded-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-filters-expanded-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-search-filters label:nth-child(2) select"
+  ],
+  [
+    "focus",
+    ".global-mail-search-form input"
+  ],
+  [
+    "hover",
+    ".global-mail-search-filters label:nth-child(2) select"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-search-filters label:nth-child(2) select\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-search-filters label:nth-child(2) select\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-evidence-human-hover\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human hover; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-evidence-human-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-evidence-human-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-search-filters label:nth-child(2) select"
+  ],
+  [
+    "focus",
+    ".global-mail-search-filters label:nth-child(2) select"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-search-filters label:nth-child(2) select\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-search-filters label:nth-child(2) select\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-evidence-human-focus\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human focus; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-evidence-human-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-evidence-human-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-search-filters label:nth-child(3) select"
+  ],
+  [
+    "focus",
+    ".global-mail-search-form input"
+  ],
+  [
+    "hover",
+    ".global-mail-search-filters label:nth-child(3) select"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-search-filters label:nth-child(3) select\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&!e.matches(\":focus\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-search-filters label:nth-child(3) select\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-account-work-hover\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work hover; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-account-work-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-account-work-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".global-mail-search-filters label:nth-child(3) select"
+  ],
+  [
+    "focus",
+    ".global-mail-search-filters label:nth-child(3) select"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".global-mail-search-filters label:nth-child(3) select\");const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&!e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".global-mail-search-filters label:nth-child(3) select\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-final-search-filters-account-work-focus\", \"fixture\": \"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope\", \"themeMechanism\": \"System Appearance/media dark\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work focus; System/media dark\",filename:\"screenshots/black-1024-final-search-filters-account-work-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-final-search-filters-account-work-focus.png"
+  ]
+]

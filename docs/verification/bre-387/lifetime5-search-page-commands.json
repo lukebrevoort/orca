@@ -1,0 +1,22 @@
+[
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime5-search-page-before\",at:new Date().toISOString(),url:location.href,rows:document.querySelectorAll('.global-mail-result-list a').length,continuation:document.querySelector('.global-mail-load-more')?.outerHTML??null,count:document.querySelector('.global-mail-result-count')?.textContent}})"
+  ],
+  [
+    "click",
+    ".global-mail-load-more"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector('.global-mail-load-more')?.disabled"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime5-search-page-after\",at:new Date().toISOString(),url:location.href,rows:document.querySelectorAll('.global-mail-result-list a').length,continuation:document.querySelector('.global-mail-load-more')?.outerHTML??null,count:document.querySelector('.global-mail-result-count')?.textContent}})"
+  ],
+  [
+    "snapshot"
+  ]
+]

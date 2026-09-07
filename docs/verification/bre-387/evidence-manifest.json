@@ -12874,9 +12874,3857 @@
         "providerRefreshNoop": false
       },
       "fixtureLifetime": 4
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:42:59.738Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-remove-confirmation-confirm-hover.png",
+      "sha256": "cec4a340048d7e3b3ff96fc250e89a6e7fecffd924e7254de2e13b0d7f84eb14",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:02.394Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-remove-confirmation-confirm-focus.png",
+      "sha256": "77a2f4838506a31c56ed3db9c518220fcde5d9b973642d7e1e696013f8e5adb2",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:05.247Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-remove-confirmation-cancel-hover.png",
+      "sha256": "d3f3bade152e8f82b0cdbba10026a289b50293aab8cfacce5603eadfdbb4ad29",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:07.454Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-remove-confirmation-cancel-focus.png",
+      "sha256": "3bd2e42941c49e43fe06eec08279e64fd389602efcd83dcc3a8ca5daf8bb72ae",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:40.924Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-remove-confirmation-confirm-hover.png",
+      "sha256": "9d121ee6cf830902f1bb5e66092454da95afc00aa1befe8c2e79c782f79611ab",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:43.033Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-remove-confirmation-confirm-focus.png",
+      "sha256": "2ef156e280f4343394a6afeb729cef0be68798b92882eb8ffdb273a638b464f4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:45.260Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-remove-confirmation-cancel-hover.png",
+      "sha256": "2e1989f87e1fc04ecd378d54937f2a73df0a73798eda31f253346998b91cd11d",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:47.559Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-remove-confirmation-cancel-focus.png",
+      "sha256": "70c53d9c525a4c0d1d714f3e0f6a0b968e83a83dacc4502efb55c4d3410cd2e7",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:54.509Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-remove-confirmation-confirm-hover.png",
+      "sha256": "04728e99288da91559737107a23a0cdc0d95edac668aa0574ff7e40a5bc3a44f",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:56.681Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-remove-confirmation-confirm-focus.png",
+      "sha256": "91032d1838580af464e7d3ba4ae6805175a357b67ab599582da09f420cc62fdb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:43:58.764Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-remove-confirmation-cancel-hover.png",
+      "sha256": "5118763daf827253313ff383d9ca29dcb04d70448e21cf4ee929aeb5ef7507c6",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:44:02.802Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-remove-confirmation-cancel-focus.png",
+      "sha256": "2d4878ad19c98450278e55c33a978e9318ec1e1923a61a07f462edb7c9b513e9",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:44:07.832Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-remove-confirmation-confirm-hover.png",
+      "sha256": "952565d5d83f9487c1195d17ec3a9526c6ec31941f025583e4a738050edf90e0",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:44:09.248Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; confirm focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-remove-confirmation-confirm-focus.png",
+      "sha256": "18536d043de4e9951380558ec2994438ddb1c90c781f6784d5a6d705122aeb89",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:44:10.648Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-remove-confirmation-cancel-hover.png",
+      "sha256": "9ef1d9c7b797e15a5642c936b05e17d2e772b5a221239578df9a92d97f1db6da",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:44:12.875Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exactly two real-route scratch baseline Views; removal confirmation open; no Confirm remove or lifecycle mutation in target captures; cancel focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-remove-confirmation-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-remove-confirmation-cancel-focus.png",
+      "sha256": "e4f2f71890b9e0cfd74cf0196025e473c2fff8ca55aa8a98e18623c869f1d939",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:45:46.489Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-edit-hover.png",
+      "sha256": "73365df52b590930210ed8a508fe3c3e218b5d9a202dd8b82a6694d3d8e50e5a",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:45:47.978Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-edit-focus.png",
+      "sha256": "4051f8ca4fef97a4062466163bb666a44797c5c6fbbf69ac741eea72f70c93d7",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:45:50.519Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-manage-hover.png",
+      "sha256": "0a0f2b078c66c9d81cbeb43818d9f26119ef2a482e96a7013f3dcea6feb3c45e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:45:54.316Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-manage-focus.png",
+      "sha256": "1ef6b4e32ebcfbf6c42627b5dcee70894a033e3840318568dd0c6f6920bce342",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:45:58.260Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-row-hover.png",
+      "sha256": "c0c039e3ca5b269f5ad08dceef5f4cd9d24d99f1bb516225ac21803d5b2df536",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:02.757Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-row-focus.png",
+      "sha256": "c0c039e3ca5b269f5ad08dceef5f4cd9d24d99f1bb516225ac21803d5b2df536",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:07.370Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-correct-hover.png",
+      "sha256": "7d0629a8fe51e9d97ad95b24f71da1d4e6c211f1e1281f7777fb00718e973902",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:14.573Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-correct-focus.png",
+      "sha256": "de9c5576d93a9cb43271cabf765dabfa8a10db229abd63169d48f66a8885db57",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:17.433Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-load-more-hover.png",
+      "sha256": "b57831c700e847d8ae1f8bd5d2c5ef05130ac4d2bd3db9b69d5d986d13a3b6bd",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:19.459Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-controls-load-more-focus.png",
+      "sha256": "fb1d2ae472d5dc5ab9a4e16ecf71ea89fab8d5ba7ea3809fd7e24ee94a184c4d",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:56.083Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-edit-hover.png",
+      "sha256": "20fe7a81b7b25783533f85318655ccd6d2fc158fa5483da303d3f1f8794b95cf",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:57.161Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-edit-focus.png",
+      "sha256": "520b4e248ac5a16a2152386fd4ad60b0539ce71021b9fbebe01043910692adec",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:58.275Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-manage-hover.png",
+      "sha256": "2f7d47b276bfcf9a72e431206e4a03869a3b0aef3b8aa2c217210c5dbf98bcd3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:46:59.090Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-manage-focus.png",
+      "sha256": "d5bba1f30863ee60a92425b5c2a5307fc695632a4f1d3356a837bbcda4535964",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:00.303Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-row-hover.png",
+      "sha256": "056d01cbdf2fd7184191b3f7197465acda23d13fefbfaa381bb56ef673c617eb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:01.197Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-row-focus.png",
+      "sha256": "056d01cbdf2fd7184191b3f7197465acda23d13fefbfaa381bb56ef673c617eb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:02.879Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-correct-hover.png",
+      "sha256": "bda836c5708fbb057d9d9ebc6faf914dd08da5488ab93d106c0e9036bcbaf7bc",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:04.407Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-correct-focus.png",
+      "sha256": "ef12b5ac4a896ca5ae5e563dbc326048f79a6fadc6bf2e38fbda3586b07d1f6c",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:05.637Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-load-more-hover.png",
+      "sha256": "428f5f9991327bf7c09c654b730b4c7358e32310dae58c266fc269ad2cc3900e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:06.647Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-controls-load-more-focus.png",
+      "sha256": "60d61e81707599bdbfe091b32960546148b45e327085342f7c5519ac1c700165",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:09.781Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-edit-hover.png",
+      "sha256": "761450a5b4aa85017cc339c6c2cfe57ab7f0e82dcca79e884bbd4474f800ecce",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:10.884Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-edit-focus.png",
+      "sha256": "aa9462a3c0497d180d71ebffed8daf112df40885df62791d55993a776ec2e8a8",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:11.987Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-manage-hover.png",
+      "sha256": "2b75fa40cda138dcede102a7883e0b3dd42cf62e4f73bbcfd9bfe40423e70bbf",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:13.288Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-manage-focus.png",
+      "sha256": "74ee2491a74c390aeff35b1b247eb54390fba37798ee70565fc02bf278520292",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:15.082Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-row-hover.png",
+      "sha256": "a0fe2dc98648a5d478c45cb883d6e115f4d223b3d95155ad9f7a03786b2a3277",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:16.412Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-row-focus.png",
+      "sha256": "a0fe2dc98648a5d478c45cb883d6e115f4d223b3d95155ad9f7a03786b2a3277",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:17.717Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-correct-hover.png",
+      "sha256": "1dd4c5bdfd45a9f44429d1ce30183bdf05deb0fdb8730a1069740142c55db84f",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:19.313Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-correct-focus.png",
+      "sha256": "752f73075aa641a39acfdb27eaafbc7b037fc990e8a32ddd9a2447c70d6accbb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:20.825Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-load-more-hover.png",
+      "sha256": "59418fe8cdd868c540ee307def14fc6ad6f50b8b22270c72c2309303cd125ab0",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:21.839Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-controls-load-more-focus.png",
+      "sha256": "9ce73aac302db696781e2d46de538fe2a19d37a57cbd1f286d17362c5e4ab46b",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:26.376Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-edit-hover.png",
+      "sha256": "44e2ef9cc8cb4405010bcc1bfc72b17747a66f18fa9c419a49ccda8a31aef381",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:27.741Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; edit focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-edit-focus.png",
+      "sha256": "c6ba411c6291ff3eeb3c33e8da12ebb3c0609092d367c754b9b7e590f5dad316",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:28.663Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-manage-hover.png",
+      "sha256": "926f555369762b70edb930fe6bd0493d62bdf438659989e61248854d589f35a4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:29.498Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; manage focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-manage-focus.png",
+      "sha256": "6127f9abc6ac48f3947b2a5267dcc4cb78c6bc1c55219f1c024c7f2756ce3925",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:30.502Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-row-hover.png",
+      "sha256": "73b3bac26f22e3e1754d1bc8a6374d0e8dbe94742d5722354e6724c536f50ea3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:31.870Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; row focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-row-focus.png",
+      "sha256": "73b3bac26f22e3e1754d1bc8a6374d0e8dbe94742d5722354e6724c536f50ea3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:33.418Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-correct-hover.png",
+      "sha256": "6e26b2b618b790390cfa9399a7d522fe7b124357c169c279e830ef72f79e47c2",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:35.406Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; correct focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-correct-focus.png",
+      "sha256": "b54d5bba7ca45488fd01b351a4c9d86484d12863dfb56b3ac2f3318e17370247",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:37.585Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-load-more-hover.png",
+      "sha256": "57f8d1a09000ecef9bb87ffc11731a9d13b679d3d8e4a498aca4d99c6c99671e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:47:39.040Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved Review fixture Maya, exactview view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750; controls only, no Edit/Manage/row/correction/pagination activation; load-more focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-controls-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-controls-load-more-focus.png",
+      "sha256": "fb631b81caf4aea6cf8890ea1f66df982d4afa6a1494307b503a16807bdf5ad5",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:48:18.927Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Immediate post actual saved Load more click; frame state must be inspected, no assumed loading visual",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands lifetime5-saved-loadmore-attempt-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/lifetime5-saved-loadmore-attempt.png",
+      "sha256": "b7addd772aa0bc01c0f2007eaf49271c607175b3bbe170666042584c56e91e55",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:53:43.368Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-reload-reload-hover.png",
+      "sha256": "7c1732868b2078d3f24f865898ee8daae645129e30367d0d256faae3d06d2442",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:53:45.488Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-saved-reload-reload-focus.png",
+      "sha256": "fdab5883ab4507873643a217759ff5e4c8057ed6971159c009bbf6544ca3ecff",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:03.880Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-reload-reload-hover.png",
+      "sha256": "67365a80035efb7045f6b7a35d500b9a990567edf040edf13fbfcf71dea265cc",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:05.811Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-saved-reload-reload-focus.png",
+      "sha256": "f021b435e58644ce004a03478060954bc09c65268930441a43ad8f5044163c3e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:11.314Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-reload-reload-hover.png",
+      "sha256": "64617c08d74003176f392fc5a6d9ab58cf73e48be1ed0b1296377d826b272fa8",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:12.750Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-saved-reload-reload-focus.png",
+      "sha256": "768ae67c169726285dce1db132da4d79e60946ff051e2e74f878f6e7e620f0b8",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:19.856Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-reload-reload-hover.png",
+      "sha256": "58d5f4171f88d70014e6f71ee93987b6a94dbc29fe441a5a750a892905fce8b0",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:54:22.732Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved Maya route with exact results GET intercepted200{} malformed-response fixture; Reload View target only, no reload activation during variants; reload focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-saved-reload-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-saved-reload-reload-focus.png",
+      "sha256": "495930f6f5ee3eda29ae5fc334ef408526837e38e2089bb9a81ae500da331f14",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:55:27.654Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Immediate post actual saved Load more click; frame state must be inspected, no assumed loading visual",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-saved-pending-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-saved-pending.png",
+      "sha256": "4f2467234eeff23f50f763b1a189a43cde20f1da79be99fb7d1427cf5420abff",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:55:47.616Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Immediate post actual saved Load more click; frame state must be inspected, no assumed loading visual",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-saved-pending-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-saved-pending.png",
+      "sha256": "f2130975e24395b83f125883e36fa5f1bf4d53d6198a1bad2bd108aff5904bdb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:56:10.602Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Immediate post actual saved Load more click; frame state must be inspected, no assumed loading visual",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands dark-1440-saved-pending-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/dark-1440-saved-pending.png",
+      "sha256": "1142d1477d5164b4d43cccb3b60314475038a4befb76cf0b4d7d39c18ab8bd92",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:57:13.852Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_ff78aac7-3011-4fa2-9f17-92740f69f58b",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "light",
+      "fixtureScenario": "Real exhausted saved continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-saved-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-saved-end.png",
+      "sha256": "1f55e835b8c07cbc15f5444ea36346004059281ce17db830de30bfe44d661918",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:57:21.177Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_ff78aac7-3011-4fa2-9f17-92740f69f58b",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "light",
+      "fixtureScenario": "Real exhausted saved continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-saved-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-saved-end.png",
+      "sha256": "a676347f358504769675beeec0086dd629c9c7c673607d94acef8802c514d448",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:57:26.319Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_ff78aac7-3011-4fa2-9f17-92740f69f58b",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "dark",
+      "fixtureScenario": "Real exhausted saved continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands dark-1440-saved-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/dark-1440-saved-end.png",
+      "sha256": "c99606480cc715d8f2ff1a8d14433ca4616e34b4db7f2c880863b73a7403f068",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:57:33.459Z",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_ff78aac7-3011-4fa2-9f17-92740f69f58b",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "dark",
+      "fixtureScenario": "Real exhausted saved continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands dark-1024-saved-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/dark-1024-saved-end.png",
+      "sha256": "38e3236456ca52b7d8edc3b9287ef30eba8cd5ccc72e4000191c3abc09470d35",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:59:09.482Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "light",
+      "fixtureScenario": "Real exhausted Organization continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-org-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-org-end.png",
+      "sha256": "c2d794c026d3d1744f12f5bd526e747f909838a7cee4419a27c03d00fe024948",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:59:12.928Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "light",
+      "fixtureScenario": "Real exhausted Organization continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-org-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-org-end.png",
+      "sha256": "9109ecdeea64807a34e2dffb604c47394b1c2563b2a40fa6db73fa35ce621aa0",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:59:16.566Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "dark",
+      "fixtureScenario": "Real exhausted Organization continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands dark-1440-org-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/dark-1440-org-end.png",
+      "sha256": "7d46ca954e5d8f6a7f98d4389435f68b990b92ff83a33f005d9c70b3a8cd9ab5",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T15:59:20.296Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "dark",
+      "fixtureScenario": "Real exhausted Organization continuation disabled target",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands dark-1024-org-end-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/dark-1024-org-end.png",
+      "sha256": "b3eca81cbd72ac27f98127632f8249f0f59942801be4b72036e3617114f9d5b3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:01.849Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-org-loadmore-loadmore-hover.png",
+      "sha256": "a94b68bb00a71ba161af9f156f74b04dcbaabf08eaad4597e032cc8e24a194a3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:02.888Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-org-loadmore-loadmore-focus.png",
+      "sha256": "4e151bdb9d53ef8c30e3c8a37e5638d8850f43c88ecde8c3dd0ddafd6889a4f5",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:07.223Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-org-loadmore-loadmore-hover.png",
+      "sha256": "2ff2beeb0e8f3e6083e178ca9807a05c43f7d8e90d923c8f12b85bbabea38aad",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:09.022Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-org-loadmore-loadmore-focus.png",
+      "sha256": "4a593c32477052833cf0216bf2d0febec7fc9a6e723d6f6b552dc2f74239a292",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:13.438Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-org-loadmore-loadmore-hover.png",
+      "sha256": "1a11b5b852ac2fef50d765872a316e8e7c577e2234ace6f1cc92a7eaccbccd8e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:16.131Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-org-loadmore-loadmore-focus.png",
+      "sha256": "541c06b4ac48138b534998c056f1a4817c2e4f32b4ccf4aa5c4b77cc743ff15d",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:20.730Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-org-loadmore-loadmore-hover.png",
+      "sha256": "2cb2336ffbca44f13496be2e8fdc544d9801319ffc95a6b3a44e81ada3617fd6",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:00:22.180Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Organization Maya results enabled continuation target; no Load more activation during visual variants; loadmore focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-org-loadmore-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-org-loadmore-loadmore-focus.png",
+      "sha256": "94fde565396f22e810a6cd0a4cb1678448ca04fdf14d69f0843b2d70ef00f03c",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:02.554Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-close-hover.png",
+      "sha256": "4252b54c7b27e029a5ea83173128680794e4e38740e6c243bc80c2131fb261bc",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:05.318Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-close-focus.png",
+      "sha256": "b2f243b61cb90adc222a0f926552d2413b25ec7f2c202bcbd14217055652a00a",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:06.145Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-submit-hover.png",
+      "sha256": "1078598f7497a689afa02bf5f49c4de9d4e8454c0f5984f0852d5e0c0981e451",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:07.546Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-submit-focus.png",
+      "sha256": "3126e78cf6999da4723263e6adaa2125c303114c9fd0aacf8e02ea12a7bc4fc3",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:10.404Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "29a93aab30fc8a6687502d77f190845687b8a67c004a7ca7a7a48e4d9b7337bf",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:12.811Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "6d9d1fc27986b231cb0aa9c29f1767f91fb59a53bb97af677c514bec9f5ebb2b",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:14.617Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-loadmore-hover.png",
+      "sha256": "29a93aab30fc8a6687502d77f190845687b8a67c004a7ca7a7a48e4d9b7337bf",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:19.083Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-chrome-loadmore-focus.png",
+      "sha256": "f8e04ef9da2d3f5169ecacdcd2a02df8797b1fb7b22c35a2ec8440d133afbd9c",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:42.535Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-close-hover.png",
+      "sha256": "e1bb6b7848af4f6384bbe67532842fb37b2ea83f11cce1965f8efc039c33047b",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:45.836Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-close-focus.png",
+      "sha256": "e30f4ae37075ba6777aa4b1cbf5d6dac6e71b7cc24de97d74ce73f7896372efa",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:48.385Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-submit-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:51.472Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-submit-focus.png",
+      "sha256": "2a7da3097420dff7750bb5b7f5afe9442cd6e7ad9219be78fc36e4458009348c",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:53.599Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:56.332Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "775d9cacd436fe7846f68f2ee27cb9bb9723a2fa974fef402233aea6758dae66",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:01:58.127Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-loadmore-hover.png",
+      "sha256": "db62eb13d8b07884afb8fc7c4d4ef618e98c4c148f6a28a9681ea3ebe62257dd",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:01.947Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-chrome-loadmore-focus.png",
+      "sha256": "ab2cabb6d9e9f8e0229ff959edd8410865091f82531f62681f6081dcf58a15f4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:11.541Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-close-hover.png",
+      "sha256": "b3d996900f78e4c6be83f269357a74ac414d017fc10f94bbb9efdef262e1042a",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:13.928Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-close-focus.png",
+      "sha256": "a901545d40fdce85b87b7eb0c5ad7c42616287710ddad93f5494d7bab3fed015",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:18.040Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-submit-hover.png",
+      "sha256": "44ab2081c8a69fc211493ac65068ffc56595fdad131f0f9a6eec634811a6e267",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:23.455Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-submit-focus.png",
+      "sha256": "35d71d849f613d654d6af699d1bed6046f4ae8a719ed458269b77076dc75b81c",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:26.733Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "a21cad7785ce503a926c27214e7b0819e6c4f8ad255c1db50fde8ab408e5e85e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:29.104Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "84fc1df903f3be5a268455ae2f67b66c2993db4c1ff4c178566a124bcac4a4a7",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:33.946Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-loadmore-hover.png",
+      "sha256": "a21cad7785ce503a926c27214e7b0819e6c4f8ad255c1db50fde8ab408e5e85e",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:38.808Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-chrome-loadmore-focus.png",
+      "sha256": "2259b1c1efa25c15f52f4807f5a5acd35d544f69a2b0acd4a4094ce1044e24ea",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:46.035Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-close-hover.png",
+      "sha256": "1040526025c377ecb41dc1aafbbdf2aad03a053c94f46df445a7b93581cd892a",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:51.299Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; close focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-close-focus.png",
+      "sha256": "8a5433c487360bbec6678808e0258fea538336e464fb7fed1205251c65f4398f",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:52.792Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-submit-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:54.617Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; submit focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-submit-focus.png",
+      "sha256": "8619a517c54820ee689f0aeb80a6867fbac499307af06f632916fbf9bbbabddc",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:57.022Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-filters-collapsed-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:58.458Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; filters-collapsed focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-filters-collapsed-focus.png",
+      "sha256": "f65d5b8c88930574a35a8a265a8f58bfdfd9d29878868c924d8728e8378aa8aa",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:02:59.693Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-loadmore-hover.png",
+      "sha256": "c55c0f9d4fb65a271b6a672b60e9a848bd286ff05567bb8382f70f744d68cff4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:03:03.796Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants; loadmore focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-chrome-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-chrome-loadmore-focus.png",
+      "sha256": "3085506f9d792fe89367070244d5c29ed8bede12841b30804d56a7661960d1e5",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:19.474Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-filters-expanded-hover.png",
+      "sha256": "75a8afe26ff163bb80fc99413bc9955480c5bbe32d70e5d2c1868bfd24b1a849",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:21.248Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-filters-expanded-focus.png",
+      "sha256": "8271c61d687dfb938f95b5a3375caf33ac10caaac8258633a81a1397fd5954e6",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:22.705Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-evidence-human-hover.png",
+      "sha256": "75a8afe26ff163bb80fc99413bc9955480c5bbe32d70e5d2c1868bfd24b1a849",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:24.648Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-evidence-human-focus.png",
+      "sha256": "2c27fea830e996832b181e954b85cd7dfdd0df9f37ab5fd59efc285c16bb18c4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:33.229Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-account-work-hover.png",
+      "sha256": "f59b7822cec72cf524df033343ddd2ce1def852addaecd5cc579d1f72984e519",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:05:40.167Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-search-filters-account-work-focus.png",
+      "sha256": "83027e88ad89a5f717cf7bc03496beafbd3016cd885c3bc6ecde0265d43e620a",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:06:09.324Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-filters-expanded-hover.png",
+      "sha256": "33cacc8b408f9e011e7ad017e05267d0632e370b4b4c7fdbdbb654aefbf34480",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:06:22.011Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-filters-expanded-focus.png",
+      "sha256": "6af383ad43af634cf4d60bfa9daf8e9763c2075ed5f2e12e049a8f2538af50ef",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:06:32.434Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-evidence-human-hover.png",
+      "sha256": "a6eda88502e6a3e208f4848e9de2dbe4620708060a4363f804ac4cff626dfb18",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:07:06.458Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-evidence-human-focus.png",
+      "sha256": "f6c89167500638c8836e338f5c6d7e6ba2febb2f074a50ad845e3ad23324fddb",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:07:51.003Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-account-work-hover.png",
+      "sha256": "baf5cd97567cb8ef1949fe0c365c9296a46290d5134e1244302f6dfa9a79eba1",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:12.862Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-search-filters-account-work-focus.png",
+      "sha256": "05edb9c043701a26f1cdf891fc77a927b6abba15d4e0250fbf8ea1ba9dc3b90f",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:27.143Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-filters-expanded-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:32.180Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-filters-expanded-focus.png",
+      "sha256": "1e08643f0239be78bd7363d9dd88535c8a648c4b44ca037bb1a40f215294ea22",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:35.245Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-evidence-human-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:41.019Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-evidence-human-focus.png",
+      "sha256": "3998d3dcee24fe26e24f0a680c9b80c1fdf6f6f988549ea5fdfb11381be46096",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:42.860Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-account-work-hover.png",
+      "sha256": "2b5c83a618764853c6bc6219fc366332079dd0633a851d835ebc3abbae6848f4",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:44.943Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-search-filters-account-work-focus.png",
+      "sha256": "7c01c3e3e15a5d48e71464947c7cb4548100a4e45e9b0dc398f8ca1ee9089880",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:54.772Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-filters-expanded-hover.png",
+      "sha256": "0564a7af6b3646f93f835718208d9cdce9e3ae266df5f4b68109aabe5f9f0869",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:08:59.592Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; filters-expanded focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-filters-expanded-focus.png",
+      "sha256": "2a2d5159796566682029462fae9a44b5a09cab27a1943dd37f542a80dca5a4c8",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:09:09.357Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-evidence-human-hover.png",
+      "sha256": "c077f5627ae6a39fd07cdc966ef8049d179970761836782d124924ec22127b68",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:09:18.499Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; evidence-human focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-evidence-human-focus.png",
+      "sha256": "b608e9c402b69d1086decf06239aa91b93b0aa2748ae4e7df17c1599188082e7",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:09:25.496Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-account-work-hover.png",
+      "sha256": "0564a7af6b3646f93f835718208d9cdce9e3ae266df5f4b68109aabe5f9f0869",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:09:29.159Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real Search expanded Filters with selected Likely human evidence and work account; native select current values/hover/keyboard focus, no unrelated filter scope; account-work focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-search-filters-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-search-filters-account-work-focus.png",
+      "sha256": "e12d3fc672ac415fb754be1822eedce5749bd0522e7266f9a4c21abc4eb2fed1",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:12:53.389Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-human-signal-minimum-hover.png",
+      "sha256": "486b8b1264fc279a6f5dc663db5f984e1126a8a12afaba308992f3e290373dd0",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:13:06.527Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-final-human-signal-minimum-focus.png",
+      "sha256": "c79018515815a92fd2e6c03d042944aa3f4d822c4075027784cce9a131a7fe25",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:14:06.961Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum hover; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-human-signal-minimum-hover.png",
+      "sha256": "af08662680b6eeecb67efe9dd854bd77c2ce42b6b917bf5d74d046567fe1acff",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:15:48.698Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum focus; System/media light",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-final-human-signal-minimum-focus.png",
+      "sha256": "0ddde62746c5d54ed66786b2114bec2880613c6592fd4246f334020de94e87b9",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:16:27.119Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-human-signal-minimum-hover.png",
+      "sha256": "b46f5ab53d11d017ab2b76244ed2883e7399d4641c55977038c4d73cb26b9401",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:16:34.493Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-final-human-signal-minimum-focus.png",
+      "sha256": "0141e6753ee0468d160d6b5e2c33caabc32bd4b3c7087fd6fecd365204088e42",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:16:50.942Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum hover; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-human-signal-minimum-hover.png",
+      "sha256": "61456f5abe0daf98c56d459136c5608bc226f864d29fdbcf41656467ec5f8500",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
+    },
+    {
+      "testedSha": "0128377589d072555e1c6131e280561347789f75",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T16:16:57.699Z",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F%3Fdestination%3Dorganization&searchAccount=work",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Unsaved Search-derived draft preserves human classification; Minimum Human Signal No minimum/preserve classifications native select hover/keyboard focus; unsupported Project blocker remains, Save disabled, no predicate edits; minimum focus; System/media dark",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-final-human-signal-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-final-human-signal-minimum-focus.png",
+      "sha256": "e421bf2fdb0ffee841bb705c746e9fe6751a590ec23cb7549f364d3c166c405d",
+      "assetReceipt": "f04-assets-reuse.json",
+      "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+      "harnessSha256": "8f2ba713c71ac2c478678cf2d9f6cc6fe5a7f98c92ad0578c4a06aca996d7d83",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 5
     }
   ],
-  "visualStatus": "Partial live evidence; F01\u2013F04 bounded fixes verified. Finite residual removal/saved/pagination/applicable Search controls, native Mac text Undo and human evidence remain open.",
+  "visualStatus": "Partial live engineering evidence: F01\u2013F04 bounded fixes verified; finite steady control observations reviewed. Missing saved3/Organization4/Search4 actual pending visual variants require reviewed continuation hold. Native Mac text Undo and owner-approved real human sessions remain open.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -13007,8 +16855,8 @@
   },
   "pr": "https://github.com/lukebrevoort/orca/pull/186",
   "finalHeadHostedCi": {
-    "status": "pending new artifact checkpoint push; prior a6fc056 hosted runs passed",
-    "boundary": "No runtime/harness changes in this artifact checkpoint. Its exact commit and checks will be reported externally to avoid self-reference."
+    "status": "pending additive lifetime5 artifact freeze; prior012 exact-head checks passed",
+    "boundary": "No runtime or harness change in this checkpoint; its exact SHA/checks recorded externally after commit."
   },
   "builtReadiness": "built-readiness.json",
   "priorHostedCi": {
@@ -13765,17 +17613,18 @@
   "findings": "findings.json",
   "fixPlan": "selection-overlap-plan.html",
   "currentBrowserLifetime": {
-    "lifetime": 4,
-    "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
-    "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
-    "readiness": "lifetime4-readiness.json",
-    "servedReceipt": "lifetime4-served-build.json",
-    "assets": "f03-assets-reuse.json",
-    "serverExec": 2877,
-    "browserSession": "bre387-residual-a63d6da",
-    "status": "closed; browser/server exit0, scratch removed and ports released",
+    "lifetime": 5,
+    "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+    "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+    "readiness": "lifetime5-readiness.json",
+    "servedReceipt": "lifetime5-served-build.json",
+    "assets": "f04-assets-reuse.json",
+    "fixtureSetup": "lifetime5-lifecycle-fixture-setup.json",
+    "serverExec": 19596,
+    "browserSession": "bre387-final-0128377",
+    "status": "closed; browser/server exit0, scratch removed, ports released",
     "providerRefreshNoop": false,
-    "cleanup": "lifetime4-cleanup.json"
+    "cleanup": "lifetime5-cleanup.json"
   },
   "browserActionLogs": [
     {
@@ -13889,12 +17738,25 @@
       "toolingDiagnosis": "lifetime3-tooling-diagnosis.json",
       "plannedViewportIdentity": "lifetime3-planned-census-viewport.json",
       "cleanup": "lifetime3-cleanup.json"
+    },
+    {
+      "lifetime": 4,
+      "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+      "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+      "readiness": "lifetime4-readiness.json",
+      "servedReceipt": "lifetime4-served-build.json",
+      "assets": "f03-assets-reuse.json",
+      "serverExec": 2877,
+      "browserSession": "bre387-residual-a63d6da",
+      "status": "closed; browser/server exit0, scratch removed and ports released",
+      "providerRefreshNoop": false,
+      "cleanup": "lifetime4-cleanup.json"
     }
   ],
   "lifetime3Cleanup": "lifetime3-cleanup.json",
   "nextRuntime": {
     "sha": "465be988438e12631a4e201f6706a6f8e0dfb035",
     "assets": "f04-assets-reuse.json",
-    "state": "not started; metadata review pending"
+    "state": "started as lifetime5; see currentBrowserLifetime"
   }
 }

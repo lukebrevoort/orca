@@ -1,0 +1,37 @@
+{
+  "at": "2026-09-07T15:37:45.126606+00:00",
+  "runtime": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "harness": "0128377589d072555e1c6131e280561347789f75",
+  "probes": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "location": null,
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "location": null,
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/login",
+      "status": 302,
+      "location": "/",
+      "bytes": 0
+    },
+    {
+      "url": "http://127.0.0.1:5187/",
+      "status": 200,
+      "location": null,
+      "bytes": 1437
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-DD9Vz4rP.js",
+      "status": 200,
+      "location": null,
+      "bytes": 894705
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:03:30.838846+00:00",
+  "completedAt": "2026-09-07T16:03:36.489421+00:00",
+  "exitCode": 0,
+  "commands": "lifetime5-search-page-commands.json",
+  "raw": "lifetime5-search-page-raw.json",
+  "stderr": "lifetime5-search-page-stderr.txt",
+  "parsedRecords": 2
+}
