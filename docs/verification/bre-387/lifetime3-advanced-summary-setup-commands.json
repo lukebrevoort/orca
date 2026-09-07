@@ -1,0 +1,29 @@
+[
+  [
+    "click",
+    ".global-mail-filter-toggle"
+  ],
+  [
+    "select",
+    "#global-mail-search-filters label:nth-child(2) select",
+    "human"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".global-mail-save:not(:disabled)\")"
+  ],
+  [
+    "click",
+    ".global-mail-save"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-preserved-constraints summary\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

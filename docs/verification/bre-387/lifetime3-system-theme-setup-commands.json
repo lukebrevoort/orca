@@ -1,0 +1,32 @@
+[
+  [
+    "wait",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "click",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "set",
+    "media",
+    "dark"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"dark\""
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-system-theme-setup\",at:new Date().toISOString(),url:location.href,systemChecked:document.querySelector(\"input[name=theme][value=system]\").checked,theme:document.documentElement.dataset.theme,mediaDark:matchMedia(\"(prefers-color-scheme: dark)\").matches,provenance:\"Real Appearance System radio; agent-browser color-scheme media emulation drives production matchMedia listener, no CSS/DOM theme override\"}})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Existing Appearance System radio selected for browser color-scheme emulation, setup-only\",filename:\"screenshots/lifetime3-system-theme-setup.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/lifetime3-system-theme-setup.png"
+  ]
+]

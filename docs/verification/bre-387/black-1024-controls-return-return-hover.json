@@ -1,0 +1,136 @@
+{
+  "at": "2026-09-07T13:37:02.195Z",
+  "scenario": "black-1024-controls-return-return-hover",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(23, 23, 23)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-action",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-preparation-state",
+          "color": "rgb(177, 177, 171)",
+          "opacity": "1",
+          "outline": "rgb(177, 177, 171) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(0, 0, 0, 0.32) 0px 20px 60px 0px",
+          "class": "views-workspace views-workspace-external-authoring",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "selected-view-authoring search-view-authoring",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer selected-view-authoring-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "auto",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": false,
+      "focusVisible": false,
+      "hit": true,
+      "hover": true,
+      "label": "Return to source",
+      "pressed": null,
+      "rect": {
+        "bottom": 400.1875,
+        "height": 36,
+        "left": 69,
+        "right": 955,
+        "top": 364.1875,
+        "width": 886,
+        "x": 69,
+        "y": 364.1875
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "themeMechanism": "Appearance System + agent-browser media dark",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+  "viewport": [
+    1024,
+    768
+  ],
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

@@ -7,7 +7,7 @@
     {
       "family": "Search",
       "controls": "Header Search trigger; search input; Save as View; result links; Load more",
-      "covered": "Cmd+K/open/Escape return and actual results/save flow; Load more25\u219250 stable identities. Header theme/bulk geometry separately fixed44ed. Current7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
+      "covered": "Cmd+K/open/Escape return and actual results/save flow; Historical saved-View (not Search) Load more25\u219250 stable identities is separately attributed. Header theme/bulk geometry separately fixed44ed. Current7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
       "missing": "Load more hover/focus and genuine request-pending disabled target remain separate pending observations. No whole-Search accessibility approval inferred.",
       "minimumActions": "Reuse one ready Search and saved results; inspect actual controls without committing. Do not repeat pagination mutation proof.",
       "evidence": "browser-actions.json; keyboard-native-control.txt; browser-actions.json (saved Load more chronology); desktop-switch.css360\u2013408; *controls-search*.json/PNG; lifetime3-session-boundary.json; search-focus-reopen-snapshot.txt"
@@ -24,7 +24,7 @@
       "family": "Tune",
       "controls": "Tune disclosure; Add filter; filter menu entries; Remove clause; preserved-constraint summary",
       "covered": "Open Tune/account scopes and unsupported states captured; pressed work account hover/focus all4. Current7d/ce1 all4 Add filter and Remove subject hover/keyboard focus have direct target records and action PNGs; menu actual already-added Account/Subject disabled and Read state keyboard focus captured. Currentall4 Tune collapsed/expanded hover/focus direct PNG/JSON, actual aria-expanded values; only disclosure toggled.",
-      "missing": "Preserved advanced summary target applicability still needs explicit reconciliation; no unseen advanced state pass inferred.",
+      "missing": "F03 native summary keyboard departure order open: color\u2192Tab reaches summary, next Tab wraps Cancel; ShiftTab wraps final Tune. Open-hover Light1024 captured; remaining summary states await fix.",
       "minimumActions": "Inspect one editable existing draft; open menu, hover/Tab targets, close without changing definition. Preserve source distinction for advanced DOM fixture.",
       "evidence": "visual-observations.json *selected-account*; organization-views.css52\u201390"
     },
@@ -39,8 +39,8 @@
     {
       "family": "Draft actions",
       "controls": "Save/Save changes; Cancel; Return; Undo",
-      "covered": "Save hover+Tabfocus all4 newselectedauthoring; disabled Save all4 unsupported/loading/error. Return ring all4 form-error. Actual cancel/source focus and healthy draft Undo recorded. Cancel/Undo exact hover and keyboard-focus images captured all4; Black1440 exposed batch target states/hit pass. Black1024 Cancel-hover original false/hitfalse record is historical and excluded; the later exposed replacement closes that observation only. Single Black1024 Cancel exposed replacement actualhover/hit true and direct image at12:12Z; no other state replayed.",
-      "missing": "Return hover remains unmapped. Black1024 Cancel hover original mismatch is superseded only by matching exposed replacement; original retained. Native input Undo remains external.",
+      "covered": "Save hover+Tabfocus all4 newselectedauthoring; disabled Save all4 unsupported/loading/error. Return ring all4 form-error. Actual cancel/source focus and healthy draft Undo recorded. Cancel/Undo exact hover and keyboard-focus images captured all4; Black1440 exposed batch target states/hit pass. Black1024 Cancel-hover original false/hitfalse record is historical and excluded; the later exposed replacement closes that observation only. Single Black1024 Cancel exposed replacement actualhover/hit true and direct image at12:12Z; no other state replayed. External Return and Retry connection hover/pointer-off keyboard focus all4 independently reviewed (16 PNGs), same error DOM retained through real System Appearance/media emulation; no activation in capture batches.",
+      "missing": "No remaining Return styling gap; native input history Undo remains external. Appearance restoration follows external control work.",
       "minimumActions": "Hover/focus these neutral actions on same draft; no additional commit needed. Native Mac verification must remain pending.",
       "evidence": "*fixed-selected-authoring-hover/*keyboard-focus; *form-error; draft-undo-before.txt / draft-undo-after.txt; browser-actions.json"
     },
@@ -55,8 +55,8 @@
     {
       "family": "Unsupported/correction fallback",
       "controls": "Replace subject; Remove blocker; Correct senders; Tune fallback",
-      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures.",
-      "missing": "Correct senders trigger and overflow Tune fallback hover/focus still pending; external error Return separately pending.",
+      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures. Correct trigger all4 hover/focus captured in *controls-correct-trigger; all8 images independently reviewed.",
+      "missing": "No separate overflow Tune fallback control exists: source966 renders manual-filter explanatory copy and existing Cancel sender correction. Tune and Cancel states already reviewed all4. Distinct Retry preview (.view-preview-retry, source965) on preview error still requires direct hover/focus all4; other Retry controls do not substitute.",
       "minimumActions": "Inspect these actual controls in retained ready drafts; do not replay save or census mutations solely for styling.",
       "evidence": "*unsupported; *overflow-panel; browser-actions.json"
     },
@@ -103,8 +103,8 @@
     {
       "family": "Help auxiliary controls",
       "controls": "Close; Skip; Retry saving choice; sample return/start buttons",
-      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated. Current all4 Close/Skip hover and actual keyboard focus target PNG/JSON complete; bounded image review pending.",
-      "missing": "Retry saving choice hover/focus and actual disabled pending state remain. Skip has no disabled state in product markup; no invented disabled Skip. Sample/starts already closed by ce1 independent proof.",
+      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated. Current all4 Close/Skip hover and actual keyboard focus target PNG/JSON complete; all16 images independently reviewed.",
+      "missing": "Retry saving choice hover/focus remains. Stable disabled Retry visual is not applicable: dismiss sets saveError=false with saving=true (first-view-guidance.tsx67), removing the banner/button at121\u2013122 while pending. Skip has no disabled state. Observe retry settlement without inventing a pending button.",
       "minimumActions": "Reuse ready help for Close/Skip/Retry targets; inspect genuine pending preference state before considering any harness change. Reuse completed ce1 sample4/16 evidence; do not reset historical user.",
       "evidence": "*fixed-empty-sample; *fixed-arrival-help; *fixed-preference-error; first-view-guidance.css8\u201310"
     }
@@ -113,5 +113,5 @@
     "Native Mac input history Undo",
     "Owner protocol approval and real usability sessions (zero completed)"
   ],
-  "next": "After F02 integration, use one existing real draft and Organization/help context for targeted control observations; no repeats of already-proven server flows."
+  "next": "F03 independently supported; freeze evidence and hold for separate top-layer owner. Resume finite-remaining-targets after coordinated integration, preserving existing reviewed groups and explicit inherited scope decisions."
 }

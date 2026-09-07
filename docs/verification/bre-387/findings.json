@@ -70,6 +70,36 @@
         "guide": "../guidance-contrast/fix-guide.html",
         "boundary": "Both start helpers and sample text locally strengthened.32 final captures/72 text measurements; minimum14.620005. Actual red held-active true independently preserved in fix evidence. Remaining control/native/human gates separate."
       }
+    },
+    {
+      "id": "F03",
+      "status": "open; keyboard sequencing defect independently supported",
+      "recordedAt": "2026-09-07T13:54:30.300853+00:00",
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "summary": "Native preserved-constraints summary is omitted from modal focus list; Tab and Shift+Tab depart to modal boundaries rather than neighboring controls",
+      "reproduction": [
+        "Real scratch Search Project, Evidence Likely human, Save as View (unsaved prepared draft)",
+        "Focus preceding native View color input, press Tab: summary becomes active and focus-visible",
+        "Press Tab from summary: Cancel becomes active rather than next replacement control",
+        "Reach summary again through color then Tab; Shift+Tab goes to final Tune rather than preceding color input"
+      ],
+      "evidence": [
+        "lifetime3-advanced-summary-setup-commands.json",
+        "lifetime3-summary-tab-from-color-raw.json",
+        "lifetime3-summary-tab-next.txt",
+        "lifetime3-summary-tab-backward-raw.json",
+        "advanced-summary-focus-diagnostic.txt",
+        "screenshots/light-1024-controls-advanced-summary-open-hover.png"
+      ],
+      "source": [
+        "apps/web/src/top-layer.tsx:18",
+        "apps/web/src/top-layer.tsx:211",
+        "apps/web/src/organization-views.tsx:957"
+      ],
+      "reviewer": "agt_df05f0d72abe independent source/readback assessment; no separate browser",
+      "boundary": "No runtime edits. Actual summary reachability is proven; healthy departure order is not. Initial generic focus sequence failure preserved separately. Browser/server remained live.",
+      "requiredValidation": "Native summary in actual external draft: forward/backward neighbor order, open/collapsed Space and visible keyboard focus in both themes/sizes, modal boundary containment without regressions."
     }
   ]
 }

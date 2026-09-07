@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:48:41.182399+00:00",
+  "completedAt": "2026-09-07T13:49:03.612074+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-advanced-summary-setup-commands.json",
+  "raw": "lifetime3-advanced-summary-setup-raw.json",
+  "stderr": "lifetime3-advanced-summary-setup-stderr.txt",
+  "parsedRecords": 0
+}

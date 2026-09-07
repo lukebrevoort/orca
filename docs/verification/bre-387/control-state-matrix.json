@@ -1,5 +1,5 @@
 {
-  "status": "In progress: F01/F02 bounded fixes verified; current target reconciliation below; no blanket engineering or human acceptance",
+  "status": "Partial observed controls; F01/F02 resolved, F03 native summary departure order open. See finite-remaining-targets.json for remaining direct observations and inherited-scope mapping.",
   "source": "visual-observations.json",
   "rows": [
     {

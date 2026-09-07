@@ -10716,9 +10716,685 @@
         "providerRefreshNoop": false
       },
       "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:32:28.107Z",
+      "url": "http://127.0.0.1:5187/settings/reading",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Existing Appearance System radio selected for browser color-scheme emulation, setup-only",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands lifetime3-system-theme-setup-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/lifetime3-system-theme-setup.png",
+      "sha256": "ab53c4526d34e35495a0a729b8350e6d29236784eeedd972e19831633719816c",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:35:29.015Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; retry hover; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-return-retry-hover.png",
+      "sha256": "1643c9c47b6da674113df10bf7ed61f4a0bac4ffa6e2b9b2c15a41a072ebcd98",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:00.605Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; retry focus; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-return-recovered-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-return-retry-focus.png",
+      "sha256": "dbef0e47fc4ecc5c774756f5cbb674d7c62d54011bca6181d22f37e894f81492",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:02.229Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; return hover; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-return-recovered-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-return-return-hover.png",
+      "sha256": "c31b00e0ebfa3db394d4f9eb7f34d84068cf2e719b33fac1b52bb3ad6b449f2c",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:03.073Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; return focus; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-return-recovered-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-return-return-focus.png",
+      "sha256": "5f6b0cf1a36854210e774fc10cc634d54c1635732fd4f539cb358d42a7110b2e",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:41.722Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; retry hover; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-return-retry-hover.png",
+      "sha256": "807c1e0ebff2bfc74427be1af0e36d9fe3bf2392fa0a81c2515dc7c0a96e425f",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:47.736Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; retry focus; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-return-retry-focus.png",
+      "sha256": "17f2405d283b726fa71cf3c9bdf0759ebf9fc4c60d193735284840db05673bb0",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:50.871Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; return hover; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-return-return-hover.png",
+      "sha256": "018a12410a7491881aabbd2a2c9c53f34945b03a745a99a80097b22865e91682",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:37:52.666Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "One rejected external commit; return focus; Appearance System and media dark; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-return-return-focus.png",
+      "sha256": "c6fdeb3f38e0b425f07474dbc4fc7c4fd9a2e70530dc0658b2e9536c83e9b0b6",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:06.227Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; retry hover; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-return-retry-hover.png",
+      "sha256": "765cc7525db0bdad7482a7d25c22e8cbf8c3d4b100c57b7a8ca5f126be70c464",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:12.137Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; retry focus; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-return-retry-focus.png",
+      "sha256": "6c9139fa4377aec791ee1a3cc611a96b65174edbaa5a1777dc50247a6a3967af",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:14.109Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; return hover; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-return-return-hover.png",
+      "sha256": "e2431b6b2fcf9429e8c7a57b6116ddc8f72ac87adefd11630ba7aa07a7bb74bc",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:16.802Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; return focus; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-return-return-focus.png",
+      "sha256": "45c8ab49278b902e38ba80d786ac031c3f0de881fba04cb981279c67da693b8a",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:24.400Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; retry hover; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-return-retry-hover.png",
+      "sha256": "b3a8e276cefe6729e328fd9c51590b92aa37c16bcfd881ba4f9300afe13f2e58",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:30.599Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; retry focus; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-return-retry-focus.png",
+      "sha256": "459d1e97a8e5fab6d9c69287b4177b9bb5e6c7d253e99b8c47287f6665d1c73c",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:31.646Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; return hover; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-return-return-hover.png",
+      "sha256": "f32c1e71bf8eaf68f1c8136c526c6b6d0955a2cd6b40a0c4c5f8dd25fb17100c",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:38:33.517Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "One rejected external commit; return focus; Appearance System and media light; no retry/Return/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-return-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-return-return-focus.png",
+      "sha256": "03e8d99ba231d35340d85cdec9880294ac28a4da11f7ad741b5ce0ef94f8dbf3",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:45:36.064Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Ready real subject Project preview; correct hover; Appearance System and media dark; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-correct-trigger-correct-hover.png",
+      "sha256": "a240e96cea80993d5c1a1570d2c2d138613229fac600aaac2b9651491d010a4f",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:45:43.159Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Ready real subject Project preview; correct focus; Appearance System and media dark; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1024-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-controls-correct-trigger-correct-focus.png",
+      "sha256": "477f63de48d6f62d469164e6c5a6369e215fdcc2ccdf168f5002e60f86bac121",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:22.611Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Ready real subject Project preview; correct hover; Appearance System and media dark; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-correct-trigger-correct-hover.png",
+      "sha256": "0acf8e6c0d0bea29e217d7a0017b39a09c31d801f94927520a74075c26520dcc",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:24.672Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Ready real subject Project preview; correct focus; Appearance System and media dark; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands black-1440-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-controls-correct-trigger-correct-focus.png",
+      "sha256": "8627a98a186841ddbbca2a63bd3b2102cb9663ca1533bfdcc313b5474d114a8f",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:34.163Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Ready real subject Project preview; correct hover; Appearance System and media light; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-correct-trigger-correct-hover.png",
+      "sha256": "0de74d5b903518e86c0fb91af9b4146e2643d61c636fed26abf3d7ada8d27596",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:35.435Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "theme": "Light",
+      "fixtureScenario": "Ready real subject Project preview; correct focus; Appearance System and media light; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1440-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-controls-correct-trigger-correct-focus.png",
+      "sha256": "0db71b605c9d3b9610918c9afe7f1b8723a48d0779e03dc7a88c7029ce1da219",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:48.602Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Ready real subject Project preview; correct hover; Appearance System and media light; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-correct-trigger-correct-hover.png",
+      "sha256": "b9da930194aace8c75f56deb058cd32b33cad8f3336ab9bfaa156fe1136bd6c1",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:46:51.907Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Ready real subject Project preview; correct focus; Appearance System and media light; no correction/save activation",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-correct-trigger-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-correct-trigger-correct-focus.png",
+      "sha256": "f926f1f086d51ae58d46c74b3872394d493bb88be1164b2ec13678c83544e8a8",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
+    },
+    {
+      "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T13:49:58.238Z",
+      "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F",
+      "viewport": {
+        "height": 768,
+        "width": 1024
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real unsaved Search Project with Likely human evidence; native summary open hover; System/media light; no save",
+      "toolVersion": "agent-browser0.34.0",
+      "actions": [
+        "Sequential batch --bail; exact commands light-1024-controls-advanced-summary-commands.json"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-controls-advanced-summary-open-hover.png",
+      "sha256": "54f4a329f3b6dfa73fa5eb51e158d40a639fd1390fcb262a908ce46986ff9e20",
+      "assetReceipt": "f02-assets-reuse.json",
+      "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+      "harnessSha256": "366e31208565aee254e903374251b5a3270f996ce0a880da005a4cb85001b1d2",
+      "fixtureFlags": {
+        "providerRefreshNoop": false
+      },
+      "fixtureLifetime": 3
     }
   ],
-  "visualStatus": "Partial live evidence:20 state families have four-way captures; current13-family target reconciliation remains requirements-based. F01 and F02/sample independently fixed at ce1bc03 (F01 introduced44edbf2). Historical F02 failure is preserved. Remaining concrete controls, native Mac text Undo, final immutable integrity/CI and owner-approved real human sessions remain open.",
+  "visualStatus": "Partial live evidence; F01/F02 bounded fixes verified. F03 native summary keyboard departure order is open; remaining control targets, native Mac input Undo and human evidence gates remain explicit.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -11589,7 +12265,7 @@
     "viewId": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4",
     "scope": "Actual saved revision2 Maya-only work allowlist; five pages/110 identities, allowed future included,new sender excluded."
   },
-  "lifecycleEvidenceBoundary": "Live snapshots establish rendered before/after order and removal/rename readback. The live reorder capture does not independently record canonical API positions or reload order. Canonical reorder and unchanged mail/provider/placement/policy/notification tables are separately established by the exact harness production-results.json snapshots.",
+  "lifecycleEvidenceBoundary": "Initial lifetime lifecycle snapshots alone did not prove canonical reorder/reload or source-mail invariants. Later lifetime2-reorder-proof.json establishes before\u2192UI reorder\u2192canonical API\u2192reload order for exact IDs. Mail/provider/placement/policy/notification invariants remain separate route-harness evidence. Lifetime3 two-View setup and control captures do not claim new lifecycle durability.",
   "checkpointHostedCi": {
     "sha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
     "status": "SUCCESS independently verified by parent",

@@ -1,0 +1,75 @@
+[
+  [
+    "open",
+    "http://127.0.0.1:5187/"
+  ],
+  [
+    "wait",
+    "--text",
+    "Inbox"
+  ],
+  [
+    "press",
+    "Meta+k"
+  ],
+  [
+    "wait",
+    "input[aria-label=\"Search stored mail\"]"
+  ],
+  [
+    "fill",
+    "input[aria-label=\"Search stored mail\"]",
+    "Project"
+  ],
+  [
+    "press",
+    "Enter"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\".global-mail-save\")&&!document.querySelector(\".global-mail-save\").disabled"
+  ],
+  [
+    "click",
+    ".global-mail-save"
+  ],
+  [
+    "wait",
+    ".view-unsupported-clauses"
+  ],
+  [
+    "click",
+    ".view-unsupported-clauses li >button:first-of-type"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\".view-save\")&&!document.querySelector(\".view-save\").disabled"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/review/inspection\").then(r=>r.json()).then(v=>{window.__bre387ExternalBefore=v;return {controlObservation:{scenario:\"lifetime3-external-reject-before\",at:new Date().toISOString(),url:location.href,inspection:v}}})"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/review/fail-next-commit\",{method:\"POST\"}).then(r=>r.json())"
+  ],
+  [
+    "scrollintoview",
+    ".view-composer h3"
+  ],
+  [
+    "click",
+    ".view-save"
+  ],
+  [
+    "wait",
+    "--text",
+    "Return to source"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/review/inspection\").then(r=>r.json()).then(v=>({controlObservation:{scenario:\"lifetime3-external-reject-after\",at:new Date().toISOString(),url:location.href,inspection:v,unchangedCanonicalViews:JSON.stringify(v.views)===JSON.stringify(window.__bre387ExternalBefore.views),error:document.querySelector(\".view-composer-error\")?.textContent,returnLabel:[...document.querySelectorAll(\".view-preparation-state button\")].map(e=>e.textContent)}}))"
+  ]
+]

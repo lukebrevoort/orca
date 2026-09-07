@@ -1,0 +1,138 @@
+{
+  "at": "2026-09-07T13:53:28.215293+00:00",
+  "runtime": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "harness": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "purpose": "Finite consolidation after source inventory; missing observation is not a product defect. Reuse actual historical evidence before captures; no persistence replays.",
+  "requiredGroups": [
+    {
+      "family": "Search pagination",
+      "targets": [
+        "Load more matches hover / keyboard focus",
+        "Actual Loading more disabled while request pending"
+      ],
+      "variants": "all4",
+      "reuse": "Historical saved Load more25\u219250 is separate functional evidence, not Search styling."
+    },
+    {
+      "family": "Selection",
+      "targets": [
+        "Use these senders enabled hover / focus",
+        "Selected and unselected mail-row hover / keyboard focus"
+      ],
+      "variants": "all4",
+      "reuse": "F01 settled geometry and selection Space smoke; no overlap rerun."
+    },
+    {
+      "family": "Native preserved summary",
+      "targets": [
+        "Open/collapsed hover and keyboard focus"
+      ],
+      "variants": "all4; Light1024 open-hover already captured",
+      "finding": "Actual color\u2192Tab reaches summary; next Tab wraps to Cancel. top-layer focus selector omits summary. Needs reviewer assessment before acceptance."
+    },
+    {
+      "family": "Contextual preparation/preview recovery",
+      "targets": [
+        "Retry preview",
+        "Retry preparation"
+      ],
+      "variants": "all4 hover / keyboard focus",
+      "applicability": "Both disappear during their pending operation; do not manufacture stable disabled Retry. Return/Retry connection already reviewed16states."
+    },
+    {
+      "family": "Guidance recovery",
+      "targets": [
+        "Retry guidance",
+        "Retry saving choice"
+      ],
+      "variants": "all4 hover / keyboard focus",
+      "applicability": "Both are removed while pending. Skip has no disabled state. Return when mail arrives has same handler/treatment as Skip, but label/context must link existing empty sample captures."
+    },
+    {
+      "family": "Removal confirmation",
+      "targets": [
+        "Confirm remove",
+        "Cancel removal"
+      ],
+      "variants": "Locate historical default/context proof, then missing hover/focus all4",
+      "constraint": "Open confirmation only; do not remove fixture Views."
+    },
+    {
+      "family": "Saved route and pagination",
+      "targets": [
+        "Edit or rename View",
+        "Manage in Organization",
+        "Reload View error",
+        "Interactive saved Thread row",
+        "Saved Correct senders",
+        "Organization and saved Load more pending/end disabled"
+      ],
+      "variants": "Map exact existing records first; retain unobserved target cells",
+      "reuse": "Earlier saved route four-way state/axe/correction captures and pagination functionality; static draft rows are articles and have no interactive-row state."
+    }
+  ],
+  "mappingDecisionsRequired": [
+    {
+      "branch": "Inherited advanced editor controls",
+      "names": [
+        "Minimum Human Signal select",
+        "Facet/condition/value",
+        "Context type/context/relationship",
+        "Date inputs",
+        "Sender/domain inputs",
+        "More filters",
+        "Retry Contexts"
+      ],
+      "status": "Source applicability exists. Map against explicit M9 requirements and existing advanced-preservation tests; not N/A merely because absent from observed draft. No expanded capture group launched."
+    },
+    {
+      "branch": "Inherited Search chrome/filter branches",
+      "names": [
+        "Close Search",
+        "Search submit",
+        "Filters expanded/collapsed",
+        "Mailbox/Evidence/Account/Space native selects",
+        "Try again",
+        "Clear query/Clear filters"
+      ],
+      "status": "Map existing Search/unsupported/equivalence evidence and explicit release scope. No blanket whole Search pass; native select behavior not inferred from color input."
+    },
+    {
+      "branch": "Inherited authority contextual links",
+      "names": [
+        "Reconnect session",
+        "Ask a Workspace owner",
+        "Connect an account"
+      ],
+      "status": "Map to explicitly required authority failure scenarios or document inherited-outside-M9 rationale; not infer from Retry Organization."
+    }
+  ],
+  "closedSinceCheckpoint": [
+    "External Return/Retry16 images",
+    "Correct trigger8 images",
+    "No separate overflow Tune fallback: manual-filter copy + already-reviewed Tune/Cancel"
+  ],
+  "externalGates": [
+    "Actual native Mac text Undo",
+    "Owner protocol approval and real uncoached sessions; zero sessions"
+  ],
+  "cleanup": [
+    "Restore prior explicit Dark appearance via real UI",
+    "Close named browser and owned scratch server with receipts"
+  ],
+  "scopeDecision": {
+    "owner": "agt_08a81e67e32c",
+    "at": "2026-09-07T13:55:16.649401+00:00",
+    "applicableM9": [
+      "Search Close / submit / Filters",
+      "Used Account / Human evidence selects",
+      "Human Signal / preserved summary"
+    ],
+    "inheritedOutsideBoundedM9": [
+      "Unrelated advanced catalog editing",
+      "Mailbox / collection filter editing",
+      "Authority reconnect / ask owner / connect account modes"
+    ],
+    "boundary": "No PASS for deferred branches; existing compatibility/evaluator tests remain separately attributed. Return when mail arrives may reuse actual sample default plus identical Skip treatment, explicitly without separate target hover/focus."
+  }
+}
