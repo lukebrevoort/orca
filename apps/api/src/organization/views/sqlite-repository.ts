@@ -527,6 +527,16 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
           .run(workspaceId, viewId, request.name, request.description, request.color, temporaryPosition, JSON.stringify(request.definition), 1, timestamp, timestamp);
         const changed = new Set(current.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position).map((row) => row.id));
         rewritePositions(sqlite, workspaceId, plan.orderedViewIds, changed, timestamp);
+        // Retire the invitation in the same authorized/idempotent transaction.
+        // Only the human who owns this workspace may complete their preference.
+        const actor = authorization.executionContext.actor;
+        if (actor.type === "human" && actor.id === workspaceId) {
+          sqlite.query(`INSERT INTO user_preferences (user_id, first_view_guidance_completed_at, updated_at)
+            SELECT id, ?, ? FROM users WHERE id = ?
+            ON CONFLICT(user_id) DO UPDATE SET
+              first_view_guidance_completed_at = coalesce(user_preferences.first_view_guidance_completed_at, excluded.first_view_guidance_completed_at)`)
+            .run(now.toISOString(), timestamp, actor.id);
+        }
         return get(workspaceId, viewId)!;
       } });
     },

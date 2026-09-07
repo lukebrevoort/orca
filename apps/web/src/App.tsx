@@ -37,7 +37,8 @@ import { createSidebarNavigationProjection, desktopDestinationFromLocation, dest
 import { ThreadLaneControls } from "./organization-lanes";
 import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
-import { isMailSearchResultReader, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
+import { FirstViewGuidanceProvider, FirstViewInvitation, useViewGuidanceSelectionRequest } from "./first-view-guidance";
+import { isMailSearchResultReader, openMailSearch, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
 import {
   SurfaceHistory,
@@ -501,7 +502,7 @@ export function App() {
   }
 }
 
-const defaultAccountPreferences: UserPreferences = { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false };
+const defaultAccountPreferences: UserPreferences = { firstViewGuidanceCompletedAt: null, signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false };
 
 const demoAgentConnections: McpConnection[] = [{
   id: "mcp_connection_demo",
@@ -2994,6 +2995,7 @@ export function InboxApp({
   }
 
   return (
+    <FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || visibleMessages.length === 0) navigateDesktop("all"); }}>
     <div className="app-root">
       <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -3202,6 +3204,7 @@ export function InboxApp({
         </>
       ) : null}
     </div>
+    </FirstViewGuidanceProvider>
   );
 }
 
@@ -4507,6 +4510,9 @@ function InboxView({
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const guidanceSelectionRequest = useViewGuidanceSelectionRequest();
+  const handledGuidanceSelection = useRef(0);
+  const pendingGuidanceFocus = useRef(false);
   const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
   const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
   const selectedViewDismissRef = useRef<(() => void) | null>(null);
@@ -4517,6 +4523,20 @@ function InboxView({
   const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
   const useSelectedSendersRef = useRef<HTMLButtonElement>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
+  useEffect(() => {
+    if (!guidanceSelectionRequest || handledGuidanceSelection.current === guidanceSelectionRequest) return;
+    handledGuidanceSelection.current = guidanceSelectionRequest;
+    pendingGuidanceFocus.current = true;
+    setSelectionMode(true);
+  }, [guidanceSelectionRequest]);
+  useEffect(() => {
+    if (!pendingGuidanceFocus.current || status !== "ready" || !displayMessages.length) return;
+    const frame = window.requestAnimationFrame(() => {
+      pendingGuidanceFocus.current = false;
+      document.querySelector<HTMLButtonElement>(".inbox-view .selection-mode-toggle")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectionMode, status, displayMessages.length]);
   const visibleRowKeys = useMemo(() => new Set(displayMessages.map(messageIdentityKey)), [displayMessages]);
   const selectedVisibleRowCount = [...visibleRowKeys].filter((key) => selectedRows.has(key)).length;
   const selectedSenderCount = selectedTargets.size;
@@ -4716,6 +4736,7 @@ function InboxView({
           : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
+      {viewMode === "inbox" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>

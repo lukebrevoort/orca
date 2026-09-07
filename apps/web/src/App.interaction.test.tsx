@@ -635,6 +635,7 @@ describe("OAuth login availability and recovery", () => {
 });
 
 const loadedPreferences: UserPreferences = {
+  firstViewGuidanceCompletedAt: null,
   signature: "Warmly, Luke",
   composeFormat: "rich",
   replyBehavior: "reply_all",

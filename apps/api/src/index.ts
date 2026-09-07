@@ -1163,7 +1163,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     const { db, sqlite } = dbFactory();
     try {
       const preference = db.select().from(userPreferences).where(eq(userPreferences.userId, c.get("auth").userId)).get();
-      return jsonWithSchema(c, userPreferencesSchema, preference ?? { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
+      return jsonWithSchema(c, userPreferencesSchema, { signature: preference?.signature ?? "", composeFormat: preference?.composeFormat ?? "plain", replyBehavior: preference?.replyBehavior ?? "reply", notifyByDefault: preference?.notifyByDefault ?? false, firstViewGuidanceCompletedAt: preference?.firstViewGuidanceCompletedAt ?? null });
     } finally { sqlite.close(); }
   });
 
@@ -1173,9 +1173,13 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
       const input = c.req.valid("json");
       const userId = c.get("auth").userId;
       const current = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get();
-      const next = { signature: current?.signature ?? "", composeFormat: current?.composeFormat ?? "plain", replyBehavior: current?.replyBehavior ?? "reply", notifyByDefault: current?.notifyByDefault ?? false, ...input };
-      db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, updatedAt: now() } }).run();
-      return jsonWithSchema(c, userPreferencesSchema, next);
+      // Completion is monotonic. A stale full Settings payload cannot reset it,
+      // and the client timestamp is only an intent; the server owns the time.
+      const next = { signature: current?.signature ?? "", composeFormat: current?.composeFormat ?? "plain", replyBehavior: current?.replyBehavior ?? "reply", notifyByDefault: current?.notifyByDefault ?? false, ...input,
+        firstViewGuidanceCompletedAt: current?.firstViewGuidanceCompletedAt ?? (input.firstViewGuidanceCompletedAt ? now().toISOString() : null) };
+      db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, firstViewGuidanceCompletedAt: sql`coalesce(${userPreferences.firstViewGuidanceCompletedAt}, ${next.firstViewGuidanceCompletedAt})`, updatedAt: now() } }).run();
+      const saved = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get()!;
+      return jsonWithSchema(c, userPreferencesSchema, { ...next, firstViewGuidanceCompletedAt: saved.firstViewGuidanceCompletedAt });
     } finally { sqlite.close(); }
   });
 

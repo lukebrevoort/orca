@@ -70,10 +70,13 @@ export const userPreferencesSchema = z.object({
   composeFormat: z.enum(["plain", "rich"]),
   replyBehavior: z.enum(["reply", "reply_all"]),
   notifyByDefault: z.boolean(),
+  firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable().default(null),
 }).strict();
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 
-export const updateUserPreferencesSchema = userPreferencesSchema.partial().refine(
+export const updateUserPreferencesSchema = userPreferencesSchema.omit({ firstViewGuidanceCompletedAt: true }).partial().extend({
+  firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable().optional(),
+}).refine(
   (value) => Object.keys(value).length > 0,
   { message: "Expected at least one preference" },
 );
