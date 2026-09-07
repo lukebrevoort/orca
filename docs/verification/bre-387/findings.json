@@ -73,7 +73,7 @@
     },
     {
       "id": "F03",
-      "status": "open; keyboard sequencing defect independently supported",
+      "status": "fixed; independent bounded verification passed",
       "recordedAt": "2026-09-07T13:54:30.300853+00:00",
       "testedSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
       "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
@@ -99,7 +99,14 @@
       ],
       "reviewer": "agt_df05f0d72abe independent source/readback assessment; no separate browser",
       "boundary": "No runtime edits. Actual summary reachability is proven; healthy departure order is not. Initial generic focus sequence failure preserved separately. Browser/server remained live.",
-      "requiredValidation": "Native summary in actual external draft: forward/backward neighbor order, open/collapsed Space and visible keyboard focus in both themes/sizes, modal boundary containment without regressions."
+      "requiredValidation": "Native summary in actual external draft: forward/backward neighbor order, open/collapsed Space and visible keyboard focus in both themes/sizes, modal boundary containment without regressions.",
+      "resolution": {
+        "sha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+        "guide": "../summary-focus/fix-guide.html",
+        "buildReceipt": "../summary-focus/final-provenance.json",
+        "ci": "https://github.com/lukebrevoort/orca/actions/runs/34132680933",
+        "boundary": "Eight keyboard and eight hover cases plus bounded wrap/Escape; reuse without replay. Wider finite residuals remain."
+      }
     }
   ]
 }

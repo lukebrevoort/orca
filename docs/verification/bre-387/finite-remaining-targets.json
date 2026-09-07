@@ -1,6 +1,6 @@
 {
   "at": "2026-09-07T13:53:28.215293+00:00",
-  "runtime": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "runtime": "d0b05f8d20992e76276283c63c843119291b6bb6",
   "harness": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
   "purpose": "Finite consolidation after source inventory; missing observation is not a product defect. Reuse actual historical evidence before captures; no persistence replays.",
   "requiredGroups": [
@@ -134,5 +134,6 @@
       "Authority reconnect / ask owner / connect account modes"
     ],
     "boundary": "No PASS for deferred branches; existing compatibility/evaluator tests remain separately attributed. Return when mail arrives may reuse actual sample default plus identical Skip treatment, explicitly without separate target hover/focus."
-  }
+  },
+  "summaryResolution": "../summary-focus/fix-guide.html; independent bounded PASS; no repeated summary checks"
 }

@@ -11394,7 +11394,7 @@
       "fixtureLifetime": 3
     }
   ],
-  "visualStatus": "Partial live evidence; F01/F02 bounded fixes verified. F03 native summary keyboard departure order is open; remaining control targets, native Mac input Undo and human evidence gates remain explicit.",
+  "visualStatus": "Partial live evidence; F01/F02/F03 bounded fixes verified. Finite residual controls, actual native Mac input Undo and human evidence remain open.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -12394,5 +12394,12 @@
       "status": "closed; cleanup verified",
       "cleanup": "lifetime2-cleanup.json"
     }
-  ]
+  ],
+  "previousBrowserLifetimes": [],
+  "lifetime3Cleanup": "lifetime3-cleanup.json",
+  "nextRuntime": {
+    "sha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+    "assets": "f03-assets-reuse.json",
+    "state": "not started"
+  }
 }

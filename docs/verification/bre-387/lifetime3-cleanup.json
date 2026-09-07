@@ -1,0 +1,38 @@
+{
+  "at": "2026-09-07T13:56:51.835735+00:00",
+  "browserSession": "bre387-controls-7d021ab",
+  "browserCloseExec": 35924,
+  "browserExitCode": 0,
+  "browserReceipt": {
+    "success": true,
+    "data": {
+      "closed": true,
+      "lifecycle": {
+        "effectiveLaunch": {
+          "browserLaunched": false,
+          "engine": "chrome",
+          "launchHash": null
+        },
+        "launched": false,
+        "relaunchedBrowser": false,
+        "restartedBackground": false,
+        "restoreStatus": "not_configured",
+        "reused": false,
+        "saveStatus": "not_configured"
+      },
+      "restoreStatus": "not_configured",
+      "saveStatus": "not_configured"
+    },
+    "error": null
+  },
+  "serverExec": 87408,
+  "serverSignal": "SIGINT via owned handle",
+  "serverExitCode": 0,
+  "scratchDirectory": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-92M5t5",
+  "scratchExists": false,
+  "listenerProbeExitCode": 1,
+  "listeners": "",
+  "stderr": "",
+  "appearanceBoundary": "Temporary System/media setting was not restored to prior explicit Dark before coordinated F03 shutdown. Record as unfinished cleanup preference step; do not claim restoration. Synthetic browser session/scratch only.",
+  "artifactCheckpoint": "e1fbe61b6c9afdf6d891de3882c69cca41f679ca"
+}
