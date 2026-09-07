@@ -137,7 +137,7 @@
   },
   "summaryResolution": "../summary-focus/fix-guide.html; independent bounded PASS; no repeated summary checks",
   "originalPlanAt": "2026-09-07T13:53:28.215293+00:00",
-  "provenanceBoundary": "Current planned lifetime4 identity. Historical evidence retains original tested runtime/harness and timestamps; no retrospective relabeling.",
+  "provenanceBoundary": "Top-level runtime/harness and originalPlanAt describe the historical lifetime4 planning record. Execution overlays identify later actual lifetimes; historical captures are never relabeled.",
   "completedLifetime4": [
     "Selection24target states independently reviewed",
     "Retry preparation8target states independently reviewed; real recovery separately recorded",
@@ -145,7 +145,7 @@
     "Retry guidance8target states independently reviewed; real recovery recorded",
     "Retry savingchoice8target states independently reviewed; actual retry+completion timestamp recorded"
   ],
-  "currentGate": "Lifetime5 closed. Steady finite target groups independently reviewed; reviewed continuation-hold implementation and narrow runtime gates precede missing transient captures. Native/human acceptance remains open.",
+  "currentGate": "Browser retries stopped after authorized fresh startup terminal OS35 failure. Runtime controls passed and all owned processes cleaned. Eleven transient variants, native Mac Undo, real owner-approved human sessions remain open.",
   "nextExecution": {
     "runtime": "465be988438e12631a4e201f6706a6f8e0dfb035",
     "harness": "0128377589d072555e1c6131e280561347789f75",
@@ -171,5 +171,14 @@
     "Final immutable artifact/hash/link/CI review",
     "Actual native Mac input Undo and owner-approved human sessions"
   ],
-  "executionUpdatedAt": "2026-09-07T15:59:31.679982+00:00"
+  "executionUpdatedAt": "2026-09-07T15:59:31.679982+00:00",
+  "actualLifetime6": {
+    "harness": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+    "runtime": "465be988438e12631a4e201f6706a6f8e0dfb035",
+    "validation": "lifetime6-hold-validation.json",
+    "browserBoundary": "lifetime6-clean-startup-failure.json",
+    "newPendingFrames": 0,
+    "serverStatus": "closed; cleanup verified",
+    "cleanup": "lifetime6-cleanup.json"
+  }
 }

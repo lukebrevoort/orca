@@ -1,0 +1,16 @@
+{
+  "at": "2026-09-07T17:21:04.105048+00:00",
+  "session": "bre387-held-clean-d8a5289",
+  "startupExec": 24212,
+  "exitCode": 1,
+  "error": "Failed to read: Resource temporarily unavailable (os error35) after5retries",
+  "lastObservedDaemonPid": 76954,
+  "lastObservedChromePid": 77628,
+  "hostLoadObservation": "11:18 load74.97/69.62/67.38; no causal claim",
+  "serverPid": 62129,
+  "serverExec": 22534,
+  "browserRetries": "stopped per parent instruction",
+  "actualCommands": "lifetime6-actions.jsonl",
+  "pendingCaptures": 0,
+  "remainingVariants": 11
+}

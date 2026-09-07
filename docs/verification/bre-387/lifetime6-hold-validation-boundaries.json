@@ -1,0 +1,7 @@
+{
+  "validatorExec": 15098,
+  "exitCode": 0,
+  "concurrentArm": "Delayed-body concurrent-arm regression; no server-side barrier proves exact await interleaving. Static post-await guard supplies race-mechanism evidence.",
+  "timeout": "Actual configured240000ms held and unconsumed-arm timers both completed; no shortened clock substitution",
+  "scope": "Direct API abort only, not browser/proxy abort propagation; final server cleanup still pending"
+}

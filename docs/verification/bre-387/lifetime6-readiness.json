@@ -1,0 +1,17 @@
+{
+  "at": "2026-09-07T16:25:16.737155+00:00",
+  "health": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "body": "{\"ok\":true,\"service\":\"orca-api\"}"
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "body": "{\"ok\":true,\"service\":\"orca-api\"}"
+    }
+  ],
+  "servedReceipt": "lifetime6-served-build.json",
+  "browser": "not started; narrow runtime controls pending"
+}

@@ -1,0 +1,17 @@
+{
+  "at": "2026-09-07T17:15:56.003492+00:00",
+  "oldSession": "bre387-held-d8a5289",
+  "newSession": "bre387-held-clean-d8a5289",
+  "controlClear": "lifetime6-before-session-close-control.json",
+  "closeExec": 66339,
+  "closeExit": 0,
+  "closeReceipt": "lifetime6-first-session-close.json",
+  "pidReadbackExec": 91789,
+  "oldDaemon66714Absent": true,
+  "oldChrome74767Absent": true,
+  "serverExec": 22534,
+  "serverPid": 62129,
+  "runtimeUnchanged": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "harnessUnchanged": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+  "boundary": "One parent-authorized fresh pinned session, same database/assets/server; no fixture rewrite or tool upgrade"
+}

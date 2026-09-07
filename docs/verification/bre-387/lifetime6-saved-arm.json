@@ -1,0 +1,462 @@
+{
+  "at": "2026-09-07T16:50:38.054523+00:00",
+  "runtimeSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "harnessSha": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+  "context": "saved",
+  "initialPage": {
+    "status": 200,
+    "bodySha256": "7c43b16fe85d6f0b50b55516aa8102e6a5d1ee141fd8c3006d7b8869df011859",
+    "data": {
+      "viewId": "view_d642cf03-3a5e-4803-a419-77a034557e86",
+      "viewRevision": 2,
+      "accountIds": [
+        "work"
+      ],
+      "items": [
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-25",
+          "subject": "Project update 26",
+          "latestReceivedAt": "2026-09-06T11:59:35.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-26",
+          "subject": "Project update 27",
+          "latestReceivedAt": "2026-09-06T11:59:34.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-27",
+          "subject": "Project update 28",
+          "latestReceivedAt": "2026-09-06T11:59:33.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-28",
+          "subject": "Project update 29",
+          "latestReceivedAt": "2026-09-06T11:59:32.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-29",
+          "subject": "Project update 30",
+          "latestReceivedAt": "2026-09-06T11:59:31.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-30",
+          "subject": "Project update 31",
+          "latestReceivedAt": "2026-09-06T11:59:30.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-31",
+          "subject": "Project update 32",
+          "latestReceivedAt": "2026-09-06T11:59:29.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-32",
+          "subject": "Project update 33",
+          "latestReceivedAt": "2026-09-06T11:59:28.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-33",
+          "subject": "Project update 34",
+          "latestReceivedAt": "2026-09-06T11:59:27.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-34",
+          "subject": "Project update 35",
+          "latestReceivedAt": "2026-09-06T11:59:26.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-35",
+          "subject": "Project update 36",
+          "latestReceivedAt": "2026-09-06T11:59:25.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-36",
+          "subject": "Project update 37",
+          "latestReceivedAt": "2026-09-06T11:59:24.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-37",
+          "subject": "Project update 38",
+          "latestReceivedAt": "2026-09-06T11:59:23.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-38",
+          "subject": "Project update 39",
+          "latestReceivedAt": "2026-09-06T11:59:22.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-39",
+          "subject": "Project update 40",
+          "latestReceivedAt": "2026-09-06T11:59:21.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-40",
+          "subject": "Project update 41",
+          "latestReceivedAt": "2026-09-06T11:59:20.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-41",
+          "subject": "Project update 42",
+          "latestReceivedAt": "2026-09-06T11:59:19.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-42",
+          "subject": "Project update 43",
+          "latestReceivedAt": "2026-09-06T11:59:18.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-43",
+          "subject": "Project update 44",
+          "latestReceivedAt": "2026-09-06T11:59:17.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-44",
+          "subject": "Project update 45",
+          "latestReceivedAt": "2026-09-06T11:59:16.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-45",
+          "subject": "Project update 46",
+          "latestReceivedAt": "2026-09-06T11:59:15.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-46",
+          "subject": "Project update 47",
+          "latestReceivedAt": "2026-09-06T11:59:14.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-47",
+          "subject": "Project update 48",
+          "latestReceivedAt": "2026-09-06T11:59:13.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-48",
+          "subject": "Project update 49",
+          "latestReceivedAt": "2026-09-06T11:59:12.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        },
+        {
+          "accountId": "work",
+          "accountEmail": "work@example.com",
+          "provider": "gmail",
+          "threadId": "work-49",
+          "subject": "Project update 50",
+          "latestReceivedAt": "2026-09-06T11:59:11.000Z",
+          "messageCount": 1,
+          "readState": "unread",
+          "primaryLaneId": "61fee326-0c41-40c5-aec7-c279ed28314d",
+          "sender": {
+            "name": "Maya Chen",
+            "email": "maya@example.com"
+          },
+          "humanSignal": 8,
+          "humanClassification": "likely_human"
+        }
+      ],
+      "nextCursor": "eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImQzNTQ0MjdiMDdlYWY2MzdlYTg0YWZjN2JhYzI5NmM0NTgxMGQ5NzhmNTdjZmE3MGJiYzY0OTM1ZGE0M2NlMTEiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTUxMDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTQ5Iiwic2hvd24iOjUwfQ",
+      "limit": 25
+    }
+  },
+  "armed": {
+    "status": 200,
+    "bodySha256": "25c045d01212fc90063a8e6f53f64d61f482c304b79bfaee0fa34cc153a4ac07",
+    "data": {
+      "armed": true,
+      "timeoutMs": 240000,
+      "receipt": {
+        "id": "a89c4b2a-0b5a-482e-8c47-3a16cc60ed12",
+        "armedAt": "2026-09-07T16:50:38.040Z",
+        "context": "saved",
+        "requestIdentity": "/v1/organization/views/view_d642cf03-3a5e-4803-a419-77a034557e86/results?cursor=eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImQzNTQ0MjdiMDdlYWY2MzdlYTg0YWZjN2JhYzI5NmM0NTgxMGQ5NzhmNTdjZmE3MGJiYzY0OTM1ZGE0M2NlMTEiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTUxMDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTQ5Iiwic2hvd24iOjUwfQ&limit=25",
+        "method": "GET"
+      }
+    }
+  },
+  "requestPath": "/v1/organization/views/view_d642cf03-3a5e-4803-a419-77a034557e86/results?limit=25&cursor=eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImQzNTQ0MjdiMDdlYWY2MzdlYTg0YWZjN2JhYzI5NmM0NTgxMGQ5NzhmNTdjZmE3MGJiYzY0OTM1ZGE0M2NlMTEiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTUxMDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTQ5Iiwic2hvd24iOjUwfQ"
+}

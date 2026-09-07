@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-07T17:10:27.080069+00:00",
+  "setupExec": 64155,
+  "exitCode": 1,
+  "firstCommand": "open http://127.0.0.1:5187/settings/reading",
+  "error": "OS35 after5retries",
+  "parsedRecords": 0,
+  "daemonPid": 66714,
+  "formerChromePid": 72070,
+  "currentChromePid": 74767,
+  "currentChromeStartedLocal": "2026-09-07 11:07:24 America/Denver",
+  "boundary": "No hold armed during failed recovery; repeat browser process replacement, cause unknown. Await coordinated session recovery; no native patch/upgrade."
+}

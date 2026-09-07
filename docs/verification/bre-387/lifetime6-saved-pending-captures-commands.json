@@ -1,0 +1,116 @@
+[
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "set",
+    "viewport",
+    "1024",
+    "768"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");if(!e)return false;const r=e.getBoundingClientRect();return document.documentElement.dataset.theme===\"light\"&&e.matches(\":disabled\")&&e.textContent.includes(\"Loading\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"
+  ],
+  [
+    "eval",
+    "(async()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\"),r=e.getBoundingClientRect(),control=await(await fetch('/v1/review/pending-continuation')).json();if(!control.held||control.receipt.context!==\"saved\"||!control.receipt.responseBodySha256)throw Error('Held real response absent');return {controlObservation:{scenario:\"lifetime6-saved-light-1024-pending\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],text:e.textContent,disabled:e.matches(':disabled'),rect:r.toJSON(),hit:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),control,themeMechanism:'real System Appearance with media emulation'}}})()"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"light\",scenario:\"Real saved continuation response held unchanged, actual pending disabled control; explicit release follows\",filename:\"screenshots/lifetime6-saved-light-1024-pending.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/lifetime6-saved-light-1024-pending.png"
+  ],
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");if(!e)return false;const r=e.getBoundingClientRect();return document.documentElement.dataset.theme===\"light\"&&e.matches(\":disabled\")&&e.textContent.includes(\"Loading\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"
+  ],
+  [
+    "eval",
+    "(async()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\"),r=e.getBoundingClientRect(),control=await(await fetch('/v1/review/pending-continuation')).json();if(!control.held||control.receipt.context!==\"saved\"||!control.receipt.responseBodySha256)throw Error('Held real response absent');return {controlObservation:{scenario:\"lifetime6-saved-light-1440-pending\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],text:e.textContent,disabled:e.matches(':disabled'),rect:r.toJSON(),hit:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),control,themeMechanism:'real System Appearance with media emulation'}}})()"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"light\",scenario:\"Real saved continuation response held unchanged, actual pending disabled control; explicit release follows\",filename:\"screenshots/lifetime6-saved-light-1440-pending.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/lifetime6-saved-light-1440-pending.png"
+  ],
+  [
+    "set",
+    "media",
+    "dark"
+  ],
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\");if(!e)return false;const r=e.getBoundingClientRect();return document.documentElement.dataset.theme===\"dark\"&&e.matches(\":disabled\")&&e.textContent.includes(\"Loading\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"
+  ],
+  [
+    "eval",
+    "(async()=>{const e=document.querySelector(\".saved-view-results .view-continuation button\"),r=e.getBoundingClientRect(),control=await(await fetch('/v1/review/pending-continuation')).json();if(!control.held||control.receipt.context!==\"saved\"||!control.receipt.responseBodySha256)throw Error('Held real response absent');return {controlObservation:{scenario:\"lifetime6-saved-dark-1440-pending\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],text:e.textContent,disabled:e.matches(':disabled'),rect:r.toJSON(),hit:e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),control,themeMechanism:'real System Appearance with media emulation'}}})()"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"dark\",scenario:\"Real saved continuation response held unchanged, actual pending disabled control; explicit release follows\",filename:\"screenshots/lifetime6-saved-dark-1440-pending.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/lifetime6-saved-dark-1440-pending.png"
+  ]
+]

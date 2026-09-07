@@ -1,5 +1,5 @@
 {
-  "status": "reviewed implementation applied; runtime validation pending",
+  "status": "Runtime control validation passed; browser transport failures prevent11 pending visual variants",
   "scope": "Extend existing disposable harness hold; no product change or rebuild",
   "arm": {
     "endpoint": "POST /v1/review/hold-next-continuation",
@@ -36,5 +36,8 @@
   "reviewedHarnessSha256": "3a2f30965dcdb7effc51983ad656708bbadc3d467f8e4e3a38cd9b6b630aeed0",
   "previousEvidenceCheckpoint": "f054bad912c708c617d6a32112965155dd4c7d68",
   "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
-  "assetReceipt": "f04-assets-reuse.json"
+  "assetReceipt": "f04-assets-reuse.json",
+  "runtimeValidation": "lifetime6-hold-validation.json",
+  "runtimeBoundaries": "lifetime6-hold-validation-boundaries.json",
+  "browserFailure": "lifetime6-clean-startup-failure.json"
 }

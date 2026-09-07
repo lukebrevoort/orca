@@ -1,0 +1,22 @@
+{
+  "at": "2026-09-07T16:58:16.384565+00:00",
+  "captureExec": 8013,
+  "captureExit": 1,
+  "control": {
+    "armed": false,
+    "held": false,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "a89c4b2a-0b5a-482e-8c47-3a16cc60ed12",
+      "armedAt": "2026-09-07T16:50:38.040Z",
+      "context": "saved",
+      "requestIdentity": "/v1/organization/views/view_d642cf03-3a5e-4803-a419-77a034557e86/results?cursor=eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImQzNTQ0MjdiMDdlYWY2MzdlYTg0YWZjN2JhYzI5NmM0NTgxMGQ5NzhmNTdjZmE3MGJiYzY0OTM1ZGE0M2NlMTEiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTUxMDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTQ5Iiwic2hvd24iOjUwfQ&limit=25",
+      "method": "GET",
+      "heldAt": "2026-09-07T16:52:28.618Z",
+      "responseStatus": 200,
+      "responseBodySha256": "283864a1ecdba615e73b05e64bc0e92406c32b2fbc0d66379f658dacbc5913a3",
+      "releasedAt": "2026-09-07T16:54:32.792Z",
+      "releaseReason": "abort"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:42:06.913882+00:00",
+  "completedAt": "2026-09-07T16:43:12.648198+00:00",
+  "exitCode": 0,
+  "commands": "lifetime6-saved-setup-commands.json",
+  "raw": "lifetime6-saved-setup-raw.json",
+  "stderr": "lifetime6-saved-setup-stderr.txt",
+  "parsedRecords": 1
+}

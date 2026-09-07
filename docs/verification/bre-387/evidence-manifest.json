@@ -16724,7 +16724,7 @@
       "fixtureLifetime": 5
     }
   ],
-  "visualStatus": "Partial live engineering evidence: F01\u2013F04 bounded fixes verified; finite steady control observations reviewed. Missing saved3/Organization4/Search4 actual pending visual variants require reviewed continuation hold. Native Mac text Undo and owner-approved real human sessions remain open.",
+  "visualStatus": "Partial engineering evidence. F01\u2013F04 bounded fixes and steady finite control observations verified. Eleven transient visual variants remain unobserved after terminal browser OS35 failures. Native Mac input Undo and owner-approved human sessions remain open; no release acceptance.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -16855,8 +16855,8 @@
   },
   "pr": "https://github.com/lukebrevoort/orca/pull/186",
   "finalHeadHostedCi": {
-    "status": "pending additive lifetime5 artifact freeze; prior012 exact-head checks passed",
-    "boundary": "No runtime or harness change in this checkpoint; its exact SHA/checks recorded externally after commit."
+    "status": "pending additive artifact checkpoint push; exact d8 hosted checks succeeded",
+    "boundary": "No product/harness change in this additive checkpoint. Final SHA/checks recorded externally."
   },
   "builtReadiness": "built-readiness.json",
   "priorHostedCi": {
@@ -17755,8 +17755,19 @@
   ],
   "lifetime3Cleanup": "lifetime3-cleanup.json",
   "nextRuntime": {
-    "sha": "465be988438e12631a4e201f6706a6f8e0dfb035",
-    "assets": "f04-assets-reuse.json",
-    "state": "started as lifetime5; see currentBrowserLifetime"
-  }
+    "lifetime": 6,
+    "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+    "harnessCheckoutSha": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+    "status": "closed; runtime controls passed; two browser transport failures and authorized clean startup failure; zero new pending frames",
+    "serverExec": 22534,
+    "serverPid": 62129,
+    "readiness": "lifetime6-readiness.json",
+    "servedReceipt": "lifetime6-served-build.json",
+    "validation": "lifetime6-hold-validation.json",
+    "browserSession": "bre387-held-d8a5289",
+    "browserBoundary": "lifetime6-browser-boundary.json",
+    "secondBrowserBoundary": "lifetime6-second-browser-boundary.json",
+    "cleanup": "lifetime6-cleanup.json"
+  },
+  "environmentLimitation": "browser-execution-limitation.html"
 }

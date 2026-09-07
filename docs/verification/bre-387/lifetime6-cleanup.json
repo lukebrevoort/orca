@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-07T17:29:12.272851+00:00",
+  "browserSession": "bre387-held-clean-d8a5289",
+  "browserCloseExec": 51605,
+  "browserExitCode": 0,
+  "browserReceipt": "lifetime6-final-browser-close.json",
+  "controlsClearExec": 20787,
+  "controlsClearExitCode": 0,
+  "controlsClear": "lifetime6-final-controls-clear.json",
+  "serverExec": 22534,
+  "serverPid": 62129,
+  "serverExitCode": 0,
+  "signal": "SIGINT through owned persistent handle",
+  "scratch": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-ZM01hf",
+  "scratchExists": false,
+  "listeners": "",
+  "listenerExit": 1,
+  "ownedProcessReadback": "  PID COMM\n",
+  "ownedProcessExit": 1,
+  "appearanceBoundary": "First session set System through real UI; failed document lifetimes and final startup did not permit final preference readback. Fresh owned session closed, ending its emulation. Lifetime5 original System restoration is separately recorded."
+}

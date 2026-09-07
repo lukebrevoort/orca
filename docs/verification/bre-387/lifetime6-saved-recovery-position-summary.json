@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T17:03:13.119165+00:00",
+  "completedAt": "2026-09-07T17:05:54.753409+00:00",
+  "exitCode": 1,
+  "commands": "lifetime6-saved-recovery-position-commands.json",
+  "raw": "lifetime6-saved-recovery-position-raw.json",
+  "stderr": "lifetime6-saved-recovery-position-stderr.txt",
+  "parsedRecords": 0
+}

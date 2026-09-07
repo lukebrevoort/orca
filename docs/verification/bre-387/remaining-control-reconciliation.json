@@ -31,7 +31,7 @@
     {
       "family": "Authoring fields",
       "controls": "Name, description, subject, native color input",
-      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient). Current name hover and keyboard-focus frame, actual native color-input keyboard-focus frame all4; no select control exists. Current all4 exact name/description/color/subject hover and description keyboard focus images+target state/hit checks; no values changed. Two isolated Description hover-only replacements Black1440/Light1024 independently reviewed; originals combined focus retained and excluded from isolated-hover proof. Lifetime5 Minimum Human Signal preserved-classification native select face8 independently reviewed, no predicate edits/save or option-popup claim.",
+      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient). Current name hover and keyboard-focus frame, actual native color-input keyboard-focus frame all4; no select control exists in that prior identity/subject-only draft. Current all4 exact name/description/color/subject hover and description keyboard focus images+target state/hit checks; no values changed. Two isolated Description hover-only replacements Black1440/Light1024 independently reviewed; originals combined focus retained and excluded from isolated-hover proof. Lifetime5 Minimum Human Signal preserved-classification native select face8 independently reviewed, no predicate edits/save or option-popup claim.",
       "missing": "All remaining actual disabled-fieldset semantics and disabled namehover independently reviewed in controls-paused group. No target styling omission identified; native picker behavior not claimed.",
       "minimumActions": "Read actual :disabled/computed fields in existing pending/authority fixture; do not infer disabled from child.disabled alone.",
       "evidence": "*fixed-loading; *form-error; organization-views.css10\u201311,38"
@@ -113,5 +113,5 @@
     "Native Mac input history Undo",
     "Owner protocol approval and real usability sessions (zero completed)"
   ],
-  "next": "Lifetime5 closed; apply reviewed exact-query continuation hold after evidence checkpoint, validate runtime controls, capture only missing saved3/Organization4/Search4 pending frames. Final native/human gates remain."
+  "next": "Closed lifetime6 with browser transport limitation. Do not repeat completed steady states; remaining11 transient visuals need a working browser execution environment. Native Mac Undo and owner-approved human sessions remain separate."
 }
