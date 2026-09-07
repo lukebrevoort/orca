@@ -5,7 +5,7 @@ import "./first-view-guidance.css";
 
 type ReadState = { status: "loading" | "ready" | "error"; completedAt: string | null; hasViews: boolean; hasMail: boolean };
 type Guidance = ReadState & {
-  hidden: boolean; saving: boolean; saveError: boolean; selectionRequest: number;
+  hidden: boolean; saving: boolean; saveError: boolean; selectionRequest: number; selectionDestination: "inbox" | "all" | null;
   consumeSelection: (request: number) => void; dismiss: () => Promise<void>; retry: () => void; start: (kind: "search" | "selection") => void;
 };
 const GuidanceContext = createContext<Guidance | null>(null);
@@ -19,13 +19,14 @@ async function read(url: string, signal: AbortSignal, init?: RequestInit): Promi
   return response.json();
 }
 
-export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch, onSelect }: { children: ReactNode; demoMode?: boolean; onSearch: () => void; onSelect: () => void }) {
+export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch, onSelect }: { children: ReactNode; demoMode?: boolean; onSearch: () => void; onSelect: () => "inbox" | "all" | void }) {
   const [state, setState] = useState<ReadState>(initial);
   const [refresh, setRefresh] = useState(0);
   const [hidden, setHidden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [selectionRequest, setSelectionRequest] = useState(0);
+  const [selectionDestination, setSelectionDestination] = useState<"inbox" | "all" | null>(null);
   const selectionCounter = useRef(0);
   const consumeSelection = useCallback((request: number) => setSelectionRequest(current => current === request ? 0 : current), []);
   const generation = useRef(0);
@@ -79,15 +80,15 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     startFrame.current = window.requestAnimationFrame(() => {
       startFrame.current = null;
       if (kind === "search") onSearch();
-      else { setSelectionRequest(++selectionCounter.current); onSelect(); }
+      else { const destination = onSelect(); setSelectionDestination(destination ?? null); setSelectionRequest(++selectionCounter.current); }
     });
   }
-  return <GuidanceContext.Provider value={{ ...state, hidden, saving, saveError, selectionRequest, consumeSelection, dismiss, retry: () => setRefresh(value => value + 1), start }}>{children}</GuidanceContext.Provider>;
+  return <GuidanceContext.Provider value={{ ...state, hidden, saving, saveError, selectionRequest, selectionDestination, consumeSelection, dismiss, retry: () => { generation.current++; setState(value => ({ ...value, status: "loading" })); setRefresh(value => value + 1); }, start }}>{children}</GuidanceContext.Provider>;
 }
 
-export function useViewGuidanceSelectionRequest() {
+export function useViewGuidanceSelectionRequest(destination?: string) {
   const guidance = useContext(GuidanceContext);
-  const request = guidance?.selectionRequest ?? 0;
+  const request = !guidance?.selectionDestination || destination === guidance.selectionDestination ? guidance?.selectionRequest ?? 0 : 0;
   const consume = guidance?.consumeSelection;
   useEffect(() => { if (request) consume?.(request); }, [request, consume]);
   return request;
@@ -98,7 +99,7 @@ function GuidanceContent({ onLeave }: { onLeave?: () => void }) {
   const titleId = useId();
   const skip = () => { void guidance.dismiss(); onLeave?.(); };
   if (guidance.status !== "ready") return <section className="first-view-guidance" aria-busy={guidance.status === "loading"}>
-    <h2>Getting started with Views</h2>
+    <div className="first-view-guidance-copy"><span className="first-view-eyebrow">Your first live View</span><h2 id={titleId} data-dialog-initial-focus tabIndex={-1}>Keep useful mail together</h2></div>
     {guidance.status === "loading" ? <p role="status">Checking your saved Views and mail…</p> : <><p role="alert">Could not check your mail and saved Views. Your mail and preferences are unchanged.</p><button type="button" onClick={guidance.retry}>Retry guidance</button></>}
   </section>;
   return <section className="first-view-guidance" aria-labelledby={titleId}>
@@ -125,5 +126,5 @@ export function ViewGettingStarted() {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   if (!guidance) return null;
-  return <><button className="view-action" ref={trigger} type="button" onClick={() => setOpen(true)}>Getting started</button>{open ? <TopLayer ariaLabel="Getting started with Views" className="first-view-help" layerClassName="first-view-help-layer" backdropClassName="first-view-help-backdrop" returnFocusRef={trigger} onClose={() => { void guidance.dismiss(); setOpen(false); }}><button className="first-view-help-close" type="button" aria-label="Close Getting started" onClick={() => { void guidance.dismiss(); setOpen(false); }}>×</button><GuidanceContent onLeave={() => setOpen(false)}/></TopLayer> : null}</>;
+  return <><button className="view-action" ref={trigger} type="button" onClick={() => { guidance.retry(); setOpen(true); }}>Getting started</button>{open ? <TopLayer ariaLabel="Getting started with Views" className="first-view-help" layerClassName="first-view-help-layer" backdropClassName="first-view-help-backdrop" returnFocusRef={trigger} onClose={() => { void guidance.dismiss(); setOpen(false); }}><button className="first-view-help-close" type="button" aria-label="Close Getting started" onClick={() => { void guidance.dismiss(); setOpen(false); }}>×</button><GuidanceContent onLeave={() => setOpen(false)}/></TopLayer> : null}</>;
 }

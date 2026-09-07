@@ -101,6 +101,8 @@ test("no invitation flashes while the canonical View list is still pending", asy
   expect(browser.document.body.textContent).not.toContain("Keep useful mail together");
   expect(writes).toHaveLength(0);
   await click("Getting started");
+  expect(browser.document.body.textContent).toContain("Checking your saved Views and mail");
+  await act(async () => { resolveList(Response.json({ workspaceId: "owner", workspaceRevision: 1, items: organizationViewsFixture })); await new Promise(resolve => setTimeout(resolve, 20)); });
   expect(browser.document.body.textContent).toContain("Keep useful mail together");
 });
 
@@ -113,4 +115,12 @@ test("a selected-mail invitation is consumed once instead of reselecting after l
   expect(starts).toBe(1);
   await click("Switch destination"); await click("Switch destination");
   expect(starts).toBe(1);
+});
+
+test("manual reopen refreshes empty mail readiness after real mail arrives", async () => {
+  empty = true; await render(); await click("Skip for now");
+  empty = false; await click("Getting started");
+  expect(button("Search mail")).toBeDefined();
+  expect(browser.document.querySelector('[data-provenance="tutorial"]')).toBeNull();
+  expect(writes).toHaveLength(1);
 });

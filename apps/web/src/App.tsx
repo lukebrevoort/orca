@@ -2995,7 +2995,7 @@ export function InboxApp({
   }
 
   return (
-    <FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || visibleMessages.length === 0) navigateDesktop("all"); }}>
+    <FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -4510,7 +4510,7 @@ function InboxView({
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
-  const guidanceSelectionRequest = useViewGuidanceSelectionRequest();
+  const guidanceSelectionRequest = useViewGuidanceSelectionRequest(viewMode);
   const handledGuidanceSelection = useRef(0);
   const pendingGuidanceFocus = useRef(false);
   const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
@@ -4523,20 +4523,6 @@ function InboxView({
   const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
   const useSelectedSendersRef = useRef<HTMLButtonElement>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
-  useEffect(() => {
-    if (!guidanceSelectionRequest || handledGuidanceSelection.current === guidanceSelectionRequest) return;
-    handledGuidanceSelection.current = guidanceSelectionRequest;
-    pendingGuidanceFocus.current = true;
-    setSelectionMode(true);
-  }, [guidanceSelectionRequest]);
-  useEffect(() => {
-    if (!pendingGuidanceFocus.current || status !== "ready" || !displayMessages.length) return;
-    const frame = window.requestAnimationFrame(() => {
-      pendingGuidanceFocus.current = false;
-      document.querySelector<HTMLButtonElement>(".inbox-view .selection-mode-toggle")?.focus();
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectionMode, status, displayMessages.length]);
   const visibleRowKeys = useMemo(() => new Set(displayMessages.map(messageIdentityKey)), [displayMessages]);
   const selectedVisibleRowCount = [...visibleRowKeys].filter((key) => selectedRows.has(key)).length;
   const selectedSenderCount = selectedTargets.size;
@@ -4608,6 +4594,21 @@ function InboxView({
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
   }, [classificationView, personFilter, viewMode]);
+
+  useEffect(() => {
+    if (!guidanceSelectionRequest || handledGuidanceSelection.current === guidanceSelectionRequest) return;
+    handledGuidanceSelection.current = guidanceSelectionRequest;
+    pendingGuidanceFocus.current = true;
+    setSelectionMode(true);
+  }, [guidanceSelectionRequest]);
+  useEffect(() => {
+    if (!pendingGuidanceFocus.current || status !== "ready" || !displayMessages.length) return;
+    const frame = window.requestAnimationFrame(() => {
+      pendingGuidanceFocus.current = false;
+      document.querySelector<HTMLButtonElement>(".inbox-view .selection-mode-toggle")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectionMode, status, displayMessages.length]);
 
   function openPinBuilder() {
     setPinFilterMailbox(canPinCurrentView ? viewMode as PinMailbox : "inbox");
@@ -4736,7 +4737,7 @@ function InboxView({
           : `${displayMessages.length} ${displayMessages.length === 1 ? "message" : "messages"} in ${inboxTitle}.`;
   return (
     <div className={`inbox-view inbox-view-${viewMode}${isCollectionView ? " inbox-view-collection" : ""}`}>
-      {viewMode === "inbox" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
+      {viewMode === "inbox" && status === "ready" && !classificationError && inboxFilter === "all" && classificationView === "all" && !isCollectionView && activePin?.kind !== "filter" && !searchQuery && !personFilter && !selectionMode ? <FirstViewInvitation/> : null}
       <header className="pane-header">
         <div>
           <p className="stream-date">{viewMode === "collection" ? inboxEyebrow : viewMode === "later" ? "Messages waiting for a better moment" : dateLabel}</p>
