@@ -1,0 +1,51 @@
+{
+  "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+  "timestamp": "2026-09-07T02:57:09.463764+00:00",
+  "category": "agent manual engineering observation; not human usability",
+  "glyph": {
+    "rawAxeIncompleteRetained": true,
+    "assessment": "Decorative aria-hidden search glyph; adjacent input has explicit aria-label Search mail. Measured glyph colors exceed 4.5:1 even treating it as text.",
+    "Light": {
+      "foreground": [
+        81,
+        100,
+        94
+      ],
+      "background": [
+        255,
+        255,
+        255
+      ],
+      "ratio": 6.3
+    },
+    "Orca Black": {
+      "foreground": [
+        177,
+        177,
+        171
+      ],
+      "background": [
+        13,
+        13,
+        13
+      ],
+      "ratio": 9.02
+    },
+    "sources": [
+      "manual-light-dom.json",
+      "manual-black-dom.json"
+    ]
+  },
+  "pointerClipping": "In both 1024 samples, maya and sender0..3 centers hit their inputs. sender4..6 are below the census overflow:auto rectangle (y406,h260); initial geometry probe did not account for ancestor clipping. Those misses are not evidence that a visible checkbox is obstructed. Scrolled candidate interaction still requires separate observation.",
+  "limits": "No blanket accessibility or full-state approval. Remaining keyboard/loading/error/zero/unsupported combinations stay pending until captured.",
+  "correctionIncompleteOpen": {
+    "1024": [
+      ".desktop-health partially obscured"
+    ],
+    "1440": [
+      "label:nth-child(8) > span partially obscured"
+    ],
+    "status": "pending direct target/background review; glyph assessment does not resolve these nodes"
+  },
+  "scrolledCandidateInteraction": "Subsequent semantic checkbox clicks reached sender4,5,6 and final snapshot verified all eight unchecked. Preview disabled. Space on focused Maya unchecked it."
+}

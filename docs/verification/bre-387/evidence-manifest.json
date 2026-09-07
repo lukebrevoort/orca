@@ -1,0 +1,911 @@
+{
+  "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+  "captures": [
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:12:13.477521+00:00",
+      "url": "http://127.0.0.1:5187/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Fresh scratch Inbox; provider credentials intentionally absent",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Authenticated scratch login",
+        "Set viewport 1440x900",
+        "Observed null guidance preference and zero Views",
+        "Observed provider refresh error suppressing automatic invitation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-inbox-sync-error.png",
+      "sha256": "cbb8eddb208c3cc2cad2c9bf95ee927cd247c533692deb51e8dc2634e6f446b0",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:14:43.010004+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "First-visit Organization Views invitation with real stored mail; no Views saved",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Organization then Views",
+        "Focus Getting started then Tab to Search mail",
+        "Hover Use selected mail",
+        "Observe disabled Edit definition and Remove View"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-onboarding.png",
+      "sha256": "cda5203ef5982b591b0d853f08d780fd0b15c036edc87ec1a5768772b227fedb",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:15:35.993781+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "First-visit Organization Views invitation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Switch to Orca Black using theme control",
+        "Tab from Getting started to Search mail",
+        "Hover Use selected mail",
+        "Observe disabled lifecycle controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-onboarding.png",
+      "sha256": "ccd682070304e24b73ce649f96d525932ba29f3b71a6f2adc521228c1c7cff88",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:15:38.664757+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Narrow first-visit Organization Views invitation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Resize to 1024x768",
+        "Retain focused Search mail and hovered Use selected mail",
+        "Inspect vertical wrapping"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-onboarding.png",
+      "sha256": "dd166f8c3a79bcb776b8b398d2561a1ffb9a7315e3f2f72a92a4f3bce6a7a157",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:16:26.730401+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Narrow first-visit Organization Views invitation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Switch to Light using theme control",
+        "Keyboard Tab to Use selected mail",
+        "Inspect stacked starts and readable focus ring"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-onboarding.png",
+      "sha256": "342cce3dbdd8ae7ac4f057b800622bec72d0e293d7cba9dafe40b5e9aa026c2c",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:17:46.446605+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Manual Getting started dialog",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Tab from initial dialog heading",
+        "Inspect named close and start controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-help.png",
+      "sha256": "4681ec8a28019ca03c86bd595c01017dac828419ca91d5755d4fae82746e5196",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:29:16.688495+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real general Search handoff retains unsupported clause",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Fill Search Project",
+        "Save as View",
+        "Inspect disabled Save and explicit replacement"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-unsupported.png",
+      "sha256": "a8ceddc387564aa16220e1024f343453c629acc7e2c4b53279ecb0ffb3359f65",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:31:13.291616+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Correction unavailable for multi-account subject scope",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Replace subject clause",
+        "Correct Project correction 0",
+        "Inspect account scope explanation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-multi-account-correction.png",
+      "sha256": "9f3abdf78154c4d3b712985468bb1bb868e97ab46a99119310369c18991f81db",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:34:18.129760+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Two-account personal OR work subject draft before deselecting personal",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Add Account filter",
+        "Choose work",
+        "Observed settled scope personal OR work; both chips selected",
+        "Not single-account correction evidence"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-account-preview.png",
+      "sha256": "7201655d203b642fad516223c89091596d7d41b6541749a09e2de0e3955f82dd",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:44:00.246213+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Complete eight-address work-only correction census",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Deselect personal explicitly",
+        "Open correction for census-0",
+        "Verify eight addresses including beyond preview",
+        "Scroll correction into view"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-correction-census.png",
+      "sha256": "0f0af85f6a47fb65b950e7d39589d93a50c76db3d6b5b5021631ebcb700d0dfd",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:45:21.211625+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Positive allowlist removes only explicitly unchecked sender0",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Uncheck sender0",
+        "Preview these senders",
+        "Observe exact seven-address allowlist and updated preview"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-corrected-preview.png",
+      "sha256": "5c97b3f0137173043dde85b5333c4589ec1fc874c0d0200559348c664d187423",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:46:44.988982+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Settled canonical saved View following observed Opening View transition; screenshot is settled results",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save Project review evidence",
+        "Observe Opening View state",
+        "Capture current frame after save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-saved-opening.png",
+      "sha256": "a0dc1b121b10c48b5f255ef8ecae7a7af52cb11729b1c2d2435a7989bb381917",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:50:11.582477+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved View after reload",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save actual View",
+        "Reload exact returned ID",
+        "Inspect current results and lifecycle controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-saved.png",
+      "sha256": "a0dc1b121b10c48b5f255ef8ecae7a7af52cb11729b1c2d2435a7989bb381917",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:50:40.446111+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Real saved View after reload",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save actual View",
+        "Reload exact returned ID",
+        "Inspect current results and lifecycle controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-saved.png",
+      "sha256": "71abd3230b99f1bd7952afc97539709d1057a0af35cf1e79b25c6d16026bd9c2",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:51:22.373441+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved View after reload",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save actual View",
+        "Reload exact returned ID",
+        "Inspect current results and lifecycle controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-saved.png",
+      "sha256": "ff234be79c562b46e00fab9f2c1267fe84e3147356034d0c3d2110017b159502",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:51:59.881105+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Real saved View after reload",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save actual View",
+        "Reload exact returned ID",
+        "Inspect current results and lifecycle controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-saved.png",
+      "sha256": "d1c980359eb805d1e1013f2ef8ae9c879482d1906ea6bfb3c86cc0e8a70da22d",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:53:27.135442+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved work-only View correction with complete eight-address census",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open saved correction",
+        "Inspect all selected labels",
+        "Scroll bounded list"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-saved-correction.png",
+      "sha256": "7c4db5bd07a3e46743dd1b2f33dc4e52d745b54a59d68696f1f9410889fbd30b",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:53:51.548680+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Saved work-only View correction with complete eight-address census",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open saved correction",
+        "Inspect all selected labels",
+        "Scroll bounded list"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-saved-correction.png",
+      "sha256": "dc8a8089aca05101cfb0ad3fdd9ecc7352c649228b9fefe82bbe7188af57f650",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:54:32.164679+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved work-only View correction with complete eight-address census",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open saved correction",
+        "Inspect all selected labels",
+        "Scroll bounded list"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-saved-correction.png",
+      "sha256": "f1eb731c36a3beb889ff52f8740fd030c69738decc37a2e2f3e4294feebac063",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:55:07.053580+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Saved work-only View correction with complete eight-address census",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open saved correction",
+        "Inspect all selected labels",
+        "Scroll bounded list"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-saved-correction.png",
+      "sha256": "cf52d3aad5b34d3343f55584e6e281563c420bed506bd54550c3719ef7896097",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:57:28.277876+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "All correction candidates unchecked; preview disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Space unchecks focused Maya",
+        "Uncheck sender0 through sender6 including scrolled candidates",
+        "Verify all eight unchecked and Preview disabled"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-empty-correction.png",
+      "sha256": "b828ba330ab6b3149731d434d151808174f47adf23972fe279f794a967e8cf96",
+      "assetReceipt": "built-readiness.json"
+    },
+    {
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T02:59:06.836758+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Persisted revision2 Maya allowlist after future insertion and reload",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Save corrected Maya-only allowlist",
+        "Insert future allowed and new sender",
+        "Verify all authenticated result pages",
+        "Reload saved ID"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-persisted-allowlist.png",
+      "sha256": "4e2feb135d2cd1ccb621c7d6fc2cd2dbb181b70a2720bd7abe154a33e2fc7c5d",
+      "assetReceipt": "built-readiness.json"
+    }
+  ],
+  "visualStatus": "pending: one named headless attempt produced no page within 55 seconds; zero screenshots and no axe/manual visual pass",
+  "humanStatus": "pending owner approval; zero sessions",
+  "requiredCaptureFields": [
+    "testedSha",
+    "baseSha",
+    "timestamp",
+    "url",
+    "viewport",
+    "theme",
+    "fixtureScenario",
+    "toolVersion",
+    "actions",
+    "category",
+    "filename",
+    "sha256"
+  ],
+  "capturedCodeSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+  "reusedTestSources": [
+    {
+      "filename": "apps/api/src/organization/views/verification.test.ts",
+      "sha256": "796f73c1e5bf7098059ac08b09fb9675b477ad9477468ac334ec2f607915c361",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/routes.test.ts",
+      "sha256": "f8a6a7a64673578be28c993ce6200edd125ba35eaaeaa249e2d8b4d3f379b73d",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/search-equivalence.test.ts",
+      "sha256": "570ca711a2f8cb02ad633633e10003324ffc62f32d71580bf73d1bf44d99a8e0",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/migration.test.ts",
+      "sha256": "f1c33228d623105212b211fda4a4aa612c9fb74a302f49d73f6b92d0eb1f88bd",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/replay-authorization.test.ts",
+      "sha256": "2bbbf8e1b82835692590db2c260bde9331307d34871eadde2327b3a439df28ec",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/db/first-view-guidance.test.ts",
+      "sha256": "710ec171cdbe824e081fbe2adbedd428d15fa6848ff199956f72fe2eb205d986",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/index.test.ts",
+      "sha256": "92946842ebff361c114a26647a8b58320194d890cd972c8e0e700d53d91c3f5d",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/organization-views.interaction.test.tsx",
+      "sha256": "7901fc5ab68105ebf4b0c8c28f5050f9fd6c82db20f65d7d04fdcf6c26b1f845",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/first-view-guidance.test.tsx",
+      "sha256": "9dd5ac234cff55a6a8adafec9ef4d59eab4eea476dffa3283db8efe9230c65ce",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/global-search.test.tsx",
+      "sha256": "3f0e9bb4e8fd08733e35aa11f5345755ee35e7ded01429c6fbfdaaf1ec06153c",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/App.interaction.test.tsx",
+      "sha256": "dd8f998bd22248f6f74fbad944a8b963365c1d479ba647143df1a1d7ac1c3d29",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    }
+  ],
+  "upstreamEvidence": {
+    "baseHostedTests": "976/976 and typecheck passed at 0e7762c, reported by parent; not a final-head result",
+    "guides": [
+      "../bre-386/reviewer-guide.html",
+      "../bre-385/reviewer-guide.html",
+      "../bre-384/reviewer-guide.html",
+      "../bre-383-selected-senders.html",
+      "../../evidence/bre-381-shared-view-draft.html"
+    ]
+  },
+  "humanApprovalLog": [
+    {
+      "source": "Linear BRE-387 Final execution review, fetched 2026-09-07",
+      "decision": "Engineering and human deliverables separated; keep ticket and M9 open until required evidence exists."
+    },
+    {
+      "source": "Linear BRE-380 comments, latest threshold request 2026-09-06T16:05:50Z",
+      "decision": "Owner approval requested, no approval recorded. Proposed 4/5 uncoached save-and-reopen within 60 seconds plus correction."
+    }
+  ],
+  "finalDocsShaReference": "Published as immutable PR head in Dispatch and Linear after the final documentation commit (avoids a self-referential hash).",
+  "coverageStatus": "Partial live captures and observations now recorded; full live matrix and all human observations remain pending.",
+  "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea",
+  "productionStatus": "Seven named scenario groups passed at committed harness SHA, including all-table no-write prepare/preview/replay; scope is limited to production-results.json.",
+  "artifactReview": {
+    "initialSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "corrections": "Complete replay response and all-table write-free assertion; canonical order assertion; acquired-resource cleanup; precise criterion-level test mappings. Static delta review passed substantive harness findings; final consolidated artifact review pending."
+  },
+  "browserAttempt": {
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "url": "http://127.0.0.1:5187/v1/review/login",
+    "session": "bre387-4d8d602",
+    "toolVersion": "agent-browser 0.34.0",
+    "headless": true,
+    "loadAtServerStart": "27.49 / 27.46 / 28.73 (earlier peak 47.78)",
+    "viewport": null,
+    "theme": null,
+    "fixtureScenario": "fresh authenticated migrated scratch DB; first visit",
+    "category": "production-scratch attempt; no page/capture",
+    "actions": [
+      "start one loopback Hono/Vite pair after all compilers exit",
+      "agent-browser --session bre387-4d8d602 open http://127.0.0.1:5187/v1/review/login",
+      "bounded 55-second stop without output/page",
+      "close named session and stop scratch server"
+    ],
+    "requestedMatrix": [
+      "1440x900 Light",
+      "1440x900 Orca Black",
+      "1024x768 Light",
+      "1024x768 Orca Black"
+    ],
+    "note": "55 seconds is an interrupted observation, not a terminal startup diagnosis. First /health probe before ready log refused connection; ready URL printed; later /health timed out after 5.041s with zero bytes. Login redirect and Vite root/module were not independently probed. esbuild service-no-longer-running appeared during shutdown, not as evidence of an initial product fault.",
+    "cleanup": "Named agent-browser close exited 0; scratch server SIGINT exited 0; harness temporary directory removal verified."
+  },
+  "pr": "https://github.com/lukebrevoort/orca/pull/186",
+  "finalHeadHostedCi": "https://github.com/lukebrevoort/orca/pull/186/checks",
+  "builtReadiness": "built-readiness.json",
+  "priorHostedCi": {
+    "testedSha": "4cf383d04e00fb5b796d0212ecb525a1dbdbeb02",
+    "status": "all checks SUCCESS",
+    "runs": [
+      "https://github.com/lukebrevoort/orca/actions/runs/34075114178",
+      "https://github.com/lukebrevoort/orca/actions/runs/34075110471"
+    ],
+    "note": "Predecessor artifact head; final-head CI must also pass after remaining evidence commits."
+  },
+  "browserActions": "browser-actions.json",
+  "providerSync": "No tokens; real refresh errors. No no-op sync fixture has been applied.",
+  "accessibilityAudits": [
+    {
+      "filename": "axe-black-1024-onboarding.json",
+      "sha256": "a862486077eb2b17a32928b050f7ffda267b5a901d5a8802d87b7d578b8fc838",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-black-1024-saved-correction.json",
+      "sha256": "8dacf8a2920bd54f9a74d47a87a053da433848bc4bce4c4ecb15c6eac8b89c29",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ],
+        [
+          ".desktop-health"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-black-1024-saved.json",
+      "sha256": "762da724cf4b80de5867fd05f96a90d0b9895485f52b7ba0c84a5e902b40aa7f",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-black-1440-saved-correction.json",
+      "sha256": "384e0d13c6087b34795a585eccf7c69f875a9ff974fb6c2bb5c2f021a6bf8916",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ],
+        [
+          "label:nth-child(8) > span"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-black-1440-saved.json",
+      "sha256": "762da724cf4b80de5867fd05f96a90d0b9895485f52b7ba0c84a5e902b40aa7f",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-light-1024-onboarding.json",
+      "sha256": "a862486077eb2b17a32928b050f7ffda267b5a901d5a8802d87b7d578b8fc838",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-light-1024-saved-correction.json",
+      "sha256": "e2b359e85096fd3a75e27fcced11646da81afa4c61e137930f78bce608dc66a4",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ],
+        [
+          ".desktop-health"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-light-1024-saved.json",
+      "sha256": "762da724cf4b80de5867fd05f96a90d0b9895485f52b7ba0c84a5e902b40aa7f",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-light-1440-saved-correction.json",
+      "sha256": "384e0d13c6087b34795a585eccf7c69f875a9ff974fb6c2bb5c2f021a6bf8916",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ],
+        [
+          "label:nth-child(8) > span"
+        ]
+      ]
+    },
+    {
+      "filename": "axe-light-1440-saved.json",
+      "sha256": "762da724cf4b80de5867fd05f96a90d0b9895485f52b7ba0c84a5e902b40aa7f",
+      "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+      "timestampProvenance": "Audit follows correspondingly named capture within current browser session; exact command timestamp not separately recorded.",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "category": "production-scratch",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.12.1",
+      "counts": {
+        "inapplicable": 40,
+        "incomplete": 1,
+        "passes": 22,
+        "violations": 0
+      },
+      "incompleteTargets": [
+        [
+          "label > span[aria-hidden=\"true\"]"
+        ]
+      ]
+    }
+  ],
+  "manualReview": "manual-review.json",
+  "livePersistence": {
+    "initial": "browser-saved-inspection.json",
+    "corrected": "browser-allowlist-inspection.json",
+    "futureInsert": "browser-future-insert.json",
+    "allPages": "browser-future-pages.json",
+    "viewId": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+    "scope": "Actual saved revision2 Maya-only work allowlist; five pages/110 identities, allowed future included,new sender excluded."
+  }
+}

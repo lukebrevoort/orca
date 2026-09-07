@@ -1,0 +1,405 @@
+[
+  {
+    "group": "P01",
+    "criterion": "prepare/preview no writes before commit; returned ID; SQLite reopen; canonical list; identical replay; named immutable tables preserved",
+    "category": "production-scratch",
+    "status": "pass",
+    "source": "scripts/bre-387-review.ts",
+    "test": "prepare and preview must not write any table",
+    "line": 91,
+    "evidence": "production-results.json",
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
+  },
+  {
+    "group": "P01",
+    "criterion": "Browser reload, My spaces and Organization retrieve identical View ID",
+    "category": "production-scratch",
+    "status": "pending",
+    "source": null,
+    "test": null,
+    "gap": "Requires live authenticated browser flow and capture."
+  },
+  {
+    "group": "P02",
+    "criterion": "All saved pages include future allowlist match, exclude nonmatch and other account",
+    "category": "production-scratch",
+    "status": "pass",
+    "source": "scripts/bre-387-review.ts",
+    "test": "all saved pages include future allowed sender",
+    "line": 122,
+    "evidence": "production-results.json",
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
+  },
+  {
+    "group": "P02",
+    "criterion": "Dynamic omitted accounts versus fixed account scope, including account added later",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/search-equivalence.test.ts",
+    "test": "omitted account scope includes accounts connected later while explicit scope stays fixed",
+    "line": 112
+  },
+  {
+    "group": "P03",
+    "criterion": "All-page Search/View account, evidence, overrides, grouping and future equivalence",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/search-equivalence.test.ts",
+    "test": "preserves override precedence, same-account isolation, cross-page conversation grouping and future matches",
+    "line": 74
+  },
+  {
+    "group": "P03",
+    "criterion": "General/mailbox/collection unsupported meaning blocks persistence; blank, zero and foreign scopes explicit",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/search-equivalence.test.ts",
+    "test": "unsupported and blank drafts cannot commit; zero and foreign scopes remain explicit",
+    "line": 99
+  },
+  {
+    "group": "P03",
+    "criterion": "Explicit subject replacement retains account; Undo restores unsupported source",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "an explicit source replacement preserves the account and Undo restores the unsupported clause",
+    "line": 160
+  },
+  {
+    "group": "P04",
+    "criterion": "Exact selected backing From; self omission; mixed, malformed, foreign and mismatched reference failures",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "prepares exact selected-message From addresses only after validating every reference",
+    "line": 212
+  },
+  {
+    "group": "P04",
+    "criterion": "Composite account/message identity and exact bulk-attention retry target (not View results)",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/App.interaction.test.tsx",
+    "test": "keeps paginated same-id messages distinct across accounts, restores the exact row, and retries the exact target",
+    "line": 2256
+  },
+  {
+    "group": "P05",
+    "criterion": "Revocation between preflight and transaction denies duplicate return",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/replay-authorization.test.ts",
+    "test": "View duplicate return reauthorizes after another connection commits and revokes between preflight and transaction entry",
+    "line": 81
+  },
+  {
+    "group": "P05",
+    "criterion": "Changed replay payload conflicts; identical committed zero replay is stable",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "replays a committed draft before mutable zero-match evaluation and conflicts on changed payload",
+    "line": 529
+  },
+  {
+    "group": "P05",
+    "criterion": "Cursor fields rejected at HTTP boundary with zero mutation",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "rejects malformed but correctly fingerprinted cursor fields at the HTTP boundary with zero mutation",
+    "line": 959
+  },
+  {
+    "group": "P05",
+    "criterion": "Collateral revisions and positions protected before lifecycle canonicalization",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "CAS-protects every collateral View revision and position before lifecycle canonicalization with zero command writes",
+    "line": 758
+  },
+  {
+    "group": "P05",
+    "criterion": "Retry keeps exact draft after authority reconnect",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "external Search recovery retains edits and the exact commit retry after authority reconnect",
+    "line": 437
+  },
+  {
+    "group": "P06",
+    "criterion": "Census beyond preview, wrong latest sender not inferred, witness, future allowlist and account isolation",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "BRE-385 correction census covers complete authorized matching messages and proves row witnesses",
+    "line": 53
+  },
+  {
+    "group": "P06",
+    "criterion": "50 accepted; 51 overflow; multi-account, malformed unavailable and foreign target fail closed",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "BRE-385 census fails closed for overflow, multiple accounts, malformed senders and foreign targets",
+    "line": 104
+  },
+  {
+    "group": "P06",
+    "criterion": "Empty selection disabled; correction pins account, replaces domains, Undo restores draft",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "BRE-385 correction uses complete census, blocks empty sets, replaces domains and undoes exact draft",
+    "line": 1585
+  },
+  {
+    "group": "P06",
+    "criterion": "Truly empty server candidate census",
+    "category": "production-scratch",
+    "status": "pass",
+    "source": "scripts/bre-387-review.ts",
+    "test": "empty matching sender census fails closed without a partial allowlist",
+    "evidence": "production-results.json",
+    "line": 133,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
+  },
+  {
+    "group": "P07",
+    "criterion": "Dirty dismissal, saved editing and latest refinement Undo",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "BRE-385 saved editing keeps only the latest refinement undo and guards dirty cancel",
+    "line": 1568
+  },
+  {
+    "group": "P07",
+    "criterion": "Keyboard Cmd/Ctrl+Z native input undo versus draft undo",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "BRE-385 latest Undo leaves native text undo to the input and keyboard draft Undo to the form",
+    "line": 222
+  },
+  {
+    "group": "P07",
+    "criterion": "Cmd+Enter duplicate submission shares one in-flight commit",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "Cmd+Enter and duplicate form submissions share one in-flight external commit",
+    "line": 721
+  },
+  {
+    "group": "P07",
+    "criterion": "Rename/edit, reorder and removal with optimistic revisions",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "edits definitions, reorders atomically, and removes with optimistic revisions",
+    "line": 667
+  },
+  {
+    "group": "P07",
+    "criterion": "Cancel restores selected rows, scroll and trigger",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/App.interaction.test.tsx",
+    "test": "cancel returns to the selected rows, scroll position, and authoring trigger",
+    "line": 2125
+  },
+  {
+    "group": "P07",
+    "criterion": "Real route rename/reorder/remove preserve named mail/provider/placement/policy/notification tables; browser lifecycle pending",
+    "category": "production-scratch",
+    "status": "pass",
+    "source": "scripts/bre-387-review.ts",
+    "test": "real rename/reorder/remove retain named",
+    "gap": "Live browser lifecycle/focus still pending; route check proves only named table snapshots.",
+    "evidence": "production-results.json",
+    "line": 151,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
+  },
+  {
+    "group": "P08",
+    "criterion": "First invitation canonical readiness, first visit, skip/dismiss durability and manual reopen",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "first invitation waits for canonical reads, dismisses durably and reopens without creating a View",
+    "line": 34
+  },
+  {
+    "group": "P08",
+    "criterion": "Selection starts once without preference/View writes",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "selected mail starts production selection without writing preferences or a View",
+    "line": 65
+  },
+  {
+    "group": "P08",
+    "criterion": "Empty sample cannot prepare or save",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "empty mail offers only a noninteractive example and skipping never prepares or saves a View",
+    "line": 58
+  },
+  {
+    "group": "P08",
+    "criterion": "Manual help Escape owns layer and restores trigger focus",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "manual help owns Escape and restores focus to Getting started",
+    "line": 84
+  },
+  {
+    "group": "P08",
+    "criterion": "Monotonic two-session/other-user persistence and strict legacy4/opt-in5 compatibility",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/index.test.ts",
+    "test": "BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings",
+    "line": 270
+  },
+  {
+    "group": "P08",
+    "criterion": "Existing View migration retires invitation without changing writing preferences",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/db/first-view-guidance.test.ts",
+    "test": "BRE-386 migration retires existing human Views without a GET mutation or resetting writing preferences",
+    "line": 8
+  },
+  {
+    "group": "P08",
+    "criterion": "Canonical human commit completes atomically; tutorial source rejects; replay/delete retain completion",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "BRE-386 real human commit completes guidance atomically and tutorial provenance cannot persist",
+    "line": 20
+  },
+  {
+    "group": "P08",
+    "criterion": "Late preference error cannot revive after canonical completion",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "a late dismissal failure cannot revive an alert after confirmed completion",
+    "line": 138
+  },
+  {
+    "group": "P08",
+    "criterion": "New connected account after canonical guidance completion",
+    "category": "production-scratch",
+    "status": "pass",
+    "source": "scripts/bre-387-review.ts",
+    "test": "account added after completion retains user preference",
+    "evidence": "production-results.json",
+    "line": 130,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
+  },
+  {
+    "group": "P09",
+    "criterion": "Light and Orca Black 1440x900 and 1024x768; all applicable control/data states, hit-testing, overflow, Escape/Tab/Space/Cmd; axe A/AA and incomplete/manual contrast",
+    "category": "live visual",
+    "status": "pending current-head execution",
+    "source": "docs/verification/bre-387/reviewer-guide.html",
+    "test": null,
+    "gap": "Pending single bounded browser attempt; DOM tests do not establish this."
+  },
+  {
+    "group": "P10",
+    "criterion": "Owner-approved sample, timing boundary, correction timing, coaching, pool/coordinator, consent/storage and required real sessions",
+    "category": "human observation",
+    "status": "pending current-head execution",
+    "source": "docs/verification/bre-387/usability-protocol.html",
+    "test": null,
+    "gap": "Proposed only; zero sessions; no threshold scoring."
+  },
+  {
+    "group": "P01",
+    "criterion": "Preview count shown then exact across cursor pages; saved/preview composite page parity",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "previews and commits one reviewed definition with no preview writes and saved-page parity",
+    "line": 392
+  },
+  {
+    "group": "P03",
+    "criterion": "Advanced create predicates survive unsupported-clause Undo, preview and commit",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "create-mode external authoring preserves every prepared predicate through unsupported-clause Undo, preview, and commit",
+    "line": 321
+  },
+  {
+    "group": "P03",
+    "criterion": "Advanced saved revision-1 constraints round-trip through editing with full summary",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "round-trips every preserved revision-1 constraint and derives the draft summary from the complete definition",
+    "line": 933
+  },
+  {
+    "group": "P04",
+    "criterion": "View result same thread ID across different accounts remains distinct across continuation pages",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "deduplicates saved continuation pages by account and Thread and discards stale generations",
+    "line": 862
+  },
+  {
+    "group": "P05",
+    "criterion": "Replay is identical and write-free only with exact persisted live grant",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/replay-authorization.test.ts",
+    "test": "View replay is identical and write-free only while the exact persisted grant remains live",
+    "line": 110
+  },
+  {
+    "group": "P08",
+    "criterion": "Manual reopen refreshes mocked mailbox readiness after simulated mail arrival",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "manual reopen refreshes empty mail readiness after real mail arrives",
+    "line": 120
+  },
+  {
+    "group": "P04",
+    "criterion": "No selected mail rows cannot start sender authoring",
+    "category": "live visual",
+    "status": "pending",
+    "source": null,
+    "test": null,
+    "gap": "Distinct from empty correction allowlist; inspect disabled/no-selection state in live selection toolbar."
+  },
+  {
+    "group": "P03",
+    "criterion": "Production advanced lane/facet/context/workflow/evidence/sender/date/read conjunction and live post-save facet changes",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/routes.test.ts",
+    "test": "creates unlimited definitions, evaluates them live across authorized Accounts, and paginates stably",
+    "line": 22
+  }
+]

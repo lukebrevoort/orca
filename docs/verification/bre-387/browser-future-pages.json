@@ -1,0 +1,474 @@
+{
+  "checks": {
+    "futureAllowed": true,
+    "futureNonmatchingExcluded": true,
+    "unique": true,
+    "workOnly": true
+  },
+  "items": [
+    {
+      "accountId": "work",
+      "threadId": "future-2"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-3"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-4"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-5"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-6"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-7"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-8"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-9"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-10"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-11"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-12"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-13"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-14"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-15"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-16"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-17"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-18"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-19"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-20"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-21"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-22"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-23"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-24"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-25"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-26"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-27"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-28"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-29"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-30"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-31"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-32"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-33"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-34"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-35"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-36"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-37"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-38"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-39"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-40"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-41"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-42"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-43"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-44"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-45"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-46"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-47"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-48"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-49"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-50"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-51"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-52"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-53"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-54"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-55"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-56"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-57"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-58"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-59"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-60"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-61"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-62"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-63"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-64"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-65"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-66"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-67"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-68"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-69"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-70"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-71"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-72"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-73"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-74"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-75"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-76"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-77"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-78"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-79"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-80"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-81"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-82"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-83"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-84"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-85"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-86"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-87"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-88"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-89"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-90"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-91"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-92"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-93"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-94"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-95"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-96"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-97"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-98"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-99"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-100"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-101"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-102"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-103"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-104"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-105"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-106"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-107"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-108"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-109"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-110"
+    },
+    {
+      "accountId": "work",
+      "threadId": "work-111"
+    }
+  ],
+  "pages": [
+    {
+      "count": 25,
+      "nextCursor": "eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImVhNTM1YWE2Yjg3YmE0ZWNjY2Q1NTI2ZjNkNjQzZDcxZDQwMzJhYjZlNGMyZDUxOTUxYzhkOGViMjQ3YzAzZjkiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTc0MDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTI2Iiwic2hvd24iOjI1fQ"
+    },
+    {
+      "count": 25,
+      "nextCursor": "eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6IjU4OTc2ZDM3NWQ0N2JhOGUwMmIzZDMyNDAxNGQzYzk5N2UxY2RjNDM3NWE3MzIyOWJkMTE2ZmVmYWU5NGY4MWYiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTQ5MDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTUxIiwic2hvd24iOjUwfQ"
+    },
+    {
+      "count": 25,
+      "nextCursor": "eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6IjJmYzhhNjhmOWVjZjY0YmQ0ZDU2Mjc1YzVhZTg0Yjc1ODUyZmNiYmM3MjdiMjU1MGNlZjk1OWFmZTcyZjliMTUiLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTI0MDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTc2Iiwic2hvd24iOjc1fQ"
+    },
+    {
+      "count": 25,
+      "nextCursor": "eyJ2ZXJzaW9uIjoyLCJmaW5nZXJwcmludCI6ImE4OWRmMGY4NmIzYmEwNWNjNzUyODVkMGM1MjY0ODRmZWViNzJiMTliMDY2YjI5MzZiN2ZiNGM3NWM4ZTQwZWQiLCJyZWNlaXZlZEF0IjoxNzg4Njk1ODk5MDAwLCJhY2NvdW50SWQiOiJ3b3JrIiwidGhyZWFkSWQiOiJ3b3JrLTEwMSIsInNob3duIjoxMDB9"
+    },
+    {
+      "count": 10,
+      "nextCursor": null
+    }
+  ],
+  "timestamp": "2026-09-07T02:58:41.387Z",
+  "viewId": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4"
+}

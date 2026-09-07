@@ -1,0 +1,3 @@
+@orca/shared lint: Exited with code 0
+$ bun --filter '*' lint
+error: script "lint" was terminated by signal SIGTERM (Polite quit request)

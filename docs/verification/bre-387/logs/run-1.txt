@@ -1,0 +1,2107 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/organization-views.interaction.test.tsx:
+(fail) external authoring preserves typed source metadata, unsupported blockers, removal Undo, and opaque return context [9225.43ms]
+  ^ this test timed out after 5000ms.
+(fail) an explicit source replacement preserves the account and Undo restores the unsupported clause [7874.73ms]
+  ^ this test timed out after 5000ms.
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+
+# Unhandled error between tests
+-------------------------------
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Use subject only
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:174:15)
+-------------------------------
+
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Work Outlook
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:208:15)
+(fail) BRE-385 latest Undo follows removal then filter, filter then removal, and repeated removals [16771.65ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Remove blocker
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:224:15)
+(fail) BRE-385 latest Undo leaves native text undo to the input and keyboard draft Undo to the form [1733.73ms]
+(fail) unmounted authoring suppresses a late successful commit callback without undoing the server write [5773.64ms]
+  ^ this test timed out after 5000ms.
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+
+# Unhandled error between tests
+-------------------------------
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Save View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:268:15)
+-------------------------------
+
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+(pass) shows the authoritative consequence when self messages were omitted from selected senders [8165.05ms]
+
+# Unhandled error between tests
+-------------------------------
+141 | }
+142 | 
+143 | test("external authoring preserves typed source metadata, unsupported blockers, removal Undo, and opaque return context", async () => {
+144 |   const returns: Array<{ anchor: string }> = [];
+145 |   const container = await renderExternalAuthoring((context) => returns.push(context));
+146 |   expect(container.querySelector(".views-header")?.textContent).toContain("Search results");
+                                                                      ^
+error: Received value must be an array type, or both received and expected values must be strings.
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:146:65)
+-------------------------------
+
+(fail) create-mode external authoring preserves every prepared predicate through unsupported-clause Undo, preview, and commit [6699.91ms]
+  ^ this test timed out after 5000ms.
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+
+# Unhandled error between tests
+-------------------------------
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Undo draft change
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:380:15)
+-------------------------------
+
+You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. 
+422 |   const container = browserWindow.document.createElement("div");
+423 |   browserWindow.document.body.append(container);
+424 |   root = createRoot(container as unknown as Element);
+425 |   await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { anchor: "result-9" } }} onCancel={() => {}} onCommitted={() => {}}/>));
+426 |   await flush(); await flush(); await flush();
+427 |   expect(previewed.at(-1)).toEqual(definition);
+                                 ^
+error: expect(received).toEqual(expected)
+
+- {
+-   "accountIds": [
+-     "account_gmail",
+-   ],
+-   "humanSignal": {
+-     "classifications": [
+-       "likely_human",
+-     ],
+-     "evidenceReasonCodes": [
+-       "direct_recipient",
+-     ],
+-     "maximumScore": 9,
+-     "minimumScore": 4,
+-   },
+-   "revision": 1,
+-   "thread": {
+-     "ids": [
+-       "thread_alpha",
+-       "thread_beta",
+-     ],
+-     "readState": "unread",
+-   },
+-   "workflowStateIds": [
+-     "workflow_unresolved",
+-   ],
+- }
++ undefined
+
+- Expected  - 26
++ Received  + 1
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:427:28)
+(fail) non-sender external preparation preserves its typed constraints through refinement and commit [480.46ms]
+107 |   return found as unknown as HTMLButtonElement;
+108 | }
+109 | 
+110 | function input(container: HTMLElement, label: string) {
+111 |   const field = [...container.querySelectorAll("label")].find((candidate) => candidate.querySelector("span")?.textContent === label)?.querySelector("input");
+112 |   expect(field, `input ${label}`).toBeDefined();
+                                        ^
+error: input View name
+
+Received: undefined
+
+      at input (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:112:35)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:456:16)
+(fail) external Search recovery retains edits and the exact commit retry after authority reconnect [25.45ms]
+498 |   const container = browserWindow.document.createElement("div");
+499 |   browserWindow.document.body.append(container);
+500 |   root = createRoot(container as unknown as Element);
+501 |   await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={{ preparation, returnContext: { viewId: view.id } }} onCancel={() => {}} onCommitted={() => {}}/>));
+502 |   await flush(); await flush(); await flush();
+503 |   expect(previewIdentities.at(-1)).toEqual({ mode: "update", viewId: view.id, viewRevision: 7, source: prepared.source, identity: prepared.identity, definition: view.definition, unsupportedClauses: [] });
+                                         ^
+error: expect(received).toEqual(expected)
+
+- {
+-   "definition": {
+-     "accountIds": [
+-       "account_gmail",
+-     ],
+-     "revision": 1,
+-     "thread": {
+-       "readState": "unread",
+-     },
+-   },
+-   "identity": {
+-     "color": "#b44c42",
+-     "description": "Unresolved production failures across every Account and primary Lane.",
+-     "name": "Weekly production review",
+-     "position": 0,
+-   },
+-   "mode": "update",
+-   "source": {
+-     "kind": "saved_view",
+-     "label": "Weekly production review",
+-   },
+-   "unsupportedClauses": [],
+-   "viewId": "view_external_update",
+-   "viewRevision": 7,
+- }
++ undefined
+
+- Expected  - 25
++ Received  + 1
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:503:36)
+(fail) external saved-view authoring carries prepared View identity and revision through preview and commit [26.07ms]
+541 |   browserWindow.document.body.append(container);
+542 |   root = createRoot(container as unknown as Element);
+543 |   const renderEntry = async (current: typeof firstEntry) => act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={current} onCancel={() => {}} onCommitted={() => {}}/>));
+544 |   await renderEntry(firstEntry);
+545 |   await flush(); await flush();
+546 |   expect(prepareCalls).toBe(1);
+                             ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:546:24)
+(fail) a stale first preparation cannot replace a newer external authoring entry [22.39ms]
+107 |   return found as unknown as HTMLButtonElement;
+108 | }
+109 | 
+110 | function input(container: HTMLElement, label: string) {
+111 |   const field = [...container.querySelectorAll("label")].find((candidate) => candidate.querySelector("span")?.textContent === label)?.querySelector("input");
+112 |   expect(field, `input ${label}`).toBeDefined();
+                                        ^
+error: input Email addresses
+
+Received: undefined
+
+      at input (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:112:35)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:599:10)
+(fail) a ready external draft cannot survive a replacement entry while its preparation is pending or failing [21.15ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Save View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:663:15)
+(fail) a stale commit response cannot use a replacement entry context or keep its saving state [41.52ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Save View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:713:15)
+(fail) an in-flight commit keeps its initiating context when an equal preparation gets a new return context [16.71ms]
+745 |   root = createRoot(container as unknown as Element);
+746 |   await act(async () => root!.render(<OrganizationViewAuthoringWorkspace entry={entry} onCancel={() => {}} onCommitted={(_result, context) => committedContexts.push(context)}/>));
+747 |   await flush(); await flush(); await flush();
+748 |   const form = container.querySelector("form") as unknown as HTMLFormElement;
+749 |   await act(async () => {
+750 |     form.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true }) as unknown as Event);
+          ^
+TypeError: null is not an object (evaluating 'form.dispatchEvent')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:750:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:749:9)
+(fail) Cmd+Enter and duplicate form submissions share one in-flight external commit [37.81ms]
+852 |     const container = browserWindow.document.createElement("div");
+853 |     browserWindow.document.body.append(container);
+854 |     root = createRoot(container as unknown as Element);
+855 |     await act(async () => root!.render(<SavedOrganizationViewWorkspace onManage={() => {}} onOpenThread={(value) => { opened.push(value); }} previewMode viewId={selected.id}/>));
+856 |     await flush(); await flush(); await flush();
+857 |     expect(container.textContent).toContain("Reload-safe result");
+                                        ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Reload-safe result"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:857:35)
+(fail) BRE-378 Organization Views lifecycle interactions > reloads a durable saved View and opens a composite account/thread target [289.66ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Load more
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:900:17)
+(fail) BRE-378 Organization Views lifecycle interactions > deduplicates saved continuation pages by account and Thread and discards stale generations [47.06ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:921:17)
+(fail) BRE-378 Organization Views lifecycle interactions > edits the selected definition and display metadata [51.35ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:974:17)
+(fail) BRE-378 Organization Views lifecycle interactions > round-trips every preserved revision-1 constraint and derives the draft summary from the complete definition [201.45ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1008:17)
+(fail) BRE-378 Organization Views lifecycle interactions > exposes named Context loading failure and retry without losing the saved selection [286.95ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1044:17)
+(fail) BRE-378 Organization Views lifecycle interactions > restricts Facet conditions and editors by value type, validates with shared rules, and names enum values [110.71ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1065:17)
+(fail) BRE-378 Organization Views lifecycle interactions > does not materialize or preview an incomplete numeric Facet predicate as equals zero [25.19ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1084:17)
+(fail) BRE-378 Organization Views lifecycle interactions > uses native input semantics compatible with display-name-enabled email Facets [166.65ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1097:17)
+(fail) BRE-378 Organization Views lifecycle interactions > starts with a readable default, suggests a name, and adds, edits, and removes named clauses [29.21ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1128:17)
+(fail) BRE-378 Organization Views lifecycle interactions > operates the Add filter menu with Arrow keys, Enter, and Escape [46.04ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1151:17)
+(fail) BRE-378 Organization Views lifecycle interactions > uses roving menu focus and closes Add filter on Tab, focus-out, and outside click [43.94ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1184:17)
+(fail) BRE-378 Organization Views lifecycle interactions > keeps the full changing scope out of aria-live while preserving concise save status [16.28ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1196:17)
+(fail) BRE-378 Organization Views lifecycle interactions > keeps every predicate family reachable while progressively disclosing infrequent filters [37.91ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button + New View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1230:17)
+(fail) BRE-378 Organization Views lifecycle interactions > creates the exact existing wire envelope and labels validation and draft preview honestly [172.10ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1265:17)
+(fail) BRE-378 Organization Views lifecycle interactions > discards stale preview responses and only enables Save for the current draft generation [110.28ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1305:17)
+(fail) BRE-378 Organization Views lifecycle interactions > reuses one retry key after a commit failure [109.01ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1327:17)
+(fail) BRE-378 Organization Views lifecycle interactions > requires a second digest-bound confirmation before committing an exact zero preview [33.23ms]
+1335 |     expect(committedRequest.confirmedZeroMatchDigest).toBe(committedRequest.draft.definitionDigest);
+1336 |   });
+1337 | 
+1338 |   test("clears stale demo results after save and persistently names the unevaluated preview state", async () => {
+1339 |     const container = await renderWorkspace();
+1340 |     expect(container.textContent).toContain("Unresolved production failure");
+                                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Unresolved production failure"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1340:35)
+(fail) BRE-378 Organization Views lifecycle interactions > clears stale demo results after save and persistently names the unevaluated preview state [64.68ms]
+121 |     field.dispatchEvent(new browserWindow.Event("change", { bubbles: true }) as unknown as Event);
+122 |   });
+123 | }
+124 | 
+125 | async function click(target: HTMLElement) {
+126 |   await act(async () => { target.click(); await Promise.resolve(); });
+                                ^
+TypeError: null is not an object (evaluating 'target.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:126:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:126:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1357:11)
+(fail) BRE-378 Organization Views lifecycle interactions > reorders Views deterministically while preserving selection [24.70ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Remove View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1364:17)
+(fail) BRE-378 Organization Views lifecycle interactions > requires explicit destructive confirmation and selects a safe neighbor after removal [31.48ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1374:17)
+(fail) BRE-378 Organization Views lifecycle interactions > does not restore canned results when deletion selects an unevaluated demo neighbor [53.16ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Remove View
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1416:17)
+(fail) BRE-378 Organization Views lifecycle interactions > reloads canonical positions and shifted revisions after an authorized removal [180.79ms]
+1443 |       if (method === "DELETE") return Response.json({ error: { code: "account_denied", message: "Only a human can remove this View" } }, { status: 403 });
+1444 |       throw new Error(`Unexpected request ${method} ${path}`);
+1445 |     }) as typeof fetch;
+1446 |     const container = await renderWorkspace(false);
+1447 |     await flush(); await flush();
+1448 |     expect(orderedNames(container)).toEqual(["Weekly production review", "Urgent humans", "Orca launch context"]);
+                                           ^
+error: expect(received).toEqual(expected)
+
+- [
+-   "Weekly production review",
+-   "Urgent humans",
+-   "Orca launch context",
+- ]
++ []
+
+- Expected  - 5
++ Received  + 1
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1448:37)
+(fail) BRE-378 Organization Views lifecycle interactions > keeps state unchanged and suppresses every later mutation after authority is denied [61.15ms]
+1481 |       if (path === "/v1/organization/views/commit") return committedResponse(init, organizationViewsFixture[0]!.id);
+1482 |       throw new Error(`Unexpected request ${method} ${path}`);
+1483 |     }) as typeof fetch;
+1484 |     const container = await renderWorkspace(false);
+1485 |     await flush(); await flush();
+1486 |     expect(container.textContent).toContain("Before edit");
+                                         ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Before edit"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1486:35)
+(fail) BRE-378 Organization Views lifecycle interactions > refetches and renders the edited View revision without a selection switch [253.79ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Load more
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1511:17)
+(fail) BRE-378 Organization Views lifecycle interactions > loads continuation pages, appends without duplicates, and exposes the terminal disabled state [509.92ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Load more
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1537:17)
+(fail) BRE-378 Organization Views lifecycle interactions > keeps a pending continuation disabled and discards it after the selection changes [297.54ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Load more
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1561:17)
+(fail) BRE-378 Organization Views lifecycle interactions > keeps Load more retryable after a continuation error [574.54ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1570:15)
+(fail) BRE-385 saved editing keeps only the latest refinement undo and guards dirty cancel [308.02ms]
+101 |   });
+102 | }
+103 | 
+104 | function button(container: HTMLElement, label: string) {
+105 |   const found = [...container.querySelectorAll("button")].find((candidate) => candidate.textContent?.trim() === label);
+106 |   expect(found, `button ${label}`).toBeDefined();
+                                         ^
+error: button Edit definition
+
+Received: undefined
+
+      at button (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:106:36)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/organization-views.interaction.test.tsx:1602:15)
+(fail) BRE-385 correction uses complete census, blocks empty sets, replaces domains and undoes exact draft [381.70ms]
+
+apps/web/src/first-view-guidance.test.tsx:
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+33 | 
+34 | test("first invitation waits for canonical reads, dismisses durably and reopens without creating a View", async () => {
+35 |   await render();
+36 |   expect(browser.document.body.textContent).toContain("Keep useful mail together");
+                                                 ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Keep useful mail together"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:36:45)
+(fail) first invitation waits for canonical reads, dismisses durably and reopens without creating a View [98.31ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:51:9)
+(fail) a failed View list never becomes an invitation or empty-mail sample [32.25ms]
+55 |   expect(browser.document.body.textContent).toContain("Keep useful mail together");
+56 |   expect(writes).toHaveLength(0);
+57 | });
+58 | test("empty mail offers only a noninteractive example and skipping never prepares or saves a View", async () => {
+59 |   empty = true; await render();
+60 |   expect(browser.document.querySelector('[data-provenance="tutorial"]')).not.toBeNull();
+                                                                                  ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:60:78)
+(fail) empty mail offers only a noninteractive example and skipping never prepares or saves a View [69.96ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:66:25)
+(fail) selected mail starts production selection without writing preferences or a View [592.28ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:73:9)
+(fail) a dismissed user gets manual help without resetting their stored preference [148.93ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:77:43)
+(fail) failed dismissal stays locally hidden and explicitly retries persistence [631.28ms]
+81 |   expect(writes).toHaveLength(2); expect(completed).not.toBeNull();
+82 | });
+83 | 
+84 | test("manual help owns Escape and restores focus to Getting started", async () => {
+85 |   completed = "2026-09-06T12:00:00.000Z"; await render();
+86 |   button("Getting started").focus(); await click("Getting started");
+                               ^
+TypeError: undefined is not an object (evaluating 'button("Getting started").focus')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:86:27)
+(fail) manual help owns Escape and restores focus to Getting started [437.07ms]
+ 95 |   const fetchBoundary = globalThis.fetch;
+ 96 |   let resolveList!: (value: Response) => void;
+ 97 |   globalThis.fetch = (async (url: string, init?: RequestInit) => url === "/v1/organization/views" ? new Promise<Response>(resolve => { resolveList = resolve; }) : fetchBoundary(url, init)) as typeof fetch;
+ 98 |   await render();
+ 99 |   expect(browser.document.body.textContent).not.toContain("Keep useful mail together");
+100 |   await act(async () => { resolveList(Response.json({ workspaceId: "owner", workspaceRevision: 1, items: organizationViewsFixture })); await new Promise(resolve => setTimeout(resolve, 20)); });
+                                ^
+TypeError: resolveList is not a function. (In 'resolveList(Response.json({ workspaceId: "owner", workspaceRevision: 1, items: organizationViewsFixture }))', 'resolveList' is undefined)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:100:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:100:9)
+(fail) no invitation flashes while the canonical View list is still pending [88.18ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:114:9)
+(fail) a selected-mail invitation is consumed once instead of reselecting after later navigation [346.91ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:121:39)
+(fail) manual reopen refreshes empty mail readiness after real mail arrives [258.93ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:129:43)
+(fail) confirmed server completion clears a failed dismissal without another write [178.16ms]
+27 |   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
+28 | });
+29 | afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
+30 | async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+31 | function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
+32 | async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+                                                                 ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at click (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:32:61)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/first-view-guidance.test.tsx:142:25)
+(fail) a late dismissal failure cannot revive an alert after confirmed completion [329.50ms]
+
+apps/web/src/App.interaction.test.tsx:
+473 |   }
+474 | 
+475 |   function providerButton(label: string) {
+476 |     const button = [...browserWindow.document.querySelectorAll("button")]
+477 |       .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+478 |     if (!button) throw new Error(`Could not find provider button: ${label}`);
+                                 ^
+error: Could not find provider button: Continue with Google
+      at providerButton (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:478:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:490:12)
+(fail) OAuth login availability and recovery > enables every configured provider after checking the public contract [216.61ms]
+473 |   }
+474 | 
+475 |   function providerButton(label: string) {
+476 |     const button = [...browserWindow.document.querySelectorAll("button")]
+477 |       .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+478 |     if (!button) throw new Error(`Could not find provider button: ${label}`);
+                                 ^
+error: Could not find provider button: Continue with Google
+      at providerButton (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:478:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:505:19)
+(fail) OAuth login availability and recovery > keeps an unavailable provider inert and gives one readable repair action [164.18ms]
+473 |   }
+474 | 
+475 |   function providerButton(label: string) {
+476 |     const button = [...browserWindow.document.querySelectorAll("button")]
+477 |       .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+478 |     if (!button) throw new Error(`Could not find provider button: ${label}`);
+                                 ^
+error: Could not find provider button: Continue with Google
+      at providerButton (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:478:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:537:19)
+(fail) OAuth login availability and recovery > downgrades stale readiness after a provider-unavailable start and rechecks before enabling OAuth [40.40ms]
+473 |   }
+474 | 
+475 |   function providerButton(label: string) {
+476 |     const button = [...browserWindow.document.querySelectorAll("button")]
+477 |       .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+478 |     if (!button) throw new Error(`Could not find provider button: ${label}`);
+                                 ^
+error: Could not find provider button: Check availability again
+      at providerButton (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:478:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:579:22)
+(fail) OAuth login availability and recovery > does not let an availability recheck race an OAuth start [56.73ms]
+615 |       }
+616 |       throw new Error(`Unexpected request: ${url}`);
+617 |     }) as typeof fetch;
+618 | 
+619 |     await renderLogin();
+620 |     expect(browserWindow.document.body.textContent).toContain("Sign-in choices could not be checked");
+                                                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Sign-in choices could not be checked"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:620:53)
+(fail) OAuth login availability and recovery > recovers a failed availability check and sanitizes a failed provider start [139.26ms]
+281 |   return container;
+282 | }
+283 | 
+284 | async function enterInput(input: HTMLInputElement, value: string) {
+285 |   await act(async () => {
+286 |     input.focus();
+          ^
+TypeError: null is not an object (evaluating 'input.focus')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:286:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at enterInput (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:285:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:673:11)
+(fail) Compose delivery validation > rejects a pending matching suggestion and keeps the invalid To input focused [18.54ms]
+694 |       body: "The details are attached below.",
+695 |     };
+696 |     await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+697 |     const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+698 |       .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+699 |     await act(async () => carbonToggle.click());
+                                ^
+TypeError: undefined is not an object (evaluating 'carbonToggle.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:699:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:699:11)
+(fail) Compose delivery validation > never drops a malformed token from otherwise valid visible recipient input [9.79ms]
+281 |   return container;
+282 | }
+283 | 
+284 | async function enterInput(input: HTMLInputElement, value: string) {
+285 |   await act(async () => {
+286 |     input.focus();
+          ^
+TypeError: null is not an object (evaluating 'input.focus')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:286:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at enterInput (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:285:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:731:13)
+(fail) Compose delivery validation > rejects shared-schema-invalid To input maya@example.com> inline and restores field focus [8.44ms]
+723 |       };
+724 |       await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+725 |       if (kind !== "To") {
+726 |         const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+727 |           .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+728 |         await act(async () => carbonToggle.click());
+                                    ^
+TypeError: undefined is not an object (evaluating 'carbonToggle.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:728:31)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:728:15)
+(fail) Compose delivery validation > rejects shared-schema-invalid Cc input maya@example..com inline and restores field focus [51.56ms]
+723 |       };
+724 |       await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+725 |       if (kind !== "To") {
+726 |         const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+727 |           .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+728 |         await act(async () => carbonToggle.click());
+                                    ^
+TypeError: undefined is not an object (evaluating 'carbonToggle.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:728:31)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:728:15)
+(fail) Compose delivery validation > rejects shared-schema-invalid Bcc input maya@-example.com inline and restores field focus [22.65ms]
+746 |     const sent: ComposeDraft[] = [];
+747 |     const draft = { ...createEmptyComposeDraft("account"), body: "A complete note." };
+748 |     await renderComposeValidationHarness({ initialDraft: draft, onSend: (value) => sent.push(value) });
+749 |     const carbonToggle = [...browserWindow.document.querySelectorAll("button")]
+750 |       .find((button) => button.textContent === "Add Cc or Bcc") as unknown as HTMLButtonElement;
+751 |     await act(async () => carbonToggle.click());
+                                ^
+TypeError: undefined is not an object (evaluating 'carbonToggle.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:751:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:751:11)
+(fail) Compose delivery validation > commits valid pending To, Cc, and Bcc input into the exact delivery payload [47.42ms]
+774 |       to: [{ name: "Maya", email: "maya@example.com" }],
+775 |       subject: "Re: Launch notes",
+776 |     };
+777 |     await renderComposeValidationHarness({ initialDraft: draft, variant: "reply", onSend: (value) => sent.push(value) });
+778 |     const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+779 |     expect(send.getAttribute("aria-disabled")).toBe("true");
+                 ^
+TypeError: null is not an object (evaluating 'send.getAttribute')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:779:12)
+(fail) Compose delivery validation > blocks an empty reply, explains the policy, and returns focus to the message body [15.31ms]
+796 |       subject: "Re: Launch notes",
+797 |       attachments: [{ id: "notes", filename: "notes.txt", mimeType: "text/plain", size: 5, file, previewUrl: null }],
+798 |     };
+799 |     await renderComposeValidationHarness({ initialDraft: draft, variant: "reply", onSend: (value) => sent.push(value) });
+800 |     const send = browserWindow.document.querySelector("button.compose-send") as unknown as HTMLButtonElement;
+801 |     expect(send.getAttribute("aria-disabled")).toBeNull();
+                 ^
+TypeError: null is not an object (evaluating 'send.getAttribute')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:801:12)
+(fail) Compose delivery validation > allows an attachment-only reply and labels that delivery policy before sending [15.35ms]
+859 |     await renderSettingsHome();
+860 |     await waitFor(0);
+861 | 
+862 |     const signature = browserWindow.document.querySelector(".settings-field textarea") as unknown as HTMLTextAreaElement;
+863 |     const accountRadios = [...browserWindow.document.querySelectorAll('input[name="compose-format"], input[name="reply-behavior"]')] as unknown as HTMLInputElement[];
+864 |     expect(signature.disabled).toBe(true);
+                 ^
+TypeError: null is not an object (evaluating 'signature.disabled')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:864:12)
+(fail) Settings recovery > retries the canonical preference read without ever PATCHing fallback values [32.40ms]
+904 |     const plainFormat = browserWindow.document.querySelector('input[name="compose-format"][value="plain"]') as unknown as HTMLInputElement;
+905 |     const richFormat = browserWindow.document.querySelector('input[name="compose-format"][value="rich"]') as unknown as HTMLInputElement;
+906 |     const reply = browserWindow.document.querySelector('input[name="reply-behavior"][value="reply"]') as unknown as HTMLInputElement;
+907 | 
+908 |     await act(async () => {
+909 |       plainFormat.click();
+            ^
+TypeError: null is not an object (evaluating 'plainFormat.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:909:7)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:908:11)
+(fail) Settings recovery > preserves newer edits across slow saves, failed saves, and PATCH retry [7.98ms]
+963 |     }) as typeof fetch;
+964 | 
+965 |     await renderSettingsHome("dark");
+966 |     await waitFor(0);
+967 | 
+968 |     expect(browserWindow.document.body.textContent).toContain("Your Orca session expired");
+                                                          ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Your Orca session expired"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:968:53)
+(fail) Settings recovery > gives session, account, agent, and sync read failures scoped recovery [27.64ms]
+ 995 |     }) as typeof fetch;
+ 996 | 
+ 997 |     await renderSettingsHome();
+ 998 |     await waitFor(0);
+ 999 |     const plainFormat = browserWindow.document.querySelector('input[name="compose-format"][value="plain"]') as unknown as HTMLInputElement;
+1000 |     await act(async () => { plainFormat.click(); });
+                                   ^
+TypeError: null is not an object (evaluating 'plainFormat.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1000:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1000:11)
+(fail) Settings recovery > keeps edited account choices local when the session expires during save [8.94ms]
+1027 |       throw new Error(`Unexpected request: ${url}`);
+1028 |     }) as typeof fetch;
+1029 | 
+1030 |     await renderSettingsHome();
+1031 |     await waitFor(0);
+1032 |     expect(browserWindow.document.body.textContent).toContain("Agent connections are temporarily unavailable");
+                                                           ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "Agent connections are temporarily unavailable"
+Received: ""
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1032:53)
+(fail) Settings recovery > retries agent connections and sync status without reloading other Settings reads [33.72ms]
+813 | });
+814 | 
+815 | function settingsButton(label: string) {
+816 |   const button = [...browserWindow.document.querySelectorAll("button")]
+817 |     .find((candidate) => candidate.textContent?.trim() === label) as unknown as HTMLButtonElement | undefined;
+818 |   if (!button) throw new Error(`Could not find Settings button: ${label}`);
+                               ^
+error: Could not find Settings button: Try loading account choices again
+      at settingsButton (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:818:26)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1067:19)
+(fail) Settings recovery > ignores a stale canonical GET after a newer preference read has completed [10.34ms]
+1098 |   });
+1099 | 
+1100 |   test("opens writing with C and keeps modified keys available", async () => {
+1101 |     await renderApp();
+1102 |     const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
+1103 |     expect(compose?.getAttribute("aria-keyshortcuts")).toBe("c");
+                                                              ^
+error: expect(received).toBe(expected)
+
+Expected: "c"
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1103:56)
+(fail) Write shortcut > opens writing with C and keeps modified keys available [39.26ms]
+1120 | 
+1121 |     await act(async () => {
+1122 |       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+1123 |     });
+1124 | 
+1125 |     expect(browserWindow.document.querySelector(".zen-canvas")).not.toBeNull();
+                                                                           ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1125:69)
+(fail) Write shortcut > starts writing in Zen mode when the preference is enabled [21.28ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Mom
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1145:11)
+(fail) App top-layer contract > keeps reader, Compose, and Zen in one topmost Escape stack [14.87ms]
+1188 |     const container = browserWindow.document.createElement("div");
+1189 |     browserWindow.document.body.append(container);
+1190 |     root = createRoot(container as unknown as Element);
+1191 |     await act(async () => root!.render(<PermissionHarness />));
+1192 |     const opener = container.querySelector('[data-testid="permission-opener"]') as unknown as HTMLButtonElement;
+1193 |     opener.focus();
+           ^
+TypeError: null is not an object (evaluating 'opener.focus')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1193:5)
+(fail) App top-layer contract > gives Gmail permission the same focus, busy, and Escape behavior [32.53ms]
+1215 | 
+1216 |   test("suspends Compose and search shortcuts behind Manage spaces and Pin Builder", async () => {
+1217 |     await renderApp();
+1218 |     const globalSearch = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
+1219 |     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim() === "Manage") as unknown as HTMLButtonElement;
+1220 |     manage.focus();
+           ^
+TypeError: undefined is not an object (evaluating 'manage.focus')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1220:5)
+(fail) App top-layer contract > suspends Compose and search shortcuts behind Manage spaces and Pin Builder [6.54ms]
+1257 |     browserWindow.document.body.tabIndex = -1;
+1258 |     browserWindow.document.body.focus();
+1259 |     await act(async () => {
+1260 |       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "c", bubbles: true, cancelable: true }));
+1261 |     });
+1262 |     expect(Boolean(browserWindow.document.querySelector('[aria-label="Zen writing mode"]'))).toBe(true);
+                                                                                                    ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1262:94)
+(fail) App top-layer contract > restores the Compose trigger when default Zen and Compose close together [13.91ms]
+1270 |   });
+1271 | 
+1272 |   test("restores a stable visible app control when Remove pin deletes the opener", async () => {
+1273 |     await renderApp({ ...defaultReaderPreferences, motion: "reduced" });
+1274 |     const savedPins = browserWindow.document.querySelector('[aria-label="Saved pins"]') as unknown as HTMLElement;
+1275 |     savedPins.hidden = true;
+           ^
+TypeError: null is not an object (evaluating 'savedPins.hidden = !0')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1275:5)
+(fail) App top-layer contract > restores a stable visible app control when Remove pin deletes the opener [6.72ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Jordan Bell
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1307:18)
+(fail) Inbox row action affordances > uses icon-first controls while keeping accessible names and states [11.69ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Luke Brevoort
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1344:18)
+(fail) Inbox row action affordances > presents thread saving as an immediate, accessible collection checklist [12.29ms]
+1395 |   });
+1396 | 
+1397 |   test("keeps evidence modal, closes the top layer with Escape, and restores trigger focus", async () => {
+1398 |     await renderApp();
+1399 |     const rowEvidence = browserWindow.document.querySelector("button.message-evidence-button") as unknown as HTMLButtonElement;
+1400 |     rowEvidence.setAttribute("data-focus-origin", "list-evidence");
+           ^
+TypeError: null is not an object (evaluating 'rowEvidence.setAttribute')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1400:5)
+(fail) Desktop evidence and navigation > keeps evidence modal, closes the top layer with Escape, and restores trigger focus [35.69ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Mom
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1434:11)
+(fail) Desktop evidence and navigation > applies a Manual Override and Safety Lock from the current Thread experience [31.66ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Mom
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1461:11)
+(fail) Desktop evidence and navigation > contains Lane drawer focus in both directions and restores the trigger after Escape [16.20ms]
+1489 |   test("writes stable destinations and follows browser history", async () => {
+1490 |     await renderApp();
+1491 |     const navButtons = [...browserWindow.document.querySelectorAll("button.desktop-sidebar-item")] as unknown as HTMLButtonElement[];
+1492 |     const focus = navButtons.find((button) => button.textContent?.includes("Focus"))!;
+1493 |     const custom = navButtons.find((button) => button.textContent?.includes("Orca launch"))!;
+1494 |     await act(async () => { focus.click(); });
+                                   ^
+TypeError: undefined is not an object (evaluating 'focus.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1494:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1494:11)
+(fail) Desktop evidence and navigation > writes stable destinations and follows browser history [27.69ms]
+1523 |     }) as typeof fetch;
+1524 | 
+1525 |     try {
+1526 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+1527 |       for (let index = 0; index < 10 && !browserWindow.document.querySelector("article.message-reader"); index += 1) await waitFor(0);
+1528 |       expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
+                                                                                        ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1528:82)
+(fail) Desktop evidence and navigation > returns from a Search result to Search, then restores the mounted source Reader [43.29ms]
+1582 |     }) as typeof fetch;
+1583 | 
+1584 |     try {
+1585 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+1586 |       for (let index = 0; index < 10 && !browserWindow.document.querySelector("article.message-reader"); index += 1) await waitFor(0);
+1587 |       expect(browserWindow.document.querySelector("article.message-reader")).not.toBeNull();
+                                                                                        ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1587:82)
+(fail) Desktop evidence and navigation > closes an invalid Search return to a synchronized Inbox fallback [28.80ms]
+1633 |     globalThis.fetch = createProductionInboxFetch(collectionsResponse, () => { collectionsRequested = true; });
+1634 |     try {
+1635 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+1636 |       for (let index = 0; index < 10 && !collectionsRequested; index += 1) await waitFor(0);
+1637 | 
+1638 |       expect(collectionsRequested).toBe(true);
+                                          ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1638:36)
+(fail) Desktop evidence and navigation > preserves a production custom-space deep link until deferred collections select it [11.36ms]
+1665 |     globalThis.fetch = createProductionInboxFetch(collectionsResponse, () => { collectionsRequested = true; });
+1666 |     try {
+1667 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+1668 |       for (let index = 0; index < 10 && !collectionsRequested; index += 1) await waitFor(0);
+1669 | 
+1670 |       expect(collectionsRequested).toBe(true);
+                                          ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1670:36)
+(fail) Desktop evidence and navigation > falls back only after production collections settle without the requested custom space [8.14ms]
+1685 |   });
+1686 | 
+1687 |   test("persists hidden workspace visibility across a reload", async () => {
+1688 |     await renderApp();
+1689 |     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+1690 |     await act(async () => { manage.click(); });
+                                   ^
+TypeError: undefined is not an object (evaluating 'manage.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1690:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1690:11)
+(fail) Desktop evidence and navigation > persists hidden workspace visibility across a reload [11.26ms]
+1701 |   });
+1702 | 
+1703 |   test("persists one absolute order when a drag crosses multiple rows", async () => {
+1704 |     await renderApp();
+1705 |     const manage = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+1706 |     await act(async () => { manage.click(); });
+                                   ^
+TypeError: undefined is not an object (evaluating 'manage.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1706:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1706:11)
+(fail) Desktop evidence and navigation > persists one absolute order when a drag crosses multiple rows [5.94ms]
+1733 |     for (const theme of ["light", "dark"] as const) {
+1734 |       browserWindow.history.replaceState({}, "", "/dev/inbox");
+1735 |       await renderApp(defaultReaderPreferences, false, { theme });
+1736 |       await waitFor(0);
+1737 |       const inboxRows = sidebarRows();
+1738 |       expect(inboxRows.some((label) => label?.includes("Launch watch"))).toBe(true);
+                                                                                ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1738:74)
+(fail) Desktop evidence and navigation > keeps Inbox and Settings on the same customized sidebar projection in both themes [11.81ms]
+1763 |       for (const theme of ["light", "dark"] as const) {
+1764 |         browserWindow.history.replaceState({}, "", route === "inbox" ? "/dev/inbox" : "/dev/settings");
+1765 |         if (route === "inbox") await renderApp(defaultReaderPreferences, false, { theme });
+1766 |         else await renderSettingsHome(theme, true);
+1767 | 
+1768 |         expect(browserWindow.document.querySelector(".desktop-health")?.textContent).not.toContain("offline");
+                                                                                                ^
+error: Received value must be an array type, or both received and expected values must be strings.
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1768:90)
+(fail) Desktop evidence and navigation > reacts immediately to connectivity changes across Inbox and Settings in both themes [27.50ms]
+1782 |   });
+1783 | 
+1784 |   test("keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback", async () => {
+1785 |     await renderApp();
+1786 |     const manageButton = () => [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent?.trim().toLowerCase() === "manage") as unknown as HTMLButtonElement;
+1787 |     await act(async () => manageButton().click());
+                                              ^
+TypeError: undefined is not an object (evaluating 'manageButton().click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1787:40)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1787:11)
+(fail) Desktop evidence and navigation > keeps a canonical destination through create, rename, reorder, hide, restore, and active fallback [33.30ms]
+1848 |   test("opens the saved drafts view and reopens a selected draft", async () => {
+1849 |     await renderApp();
+1850 | 
+1851 |     const draftsButton = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+1852 |       .find((button) => button.textContent?.includes("Drafts")) as HTMLButtonElement | undefined;
+1853 |     expect(draftsButton).toBeDefined();
+                                ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1853:26)
+(fail) Drafts mailbox > opens the saved drafts view and reopens a selected draft [11.55ms]
+1887 |     root = createRoot(container as unknown as Element);
+1888 |     await act(async () => {
+1889 |       root!.render(<DraftScopeHarness availableDrafts={[savedDraft]} scope="new" />);
+1890 |     });
+1891 |     const edit = browserWindow.document.querySelector('[data-testid="edit-draft"]') as unknown as HTMLButtonElement | null;
+1892 |     expect(edit).not.toBeNull();
+                            ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1892:22)
+(fail) Drafts mailbox > keeps a new draft isolated through mounted close and reopen scope transitions [9.71ms]
+1928 |       browserWindow.document.body.append(container);
+1929 |       root = createRoot(container as unknown as Element);
+1930 |       await act(async () => {
+1931 |         root!.render(<DraftScopeHarness availableDrafts={availableDrafts} demoMode={false} scope="draft:draft-a" />);
+1932 |       });
+1933 |       expect(browserWindow.document.querySelector('[data-testid="draft-subject"]')?.textContent).toBe("Draft A");
+                                                                                                        ^
+error: expect(received).toBe(expected)
+
+Expected: "Draft A"
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1933:98)
+(fail) Drafts mailbox > does not let a deferred old save patch the newly selected draft [9.72ms]
+1954 |   });
+1955 | 
+1956 |   test("moves between user-owned workflow spaces without reviving classification tabs", async () => {
+1957 |     await renderApp();
+1958 |     const primary = browserWindow.document.querySelector('nav[aria-label="Primary navigation"]');
+1959 |     expect(primary).not.toBeNull();
+                               ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1959:25)
+(fail) Drafts mailbox > moves between user-owned workflow spaces without reviving classification tabs [5.52ms]
+1991 |     restoreDom();
+1992 |   });
+1993 | 
+1994 |   function buttonByName(name: string) {
+1995 |     const button = browserWindow.document.querySelector(`button[aria-label="${name}"]`) as unknown as HTMLButtonElement | null;
+1996 |     if (!button) throw new Error(`Could not find ${name}`);
+                                  ^
+error: Could not find Open Maya Chen pin
+      at buttonByName (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1996:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2004:7)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2003:11)
+(fail) Pin navigation and bulk sender actions > lets a user-owned workflow space replace a temporary person filter [10.23ms]
+2017 | 
+2018 |   test("opens a pinned thread from outside its current signal view", async () => {
+2019 |     await renderApp();
+2020 |     await act(async () => {
+2021 |       ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+2022 |         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+                                                                        ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].find((button) => button.textContent?.includes("Signals")).click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2022:66)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2020:11)
+(fail) Pin navigation and bulk sender actions > opens a pinned thread from outside its current signal view [22.98ms]
+1991 |     restoreDom();
+1992 |   });
+1993 | 
+1994 |   function buttonByName(name: string) {
+1995 |     const button = browserWindow.document.querySelector(`button[aria-label="${name}"]`) as unknown as HTMLButtonElement | null;
+1996 |     if (!button) throw new Error(`Could not find ${name}`);
+                                  ^
+error: Could not find Open Dinner on Sunday? pin
+      at buttonByName (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:1996:28)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2034:17)
+(fail) Pin navigation and bulk sender actions > lets keyboard users unpin a saved thread directly from the rail [7.01ms]
+2042 | 
+2043 |   test("starts a saved search from the global no-results state", async () => {
+2044 |     browserWindow.history.replaceState({}, "", "/dev/inbox?q=moonbase%20ledger");
+2045 |     await renderApp();
+2046 |     const search = browserWindow.document.querySelector('input[aria-label="Search mail"]') as unknown as HTMLInputElement;
+2047 |     expect(search.value).toBe("moonbase ledger");
+                  ^
+TypeError: null is not an object (evaluating 'search.value')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2047:12)
+(fail) Pin navigation and bulk sender actions > starts a saved search from the global no-results state [6.73ms]
+2062 |     browserWindow.history.replaceState({}, "", "/dev/inbox?q=Jordan");
+2063 |     await renderApp();
+2064 |     const listRegion = browserWindow.document.querySelector(".inbox-body");
+2065 |     const resultStatus = browserWindow.document.querySelector(".inbox-results-status");
+2066 | 
+2067 |     expect(listRegion?.hasAttribute("aria-live")).toBe(false);
+                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2067:51)
+(fail) Pin navigation and bulk sender actions > announces a concise result status without making the message list live [6.23ms]
+2072 |   });
+2073 | 
+2074 |   test("exposes the visible bulk-selection state as pressed", async () => {
+2075 |     await renderApp();
+2076 |     const selectMode = [...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement;
+2077 |     await act(async () => { selectMode.click(); });
+                                   ^
+TypeError: undefined is not an object (evaluating 'selectMode.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2077:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2077:11)
+(fail) Pin navigation and bulk sender actions > exposes the visible bulk-selection state as pressed [10.41ms]
+(pass) Pin navigation and bulk sender actions > hands the server only exact selected row identities for sender preparation [15.94ms]
+2109 |     const messages: InboxMessage[] = [
+2110 |       { ...source, id: "message-a", accountId: "account-a", threadId: "thread-a", from: { name: "Maya", email: "maya@example.com" }, subject: "Account A" },
+2111 |       { ...source, id: "message-b", accountId: "account-b", threadId: "thread-b", from: { name: "Ari", email: "ari@example.com" }, subject: "Account B", receivedAt: "2026-07-02T11:00:00.000Z" },
+2112 |     ];
+2113 |     await renderApp(defaultReaderPreferences, false, { theme: "light", initialDemoMessages: messages });
+2114 |     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+                                                                                                                                                 ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select").click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2114:139)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2114:11)
+(fail) Pin navigation and bulk sender actions > keeps mixed-account row selection and blocks sender View preparation [17.98ms]
+2122 |     expect(browserWindow.document.querySelectorAll('button.message-row[aria-pressed="true"]')).toHaveLength(2);
+2123 |   });
+2124 | 
+2125 |   test("cancel returns to the selected rows, scroll position, and authoring trigger", async () => {
+2126 |     await renderApp();
+2127 |     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+                                                                                                                                                 ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Select").click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2127:139)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2127:11)
+(fail) Pin navigation and bulk sender actions > cancel returns to the selected rows, scroll position, and authoring trigger [12.48ms]
+2148 | 
+2149 |   test("moves multiple selected senders to Quiet in one action", async () => {
+2150 |     await renderApp();
+2151 |     const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+2152 |     await act(async () => {
+2153 |       selectMode.click();
+             ^
+TypeError: undefined is not an object (evaluating 'selectMode.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2153:7)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2152:11)
+(fail) Pin navigation and bulk sender actions > moves multiple selected senders to Quiet in one action [7.94ms]
+2170 |   });
+2171 | 
+2172 |   test("keeps selection across search and includes hidden selections in the sender count", async () => {
+2173 |     await renderApp();
+2174 |     const selectMode = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement;
+2175 |     await act(async () => { selectMode.click(); });
+                                   ^
+TypeError: undefined is not an object (evaluating 'selectMode.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2175:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2175:11)
+(fail) Pin navigation and bulk sender actions > keeps selection across search and includes hidden selections in the sender count [94.86ms]
+2194 |           ? { status: "failed" as const, target, retryable: true, error: { code: "temporarily_unavailable" as const, message: "Try again" }, resolution: { behavior: "normal" as const, rule: null } }
+2195 |           : { status: "succeeded" as const, target, resolution: { behavior, rule: null } }),
+2196 |       };
+2197 |     };
+2198 |     await renderApp(defaultReaderPreferences, false, { theme: "dark", bulkAttentionClient });
+2199 |     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+                                                                                                                                           ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select").click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2199:133)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2199:11)
+(fail) Pin navigation and bulk sender actions > reconciles mixed failure, keeps only the failed sender selected, and retries it [27.91ms]
+2235 |           behavior,
+2236 |           outcomes: [{ status: "succeeded", target: targets[0]!, resolution: { behavior, rule: null } }],
+2237 |         };
+2238 |     };
+2239 |     await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
+2240 |     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+                                                                                                                                           ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select").click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2240:133)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2240:11)
+(fail) Pin navigation and bulk sender actions > retries a retryable exact sender target after its canonical state removes the row [15.79ms]
+2312 |     }) as typeof fetch;
+2313 |     try {
+2314 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light", bulkAttentionClient });
+2315 |       await waitFor(0);
+2316 |       const loadMore = [...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Load more messages") as unknown as HTMLButtonElement;
+2317 |       expect(loadMore).toBeDefined();
+                              ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2317:24)
+(fail) Pin navigation and bulk sender actions > keeps paginated same-id messages distinct across accounts, restores the exact row, and retries the exact target [40.46ms]
+2366 |       return new Promise((resolve) => {
+2367 |         resolveRequest = resolve;
+2368 |       });
+2369 |     };
+2370 |     await renderApp(defaultReaderPreferences, false, { theme: "light", bulkAttentionClient });
+2371 |     await act(async () => { ([...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select") as unknown as HTMLButtonElement).click(); });
+                                                                                                                                           ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll("button")].find((button) => button.textContent === "Select").click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2371:133)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2371:11)
+(fail) Pin navigation and bulk sender actions > disables every duplicate bulk submission path while saving [48.10ms]
+176 |   return pane;
+177 | }
+178 | 
+179 | function desktopWorkspace() {
+180 |   const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+181 |   if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+                                  ^
+error: Could not find the desktop workspace scrollport
+      at desktopWorkspace (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:181:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2453:25)
+(fail) Inbox reader viewport restoration > keeps a loaded Reader mounted and scrolled through an unrelated delayed mailbox refresh [111.30ms]
+176 |   return pane;
+177 | }
+178 | 
+179 | function desktopWorkspace() {
+180 |   const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+181 |   if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+                                  ^
+error: Could not find the desktop workspace scrollport
+      at desktopWorkspace (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:181:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2536:25)
+(fail) Inbox reader viewport restoration > refreshes changed active-thread content without replaying Reader loading or losing scroll [30.34ms]
+2604 |     };
+2605 | 
+2606 |     try {
+2607 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+2608 |       for (let index = 0; index < 30 && (threadReadCount < 1 || inboxReadCount < 2); index += 1) await waitFor(0);
+2609 |       expect(threadReadCount).toBe(1);
+                                     ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2609:31)
+(fail) Inbox reader viewport restoration > waits for the primary Reader request before refreshing a newer mailbox version [75.59ms]
+2695 | 
+2696 |     try {
+2697 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+2698 |       for (let index = 0; index < 30 && (!browserWindow.document.querySelector(".reader-document:not(.reader-loading)") || inboxReadCount < 2); index += 1) await waitFor(0);
+2699 |       const readerDocument = browserWindow.document.querySelector(".reader-document:not(.reader-loading)");
+2700 |       if (!readerDocument) throw new Error("Reader did not settle before silent refresh retry test");
+                                            ^
+error: Reader did not settle before silent refresh retry test
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2700:38)
+(fail) Inbox reader viewport restoration > retries a failed silent Reader refresh on a later same-version mailbox refresh [9.23ms]
+2761 | 
+2762 |     try {
+2763 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+2764 |       for (let index = 0; index < 20 && !browserWindow.document.querySelector(".reader-state button"); index += 1) await waitFor(0);
+2765 |       const retry = browserWindow.document.querySelector(".reader-state button") as unknown as HTMLButtonElement;
+2766 |       expect(retry?.textContent).toBe("Try again");
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: "Try again"
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2766:34)
+(fail) Inbox reader viewport restoration > fetches fresh detail after explicit Retry and after selecting another thread [8.37ms]
+2402 |     restoreDom();
+2403 |   });
+2404 | 
+2405 |   async function expectReaderOrigin(label: string) {
+2406 |     for (let index = 0; index < 20 && browserWindow.document.querySelector(".reader-back span")?.textContent !== label; index += 1) await waitFor(0);
+2407 |     expect(browserWindow.document.querySelector(".reader-back span")?.textContent).toBe(label);
+                                                                                          ^
+error: expect(received).toBe(expected)
+
+Expected: "Focus"
+Received: undefined
+
+      at expectReaderOrigin (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2407:84)
+      at async <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2789:13)
+(fail) Inbox reader viewport restoration > labels a direct and reloaded production Focus reader from its synchronized destination [25.81ms]
+2402 |     restoreDom();
+2403 |   });
+2404 | 
+2405 |   async function expectReaderOrigin(label: string) {
+2406 |     for (let index = 0; index < 20 && browserWindow.document.querySelector(".reader-back span")?.textContent !== label; index += 1) await waitFor(0);
+2407 |     expect(browserWindow.document.querySelector(".reader-back span")?.textContent).toBe(label);
+                                                                                          ^
+error: expect(received).toBe(expected)
+
+Expected: "Launch review"
+Received: undefined
+
+      at expectReaderOrigin (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2407:84)
+      at async <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2825:13)
+(fail) Inbox reader viewport restoration > labels a deferred production custom-space reader after load, Forward, and reload [83.75ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Luke Brevoort
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2848:11)
+(fail) Inbox reader viewport restoration > keeps reader and composer in URL order across browser Back and Forward [35.15ms]
+2884 |   test("returns from a reader to the same shared custom-space destination", async () => {
+2885 |     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=inbox&q=launch&flag=kept");
+2886 |     await renderApp();
+2887 |     const custom = [...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+2888 |       .find((button) => button.textContent?.includes("Orca launch")) as unknown as HTMLButtonElement;
+2889 |     await act(async () => custom.click());
+                                 ^
+TypeError: undefined is not an object (evaluating 'custom.click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2889:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2889:11)
+(fail) Inbox reader viewport restoration > returns from a reader to the same shared custom-space destination [44.93ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Luke Brevoort
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2914:11)
+(fail) Inbox reader viewport restoration > cancels an animated Compose close when browser Back already revealed the reader [35.55ms]
+2931 |   });
+2932 | 
+2933 |   test("reloads an initial deep link once and gives it a safe in-app Back target", async () => {
+2934 |     browserWindow.history.replaceState({}, "", "/dev/inbox?destination=focus&q=notes&thread=thread_1&accountId=acct_demo&flag=kept");
+2935 |     await renderApp();
+2936 |     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+                                                                                             ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2936:87)
+(fail) Inbox reader viewport restoration > reloads an initial deep link once and gives it a safe in-app Back target [9.71ms]
+2960 |     const pageShow = new browserWindow.Event("pageshow") as unknown as PageTransitionEvent;
+2961 |     Object.defineProperty(pageShow, "persisted", { configurable: true, value: true });
+2962 |     await act(async () => {
+2963 |       browserWindow.dispatchEvent(pageShow as never);
+2964 |     });
+2965 |     expect(browserWindow.document.querySelector('[aria-label="Message reader"]')).not.toBeNull();
+                                                                                             ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2965:87)
+(fail) Inbox reader viewport restoration > reconciles a bfcache pageshow with the current surface URL [33.06ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Luke Brevoort
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:296:5)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at openMessage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:295:9)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2971:11)
+(fail) Inbox reader viewport restoration > observes and scrolls the desktop workspace for reader jump-to-top [18.73ms]
+176 |   return pane;
+177 | }
+178 | 
+179 | function desktopWorkspace() {
+180 |   const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+181 |   if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+                                  ^
+error: Could not find the desktop workspace scrollport
+      at desktopWorkspace (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:181:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:2990:23)
+(fail) Inbox reader viewport restoration > restores the desktop workspace and origin focus after Escape [101.07ms]
+176 |   return pane;
+177 | }
+178 | 
+179 | function desktopWorkspace() {
+180 |   const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+181 |   if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+                                  ^
+error: Could not find the desktop workspace scrollport
+      at desktopWorkspace (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:181:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3013:23)
+(fail) Inbox reader viewport restoration > restores the selected row and workspace offsets after Inbox Back [35.99ms]
+176 |   return pane;
+177 | }
+178 | 
+179 | function desktopWorkspace() {
+180 |   const workspace = browserWindow.document.querySelector(".desktop-workspace") as unknown as HTMLElement | null;
+181 |   if (!workspace) throw new Error("Could not find the desktop workspace scrollport");
+                                  ^
+error: Could not find the desktop workspace scrollport
+      at desktopWorkspace (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:181:29)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3034:23)
+(fail) Inbox reader viewport restoration > re-arms the list return point when Forward reopens a reader [12.26ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Luke Brevoort
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3088:20)
+(fail) Inbox reader viewport restoration > restores a reader row once without stealing focus after a fresh Compose closes [16.94ms]
+3112 | 
+3113 |   test("opens a propagated event source and returns to the same signal position", async () => {
+3114 |     await renderApp();
+3115 |     await act(async () => {
+3116 |       ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+3117 |         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+                                                                        ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].find((button) => button.textContent?.includes("Signals")).click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3117:66)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3115:11)
+(fail) Inbox reader viewport restoration > opens a propagated event source and returns to the same signal position [57.49ms]
+3190 |       await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+3191 |       for (let index = 0; index < 20 && (!browserWindow.document.querySelector("article.agent-event")
+3192 |         || ![...browserWindow.document.querySelectorAll("button.message-row")].some((candidate) => candidate.textContent?.includes(message.from.name!))); index += 1) await waitFor(0);
+3193 |       const card = [...browserWindow.document.querySelectorAll("article.agent-event")].find((item) => item.textContent?.includes(event.title));
+3194 |       const origin = card?.querySelector("button") as unknown as HTMLButtonElement | null;
+3195 |       if (!origin) throw new Error("Could not find the production propagated-event source action");
+                                    ^
+error: Could not find the production propagated-event source action
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3195:30)
+(fail) Inbox reader viewport restoration > keeps a connected propagated-event origin through Back, Forward, and Back [13.10ms]
+3235 | 
+3236 |   test("reveals and restores a quieted local signal without changing its source mail", async () => {
+3237 |     await renderApp();
+3238 |     await act(async () => {
+3239 |       ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+3240 |         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+                                                                        ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].find((button) => button.textContent?.includes("Signals")).click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3240:66)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3238:11)
+(fail) Inbox reader viewport restoration > reveals and restores a quieted local signal without changing its source mail [29.43ms]
+3258 | 
+3259 |   test("keeps broad mutes explicitly reversible before restoring the event", async () => {
+3260 |     await renderApp();
+3261 |     await act(async () => {
+3262 |       ([...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')]
+3263 |         .find((button) => button.textContent?.includes("Signals")) as unknown as HTMLButtonElement).click();
+                                                                        ^
+TypeError: undefined is not an object (evaluating '[...browserWindow.document.querySelectorAll('nav[aria-label="Primary navigation"] button.desktop-sidebar-item')].find((button) => button.textContent?.includes("Signals")).click')
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3263:66)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/react/cjs/react.development.js:814:22)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3261:11)
+(fail) Inbox reader viewport restoration > keeps broad mutes explicitly reversible before restoring the event [19.90ms]
+164 | 
+165 | function messageRow(sender: string) {
+166 |   const rows = [...browserWindow.document.querySelectorAll("button.message-row")] as unknown as HTMLButtonElement[];
+167 |   const row = rows
+168 |     .find((candidate) => candidate.textContent?.includes(sender));
+169 |   if (!row) throw new Error(`Could not find message row for ${sender}`);
+                            ^
+error: Could not find message row for Jordan Bell
+      at messageRow (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:169:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3287:19)
+(fail) Inbox reader viewport restoration > cancels an old focus frame when a new reader opens before it runs [35.93ms]
+3303 |   });
+3304 | 
+3305 |   test("refreshes the rail avatar when a changed photo returns from settings", async () => {
+3306 |     await renderApp();
+3307 |     const avatar = browserWindow.document.querySelector(".desktop-account-avatar img");
+3308 |     expect(avatar?.getAttribute("src")).toBe(PROFILE_PHOTO_FALLBACK_SRC);
+                                               ^
+error: expect(received).toBe(expected)
+
+Expected: "/profile-avatar.svg"
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3308:41)
+(fail) Inbox reader viewport restoration > refreshes the rail avatar when a changed photo returns from settings [16.53ms]
+314 |   });
+315 | }
+316 | 
+317 | async function openZen() {
+318 |   const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
+319 |   if (!compose) throw new Error("Could not find compose button");
+                                ^
+error: Could not find compose button
+      at openZen (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:319:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3344:26)
+(fail) Zen exit presence > keeps the canvas mounted with its exit state until Save & close finishes [28.90ms]
+314 |   });
+315 | }
+316 | 
+317 | async function openZen() {
+318 |   const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
+319 |   if (!compose) throw new Error("Could not find compose button");
+                                ^
+error: Could not find compose button
+      at openZen (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:319:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3366:26)
+(fail) Zen exit presence > uses the same closing lifecycle for Escape [14.90ms]
+3380 |     browserWindow.document.documentElement.dataset.motion = "reduced";
+3381 |     await act(async () => {
+3382 |       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+3383 |     });
+3384 |     const canvas = browserWindow.document.querySelector(".zen-canvas") as unknown as HTMLElement | null;
+3385 |     if (!canvas) throw new Error("Could not find Zen canvas");
+                                  ^
+error: Could not find Zen canvas
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3385:28)
+(fail) Zen exit presence > returns straight to the inbox on Escape when Zen is the default [40.60ms]
+3397 |     browserWindow.document.documentElement.dataset.motion = "reduced";
+3398 |     await act(async () => {
+3399 |       browserWindow.dispatchEvent(new browserWindow.KeyboardEvent("keydown", { key: "m", metaKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+3400 |     });
+3401 |     const canvas = browserWindow.document.querySelector(".zen-canvas") as unknown as HTMLElement | null;
+3402 |     if (!canvas) throw new Error("Could not find Zen canvas");
+                                  ^
+error: Could not find Zen canvas
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3402:28)
+(fail) Zen exit presence > keeps Save & close returning to the panel when Zen is the default [8.40ms]
+314 |   });
+315 | }
+316 | 
+317 | async function openZen() {
+318 |   const compose = browserWindow.document.querySelector("button.desktop-compose") as unknown as HTMLButtonElement | null;
+319 |   if (!compose) throw new Error("Could not find compose button");
+                                ^
+error: Could not find compose button
+      at openZen (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:319:27)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3417:26)
+(fail) Zen exit presence > returns immediately for reduced motion without delaying panel controls [39.31ms]
+3449 |       if (url.pathname === "/v1/pins") return jsonResponse(pins);
+3450 |       return base(input, init);
+3451 |     }) as typeof fetch;
+3452 |     await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+3453 |     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
+3454 |     expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
+                                                                                  ^
+error: expect(received).not.toBeNull()
+
+Received: null
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3454:76)
+(fail) BRE-386 guidance navigation > normal Inbox invitation disappears for attention and classification filter pins [15.41ms]
+3468 |     }) as typeof fetch;
+3469 |     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${source}`);
+3470 |     await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+3471 |     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
+3472 |     const start = [...browserWindow.document.querySelectorAll("button")].find(button => button.querySelector("strong")?.textContent === "Use selected mail");
+3473 |     expect(start).toBeDefined();
+                         ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3473:19)
+(fail) BRE-386 guidance navigation > selected-mail start from organization survives All Mail navigation and does not replay later [8.03ms]
+3468 |     }) as typeof fetch;
+3469 |     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${source}`);
+3470 |     await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+3471 |     for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
+3472 |     const start = [...browserWindow.document.querySelectorAll("button")].find(button => button.querySelector("strong")?.textContent === "Use selected mail");
+3473 |     expect(start).toBeDefined();
+                         ^
+error: expect(received).toBeDefined()
+
+Received: undefined
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/web/src/App.interaction.test.tsx:3473:19)
+(fail) BRE-386 guidance navigation > selected-mail start from inbox survives All Mail navigation and does not replay later [197.45ms]
+
+apps/api/src/index.test.ts:
+(pass) Orca API > requires a session before returning auth state [78.38ms]
+(pass) Orca API > requires a session before returning an account [3.74ms]
+(pass) Orca API > lists every connected provider and disconnects only owned accounts with local data [2032.60ms]
+(fail) Orca API > keeps Gmail-only routes on Gmail when Outlook was connected first [5810.71ms]
+  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+(pass) Orca API > requires a session before returning inbox data [31.59ms]
+252 |       db.insert(users).values({ id: "preferences_user", email: "preferences@example.com" }).run();
+253 |       const session = await createSession(db, "preferences_user");
+254 |       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
+255 |       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
+256 | 
+257 |       assert.deepEqual(await (await testApp.request("/v1/preferences", { headers })).json(), { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
+                   ^
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   error: {
++     code: 'unauthorized',
++     message: 'Authentication required'
++   }
+-   composeFormat: 'plain',
+-   notifyByDefault: false,
+-   replyBehavior: 'reply',
+-   signature: ''
+  }
+
+ generatedMessage: true,
+     actual: {
+  error: [Object ...],
+},
+   expected: {
+  signature: "",
+  composeFormat: "plain",
+  replyBehavior: "reply",
+  notifyByDefault: false,
+},
+   operator: "deepStrictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.test.ts:257:14
+      at processTicksAndRejections (native:7:39)
+(fail) Orca API > persists account-level writing and reminder preferences [1329.82ms]
+(pass) Orca API > BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings [1611.60ms]
+(pass) Orca API > persists onboarding completion and exposes it on later session checks [373.84ms]
+(pass) Orca API > creates account-owned drafts with revisions and a safe delivery boundary [3081.74ms]
+(pass) Orca API > persists Gmail drafts and sends exactly once after reserving the idempotency key [3177.23ms]
+(pass) Orca API > marks an unconfirmed Gmail send as ambiguous instead of retrying it [1151.83ms]
+(pass) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable [1125.20ms]
+(pass) Orca API > dispatches account lifecycle through a partial custom registry [621.97ms]
+outlook sync failed {
+  userId: "outlook_user",
+  error: 12 | export const outlookProvider: MailProviderAdapter = {
+13 |   provider: "outlook",
+14 |   createOAuthApp: createOutlookAuthApp,
+15 |   detectCapabilities: detectOutlookCapabilities,
+16 |   async syncPage() {
+17 |     throw new ProviderNotImplementedError("outlook", "sync");
+               ^
+ProviderNotImplementedError: outlook sync is not implemented
+  provider: "outlook",
+ operation: "sync",
+
+      at syncPage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/providers/outlook/provider.ts:17:11)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.ts:2487:47)
+      at dispatch (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/hono/dist/compose.js:22:23)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/auth/middleware.ts:99:13)
+      at async dispatch (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/hono/dist/compose.js:22:23)
+      at async cors2 (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/hono/dist/middleware/cors/index.js:76:11)
+      at async dispatch (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/hono/dist/compose.js:22:23)
+      at async <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/node_modules/hono/dist/hono-base.js:306:31)
+      at async <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.test.ts:757:42)
+,
+}
+(pass) Orca API > dispatches a registered Outlook account and keeps unsupported sync explicit [369.96ms]
+(pass) Orca API > rejects blank inbox cursors [12.63ms]
+(pass) Orca API > returns an account-scoped, chronological reader snapshot with sanitized HTML [1872.81ms]
+(pass) Orca API > filters and deterministically sorts explainable attention views [5306.52ms]
+(pass) Orca API > merges two owned accounts with account-local attention rules, metadata, and cursors [2794.04ms]
+(pass) Orca API > filters effective Human Inbox and Tideline classes before pagination without crossing accounts or filter modes [1019.67ms]
+(fail) Orca API > serves the shared M5 matrix across providers with counts, cursors, overrides, and mixed threads [5360.88ms]
+  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+(pass) Orca API > resolves classification for a mailbox-sized page with account overrides loaded once [3316.49ms]
+1324 | 
+1325 |       const createCollection = (name: string) => testApp.request("/v1/collections", { method: "POST", headers, body: JSON.stringify({ name }) });
+1326 |       const work = await (await createCollection("Work")).json();
+1327 |       const reference = await (await createCollection("Reference")).json();
+1328 |       const recolored = await (await testApp.request(`/v1/collections/${work.id}`, { method: "PATCH", headers, body: JSON.stringify({ color: "#83728d" }) })).json();
+1329 |       assert.equal(recolored.color, "#83728d");
+                    ^
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- '#83728d'
+
+ generatedMessage: true,
+     actual: undefined,
+   expected: "#83728d",
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.test.ts:1329:14
+      at processTicksAndRejections (native:7:39)
+(fail) Orca API > keeps collections additive, orders pins deterministically, and deletes only organization metadata [1620.07ms]
+(fail) Orca API > imports selected Gmail labels once, supports skip, and handles accounts with no user labels [5450.67ms]
+  ^ this test timed out after 5000ms, before its done callback was called. If a done callback was not intended, remove the last parameter from the test callback function
+1492 |       const due = await (await testApp.request("/v1/reminders", { headers })).json();
+1493 |       assert.equal(due[0].status, "resurfaced");
+1494 |       assert.equal(due[0].resurfacedAt, clock.toISOString());
+1495 |       const done = await (await testApp.request(`/v1/reminders/${created.id}/done`, { method: "POST", headers })).json();
+1496 |       assert.equal(done.status, "completed");
+1497 |       assert.equal((await testApp.request(`/v1/reminders/${created.id}`, { method: "DELETE", headers })).status, 204);
+                    ^
+AssertionError: Expected values to be strictly equal:
+
+401 !== 204
+
+ generatedMessage: true,
+     actual: 401,
+   expected: 204,
+   operator: "strictEqual",
+       code: "ERR_ASSERTION"
+
+      at /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.test.ts:1497:14
+      at processTicksAndRejections (native:7:39)
+(fail) Orca API > schedules, resurfaces, completes, and cancels thread reminders with a controllable clock [5644.87ms]
+(pass) Orca API > upgrades a database at migration 0003 with the reader storage migrations [3236.48ms]
+(pass) Orca API > runs the manual Gmail sync endpoint for an authenticated user [3307.77ms]
+(pass) Orca API > runs manual Gmail sync against the selected stacked account [1974.76ms]
+(pass) Orca API > serializes manual Gmail sync behind existing account work [4134.65ms]
+(pass) Orca API > reports per-account sync status and last successful sync time [2648.65ms]
+gmail sync failed {
+  userId: "user_1",
+  error: 1811 | 
+1812 |       const session = await createSession(db, "user_1");
+1813 |       const testApp = createApp({
+1814 |         dbFactory: () => createDatabaseClient(dbPath),
+1815 |         syncPage: async () => {
+1816 |           throw new GmailSyncError("raw upstream detail acct_1", "provider_error");
+                       ^
+GmailSyncError: raw upstream detail acct_1
+ code: "provider_error"
+
+      at syncPage (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/index.test.ts:1816:17)
+      at syncIncrementalPages (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/providers/gmail/sync-runtime.ts:221:26)
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/providers/gmail/sync-runtime.ts:176:29)
+      at drainOwned (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/providers/gmail/sync-coordinator.ts:232:32)
+      at drainAccount (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/apps/api/src/providers/gmail/sync-coordinator.ts:214:19)
+,
+}
+(pass) Orca API > maps provider sync failures to a bounded public error response [1646.25ms]
+(pass) Orca API > persists account-scoped sender rules, resolves precedence, and resets to the next rule [3021.57ms]

@@ -1,0 +1,3 @@
+@orca/shared build: Exited with code 0
+$ bun --filter '*' build
+error: script "build" was terminated by signal SIGTERM (Polite quit request)

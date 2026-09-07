@@ -1,0 +1,54 @@
+[
+  {
+    "recordedAt": "2026-09-07T02:40:39.969990+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "session": "bre387-built-623e5fc",
+    "actions": [
+      {
+        "command": "type @e7 Project",
+        "handle": 53685,
+        "exit": 0,
+        "observation": "Next snapshot showed ProjectProjectProjectProject. Cause unknown; automation observation, not an isolated product defect. No duration measured beyond persistent polling."
+      },
+      {
+        "command": "fill @e8 Project",
+        "exit": 0,
+        "observation": "Next snapshot shows Project and real matching stored-mail results."
+      },
+      {
+        "command": "Save as View; Replace with subject contains Project; Undo draft change",
+        "observation": "Unsupported general clause retained and Save disabled; explicit replacement produced preview and enabled Save; Undo restored blocker and disabled Save."
+      },
+      {
+        "command": "Correct senders for Project correction 0",
+        "observation": "Multi-account scope unavailable with Choose one account in Tune explanation; no partial sender list offered."
+      },
+      {
+        "command": "Add filter Account; choose work; correction click",
+        "observation": "Correction click returned no matching button while Checking draft was visible. Subsequent screenshot showed personal OR work selected; narrowing not yet established."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T02:50:48.996184+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "deselect personal; Correct senders for Project correction 0",
+        "observation": "Complete bounded census: 8 addresses in work@example.com at 2026-09-07T02:42:49.863Z. Proven conversation sender sender0; no automatic removal."
+      },
+      {
+        "command": "uncheck sender0; Preview these senders",
+        "observation": "Seven exact addresses excluding sender0; preview starts correction1, correction2, correction3, update4, correction4."
+      },
+      {
+        "command": "Undo draft change",
+        "observation": "Sender filter removed; correction0 restored to first preview result."
+      },
+      {
+        "command": "fill View name Project review evidence; Save View; inspection; reload",
+        "observation": "Real persisted work-only subject Project View revision1. Reload restored results and My spaces entry. See browser-saved-inspection.json."
+      }
+    ]
+  }
+]
