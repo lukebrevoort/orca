@@ -1,0 +1,109 @@
+{
+  "at": "2026-09-07T10:25:50.379Z",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(23, 23, 23)",
+          "boxShadow": "none",
+          "class": "global-mail-save",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(106, 169, 245) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "boxShadow": "none",
+          "class": "global-mail-search-toolbar",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "boxShadow": "rgba(0, 0, 0, 0.72) 0px 34px 110px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": true,
+      "label": "Save as View",
+      "pressed": null,
+      "rect": {
+        "bottom": 224,
+        "height": 38,
+        "left": 997.375,
+        "right": 1085,
+        "top": 186,
+        "width": 87.625,
+        "x": 997.375,
+        "y": 186
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+  "viewport": [
+    1440,
+    900
+  ],
+  "scenario": "black-1440-controls-search-save-focus",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

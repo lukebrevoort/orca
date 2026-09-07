@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:07:33.292227+00:00",
+  "completedAt": "2026-09-07T13:07:45.511903+00:00",
+  "exitCode": 0,
+  "commands": "black-1440-controls-help-auxiliary-recovered-commands.json",
+  "raw": "black-1440-controls-help-auxiliary-recovered-raw.json",
+  "stderr": "black-1440-controls-help-auxiliary-recovered-stderr.txt",
+  "parsedRecords": 8
+}

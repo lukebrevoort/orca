@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:30:24.812516+00:00",
+  "completedAt": "2026-09-07T12:30:49.906715+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-open-dirty-commands.json",
+  "raw": "lifetime3-open-dirty-raw.json",
+  "stderr": "lifetime3-open-dirty-stderr.txt",
+  "parsedRecords": 0
+}

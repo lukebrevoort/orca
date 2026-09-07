@@ -1,0 +1,106 @@
+[
+  [
+    "wait",
+    "--fn",
+    "Boolean(document.querySelector(\"button[aria-label=\\\"Switch to Orca Black\\\"],button[aria-label=\\\"Switch to Light\\\"]\"))"
+  ],
+  [
+    "wait",
+    "--text",
+    "Inbox"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Organization",
+    "--exact"
+  ],
+  [
+    "wait",
+    "--text",
+    "Production failures"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Views",
+    "--exact"
+  ],
+  [
+    "wait",
+    ".view-new"
+  ],
+  [
+    "click",
+    ".view-new"
+  ],
+  [
+    "wait",
+    ".view-filter-trigger"
+  ],
+  [
+    "click",
+    ".view-filter-trigger"
+  ],
+  [
+    "wait",
+    ".view-filter-menu [data-menu-index=\"5\"]"
+  ],
+  [
+    "click",
+    ".view-filter-menu [data-menu-index=\"5\"]"
+  ],
+  [
+    "wait",
+    "[data-clause=\"subject\"] input"
+  ],
+  [
+    "fill",
+    "[data-clause=\"subject\"] input",
+    "Project"
+  ],
+  [
+    "wait",
+    ".view-filter-trigger"
+  ],
+  [
+    "click",
+    ".view-filter-trigger"
+  ],
+  [
+    "wait",
+    ".view-filter-menu [data-menu-index=\"0\"]"
+  ],
+  [
+    "click",
+    ".view-filter-menu [data-menu-index=\"0\"]"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "work",
+    "--exact"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "personal",
+    "--exact"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-third-reconstructed-draft\",at:new Date().toISOString(),theme:document.documentElement.dataset.theme,url:location.href,accounts:[...document.querySelectorAll(\"[data-clause=account] button[aria-pressed]\")].map(e=>({label:e.textContent,pressed:e.getAttribute(\"aria-pressed\")})),subject:document.querySelector(\"[data-clause=subject] input\")?.value,authority:document.querySelector(\".view-composer\")?.dataset.authority}})"
+  ]
+]

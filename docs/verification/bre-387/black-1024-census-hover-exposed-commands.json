@@ -1,0 +1,33 @@
+[
+  [
+    "set",
+    "viewport",
+    "1024",
+    "768"
+  ],
+  [
+    "scrollintoview",
+    ".view-sender-correction label:first-child"
+  ],
+  [
+    "hover",
+    ".view-sender-correction label:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-sender-correction label:first-child\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-sender-correction label:first-child,.view-sender-correction label:first-child input,.view-sender-correction label:first-child span\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1024-controls-census-checkbox-hover-exposed\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Real complete work-only census: checked sender label hover; no allowlist applied\",filename:\"screenshots/black-1024-controls-census-checkbox-hover-exposed.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1024-controls-census-checkbox-hover-exposed.png"
+  ]
+]

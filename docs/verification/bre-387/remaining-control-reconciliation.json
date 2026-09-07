@@ -7,10 +7,10 @@
     {
       "family": "Search",
       "controls": "Header Search trigger; search input; Save as View; result links; Load more",
-      "covered": "Cmd+K/open/Escape return and actual results/save flow; Load more25\u219250 stable identities. Header theme/bulk geometry separately fixed44ed.",
-      "missing": "Search modal Save as View hover/focus and disabled empty-query target; result link hover/focus; search input focus treatment four-way not directly mapped. Load more hover/focus/disabled during request not directly mapped.",
+      "covered": "Cmd+K/open/Escape return and actual results/save flow; Load more25\u219250 stable identities. Header theme/bulk geometry separately fixed44ed. Current7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
+      "missing": "Load more hover/focus and genuine request-pending disabled target remain separate pending observations. No whole-Search accessibility approval inferred.",
       "minimumActions": "Reuse one ready Search and saved results; inspect actual controls without committing. Do not repeat pagination mutation proof.",
-      "evidence": "browser-actions.json; keyboard-native-control.txt; browser-actions.json (saved Load more chronology); desktop-switch.css360\u2013408"
+      "evidence": "browser-actions.json; keyboard-native-control.txt; browser-actions.json (saved Load more chronology); desktop-switch.css360\u2013408; *controls-search*.json/PNG; lifetime3-session-boundary.json; search-focus-reopen-snapshot.txt"
     },
     {
       "family": "Selection",
@@ -23,72 +23,72 @@
     {
       "family": "Tune",
       "controls": "Tune disclosure; Add filter; filter menu entries; Remove clause; preserved-constraint summary",
-      "covered": "Open Tune/account scopes and unsupported states captured; pressed work account hover/focus all4.",
-      "missing": "Tune hover/focus; Add filter/menu item hover/focus and applicable disabled already-added option; Remove clause hover/focus; advanced summary hover/focus not directly recorded.",
+      "covered": "Open Tune/account scopes and unsupported states captured; pressed work account hover/focus all4. Current7d/ce1 all4 Add filter and Remove subject hover/keyboard focus have direct target records and action PNGs; menu actual already-added Account/Subject disabled and Read state keyboard focus captured. Currentall4 Tune collapsed/expanded hover/focus direct PNG/JSON, actual aria-expanded values; only disclosure toggled.",
+      "missing": "Preserved advanced summary target applicability still needs explicit reconciliation; no unseen advanced state pass inferred.",
       "minimumActions": "Inspect one editable existing draft; open menu, hover/Tab targets, close without changing definition. Preserve source distinction for advanced DOM fixture.",
       "evidence": "visual-observations.json *selected-account*; organization-views.css52\u201390"
     },
     {
       "family": "Authoring fields",
-      "controls": "Name, description, subject, color select",
-      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient).",
-      "missing": "Field hover border and color select keyboard focus/disabled actual :disabled not directly measured; name/description distinct labels need direct readability check.",
+      "controls": "Name, description, subject, native color input",
+      "covered": "Default fields captured all4; subject focus ring during real loading all4; authority-error disabled fieldset captured (generic e.disabled probe alone insufficient). Current name hover and keyboard-focus frame, actual native color-input keyboard-focus frame all4; no select control exists. Current all4 exact name/description/color/subject hover and description keyboard focus images+target state/hit checks; no values changed. Two isolated Description hover-only replacements Black1440/Light1024 independently reviewed; originals combined focus retained and excluded from isolated-hover proof.",
+      "missing": "All remaining actual disabled-fieldset semantics and disabled namehover independently reviewed in controls-paused group. No target styling omission identified; native picker behavior not claimed.",
       "minimumActions": "Read actual :disabled/computed fields in existing pending/authority fixture; do not infer disabled from child.disabled alone.",
       "evidence": "*fixed-loading; *form-error; organization-views.css10\u201311,38"
     },
     {
       "family": "Draft actions",
       "controls": "Save/Save changes; Cancel; Return; Undo",
-      "covered": "Save hover+Tabfocus all4 newselectedauthoring; disabled Save all4 unsupported/loading/error. Return ring all4 form-error. Actual cancel/source focus and healthy draft Undo recorded.",
-      "missing": "Cancel and Undo hover/focus not directly targeted all4; Return hover not directly mapped. Native input Undo remains external limitation, not a visual rerun.",
+      "covered": "Save hover+Tabfocus all4 newselectedauthoring; disabled Save all4 unsupported/loading/error. Return ring all4 form-error. Actual cancel/source focus and healthy draft Undo recorded. Cancel/Undo exact hover and keyboard-focus images captured all4; Black1440 exposed batch target states/hit pass. Black1024 Cancel-hover original false/hitfalse record is historical and excluded; the later exposed replacement closes that observation only. Single Black1024 Cancel exposed replacement actualhover/hit true and direct image at12:12Z; no other state replayed.",
+      "missing": "Return hover remains unmapped. Black1024 Cancel hover original mismatch is superseded only by matching exposed replacement; original retained. Native input Undo remains external.",
       "minimumActions": "Hover/focus these neutral actions on same draft; no additional commit needed. Native Mac verification must remain pending.",
       "evidence": "*fixed-selected-authoring-hover/*keyboard-focus; *form-error; draft-undo-before.txt / draft-undo-after.txt; browser-actions.json"
     },
     {
       "family": "Correction",
       "controls": "Census checkboxes and labels; Preview these senders; Cancel correction",
-      "covered": "Checked and empty selection all4; Preview disabled all4; lower candidate Tab/Space plus focus2px and target contrast all4 historical unchangedcomponent. Future allowlist saved evidence separate.",
-      "missing": "Checkbox/label hover not directly captured. Preview enabled hover/focus and Cancel correction hover/focus not targeted all4. No disabled-checkbox state exists in current correction input markup; do not invent one.",
+      "covered": "Checked and empty selection all4; Preview disabled all4; lower candidate Tab/Space plus focus2px and target contrast all4 historical unchangedcomponent. Future allowlist saved evidence separate. Current ce1/7d all4 direct checkbox hover, Tab/Space unchecked focus, enabled Preview/Cancel hover and keyboard focus PNG/JSON. Black1024 first checkbox-hover mismatch is retained and superseded by matching exposed replacement only.",
+      "missing": "Targeted six-state census images independently reviewed all4, including Black1024 exposed replacement; no remaining styling gap in this group. Full-list traversal and saved outcome proof remain separate.",
       "minimumActions": "Open current census; hover checked label, Tab/Space without Apply, inspect enabled Preview/Cancel. Reuse existing empty-disabled captures and lower-row keyboard records.",
-      "evidence": "manual-targets-*.json; keyboard-census.txt; *fixed-empty-correction; organization-views.css170"
+      "evidence": "manual-targets-*.json; keyboard-census.txt; *fixed-empty-correction; organization-views.css170; *controls-census*.json and matching PNGs; lifetime3-census-open.json (actual 8 work-only addresses)"
     },
     {
       "family": "Unsupported/correction fallback",
       "controls": "Replace subject; Remove blocker; Correct senders; Tune fallback",
-      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures.",
-      "missing": "Distinct inline replacement/remove/correction trigger hover/focus not directly recorded. No stable pressed/selected state documented.",
+      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures.",
+      "missing": "Correct senders trigger and overflow Tune fallback hover/focus still pending; external error Return separately pending.",
       "minimumActions": "Inspect these actual controls in retained ready drafts; do not replay save or census mutations solely for styling.",
       "evidence": "*unsupported; *overflow-panel; browser-actions.json"
     },
     {
       "family": "Dialogs",
       "controls": "Keep editing; Discard draft; zero confirmation; cancel zero confirmation",
-      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven.",
-      "missing": "Keep/Discard hover and keyboard focus ring all4 absent (current active Keep has outline none); danger treatment must be checked separately from neutral Save. Confirm/cancel-zero hover/focus not targeted.",
+      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven. Current ce1/7d all4 exact Keep/Discard and Confirm zero/Cancel zero hover+keyboard focus target JSON/PNG pass explicit state/hit/targettransition waits. No new save/discard persistence claimed.",
+      "missing": "All32 dirty/zero control images independently reviewed; no remaining targeted styling gap in this group. No outcome inferred from captures.",
       "minimumActions": "Open each existing draft dialog once; hover/Tab both actions; cancel/keep without another zero save.",
       "evidence": "*dirty-guard; *zero-confirm-state; organization-views.css15\u201316"
     },
     {
       "family": "Lifecycle selected View",
       "controls": "View chip selected/unselected; enabled/boundary reorder arrows",
-      "covered": "Chip selected hover all4; reorder keyboardfocus all4; arrows default/hover/contrast/hit all4; boundary arrows disabled all4; canonical reorder/reload proof.",
-      "missing": "Unselected View chip hover/focus not explicitly targeted; selected chip focus itself not recorded (focus\u2192Tab moves to arrow).",
+      "covered": "Chip selected hover all4; reorder keyboardfocus all4; arrows default/hover/contrast/hit all4; boundary arrows disabled all4; canonical reorder/reload proof. Current all4 selected/unselected chip hover+actual keyboard focus and enabled reorder up/down target PNG/JSON; 56 lifecycle records pass state/hit across all controls.",
+      "missing": "Selected/unselected chips and reorder controls independently visually reviewed all4; no remaining targeted styling gap. Canonical ordering/durability proof remains separate.",
       "minimumActions": "Focus selected and unselected chip without activation; no reorder rerun.",
       "evidence": "*fixed-organization; manual-order-*.json; lifetime2-reorder-proof.json"
     },
     {
       "family": "Lifecycle actions",
       "controls": "New View; Edit definition; Remove View; Organization retry",
-      "covered": "Default enabled and list-error disabled all4; retry behavior, rename/remove side-effect route invariants separately proven.",
-      "missing": "New/Edit hover/focus; Remove danger hover/focus; Retry Organization hover/focus not targeted all4. Disabled hover appearance distinct danger rule should be checked.",
+      "covered": "Default enabled and list-error disabled all4; retry behavior, rename/remove side-effect route invariants separately proven. Current all4 New/Edit/Remove hover and actual keyboard focus PNG/JSON with enabled state/hit checks; no activation.",
+      "missing": "Retry Organization and disabled Remove hover now independently reviewed all4 in controls-paused group. No targeted styling omission identified; no lifecycle outcome inferred.",
       "minimumActions": "Hover/Tab actions in ready/error existing Organization; do not perform destructive remove.",
       "evidence": "*fixed-list-error; *fixed-organization; organization-views.css9\u201316; desktop-switch.css740"
     },
     {
       "family": "Organization navigation",
       "controls": "Views tab; Getting started trigger; My spaces View link",
-      "covered": "Selected Views and current sidebar View labels all4; same-ID routes and help Escape return demonstrated.",
-      "missing": "Views selected hover/focus and Getting started trigger hover/focus all4 not targeted; sidebar View focus/hover not directly mapped.",
+      "covered": "Selected Views and current sidebar View labels all4; same-ID routes and help Escape return demonstrated. Current all4 selected Views tab, Getting started trigger and actual saved sidebar View hover/keyboard focus PNG/JSON, no navigation activation.",
+      "missing": "All24 navigation control images independently reviewed; current selected Views attribute aria-current=page recorded in lifetime3-views-tab-current.json. No targeted styling gap.",
       "minimumActions": "Read hover/Tab states without navigation mutations; reuse same-ID persistence evidence.",
       "evidence": "visual-observations.json; lifetime2-actions.jsonl; desktop-switch.css233,709\u2013710"
     },
@@ -103,9 +103,9 @@
     {
       "family": "Help auxiliary controls",
       "controls": "Close; Skip; Retry saving choice; sample return/start buttons",
-      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated.",
-      "missing": "Close/Skip/Retry hover/focus; disabled preference pending state actual control target not captured. Sample caption candidate contrast unmeasured currentfixture (mail arrived).",
-      "minimumActions": "Reuse ready help and optional bounded real preference hold only if authorized/needed; sample candidate is fixworker read-only investigation, do not reset historical user.",
+      "covered": "Four-way empty sample/arrivalhelp/preferenceerror rendered; Skip retry/reload/secondsession durability demonstrated. Current all4 Close/Skip hover and actual keyboard focus target PNG/JSON complete; bounded image review pending.",
+      "missing": "Retry saving choice hover/focus and actual disabled pending state remain. Skip has no disabled state in product markup; no invented disabled Skip. Sample/starts already closed by ce1 independent proof.",
+      "minimumActions": "Reuse ready help for Close/Skip/Retry targets; inspect genuine pending preference state before considering any harness change. Reuse completed ce1 sample4/16 evidence; do not reset historical user.",
       "evidence": "*fixed-empty-sample; *fixed-arrival-help; *fixed-preference-error; first-view-guidance.css8\u201310"
     }
   ],

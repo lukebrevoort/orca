@@ -1,0 +1,19 @@
+{
+  "recordedAt": "2026-09-07T12:04:41.712150+00:00",
+  "runtimeSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "harnessSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "classification": "Unexpected about:blank observed after tool failure; cause unknown, not an Orca error page",
+  "evidence": [
+    "black-1440-action-visual-raw.json",
+    "action-batch-after-os35.json",
+    "action-batch-tab-list.json",
+    "lifetime3-actions.jsonl"
+  ],
+  "recovery": [
+    "Same server health returned 200; same named session pinned reopen; no database reset",
+    "Initial Organization to Views immediate lookup failed; fresh snapshot established Organization readiness",
+    "Views/New succeeded; Add filter immediate lookup failed; fresh builder snapshot then selector-gated local draft setup succeeded"
+  ],
+  "draftReadback": "lifetime3-reconstructed-draft.json",
+  "persistence": "No View creation in reconstruction"
+}

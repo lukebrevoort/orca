@@ -1,0 +1,138 @@
+[
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".organization-recovery button"
+  ],
+  [
+    "focus",
+    ".desktop-workspace-header input"
+  ],
+  [
+    "hover",
+    ".organization-recovery button"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".organization-recovery button\");if(!e)return false;const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".organization-recovery button\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1440-controls-paused-retry-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Injected commit503 over real fixture edit; retry hover actual disabled=False; no retry/save/remove activation\",filename:\"screenshots/black-1440-controls-paused-retry-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1440-controls-paused-retry-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".organization-recovery button"
+  ],
+  [
+    "focus",
+    ".organization-recovery button"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".organization-recovery button\");if(!e)return false;const r=e.getBoundingClientRect();return !e.matches(\":disabled\")&&e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".organization-recovery button\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1440-controls-paused-retry-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Injected commit503 over real fixture edit; retry focus actual disabled=False; no retry/save/remove activation\",filename:\"screenshots/black-1440-controls-paused-retry-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1440-controls-paused-retry-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-identity label:first-child input"
+  ],
+  [
+    "focus",
+    ".desktop-workspace-header input"
+  ],
+  [
+    "hover",
+    ".view-identity label:first-child input"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-identity label:first-child input\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":disabled\")&&e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-identity label:first-child input\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1440-controls-paused-field-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Injected commit503 over real fixture edit; field hover actual disabled=True; no retry/save/remove activation\",filename:\"screenshots/black-1440-controls-paused-field-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1440-controls-paused-field-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "focus",
+    ".desktop-workspace-header input"
+  ],
+  [
+    "hover",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions .view-danger\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":disabled\")&&e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions .view-danger\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1440-controls-paused-remove-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Orca Black\",scenario:\"Injected commit503 over real fixture edit; remove hover actual disabled=True; no retry/save/remove activation\",filename:\"screenshots/black-1440-controls-paused-remove-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/black-1440-controls-paused-remove-hover.png"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-composer fieldset input,.view-composer fieldset button,.view-save,.view-new\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"black-1440-controls-paused-disabled-semantics\"})})"
+  ]
+]

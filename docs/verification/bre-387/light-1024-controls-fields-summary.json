@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:39:11.624393+00:00",
+  "completedAt": "2026-09-07T12:39:30.877039+00:00",
+  "exitCode": 0,
+  "commands": "light-1024-controls-fields-commands.json",
+  "raw": "light-1024-controls-fields-raw.json",
+  "stderr": "light-1024-controls-fields-stderr.txt",
+  "parsedRecords": 10
+}

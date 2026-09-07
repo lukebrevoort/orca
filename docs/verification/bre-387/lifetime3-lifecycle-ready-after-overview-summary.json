@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:48:47.042902+00:00",
+  "completedAt": "2026-09-07T12:48:52.286115+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-lifecycle-ready-after-overview-commands.json",
+  "raw": "lifetime3-lifecycle-ready-after-overview-raw.json",
+  "stderr": "lifetime3-lifecycle-ready-after-overview-stderr.txt",
+  "parsedRecords": 1
+}

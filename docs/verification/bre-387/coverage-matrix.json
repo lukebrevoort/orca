@@ -410,10 +410,10 @@
     "group": "P09",
     "criterion": "Light and Orca Black 1440x900 and 1024x768; all applicable control/data states, hit-testing, overflow, Escape/Tab/Space/Cmd; axe A/AA and incomplete/manual contrast",
     "category": "live visual",
-    "status": "F02 contrast fix required; bounded captured states and interactions separately mapped",
+    "status": "F01/F02 bounded fixes verified; remaining target states and acceptance gaps separately mapped",
     "source": "docs/verification/bre-387/reviewer-guide.html",
     "test": null,
-    "gap": "F01 fixed with independent four-way settled geometry verification at44edbf2 (selection-header/fix-guide.html). All20 state families now have four-way captures; these do not imply every interaction passes. F02 Light guidance helper hover contrast4.49:1 fails4.5:1. Control-state reconciliation, manual native Mac input Undo and final evidence audit remain open.",
+    "gap": "F01 fixed with independent four-way settled geometry verification at44edbf2 (selection-header/fix-guide.html). All20 state families now have four-way captures; these do not imply every interaction passes. Historical F02 contrast failure is fixed atce1bc03; independent guidance-contrast/fix-guide.html evidence supersedes it. Control-state reconciliation, manual native Mac input Undo and final evidence audit remain open.",
     "evidence": "findings.json"
   },
   {

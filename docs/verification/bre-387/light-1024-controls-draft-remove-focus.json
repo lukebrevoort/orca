@@ -1,0 +1,231 @@
+{
+  "at": "2026-09-07T11:28:38.502Z",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgba(0, 0, 0, 0)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-clause-remove",
+          "color": "rgb(81, 100, 94)",
+          "opacity": "1",
+          "outline": "rgb(8, 116, 97) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34) rgb(210, 221, 215) rgb(16, 37, 34) rgb(16, 37, 34)",
+          "borderWidth": "0px 1px 0px 0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HEADER"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(210, 221, 215)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-clause",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "ARTICLE"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "view-clause-list",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "view-builder-fieldset",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "FIELDSET"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-composer",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "FORM"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(210, 221, 215)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(18, 40, 34, 0.07) 0px 20px 60px 0px",
+          "class": "views-workspace",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "organization-studio",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "desktop-workspace",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "auto",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "desktop-shell",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "hidden",
+          "tag": "MAIN"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "app-root",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Remove subject filter",
+      "pressed": null,
+      "rect": {
+        "bottom": 405.5,
+        "height": 28,
+        "left": 413.375,
+        "right": 463,
+        "top": 377.5,
+        "width": 49.625,
+        "x": 413.375,
+        "y": 377.5
+      },
+      "value": ""
+    }
+  ],
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "viewport": [
+    1024,
+    768
+  ],
+  "scenario": "light-1024-controls-draft-remove-focus",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

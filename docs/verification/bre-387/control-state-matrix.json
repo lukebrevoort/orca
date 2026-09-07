@@ -1,5 +1,5 @@
 {
-  "status": "in progress; F02 open; not blanket visual approval",
+  "status": "In progress: F01/F02 bounded fixes verified; current target reconciliation below; no blanket engineering or human acceptance",
   "source": "visual-observations.json",
   "rows": [
     {
@@ -12,7 +12,7 @@
             "light-1440-fixed-selected-authoring-hover",
             "light-1440-fixed-selected-authoring-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Light",
@@ -21,7 +21,7 @@
             "light-1024-fixed-selected-authoring-hover",
             "light-1024-fixed-selected-authoring-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -32,7 +32,7 @@
             "black-1440-fixed-selected-authoring-hover",
             "black-1440-fixed-selected-authoring-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -43,7 +43,7 @@
             "black-1024-fixed-selected-authoring-hover",
             "black-1024-fixed-selected-authoring-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         }
       ]
     },
@@ -57,7 +57,7 @@
             "light-1440-fixed-selected-account-controls-pressed-hover",
             "light-1440-fixed-selected-account-controls-pressed-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Light",
@@ -66,7 +66,7 @@
             "light-1024-fixed-selected-account-controls-pressed-hover",
             "light-1024-fixed-selected-account-controls-pressed-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -75,7 +75,7 @@
             "black-1440-fixed-selected-authoring-account-pressed-hover",
             "black-1440-fixed-selected-authoring-account-pressed-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -84,7 +84,7 @@
             "black-1024-fixed-selected-authoring-account-pressed-hover",
             "black-1024-fixed-selected-authoring-account-pressed-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         }
       ]
     },
@@ -99,7 +99,7 @@
             "light-1440-fixed-organization-selected-hover",
             "light-1440-fixed-organization-order-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Light",
@@ -109,7 +109,7 @@
             "light-1024-fixed-organization-selected-hover",
             "light-1024-fixed-organization-order-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -119,7 +119,7 @@
             "black-1440-fixed-organization-selected-hover",
             "black-1440-fixed-organization-order-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         },
         {
           "theme": "Orca Black",
@@ -129,7 +129,7 @@
             "black-1024-fixed-organization-selected-hover",
             "black-1024-fixed-organization-order-keyboard-focus"
           ],
-          "status": "observed; F02 contrast failure applies to Light guidance"
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
         }
       ]
     },
@@ -143,7 +143,7 @@
             "light-1440-fixed-guidance-controls-hover",
             "light-1440-fixed-guidance-controls-keyboard-focus"
           ],
-          "status": "observed; Light helper contrast F02 fails"
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
         },
         {
           "theme": "Light",
@@ -152,7 +152,7 @@
             "light-1024-fixed-guidance-controls-hover",
             "light-1024-fixed-guidance-controls-keyboard-focus"
           ],
-          "status": "observed; Light helper contrast F02 fails"
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
         },
         {
           "theme": "Orca Black",
@@ -161,7 +161,7 @@
             "black-1440-fixed-guidance-controls-hover",
             "black-1440-fixed-guidance-controls-keyboard-focus"
           ],
-          "status": "hover/focus observed; not blanket contrast approval"
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
         },
         {
           "theme": "Orca Black",
@@ -170,17 +170,22 @@
             "black-1024-fixed-guidance-controls-hover",
             "black-1024-fixed-guidance-controls-keyboard-focus"
           ],
-          "status": "hover/focus observed; not blanket contrast approval"
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
         }
       ]
     }
   ],
   "remaining": [
-    "F02 local helper contrast defect requires separately owned fix and recapture",
-    "Explicit checkbox hover treatment reconciliation",
-    "Native Mac input Undo requires direct manual verification; handler-free control reproduces automation limitation",
+    "Concrete unclosed target states in remaining-control-reconciliation.json; do not infer coverage from family overview images",
+    "Native Mac input Undo needs direct manual verification; handler-free control reproduces automation limitation",
     "Human protocol unapproved and zero real sessions",
     "Final immutable evidence integrity and exact-head CI pending"
   ],
-  "guidanceEscape": "All four completed: helpOpen=false and active text Getting started; see lifetime2-actions.jsonl and logs/guidance-controls-remaining.txt."
+  "guidanceEscape": "All four completed: helpOpen=false and active text Getting started; see lifetime2-actions.jsonl and logs/guidance-controls-remaining.txt.",
+  "currentReconciliation": "remaining-control-reconciliation.html",
+  "currentReconciliationData": "remaining-control-reconciliation.json",
+  "fixes": {
+    "F01": "../selection-header/fix-guide.html",
+    "F02": "../guidance-contrast/fix-guide.html"
+  }
 }

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:10:49.474895+00:00",
+  "completedAt": "2026-09-07T12:12:20.074545+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-cancel-hover-exposed-commands.json",
+  "raw": "black-1024-cancel-hover-exposed-raw.json",
+  "stderr": "black-1024-cancel-hover-exposed-stderr.txt",
+  "parsedRecords": 2
+}

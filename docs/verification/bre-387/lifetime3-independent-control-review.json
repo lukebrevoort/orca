@@ -1,0 +1,51 @@
+{
+  "reviewerAgent": "agt_df05f0d72abe",
+  "mode": "read-only files/images, no browser/compiler",
+  "runtimeSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "harnessSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "groups": [
+    {
+      "family": "Census",
+      "imageCount": 24,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "Six actual target states all4; Black1024 exposed checkbox-hover replacement authoritative; full-list traversal and Apply/save separate",
+      "recordedAt": "2026-09-07T13:16:56.158808+00:00"
+    },
+    {
+      "family": "Dirty and zero dialogs",
+      "imageCount": 32,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "Keep/Discard and Confirm/Cancel zero hover and keyboard focus all4; no activation/outcome inference",
+      "recordedAt": "2026-09-07T13:16:56.159974+00:00"
+    },
+    {
+      "family": "Lifecycle",
+      "imageCount": 56,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "New/Edit/Remove, selected/unselectedchips and enabledreorder all4; disabledboundary records included; no persistence inference",
+      "recordedAt": "2026-09-07T13:16:56.159989+00:00"
+    },
+    {
+      "family": "Navigation",
+      "imageCount": 24,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "Views/help/sidebarView hover/focus all4; aria-current page separate actualreceipt",
+      "recordedAt": "2026-09-07T13:16:56.159998+00:00"
+    },
+    {
+      "family": "Description replacements",
+      "imageCount": 2,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "Black1440/Light1024 hover-only; combined originals retained; indexingcorrection explicit",
+      "recordedAt": "2026-09-07T13:16:56.160007+00:00"
+    },
+    {
+      "family": "Help Close and Skip",
+      "imageCount": 16,
+      "verdict": "bounded PASS communicated by independent reviewer",
+      "scope": "All4 hover/focus; recoveredBlack1440 authoritative, originalfailedhandoff retained; retrypreference/pending separate",
+      "recordedAt": "2026-09-07T13:16:56.160016+00:00"
+    }
+  ],
+  "limits": "Mutable checkpoint review, not final immutable integrity/hash review or full engineering/human acceptance."
+}

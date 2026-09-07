@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:16:05.724071+00:00",
+  "completedAt": "2026-09-07T12:16:16.153524+00:00",
+  "exitCode": 1,
+  "commands": "light-1024-controls-census-commands.json",
+  "raw": "light-1024-controls-census-raw.json",
+  "stderr": "light-1024-controls-census-stderr.txt",
+  "parsedRecords": 0
+}

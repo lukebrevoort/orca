@@ -1,0 +1,460 @@
+[
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".view-new"
+  ],
+  [
+    "hover",
+    ".view-new"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-new\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-new\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-new-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline new hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-new-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-new-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-new"
+  ],
+  [
+    "focus",
+    ".view-new"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-new\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-new\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-new-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline new focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-new-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-new-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions button:first-child"
+  ],
+  [
+    "hover",
+    ".view-lifecycle-actions button:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-edit-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline edit hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-edit-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-edit-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions button:first-child"
+  ],
+  [
+    "focus",
+    ".view-lifecycle-actions button:first-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-edit-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline edit focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-edit-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-edit-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "hover",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions .view-danger\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions .view-danger\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-remove-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline remove hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-remove-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-remove-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "focus",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-lifecycle-actions .view-danger\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-lifecycle-actions .view-danger\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-remove-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline remove focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-remove-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-remove-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-chip[aria-pressed=true]"
+  ],
+  [
+    "hover",
+    ".view-chip[aria-pressed=true]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-chip[aria-pressed=true]\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-chip[aria-pressed=true]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-selected-chip-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline selected-chip hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-selected-chip-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-selected-chip-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-chip[aria-pressed=true]"
+  ],
+  [
+    "focus",
+    ".view-chip[aria-pressed=true]"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-chip[aria-pressed=true]\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-chip[aria-pressed=true]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-selected-chip-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline selected-chip focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-selected-chip-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-selected-chip-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-chip[aria-pressed=false]"
+  ],
+  [
+    "hover",
+    ".view-chip[aria-pressed=false]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-chip[aria-pressed=false]\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-chip[aria-pressed=false]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-unselected-chip-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline unselected-chip hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-unselected-chip-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-unselected-chip-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-chip[aria-pressed=false]"
+  ],
+  [
+    "focus",
+    ".view-chip[aria-pressed=false]"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-chip[aria-pressed=false]\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-chip[aria-pressed=false]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-unselected-chip-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline unselected-chip focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-unselected-chip-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-unselected-chip-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-list-item:first-child .view-order-controls button:last-child"
+  ],
+  [
+    "hover",
+    ".view-list-item:first-child .view-order-controls button:last-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-list-item:first-child .view-order-controls button:last-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-list-item:first-child .view-order-controls button:last-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-move-down-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline move-down hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-move-down-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-move-down-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-list-item:first-child .view-order-controls button:last-child"
+  ],
+  [
+    "focus",
+    ".view-list-item:first-child .view-order-controls button:last-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-list-item:first-child .view-order-controls button:last-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-list-item:first-child .view-order-controls button:last-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-move-down-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline move-down focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-move-down-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-move-down-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-list-item:nth-child(2) .view-order-controls button:first-child"
+  ],
+  [
+    "hover",
+    ".view-list-item:nth-child(2) .view-order-controls button:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-list-item:nth-child(2) .view-order-controls button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-list-item:nth-child(2) .view-order-controls button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-move-up-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline move-up hover; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-move-up-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-move-up-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-list-item:nth-child(2) .view-order-controls button:first-child"
+  ],
+  [
+    "focus",
+    ".view-list-item:nth-child(2) .view-order-controls button:first-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-list-item:nth-child(2) .view-order-controls button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-list-item:nth-child(2) .view-order-controls button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-move-up-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real lifecycle fixture baseline move-up focus; no save/reorder/remove activation\",filename:\"screenshots/light-1440-controls-lifecycle-move-up-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-lifecycle-move-up-focus.png"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-order-controls button:disabled\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-lifecycle-boundary-disabled\"})})"
+  ]
+]

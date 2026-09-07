@@ -1,0 +1,152 @@
+[
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Switch to Light",
+    "--exact"
+  ],
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".view-identity label:first-child input"
+  ],
+  [
+    "hover",
+    ".view-identity label:first-child input"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-identity label:first-child input\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-identity label:first-child input\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-fields-name-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Actual unsaved authoring name hover; no input value change\",filename:\"screenshots/light-1440-controls-fields-name-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-fields-name-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-identity label:nth-child(2) input"
+  ],
+  [
+    "hover",
+    ".view-identity label:nth-child(2) input"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-identity label:nth-child(2) input\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-identity label:nth-child(2) input\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-fields-description-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Actual unsaved authoring description hover; no input value change\",filename:\"screenshots/light-1440-controls-fields-description-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-fields-description-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".view-identity label:nth-child(2) input"
+  ],
+  [
+    "focus",
+    ".view-identity label:first-child input"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".view-identity label:nth-child(2) input\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".view-identity label:nth-child(2) input\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-fields-description-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Actual unsaved authoring description focus; no input value change\",filename:\"screenshots/light-1440-controls-fields-description-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-fields-description-focus.png"
+  ],
+  [
+    "scrollintoview",
+    "input[aria-label=\"View color\"]"
+  ],
+  [
+    "hover",
+    "input[aria-label=\"View color\"]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\"input[aria-label=\\\"View color\\\"]\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\"input[aria-label=\\\"View color\\\"]\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-fields-color-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Actual unsaved authoring color hover; no input value change\",filename:\"screenshots/light-1440-controls-fields-color-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-fields-color-hover.png"
+  ],
+  [
+    "scrollintoview",
+    "[data-clause=subject] input"
+  ],
+  [
+    "hover",
+    "[data-clause=subject] input"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\"[data-clause=subject] input\");if(!e)return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\"[data-clause=subject] input\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-fields-subject-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Actual unsaved authoring subject hover; no input value change\",filename:\"screenshots/light-1440-controls-fields-subject-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-fields-subject-hover.png"
+  ]
+]

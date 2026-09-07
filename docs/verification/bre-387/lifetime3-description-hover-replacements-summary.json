@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-09-07T12:59:48.532292+00:00",
+  "completedAt": "2026-09-07T13:00:30.338043+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-description-hover-replacements-commands.json",
+  "raw": "lifetime3-description-hover-replacements-raw.json",
+  "stderr": "lifetime3-description-hover-replacements-stderr.txt",
+  "parsedRecords": 3,
+  "indexingCorrection": "Original parsedRecords3 retained; two distinct capture filenames share scenario text. Both raw receipts exist and are now indexed by filename, no browser rerun."
+}

@@ -1,0 +1,28 @@
+[
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Views",
+    "--exact"
+  ],
+  [
+    "wait",
+    ".view-chip"
+  ],
+  [
+    "click",
+    ".view-list-item:first-child .view-chip"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelectorAll(\".view-chip\").length===2 && !document.querySelector(\".view-lifecycle-actions button:first-child\").disabled"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-lifecycle-ready-after-overview\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,views:[...document.querySelectorAll(\".view-chip\")].map(e=>({name:e.innerText,pressed:e.getAttribute(\"aria-pressed\")})),actions:[...document.querySelectorAll(\".view-lifecycle-actions button,.view-order-controls button\")].map(e=>({label:e.getAttribute(\"aria-label\")||e.textContent,disabled:e.matches(\":disabled\")}))}})"
+  ]
+]

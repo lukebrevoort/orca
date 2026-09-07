@@ -1,0 +1,37 @@
+[
+  [
+    "click",
+    ".view-discard-keep"
+  ],
+  [
+    "wait",
+    "[data-clause=subject] input"
+  ],
+  [
+    "fill",
+    "[data-clause=subject] input",
+    "BRE387 unmatched control sample"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\".view-save\")?.textContent === \"Review zero matches\" && !document.querySelector(\".view-save\").disabled"
+  ],
+  [
+    "scrollintoview",
+    ".view-composer h3"
+  ],
+  [
+    "click",
+    ".view-save"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\".view-save\")?.textContent === \"Confirm zero-match save\""
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-zero-control-setup\",at:new Date().toISOString(),url:location.href,subject:document.querySelector(\"[data-clause=subject] input\").value,saveLabel:document.querySelector(\".view-save\").textContent,actions:[...document.querySelectorAll(\".view-composer-actions button\")].map(e=>e.textContent)}})"
+  ]
+]

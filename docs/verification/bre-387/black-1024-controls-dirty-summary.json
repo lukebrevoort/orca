@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:30:50.605936+00:00",
+  "completedAt": "2026-09-07T12:31:05.156204+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-controls-dirty-commands.json",
+  "raw": "black-1024-controls-dirty-raw.json",
+  "stderr": "black-1024-controls-dirty-stderr.txt",
+  "parsedRecords": 8
+}

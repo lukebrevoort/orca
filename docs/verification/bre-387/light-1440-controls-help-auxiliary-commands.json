@@ -1,0 +1,144 @@
+[
+  [
+    "set",
+    "viewport",
+    "1440",
+    "900"
+  ],
+  [
+    "scrollintoview",
+    ".first-view-help-close"
+  ],
+  [
+    "focus",
+    ".first-view-help h2"
+  ],
+  [
+    "hover",
+    ".first-view-help-close"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".first-view-help-close\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".first-view-help-close\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-help-auxiliary-close-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real Getting started auxiliary control close hover; no Close or Skip activation\",filename:\"screenshots/light-1440-controls-help-auxiliary-close-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-help-auxiliary-close-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".first-view-help-close"
+  ],
+  [
+    "focus",
+    ".first-view-help-close"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".first-view-help-close\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".first-view-help-close\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-help-auxiliary-close-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real Getting started auxiliary control close focus; no Close or Skip activation\",filename:\"screenshots/light-1440-controls-help-auxiliary-close-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-help-auxiliary-close-focus.png"
+  ],
+  [
+    "scrollintoview",
+    ".first-view-help .first-view-guidance footer button:first-child"
+  ],
+  [
+    "focus",
+    ".first-view-help h2"
+  ],
+  [
+    "hover",
+    ".first-view-help .first-view-guidance footer button:first-child"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".first-view-help .first-view-guidance footer button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":hover\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".first-view-help .first-view-guidance footer button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-help-auxiliary-skip-hover\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real Getting started auxiliary control skip hover; no Close or Skip activation\",filename:\"screenshots/light-1440-controls-help-auxiliary-skip-hover.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-help-auxiliary-skip-hover.png"
+  ],
+  [
+    "scrollintoview",
+    ".first-view-help .first-view-guidance footer button:first-child"
+  ],
+  [
+    "focus",
+    ".first-view-help .first-view-guidance footer button:first-child"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "wait",
+    "--fn",
+    "(()=>{const e=document.querySelector(\".first-view-help .first-view-guidance footer button:first-child\");if(!e||e.matches(\":disabled\"))return false;const r=e.getBoundingClientRect();return e.matches(\":focus-visible\")&&e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))&&!e.getAnimations().some(a=>a.playState===\"running\")})()"
+  ],
+  [
+    "eval",
+    "({controlObservation:Object.assign((()=>{const selector=\".first-view-help .first-view-guidance footer button:first-child\";return {at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],targets:[...document.querySelectorAll(selector)].map(e=>{let s=getComputedStyle(e),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2),chain=[];for(let x=e;x;x=x.parentElement){let c=getComputedStyle(x);chain.push({tag:x.tagName,class:x.className,color:c.color,background:c.backgroundColor,opacity:c.opacity,borderColor:c.borderColor,borderWidth:c.borderWidth,overflow:c.overflow,outline:c.outline,boxShadow:c.boxShadow})}return {label:e.getAttribute('aria-label')||[...(e.labels||[])].map(x=>x.textContent.trim()).join(' ')||e.textContent.trim(),value:e.value,disabled:e.matches(':disabled'),hover:e.matches(':hover'),focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),active:e.matches(':active'),pressed:e.getAttribute('aria-pressed'),expanded:e.getAttribute('aria-expanded'),checked:e.checked,rect:r.toJSON(),hit:e===h||e.contains(h),chain}})}})(),{\"scenario\": \"light-1440-controls-help-auxiliary-skip-focus\"})})"
+  ],
+  [
+    "eval",
+    "({captureReceipt:{at:new Date().toISOString(),url:location.href,viewport:{width:innerWidth,height:innerHeight},theme:\"Light\",scenario:\"Real Getting started auxiliary control skip focus; no Close or Skip activation\",filename:\"screenshots/light-1440-controls-help-auxiliary-skip-focus.png\"}})"
+  ],
+  [
+    "screenshot",
+    "docs/verification/bre-387/screenshots/light-1440-controls-help-auxiliary-skip-focus.png"
+  ]
+]

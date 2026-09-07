@@ -1,0 +1,123 @@
+{
+  "at": "2026-09-07T10:44:39.499Z",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(23, 23, 23)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "global-mail-save",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(106, 169, 245) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "global-mail-search-toolbar",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(0, 0, 0, 0.72) 0px 34px 110px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": true,
+      "label": "Save as View",
+      "pressed": null,
+      "rect": {
+        "bottom": 214.75,
+        "height": 38,
+        "left": 789.375,
+        "right": 877,
+        "top": 176.75,
+        "width": 87.625,
+        "x": 789.375,
+        "y": 176.75
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+  "viewport": [
+    1024,
+    768
+  ],
+  "scenario": "black-1024-controls-search-save-focus",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

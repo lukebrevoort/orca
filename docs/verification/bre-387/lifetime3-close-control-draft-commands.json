@@ -1,0 +1,33 @@
+[
+  [
+    "scrollintoview",
+    ".view-composer h3"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Cancel",
+    "--exact"
+  ],
+  [
+    "wait",
+    ".view-discard-keep"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Discard draft",
+    "--exact"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\".view-composer\")"
+  ]
+]

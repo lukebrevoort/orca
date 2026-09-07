@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:20:53.250732+00:00",
+  "completedAt": "2026-09-07T12:23:10.102605+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-controls-census-exposed-commands.json",
+  "raw": "black-1024-controls-census-exposed-raw.json",
+  "stderr": "black-1024-controls-census-exposed-stderr.txt",
+  "parsedRecords": 12
+}
