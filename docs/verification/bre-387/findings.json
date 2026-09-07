@@ -1,0 +1,30 @@
+{
+  "findings": [
+    {
+      "id": "F01",
+      "status": "needs-fix; inherited runtime defect",
+      "recordedAt": "2026-09-07T05:25:13.320194+00:00",
+      "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+      "productBase": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "summary": "Scrolled bulk selection toolbar overlays persistent workspace header; theme center targets Select all visible",
+      "reproduction": [
+        "Light1024 Inbox Select",
+        "Select work Apartment viewing1 and personal Apartment weekend",
+        "Personal-row scroll places sticky toolbar over header",
+        "Theme click rejected; elementFromPoint at theme center returns bulk-select-all"
+      ],
+      "evidence": [
+        "selection-theme-hit.json",
+        "screenshots/light-1024-mixed-scrolled.png"
+      ],
+      "source": [
+        "apps/web/src/styles.css:4531",
+        "apps/web/src/desktop-switch.css:287",
+        "apps/web/src/App.tsx:3009"
+      ],
+      "reviewer": "agt_df05f0d72abe static/source and artifact review; no separate browser run",
+      "boundary": "Inherited from BRE285 bulk and BRE326 shell, unchanged vs BRE386. Scroll-back restores access but does not close acceptance. No runtime fix in BRE387. Parent notified to route upstream.",
+      "requiredValidation": "Both sizes/themes, scrolled no-selection/mixed selection, actual theme/Search/bulk centers, visible keyboard focus, no unintended selection mutation."
+    }
+  ]
+}

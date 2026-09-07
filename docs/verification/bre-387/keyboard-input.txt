@@ -1,0 +1,14 @@
+COMMAND press End
+✓ Done
+COMMAND press x
+✓ Done
+COMMAND press Meta+z
+✓ Done
+- heading "Search mail" [level=1, ref=e3]
+- button "Close Search mail and return to View:view_7efd42ca-3b60-4d90-89a2-020148aa4af4" [ref=e4]
+- textbox "Search stored mail" [ref=e8]: Projectx
+- button "Search" [ref=e5]
+- button "Filters" [expanded=false, ref=e1]
+- button "Save as View" [ref=e2]
+- heading "Nothing found for “Projectx”." [level=2, ref=e6]
+- button "Clear query" [ref=e7]

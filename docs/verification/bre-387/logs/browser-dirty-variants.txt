@@ -1,0 +1,30 @@
+2026-09-07T04:33:18.068067+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T04:33:42.307336+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1024-dirty-guard', 'Orca Black', '1024', '768', 'Dirty draft dismissal with Keep editing and Discard draft', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-dirty-guard.png
+screenshots/black-1024-dirty-guard.png
+2026-09-07T04:33:54.969997+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1024-dirty-guard')
+{"scenario": "black-1024-dirty-guard", "active": {"label": "Keep editing", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T04:33:59.351996+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T04:34:09.012057+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1440-dirty-guard', 'Orca Black', '1440', '900', 'Dirty draft dismissal with Keep editing and Discard draft', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-dirty-guard.png
+screenshots/black-1440-dirty-guard.png
+2026-09-07T04:34:15.672106+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1440-dirty-guard')
+{"scenario": "black-1440-dirty-guard", "active": {"label": "Keep editing", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T04:34:23.881662+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'find', 'role', 'button', 'click', '--name', 'Switch to Light', '--exact')
+✓ Done
+2026-09-07T04:34:28.987344+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T04:34:36.940938+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1440-dirty-guard', 'Light', '1440', '900', 'Dirty draft dismissal with Keep editing and Discard draft', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-dirty-guard.png
+screenshots/light-1440-dirty-guard.png
+2026-09-07T04:34:49.720242+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1440-dirty-guard')
+{"scenario": "light-1440-dirty-guard", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T04:35:06.168199+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T04:35:26.258875+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1024-dirty-guard', 'Light', '1024', '768', 'Dirty draft dismissal with Keep editing and Discard draft', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-dirty-guard.png
+screenshots/light-1024-dirty-guard.png
+2026-09-07T04:35:47.324342+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1024-dirty-guard')
+{"scenario": "light-1024-dirty-guard", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}

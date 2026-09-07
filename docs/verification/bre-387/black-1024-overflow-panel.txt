@@ -1,0 +1,11 @@
+Keep only these senders
+
+Correcting “Overflow census” in work@example.com. Conversation overflow-0.
+
+This is a positive allowlist for this account only; accounts connected later are not included. Omitted and new senders stay outside this View until you add them. Exact addresses replace any existing domain filters. Mail stays unchanged.
+
+More than 50 matching senders. Use exact sender controls in Tune; no partial list is applied.
+
+No partial sender list can be applied. Use the labeled filters for manual correction.
+
+Cancel sender correction

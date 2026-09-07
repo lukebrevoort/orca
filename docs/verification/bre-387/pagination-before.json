@@ -1,0 +1,132 @@
+{
+  "heading": "1 ACCOUNT · 25 SHOWN\nCurrent results\n\nMembership is evaluated live; opening a Thread preserves its account identity.",
+  "rows": [
+    {
+      "date": "2026-09-06T12:00:00.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 0"
+    },
+    {
+      "date": "2026-09-06T11:59:59.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 1"
+    },
+    {
+      "date": "2026-09-06T11:59:59.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project new sender"
+    },
+    {
+      "date": "2026-09-06T11:59:58.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 2"
+    },
+    {
+      "date": "2026-09-06T11:59:58.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project allowed sender"
+    },
+    {
+      "date": "2026-09-06T11:59:57.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 3"
+    },
+    {
+      "date": "2026-09-06T11:59:57.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 4"
+    },
+    {
+      "date": "2026-09-06T11:59:56.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 4"
+    },
+    {
+      "date": "2026-09-06T11:59:56.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 5"
+    },
+    {
+      "date": "2026-09-06T11:59:55.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 5"
+    },
+    {
+      "date": "2026-09-06T11:59:55.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 6"
+    },
+    {
+      "date": "2026-09-06T11:59:54.000Z",
+      "description": "Juniper Studio · work@example.com",
+      "subject": "Project correction 6"
+    },
+    {
+      "date": "2026-09-06T11:59:54.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 7"
+    },
+    {
+      "date": "2026-09-06T11:59:53.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 8"
+    },
+    {
+      "date": "2026-09-06T11:59:52.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 9"
+    },
+    {
+      "date": "2026-09-06T11:59:51.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 10"
+    },
+    {
+      "date": "2026-09-06T11:59:50.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 11"
+    },
+    {
+      "date": "2026-09-06T11:59:49.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 12"
+    },
+    {
+      "date": "2026-09-06T11:59:48.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 13"
+    },
+    {
+      "date": "2026-09-06T11:59:47.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 14"
+    },
+    {
+      "date": "2026-09-06T11:59:46.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 15"
+    },
+    {
+      "date": "2026-09-06T11:59:45.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 16"
+    },
+    {
+      "date": "2026-09-06T11:59:44.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 17"
+    },
+    {
+      "date": "2026-09-06T11:59:43.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 18"
+    },
+    {
+      "date": "2026-09-06T11:59:42.000Z",
+      "description": "Maya Chen · work@example.com",
+      "subject": "Project update 19"
+    }
+  ],
+  "timestamp": "2026-09-07T04:07:05.949Z",
+  "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4"
+}

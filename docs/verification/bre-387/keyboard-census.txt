@@ -1,0 +1,41 @@
+2026-09-07T04:14:18.358011+00:00 COMMAND ['snapshot', '-i', '-s', '[aria-label="Correct matching senders"]']
+- region "Correct matching senders" [ref=e21]
+  - heading "Keep only these senders" [level=4, ref=e27]
+  - checkbox "MAYA@EXAMPLE.COM" [checked=true, ref=e46]
+  - checkbox "SENDER0@EXAMPLE.COM" [checked=true, ref=e47]
+  - checkbox "SENDER1@EXAMPLE.COM" [checked=true, ref=e48]
+  - checkbox "SENDER2@EXAMPLE.COM" [checked=true, ref=e49]
+  - checkbox "SENDER3@EXAMPLE.COM" [checked=true, ref=e50]
+  - checkbox "SENDER4@EXAMPLE.COM" [checked=true, ref=e51]
+  - checkbox "SENDER5@EXAMPLE.COM" [checked=true, ref=e52]
+  - checkbox "SENDER6@EXAMPLE.COM" [checked=true, ref=e53]
+  - button "Preview these senders" [ref=e28]
+  - button "Cancel sender correction" [ref=e29]
+2026-09-07T04:14:22.854920+00:00 COMMAND ['focus', '.view-sender-correction label:first-child input']
+✓ Done
+2026-09-07T04:14:26.062520+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:28.412920+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:32.507538+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:35.770605+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:37.532933+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:38.385944+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:41.415731+00:00 COMMAND ['press', 'Tab']
+✓ Done
+2026-09-07T04:14:44.003319+00:00 COMMAND ['eval', '({active:document.activeElement.labels?.[0]?.textContent,checked:document.activeElement.checked})']
+{
+  "active": "sender6@example.com",
+  "checked": true
+}
+2026-09-07T04:14:46.053738+00:00 COMMAND ['press', 'Space']
+✓ Done
+2026-09-07T04:14:46.823115+00:00 COMMAND ['eval', '({active:document.activeElement.labels?.[0]?.textContent,checked:document.activeElement.checked})']
+{
+  "active": "sender6@example.com",
+  "checked": false
+}

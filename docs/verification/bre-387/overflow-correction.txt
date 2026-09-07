@@ -1,0 +1,11 @@
+- region "Correct matching senders" [ref=e29]
+  - heading "Keep only these senders" [level=4, ref=e39]
+  - paragraph
+    - StaticText "Correcting “Overflow census” in work@example.com. Conversation overflow-0."
+  - paragraph
+    - StaticText "This is a positive allowlist for this account only; accounts connected later are not included. Omitted and new senders stay outside this View until you add them. Exact addresses replace any existing domain filters. Mail stays unchanged."
+  - paragraph
+    - StaticText "More than 50 matching senders. Use exact sender controls in Tune; no partial list is applied."
+  - paragraph
+    - StaticText "No partial sender list can be applied. Use the labeled filters for manual correction."
+  - button "Cancel sender correction" [ref=e40]

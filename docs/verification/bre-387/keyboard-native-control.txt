@@ -1,0 +1,44 @@
+2026-09-07T03:57:34.713031+00:00 COMMAND ['fill', '#fill', 'Project']
+✓ Done
+2026-09-07T03:57:42.815760+00:00 COMMAND ['press', 'End']
+✓ Done
+2026-09-07T03:57:52.361167+00:00 COMMAND ['press', 'x']
+✓ Done
+2026-09-07T03:58:06.059969+00:00 COMMAND ['press', 'Meta+z']
+✓ Done
+2026-09-07T03:58:14.295908+00:00 COMMAND ['eval', '({case:"fill",value:document.querySelector("#fill").value,active:document.activeElement.id,platform:navigator.platform})']
+{
+  "active": "fill",
+  "case": "fill",
+  "platform": "MacIntel",
+  "value": "Projectx"
+}
+2026-09-07T03:58:20.598867+00:00 COMMAND ['focus', '#typed']
+✓ Done
+2026-09-07T03:58:25.856216+00:00 COMMAND ['press', 'P']
+✓ Done
+2026-09-07T03:58:32.577267+00:00 COMMAND ['press', 'r']
+✓ Done
+2026-09-07T03:58:37.408691+00:00 COMMAND ['press', 'o']
+✓ Done
+2026-09-07T03:58:43.969454+00:00 COMMAND ['press', 'j']
+✓ Done
+2026-09-07T03:58:48.816197+00:00 COMMAND ['press', 'e']
+✓ Done
+2026-09-07T03:58:54.377294+00:00 COMMAND ['press', 'c']
+✓ Done
+2026-09-07T03:58:58.686329+00:00 COMMAND ['press', 't']
+✓ Done
+2026-09-07T03:59:02.629511+00:00 COMMAND ['press', 'End']
+✓ Done
+2026-09-07T03:59:06.215297+00:00 COMMAND ['press', 'x']
+✓ Done
+2026-09-07T03:59:09.443213+00:00 COMMAND ['press', 'Meta+z']
+✓ Done
+2026-09-07T03:59:12.341968+00:00 COMMAND ['eval', '({case:"typed",value:document.querySelector("#typed").value,active:document.activeElement.id,platform:navigator.platform})']
+{
+  "active": "typed",
+  "case": "typed",
+  "platform": "MacIntel",
+  "value": "Projectx"
+}

@@ -1,0 +1,708 @@
+{
+  "status": "in progress; captures do not imply all hover/focus/keyboard/loading states",
+  "rows": [
+    {
+      "family": "Onboarding",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-onboarding.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-onboarding.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-onboarding.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-onboarding.png",
+            "screenshots/black-1024-empty-onboarding.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Saved results",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-saved.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-saved.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-saved.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-saved.png",
+            "screenshots/black-1024-zero-saved.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Correction census",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-saved-correction.png",
+            "screenshots/light-1440-census-keyboard.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-saved-correction.png",
+            "screenshots/light-1024-census-keyboard.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-saved-correction.png",
+            "screenshots/black-1440-census-keyboard.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-saved-correction.png",
+            "screenshots/black-1024-census-keyboard.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Error and disabled draft",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-form-error.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-form-error.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-form-error.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-form-error.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Dirty dismissal",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-dirty-guard.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-dirty-guard.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-dirty-guard.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-dirty-guard.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Unsupported general Search",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-unsupported.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-unsupported.png",
+            "screenshots/light-1024-prepare-transition.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-unsupported.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-unsupported.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Multi-account unavailable",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-multi-account-unavailable.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-multi-account-correction.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-multi-account-unavailable.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-multi-account-unavailable.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Correction empty selection",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-empty-correction.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Selected mail: no selection",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-no-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-no-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-no-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-no-selection.png",
+            "screenshots/black-1024-no-selection-state.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Selected mail: mixed accounts",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-mixed-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-mixed-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-mixed-selection-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-mixed-selection.png",
+            "screenshots/black-1024-mixed-selection-state.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Selected mail authoring",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-selected-authoring.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "List error",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-list-error.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Preference error",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-preference-error.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Empty sample",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-empty-onboarding.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Mail arrival help",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-arrival-help.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Correction overflow",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-overflow-panel.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-overflow-panel.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-overflow-panel.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-overflow-correction.png",
+            "screenshots/black-1024-overflow-panel.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Zero confirmation",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-zero-confirm-state.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-zero-confirm-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-zero-confirm-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-zero-confirmation.png",
+            "screenshots/black-1024-zero-confirm-state.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Zero saved results",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-zero-results-state.png"
+          ]
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-zero-results-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-zero-results-state.png"
+          ]
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-zero-saved.png",
+            "screenshots/black-1024-zero-results-state.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Organization management",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-organization.png",
+            "screenshots/black-1024-reordered.png"
+          ]
+        }
+      ]
+    },
+    {
+      "family": "Actual pending/loading",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "status": "pending live observation",
+          "captures": []
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "status": "pending live observation",
+          "captures": []
+        }
+      ]
+    }
+  ]
+}

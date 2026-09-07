@@ -1,0 +1,27 @@
+{
+  "emptyMailCount": {
+    "count": 0
+  },
+  "preferences": [
+    {
+      "first_view_guidance_completed_at": "2026-09-07T02:17:48.851Z",
+      "user_id": "reviewer"
+    }
+  ],
+  "views": [
+    {
+      "definition": "{\"revision\":1,\"accountIds\":[\"work\"],\"sender\":{\"addresses\":[\"maya@example.com\"]}}",
+      "id": "view_021cd615-11db-49e7-a1f3-9ad29349ab9c",
+      "name": "Selected Maya evidence",
+      "revision": 1,
+      "workspace_id": "reviewer"
+    },
+    {
+      "definition": "{\"revision\":1,\"accountIds\":[\"work\"],\"sender\":{\"addresses\":[\"maya@example.com\"]},\"thread\":{\"subjectContains\":\"Project\"}}",
+      "id": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "name": "Project renamed evidence",
+      "revision": 4,
+      "workspace_id": "reviewer"
+    }
+  ]
+}

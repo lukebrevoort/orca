@@ -38,14 +38,180 @@
   },
   "pointerClipping": "In both 1024 samples, maya and sender0..3 centers hit their inputs. sender4..6 are below the census overflow:auto rectangle (y406,h260); initial geometry probe did not account for ancestor clipping. Those misses are not evidence that a visible checkbox is obstructed. Scrolled candidate interaction still requires separate observation.",
   "limits": "No blanket accessibility or full-state approval. Remaining keyboard/loading/error/zero/unsupported combinations stay pending until captured.",
-  "correctionIncompleteOpen": {
-    "1024": [
-      ".desktop-health partially obscured"
+  "scrolledCandidateInteraction": "Subsequent semantic checkbox clicks reached sender4,5,6 and final snapshot verified all eight unchecked. Preview disabled. Space on focused Maya unchecked it.",
+  "directIncompleteReview": {
+    "status": "manual contrast/hit review complete for recorded glyph, header text and fully scrolled sender6 span; original axe reports unchanged",
+    "checks": [
+      {
+        "source": "manual-targets-black-1024.json",
+        "timestamp": "2026-09-07T04:16:49.727Z",
+        "viewport": {
+          "height": 768,
+          "width": 1024
+        },
+        "theme": "dark",
+        "active": {
+          "checked": false,
+          "label": "sender6@example.com",
+          "outline": "rgb(106, 169, 245) solid 2px"
+        },
+        "nodes": [
+          {
+            "selector": ".desktop-health",
+            "text": "syncing",
+            "hit": true,
+            "foreground": [
+              177.0,
+              177.0,
+              171.0
+            ],
+            "recordedBackground": "color(srgb 0.0196078 0.0196078 0.0196078 / 0.94)",
+            "minimumContrastOverAnyUnderlyingRGB": 8.55,
+            "method": "Conservative bound compositing recorded 94% header color over arbitrary RGB black through white; no assumption that nearest opaque ancestor is actual blurred backdrop."
+          },
+          {
+            "selector": ".view-sender-correction label:nth-child(8) > span",
+            "text": "sender6@example.com",
+            "hit": true,
+            "foreground": [
+              177.0,
+              177.0,
+              171.0
+            ],
+            "recordedBackground": "rgb(23, 23, 23)",
+            "contrastRatio": 8.32,
+            "method": "Actual span computed color against nearest opaque correction-panel background; all recorded ancestor opacity values1."
+          }
+        ]
+      },
+      {
+        "source": "manual-targets-black-1440.json",
+        "timestamp": "2026-09-07T04:17:21.021Z",
+        "viewport": {
+          "height": 900,
+          "width": 1440
+        },
+        "theme": "dark",
+        "active": {
+          "checked": false,
+          "label": "sender6@example.com",
+          "outline": "rgb(106, 169, 245) solid 2px"
+        },
+        "nodes": [
+          {
+            "selector": ".desktop-health",
+            "text": "syncing",
+            "hit": true,
+            "foreground": [
+              177.0,
+              177.0,
+              171.0
+            ],
+            "recordedBackground": "color(srgb 0.0196078 0.0196078 0.0196078 / 0.94)",
+            "minimumContrastOverAnyUnderlyingRGB": 8.55,
+            "method": "Conservative bound compositing recorded 94% header color over arbitrary RGB black through white; no assumption that nearest opaque ancestor is actual blurred backdrop."
+          },
+          {
+            "selector": ".view-sender-correction label:nth-child(8) > span",
+            "text": "sender6@example.com",
+            "hit": true,
+            "foreground": [
+              177.0,
+              177.0,
+              171.0
+            ],
+            "recordedBackground": "rgb(23, 23, 23)",
+            "contrastRatio": 8.32,
+            "method": "Actual span computed color against nearest opaque correction-panel background; all recorded ancestor opacity values1."
+          }
+        ]
+      },
+      {
+        "source": "manual-targets-light-1024.json",
+        "timestamp": "2026-09-07T04:18:40.068Z",
+        "viewport": {
+          "height": 768,
+          "width": 1024
+        },
+        "theme": "light",
+        "active": {
+          "checked": false,
+          "label": "sender6@example.com",
+          "outline": "rgb(8, 116, 97) solid 2px"
+        },
+        "nodes": [
+          {
+            "selector": ".desktop-health",
+            "text": "syncing",
+            "hit": true,
+            "foreground": [
+              81.0,
+              100.0,
+              94.0
+            ],
+            "recordedBackground": "color(srgb 0.964706 0.980392 0.968627 / 0.94)",
+            "minimumContrastOverAnyUnderlyingRGB": 5.24,
+            "method": "Conservative bound compositing recorded 94% header color over arbitrary RGB black through white; no assumption that nearest opaque ancestor is actual blurred backdrop."
+          },
+          {
+            "selector": ".view-sender-correction label:nth-child(8) > span",
+            "text": "sender6@example.com",
+            "hit": true,
+            "foreground": [
+              81.0,
+              100.0,
+              94.0
+            ],
+            "recordedBackground": "rgb(237, 245, 242)",
+            "contrastRatio": 5.68,
+            "method": "Actual span computed color against nearest opaque correction-panel background; all recorded ancestor opacity values1."
+          }
+        ]
+      },
+      {
+        "source": "manual-targets-light-1440.json",
+        "timestamp": "2026-09-07T04:17:48.607Z",
+        "viewport": {
+          "height": 900,
+          "width": 1440
+        },
+        "theme": "light",
+        "active": {
+          "checked": false,
+          "label": "sender6@example.com",
+          "outline": "rgb(8, 116, 97) solid 2px"
+        },
+        "nodes": [
+          {
+            "selector": ".desktop-health",
+            "text": "syncing",
+            "hit": true,
+            "foreground": [
+              81.0,
+              100.0,
+              94.0
+            ],
+            "recordedBackground": "color(srgb 0.964706 0.980392 0.968627 / 0.94)",
+            "minimumContrastOverAnyUnderlyingRGB": 5.24,
+            "method": "Conservative bound compositing recorded 94% header color over arbitrary RGB black through white; no assumption that nearest opaque ancestor is actual blurred backdrop."
+          },
+          {
+            "selector": ".view-sender-correction label:nth-child(8) > span",
+            "text": "sender6@example.com",
+            "hit": true,
+            "foreground": [
+              81.0,
+              100.0,
+              94.0
+            ],
+            "recordedBackground": "rgb(237, 245, 242)",
+            "contrastRatio": 5.68,
+            "method": "Actual span computed color against nearest opaque correction-panel background; all recorded ancestor opacity values1."
+          }
+        ]
+      }
     ],
-    "1440": [
-      "label:nth-child(8) > span partially obscured"
-    ],
-    "status": "pending direct target/background review; glyph assessment does not resolve these nodes"
+    "limits": "Original clipped states remain represented by raw incomplete reports. These follow-up captures reconstruct an eight-address unsaved draft after later mail; they establish visible target colors and keyboard reach, not an automated axe completion or human usability result."
   },
-  "scrolledCandidateInteraction": "Subsequent semantic checkbox clicks reached sender4,5,6 and final snapshot verified all eight unchecked. Preview disabled. Space on focused Maya unchecked it."
+  "nativeUndo": "Cmd-Z leaves Projectx in Search and both handler-free control baselines. No Orca-specific defect established; native Mac Undo remains unverified."
 }

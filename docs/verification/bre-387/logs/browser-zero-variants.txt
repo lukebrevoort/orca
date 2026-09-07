@@ -1,0 +1,38 @@
+2026-09-07T05:05:33.050720+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:05:35.618677+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Confirm zero-match save')
+Confirm zero-match save
+2026-09-07T05:05:40.169340+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1024-zero-confirm-state', 'Orca Black', '1024', '768', 'Explicit zero-match save confirmation; no save in variant loop', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-zero-confirm-state.png
+screenshots/black-1024-zero-confirm-state.png
+2026-09-07T05:05:48.562985+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1024-zero-confirm-state')
+{"scenario": "black-1024-zero-confirm-state", "active": {"label": "Confirm zero-match save", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:05:56.190355+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:06:03.044237+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Confirm zero-match save')
+Confirm zero-match save
+2026-09-07T05:06:14.964071+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1440-zero-confirm-state', 'Orca Black', '1440', '900', 'Explicit zero-match save confirmation; no save in variant loop', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-zero-confirm-state.png
+screenshots/black-1440-zero-confirm-state.png
+2026-09-07T05:06:39.007848+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1440-zero-confirm-state')
+{"scenario": "black-1440-zero-confirm-state", "active": {"label": "Confirm zero-match save", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:06:54.975248+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'find', 'role', 'button', 'click', '--name', 'Switch to Light', '--exact')
+✓ Done
+2026-09-07T05:07:00.563058+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:07:05.084218+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Confirm zero-match save')
+Confirm zero-match save
+2026-09-07T05:07:15.034759+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1440-zero-confirm-state', 'Light', '1440', '900', 'Explicit zero-match save confirmation; no save in variant loop', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-zero-confirm-state.png
+screenshots/light-1440-zero-confirm-state.png
+2026-09-07T05:07:26.035613+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1440-zero-confirm-state')
+{"scenario": "light-1440-zero-confirm-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:07:29.064682+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:07:32.724787+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Confirm zero-match save')
+Confirm zero-match save
+2026-09-07T05:07:36.140068+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1024-zero-confirm-state', 'Light', '1024', '768', 'Explicit zero-match save confirmation; no save in variant loop', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-zero-confirm-state.png
+screenshots/light-1024-zero-confirm-state.png
+2026-09-07T05:07:40.335943+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1024-zero-confirm-state')
+{"scenario": "light-1024-zero-confirm-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}

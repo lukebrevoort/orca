@@ -1,0 +1,801 @@
+orca
+PERSONAL
+Compose
+C
+
+ANCHORS
+
+Inbox
+100
+Drafts
+0
+MY SPACES
+MANAGE
+Focus
+0
+Notify
+0
+Quiet
+0
+Later
+0
+Project renamed evidence
+All Mail
+
+WORKSPACE
+
+Organization
+Settings
+Orca reviewer
+2 accounts · attention
+›
+⌕
+⌘ K
+Attention
+Light
+MY SPACES · LIVE VIEW
+Project renamed evidence
+
+Evaluating current stored mail with the saved definition.
+
+Edit or rename ViewManage in Organization
+1 ACCOUNT · 25 SHOWN
+Current results
+
+Membership is evaluated live; opening a Thread preserves its account identity.
+
+8
+Project correction 0
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 0
+8
+Project correction 1
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 1
+8
+Project new sender
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project new sender
+8
+Project correction 2
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 2
+8
+Project allowed sender
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project allowed sender
+8
+Project correction 3
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 3
+8
+Project update 4
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 4
+8
+Project correction 4
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 4
+8
+Project update 5
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 5
+8
+Project correction 5
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 5
+8
+Project update 6
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 6
+8
+Project correction 6
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 6
+8
+Project update 7
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 7
+8
+Project update 8
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 8
+8
+Project update 9
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 9
+8
+Project update 10
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 10
+8
+Project update 11
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 11
+8
+Project update 12
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 12
+8
+Project update 13
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 13
+8
+Project update 14
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 14
+8
+Project update 15
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 15
+8
+Project update 16
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 16
+8
+Project update 17
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 17
+8
+Project update 18
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 18
+8
+Project update 19
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project update 19
+Load more
+⌕
+Search mail
+
+STORED MESSAGES
+
+Esc
+Back to View:view_7efd42ca-3b60-4d90-89a2-020148aa4af4
+×
+⌕
+Enter
+Search
+SCOPE
+All mail · Any evidence
+≡
+Filters
+Save as View
+Results
+100+ messages · ↓ to browse
+Juniper Studio
+Sep 6
+Project correction 0
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 1
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project new sender
+Arrived after the View was saved.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 2
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project allowed sender
+An allowed sender after saving.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 3
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 4
+A personal note about plans and next steps.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 4
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 5
+A personal note about plans and next steps.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 5
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 6
+A personal note about plans and next steps.
+LIKELY HUMAN
+Juniper Studio
+Sep 6
+Project correction 6
+Seven distinct matching senders beyond one preview page.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 7
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 8
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 9
+An apartment detail appears only in this snippet.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 10
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 11
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 12
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 13
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 14
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 15
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 16
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 17
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 18
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 19
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 20
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 21
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 22
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 23
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 24
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 25
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 26
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 27
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 28
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 29
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 30
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 31
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 32
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 33
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 34
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 35
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 36
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 37
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 38
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 39
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 40
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 41
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 42
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 43
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 44
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 45
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 46
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 47
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 48
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 49
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 50
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 51
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 52
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 53
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 54
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 55
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 56
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 57
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 58
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 59
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 60
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 61
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 62
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 63
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 64
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 65
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 66
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 67
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 68
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 69
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 70
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 71
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 72
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 73
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 74
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 75
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 76
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 77
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 78
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 79
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 80
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 81
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 82
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 83
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 84
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 85
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 86
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 87
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 88
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 89
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 90
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 91
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 92
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 93
+A personal note about plans and next steps.
+LIKELY HUMAN
+Maya Chen
+Sep 6
+Project update 94
+A personal note about plans and next steps.
+LIKELY HUMAN
+Load more matches
+
+Previewing conversations for this View. Search message order and counts may differ. Your original search stays unchanged.
+
+SEARCH MAIL
+Review this live View
+
+Confirm the exact account and filters before saving.
+
+Live from current Thread organization
+No membership list is stored.
+PERSPECTIVE BUILDER
+Build a live perspective
+Undo draft change
+Cancel
+Save View
+VIEW NAME
+A short name shown in your workspace.
+DESCRIPTION optional
+COLOR
+CURRENT SCOPE
+
+Show messages with “Project” in the subject from any account in any lane.
+
+NEEDS REVIEW
+Unsupported clauses resolved
+
+Add an equivalent supported filter if the removed meaning still matters.
+
+Tune
+FILTERS
+Every filter narrows the same live result.
+Add filter ＋
+SUBJECT
+Match words in the Thread subject
+Remove
+SUBJECT CONTAINS
+STORED-MAIL PREVIEW
+1 predicate family · combined with AND
+5 shown · no preview state is persisted.
+
+Preview is current. Ready to save this perspective.
+
+Keep only these senders
+
+Correcting “Project correction 0” in work@example.com. Conversation census-0.
+
+This is a positive allowlist for this account only; accounts connected later are not included. Omitted and new senders stay outside this View until you add them. Exact addresses replace any existing domain filters. Mail stays unchanged.
+
+Choose one account in Tune before correcting senders.
+
+No partial sender list can be applied. Use the labeled filters for manual correction.
+
+Cancel sender correction
+UNSAVED RESULT SAMPLE
+5 SHOWN
+8
+Project correction 0
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 0
+8
+Project correction 1
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 1
+8
+Project new sender
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project new sender
+8
+Project correction 2
+Juniper Studio · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project correction 2
+8
+Project allowed sender
+Maya Chen · work@example.com
+Saved Selection
+Sep 6
+Correct senders for Project allowed sender

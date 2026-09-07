@@ -1,0 +1,24 @@
+{
+  "emptyMailCount": {
+    "count": 1
+  },
+  "preferences": [
+    {
+      "first_view_guidance_completed_at": "2026-09-07T03:14:06.942Z",
+      "user_id": "empty-reviewer"
+    },
+    {
+      "first_view_guidance_completed_at": "2026-09-07T02:17:48.851Z",
+      "user_id": "reviewer"
+    }
+  ],
+  "views": [
+    {
+      "definition": "{\"revision\":1,\"accountIds\":[\"work\"],\"thread\":{\"subjectContains\":\"No stored subject matches BRE387 zero\"}}",
+      "id": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+      "name": "Project renamed evidence",
+      "revision": 6,
+      "workspace_id": "reviewer"
+    }
+  ]
+}
