@@ -1578,7 +1578,7 @@ test("BRE-385 saved editing keeps only the latest refinement undo and guards dir
   expect(input(container, "View name").value).toBe("Renamed only in draft");
   expect([...container.querySelectorAll("button")].some((item) => item.textContent === "Undo draft change")).toBe(false);
   await click(button(container, "Cancel"));
-  await click(button(container, "Discard"));
+  await click(button(container, "Discard draft"));
   expect(container.querySelector(".view-results h3")?.textContent).toBe("Weekly production review");
 });
 
