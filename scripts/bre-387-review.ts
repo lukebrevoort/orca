@@ -63,13 +63,19 @@ if (process.argv.includes("--check")) {
     assert.equal(response.status, 200, JSON.stringify(value));
     return value;
   };
-  const before = JSON.stringify(client.sqlite.query("SELECT * FROM emails ORDER BY account_id,id").all());
+  const tables = (client.sqlite.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map(row => row.name);
+  const snapshot = (names: string[]) => Object.fromEntries(names.map(name => [name, client.sqlite.query(`SELECT * FROM "${name.replaceAll('"', '""')}"`).all().map(row => JSON.stringify(row)).sort()]));
+  const immutableTables = tables.filter(name => /^(emails|threads|oauth_accounts|email_labels|labels|contacts|human_classification_overrides|sender_attention_rules|attention_view_settings|thread_reminders|reminder_view_settings|collections|collection_threads|pins|message_drafts)$/.test(name) || /organization_(thread_|lane_policies|lanes$|workflow_states|facets$|contexts$|rule)/.test(name));
+  const before = snapshot(immutableTables);
+  const beforePreparation = snapshot(tables);
   let status = "failed";
   try {
     const prepared = await request("/v1/organization/views/prepare", { kind: "selected_senders", source: { kind: "sender_selection", label: "BRE-387 exact stored row" }, identity: { name: "Maya live mail" }, references: [{ accountId: "work", threadId: "work-0", messageId: "message-work-0" }] });
     assert.deepEqual(prepared.draft.definition.sender.addresses, ["maya@example.com"]);
     const { mode, viewId, viewRevision, source, identity, definition, unsupportedClauses } = prepared.draft;
     const preview = await request("/v1/organization/views/preview", { draft: { mode, viewId, viewRevision, source, identity, definition, unsupportedClauses }, page: { limit: 25 } });
+    assert.deepEqual(snapshot(tables), beforePreparation, "prepare and preview must not write any table");
+    results.push({ scenario: "prepare and preview are read-only before commit", status: "pass", checkedTables: tables });
     const envelope = { draft: preview.draft, expectedRevisions: { workspace: preview.workspaceRevision, view: null }, retryKey: "bre387-route-proof" };
     const saved = await request("/v1/organization/views/commit", envelope);
     const replay = await request("/v1/organization/views/commit", envelope);
@@ -81,8 +87,8 @@ if (process.argv.includes("--check")) {
     reopened.sqlite.close();
     const listed = await request("/v1/organization/views");
     assert.ok(listed.items.some((v: { id: string }) => v.id === saved.view.id));
-    assert.equal(JSON.stringify(client.sqlite.query("SELECT * FROM emails ORDER BY account_id,id").all()), before);
-    results.push({ scenario: "exact selected row → real preview → commit → identical replay → reopened SQLite → canonical list; mail unchanged", status: "pass", viewId: saved.view.id, definition: saved.view.definition });
+    assert.deepEqual(snapshot(immutableTables), before, "commit and replay preserve mail, provider, placement, policy, classification and notification data");
+    results.push({ scenario: "exact selected row → real preview → commit → identical replay → reopened SQLite → canonical list; mail unchanged", status: "pass", viewId: saved.view.id, definition: saved.view.definition, unchangedTables: immutableTables });
     mail("future-allowed", "work", "Future matching mail", "maya@example.com", "Stored after save");
     mail("future-other", "work", "Future nonmatching mail", "other@example.com", "Stored after save");
     const allItems: Array<{ accountId: string; threadId: string }> = [];
