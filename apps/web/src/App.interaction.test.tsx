@@ -635,6 +635,7 @@ describe("OAuth login availability and recovery", () => {
 });
 
 const loadedPreferences: UserPreferences = {
+  firstViewGuidanceCompletedAt: null,
   signature: "Warmly, Luke",
   composeFormat: "rich",
   replyBehavior: "reply_all",
@@ -2434,7 +2435,7 @@ describe("Inbox reader viewport restoration", () => {
     browserWindow.history.replaceState({}, "", `/dev/inbox?destination=inbox&thread=${encodeURIComponent(selectedMessage.threadId)}&accountId=${encodeURIComponent(selectedMessage.accountId)}`);
     globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input), browserWindow.location.href);
-      if (url.pathname === "/v1/inbox") {
+      if (url.pathname === "/v1/inbox" && url.searchParams.get("limit") !== "1") {
         inboxReadCount += 1;
         if (inboxReadCount === 2) return delayedInbox;
       }
@@ -3431,5 +3432,56 @@ describe("Zen exit presence", () => {
       closePanelButton.click();
     });
     expect(browserWindow.document.querySelector("aside[aria-label=\"Compose message\"]")).toBeNull();
+  });
+});
+
+describe("BRE-386 guidance navigation", () => {
+  const originalFetch = globalThis.fetch;
+  beforeEach(() => installDom());
+  afterEach(async () => { if (root) { await act(async () => root!.unmount()); root = null; } globalThis.fetch = originalFetch; restoreDom(); });
+  test("normal Inbox invitation disappears for attention and classification filter pins", async () => {
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])));
+    const pins = ["attention", "classification"].map((kind, position) => ({ id: kind, accountId: accountFixture.id, kind: "filter", targetId: JSON.stringify({ mailbox: "inbox", attention: kind === "attention" ? "focus" : "all", classification: kind === "classification" ? "human" : "all", person: null, query: "" }), label: kind, icon: "search", color: "#70867d", position, createdAt: "2026-09-06T12:00:00.000Z", updatedAt: "2026-09-06T12:00:00.000Z" }));
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/preferences") return jsonResponse({ signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null });
+      if (url.pathname === "/v1/organization/views") return jsonResponse({ workspaceId: "owner", workspaceRevision: 1, items: [] });
+      if (url.pathname === "/v1/pins") return jsonResponse(pins);
+      return base(input, init);
+    }) as typeof fetch;
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
+    expect(browserWindow.document.querySelector(".first-view-starts")).not.toBeNull();
+    for (const kind of ["attention", "classification"]) {
+      await act(async () => { (browserWindow.document.querySelector(`button[aria-label="Open ${kind} pin"]`) as unknown as HTMLButtonElement).click(); });
+      await waitFor(0);
+      expect(browserWindow.document.querySelector(".first-view-starts")).toBeNull();
+    }
+  });
+  test.each(["organization", "inbox"])("selected-mail start from %s survives All Mail navigation and does not replay later", async (source) => {
+    const base = createProductionInboxFetch(Promise.resolve(jsonResponse([])), undefined, { messages: inboxFixture.map(message => ({ ...message, attentionBehavior: "quiet" })) });
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input), browserWindow.location.href);
+      if (url.pathname === "/v1/preferences") return jsonResponse({ signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null });
+      if (url.pathname === "/v1/organization/views") return jsonResponse({ workspaceId: "owner", workspaceRevision: 1, items: [] });
+      return base(input, init);
+    }) as typeof fetch;
+    browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${source}`);
+    await renderApp(defaultReaderPreferences, false, { demoMode: false, theme: "light" });
+    for (let i = 0; i < 30 && !browserWindow.document.querySelector(".first-view-starts"); i++) await waitFor(0);
+    const start = [...browserWindow.document.querySelectorAll("button")].find(button => button.querySelector("strong")?.textContent === "Use selected mail");
+    expect(start).toBeDefined();
+    await act(async () => { start!.click(); });
+    await act(async () => flushAnimationFrames());
+    await waitFor(0);
+    await act(async () => flushAnimationFrames());
+    expect(browserWindow.location.search).toContain("destination=all");
+    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("true");
+    expect(browserWindow.document.activeElement?.classList.contains("selection-mode-toggle")).toBe(true);
+    for (const destination of ["organization", "all"]) {
+      await act(async () => { browserWindow.history.replaceState({}, "", `/dev/inbox?destination=${destination}`); browserWindow.dispatchEvent(new browserWindow.PopStateEvent("popstate")); });
+      await waitFor(0);
+    }
+    expect(browserWindow.document.querySelector(".selection-mode-toggle")?.getAttribute("aria-pressed")).toBe("false");
   });
 });

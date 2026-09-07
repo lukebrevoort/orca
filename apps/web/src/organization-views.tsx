@@ -33,6 +33,7 @@ import {
   type OrganizationViewPreparationNotice,
 } from "@orca/shared";
 import { hydrateViewDraft, materializeViewDraft, type ViewDraftFields, type ClauseKind } from "./organization-view-draft";
+import { FirstViewInvitation, ViewGettingStarted } from "./first-view-guidance";
 import { OrganizationAuthorityProvider, useOrganizationAuthority } from "./organization-authority";
 
 type LoadState = "loading" | "ready" | "saving" | "error";
@@ -942,6 +943,7 @@ export function OrganizationViewsWorkspace<TContext = unknown>({ authoringEntry 
   }
 
   return <section ref={workspaceRef} onKeyDown={(event) => { if (event.key === "Escape" && composerMode && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); dismissComposer(); } }} className={`views-workspace${authoringEntry ? " views-workspace-external-authoring" : ""}`} aria-labelledby="views-title">
+    {!authoringEntry && !composerMode ? <><ViewGettingStarted/><FirstViewInvitation/></> : null}
     <header className="views-header"><div><span>{authoringEntry ? authoringSourceLabel : "Workspace queries · unlimited"}</span><h2 data-dialog-initial-focus={authoringEntry ? true : undefined} id="views-title" tabIndex={authoringEntry ? -1 : undefined}>{authoringEntry ? "Review this live View" : "Live Views"}</h2><p>{authoringEntry ? "Confirm the exact account and filters before saving." : "One Thread can appear in every useful perspective while keeping one primary Lane."}</p></div>{!authoringEntry ? <button className="view-action view-new" disabled={!canMutate && composerMode !== "create"} onClick={() => composerMode ? cancelComposer() : loadComposer()} type="button">{composerMode === "create" ? "Close builder" : "+ New View"}</button> : null}</header>
     {discardPending ? <section className="view-preparation-state" role="alert"><strong>Discard changes to this draft?</strong><span>Your saved View, source and mail stay unchanged.</span><button className="view-action view-discard-keep" onClick={() => { exitAfterDiscard.current = null; setDiscardPending(false); focusSoon(null); }} type="button">Keep editing</button><button className="view-action" onClick={finishCancel} type="button">Discard draft</button></section> : null}
     <div className="views-live-note"><i aria-hidden="true"/><strong>Live from current Thread organization</strong><span>No membership list is stored.</span></div>

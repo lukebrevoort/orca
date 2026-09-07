@@ -17,6 +17,39 @@ import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts"
 
 const temporaryDirectories: string[] = [];
 
+test("BRE-386 real human commit completes guidance atomically and tutorial provenance cannot persist", async () => {
+  const { app, headers, path } = await setup();
+  const request = (url: string, body: unknown) => app.request(url, { method: "POST", headers, body: JSON.stringify(body) });
+  const preferences = async () => (await app.request("/v1/preferences?include=first_view_guidance", { headers })).json();
+  assert.equal((await preferences()).firstViewGuidanceCompletedAt, null);
+  const prepared = await (await request("/v1/organization/views/prepare", { kind: "selected_senders", source: { kind: "sender_selection", label: "Selected mail" }, identity: { name: "Maya" }, references: [{ accountId: "account_a", threadId: "thread_a", messageId: "message_maya" }] })).json();
+  const { mode, viewId, viewRevision, source, identity, definition, unsupportedClauses } = prepared.draft;
+  const previewResponse = await request("/v1/organization/views/preview", { draft: { mode, viewId, viewRevision, source, identity, definition, unsupportedClauses }, page: { limit: 25 } });
+  assert.equal(previewResponse.status, 200, await previewResponse.clone().text());
+  const preview = await previewResponse.json();
+  assert.equal((await preferences()).firstViewGuidanceCompletedAt, null);
+  const envelope = { draft: preview.draft, expectedRevisions: { workspace: preview.workspaceRevision, view: null }, retryKey: "bre386-first-save" };
+  const tutorial = await request("/v1/organization/views/commit", { ...envelope, draft: { ...preview.draft, source: { kind: "tutorial", label: "Example only" } } });
+  assert.equal(tutorial.status, 400);
+  assert.equal((await request("/v1/organization/views/prepare", { kind: "typed_definition", source: { kind: "tutorial", label: "Example" }, identity: { name: "Sample" }, definition: { revision: 1, thread: { subjectContains: "Sample" } } })).status, 400);
+  assert.equal((await preferences()).firstViewGuidanceCompletedAt, null);
+  const savedResponse = await request("/v1/organization/views/commit", envelope);
+  assert.equal(savedResponse.status, 200, await savedResponse.clone().text());
+  const saved = await savedResponse.json();
+  const timestamp = (await preferences()).firstViewGuidanceCompletedAt;
+  assert.equal(typeof timestamp, "string");
+  assert.ok(Number.isFinite(Date.parse(timestamp)));
+  const replay = await (await request("/v1/organization/views/commit", envelope)).json();
+  assert.equal(replay.view.id, saved.view.id);
+  assert.equal((await preferences()).firstViewGuidanceCompletedAt, timestamp);
+  assert.equal((await app.request(`/v1/organization/views/${saved.view.id}?expectedRevision=1&expectedWorkspaceRevision=${saved.workspaceRevision}&idempotencyKey=bre386-delete`, { method: "DELETE", headers })).status, 204);
+  assert.equal((await preferences()).firstViewGuidanceCompletedAt, timestamp);
+  const client = createDatabaseClient(path);
+  assert.equal((client.sqlite.query("SELECT count(*) AS count FROM organization_views").get() as { count: number }).count, 0);
+  assert.equal((client.sqlite.query("SELECT count(*) AS count FROM user_preferences WHERE user_id='foreign'").get() as { count: number }).count, 0);
+  client.sqlite.close();
+});
+
 test("BRE-385 correction census covers complete authorized matching messages and proves row witnesses", { timeout: 30_000 }, async () => {
   const { app, headers, path } = await setup();
   const db = createDatabaseClient(path);

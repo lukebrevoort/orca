@@ -82,7 +82,9 @@ import {
   updateMessageDraftSchema,
   updateSenderAttentionRuleSchema,
   updateUserPreferencesSchema,
-  userPreferencesSchema,
+  legacyUserPreferencesResponseSchema,
+  guidanceUserPreferencesResponseSchema,
+  userPreferencesQuerySchema,
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
@@ -1159,23 +1161,35 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
-  app.get("/v1/preferences", requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const preference = db.select().from(userPreferences).where(eq(userPreferences.userId, c.get("auth").userId)).get();
-      return jsonWithSchema(c, userPreferencesSchema, preference ?? { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
+      c.header("Cache-Control", "private, no-store");
+      const legacy = { signature: preference?.signature ?? "", composeFormat: preference?.composeFormat ?? "plain", replyBehavior: preference?.replyBehavior ?? "reply", notifyByDefault: preference?.notifyByDefault ?? false };
+      return c.req.valid("query").include === "first_view_guidance"
+        ? jsonWithSchema(c, guidanceUserPreferencesResponseSchema, { ...legacy, firstViewGuidanceCompletedAt: preference?.firstViewGuidanceCompletedAt ?? null })
+        : jsonWithSchema(c, legacyUserPreferencesResponseSchema, legacy);
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/preferences", validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const input = c.req.valid("json");
       const userId = c.get("auth").userId;
       const current = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get();
-      const next = { signature: current?.signature ?? "", composeFormat: current?.composeFormat ?? "plain", replyBehavior: current?.replyBehavior ?? "reply", notifyByDefault: current?.notifyByDefault ?? false, ...input };
-      db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, updatedAt: now() } }).run();
-      return jsonWithSchema(c, userPreferencesSchema, next);
+      // Completion is monotonic. A stale full Settings payload cannot reset it,
+      // and the client timestamp is only an intent; the server owns the time.
+      const next = { signature: current?.signature ?? "", composeFormat: current?.composeFormat ?? "plain", replyBehavior: current?.replyBehavior ?? "reply", notifyByDefault: current?.notifyByDefault ?? false, ...input,
+        firstViewGuidanceCompletedAt: current?.firstViewGuidanceCompletedAt ?? (input.firstViewGuidanceCompletedAt ? now().toISOString() : null) };
+      db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, firstViewGuidanceCompletedAt: sql`coalesce(${userPreferences.firstViewGuidanceCompletedAt}, ${next.firstViewGuidanceCompletedAt})`, updatedAt: now() } }).run();
+      const saved = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get()!;
+      c.header("Cache-Control", "private, no-store");
+      const { firstViewGuidanceCompletedAt: _stamp, ...legacy } = next;
+      return c.req.valid("query").include === "first_view_guidance"
+        ? jsonWithSchema(c, guidanceUserPreferencesResponseSchema, { ...legacy, firstViewGuidanceCompletedAt: saved.firstViewGuidanceCompletedAt })
+        : jsonWithSchema(c, legacyUserPreferencesResponseSchema, legacy);
     } finally { sqlite.close(); }
   });
 
