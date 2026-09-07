@@ -57,15 +57,17 @@ let failViewList = false;
 if (process.argv.includes("--check")) {
   const results: object[] = [];
   const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
-  const request = async (url: string, body?: unknown) => {
-    const response = await app.request(url, { headers, ...(body ? { method: "POST", body: JSON.stringify(body) } : {}) });
-    const value = await response.json();
-    assert.equal(response.status, 200, JSON.stringify(value));
+  const request = async (url: string, body?: unknown, method = body ? "POST" : "GET", expectedStatus = 200) => {
+    const response = await app.request(url, { headers, method, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const text = await response.text();
+    assert.equal(response.status, expectedStatus, text);
+    const value = text ? JSON.parse(text) : null;
     return value;
   };
   const tables = (client.sqlite.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all() as { name: string }[]).map(row => row.name);
   const snapshot = (names: string[]) => Object.fromEntries(names.map(name => [name, client.sqlite.query(`SELECT * FROM "${name.replaceAll('"', '""')}"`).all().map(row => JSON.stringify(row)).sort()]));
   const immutableTables = tables.filter(name => /^(emails|threads|oauth_accounts|email_labels|labels|contacts|human_classification_overrides|sender_attention_rules|attention_view_settings|thread_reminders|reminder_view_settings|collections|collection_threads|pins|message_drafts)$/.test(name) || /organization_(thread_|lane_policies|lanes$|workflow_states|facets$|contexts$|rule)/.test(name));
+  const writingBefore = await request("/v1/preferences");
   const before = snapshot(immutableTables);
   const beforePreparation = snapshot(tables);
   let status = "failed";
@@ -109,6 +111,28 @@ if (process.argv.includes("--check")) {
     const other = await (await app.request("/v1/preferences?include=first_view_guidance", { headers: { cookie: `orca_session=${emptySession.token}` } })).json();
     assert.equal(other.firstViewGuidanceCompletedAt, null);
     results.push({ scenario: "canonical completion with independent user isolation", status: "pass" });
+    client.db.insert(oauthAccounts).values({ id: "added-later", userId: "reviewer", provider: "gmail", providerId: "added-later", providerEmail: "later@example.com" }).run();
+    assert.equal((await request("/v1/preferences?include=first_view_guidance")).firstViewGuidanceCompletedAt, preferences.firstViewGuidanceCompletedAt);
+    results.push({ scenario: "account added after completion retains user preference", status: "pass" });
+    const emptyCensus = await request("/v1/organization/views/sender-candidates", { draft: { mode, viewId, viewRevision, source, identity, definition: { revision: 1, accountIds: ["work"], thread: { subjectContains: "no-such-subject-bre387" } }, unsupportedClauses: [] }, target: { accountId: "work", threadId: "work-0" } });
+    assert.equal(emptyCensus.status, "unavailable"); assert.deepEqual(emptyCensus.addresses, []); assert.deepEqual(emptyCensus.witnessAddresses, []);
+    results.push({ scenario: "empty matching sender census fails closed without a partial allowlist", status: "pass" });
+    const beforeLifecycle = snapshot(immutableTables);
+    const second = await request("/v1/organization/views/prepare", { kind: "typed_definition", source: { kind: "manual", label: "Lifecycle proof" }, identity: { name: "Second View" }, definition: saved.view.definition });
+    await request("/v1/organization/views/commit", { draft: second.draft, expectedRevisions: { workspace: second.workspaceRevision, view: null }, retryKey: "bre387-second" });
+    let canonical = await request("/v1/organization/views");
+    let target = canonical.items.find((v: { id: string }) => v.id === saved.view.id);
+    await request(`/v1/organization/views/${target.id}`, { idempotencyKey: "bre387-rename", expectedWorkspaceRevision: canonical.workspaceRevision, expectedRevision: target.revision, patch: { name: "Renamed Maya" } }, "PATCH");
+    canonical = await request("/v1/organization/views");
+    await request("/v1/organization/views/reorder", { idempotencyKey: "bre387-reorder", expectedWorkspaceRevision: canonical.workspaceRevision, items: [...canonical.items].reverse().map((v: { id: string; revision: number }, position: number) => ({ id: v.id, expectedRevision: v.revision, position })) });
+    canonical = await request("/v1/organization/views");
+    target = canonical.items.find((v: { id: string }) => v.id === saved.view.id);
+    assert.equal(target.name, "Renamed Maya");
+    await request(`/v1/organization/views/${target.id}?expectedRevision=${target.revision}&expectedWorkspaceRevision=${canonical.workspaceRevision}&idempotencyKey=bre387-remove`, undefined, "DELETE", 204);
+    assert.ok(!(await request("/v1/organization/views")).items.some((v: { id: string }) => v.id === saved.view.id));
+    assert.deepEqual(snapshot(immutableTables), beforeLifecycle);
+    assert.deepEqual(await request("/v1/preferences"), writingBefore);
+    results.push({ scenario: "real rename/reorder/remove retain named mail/provider/placement/policy/classification tables and legacy writing/notification preferences", status: "pass", unchangedTables: immutableTables });
     status = "pass";
   } finally {
     mkdirSync("docs/verification/bre-387", { recursive: true });

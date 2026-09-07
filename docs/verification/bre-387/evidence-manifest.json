@@ -1,0 +1,101 @@
+{
+  "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+  "captures": [],
+  "visualStatus": "pending",
+  "humanStatus": "pending owner approval; zero sessions",
+  "requiredCaptureFields": [
+    "testedSha",
+    "baseSha",
+    "timestamp",
+    "url",
+    "viewport",
+    "theme",
+    "fixtureScenario",
+    "toolVersion",
+    "actions",
+    "category",
+    "filename",
+    "sha256"
+  ],
+  "finalDocsSha": null,
+  "capturedCodeSha": "pending final harness verification",
+  "reusedTestSources": [
+    {
+      "filename": "apps/api/src/organization/views/verification.test.ts",
+      "sha256": "796f73c1e5bf7098059ac08b09fb9675b477ad9477468ac334ec2f607915c361",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/routes.test.ts",
+      "sha256": "f8a6a7a64673578be28c993ce6200edd125ba35eaaeaa249e2d8b4d3f379b73d",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/search-equivalence.test.ts",
+      "sha256": "570ca711a2f8cb02ad633633e10003324ffc62f32d71580bf73d1bf44d99a8e0",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/views/migration.test.ts",
+      "sha256": "f1c33228d623105212b211fda4a4aa612c9fb74a302f49d73f6b92d0eb1f88bd",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/organization/replay-authorization.test.ts",
+      "sha256": "2bbbf8e1b82835692590db2c260bde9331307d34871eadde2327b3a439df28ec",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/db/first-view-guidance.test.ts",
+      "sha256": "710ec171cdbe824e081fbe2adbedd428d15fa6848ff199956f72fe2eb205d986",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/api/src/index.test.ts",
+      "sha256": "92946842ebff361c114a26647a8b58320194d890cd972c8e0e700d53d91c3f5d",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/organization-views.interaction.test.tsx",
+      "sha256": "7901fc5ab68105ebf4b0c8c28f5050f9fd6c82db20f65d7d04fdcf6c26b1f845",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/first-view-guidance.test.tsx",
+      "sha256": "9dd5ac234cff55a6a8adafec9ef4d59eab4eea476dffa3283db8efe9230c65ce",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/global-search.test.tsx",
+      "sha256": "3f0e9bb4e8fd08733e35aa11f5345755ee35e7ded01429c6fbfdaaf1ec06153c",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    },
+    {
+      "filename": "apps/web/src/App.interaction.test.tsx",
+      "sha256": "dd8f998bd22248f6f74fbad944a8b963365c1d479ba647143df1a1d7ac1c3d29",
+      "provenance": "unchanged from verified BRE-386 base; execution status in verification-runs and hosted CI"
+    }
+  ],
+  "upstreamEvidence": {
+    "baseHostedTests": "976/976 and typecheck passed at 0e7762c, reported by parent; not a final-head result",
+    "guides": [
+      "../bre-386/reviewer-guide.html",
+      "../bre-385/reviewer-guide.html",
+      "../bre-384/reviewer-guide.html",
+      "../bre-383-selected-senders.html",
+      "../../evidence/bre-381-shared-view-draft.html"
+    ]
+  },
+  "humanApprovalLog": [
+    {
+      "source": "Linear BRE-387 Final execution review, fetched 2026-09-07",
+      "decision": "Engineering and human deliverables separated; keep ticket and M9 open until required evidence exists."
+    },
+    {
+      "source": "Linear BRE-380 comments, latest threshold request 2026-09-06T16:05:50Z",
+      "decision": "Owner approval requested, no approval recorded. Proposed 4/5 uncoached save-and-reopen within 60 seconds plus correction."
+    }
+  ],
+  "finalDocsShaReference": "Published as immutable PR head in Dispatch and Linear after the final documentation commit (avoids a self-referential hash).",
+  "coverageStatus": "Harness proves only its named scenarios. Other production criteria are source-mapped below and pending directly supporting current-head execution/hosted CI; live UI and human observation remain pending."
+}

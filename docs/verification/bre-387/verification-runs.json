@@ -1,0 +1,108 @@
+[
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "exitCode": 1,
+    "category": "setup attempt",
+    "summary": "Cannot find module '@orca/shared'; resolved by bun install --frozen-lockfile (170 packages, exit 0).",
+    "testedSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "timestampNote": "Before first recorded successful route run; exact start timestamp not recorded.",
+    "provenanceNote": "Development working-tree execution; harness content checksum in production-results for latest run. Final committed harness rerun follows artifact freeze."
+  },
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "startedAt": "2026-09-07T01:31:25.495744+00:00",
+    "durationSeconds": 10.93,
+    "exitCode": 0,
+    "testedSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "workingTree": "?? docs/verification/bre-387/\n?? scripts/bre-387-review.ts\n",
+    "log": "logs/run-0.txt",
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summary": "Command completed; see exitCode and log.",
+    "provenanceNote": "Development working-tree execution; harness content checksum in production-results for latest run. Final committed harness rerun follows artifact freeze."
+  },
+  {
+    "command": [
+      "bun",
+      "test",
+      "apps/api/src/organization/views",
+      "apps/api/src/db/first-view-guidance.test.ts",
+      "apps/api/src/index.test.ts",
+      "apps/web/src/first-view-guidance.test.tsx",
+      "apps/web/src/organization-views.interaction.test.tsx",
+      "apps/web/src/App.interaction.test.tsx"
+    ],
+    "startedAt": "2026-09-07T01:31:47.050125+00:00",
+    "durationSeconds": 180.29,
+    "exitCode": "timeout-180s",
+    "testedSha": "f845d60e89d66617b5eac662b3baaf3f3878fe8b",
+    "workingTree": "?? docs/verification/bre-387/\n",
+    "log": "logs/run-1.txt",
+    "logSha256": "e1c23e046fffc7010170c4180ad84f2a643846d771b9b9c2cbcae34aa40b083d",
+    "summary": "See raw log; timeout is incomplete, not compiler failure."
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "build"
+    ],
+    "startedAt": "2026-09-07T01:35:21.677948+00:00",
+    "durationSeconds": 180.24,
+    "exitCode": "timeout-180s",
+    "testedSha": "f845d60e89d66617b5eac662b3baaf3f3878fe8b",
+    "workingTree": "?? docs/verification/bre-387/\n",
+    "log": "logs/run-2.txt",
+    "logSha256": "ac540067ebd4db960d92483f63347c09359c83236d342a838569e288097f25cb",
+    "summary": "See raw log; timeout is incomplete, not compiler failure."
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "lint"
+    ],
+    "startedAt": "2026-09-07T01:38:47.851666+00:00",
+    "durationSeconds": 180.07,
+    "exitCode": "timeout-180s",
+    "testedSha": "f845d60e89d66617b5eac662b3baaf3f3878fe8b",
+    "workingTree": "?? docs/verification/bre-387/\n",
+    "log": "logs/run-3.txt",
+    "logSha256": "79716ef6242e17187b010cfebf42f7815e4270cda7b82f4d08bbe1863595096e",
+    "summary": "See raw log; timeout is incomplete, not compiler failure."
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "--cwd",
+      "apps/api",
+      "build"
+    ],
+    "startedAt": "2026-09-07T01:43:21.682654+00:00",
+    "durationSeconds": 160.78,
+    "exitCode": 0,
+    "testedSha": "c554406b47f5956463736cc3652bbb918498de96",
+    "log": "logs/2026-09-07T01-43-21.682654+00-00.txt"
+  },
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "startedAt": "2026-09-07T01:46:28.807935+00:00",
+    "durationSeconds": 5.14,
+    "exitCode": 0,
+    "testedSha": "c554406b47f5956463736cc3652bbb918498de96",
+    "log": "logs/2026-09-07T01-46-28.807935+00-00.txt",
+    "provenanceNote": "Development working-tree execution; harness content checksum in production-results for latest run. Final committed harness rerun follows artifact freeze."
+  }
+]
