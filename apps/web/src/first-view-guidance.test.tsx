@@ -124,3 +124,25 @@ test("manual reopen refreshes empty mail readiness after real mail arrives", asy
   expect(browser.document.querySelector('[data-provenance="tutorial"]')).toBeNull();
   expect(writes).toHaveLength(1);
 });
+
+test("confirmed server completion clears a failed dismissal without another write", async () => {
+  saveFails = true; await render(); await click("Skip for now");
+  expect(browser.document.body.textContent).toContain("Hidden for this visit");
+  completed = "2026-09-06T12:00:00.000Z";
+  await act(async () => { browser.dispatchEvent(new browser.Event("orca:views-changed")); await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(browser.document.body.textContent).not.toContain("Hidden for this visit");
+  expect(button("Retry saving choice")).toBeUndefined();
+  expect(writes).toHaveLength(1);
+});
+
+test("a late dismissal failure cannot revive an alert after confirmed completion", async () => {
+  const fetchBoundary = globalThis.fetch;
+  let rejectSave!: (error: Error) => void;
+  globalThis.fetch = (async (url: string, init?: RequestInit) => init?.method === "PATCH" ? new Promise<Response>((_resolve, reject) => { rejectSave = reject; }) : fetchBoundary(url, init)) as typeof fetch;
+  await render(); await click("Skip for now");
+  completed = "2026-09-06T12:00:00.000Z";
+  await act(async () => { browser.dispatchEvent(new browser.Event("online")); await new Promise(resolve => setTimeout(resolve, 20)); });
+  await act(async () => { rejectSave(new Error("Late response failure")); await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(browser.document.body.textContent).not.toContain("Hidden for this visit");
+  expect(button("Retry saving choice")).toBeUndefined();
+});

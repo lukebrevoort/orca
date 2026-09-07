@@ -54,6 +54,7 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     ]).then(([preferences, views, mail]) => {
       if (controller.signal.aborted || request !== generation.current) return;
       completed.current = completed.current ?? preferences.firstViewGuidanceCompletedAt;
+      if (completed.current) setSaveError(false);
       setState({ status: "ready", completedAt: completed.current, hasViews: views.items.length > 0, hasMail: mail.messages.length > 0 });
     }).catch(() => { if (!controller.signal.aborted && request === generation.current) setState(value => ({ ...value, status: "error" })); });
     return () => controller.abort();
@@ -61,7 +62,8 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
 
   async function dismiss() {
     setHidden(true);
-    if (mutation.current || completed.current || demoMode) return;
+    if (completed.current) { setSaveError(false); return; }
+    if (mutation.current || demoMode) return;
     const controller = new AbortController(); mutation.current = controller;
     setSaving(true); setSaveError(false);
     try {
@@ -69,7 +71,7 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
       if (controller.signal.aborted) return;
       completed.current = value.firstViewGuidanceCompletedAt;
       setState(current => ({ ...current, completedAt: value.firstViewGuidanceCompletedAt }));
-    } catch { if (!controller.signal.aborted) setSaveError(true); }
+    } catch { if (!controller.signal.aborted && !completed.current) setSaveError(true); }
     finally { if (!controller.signal.aborted) { mutation.current = null; setSaving(false); } }
   }
   function start(kind: "search" | "selection") {
