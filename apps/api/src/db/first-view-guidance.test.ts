@@ -23,7 +23,7 @@ test("BRE-386 migration retires existing human Views without a GET mutation or r
     expect(preferences.signature).toBe("Keep my signature");
     expect(preferences.first_view_guidance_completed_at).toBe("1970-01-01T00:00:01.000Z");
     sqlite.query("DELETE FROM organization_views WHERE id='old-view'").run();
-    expect((sqlite.query("SELECT first_view_guidance_completed_at AS stamp FROM user_preferences WHERE user_id='existing'").get() as { stamp: string }).stamp).toBe(preferences.first_view_guidance_completed_at);
+    expect((sqlite.query("SELECT first_view_guidance_completed_at AS stamp FROM user_preferences WHERE user_id='existing'").get() as { stamp: string | null }).stamp).toBe(preferences.first_view_guidance_completed_at);
     expect(sqlite.query("SELECT * FROM user_preferences WHERE user_id='new'").get()).toBeNull();
   } finally { sqlite.close(); rmSync(dir, { recursive: true, force: true }); }
 });
