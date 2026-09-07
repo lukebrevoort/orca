@@ -3,10 +3,10 @@
     "group": "P01",
     "criterion": "prepare/preview no writes before commit; returned ID; SQLite reopen; canonical list; identical replay; named immutable tables preserved",
     "category": "production-scratch",
-    "status": "passed working-tree harness; see production-results harnessSha256 and verification run",
+    "status": "pending rerun after independent-review corrections",
     "source": "scripts/bre-387-review.ts",
     "test": "prepare and preview must not write any table",
-    "line": 77,
+    "line": 91,
     "evidence": "production-results.json"
   },
   {
@@ -22,10 +22,10 @@
     "group": "P02",
     "criterion": "All saved pages include future allowlist match, exclude nonmatch and other account",
     "category": "production-scratch",
-    "status": "passed working-tree harness; see production-results harnessSha256 and verification run",
+    "status": "pending rerun after independent-review corrections",
     "source": "scripts/bre-387-review.ts",
     "test": "all saved pages include future allowed sender",
-    "line": 106,
+    "line": 120,
     "evidence": "production-results.json"
   },
   {
@@ -75,7 +75,7 @@
   },
   {
     "group": "P04",
-    "criterion": "Composite account/message identity and exact target return",
+    "criterion": "Composite account/message identity and exact bulk-attention retry target (not View results)",
     "category": "DOM fixture",
     "status": "pending current-head execution",
     "source": "apps/web/src/App.interaction.test.tsx",
@@ -84,7 +84,7 @@
   },
   {
     "group": "P05",
-    "criterion": "Revocation between preflight and transaction; replay remains write-free only with live grant",
+    "criterion": "Revocation between preflight and transaction denies duplicate return",
     "category": "production-scratch",
     "status": "pending current-head execution",
     "source": "apps/api/src/organization/replay-authorization.test.ts",
@@ -158,10 +158,11 @@
     "group": "P06",
     "criterion": "Truly empty server candidate census",
     "category": "production-scratch",
-    "status": "passed working-tree harness; see production-results harnessSha256 and verification run",
+    "status": "pending rerun after independent-review corrections",
     "source": "scripts/bre-387-review.ts",
     "test": "empty matching sender census fails closed without a partial allowlist",
-    "evidence": "production-results.json"
+    "evidence": "production-results.json",
+    "line": 131
   },
   {
     "group": "P07",
@@ -212,11 +213,12 @@
     "group": "P07",
     "criterion": "Real route rename/reorder/remove preserve named mail/provider/placement/policy/notification tables; browser lifecycle pending",
     "category": "production-scratch",
-    "status": "passed working-tree harness; see production-results harnessSha256 and verification run",
+    "status": "pending rerun after independent-review corrections",
     "source": "scripts/bre-387-review.ts",
     "test": "real rename/reorder/remove retain named",
     "gap": "Live browser lifecycle/focus still pending; route check proves only named table snapshots.",
-    "evidence": "production-results.json"
+    "evidence": "production-results.json",
+    "line": 149
   },
   {
     "group": "P08",
@@ -238,7 +240,7 @@
   },
   {
     "group": "P08",
-    "criterion": "Empty sample cannot prepare/save; real mail arrival enables manual start",
+    "criterion": "Empty sample cannot prepare or save",
     "category": "DOM fixture",
     "status": "pending current-head execution",
     "source": "apps/web/src/first-view-guidance.test.tsx",
@@ -294,10 +296,11 @@
     "group": "P08",
     "criterion": "New connected account after canonical guidance completion",
     "category": "production-scratch",
-    "status": "passed working-tree harness; see production-results harnessSha256 and verification run",
+    "status": "pending rerun after independent-review corrections",
     "source": "scripts/bre-387-review.ts",
     "test": "account added after completion retains user preference",
-    "evidence": "production-results.json"
+    "evidence": "production-results.json",
+    "line": 128
   },
   {
     "group": "P09",
@@ -316,5 +319,59 @@
     "source": "docs/verification/bre-387/usability-protocol.html",
     "test": null,
     "gap": "Proposed only; zero sessions; no threshold scoring."
+  },
+  {
+    "group": "P01",
+    "criterion": "Preview count shown then exact across cursor pages; saved/preview composite page parity",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/views/verification.test.ts",
+    "test": "previews and commits one reviewed definition with no preview writes and saved-page parity",
+    "line": 392
+  },
+  {
+    "group": "P03",
+    "criterion": "Advanced create predicates survive unsupported-clause Undo, preview and commit",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "create-mode external authoring preserves every prepared predicate through unsupported-clause Undo, preview, and commit",
+    "line": 321
+  },
+  {
+    "group": "P03",
+    "criterion": "Advanced saved revision-1 constraints round-trip through editing with full summary",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "round-trips every preserved revision-1 constraint and derives the draft summary from the complete definition",
+    "line": 933
+  },
+  {
+    "group": "P04",
+    "criterion": "View result same thread ID across different accounts remains distinct across continuation pages",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/organization-views.interaction.test.tsx",
+    "test": "deduplicates saved continuation pages by account and Thread and discards stale generations",
+    "line": 862
+  },
+  {
+    "group": "P05",
+    "criterion": "Replay is identical and write-free only with exact persisted live grant",
+    "category": "production-scratch",
+    "status": "pending current-head execution",
+    "source": "apps/api/src/organization/replay-authorization.test.ts",
+    "test": "View replay is identical and write-free only while the exact persisted grant remains live",
+    "line": 110
+  },
+  {
+    "group": "P08",
+    "criterion": "Manual reopen refreshes readiness after real stored mail arrives",
+    "category": "DOM fixture",
+    "status": "pending current-head execution",
+    "source": "apps/web/src/first-view-guidance.test.tsx",
+    "test": "manual reopen refreshes empty mail readiness after real mail arrives",
+    "line": 120
   }
 ]

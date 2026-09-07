@@ -17,8 +17,7 @@
     "filename",
     "sha256"
   ],
-  "finalDocsSha": null,
-  "capturedCodeSha": "pending final harness verification",
+  "capturedCodeSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
   "reusedTestSources": [
     {
       "filename": "apps/api/src/organization/views/verification.test.ts",
@@ -97,5 +96,7 @@
     }
   ],
   "finalDocsShaReference": "Published as immutable PR head in Dispatch and Linear after the final documentation commit (avoids a self-referential hash).",
-  "coverageStatus": "Harness proves only its named scenarios. Other production criteria are source-mapped below and pending directly supporting current-head execution/hosted CI; live UI and human observation remain pending."
+  "coverageStatus": "Criterion-level evidence is in coverage-matrix.json. Live visual and human observations are pending.",
+  "harnessSha256": "6828c463071a41bd12ebc59c0b8ae36e748e9315a50fc1d1e304f91b3de8f384",
+  "productionStatus": "Seven named scenario groups passed; no aggregate claim beyond production-results.json."
 }

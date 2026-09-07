@@ -17,7 +17,19 @@ process.env.SESSION_SECRET = "bre387-disposable-local-review-session-secret";
 process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 38).toString("base64");
 const directory = mkdtempSync(join(tmpdir(), "orca-bre387-review-"));
 const path = join(directory, "review.sqlite");
+let closeDatabase: (() => void) | undefined;
+let api: ReturnType<typeof Bun.serve> | undefined;
+let web: Awaited<ReturnType<typeof createServer>> | undefined;
+let cleaned = false;
+async function cleanup() {
+  if (cleaned) return;
+  cleaned = true;
+  try { api?.stop(true); await web?.close(); }
+  finally { try { closeDatabase?.(); } finally { rmSync(directory, { recursive: true, force: true }); } }
+}
+try {
 const client = createDatabaseClient(path);
+closeDatabase = () => client.sqlite.close();
 migrate(client.db, { migrationsFolder: resolve("apps/api/drizzle") });
 client.db.insert(users).values([{ id: "reviewer", email: "reviewer@example.com", displayName: "Orca reviewer" }, { id: "empty-reviewer", email: "empty@example.com" }]).run();
 client.db.insert(oauthAccounts).values([
@@ -81,7 +93,7 @@ if (process.argv.includes("--check")) {
     const envelope = { draft: preview.draft, expectedRevisions: { workspace: preview.workspaceRevision, view: null }, retryKey: "bre387-route-proof" };
     const saved = await request("/v1/organization/views/commit", envelope);
     const replay = await request("/v1/organization/views/commit", envelope);
-    assert.equal(replay.view.id, saved.view.id);
+    assert.deepEqual(replay, saved, "identical replay returns the complete original response");
     const reopened = createDatabaseClient(path);
     const stored = reopened.sqlite.query("SELECT id,definition FROM organization_views WHERE id=?").get(saved.view.id) as { id: string; definition: string };
     assert.equal(stored.id, saved.view.id);
@@ -124,8 +136,10 @@ if (process.argv.includes("--check")) {
     let target = canonical.items.find((v: { id: string }) => v.id === saved.view.id);
     await request(`/v1/organization/views/${target.id}`, { idempotencyKey: "bre387-rename", expectedWorkspaceRevision: canonical.workspaceRevision, expectedRevision: target.revision, patch: { name: "Renamed Maya" } }, "PATCH");
     canonical = await request("/v1/organization/views");
-    await request("/v1/organization/views/reorder", { idempotencyKey: "bre387-reorder", expectedWorkspaceRevision: canonical.workspaceRevision, items: [...canonical.items].reverse().map((v: { id: string; revision: number }, position: number) => ({ id: v.id, expectedRevision: v.revision, position })) });
+    const desiredOrder = [...canonical.items].reverse().map((v: { id: string; revision: number }, position: number) => ({ id: v.id, expectedRevision: v.revision, position }));
+    await request("/v1/organization/views/reorder", { idempotencyKey: "bre387-reorder", expectedWorkspaceRevision: canonical.workspaceRevision, items: desiredOrder });
     canonical = await request("/v1/organization/views");
+    assert.deepEqual(canonical.items.map((v: { id: string }) => v.id), desiredOrder.map(v => v.id), "canonical order must equal the requested reorder");
     target = canonical.items.find((v: { id: string }) => v.id === saved.view.id);
     assert.equal(target.name, "Renamed Maya");
     await request(`/v1/organization/views/${target.id}?expectedRevision=${target.revision}&expectedWorkspaceRevision=${canonical.workspaceRevision}&idempotencyKey=bre387-remove`, undefined, "DELETE", 204);
@@ -135,16 +149,13 @@ if (process.argv.includes("--check")) {
     results.push({ scenario: "real rename/reorder/remove retain named mail/provider/placement/policy/classification tables and legacy writing/notification preferences", status: "pass", unchangedTables: immutableTables });
     status = "pass";
   } finally {
+    try {
     mkdirSync("docs/verification/bre-387", { recursive: true });
     writeFileSync("docs/verification/bre-387/production-results.json", JSON.stringify({ status, harnessSha256: createHash("sha256").update(readFileSync(import.meta.filename)).digest("hex"), testedSha: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), baseSha: "0e7762cf1977f77151a422963f73e9a10188b866", timestamp: new Date().toISOString(), category: "production-scratch", tool: Bun.version, results }, null, 2) + "\n");
-    client.sqlite.close(); rmSync(directory, { recursive: true, force: true });
+    } finally { await cleanup(); }
   }
   process.exit(0);
 }
-let api: ReturnType<typeof Bun.serve> | undefined;
-let web: Awaited<ReturnType<typeof createServer>> | undefined;
-async function cleanup() { api?.stop(true); await web?.close(); client.sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
-try {
 api = Bun.serve({ hostname: "127.0.0.1", port: 3087, fetch: (request) => {
   const pathname = new URL(request.url).pathname;
   if (pathname === "/v1/review/fail-next-preference" && request.method === "POST") { failNextPreference = true; return Response.json({ armed: true }); }

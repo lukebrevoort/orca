@@ -104,5 +104,45 @@
     "testedSha": "c554406b47f5956463736cc3652bbb918498de96",
     "log": "logs/2026-09-07T01-46-28.807935+00-00.txt",
     "provenanceNote": "Development working-tree execution; harness content checksum in production-results for latest run. Final committed harness rerun follows artifact freeze."
+  },
+  {
+    "command": [
+      "bun",
+      "scripts/bre-387-review.ts",
+      "--check"
+    ],
+    "startedAt": "2026-09-07T01:47:31.178133+00:00",
+    "durationSeconds": 9.65,
+    "exitCode": 0,
+    "testedSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "log": "logs/2026-09-07T01-47-31.178133+00-00.txt"
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "--cwd",
+      "apps/web",
+      "build"
+    ],
+    "startedAt": "2026-09-07T01:47:46.319553+00:00",
+    "durationSeconds": 276.52,
+    "exitCode": 0,
+    "testedSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "log": "logs/2026-09-07T01-47-46.319553+00-00.txt"
+  },
+  {
+    "command": [
+      "bun",
+      "run",
+      "--cwd",
+      "apps/api",
+      "lint"
+    ],
+    "startedAt": "2026-09-07T01:52:38.162422+00:00",
+    "durationSeconds": 26.97,
+    "exitCode": 0,
+    "testedSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "log": "logs/2026-09-07T01-52-38.162422+00-00.txt"
   }
 ]
