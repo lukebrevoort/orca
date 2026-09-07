@@ -1,0 +1,7 @@
+bun install v1.3.14 (d1632b29)
+
++ @types/node@24.13.2
++ axe-core@4.13.0
++ typescript@5.9.3
+
+170 packages installed [5.33s]

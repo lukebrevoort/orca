@@ -1,0 +1,31 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/surface-history.test.ts:
+(pass) surface history contract > reads legacy path links and keeps destination, query, and unknown parameters [59.54ms]
+(pass) surface history contract > seeds a clean in-app predecessor for an initial deep link [20.24ms]
+(pass) surface history contract > makes preference-driven Zen explicit in an initial Compose URL [9.00ms]
+(pass) surface history contract > nests reader, composer, and Zen so Back and Forward dismiss one owned surface [12.54ms]
+(pass) surface history contract > consumes reader return context exactly once without rewriting the destination entry [8.86ms]
+(pass) surface history contract > replaces stale surface parameters when an unowned deep link is closed [3.11ms]
+(pass) surface history contract > replaces an invalid custom-space surface with one clean fallback entry [2.26ms]
+(pass) surface history contract > captures the desktop scroll owner and restores focus only to a safe target [34.35ms]
+
+apps/web/src/desktop-switch.test.ts:
+(pass) desktop application shell > exposes one named primary navigation landmark and one current destination [1295.04ms]
+(pass) desktop application shell > keeps the sidebar in the viewport while the workspace owns long-page scrolling [1232.03ms]
+(fail) desktop application shell > switches to complete, theme-safe mobile navigation only through 760px [38900.45ms]
+  ^ this test timed out after 15000ms.
+(fail) desktop application shell > reflows mobile message anatomy into content and 44px action bands [24536.44ms]
+  ^ this test timed out after 15000ms.
+(fail) desktop application shell > bounds Inbox heading actions to the desktop workspace at narrow and wide widths [21841.88ms]
+  ^ this test timed out after 10000ms.
+(fail) desktop application shell > keeps compact Later evidence, attention, and reminder actions in separate bands [12981.66ms]
+  ^ this test timed out after 5000ms.
+(fail) desktop application shell > keeps compact read and unread rows restrained, scannable, and aligned [46095.97ms]
+  ^ this test timed out after 15000ms.
+(pass) desktop application shell > renders the compact unread marker only in unread message markup [78.53ms]
+
+ 11 pass
+ 5 fail
+ 366 expect() calls
+Ran 16 tests across 2 files. [156.07s]

@@ -1,0 +1,17 @@
+PASS 1024-empty: header 68, toolbar 80..178, scroll 600
+PASS 1024-empty-theme: header 68, toolbar 80..178, scroll 600
+PASS 1024-mixed: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-dark-search-return: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-theme: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-light-search-return: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-deep: header 68, toolbar 80..204.5, scroll 1200
+PASS 1024-mixed-deep-theme: header 68, toolbar 80..204.5, scroll 1200
+PASS 1440-empty: header 68, toolbar 80..138, scroll 600
+PASS 1440-empty-theme: header 68, toolbar 80..138, scroll 600
+PASS 1440-mixed: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-light-search-return: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-theme: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-dark-search-return: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-deep: header 68, toolbar 80..164.5, scroll 1200
+PASS 1440-mixed-deep-theme: header 68, toolbar 80..164.5, scroll 1200
+Selection/header regression passed. Artifacts: /tmp/orca-selection-settled

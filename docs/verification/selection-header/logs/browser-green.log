@@ -1,0 +1,54 @@
+PASS 1024-empty: header 68, toolbar 80..178, scroll 600
+FAIL 1024-empty-theme: header 68, toolbar 80..178, scroll 600
+PASS 1024-mixed: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-dark-search-return: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-theme: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-light-search-return: header 68, toolbar 80..204.5, scroll 600
+PASS 1024-mixed-deep: header 68, toolbar 80..204.5, scroll 1200
+PASS 1024-mixed-deep-theme: header 68, toolbar 80..204.5, scroll 1200
+PASS 1440-empty: header 68, toolbar 80..138, scroll 600
+FAIL 1440-empty-theme: header 68, toolbar 80..138, scroll 600
+PASS 1440-mixed: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-light-search-return: header 68, toolbar 80..164.5, scroll 600
+FAIL 1440-mixed-theme: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-dark-search-return: header 68, toolbar 80..164.5, scroll 600
+PASS 1440-mixed-deep: header 68, toolbar 80..164.5, scroll 1200
+FAIL 1440-mixed-deep-theme: header 68, toolbar 80..164.5, scroll 1200
+180 |       await searchReturn(`${width}-mixed-${mixed.theme}`);
+181 |       await themeClickPreservesSelection(`${width}-mixed-theme`, mixed);
+182 |       await searchReturn(`${width}-mixed-${mixed.theme === "dark" ? "light" : "dark"}`);
+183 |       await scroll(1200);
+184 |       const deep = await capture(`${width}-mixed-deep`, 2);
+185 |       await themeClickPreservesSelection(`${width}-mixed-deep-theme`, deep);
+                                       ^
+error: 1024-empty-theme: Search mail: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Switch to Light: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Select all visible: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Use these senders: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Keep in inbox: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Quiet: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1024-empty-theme: Hide: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Search mail: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Switch to Orca Black: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Select all visible: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Use these senders: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Keep in inbox: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Quiet: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-empty-theme: Hide: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Search mail: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Switch to Light: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Select all visible: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Use these senders: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Keep in inbox: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Quiet: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-theme: Hide: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Search mail: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Switch to Orca Black: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Select all visible: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Use these senders: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Keep in inbox: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Quiet: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+1440-mixed-deep-theme: Hide: wrong pointer target [{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"},{"correct":false,"actual":"HTML"}]
+      at /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/scripts/check-selection-header.ts:185:34
+
+Bun v1.3.14 (macOS arm64)
