@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { inboxClassificationResponseSchema, organizationViewListResponseSchema, userPreferencesSchema } from "@orca/shared";
+import { inboxClassificationResponseSchema, organizationViewListResponseSchema, guidanceUserPreferencesResponseSchema } from "@orca/shared";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import "./first-view-guidance.css";
 
@@ -48,7 +48,7 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     // A failed canonical View list is not an empty workspace. All three reads
     // must succeed before presenting an invitation or an empty-mail example.
     void Promise.all([
-      read("/v1/preferences", controller.signal).then(value => userPreferencesSchema.parse(value)),
+      read("/v1/preferences?include=first_view_guidance", controller.signal).then(value => guidanceUserPreferencesResponseSchema.parse(value)),
       read("/v1/organization/views", controller.signal).then(value => organizationViewListResponseSchema.parse(value)),
       read("/v1/inbox?view=all&classification=all&limit=1", controller.signal).then(value => inboxClassificationResponseSchema.parse(value)),
     ]).then(([preferences, views, mail]) => {
@@ -65,7 +65,7 @@ export function FirstViewGuidanceProvider({ children, demoMode = false, onSearch
     const controller = new AbortController(); mutation.current = controller;
     setSaving(true); setSaveError(false);
     try {
-      const value = userPreferencesSchema.parse(await read("/v1/preferences", controller.signal, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: new Date().toISOString() }) }));
+      const value = guidanceUserPreferencesResponseSchema.parse(await read("/v1/preferences?include=first_view_guidance", controller.signal, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: new Date().toISOString() }) }));
       if (controller.signal.aborted) return;
       completed.current = value.firstViewGuidanceCompletedAt;
       setState(current => ({ ...current, completedAt: value.firstViewGuidanceCompletedAt }));

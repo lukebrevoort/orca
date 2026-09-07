@@ -20,7 +20,7 @@ const temporaryDirectories: string[] = [];
 test("BRE-386 real human commit completes guidance atomically and tutorial provenance cannot persist", async () => {
   const { app, headers, path } = await setup();
   const request = (url: string, body: unknown) => app.request(url, { method: "POST", headers, body: JSON.stringify(body) });
-  const preferences = async () => (await app.request("/v1/preferences", { headers })).json();
+  const preferences = async () => (await app.request("/v1/preferences?include=first_view_guidance", { headers })).json();
   assert.equal((await preferences()).firstViewGuidanceCompletedAt, null);
   const prepared = await (await request("/v1/organization/views/prepare", { kind: "selected_senders", source: { kind: "sender_selection", label: "Selected mail" }, identity: { name: "Maya" }, references: [{ accountId: "account_a", threadId: "thread_a", messageId: "message_maya" }] })).json();
   const { mode, viewId, viewRevision, source, identity, definition, unsupportedClauses } = prepared.draft;

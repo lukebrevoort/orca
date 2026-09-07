@@ -82,7 +82,9 @@ import {
   updateMessageDraftSchema,
   updateSenderAttentionRuleSchema,
   updateUserPreferencesSchema,
-  userPreferencesSchema,
+  legacyUserPreferencesResponseSchema,
+  guidanceUserPreferencesResponseSchema,
+  userPreferencesQuerySchema,
 } from "@orca/shared";
 
 import { requireAuth, type AuthVariables } from "./auth/middleware.ts";
@@ -1159,15 +1161,19 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
     }
   });
 
-  app.get("/v1/preferences", requireAuth({ dbFactory }), (c) => {
+  app.get("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const preference = db.select().from(userPreferences).where(eq(userPreferences.userId, c.get("auth").userId)).get();
-      return jsonWithSchema(c, userPreferencesSchema, { signature: preference?.signature ?? "", composeFormat: preference?.composeFormat ?? "plain", replyBehavior: preference?.replyBehavior ?? "reply", notifyByDefault: preference?.notifyByDefault ?? false, firstViewGuidanceCompletedAt: preference?.firstViewGuidanceCompletedAt ?? null });
+      c.header("Cache-Control", "private, no-store");
+      const legacy = { signature: preference?.signature ?? "", composeFormat: preference?.composeFormat ?? "plain", replyBehavior: preference?.replyBehavior ?? "reply", notifyByDefault: preference?.notifyByDefault ?? false };
+      return c.req.valid("query").include === "first_view_guidance"
+        ? jsonWithSchema(c, guidanceUserPreferencesResponseSchema, { ...legacy, firstViewGuidanceCompletedAt: preference?.firstViewGuidanceCompletedAt ?? null })
+        : jsonWithSchema(c, legacyUserPreferencesResponseSchema, legacy);
     } finally { sqlite.close(); }
   });
 
-  app.patch("/v1/preferences", validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
+  app.patch("/v1/preferences", validator("query", (value, c) => validateJson(c, userPreferencesQuerySchema, value)), validator("json", (value, c) => validateJson(c, updateUserPreferencesSchema, value)), requireAuth({ dbFactory }), (c) => {
     const { db, sqlite } = dbFactory();
     try {
       const input = c.req.valid("json");
@@ -1179,7 +1185,11 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
         firstViewGuidanceCompletedAt: current?.firstViewGuidanceCompletedAt ?? (input.firstViewGuidanceCompletedAt ? now().toISOString() : null) };
       db.insert(userPreferences).values({ userId, ...next, updatedAt: now() }).onConflictDoUpdate({ target: userPreferences.userId, set: { ...next, firstViewGuidanceCompletedAt: sql`coalesce(${userPreferences.firstViewGuidanceCompletedAt}, ${next.firstViewGuidanceCompletedAt})`, updatedAt: now() } }).run();
       const saved = db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).get()!;
-      return jsonWithSchema(c, userPreferencesSchema, { ...next, firstViewGuidanceCompletedAt: saved.firstViewGuidanceCompletedAt });
+      c.header("Cache-Control", "private, no-store");
+      const { firstViewGuidanceCompletedAt: _stamp, ...legacy } = next;
+      return c.req.valid("query").include === "first_view_guidance"
+        ? jsonWithSchema(c, guidanceUserPreferencesResponseSchema, { ...legacy, firstViewGuidanceCompletedAt: saved.firstViewGuidanceCompletedAt })
+        : jsonWithSchema(c, legacyUserPreferencesResponseSchema, legacy);
     } finally { sqlite.close(); }
   });
 

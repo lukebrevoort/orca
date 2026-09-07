@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { z } from "zod";
+import { guidanceUserPreferencesResponseSchema } from "@orca/shared";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -252,10 +254,10 @@ describe("Orca API", () => {
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath) });
       const headers = { cookie: `orca_session=${session.token}`, "content-type": "application/json" };
 
-      assert.deepEqual(await (await testApp.request("/v1/preferences", { headers })).json(), { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null });
+      assert.deepEqual(await (await testApp.request("/v1/preferences", { headers })).json(), { signature: "", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false });
       const saved = await testApp.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({ signature: "Warmly,\nLuke", composeFormat: "rich", replyBehavior: "reply_all", notifyByDefault: true }) });
       assert.equal(saved.status, 200);
-      assert.deepEqual(await saved.json(), { signature: "Warmly,\nLuke", composeFormat: "rich", replyBehavior: "reply_all", notifyByDefault: true, firstViewGuidanceCompletedAt: null });
+      assert.deepEqual(await saved.json(), { signature: "Warmly,\nLuke", composeFormat: "rich", replyBehavior: "reply_all", notifyByDefault: true });
       assert.equal((await testApp.request("/v1/preferences", { method: "PATCH", headers, body: JSON.stringify({}) })).status, 400);
     } finally {
       sqlite.close();
@@ -279,18 +281,31 @@ describe("Orca API", () => {
       const other = await createSession(db, "guidance_other");
       const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => new Date("2026-09-06T12:00:00.000Z") });
       const headers = (token: string) => ({ cookie: `orca_session=${token}`, "content-type": "application/json" });
-      const read = async (token: string) => (await testApp.request("/v1/preferences", { headers: headers(token) })).json();
+      const read = async (token: string) => guidanceUserPreferencesResponseSchema.parse(await (await testApp.request("/v1/preferences?include=first_view_guidance", { headers: headers(token) })).json());
       assert.equal((await read(first.token)).firstViewGuidanceCompletedAt, null);
-      const response = await testApp.request("/v1/preferences", { method: "PATCH", headers: headers(first.token), body: JSON.stringify({ firstViewGuidanceCompletedAt: "2000-01-01T00:00:00.000Z" }) });
+      const response = await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: headers(first.token), body: JSON.stringify({ firstViewGuidanceCompletedAt: "2000-01-01T00:00:00.000Z" }) });
       assert.equal(response.status, 200);
-      assert.equal((await response.json()).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      assert.equal(guidanceUserPreferencesResponseSchema.parse(await response.json()).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      assert.equal(response.headers.get("Cache-Control"), "private, no-store");
       assert.equal((await read(second.token)).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
-      await testApp.request("/v1/preferences", { method: "PATCH", headers: headers(second.token), body: JSON.stringify({ signature: "New signature", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null }) });
+      await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: headers(second.token), body: JSON.stringify({ signature: "New signature", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null }) });
       const updated = await read(first.token);
       assert.equal(updated.signature, "New signature");
       assert.equal(updated.firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
       assert.equal((await read(other.token)).firstViewGuidanceCompletedAt, null);
-      assert.equal((await testApp.request("/v1/preferences", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: "2026-09-06T12:00:00.000Z" }) })).status, 401);
+      // Verbatim four-field strict contract from BRE-385 fe7029a.
+      const legacySchema = z.object({ signature: z.string().max(10_000), composeFormat: z.enum(["plain", "rich"]), replyBehavior: z.enum(["reply", "reply_all"]), notifyByDefault: z.boolean() }).strict();
+      const legacy = legacySchema.parse(await (await testApp.request("/v1/preferences", { headers: headers(first.token) })).json());
+      const legacySaved = await testApp.request("/v1/preferences", { method: "PATCH", headers: headers(first.token), body: JSON.stringify({ ...legacy, signature: "Old Settings" }) });
+      assert.equal(legacySaved.status, 200);
+      assert.equal(legacySaved.headers.get("Cache-Control"), "private, no-store");
+      assert.equal(legacySchema.parse(await legacySaved.json()).signature, "Old Settings");
+      assert.equal((await read(second.token)).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      for (const method of ["GET", "PATCH"]) {
+        assert.equal((await testApp.request("/v1/preferences?include=unknown", { method, headers: headers(first.token), ...(method === "PATCH" ? { body: JSON.stringify({ signature: "Must not save" }) } : {}) })).status, 400);
+      }
+      assert.equal((await read(first.token)).signature, "Old Settings");
+      assert.equal((await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: "2026-09-06T12:00:00.000Z" }) })).status, 401);
     } finally { sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY; }
   });
 

@@ -354,6 +354,9 @@ export {
   updateSenderAttentionRuleSchema,
   updateUserPreferencesSchema,
   userPreferencesSchema,
+  legacyUserPreferencesResponseSchema,
+  guidanceUserPreferencesResponseSchema,
+  userPreferencesQuerySchema,
 } from "./schemas.ts";
 
 export {
@@ -573,5 +576,7 @@ export type {
   UpdateSenderAttentionRule,
   UpdateUserPreferences,
   UserPreferences,
+  LegacyUserPreferencesResponse,
+  GuidanceUserPreferencesResponse,
 } from "./schemas.ts";
 export * from "./organization-view-search.ts";

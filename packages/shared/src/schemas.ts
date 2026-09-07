@@ -74,6 +74,13 @@ export const userPreferencesSchema = z.object({
 }).strict();
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 
+// Wire contracts distinguish rolling legacy clients from explicit guidance reads.
+export const legacyUserPreferencesResponseSchema = userPreferencesSchema.omit({ firstViewGuidanceCompletedAt: true });
+export type LegacyUserPreferencesResponse = z.infer<typeof legacyUserPreferencesResponseSchema>;
+export const guidanceUserPreferencesResponseSchema = userPreferencesSchema.extend({ firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable() });
+export type GuidanceUserPreferencesResponse = z.infer<typeof guidanceUserPreferencesResponseSchema>;
+export const userPreferencesQuerySchema = z.object({ include: z.literal("first_view_guidance").optional() }).strict();
+
 export const updateUserPreferencesSchema = userPreferencesSchema.omit({ firstViewGuidanceCompletedAt: true }).partial().extend({
   firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable().optional(),
 }).refine(

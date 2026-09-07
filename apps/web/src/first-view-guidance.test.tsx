@@ -19,7 +19,7 @@ beforeEach(() => {
   writes = []; completed = null; empty = false; listFails = false; saveFails = false; searches = 0; selections = 0;
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") { writes.push(url); if (saveFails) return new Response("Unavailable", { status: 503 }); completed = "2026-09-06T12:00:00.000Z"; return Response.json(preferences()); }
-    if (url === "/v1/preferences") return Response.json(preferences());
+    if (url === "/v1/preferences?include=first_view_guidance") return Response.json(preferences());
     if (url === "/v1/organization/views") return listFails ? new Response("Unavailable", { status: 503 }) : Response.json({ workspaceId: "owner", workspaceRevision: 1, items: [] });
     if (url.startsWith("/v1/inbox?")) return Response.json({ accounts: [demoAccount], messages: empty ? [] : demoMessages.slice(0, 1), nextCursor: null, counts: { attention: { normal: 0, focus: 0, quiet: 0, hidden: 0, all: 0 }, classification: { likely_human: 0, uncertain: 0, automated_or_bulk: 0, unclassified: 0, all: 0 } } });
     throw new Error(`Unexpected guidance request ${url}`);
@@ -27,7 +27,7 @@ beforeEach(() => {
   const container = browser.document.createElement("div"); browser.document.body.append(container); root = createRoot(container as unknown as Element);
 });
 afterEach(async () => { await act(async () => root.unmount()); globalThis.fetch = originalFetch; for (const name of names) { const d = originals.get(name); if (d) Object.defineProperty(globalThis, name, d); else delete (globalThis as any)[name]; } delete (globalThis as any).IS_REACT_ACT_ENVIRONMENT; await browser.close(); });
-async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => selections++}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
+async function render() { await act(async () => { root.render(<TopLayerProvider><FirstViewGuidanceProvider onSearch={() => searches++} onSelect={() => { selections++; }}><FirstViewInvitation/><ViewGettingStarted/></FirstViewGuidanceProvider></TopLayerProvider>); await new Promise(resolve => setTimeout(resolve, 20)); }); }
 function button(label: string) { return [...browser.document.querySelectorAll("button")].find(x => x.textContent === label || x.querySelector("strong")?.textContent === label)!; }
 async function click(label: string) { expect(button(label)).toBeDefined(); await act(async () => { button(label).click(); await new Promise(resolve => setTimeout(resolve, 20)); }); }
 
@@ -36,7 +36,7 @@ test("first invitation waits for canonical reads, dismisses durably and reopens 
   expect(browser.document.body.textContent).toContain("Keep useful mail together");
   expect(browser.document.activeElement).toBe(browser.document.body);
   await click("Skip for now");
-  expect(writes).toEqual(["/v1/preferences"]);
+  expect(writes).toEqual(["/v1/preferences?include=first_view_guidance"]);
   expect(browser.document.body.textContent).not.toContain("Keep useful mail together");
   await click("Getting started");
   expect(browser.document.querySelector('[role="dialog"]')).not.toBeNull();
@@ -60,7 +60,7 @@ test("empty mail offers only a noninteractive example and skipping never prepare
   expect(browser.document.querySelector('[data-provenance="tutorial"]')).not.toBeNull();
   expect(button("Search mail")).toBeUndefined(); expect(button("Use selected mail")).toBeUndefined();
   await click("Return when mail arrives");
-  expect(writes).toEqual(["/v1/preferences"]); expect(searches + selections).toBe(0);
+  expect(writes).toEqual(["/v1/preferences?include=first_view_guidance"]); expect(searches + selections).toBe(0);
 });
 test("selected mail starts production selection without writing preferences or a View", async () => {
   await render(); await click("Use selected mail");
