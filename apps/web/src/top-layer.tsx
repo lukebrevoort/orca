@@ -21,6 +21,7 @@ const focusableSelector = [
   "input:not([disabled])",
   "textarea:not([disabled])",
   "select:not([disabled])",
+  "details > summary:first-of-type",
   "[contenteditable=\"true\"]",
   "[tabindex]:not([tabindex=\"-1\"])",
 ].join(",");
@@ -44,12 +45,21 @@ type TopLayerManager = {
 const TopLayerContext = createContext<TopLayerManager | null>(null);
 
 function visibleFocusableElements(root: HTMLElement) {
-  return [...root.querySelectorAll<HTMLElement>(focusableSelector)].filter((element) => (
-    !element.hidden
+  return [...root.querySelectorAll<HTMLElement>(focusableSelector)].filter((element) => {
+    if (element.hasAttribute("tabindex") && element.tabIndex < 0) return false;
+    // Closed details expose only their first summary, including its children.
+    // Check every ancestor so an open nested details cannot expose hidden content.
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      if (ancestor.matches("details:not([open])")) {
+        const summary = [...ancestor.children].find((child) => child.tagName === "SUMMARY");
+        if (!summary?.contains(element)) return false;
+      }
+    }
+    return !element.hidden
     && !element.closest("[hidden]")
     && element.getAttribute("aria-hidden") !== "true"
-    && !element.closest("[inert]")
-  ));
+    && !element.closest("[inert]");
+  });
 }
 
 function isEditableTarget(target: EventTarget | null) {

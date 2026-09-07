@@ -1,0 +1,21 @@
+{
+  "theme": "light",
+  "viewport": [
+    1024,
+    768
+  ],
+  "open": true,
+  "text": "Preserved constraints \u00b7 1",
+  "hover": true,
+  "focused": false,
+  "hit": true,
+  "rect": {
+    "x": 83,
+    "y": 509.1875,
+    "width": 137.625,
+    "height": 12
+  },
+  "color": "rgb(16, 37, 34)",
+  "fontSize": "8px",
+  "visibility": "visible"
+}

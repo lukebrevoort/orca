@@ -1,0 +1,98 @@
+[
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.desktop-global-search input')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fill",
+      ".desktop-global-search input",
+      "Project"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"filled\":\".desktop-global-search input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Enter"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Enter\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-filter-toggle')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-filter-toggle"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-filter-toggle\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "select",
+      "#global-mail-search-filters label:nth-child(2) select",
+      "human"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"selected\":[\"human\"]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-save"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-save\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-preserved-constraints summary')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "snapshot",
+      "-i"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"refs\":{\"e1\":{\"name\":\"Review this live View\",\"role\":\"region\"},\"e10\":{\"name\":\"Replace with subject contains \u201cProject\u201d\",\"role\":\"button\"},\"e11\":{\"name\":\"Remove blocker\",\"role\":\"button\"},\"e2\":{\"name\":\"Review this live View\",\"role\":\"heading\"},\"e3\":{\"name\":\"Build a live perspective\",\"role\":\"heading\"},\"e4\":{\"name\":\"Cancel\",\"role\":\"button\"},\"e5\":{\"name\":\"Save View\",\"role\":\"button\"},\"e6\":{\"name\":\"Unsupported source clauses\",\"role\":\"region\"},\"e7\":{\"name\":\"Tune\",\"role\":\"button\"},\"e8\":{\"name\":\"VIEW NAME A short name shown in your workspace.\",\"role\":\"textbox\"},\"e9\":{\"name\":\"DESCRIPTION optional\",\"role\":\"textbox\"}},\"snapshot\":\"- region \\\"Review this live View\\\" [ref=e1]\\n  - heading \\\"Review this live View\\\" [level=2, ref=e2]\\n  - heading \\\"Build a live perspective\\\" [level=3, ref=e3]\\n  - button \\\"Cancel\\\" [ref=e4]\\n  - button \\\"Save View\\\" [disabled, ref=e5]\\n  - textbox \\\"VIEW NAME A short name shown in your workspace.\\\" [ref=e8]: Search \u00b7 Project\\n  - textbox \\\"DESCRIPTION optional\\\" [ref=e9]\\n  - region \\\"Unsupported source clauses\\\" [ref=e6]\\n    - button \\\"Replace with subject contains \u201cProject\u201d\\\" [ref=e10]\\n    - button \\\"Remove blocker\\\" [ref=e11]\\n  - button \\\"Tune\\\" [expanded=false, ref=e7]\"},\"error\":null}\n",
+    "stderr": ""
+  }
+]

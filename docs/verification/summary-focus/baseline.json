@@ -1,0 +1,17 @@
+{
+  "checkpoint": "e1fbe61b6c9afdf6d891de3882c69cca41f679ca",
+  "runtime": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "redTests": {
+    "exec": 4554,
+    "exit": 1,
+    "pass": 3,
+    "fail": 4
+  },
+  "greenTests": {
+    "exec": 75602,
+    "exit": 0,
+    "pass": 7,
+    "fail": 0
+  },
+  "limitation": "Happy DOM checks manager interception and wrapping, not native browser sequential traversal."
+}

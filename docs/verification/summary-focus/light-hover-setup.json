@@ -1,0 +1,98 @@
+[
+  {
+    "command": [
+      "click",
+      ".desktop-theme-toggle"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".desktop-theme-toggle\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "document.documentElement.dataset.theme!=='dark' && !document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fill",
+      ".desktop-global-search input",
+      "Project"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"filled\":\".desktop-global-search input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Enter"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Enter\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-filter-toggle')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-filter-toggle"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-filter-toggle\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "select",
+      "#global-mail-search-filters label:nth-child(2) select",
+      "human"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"selected\":[\"human\"]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-save"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-save\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-preserved-constraints summary')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  }
+]

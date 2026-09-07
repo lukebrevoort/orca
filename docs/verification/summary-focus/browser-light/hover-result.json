@@ -1,0 +1,5 @@
+{
+  "status": "PASS",
+  "cases": 4,
+  "scope": "Pointer-only open/closed hover states; prior keyboard results retained separately."
+}

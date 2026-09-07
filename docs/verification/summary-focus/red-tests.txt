@@ -1,0 +1,67 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/top-layer.test.tsx:
+94 |     const summary = browserWindow.document.querySelector("summary")!;
+95 |     summary.focus();
+96 |     expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+97 |     const event = new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Tab", shiftKey: reverse });
+98 |     await act(async () => { summary.dispatchEvent(event); });
+99 |     expect(event.defaultPrevented).toBe(false);
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/src/top-layer.test.tsx:99:36)
+(fail) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [677.07ms]
+94 |     const summary = browserWindow.document.querySelector("summary")!;
+95 |     summary.focus();
+96 |     expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+97 |     const event = new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Tab", shiftKey: reverse });
+98 |     await act(async () => { summary.dispatchEvent(event); });
+99 |     expect(event.defaultPrevented).toBe(false);
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: false
+Received: true
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/src/top-layer.test.tsx:99:36)
+(fail) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [133.88ms]
+107 |       <details><summary>Last</summary><button>Hidden last action</button></details>
+108 |     </TopLayer></TopLayerProvider>));
+109 |     const summaries = browserWindow.document.querySelectorAll("summary");
+110 |     const first = summaries[0]!;
+111 |     const last = summaries[2]!;
+112 |     expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+                                                                          ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/src/top-layer.test.tsx:112:69)
+(fail) shared top-layer contract > wraps through native summary boundaries and excludes closed nested details contents [52.15ms]
+130 |     </TopLayer></TopLayerProvider>));
+131 |     const first = browserWindow.document.querySelector("[data-first]")!;
+132 |     const last = browserWindow.document.querySelector("[data-last]")!;
+133 |     expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+134 |     await keydown("Tab", true);
+135 |     expect(isSameNode(browserWindow.document.activeElement, last)).toBe(true);
+                                                                         ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/src/top-layer.test.tsx:135:68)
+(fail) shared top-layer contract > does not treat secondary or negative-tabindex summaries as native tab stops [36.20ms]
+(pass) shared top-layer contract > stacks nested dialogs, traps Tab both ways, and restores each opener [74.99ms]
+(pass) shared top-layer contract > keeps focus inside a busy layer with no enabled actions and ignores Escape [10.34ms]
+(pass) shared top-layer contract > coalesces nested unregister restoration into one frame and restores the external opener [30.33ms]
+
+ 3 pass
+ 4 fail
+ 31 expect() calls
+Ran 7 tests across 1 file. [3.76s]

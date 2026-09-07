@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-07T14:18:58.446183+00:00",
+  "browserExec": 47005,
+  "browserExit": 0,
+  "serverExec": 89276,
+  "serverExit": 0,
+  "signal": "SIGINT via owned handle",
+  "scratch": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-s9H0Pg",
+  "scratchExists": false,
+  "listenerExit": 1,
+  "listeners": "",
+  "appearance": "Fresh scratch starts Light; real header toggled Black then Light. No external preference restoration claimed."
+}

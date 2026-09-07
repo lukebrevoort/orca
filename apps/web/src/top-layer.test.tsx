@@ -85,6 +85,74 @@ async function keydown(key: string, shiftKey = false) {
 describe("shared top-layer contract", () => {
   beforeEach(installDom);
 
+  // Happy DOM does not perform native sequential focus navigation. These tests
+  // exercise the real manager's interception and boundary wrapping only.
+  test.each([false, true])("leaves interior native summary Tab to the browser (reverse=%s)", async (reverse) => {
+    await act(async () => root!.render(<TopLayerProvider><TopLayer ariaLabel="Summary traversal" onClose={() => {}}>
+      <button>Before</button><details open><summary>Constraints</summary><button>Detail action</button></details><button>After</button>
+    </TopLayer></TopLayerProvider>));
+    const summary = browserWindow.document.querySelector("summary")!;
+    summary.focus();
+    expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+    const event = new browserWindow.KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Tab", shiftKey: reverse });
+    await act(async () => { summary.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(false);
+    expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(true);
+  });
+
+  test("wraps through native summary boundaries and excludes closed nested details contents", async () => {
+    await act(async () => root!.render(<TopLayerProvider><TopLayer ariaLabel="Details boundaries" onClose={() => {}}>
+      <details><summary>First</summary><button>Hidden first action</button><details open><summary>Hidden nested summary</summary><button>Hidden nested action</button></details></details>
+      <button data-middle>Middle</button>
+      <details><summary>Last</summary><button>Hidden last action</button></details>
+    </TopLayer></TopLayerProvider>));
+    const summaries = browserWindow.document.querySelectorAll("summary");
+    const first = summaries[0]!;
+    const last = summaries[2]!;
+    expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+    await keydown("Tab", true);
+    expect(isSameNode(browserWindow.document.activeElement, last)).toBe(true);
+    await keydown("Tab");
+    expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+    last.parentElement!.setAttribute("open", "");
+    const revealed = last.parentElement!.querySelector("button")!;
+    await keydown("Tab", true);
+    expect(isSameNode(browserWindow.document.activeElement, revealed)).toBe(true);
+    await keydown("Tab");
+    expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+  });
+
+  test("does not treat secondary or negative-tabindex summaries as native tab stops", async () => {
+    await act(async () => root!.render(<TopLayerProvider><TopLayer ariaLabel="Summary eligibility" onClose={() => {}}>
+      <details open><summary tabIndex={-1}>Programmatic only</summary><summary>Secondary summary</summary></details>
+      <button data-first>First action</button><button data-last>Last action</button>
+      <details><summary tabIndex={-2}>Also programmatic only</summary><button>Hidden</button></details>
+    </TopLayer></TopLayerProvider>));
+    const first = browserWindow.document.querySelector("[data-first]")!;
+    const last = browserWindow.document.querySelector("[data-last]")!;
+    expect(isSameNode(browserWindow.document.activeElement, first)).toBe(true);
+    await keydown("Tab", true);
+    expect(isSameNode(browserWindow.document.activeElement, last)).toBe(true);
+  });
+
+  test("retains hidden, inert and disabled exclusions around summary boundaries", async () => {
+    await act(async () => root!.render(<TopLayerProvider><TopLayer ariaLabel="Hidden candidates" onClose={() => {}}>
+      <details hidden><summary>Hidden summary</summary></details>
+      <div inert><details><summary>Inert summary</summary></details></div>
+      <button disabled>Disabled before</button>
+      <details><summary>Available summary</summary></details>
+      <button aria-hidden="true">Hidden after</button><button disabled>Disabled after</button>
+    </TopLayer></TopLayerProvider>));
+    const summary = browserWindow.document.querySelector("details:not([hidden]) > summary")!;
+    const available = browserWindow.document.querySelectorAll("summary")[2]!;
+    expect(isSameNode(browserWindow.document.activeElement, available)).toBe(true);
+    expect(isSameNode(browserWindow.document.activeElement, summary)).toBe(false);
+    await keydown("Tab");
+    expect(isSameNode(browserWindow.document.activeElement, available)).toBe(true);
+    await keydown("Tab", true);
+    expect(isSameNode(browserWindow.document.activeElement, available)).toBe(true);
+  });
+
   afterEach(async () => {
     if (root) await act(async () => root!.unmount());
     for (const name of globalNames) {
