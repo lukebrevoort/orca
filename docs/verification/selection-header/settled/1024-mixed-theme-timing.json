@@ -1,0 +1,6 @@
+{
+  "startedAt": "2026-09-07T06:23:32.034Z",
+  "settledAt": "2026-09-07T06:23:40.842Z",
+  "clickAndWaitElapsedMs": 8808,
+  "condition": "expected theme applied and data-orca-transition removed by transition.finished"
+}

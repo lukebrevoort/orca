@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orca · Selection toolbar and persistent header</title>
+<style>
+  body{font:16px/1.6 system-ui,sans-serif;color:#102522;background:#f6faf7;margin:32px auto;padding:0 24px;max-width:1000px}
+  h1,h2{font-family:Georgia,serif;line-height:1.2}h1{font-size:38px}h2{margin-top:32px}
+  a{color:#176759}code,pre{font-family:ui-monospace,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#e5eee9;padding:18px}
+  img{width:100%;border:1px solid #b5c9c1;border-radius:8px}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #b5c9c1;text-align:left}
+  .status{padding:16px;background:#fff0d3;border-left:5px solid #a46b10}
+</style>
+<h1>Keep selection actions below the workspace header</h1>
+<p class="status">Desktop overlap fixed and browser-verified. The original failure and first-run synchronization failures are preserved. Five local CSS tests timed out; exact-commit hosted checks and independent review remain separate gates.</p>
+<p>When a selected message scrolls into view, the sticky selection toolbar covers Search and the theme button. A click intended to change the theme can instead select every visible message.</p>
+<h2>Measured cause and bounded change</h2>
+<p>On the original built app at 1024×768 Light, scrolling “Apartment weekend” into view puts the workspace at scroll 736px. The header occupies 0–68px; the toolbar occupies 12–136.5px. All five sampled theme points hit the toolbar, and Search is also intercepted.</p>
+<p>The actual scroll ancestor is <code>.desktop-workspace</code>. The content pane computes to <code>overflow: visible</code> and scroll 0 despite retaining a 768px maximum height. The fix preserves that scroll behavior. A shared 68px desktop header size supplies the toolbar’s sticky offset, leaving a 12px gap. The toolbar layer sits below the header. The toolbar override applies only above 760px; existing mobile header and selection rules remain effective.</p>
+<p>This measured diagnosis supersedes the nested-scrollport change proposed in the historical <a href="../bre-387/selection-overlap-plan.html">pre-fix plan</a>. Its inherited overflow declaration is overridden at the tested desktop widths; no scrollport or maximum-height change is justified by the reproduced failure.</p>
+<p>Runtime scope: <code>apps/web/src/desktop-switch.css</code>. No View, selection, reader navigation, or provider behavior changes.</p>
+<h2>Original failure · frozen evidence</h2>
+<p>Source checkpoint: <code>8a4d508d84858d6f2a679681b56392e2fbef00b2</code>. Original built assets served by the evidence worker: CSS <code>index-BFt98LaZ.css</code>, JavaScript <code>index-DftHYpWp.js</code>. The original dist was not rebuilt or modified. See the existing <a href="../bre-387/built-readiness.json">build receipt</a> for hashes and its recorded source chain.</p>
+<p><a href="red/current.json">Actual rectangles, hit targets, scroll ancestors, selected rows and asset URLs</a> · <a href="red/result.json">Regression failure</a></p>
+<img src="red/current.png" alt="Original Light 1024 app after scrolling: the selection toolbar covers Search and the theme control.">
+<h2>Fixed layout · actual browser measurements</h2>
+<p><a href="settled/result.json">PASS: zero failures</a> · <a href="logs/browser-settled.log">Complete browser command result</a> · <a href="fixed-build.json">Fixed source and asset hashes</a></p>
+<table><thead><tr><th>Viewport</th><th>Header</th><th>Toolbar, empty / mixed</th><th>Light and Black</th></tr></thead><tbody>
+<tr><td>1024×768</td><td>0–68px</td><td>80–178px / 80–204.5px</td><td><a href="settled/1024-mixed-theme.png">Light</a> · <a href="settled/1024-mixed.png">Black</a></td></tr>
+<tr><td>1440×900</td><td>0–68px</td><td>80–138px / 80–164.5px</td><td><a href="settled/1440-mixed.png">Light</a> · <a href="settled/1440-mixed-theme.png">Black</a></td></tr>
+</tbody></table>
+<p>All 16 asserted geometry/hit captures pass at workspace scroll 600 or 1200px. Every header and bulk control passes five pointer points, including disabled controls. Theme actions preserve the selected fixture rows and scroll; four Search → Escape returns do likewise. Twelve Tab-focus records show the expected control, <code>:focus-visible</code>, and a solid 2px outline with 2px offset.</p>
+<img src="settled/1024-mixed-theme.png" alt="Fixed Light 1024 app: Search and theme remain above the fully visible mixed-selection toolbar.">
+<p><strong>Evidence boundaries:</strong> selected identity is the fixture’s unique accessible row label, not an internal database ID. Use the main <code>*mixed-deep*.png</code> captures for deep-scroll geometry. The separate <code>*focus.png</code> captures prove focus appearance; keyboard traversal may naturally scroll back toward the heading. These observations do not certify every unrelated control’s contrast.</p>
+<h2>Synchronization failure retained</h2>
+<p>The first fixed-build run used a fixed 650ms delay after theme clicks. Four post-theme captures reported 28 wrong targets, all <code>HTML</code>, despite correct geometry, selection and scroll. See the untouched <a href="first-run/result.json">failure result</a>, <a href="logs/browser-green.log">first-run log</a> and <a href="first-run/1024-empty-theme.json">representative raw measurement</a>.</p>
+<p>The app removes <code>data-orca-transition</code> when <code>transition.finished</code> settles. The final harness waits for that signal and the expected theme, retaining every geometry and hit assertion. All 16 captures then passed on the same product assets, with <code>transition: null</code> recorded. The <code>*timing.json</code> files record click plus CLI/wait elapsed time, not pure animation duration. No product behavior, timeout threshold or workflow was changed to obtain the passing result.</p>
+<h2>Repeatable regression</h2>
+<p>Start the existing disposable reviewer app in a resource slot, open its scratch login using a named agent-browser session, and enter Inbox. The harness uses the real public app controls and the seeded work/personal Maya rows. It does not create Views or change mail data. Current-state mode can inspect a handed-off scrolled session without resetting it.</p>
+<pre>agent-browser skills get core --full
+# Existing scratch app must already be running and authenticated.
+bun apps/web/scripts/check-selection-header.ts --session NAME --matrix --output /tmp/selection-green
+# Current-state probe; --keep-session is only for an explicitly handed-off session.
+bun apps/web/scripts/check-selection-header.ts --session NAME --keep-session --output /tmp/selection-red</pre>
+<p>The matrix checks 1024×768 and 1440×900, Light and Orca Black, zero selected rows and mixed-account selection, header/toolbar viewport bounds, non-overlap, and five pointer points for each control including disabled controls. Actual theme clicks and Search → Escape returns must preserve the selected fixture rows and workspace scroll. Tab must produce a visible focus ring. The command exits nonzero on failure and writes JSON plus screenshots. The browser closes by default.</p>
+<h2>Separate smoke checks</h2>
+<p><a href="smoke/summary.json">Asserted smoke measurements and limitations</a>. These use the same disposable real-API fixture; they create no saved View.</p>
+<ol><li>With “Select all visible” focused by keyboard, Space selects 100 rows; Space again clears them. <a href="smoke/space-all.png">Pressed state</a>; <a href="smoke/black-pressed-hover.png">Black pressed + hover</a>; <a href="smoke/light-pressed-hover.png">Light pressed + hover</a>.</li>
+<li>Select only “Apartment viewing 1”, scroll the workspace to 600px, open “Use these senders”, then Cancel. Repeat, edit the View name, Cancel and Discard draft. Both returns keep that row, scroll 600, and focus on “Use these senders”. <a href="smoke/authoring-open.png">Open</a> · <a href="smoke/authoring-cancel.png">Cancel</a> · <a href="smoke/authoring-discard-guard.png">Discard guard</a> · <a href="smoke/authoring-discard.png">Discard return</a>.</li>
+<li>Leave selection mode, scroll to 600px, open “Apartment weekend”, then use the Reader’s Inbox button. The source row regains focus at scroll 600. <a href="smoke/reader-open.png">Light Reader</a> · <a href="smoke/reader-black-1024.png">Black Reader</a> · <a href="smoke/reader-black-return.json">Corrected return measurement</a>. The initial Light smoke wait wrongly expected DOM removal and timed out at 25s; the app deliberately retains a hidden Reader. The original <a href="smoke/reader-return.json">record</a> and <a href="smoke/reader-return.png">visible Inbox capture</a> are retained. The corrected check requires the public Inbox pane and a zero-size hidden Reader rectangle.</li>
+<li>Open Organization and inspect its shell in <a href="smoke/organization-light.png">Light 1440</a> and <a href="smoke/organization-black-1024.png">Black 1024</a>. This is layout smoke, not Organization authority validation.</li>
+<li>At 390×844, inspect Inbox in <a href="smoke/mobile-light.png">Light</a> and <a href="smoke/mobile-black.png">Black</a>. The pane remains 358px wide with 16px gutters and no document overflow. Selection computes to the original 12px offset/z30; header minimum remains 58px. The desktop override does not apply.</li></ol>
+<h2>Gates and review</h2>
+<table><thead><tr><th>Check</th><th>Actual result</th></tr></thead><tbody>
+<tr><td>Original geometry probe</td><td>Exit 1: header interception reproduced before CSS edits.</td></tr>
+<tr><td>Focused local tests</td><td><a href="logs/focused.log">11 pass, 5 timeout failures</a>, 366 assertions, 156.07s. Existing Happy DOM CSS tests exceeded unchanged 5/10/15s limits; no assertion mismatches were reported. First invocation could not load happy-dom; frozen-lockfile installation then succeeded.</td></tr>
+<tr><td>Root production build</td><td><a href="logs/build.log">Exit 0</a>, shared/API/web; 170 Vite modules. Existing &gt;500kB chunk warning retained. One root command uses workspace fanout; no test/browser overlap.</td></tr>
+<tr><td>Browser regression</td><td><a href="settled/result.json">Exit 0</a> after lifecycle-aware synchronization; first failed run retained above.</td></tr>
+<tr><td>Root lint</td><td><a href="logs/lint.log">Exit 0</a>, shared/API/web. Ran after browser/server cleanup.</td></tr>
+<tr><td>Hosted typecheck/full tests</td><td>Required on the exact pushed fix commit. Full tests were not rerun locally after the focused timeout failures.</td></tr>
+</tbody></table>
+<p><a href="cleanup.json">Cleanup receipt</a>: browser closed, owned server exited 0, ports released, scratch database removed. Fixed built assets remain available for coordinated independent verification. Independent review and hosted checks attach to the immutable additive commit; this bounded fix does not close the wider BRE-387 release or human-usability gates.</p>
+</html>

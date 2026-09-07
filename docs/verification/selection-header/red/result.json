@@ -1,0 +1,8 @@
+{
+  "status": "fail",
+  "failures": [
+    "current: toolbar overlaps header: 12 < 68",
+    "current: Search mail: wrong pointer target [{\"correct\":false,\"actual\":\"STRONG\"},{\"correct\":false,\"actual\":\"STRONG\"},{\"correct\":false,\"actual\":\"STRONG\"},{\"correct\":false,\"actual\":\"STRONG\"},{\"correct\":false,\"actual\":\"DIV\"}]",
+    "current: Switch to Orca Black: wrong pointer target [{\"correct\":false,\"actual\":\"bulk-select-all\"},{\"correct\":false,\"actual\":\"bulk-select-all\"},{\"correct\":false,\"actual\":\"bulk-select-all\"},{\"correct\":false,\"actual\":\"Bulk sender actions\"},{\"correct\":false,\"actual\":\"bulk-select-all\"}]"
+  ]
+}

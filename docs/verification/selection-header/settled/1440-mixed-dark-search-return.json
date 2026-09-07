@@ -1,0 +1,415 @@
+{
+  "capturedAt": "2026-09-07T06:26:33.934Z",
+  "url": "http://127.0.0.1:5187/",
+  "theme": "dark",
+  "transition": null,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "header": {
+    "top": 0,
+    "bottom": 68,
+    "left": 246,
+    "right": 1440,
+    "width": 1194,
+    "height": 68
+  },
+  "toolbar": {
+    "top": 80,
+    "bottom": 164.5,
+    "left": 403,
+    "right": 1283,
+    "width": 880,
+    "height": 84.5
+  },
+  "selected": [
+    "Deselect Maya Chen: Apartment viewing 1",
+    "Deselect Maya Chen: Apartment weekend"
+  ],
+  "mixedAccount": true,
+  "scroll": {
+    "workspace": 600,
+    "pane": 0,
+    "document": 0
+  },
+  "ancestors": [
+    {
+      "node": "bulk-action-bar",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "sticky",
+      "top": "80px",
+      "zIndex": "15",
+      "scrollTop": 0,
+      "clientHeight": 83,
+      "scrollHeight": 83
+    },
+    {
+      "node": "classification-panel",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 7983,
+      "scrollHeight": 7983
+    },
+    {
+      "node": "inbox-view inbox-view-inbox",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 8377,
+      "scrollHeight": 8377
+    },
+    {
+      "node": "DIV",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 8377,
+      "scrollHeight": 8377
+    },
+    {
+      "node": "content-pane",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "900px",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 8377
+    },
+    {
+      "node": "desktop-workspace",
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 600,
+      "clientHeight": 900,
+      "scrollHeight": 8445
+    },
+    {
+      "node": "desktop-shell",
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 900
+    },
+    {
+      "node": "app-root",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "relative",
+      "top": "0px",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 900
+    },
+    {
+      "node": "DIV",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 900
+    },
+    {
+      "node": "BODY",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 900
+    },
+    {
+      "node": "HTML",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "maxHeight": "none",
+      "position": "static",
+      "top": "auto",
+      "zIndex": "auto",
+      "scrollTop": 0,
+      "clientHeight": 900,
+      "scrollHeight": 900
+    }
+  ],
+  "controls": [
+    {
+      "label": "Search mail",
+      "disabled": false,
+      "rect": {
+        "top": 22.5,
+        "bottom": 44.5,
+        "left": 307.640625,
+        "right": 901.546875,
+        "width": 593.90625,
+        "height": 22
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "Search mail"
+        },
+        {
+          "correct": true,
+          "actual": "Search mail"
+        },
+        {
+          "correct": true,
+          "actual": "Search mail"
+        },
+        {
+          "correct": true,
+          "actual": "Search mail"
+        },
+        {
+          "correct": true,
+          "actual": "Search mail"
+        }
+      ]
+    },
+    {
+      "label": "Switch to Light",
+      "disabled": false,
+      "rect": {
+        "top": 16.5,
+        "bottom": 50.5,
+        "left": 1076.671875,
+        "right": 1124.640625,
+        "width": 47.96875,
+        "height": 34
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "Switch to Light"
+        },
+        {
+          "correct": true,
+          "actual": "Switch to Light"
+        },
+        {
+          "correct": true,
+          "actual": "Switch to Light"
+        },
+        {
+          "correct": true,
+          "actual": "Switch to Light"
+        },
+        {
+          "correct": true,
+          "actual": "Switch to Light"
+        }
+      ]
+    },
+    {
+      "label": "Select all visible",
+      "disabled": false,
+      "rect": {
+        "top": 106.25,
+        "bottom": 138.25,
+        "left": 734.125,
+        "right": 841.90625,
+        "width": 107.78125,
+        "height": 32
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "bulk-select-all"
+        },
+        {
+          "correct": true,
+          "actual": "bulk-select-all"
+        },
+        {
+          "correct": true,
+          "actual": "bulk-select-all"
+        },
+        {
+          "correct": true,
+          "actual": "bulk-select-all"
+        },
+        {
+          "correct": true,
+          "actual": "bulk-select-all"
+        }
+      ]
+    },
+    {
+      "label": "Use these senders",
+      "disabled": true,
+      "rect": {
+        "top": 93,
+        "bottom": 125,
+        "left": 855.90625,
+        "right": 973.90625,
+        "width": 118,
+        "height": 32
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        }
+      ]
+    },
+    {
+      "label": "Keep in inbox",
+      "disabled": false,
+      "rect": {
+        "top": 106.25,
+        "bottom": 138.25,
+        "left": 1059.90625,
+        "right": 1154.390625,
+        "width": 94.484375,
+        "height": 32
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        }
+      ]
+    },
+    {
+      "label": "Quiet",
+      "disabled": false,
+      "rect": {
+        "top": 106.25,
+        "bottom": 138.25,
+        "left": 1160.390625,
+        "right": 1213.390625,
+        "width": 53,
+        "height": 32
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        }
+      ]
+    },
+    {
+      "label": "Hide",
+      "disabled": false,
+      "rect": {
+        "top": 106.25,
+        "bottom": 138.25,
+        "left": 1219.390625,
+        "right": 1268,
+        "width": 48.609375,
+        "height": 32
+      },
+      "hits": [
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        },
+        {
+          "correct": true,
+          "actual": "BUTTON"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    "http://127.0.0.1:5187/assets/index-DcPuaZRQ.js",
+    "http://127.0.0.1:5187/assets/index-CdNnB39U.css"
+  ],
+  "horizontalOverflow": false
+}

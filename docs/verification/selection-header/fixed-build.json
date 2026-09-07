@@ -1,0 +1,18 @@
+{
+  "baseSha": "8a4d508d84858d6f2a679681b56392e2fbef00b2",
+  "runtimeChanges": [
+    "apps/web/src/desktop-switch.css"
+  ],
+  "buildCommand": "bun run build",
+  "buildExitCode": 0,
+  "serverCommand": "bun scripts/bre-387-review.ts --built",
+  "note": "The existing harness /v1/review/build productSourceBaseSha is a historical constant, not the fixed build source. This receipt records actual fixed working files and assets.",
+  "files": {
+    "apps/web/src/desktop-switch.css": "9a55d19a8ae8adab68341e46014d7f6605dab2c20e86f730a0443133a75fd3c4",
+    "apps/web/dist/index.html": "6ddee6ee16354fb01016f3c09febc4fff20d1cba27aec1026cb687f340f69f77",
+    "apps/web/dist/assets/index-DcPuaZRQ.js": "ce496add9d8bf2d4549d63b0b7babfe41b756bf84f14ad15e74b9d6b23ec01f2",
+    "apps/web/dist/assets/index-CdNnB39U.css": "8590fb10553f5999cd2d63bce7b139c18d9c5c59289a306d5a0cdbd8eba9f224"
+  },
+  "regressionHarnessSha256": "e97001d98a318a78bdb4749422c1ba1a7a4518977e98d643d2a89b21a2989c13",
+  "sourceDescription": "Frozen base plus only desktop-switch.css runtime change; its SHA256 binds the source in this additive commit to the recorded build."
+}
