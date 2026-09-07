@@ -1,0 +1,40 @@
+{
+  "status": "reviewed implementation applied; runtime validation pending",
+  "scope": "Extend existing disposable harness hold; no product change or rebuild",
+  "arm": {
+    "endpoint": "POST /v1/review/hold-next-continuation",
+    "body": {
+      "context": "search | saved | organization",
+      "requestPath": "exact pathname plus complete query string including nonempty cursor"
+    },
+    "validation": [
+      "Reject absolute URL, fragment, duplicate query keys, absent/empty cursor",
+      "search context requires /v1/inbox; saved/organization requires /v1/organization/views/{id}/results",
+      "Bind canonical complete sorted query including limit, classification, query, account, collection/view and cursor; no wildcard consumption",
+      "Reject if preview or continuation hold is already armed/held"
+    ]
+  },
+  "matching": "Reserve exactly one GET whose path and full canonical query match the armed identity before app.fetch. All other requests proceed normally. Context label accompanies exact path/query receipt and browser URL evidence; shared endpoint does not conflate saved/Organization UIs.",
+  "response": "Run real app.fetch; clone only for status/body SHA256. Await release then return original unchanged Response. Receipt includes arm/match/release timestamps, method/path/query/context, status/hash, reason.",
+  "cleanup": [
+    "240s maximum unconsumed arm timer clears arm",
+    "Existing matched hold240s timer, abort listener, explicit idempotent release, handler-error/finally and server cleanup semantics reused",
+    "Explicit release endpoint clears both unconsumed arm and matched hold, preserving receipt",
+    "No commit/provider/auth interception"
+  ],
+  "validationBeforeCaptures": [
+    "unmatched request does not consume arm",
+    "matched real response held with200/hash then explicit release yields same status/bytes",
+    "direct API abort releases matched hold; explicitly scoped TCP/API evidence",
+    "unconsumed release clears arm; timeout cleanup checked narrowly without broad gates",
+    "concurrent arm losing409/firstidentity retained; preview/continuation mutual exclusion both directions",
+    "negative method/path/cursor/query/context/duplicate/malformed identity preservation",
+    "real configured240s timeout, no shortened substitute"
+  ],
+  "captureScope": "Only missing saved3, Organization4 and Search4 actual pending frames; release/settled UI after each context. Reuse passed Black1024 saved pending. Capture all4 variants from one held response per context where possible; no pervariant saved mutations.",
+  "lifetimeBoundary": "After current reusable controls finish, restore Appearance/clear routes/close current browser and server with receipts; review/apply/freeze harness delta, reuse465 dist without rebuild, start exactly one next lifetime. Preserve all lifetime5 fixtures/evidence and label fresh synthetic baseline if required.",
+  "reviewedHarnessSha256": "3a2f30965dcdb7effc51983ad656708bbadc3d467f8e4e3a38cd9b6b630aeed0",
+  "previousEvidenceCheckpoint": "f054bad912c708c617d6a32112965155dd4c7d68",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "assetReceipt": "f04-assets-reuse.json"
+}

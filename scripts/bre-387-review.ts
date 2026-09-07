@@ -25,13 +25,40 @@ let cleaned = false;
 let holdNextPreview = false;
 let releasePreview: (() => void) | undefined;
 let previewHeldAt: string | undefined;
-let previewHoldReceipt: { id: string; heldAt: string; responseStatus?: number; responseBodySha256?: string; releasedAt?: string; releaseReason?: string } | undefined;
+let previewHoldReceipt: { id: string; heldAt?: string; armedAt?: string; context?: string; requestIdentity?: string; method?: string; responseStatus?: number; responseBodySha256?: string; releasedAt?: string; releaseReason?: string } | undefined;
 const previewHoldTimeoutMs = 240_000;
 const providerRefreshNoop = process.argv.includes("--provider-refresh-noop");
+// Disposable continuation hold: exact canonical query identity, never wildcard matching.
+let continuationArm: { identity: string; context: "search" | "saved" | "organization"; timer: ReturnType<typeof setTimeout> } | undefined;
+function continuationIdentity(path: string, context: string): string | undefined {
+  if (!path.startsWith("/v1/") || path.includes("#") || path.includes("\\")) return;
+  // Reject malformed percent encoding before URLSearchParams can replace it.
+  try { decodeURIComponent(path); } catch { return; }
+  const url = new URL(path, "http://127.0.0.1:3087");
+  const isSearch = context === "search" && url.pathname === "/v1/inbox";
+  const isView = (context === "saved" || context === "organization") && /^\/v1\/organization\/views\/[^/]+\/results$/.test(url.pathname);
+  if (!isSearch && !isView) return;
+  const keys = [...url.searchParams.keys()];
+  if (new Set(keys).size !== keys.length || !url.searchParams.get("cursor")?.trim()) return;
+  const allowed = isSearch ? ["limit", "classification", "query", "accountId", "collectionId", "view", "cursor"] : ["limit", "cursor"];
+  if (keys.some(key => !allowed.includes(key))) return;
+  url.searchParams.sort();
+  return url.pathname + "?" + url.searchParams.toString();
+}
+function clearContinuationArm(reason: string) {
+  if (!continuationArm) return;
+  clearTimeout(continuationArm.timer); continuationArm = undefined;
+  if (previewHoldReceipt && !previewHoldReceipt.heldAt) {
+    previewHoldReceipt.releasedAt = new Date().toISOString();
+    previewHoldReceipt.releaseReason = reason;
+  }
+}
+
 async function cleanup() {
   if (cleaned) return;
   cleaned = true;
   holdNextPreview = false;
+  clearContinuationArm("cleanup");
   releasePreview?.();
   try { api?.stop(true); await web?.close(); }
   finally { try { closeDatabase?.(); } finally { rmSync(directory, { recursive: true, force: true }); } }
@@ -170,13 +197,32 @@ if (process.argv.includes("--check")) {
 api = Bun.serve({ hostname: "127.0.0.1", port: 3087, idleTimeout: 255, fetch: async (request) => {
   const pathname = new URL(request.url).pathname;
   if (pathname === "/v1/review/hold-next-preview" && request.method === "POST") {
-    if (holdNextPreview || releasePreview) return Response.json({ error: "A preview hold is already active" }, { status: 409 });
+    if (holdNextPreview || continuationArm || releasePreview) return Response.json({ error: "A preview hold is already active" }, { status: 409 });
     previewHoldReceipt = undefined;
     holdNextPreview = true; return Response.json({ armed: true, timeoutMs: previewHoldTimeoutMs });
   }
+  if (pathname === "/v1/review/hold-next-continuation" && request.method === "POST") {
+    if (holdNextPreview || continuationArm || releasePreview) return Response.json({ error: "A hold is already active" }, { status: 409 });
+    let input: { context?: unknown; requestPath?: unknown };
+    try { input = await request.json(); } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
+    if (!input || typeof input !== "object" || typeof input.context !== "string" || typeof input.requestPath !== "string") return Response.json({ error: "Invalid identity" }, { status: 400 });
+    const identity = continuationIdentity(input.requestPath, input.context);
+    if (!identity) return Response.json({ error: "Invalid continuation identity" }, { status: 400 });
+    // Parsing awaited; another arm may have won while its body was being read.
+    if (holdNextPreview || continuationArm || releasePreview) return Response.json({ error: "A hold is already active" }, { status: 409 });
+    previewHoldReceipt = { id: crypto.randomUUID(), armedAt: new Date().toISOString(), context: input.context, requestIdentity: identity, method: "GET" };
+    continuationArm = { identity, context: input.context as "search" | "saved" | "organization", timer: setTimeout(() => clearContinuationArm("arm-timeout"), previewHoldTimeoutMs) };
+    return Response.json({ armed: true, timeoutMs: previewHoldTimeoutMs, receipt: previewHoldReceipt });
+  }
+  if (pathname === "/v1/review/pending-continuation" && request.method === "GET") return Response.json({ armed: Boolean(continuationArm), held: Boolean(releasePreview) && Boolean(previewHoldReceipt?.context), timeoutMs: previewHoldTimeoutMs, receipt: previewHoldReceipt ?? null });
+  if (pathname === "/v1/review/release-continuation" && request.method === "POST") {
+    const armed = Boolean(continuationArm), released = Boolean(releasePreview);
+    clearContinuationArm("explicit"); holdNextPreview = false; releasePreview?.();
+    return Response.json({ armed, released, receipt: previewHoldReceipt ?? null });
+  }
   if (pathname === "/v1/review/pending-preview" && request.method === "GET") return Response.json({ armed: holdNextPreview, held: Boolean(releasePreview), heldAt: previewHeldAt ?? null, timeoutMs: previewHoldTimeoutMs, receipt: previewHoldReceipt ?? null });
   if (pathname === "/v1/review/release-preview" && request.method === "POST") {
-    const released = Boolean(releasePreview); holdNextPreview = false; releasePreview?.(); return Response.json({ released });
+    const released = Boolean(releasePreview); holdNextPreview = false; clearContinuationArm("explicit"); releasePreview?.(); return Response.json({ released });
   }
   if (providerRefreshNoop && pathname === "/v1/sync/gmail" && request.method === "POST") return Response.json({ reviewFixture: "provider-refresh-noop" });
   if (pathname === "/v1/review/fail-next-preference" && request.method === "POST") { failNextPreference = true; return Response.json({ armed: true }); }
@@ -189,10 +235,16 @@ api = Bun.serve({ hostname: "127.0.0.1", port: 3087, idleTimeout: 255, fetch: as
   let held: Promise<void> | undefined;
   let finishHeld: ((reason?: string) => void) | undefined;
   let receipt: NonNullable<typeof previewHoldReceipt> | undefined;
-  if (holdNextPreview && pathname === "/v1/organization/views/preview" && request.method === "POST") {
+  const requestUrl = new URL(request.url);
+  const matchesContinuation = request.method === "GET" && continuationArm && continuationIdentity(requestUrl.pathname + requestUrl.search, continuationArm.context) === continuationArm.identity;
+  if ((holdNextPreview && pathname === "/v1/organization/views/preview" && request.method === "POST") || matchesContinuation) {
     holdNextPreview = false;
     previewHeldAt = new Date().toISOString();
-    receipt = { id: crypto.randomUUID(), heldAt: previewHeldAt }; previewHoldReceipt = receipt;
+    if (matchesContinuation && continuationArm) {
+      clearTimeout(continuationArm.timer); continuationArm = undefined;
+      receipt = previewHoldReceipt!; receipt.heldAt = previewHeldAt;
+    } else receipt = { id: crypto.randomUUID(), heldAt: previewHeldAt };
+    previewHoldReceipt = receipt;
     held = new Promise<void>((resolveHeld) => {
       let finished = false;
       const finish = (reason = "explicit") => {
