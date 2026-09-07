@@ -273,27 +273,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-empty-correction.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-empty-correction.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-empty-correction.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-empty-correction.png"
+            "screenshots/black-1024-empty-correction.png",
+            "screenshots/black-1024-fixed-empty-correction.png"
           ]
         }
       ]
@@ -380,27 +387,38 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-selected-authoring.png",
+            "screenshots/light-1440-fixed-selected-authoring-focus.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-selected-authoring.png",
+            "screenshots/light-1024-fixed-selected-authoring-focus.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-selected-authoring.png",
+            "screenshots/black-1440-fixed-selected-authoring-focus.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-selected-authoring.png"
+            "screenshots/black-1024-selected-authoring.png",
+            "screenshots/black-1024-fixed-selected-authoring.png",
+            "screenshots/black-1024-fixed-selected-authoring-focus.png"
           ]
         }
       ]
@@ -411,27 +429,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-list-error.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-list-error.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-list-error.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-list-error.png"
+            "screenshots/black-1024-list-error.png",
+            "screenshots/black-1024-fixed-list-error.png"
           ]
         }
       ]
@@ -442,27 +467,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-preference-error.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-preference-error.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-preference-error.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-preference-error.png"
+            "screenshots/black-1024-preference-error.png",
+            "screenshots/black-1024-fixed-preference-error.png"
           ]
         }
       ]
@@ -473,27 +505,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-empty-sample.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-empty-sample.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-empty-sample.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-empty-onboarding.png"
+            "screenshots/black-1024-empty-onboarding.png",
+            "screenshots/black-1024-fixed-empty-sample.png"
           ]
         }
       ]
@@ -504,27 +543,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-arrival-help.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-arrival-help.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-arrival-help.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
-            "screenshots/black-1024-arrival-help.png"
+            "screenshots/black-1024-arrival-help.png",
+            "screenshots/black-1024-fixed-arrival-help.png"
           ]
         }
       ]
@@ -649,20 +695,27 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-organization.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-organization.png",
+            "screenshots/light-1024-fixed-reordered-reload.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-organization.png"
+          ]
         },
         {
           "theme": "Orca Black",
@@ -670,7 +723,8 @@
           "status": "captured; inspect linked state, not blanket interaction approval",
           "captures": [
             "screenshots/black-1024-organization.png",
-            "screenshots/black-1024-reordered.png"
+            "screenshots/black-1024-reordered.png",
+            "screenshots/black-1024-fixed-organization.png"
           ]
         }
       ]
@@ -681,26 +735,34 @@
         {
           "theme": "Light",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1440-fixed-loading.png"
+          ]
         },
         {
           "theme": "Light",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/light-1024-fixed-loading.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1440,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1440-fixed-loading.png"
+          ]
         },
         {
           "theme": "Orca Black",
           "width": 1024,
-          "status": "pending live observation",
-          "captures": []
+          "status": "captured; inspect linked state, not blanket interaction approval",
+          "captures": [
+            "screenshots/black-1024-fixed-loading.png"
+          ]
         }
       ]
     }

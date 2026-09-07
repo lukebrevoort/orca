@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-09-07T06:59:56.284504+00:00",
+  "heldBeforeDisconnect": {
+    "armed": false,
+    "held": true,
+    "heldAt": "2026-09-07T06:59:47.180Z",
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "78700bc4-443a-42ad-a3f4-cd9410725752",
+      "heldAt": "2026-09-07T06:59:47.180Z",
+      "responseStatus": 200,
+      "responseBodySha256": "6e8974bf0cc3cee306a741153ef5e86f7f32dec2e02c42ba31fb0503a3a3fa7d"
+    }
+  },
+  "observedAfterDisconnect": {
+    "armed": false,
+    "held": false,
+    "heldAt": null,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "78700bc4-443a-42ad-a3f4-cd9410725752",
+      "heldAt": "2026-09-07T06:59:47.180Z",
+      "responseStatus": 200,
+      "responseBodySha256": "6e8974bf0cc3cee306a741153ef5e86f7f32dec2e02c42ba31fb0503a3a3fa7d",
+      "releasedAt": "2026-09-07T06:59:53.784Z",
+      "releaseReason": "abort"
+    }
+  },
+  "abortObserved": true,
+  "note": "Direct API client TCP shutdown after real preview ready; explicit cleanup release if disconnect did not propagate within 15 seconds."
+}

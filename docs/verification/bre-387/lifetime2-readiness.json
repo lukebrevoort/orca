@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-09-07T06:50:21.372989+00:00",
+  "probes": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "bytes": 32,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "bytes": 32,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/login",
+      "status": 302,
+      "bytes": 0,
+      "location": "/"
+    },
+    {
+      "url": "http://127.0.0.1:5187/",
+      "status": 200,
+      "bytes": 1437,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-DcPuaZRQ.js",
+      "status": 200,
+      "bytes": 894457,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-CdNnB39U.css",
+      "status": 200,
+      "bytes": 368559,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/build",
+      "status": 200,
+      "bytes": 12526,
+      "location": null
+    }
+  ]
+}

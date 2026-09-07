@@ -1,0 +1,38 @@
+✓ Done
+
+✓ Done
+
+Use selected mail
+
+✓ Done
+
+{"scenario": "light-1024-fixed-guidance-controls-hover", "active": {"label": "Keep useful mail together", "outline": "rgb(15, 36, 34) none 3px", "outlineOffset": "0px", "tag": "H2"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Done
+
+✓ Done
+
+{"scenario": "light-1024-fixed-guidance-controls-keyboard-focus", "active": {"label": "Search mailFind mail, then choose Save as View.", "outline": "rgb(15, 36, 34) solid 2px", "outlineOffset": "3px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-fixed-guidance-controls.png
+screenshots/light-1024-fixed-guidance-controls.png
+Traceback (most recent call last):
+  File "/tmp/bre387-axe.py", line 10, in <module>
+    evaluate('window.__bre387AxePending={status:"running"};window.axe.run(document,{runOnly:{type:"tag",values:["wcag2a","wcag2aa","wcag21a","wcag21aa"]}}).then(result=>window.__bre387AxePending={status:"complete",result}).catch(error=>window.__bre387AxePending={status:"error",message:String(error)}); "started"')
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bre387-axe.py", line 7, in evaluate
+    r.check_returncode();return json.loads(r.stdout)
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 509, in check_returncode
+    raise CalledProcessError(self.returncode, self.args, self.stdout,
+                             self.stderr)
+subprocess.CalledProcessError: Command '['/opt/homebrew/bin/agent-browser', '--session', 'bre387-fixed-8d709a8', 'eval', '--stdin']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/tmp/bre387-guidance-controls.py", line 12, in <module>
+    run('python3','/tmp/bre387-axe.py',name,theme,str(w),str(h))
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bre387-guidance-controls.py", line 3, in run
+    def run(*args):subprocess.run(args,check=True)
+                   ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '('python3', '/tmp/bre387-axe.py', 'light-1024-fixed-guidance-controls', 'Light', '1024', '768')' returned non-zero exit status 1.

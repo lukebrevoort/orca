@@ -1,0 +1,186 @@
+{
+  "status": "in progress; F02 open; not blanket visual approval",
+  "source": "visual-observations.json",
+  "rows": [
+    {
+      "family": "Authoring Save hover and Tab focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-selected-authoring-hover",
+            "light-1440-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-selected-authoring-hover",
+            "light-1024-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-selected-authoring-account-pressed-hover",
+            "black-1440-fixed-selected-authoring-account-pressed-focus",
+            "black-1440-fixed-selected-authoring-hover",
+            "black-1440-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-selected-authoring-account-pressed-hover",
+            "black-1024-fixed-selected-authoring-account-pressed-focus",
+            "black-1024-fixed-selected-authoring-hover",
+            "black-1024-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        }
+      ]
+    },
+    {
+      "family": "Pressed account hover and focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-selected-account-controls-pressed-hover",
+            "light-1440-fixed-selected-account-controls-pressed-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-selected-account-controls-pressed-hover",
+            "light-1024-fixed-selected-account-controls-pressed-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-selected-authoring-account-pressed-hover",
+            "black-1440-fixed-selected-authoring-account-pressed-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-selected-authoring-account-pressed-hover",
+            "black-1024-fixed-selected-authoring-account-pressed-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        }
+      ]
+    },
+    {
+      "family": "Organization selected View hover and reorder focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-organization",
+            "light-1440-fixed-organization-selected-hover",
+            "light-1440-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-organization",
+            "light-1024-fixed-organization-selected-hover",
+            "light-1024-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-organization",
+            "black-1440-fixed-organization-selected-hover",
+            "black-1440-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-organization",
+            "black-1024-fixed-organization-selected-hover",
+            "black-1024-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "observed; F02 contrast failure applies to Light guidance"
+        }
+      ]
+    },
+    {
+      "family": "Getting started start hover and focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-guidance-controls-hover",
+            "light-1440-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "observed; Light helper contrast F02 fails"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-guidance-controls-hover",
+            "light-1024-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "observed; Light helper contrast F02 fails"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-guidance-controls-hover",
+            "black-1440-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "hover/focus observed; not blanket contrast approval"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-guidance-controls-hover",
+            "black-1024-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "hover/focus observed; not blanket contrast approval"
+        }
+      ]
+    }
+  ],
+  "remaining": [
+    "F02 local helper contrast defect requires separately owned fix and recapture",
+    "Explicit checkbox hover treatment reconciliation",
+    "Native Mac input Undo requires direct manual verification; handler-free control reproduces automation limitation",
+    "Human protocol unapproved and zero real sessions",
+    "Final immutable evidence integrity and exact-head CI pending"
+  ],
+  "guidanceEscape": "All four completed: helpOpen=false and active text Getting started; see lifetime2-actions.jsonl and logs/guidance-controls-remaining.txt."
+}

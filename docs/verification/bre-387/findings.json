@@ -2,7 +2,7 @@
   "findings": [
     {
       "id": "F01",
-      "status": "needs-fix; inherited runtime defect",
+      "status": "fixed; bounded independent verification passed",
       "recordedAt": "2026-09-07T05:25:13.320194+00:00",
       "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
       "productBase": "0e7762cf1977f77151a422963f73e9a10188b866",
@@ -23,8 +23,48 @@
         "apps/web/src/App.tsx:3009"
       ],
       "reviewer": "agt_df05f0d72abe static/source and artifact review; no separate browser run",
-      "boundary": "Inherited from BRE285 bulk and BRE326 shell, unchanged vs BRE386. Scroll-back restores access but does not close acceptance. No runtime fix in BRE387. Parent notified to route upstream.",
-      "requiredValidation": "Both sizes/themes, scrolled no-selection/mixed selection, actual theme/Search/bulk centers, visible keyboard focus, no unintended selection mutation."
+      "boundary": "Inherited defect preserved in historical red evidence. Separate desktop-shell worker fixed shared header offset and toolbar layer without changing scroll ownership; integrated by fast-forward. Wider BRE-387 acceptance remains separate.",
+      "requiredValidation": "Both sizes/themes, scrolled no-selection/mixed selection, actual theme/Search/bulk centers, visible keyboard focus, no unintended selection mutation.",
+      "resolution": {
+        "sha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+        "guide": "../selection-header/fix-guide.html",
+        "result": "../selection-header/settled/result.json",
+        "buildReceipt": "../selection-header/fixed-build.json",
+        "ci": "https://github.com/lukebrevoort/orca/actions/runs/34092141391",
+        "reviewer": "agt_df05f0d72abe independent source/artifact/hosted-check review; 16 settled geometry checks",
+        "runtimeScope": "apps/web/src/desktop-switch.css"
+      }
+    },
+    {
+      "id": "F02",
+      "status": "confirmed inherited contrast defect; separate fix owner planning",
+      "recordedAt": "2026-09-07T08:31:46.875450+00:00",
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "summary": "Light Getting started Search start helper text on hover measures 4.49:1, below 4.5:1",
+      "reproduction": [
+        "Organization > Views > Getting started, Light1024",
+        "Hover Search mail start; focus Close then Tab to Search mail",
+        "Inspect helper span #5f7470 against hovered button #edf5f2 at 11px normal weight"
+      ],
+      "evidence": [
+        "axe-pending-after-guidance-conflict.json",
+        "screenshots/light-1024-fixed-guidance-controls.png",
+        "axe-light-1024-fixed-guidance-controls-tool-stderr.txt",
+        "visual-observations.json"
+      ],
+      "source": [
+        "apps/web/src/first-view-guidance.css:7",
+        "apps/web/src/first-view-guidance.css:8"
+      ],
+      "boundary": "Completed raw audit contains Getting started modal nodes, full axe4.13 A/AA options and timestamp08:21:26.492Z. Helper reported duplicate invocation; exact duplicate mechanism remains unknown. Failure retained independently of transport error. No runtime fix in evidence ownership.",
+      "independentReview": "agt_df05f0d72abe independently confirmed source, screenshot and exact contrast4.490483260625042:1; not rounding-pass. Both start helpers share treatment.",
+      "directMeasurement": {
+        "hover": "f02-light-guidance-1-hover.json",
+        "focus": "f02-light-guidance-1-focus.json",
+        "contrast": 4.49048326062504,
+        "limitations": "Default snapshot was taken before modal settled and contains no targets. File named active records active=false/hover=false, so it does not establish pressed state. Second-helper hover timed out after first sequence; retained as failed bounded attempt. No claim of active/sibling live proof."
+      }
     }
   ]
 }

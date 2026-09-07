@@ -1,0 +1,197 @@
+{
+  "method": "Computed CSS foreground composited against ancestor solid background chain over white canvas; not pixel sampling. Background images/element opacity require separate review.",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "SPAN"
+        },
+        {
+          "background": "rgb(237, 245, 242)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "first-view-starts",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "class": "first-view-guidance",
+          "image": "none",
+          "opacity": "1",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "first-view-help",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "orca-top-layer first-view-help-layer",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "HTML"
+        }
+      ],
+      "contrast": 4.49048326062504,
+      "disabled": false,
+      "effectiveBackground": [
+        237,
+        245,
+        242
+      ],
+      "focused": false,
+      "foreground": "rgb(95, 116, 112)",
+      "glyph": "Find mail, then choose Save as View.",
+      "hit": true,
+      "hovered": true,
+      "label": "Find mail, then choose Save as View.",
+      "outline": "rgb(95, 116, 112) none 3px",
+      "parentFocused": false,
+      "rect": {
+        "bottom": 413.296875,
+        "height": 16.5,
+        "left": 216,
+        "right": 808,
+        "top": 396.796875,
+        "width": 592,
+        "x": 216,
+        "y": 396.796875
+      }
+    },
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "SPAN"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "first-view-starts",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "class": "first-view-guidance",
+          "image": "none",
+          "opacity": "1",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "first-view-help",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "orca-top-layer first-view-help-layer",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "class": "",
+          "image": "none",
+          "opacity": "1",
+          "tag": "HTML"
+        }
+      ],
+      "contrast": 4.977829588709942,
+      "disabled": false,
+      "effectiveBackground": [
+        255,
+        255,
+        255
+      ],
+      "focused": false,
+      "foreground": "rgb(95, 116, 112)",
+      "glyph": "Select conversations from one account, then choose Use these senders.",
+      "hit": true,
+      "hovered": false,
+      "label": "Select conversations from one account, then choose Use these senders.",
+      "outline": "rgb(95, 116, 112) none 3px",
+      "parentFocused": false,
+      "rect": {
+        "bottom": 491.796875,
+        "height": 16.5,
+        "left": 216,
+        "right": 808,
+        "top": 475.296875,
+        "width": 592,
+        "x": 216,
+        "y": 475.296875
+      }
+    }
+  ],
+  "timestamp": "2026-09-07T08:38:50.951Z",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "viewport": [
+    1024,
+    768
+  ]
+}

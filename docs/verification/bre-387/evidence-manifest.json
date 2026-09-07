@@ -1976,9 +1976,1385 @@
       "assetReceipt": "built-readiness.json",
       "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
       "runtimeSourceBaseSha": "0e7762cf1977f77151a422963f73e9a10188b866"
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T06:55:32.654795+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Fresh empty-user Getting started: illustrative sample with real empty mailbox; no provider simulation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Return when mail arrives and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-empty-sample.png",
+      "sha256": "74e17b9e84aa88c2808cafe4770572885a868dcff4fc8aca63da4ba1694d013d",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T06:56:35.985042+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Fresh empty-user Getting started: illustrative sample with real empty mailbox; no provider simulation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Return when mail arrives and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-empty-sample.png",
+      "sha256": "8892176e6cee6b0d1d6f96a642915d26f7bff091d27706afa5be74bbad95ac60",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T06:57:28.720236+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Fresh empty-user Getting started: illustrative sample with real empty mailbox; no provider simulation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Return when mail arrives and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-empty-sample.png",
+      "sha256": "09f24ba4042bf676e47d2d4a9f61bd7ecc6a98c00adc6067d6490bdd6952af6a",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T06:57:59.257541+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Fresh empty-user Getting started: illustrative sample with real empty mailbox; no provider simulation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Return when mail arrives and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-empty-sample.png",
+      "sha256": "51bdc7d6376bf0807d05100d42e5a9471d9d3542f35bf233d5583df7cc79b8ea",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:03:03.063340+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Same fresh empty user after real stored mail arrival: manual Getting started offers both production starts",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Use selected mail and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-arrival-help.png",
+      "sha256": "0419b06a565e852879911b85e56a54c709b02e26871ad27ae394b329a58f945d",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:03:30.503134+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Same fresh empty user after real stored mail arrival: manual Getting started offers both production starts",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Use selected mail and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-arrival-help.png",
+      "sha256": "06e09ee6e69595c65791904f0c3e03d1ad602103a988496756f0bb5f14b88278",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:03:57.726792+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Same fresh empty user after real stored mail arrival: manual Getting started offers both production starts",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Use selected mail and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-arrival-help.png",
+      "sha256": "ccf32a2723035b4d45b7376a7c80c7d5ff72a1ad7abbf46ece14183fa5f4ffef",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:04:27.806061+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Same fresh empty user after real stored mail arrival: manual Getting started offers both production starts",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Open Getting started",
+        "Observe empty-mail Use selected mail and sample",
+        "No View save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-arrival-help.png",
+      "sha256": "dde70d8f88c3f33f3ad1872c559176de1758e2ad2c619b582f40b6800b890531",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:06:13.491969+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Fixture-injected preference PATCH failure on uncompleted reviewer: real error banner and retry, provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/black-1024-fixed-preference-error.png",
+      "sha256": "df0ed6574a78520730df91f77615f8d46ed7136fa1d63c0bf5340c35357e9ee2",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:06:32.234614+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Fixture-injected preference PATCH failure on uncompleted reviewer: real error banner and retry, provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/black-1440-fixed-preference-error.png",
+      "sha256": "ba0730ea0b6ee6621289c34df88da08712a5a88c5a8d0ccb0046806e0b965595",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:06:44.497984+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Fixture-injected preference PATCH failure on uncompleted reviewer: real error banner and retry, provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/light-1440-fixed-preference-error.png",
+      "sha256": "0bafad3f7f3aaac9ea05276945ffb629912614a7d5ac91f19a621c8d90be6639",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:07:03.096671+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Fixture-injected preference PATCH failure on uncompleted reviewer: real error banner and retry, provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/light-1024-fixed-preference-error.png",
+      "sha256": "05b5bb3a6766cf2912a13d2bc719e6e5d602026446730352159e54b3314b7dbb",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:09:36.251026+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Injected View-list failure after real authenticated reload: Organization unavailable and creation/edit/removal disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/black-1024-fixed-list-error.png",
+      "sha256": "166855165d9a206bdcf86d55c003c3565ae577840108b830d0cd5191de3d5355",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:09:55.945624+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Injected View-list failure after real authenticated reload: Organization unavailable and creation/edit/removal disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/black-1440-fixed-list-error.png",
+      "sha256": "2b716cd7b9d83fc08317546afa316627294a18fd870ee3cd484eef928c67aae1",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:10:24.808071+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Injected View-list failure after real authenticated reload: Organization unavailable and creation/edit/removal disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/light-1440-fixed-list-error.png",
+      "sha256": "7fd7a5852843f396bf3b8d25896e0db7a5d81c28167c2786bf4292085ed49698",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:10:54.272432+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Injected View-list failure after real authenticated reload: Organization unavailable and creation/edit/removal disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch with injected failure fixture",
+      "filename": "screenshots/light-1024-fixed-list-error.png",
+      "sha256": "84477889e4977fc8a374faf0073886bee28d9f015972f98cafc6c3fd94f13cdd",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:16:51.999485+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Actual real preview pending behind bounded response-delay fixture; unchanged body/status; provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Explicit subject replacement triggers real preview",
+        "Receipt held=true with real response status and hash",
+        "Observe Checking draft and disabled Save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-loading.png",
+      "sha256": "34614b6c090265296f17dbb3923df84f73c113788078792ddddeca2f54679af9",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:18:56.556281+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Actual real preview pending behind bounded response-delay fixture; unchanged body/status; provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Explicit subject replacement triggers real preview",
+        "Receipt held=true with real response status and hash",
+        "Observe Checking draft and disabled Save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-loading.png",
+      "sha256": "5f7a8414ec3f1b5bc0c028fc43cdb4304ea24340868b3c30e08fbd12554c298f",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:23:18.088157+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Actual real preview pending behind bounded response-delay fixture; unchanged body/status; provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Explicit subject replacement triggers real preview",
+        "Receipt held=true with real response status and hash",
+        "Observe Checking draft and disabled Save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-loading.png",
+      "sha256": "2ffb635cb30c1996bfde11416c2b68c6170042a14e6064f1fcfcece0f8a3254e",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:24:38.070829+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Actual real preview pending behind bounded response-delay fixture; unchanged body/status; provider simulation off",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Explicit subject replacement triggers real preview",
+        "Receipt held=true with real response status and hash",
+        "Observe Checking draft and disabled Save"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-loading.png",
+      "sha256": "38be7aaa62267ce15aa8576b620cb49796535b243031618a42811852fd540e8c",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:36:27.936293+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Work-only revision2 correction census: all8 candidates unchecked, empty allowlist cannot be applied; no correction/save mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-empty-correction.png",
+      "sha256": "1db4aac7ef7f3b13a1096eceea7b750fa2e9cf1caf80d5a8b9e2cf68842ef202",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:38:26.764737+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Work-only revision2 correction census: all8 candidates unchecked, empty allowlist cannot be applied; no correction/save mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-empty-correction.png",
+      "sha256": "0eff7beb44a563b16c529fe01465e2c2f806371e2f4554f77dfbf817af92fbed",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:39:03.583095+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Work-only revision2 correction census: all8 candidates unchecked, empty allowlist cannot be applied; no correction/save mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-empty-correction.png",
+      "sha256": "163a028e768f6bba834590ffe6eff0babac5f20329e205c6e09e7b2abc79916d",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:39:36.152265+00:00",
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Work-only revision2 correction census: all8 candidates unchecked, empty allowlist cannot be applied; no correction/save mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-empty-correction.png",
+      "sha256": "3bca51d8fa72ee8b32c6199c9138f4051e6fd80e638b5e3a41d23211f39973fe",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:45:09.995721+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exact selected stored work Apartment viewing1 -> Maya sender authoring; ready production draft, no save",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Select exact work row",
+        "Use these senders",
+        "Observe account and exact sender predicate",
+        "No View commit"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-selected-authoring.png",
+      "sha256": "68c59052452af1e85975b6f1d4ff1f43268c5581e9e3e1bece6102e5ba8ccee2",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:45:35.748971+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Selected sender authoring keyboard focus on Save after Tab from Cancel",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Focus Cancel",
+        "Press Tab",
+        "Observe Save focus ring and readable label without submission"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-selected-authoring-focus.png",
+      "sha256": "febec77b0057cb52b5c05b551b3465dbb13d65d1aa350b9171a216851047f6f8",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:46:10.973338+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exact selected stored work Apartment viewing1 -> Maya sender authoring; ready production draft, no save",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Select exact work row",
+        "Use these senders",
+        "Observe account and exact sender predicate",
+        "No View commit"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-selected-authoring.png",
+      "sha256": "cca35c3c78ecac5557f281b5e5007fac0e9af984ea47294f2fa30568c49b35ab",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:46:25.193266+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Selected sender authoring keyboard focus on Save after Tab from Cancel",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Focus Cancel",
+        "Press Tab",
+        "Observe Save focus ring and readable label without submission"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-selected-authoring-focus.png",
+      "sha256": "5c7f75b8f9db3a5845f869d962596576a6415470f6f62936fea16e12cf52f150",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:50:52.269264+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exact selected stored work Apartment viewing1 -> Maya sender authoring; ready production draft, no save",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Select exact work row",
+        "Use these senders",
+        "Observe account and exact sender predicate",
+        "No View commit"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-selected-authoring.png",
+      "sha256": "2e79ddaf6e0cbdc0285cf10bc4ec9c917dbbcd3f1613864040cdb0bfd28719d2",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:51:14.032789+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Selected sender authoring keyboard focus on Save after Tab from Cancel",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Focus Cancel",
+        "Press Tab",
+        "Observe Save focus ring and readable label without submission"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-selected-authoring-focus.png",
+      "sha256": "dc7c7594a91e67efc39b0e972f35882fac82595efc28ab0b59902c69db1ba02e",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:51:37.497348+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Exact selected stored work Apartment viewing1 -> Maya sender authoring; ready production draft, no save",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Select exact work row",
+        "Use these senders",
+        "Observe account and exact sender predicate",
+        "No View commit"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-selected-authoring.png",
+      "sha256": "dc62392265495becd37317c80987bc641dbd561c9c30c67d0b54271eaf904a81",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:51:52.520957+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Selected sender authoring keyboard focus on Save after Tab from Cancel",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Focus Cancel",
+        "Press Tab",
+        "Observe Save focus ring and readable label without submission"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-selected-authoring-focus.png",
+      "sha256": "a72a77ac798377dab4bc026b94c4930b84b7f3dc867377dcb81ee6e2f0f87b62",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:53:09.037868+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exact selected-work sender draft: pressed account button hovered then keyboard focused; no predicate mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover pressed work account",
+        "Focus personal then Tab to work",
+        "Record readable selected label and focus without toggling"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-selected-account-controls.png",
+      "sha256": "f4b1f00e5fb28122ad8452de09318f75789d894d734da08a27f08c58c134e04b",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:53:29.037613+00:00",
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Exact selected-work sender draft: pressed account button hovered then keyboard focused; no predicate mutation",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover pressed work account",
+        "Focus personal then Tab to work",
+        "Record readable selected label and focus without toggling"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-selected-account-controls.png",
+      "sha256": "d2bfa33a9bf0b3684bf5c5e6f8dcc18c0c15f0e80dfba26d5c9d2be46daf020b",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:55:50.498957+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Organization real two saved Views; exact selected Maya/work predicate, enabled lifecycle and boundary-disabled reorder controls",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-organization.png",
+      "sha256": "9c789511b314fcf7a22b9c2d11e067a4902f62441a2b5cdc0d85f62c8dc0a577",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:56:24.427599+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Organization selected View and keyboard reorder focus; first boundary up control disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover selected View",
+        "Focus selected View",
+        "Tab skips disabled Move up and reaches Move down",
+        "No reorder yet"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-organization-focus.png",
+      "sha256": "be121d3220fab11f895a10cbc5591c9da6fa3161d4a409c1c08b33175bdd82c3",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:57:02.272126+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Organization real two saved Views; exact selected Maya/work predicate, enabled lifecycle and boundary-disabled reorder controls",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-organization.png",
+      "sha256": "c9d08cc0bd4484759131c0937f379fe85df8485d6aa488167f542c60aa8974ef",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:57:32.023535+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Organization selected View and keyboard reorder focus; first boundary up control disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover selected View",
+        "Focus selected View",
+        "Tab skips disabled Move up and reaches Move down",
+        "No reorder yet"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-organization-focus.png",
+      "sha256": "c9d08cc0bd4484759131c0937f379fe85df8485d6aa488167f542c60aa8974ef",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:58:02.411482+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Organization real two saved Views; exact selected Maya/work predicate, enabled lifecycle and boundary-disabled reorder controls",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-organization.png",
+      "sha256": "3e457bd0a46b4a81f76183e7b3c31a44fd97dfc4bc2f51a4255abfca126de5ea",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:58:29.452830+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Organization selected View and keyboard reorder focus; first boundary up control disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover selected View",
+        "Focus selected View",
+        "Tab skips disabled Move up and reaches Move down",
+        "No reorder yet"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-organization-focus.png",
+      "sha256": "3e30df2b35c127c0f9e9f94e18af164b2925f53dfe5971b1329ed443a768ebfb",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T07:59:07.576661+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Organization real two saved Views; exact selected Maya/work predicate, enabled lifecycle and boundary-disabled reorder controls",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reuse same UI state without persistence mutation",
+        "Set viewport and theme",
+        "Inspect visible labels and controls"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-organization.png",
+      "sha256": "8d3897d51cea7d5abc75c638886b3ed01e415ec5527232c18399c3f756f5eb04",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:00:22.911299+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Organization selected View and keyboard reorder focus; first boundary up control disabled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Hover selected View",
+        "Focus selected View",
+        "Tab skips disabled Move up and reaches Move down",
+        "No reorder yet"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-organization-focus.png",
+      "sha256": "d484e38804d13f0b01e95a2646793c2eea40ab7bd9ae6dbae12ff73255dd7e27",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:09:18.492993+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Canonical reorder survives reload: Project position0, Maya position1, same IDs/definitions; authority settled",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Click Move Fixed Maya selection down once",
+        "Read exact API order and revisions",
+        "Reload Organization and open Views",
+        "Verify DOM order matches canonical API"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-reordered-reload.png",
+      "sha256": "5cd5e250335166964ac3119037a84b2b5c8687df4802904dfec12e195124152c",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:20:01.154486+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Light",
+      "fixtureScenario": "Manual Getting started on completed real-mail user: start button hover and keyboard focus",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reopen Getting started",
+        "Hover Search start",
+        "Focus Close then Tab to Search start",
+        "No start or preference mutation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1024-fixed-guidance-controls.png",
+      "sha256": "339f98323bc107988a6943bb9fb03f04d27e09c5039d146bfa6490bb15d533d3",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:30:58.858753+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Light",
+      "fixtureScenario": "Manual Getting started on completed real-mail user: start button hover and keyboard focus",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reopen Getting started",
+        "Hover Search start",
+        "Focus Close then Tab to Search start",
+        "No start or preference mutation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/light-1440-fixed-guidance-controls.png",
+      "sha256": "e0c4432e845d7d7c56607e9624eb6b3c81d341d4f55d737889572225c5746d95",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:32:11.542837+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Manual Getting started on completed real-mail user: start button hover and keyboard focus",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reopen Getting started",
+        "Hover Search start",
+        "Focus Close then Tab to Search start",
+        "No start or preference mutation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1440-fixed-guidance-controls.png",
+      "sha256": "5c76aa5713ac0a3b10343dd131c40761e16f659c567c341226ad150d789a901b",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+      "timestamp": "2026-09-07T08:34:20.005659+00:00",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "Orca Black",
+      "fixtureScenario": "Manual Getting started on completed real-mail user: start button hover and keyboard focus",
+      "toolVersion": "agent-browser 0.34.0",
+      "actions": [
+        "Reopen Getting started",
+        "Hover Search start",
+        "Focus Close then Tab to Search start",
+        "No start or preference mutation"
+      ],
+      "category": "production-scratch",
+      "filename": "screenshots/black-1024-fixed-guidance-controls.png",
+      "sha256": "c896c18436661ef4c4b7f32fb8f9b9d21e9fb2dfcc530c6ba8f89c136af6ef7f",
+      "assetReceipt": "fixed-assets-reuse.json",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+      "fixtureFlags": {
+        "providerRefreshNoop": false,
+        "boundedPreviewHoldAvailable": true
+      },
+      "fixtureLifetime": 2
     }
   ],
-  "visualStatus": "NEEDS FIX: confirmed inherited scrolled selection toolbar/header overlap F01. Other captured states remain bounded evidence; remaining state variants/loading/native Mac Undo/human sessions are open. No engineering release approval.",
+  "visualStatus": "Partial live evidence: all 20 state families have four-way captures, but this does not establish every interaction. F01 independently fixed at44edbf2. F02 Light guidance helper hover contrast fails4.49:1; remaining control-state reconciliation, native Mac input Undo and real human evidence remain open.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -2074,7 +3450,7 @@
   ],
   "finalDocsShaReference": "Published as immutable PR head in Dispatch and Linear after the final documentation commit (avoids a self-referential hash).",
   "coverageStatus": "Partial live captures and observations now recorded; full live matrix and all human observations remain pending.",
-  "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea",
+  "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
   "productionStatus": "Seven named scenario groups passed at committed harness SHA, including all-table no-write prepare/preview/replay; scope is limited to production-results.json.",
   "artifactReview": {
     "initialSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
@@ -2490,6 +3866,354 @@
           "label > span[aria-hidden=\"true\"]"
         ]
       ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "category": "production-scratch",
+      "filename": "axe-black-1024-fixed-empty-correction.json",
+      "sha256": "9adfdbbbd1c25cd62e8746488155c3263d247d8e51ebda55e9bf1d70d556df3e",
+      "timestamp": "2026-09-07T07:37:53.010175+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "category": "production-scratch",
+      "filename": "axe-black-1440-fixed-empty-correction.json",
+      "sha256": "3876de68a7bd6f5c019e16959f3e1cd7b5679278f10499d523ca1c6513c2b4cc",
+      "timestamp": "2026-09-07T07:38:36.705114+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "category": "production-scratch",
+      "filename": "axe-light-1440-fixed-empty-correction.json",
+      "sha256": "e1e84c299bb20f701cb1190f946191d4c1b50ade2574c4a2e2e5d5b688ad35a6",
+      "timestamp": "2026-09-07T07:39:12.770226+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=view%3Aview_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+      "category": "production-scratch",
+      "filename": "axe-light-1024-fixed-empty-correction.json",
+      "sha256": "409eda9486dfaa3a1cab5f3af97aa37f4967e252bedc4d08493ae7b75c516dc2",
+      "timestamp": "2026-09-07T07:39:41.485776+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "category": "production-scratch",
+      "filename": "axe-light-1024-fixed-selected-authoring.json",
+      "sha256": "41c7c6be4edacf636d1ff071099addd270628bddff24c6d398ad83120f54ef23",
+      "timestamp": "2026-09-07T07:45:40.454171+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 0,
+        "passes": 23,
+        "inapplicable": 39
+      },
+      "incompleteTargets": []
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "category": "production-scratch",
+      "filename": "axe-light-1440-fixed-selected-authoring.json",
+      "sha256": "933ed9b4393c92693569f43a2179825a2ca3543fe13fdaa3fa01a20c3b3a77b2",
+      "timestamp": "2026-09-07T07:46:28.859863+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 0,
+        "passes": 23,
+        "inapplicable": 39
+      },
+      "incompleteTargets": []
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "category": "production-scratch",
+      "filename": "axe-black-1440-fixed-selected-authoring.json",
+      "sha256": "732da8db5c12dec879c6e2eac6e9af15e06ee0dd581d35cbe02a71ea60fc7e09",
+      "timestamp": "2026-09-07T07:51:19.694955+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 0,
+        "passes": 23,
+        "inapplicable": 39
+      },
+      "incompleteTargets": []
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=inbox",
+      "category": "production-scratch",
+      "filename": "axe-black-1024-fixed-selected-authoring.json",
+      "sha256": "971e79350e5effaa7a8fd21e9d81684e54cee2001d338a5dd2d35d73c6cff171",
+      "timestamp": "2026-09-07T07:51:55.910049+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 0,
+        "passes": 23,
+        "inapplicable": 39
+      },
+      "incompleteTargets": []
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "category": "production-scratch",
+      "filename": "axe-black-1024-fixed-organization.json",
+      "sha256": "6428a20d237b594a3a22d67a3e424a3f7769bbe95eed4b9ac53e058e6db20a66",
+      "timestamp": "2026-09-07T07:56:31.845564+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Maya selection down\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Project evidence up\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Orca Black",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "category": "production-scratch",
+      "filename": "axe-black-1440-fixed-organization.json",
+      "sha256": "14e2c1bb198c5d019de8bdb7fbc2c7774e5784858ea23383603de75075c83d4f",
+      "timestamp": "2026-09-07T07:57:34.753375+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Maya selection down\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Project evidence up\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "category": "production-scratch",
+      "filename": "axe-light-1440-fixed-organization.json",
+      "sha256": "0b82c3c3e5ab29781ff4399cfe4621305d588df128e91e21a7fa2c367a3afcf3",
+      "timestamp": "2026-09-07T07:58:32.151350+00:00",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "axeLibrarySha256": "c24f097bd2f451d4f933e8bc7d8d539f8672a2ebcb5cc9f9f3eec8ca9470a0c1",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Maya selection down\"]"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Project evidence up\"]"
+          ]
+        ]
+      ]
+    },
+    {
+      "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+      "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+      "theme": "Light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "category": "production-scratch",
+      "filename": "axe-light-1024-fixed-organization-after-reload.json",
+      "sha256": "ec07ae6d6193279d365330141b96302c11efcdc8d30d943ed17787fe5cfe47ac",
+      "completedAt": "2026-09-07T08:16:18.806Z",
+      "toolVersion": "agent-browser 0.34.0 / axe 4.13.0",
+      "method": "Single async axe.run with unchanged A/AA rules; short status/result calls after prior synchronous CLI os35 failures. No rule suppression.",
+      "counts": {
+        "violations": 0,
+        "incomplete": 1,
+        "passes": 22,
+        "inapplicable": 40
+      },
+      "incompleteTargets": [
+        [
+          [
+            "label > span[aria-hidden=\"true\"]"
+          ],
+          [
+            ".view-list-item:nth-child(1) > .view-order-controls > .view-icon-action[type=\"button\"]:nth-child(2)"
+          ],
+          [
+            "button[aria-label=\"Move Fixed Maya selection up\"]"
+          ]
+        ]
+      ]
     }
   ],
   "manualReview": "manual-review.json",
@@ -2503,18 +4227,12 @@
   },
   "lifecycleEvidenceBoundary": "Live snapshots establish rendered before/after order and removal/rename readback. The live reorder capture does not independently record canonical API positions or reload order. Canonical reorder and unchanged mail/provider/placement/policy/notification tables are separately established by the exact harness production-results.json snapshots.",
   "checkpointHostedCi": {
-    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
-    "status": "SUCCESS",
-    "workflow": ".github/workflows/unit-tests.yml",
-    "commands": [
-      "bun run typecheck",
-      "bun run test"
-    ],
+    "sha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "status": "SUCCESS independently verified by parent",
     "runs": [
-      "https://github.com/lukebrevoort/orca/actions/runs/34078137445",
-      "https://github.com/lukebrevoort/orca/actions/runs/34078134821"
-    ],
-    "boundary": "Final artifact head must independently settle; no runtime or harness changes after this checkpoint."
+      "https://github.com/lukebrevoort/orca/actions/runs/34093888604",
+      "https://github.com/lukebrevoort/orca/actions/runs/34093885529"
+    ]
   },
   "nativeUndoDiagnostic": {
     "source": "keyboard-native-control.txt",
@@ -2525,14 +4243,16 @@
   "findings": "findings.json",
   "fixPlan": "selection-overlap-plan.html",
   "currentBrowserLifetime": {
-    "status": "kept running for coordinated upstream fix and recapture; not cleaned yet",
-    "session": "bre387-built-623e5fc",
-    "api": "http://127.0.0.1:3087",
-    "web": "http://127.0.0.1:5187",
-    "savedViewId": "view_7efd42ca-3b60-4d90-89a2-020148aa4af4",
-    "currentRevision": 8,
-    "inspection": "browser-zero-second-save.txt",
-    "boundary": "Revision2 allowlist/future and revision6 zero evidence are historical. Revision8 work-only unmatched subject is current. Runtime/harness source and built assets unchanged during this lifetime."
+    "lifetime": 2,
+    "session": "bre387-fixed-8d709a8",
+    "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+    "harnessSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "providerRefreshNoop": false,
+    "assetReceipt": "fixed-served-build.json",
+    "assetReuse": "fixed-assets-reuse.json",
+    "readiness": "lifetime2-readiness.json",
+    "priorCleanup": "lifetime1-cleanup.json",
+    "status": "live; cleanup pending"
   },
   "browserActionLogs": [
     {
@@ -2591,5 +4311,26 @@
       "source": "screenshot",
       "description": "BRE-387 evidence checkpoint: black-1024-zero-results-state.png; agent-operated scratch data, no human usability approval."
     }
-  ]
+  ],
+  "loadingEvidence": {
+    "light": "loading-light-receipts.json",
+    "black": "loading-orca-black-receipts.json",
+    "browserLightMatch": "loading-light-browser-match.json",
+    "browserBlackMatch": "loading-black-browser-match.json",
+    "controlRelease": "hold-release-check.json",
+    "controlAbort": "hold-abort-check.json",
+    "boundary": "Real preview status/body held by explicit delay fixture, released unchanged; no provider sync simulation. TCP abort checked direct API; proxy cancellation/timeout/cleanup must not be inferred."
+  },
+  "guidanceAuditConflict": {
+    "rawResult": "axe-pending-after-guidance-conflict.json",
+    "error": "axe-light-1024-fixed-guidance-controls-tool-stderr.txt",
+    "wrapperLog": "logs/guidance-controls-failed-wrapper.txt",
+    "resultTimestamp": "2026-09-07T08:21:26.492Z",
+    "counts": {
+      "violations": 1,
+      "passes": 18,
+      "incomplete": 0
+    },
+    "attribution": "Completed result includes exact Getting started modal and hovered Search helper nodes matching Light1024 capture. Duplicate invocation mechanism not established; raw failure is retained, not discarded."
+  }
 }

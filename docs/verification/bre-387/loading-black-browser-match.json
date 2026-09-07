@@ -1,0 +1,17 @@
+{
+  "responseRecorder": [
+    {
+      "receivedAt": "2026-09-07T07:19:18.305Z",
+      "sha256": "98e640ecae45e3330e1f9637b8d33790eee8fbea42a41fda6b02bde62b691b84",
+      "status": 200
+    },
+    {
+      "receivedAt": "2026-09-07T07:25:01.087Z",
+      "sha256": "70837ebee4875da56a5240101471f1ac6a4ab86134ec904713638b02cb81c5c7",
+      "status": 200
+    }
+  ],
+  "receiptId": "69235831-1d2d-4b57-9652-38220c309435",
+  "statusAndBytesMatch": true,
+  "settledUiEvidence": "lifetime2-actions.jsonl"
+}

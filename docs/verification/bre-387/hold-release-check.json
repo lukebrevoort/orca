@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-09-07T06:57:24.938304+00:00",
+  "category": "production-scratch with bounded response-delay fixture",
+  "armed": {
+    "armed": true,
+    "timeoutMs": 240000
+  },
+  "held": {
+    "armed": false,
+    "held": true,
+    "heldAt": "2026-09-07T06:57:23.907Z",
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "bc85bb48-ec29-4c9d-982a-a8c7a722a223",
+      "heldAt": "2026-09-07T06:57:23.907Z",
+      "responseStatus": 200,
+      "responseBodySha256": "377330544505a98152f1fd22e4e7658457c47a313f85149ed9287529d54eecdd"
+    }
+  },
+  "release": {
+    "released": true
+  },
+  "final": {
+    "armed": false,
+    "held": false,
+    "heldAt": null,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "bc85bb48-ec29-4c9d-982a-a8c7a722a223",
+      "heldAt": "2026-09-07T06:57:23.907Z",
+      "responseStatus": 200,
+      "responseBodySha256": "377330544505a98152f1fd22e4e7658457c47a313f85149ed9287529d54eecdd",
+      "releasedAt": "2026-09-07T06:57:24.934Z",
+      "releaseReason": "explicit"
+    }
+  },
+  "returnedStatus": 200,
+  "returnedBodySha256": "377330544505a98152f1fd22e4e7658457c47a313f85149ed9287529d54eecdd",
+  "pass": true,
+  "note": "No commit; unchanged real preview body/status released. Abort/timeout/cleanup are separate checks."
+}

@@ -8,8 +8,9 @@
     "test": "prepare and preview must not write any table",
     "line": 91,
     "evidence": "production-results.json",
-    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
-    "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea"
+    "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+    "executionEvidence": "logs/2026-09-07T06-48-41.684356+00-00.txt"
   },
   {
     "group": "P01",
@@ -31,8 +32,9 @@
     "test": "all saved pages include future allowed sender",
     "line": 122,
     "evidence": "production-results.json",
-    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
-    "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea"
+    "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+    "executionEvidence": "logs/2026-09-07T06-48-41.684356+00-00.txt"
   },
   {
     "group": "P02",
@@ -211,8 +213,9 @@
     "test": "empty matching sender census fails closed without a partial allowlist",
     "evidence": "production-results.json",
     "line": 133,
-    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
-    "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea"
+    "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+    "executionEvidence": "logs/2026-09-07T06-48-41.684356+00-00.txt"
   },
   {
     "group": "P07",
@@ -228,7 +231,7 @@
   },
   {
     "group": "P07",
-    "criterion": "Keyboard Cmd/Ctrl+Z native input undo versus draft undo",
+    "criterion": "Input shortcut is not intercepted; form shortcut restores draft",
     "category": "DOM fixture",
     "status": "pass at hosted checkpoint",
     "source": "apps/web/src/organization-views.interaction.test.tsx",
@@ -236,7 +239,9 @@
     "line": 222,
     "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
     "executionEvidence": "https://github.com/lukebrevoort/orca/actions/runs/34078137445",
-    "executionBoundary": "Unchanged exact test source; full workspace tests/typecheck passed. Final artifact-head CI linked separately."
+    "executionBoundary": "Unchanged exact test source; full workspace tests/typecheck passed. Final artifact-head CI linked separately.",
+    "gap": "Happy DOM does not implement native text history. This test proves defaultPrevented=false in input and draft restoration outside text inputs only. Actual native Mac text Undo remains pending direct manual verification; handler-free browser control reproduces automation limitation.",
+    "nativeHistoryEvidence": "keyboard-native-control.txt"
   },
   {
     "group": "P07",
@@ -276,16 +281,21 @@
   },
   {
     "group": "P07",
-    "criterion": "Real route rename/reorder/remove preserve named mail/provider/placement/policy/notification tables; browser lifecycle pending",
+    "criterion": "Real route rename/reorder/remove preserve named mail/provider/placement/policy/notification tables; live transitions separately recorded",
     "category": "production-scratch",
     "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "real rename/reorder/remove retain named",
-    "gap": "Live browser lifecycle/focus still pending; route check proves only named table snapshots.",
+    "gap": "Live rename/remove/dirty/source-focus transitions in browser-actions.json; current fixed-runtime before\u2192UI reorder\u2192canonical API\u2192reload order in lifetime2-reorder-proof.json. Mail/provider/placement/policy/notification invariants come from separate route harness, not browser inspection snapshots.",
     "evidence": "production-results.json",
     "line": 151,
-    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
-    "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea"
+    "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+    "liveEvidence": [
+      "browser-actions.json",
+      "lifetime2-reorder-proof.json"
+    ],
+    "executionEvidence": "logs/2026-09-07T06-48-41.684356+00-00.txt"
   },
   {
     "group": "P08",
@@ -392,17 +402,18 @@
     "test": "account added after completion retains user preference",
     "evidence": "production-results.json",
     "line": 130,
-    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
-    "harnessSha256": "fbe8ddc86e1684ec3574bdf10f380f712943016acef1a98a8ceab6368f7f05ea"
+    "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
+    "harnessSha256": "fbdf82f7455a9cb5621bf193efff192b55efc68b2018e4cb30bb1ddf9cf4515d",
+    "executionEvidence": "logs/2026-09-07T06-48-41.684356+00-00.txt"
   },
   {
     "group": "P09",
     "criterion": "Light and Orca Black 1440x900 and 1024x768; all applicable control/data states, hit-testing, overflow, Escape/Tab/Space/Cmd; axe A/AA and incomplete/manual contrast",
     "category": "live visual",
-    "status": "needs fix and remaining live observations",
+    "status": "F02 contrast fix required; bounded captured states and interactions separately mapped",
     "source": "docs/verification/bre-387/reviewer-guide.html",
     "test": null,
-    "gap": "F01: scrolled bulk selection toolbar overlays header and theme center hits Select all visible. Unscrolled captures are not acceptance of this geometry. Remaining cells/loading/native Mac input Undo remain explicit;14 axe reports have0violations with targeted manual incomplete resolution, not blanket approval.",
+    "gap": "F01 fixed with independent four-way settled geometry verification at44edbf2 (selection-header/fix-guide.html). All20 state families now have four-way captures; these do not imply every interaction passes. F02 Light guidance helper hover contrast4.49:1 fails4.5:1. Control-state reconciliation, manual native Mac input Undo and final evidence audit remain open.",
     "evidence": "findings.json"
   },
   {
@@ -490,10 +501,10 @@
     "group": "P04",
     "criterion": "No selected mail rows cannot start sender authoring",
     "category": "live visual",
-    "status": "functional disabled guard captured all four combinations; pointer F01 open",
+    "status": "disabled guard captured four-way; F01 geometry independently fixed",
     "source": null,
     "test": null,
-    "gap": "Captures do not close inherited scrolled toolbar/header overlap.",
+    "gap": "Historical screenshots preserve old runtime; fixed runtime44edbf2 geometry verified separately in ../selection-header/fix-guide.html.",
     "evidence": "visual-state-matrix.html",
     "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0"
   },

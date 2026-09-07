@@ -1,0 +1,13 @@
+{
+  "responseRecorder": [
+    {
+      "receivedAt": "2026-09-07T07:19:18.305Z",
+      "sha256": "98e640ecae45e3330e1f9637b8d33790eee8fbea42a41fda6b02bde62b691b84",
+      "status": 200
+    }
+  ],
+  "receiptId": "bb55e528-5b51-49c2-bad5-62d4e7c353e5",
+  "statusAndBytesMatch": true,
+  "settledUiEvidence": "lifetime2-actions.jsonl",
+  "note": "After explicit release, browser recorder receives same status/hash and following snapshot shows enabled Save View and five real preview rows."
+}

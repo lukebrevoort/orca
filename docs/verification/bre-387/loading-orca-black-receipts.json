@@ -1,0 +1,59 @@
+{
+  "observations": [
+    {
+      "timestamp": "2026-09-07T07:23:06.296588+00:00",
+      "viewport": [
+        1024,
+        768
+      ],
+      "held": {
+        "armed": false,
+        "held": true,
+        "heldAt": "2026-09-07T07:22:49.700Z",
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "69235831-1d2d-4b57-9652-38220c309435",
+          "heldAt": "2026-09-07T07:22:49.700Z",
+          "responseStatus": 200,
+          "responseBodySha256": "70837ebee4875da56a5240101471f1ac6a4ab86134ec904713638b02cb81c5c7"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-09-07T07:24:10.932715+00:00",
+      "viewport": [
+        1440,
+        900
+      ],
+      "held": {
+        "armed": false,
+        "held": true,
+        "heldAt": "2026-09-07T07:22:49.700Z",
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "69235831-1d2d-4b57-9652-38220c309435",
+          "heldAt": "2026-09-07T07:22:49.700Z",
+          "responseStatus": 200,
+          "responseBodySha256": "70837ebee4875da56a5240101471f1ac6a4ab86134ec904713638b02cb81c5c7"
+        }
+      }
+    }
+  ],
+  "release": {
+    "released": true
+  },
+  "final": {
+    "armed": false,
+    "held": false,
+    "heldAt": null,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "69235831-1d2d-4b57-9652-38220c309435",
+      "heldAt": "2026-09-07T07:22:49.700Z",
+      "responseStatus": 200,
+      "responseBodySha256": "70837ebee4875da56a5240101471f1ac6a4ab86134ec904713638b02cb81c5c7",
+      "releasedAt": "2026-09-07T07:24:59.044Z",
+      "releaseReason": "explicit"
+    }
+  }
+}

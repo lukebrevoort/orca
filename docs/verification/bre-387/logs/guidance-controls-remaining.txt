@@ -1,0 +1,78 @@
+✓ Done
+
+{
+  "active": "Getting started",
+  "helpOpen": false
+}
+
+✓ Done
+
+✓ Done
+
+Use selected mail
+
+✓ Done
+
+{"scenario": "light-1440-fixed-guidance-controls-hover", "active": {"label": "Keep useful mail together", "outline": "rgb(15, 36, 34) none 3px", "outlineOffset": "0px", "tag": "H2"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Done
+
+✓ Done
+
+{"scenario": "light-1440-fixed-guidance-controls-keyboard-focus", "active": {"label": "Search mailFind mail, then choose Save as View.", "outline": "rgb(15, 36, 34) solid 2px", "outlineOffset": "3px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-fixed-guidance-controls.png
+screenshots/light-1440-fixed-guidance-controls.png
+✓ Done
+
+{
+  "active": "Getting started",
+  "helpOpen": false
+}
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+Use selected mail
+
+✓ Done
+
+{"scenario": "black-1440-fixed-guidance-controls-hover", "active": {"label": "Keep useful mail together", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "H2"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Done
+
+✓ Done
+
+{"scenario": "black-1440-fixed-guidance-controls-keyboard-focus", "active": {"label": "Search mailFind mail, then choose Save as View.", "outline": "rgb(244, 243, 239) solid 2px", "outlineOffset": "3px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-fixed-guidance-controls.png
+screenshots/black-1440-fixed-guidance-controls.png
+✓ Done
+
+{
+  "active": "Getting started",
+  "helpOpen": false
+}
+
+✓ Done
+
+✓ Done
+
+Use selected mail
+
+✓ Done
+
+{"scenario": "black-1024-fixed-guidance-controls-hover", "active": {"label": "Keep useful mail together", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "H2"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Done
+
+✓ Done
+
+{"scenario": "black-1024-fixed-guidance-controls-keyboard-focus", "active": {"label": "Search mailFind mail, then choose Save as View.", "outline": "rgb(244, 243, 239) solid 2px", "outlineOffset": "3px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Close Getting started with Views"]}
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-fixed-guidance-controls.png
+screenshots/black-1024-fixed-guidance-controls.png
+✓ Done
+
+{
+  "active": "Getting started",
+  "helpOpen": false
+}
+

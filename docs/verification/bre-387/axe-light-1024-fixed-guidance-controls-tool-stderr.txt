@@ -1,0 +1,4 @@
+✗ Evaluation error: Error: Axe is already running. Use `await axe.run()` to wait for the previous run to finish before starting a new run.
+    at E (<anonymous>:12:93990)
+    at axe.run (<anonymous>:12:480494)
+    at <anonymous>:1:57

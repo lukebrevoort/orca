@@ -1,0 +1,29 @@
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✗ Element not found: .first-view-starts button:nth-child(2). Verify the selector, role, or name is correct and the element exists in the DOM.
+
+Traceback (most recent call last):
+  File "/tmp/bre387-f02-targets.py", line 13, in <module>
+    run(*ab,'hover',sel);measure(f'f02-light-guidance-{i}-hover.json',js)
+    ~~~^^^^^^^^^^^^^^^^^
+  File "/tmp/bre387-f02-targets.py", line 3, in run
+    def run(*a):subprocess.run(a,check=True)
+                ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '('python3', '/tmp/bre387-ab.py', 'hover', '.first-view-starts button:nth-child(2)')' returned non-zero exit status 1.

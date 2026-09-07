@@ -1,0 +1,172 @@
+{
+  "status": "pass",
+  "phases": {
+    "before-reorder": {
+      "body": {
+        "items": [
+          {
+            "color": "#70867d",
+            "createdAt": "2026-09-07T07:53:52.691Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "sender": {
+                "addresses": [
+                  "maya@example.com"
+                ]
+              }
+            },
+            "description": "",
+            "id": "view_39aca761-e988-42ee-8d4d-11f3403027c5",
+            "name": "Fixed Maya selection",
+            "position": 0,
+            "revision": 1,
+            "updatedAt": "2026-09-07T07:53:52.691Z",
+            "workspaceId": "reviewer"
+          },
+          {
+            "color": "#0b9b84",
+            "createdAt": "2026-09-07T07:31:26.304Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "thread": {
+                "subjectContains": "Project"
+              }
+            },
+            "description": "",
+            "id": "view_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+            "name": "Fixed Project evidence",
+            "position": 1,
+            "revision": 3,
+            "updatedAt": "2026-09-07T07:53:52.691Z",
+            "workspaceId": "reviewer"
+          }
+        ],
+        "workspaceId": "reviewer",
+        "workspaceRevision": 4
+      },
+      "phase": "before-reorder",
+      "status": 200
+    },
+    "after-reorder": {
+      "body": {
+        "items": [
+          {
+            "color": "#0b9b84",
+            "createdAt": "2026-09-07T07:31:26.304Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "thread": {
+                "subjectContains": "Project"
+              }
+            },
+            "description": "",
+            "id": "view_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+            "name": "Fixed Project evidence",
+            "position": 0,
+            "revision": 4,
+            "updatedAt": "2026-09-07T08:06:53.086Z",
+            "workspaceId": "reviewer"
+          },
+          {
+            "color": "#70867d",
+            "createdAt": "2026-09-07T07:53:52.691Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "sender": {
+                "addresses": [
+                  "maya@example.com"
+                ]
+              }
+            },
+            "description": "",
+            "id": "view_39aca761-e988-42ee-8d4d-11f3403027c5",
+            "name": "Fixed Maya selection",
+            "position": 1,
+            "revision": 2,
+            "updatedAt": "2026-09-07T08:06:53.086Z",
+            "workspaceId": "reviewer"
+          }
+        ],
+        "workspaceId": "reviewer",
+        "workspaceRevision": 5
+      },
+      "phase": "after-reorder",
+      "status": 200
+    },
+    "after-reload": {
+      "body": {
+        "items": [
+          {
+            "color": "#0b9b84",
+            "createdAt": "2026-09-07T07:31:26.304Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "thread": {
+                "subjectContains": "Project"
+              }
+            },
+            "description": "",
+            "id": "view_c7c030dc-aa5c-418b-bd58-0f43a2a4cd38",
+            "name": "Fixed Project evidence",
+            "position": 0,
+            "revision": 4,
+            "updatedAt": "2026-09-07T08:06:53.086Z",
+            "workspaceId": "reviewer"
+          },
+          {
+            "color": "#70867d",
+            "createdAt": "2026-09-07T07:53:52.691Z",
+            "definition": {
+              "accountIds": [
+                "work"
+              ],
+              "revision": 1,
+              "sender": {
+                "addresses": [
+                  "maya@example.com"
+                ]
+              }
+            },
+            "description": "",
+            "id": "view_39aca761-e988-42ee-8d4d-11f3403027c5",
+            "name": "Fixed Maya selection",
+            "position": 1,
+            "revision": 2,
+            "updatedAt": "2026-09-07T08:06:53.086Z",
+            "workspaceId": "reviewer"
+          }
+        ],
+        "workspaceId": "reviewer",
+        "workspaceRevision": 5
+      },
+      "domOrder": [
+        "Fixed Project evidence",
+        "Fixed Maya selection"
+      ],
+      "phase": "after-reload",
+      "status": 200
+    }
+  },
+  "assertions": [
+    "One UI move reverses two canonical positions",
+    "Same IDs and definitions retained",
+    "Reload API equals post-move API",
+    "Reload DOM order equals canonical API"
+  ],
+  "boundary": "Does not independently prove mail/provider tables unchanged; separate route harness table snapshots establish those invariants."
+}
