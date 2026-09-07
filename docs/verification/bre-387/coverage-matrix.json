@@ -3,11 +3,13 @@
     "group": "P01",
     "criterion": "prepare/preview no writes before commit; returned ID; SQLite reopen; canonical list; identical replay; named immutable tables preserved",
     "category": "production-scratch",
-    "status": "pending rerun after independent-review corrections",
+    "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "prepare and preview must not write any table",
     "line": 91,
-    "evidence": "production-results.json"
+    "evidence": "production-results.json",
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
   },
   {
     "group": "P01",
@@ -22,11 +24,13 @@
     "group": "P02",
     "criterion": "All saved pages include future allowlist match, exclude nonmatch and other account",
     "category": "production-scratch",
-    "status": "pending rerun after independent-review corrections",
+    "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "all saved pages include future allowed sender",
-    "line": 120,
-    "evidence": "production-results.json"
+    "line": 122,
+    "evidence": "production-results.json",
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
   },
   {
     "group": "P02",
@@ -158,11 +162,13 @@
     "group": "P06",
     "criterion": "Truly empty server candidate census",
     "category": "production-scratch",
-    "status": "pending rerun after independent-review corrections",
+    "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "empty matching sender census fails closed without a partial allowlist",
     "evidence": "production-results.json",
-    "line": 131
+    "line": 133,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
   },
   {
     "group": "P07",
@@ -213,12 +219,14 @@
     "group": "P07",
     "criterion": "Real route rename/reorder/remove preserve named mail/provider/placement/policy/notification tables; browser lifecycle pending",
     "category": "production-scratch",
-    "status": "pending rerun after independent-review corrections",
+    "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "real rename/reorder/remove retain named",
     "gap": "Live browser lifecycle/focus still pending; route check proves only named table snapshots.",
     "evidence": "production-results.json",
-    "line": 149
+    "line": 151,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
   },
   {
     "group": "P08",
@@ -296,11 +304,13 @@
     "group": "P08",
     "criterion": "New connected account after canonical guidance completion",
     "category": "production-scratch",
-    "status": "pending rerun after independent-review corrections",
+    "status": "pass",
     "source": "scripts/bre-387-review.ts",
     "test": "account added after completion retains user preference",
     "evidence": "production-results.json",
-    "line": 128
+    "line": 130,
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245"
   },
   {
     "group": "P09",
@@ -367,7 +377,7 @@
   },
   {
     "group": "P08",
-    "criterion": "Manual reopen refreshes readiness after real stored mail arrives",
+    "criterion": "Manual reopen refreshes mocked mailbox readiness after simulated mail arrival",
     "category": "DOM fixture",
     "status": "pending current-head execution",
     "source": "apps/web/src/first-view-guidance.test.tsx",

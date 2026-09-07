@@ -1,7 +1,7 @@
 {
   "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
   "captures": [],
-  "visualStatus": "pending",
+  "visualStatus": "pending: one named headless attempt produced no page within 55 seconds; zero screenshots and no axe/manual visual pass",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -17,7 +17,7 @@
     "filename",
     "sha256"
   ],
-  "capturedCodeSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+  "capturedCodeSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
   "reusedTestSources": [
     {
       "filename": "apps/api/src/organization/views/verification.test.ts",
@@ -97,6 +97,39 @@
   ],
   "finalDocsShaReference": "Published as immutable PR head in Dispatch and Linear after the final documentation commit (avoids a self-referential hash).",
   "coverageStatus": "Criterion-level evidence is in coverage-matrix.json. Live visual and human observations are pending.",
-  "harnessSha256": "6828c463071a41bd12ebc59c0b8ae36e748e9315a50fc1d1e304f91b3de8f384",
-  "productionStatus": "Seven named scenario groups passed; no aggregate claim beyond production-results.json."
+  "harnessSha256": "dd5a7a609c9e50637be4f6dab32d04b17c4ca42daf6147f2f3997cd4451f3245",
+  "productionStatus": "Seven named scenario groups passed at committed harness SHA, including all-table no-write prepare/preview/replay; scope is limited to production-results.json.",
+  "artifactReview": {
+    "initialSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "corrections": "Complete replay response and all-table write-free assertion; canonical order assertion; acquired-resource cleanup; precise criterion-level test mappings. Static delta review passed substantive harness findings; final consolidated artifact review pending."
+  },
+  "browserAttempt": {
+    "testedSha": "4d8d6026b2dc6278370ee51f55f96d6ab432d2ae",
+    "baseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "url": "http://127.0.0.1:5187/v1/review/login",
+    "session": "bre387-4d8d602",
+    "toolVersion": "agent-browser 0.34.0",
+    "headless": true,
+    "loadAtServerStart": "27.49 / 27.46 / 28.73 (earlier peak 47.78)",
+    "viewport": null,
+    "theme": null,
+    "fixtureScenario": "fresh authenticated migrated scratch DB; first visit",
+    "category": "production-scratch attempt; no page/capture",
+    "actions": [
+      "start one loopback Hono/Vite pair after all compilers exit",
+      "agent-browser --session bre387-4d8d602 open http://127.0.0.1:5187/v1/review/login",
+      "bounded 55-second stop without output/page",
+      "close named session and stop scratch server"
+    ],
+    "requestedMatrix": [
+      "1440x900 Light",
+      "1440x900 Orca Black",
+      "1024x768 Light",
+      "1024x768 Orca Black"
+    ],
+    "note": "55 seconds is an interrupted observation, not a terminal startup diagnosis. First /health probe before ready log refused connection; ready URL printed; later /health timed out after 5.041s with zero bytes. Login redirect and Vite root/module were not independently probed. esbuild service-no-longer-running appeared during shutdown, not as evidence of an initial product fault.",
+    "cleanup": "Named agent-browser close exited 0; scratch server SIGINT exited 0; harness temporary directory removal verified."
+  },
+  "pr": "https://github.com/lukebrevoort/orca/pull/186",
+  "finalHeadHostedCi": "https://github.com/lukebrevoort/orca/pull/186/checks"
 }
