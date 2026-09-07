@@ -1,5 +1,5 @@
 {
-  "status": "Partial observed controls; F01/F02/F03 resolved. F04 malformed-preview footer overlap confirmed open; finite remaining controls/native/human gates retained.",
+  "status": "Partial observed controls; F01\u2013F04 bounded fixes verified. Remaining finite controls/native/human gates retained.",
   "source": "visual-observations.json",
   "rows": [
     {

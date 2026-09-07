@@ -7,7 +7,7 @@
     {
       "family": "Search",
       "controls": "Header Search trigger; search input; Save as View; result links; Load more",
-      "covered": "Cmd+K/open/Escape return and actual results/save flow; Historical saved-View (not Search) Load more25\u219250 stable identities is separately attributed. Header theme/bulk geometry separately fixed44ed. Current7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
+      "covered": "Cmd+K/open/Escape return and actual results/save flow; Historical saved-View (not Search) Load more25\u219250 stable identities is separately attributed. Header theme/bulk geometry separately fixed44ed. Historical lifetime3 7d/ce1 allfour: empty-query actual disabled Save, Save hover/Tabfocus, first result hover plus separate keyboard-only focus PNG/JSON with pointeroff, input keyboard-only focus PNG/JSON including actual parent border/shadow.",
       "missing": "Load more hover/focus and genuine request-pending disabled target remain separate pending observations. No whole-Search accessibility approval inferred.",
       "minimumActions": "Reuse one ready Search and saved results; inspect actual controls without committing. Do not repeat pagination mutation proof.",
       "evidence": "browser-actions.json; keyboard-native-control.txt; browser-actions.json (saved Load more chronology); desktop-switch.css360\u2013408; *controls-search*.json/PNG; lifetime3-session-boundary.json; search-focus-reopen-snapshot.txt"
@@ -23,7 +23,7 @@
     {
       "family": "Tune",
       "controls": "Tune disclosure; Add filter; filter menu entries; Remove clause; preserved-constraint summary",
-      "covered": "Open Tune/account scopes and unsupported states captured; pressed work account hover/focus all4. Current7d/ce1 all4 Add filter and Remove subject hover/keyboard focus have direct target records and action PNGs; menu actual already-added Account/Subject disabled and Read state keyboard focus captured. Currentall4 Tune collapsed/expanded hover/focus direct PNG/JSON, actual aria-expanded values; only disclosure toggled.",
+      "covered": "Open Tune/account scopes and unsupported states captured; pressed work account hover/focus all4. Historical lifetime3 7d/ce1 all4 Add filter and Remove subject hover/keyboard focus have direct target records and action PNGs; menu actual already-added Account/Subject disabled and Read state keyboard focus captured. Currentall4 Tune collapsed/expanded hover/focus direct PNG/JSON, actual aria-expanded values; only disclosure toggled.",
       "missing": "F03 resolved at d0b05f8: eight keyboard/eight hover cases and bounded wrap/Escape imported from ../summary-focus/fix-guide.html. No summary replay. Remaining applicable Human Signal/menu/select contexts tracked in finite plan.",
       "minimumActions": "Inspect one editable existing draft; open menu, hover/Tab targets, close without changing definition. Preserve source distinction for advanced DOM fixture.",
       "evidence": "visual-observations.json *selected-account*; organization-views.css52\u201390"
@@ -47,7 +47,7 @@
     {
       "family": "Correction",
       "controls": "Census checkboxes and labels; Preview these senders; Cancel correction",
-      "covered": "Checked and empty selection all4; Preview disabled all4; lower candidate Tab/Space plus focus2px and target contrast all4 historical unchangedcomponent. Future allowlist saved evidence separate. Current ce1/7d all4 direct checkbox hover, Tab/Space unchecked focus, enabled Preview/Cancel hover and keyboard focus PNG/JSON. Black1024 first checkbox-hover mismatch is retained and superseded by matching exposed replacement only.",
+      "covered": "Checked and empty selection all4; Preview disabled all4; lower candidate Tab/Space plus focus2px and target contrast all4 historical unchangedcomponent. Future allowlist saved evidence separate. Historical lifetime3 ce1/7d all4 direct checkbox hover, Tab/Space unchecked focus, enabled Preview/Cancel hover and keyboard focus PNG/JSON. Black1024 first checkbox-hover mismatch is retained and superseded by matching exposed replacement only.",
       "missing": "Targeted six-state census images independently reviewed all4, including Black1024 exposed replacement; no remaining styling gap in this group. Full-list traversal and saved outcome proof remain separate.",
       "minimumActions": "Open current census; hover checked label, Tab/Space without Apply, inspect enabled Preview/Cancel. Reuse existing empty-disabled captures and lower-row keyboard records.",
       "evidence": "manual-targets-*.json; keyboard-census.txt; *fixed-empty-correction; organization-views.css170; *controls-census*.json and matching PNGs; lifetime3-census-open.json (actual 8 work-only addresses)"
@@ -55,15 +55,15 @@
     {
       "family": "Unsupported/correction fallback",
       "controls": "Replace subject; Remove blocker; Correct senders; Tune fallback",
-      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures. Correct trigger all4 hover/focus captured in *controls-correct-trigger; all8 images independently reviewed. Retry preparation/preview eight target states each independently reviewed; unroute precedes real recovery. Malformedpreview whole-footer overlap remains F04-candidate, separate from target PASS.",
-      "missing": "No separate overflow Tune button. F04 confirmed footer geometry assessment pending; exact recovery target states covered.",
+      "covered": "Unsupported/replacement/Undo/multiaccount/>50 fallback behavior and all4 state captures. Currentall4 Replace subject and Remove blocker hover/focus PNG/JSON; neither activated during these captures. Correct trigger all4 hover/focus captured in *controls-correct-trigger; all8 images independently reviewed. Retry preparation/preview eight target states each independently reviewed; unroute precedes real recovery. Historical F04 two-frame overlap is preserved; bounded CSS fix at465be988 independently verified, separate from target PASS.",
+      "missing": "No separate overflow Tune button. F04 bounded geometry fix verified; no repeated footer matrix required; exact recovery target states covered.",
       "minimumActions": "Inspect these actual controls in retained ready drafts; do not replay save or census mutations solely for styling.",
       "evidence": "*unsupported; *overflow-panel; browser-actions.json"
     },
     {
       "family": "Dialogs",
       "controls": "Keep editing; Discard draft; zero confirmation; cancel zero confirmation",
-      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven. Current ce1/7d all4 exact Keep/Discard and Confirm zero/Cancel zero hover+keyboard focus target JSON/PNG pass explicit state/hit/targettransition waits. No new save/discard persistence claimed.",
+      "covered": "All4 dirty and zero dialogs; Keep/Discard outcomes/source focus and explicit zero persistence proven. Historical lifetime3 ce1/7d all4 exact Keep/Discard and Confirm zero/Cancel zero hover+keyboard focus target JSON/PNG pass explicit state/hit/targettransition waits. No new save/discard persistence claimed.",
       "missing": "All32 dirty/zero control images independently reviewed; no remaining targeted styling gap in this group. No outcome inferred from captures.",
       "minimumActions": "Open each existing draft dialog once; hover/Tab both actions; cancel/keep without another zero save.",
       "evidence": "*dirty-guard; *zero-confirm-state; organization-views.css15\u201316"
@@ -113,5 +113,5 @@
     "Native Mac input history Undo",
     "Owner protocol approval and real usability sessions (zero completed)"
   ],
-  "next": "F04 confirmed footer text overlap; freeze for separate layout owner. After verified integration resume finite remaining groups, reusing all completed target states."
+  "next": "Resume remaining removal confirmation, saved-route/pagination and applicable Search chrome/used-select groups on465be988 with new receipt-only harness. Reuse F04 and other completed evidence; native/human remain open."
 }

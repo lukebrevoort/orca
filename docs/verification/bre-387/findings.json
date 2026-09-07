@@ -110,7 +110,7 @@
     },
     {
       "id": "F04",
-      "status": "confirmed open; malformed preview response causes settled footer text overlap",
+      "status": "fixed; independent bounded verification passed",
       "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
       "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
       "summary": "Raw preview schema-validation error overlaps footer summary copy in1024 captures;1440 summary compressed",
@@ -136,6 +136,13 @@
           "previewScrollWidth": 64,
           "transition": null
         }
+      },
+      "resolution": {
+        "sha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+        "guide": "../preview-error-layout/fix-guide.html",
+        "receipt": "../preview-error-layout/fixed-build.json",
+        "ci": "https://github.com/lukebrevoort/orca/actions/runs/34138702249",
+        "scope": "CSS footer containment, malformed and recovered normal footer, both themes and three widths; no View saved; remaining M9 controls separate."
       }
     }
   ]

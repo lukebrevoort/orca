@@ -12876,7 +12876,7 @@
       "fixtureLifetime": 4
     }
   ],
-  "visualStatus": "Partial live evidence; F01/F02/F03 bounded fixes verified. F04 confirmed malformed-preview footer overlap remains open, with finite remaining control groups and native/human gates.",
+  "visualStatus": "Partial live evidence; F01\u2013F04 bounded fixes verified. Finite residual removal/saved/pagination/applicable Search controls, native Mac text Undo and human evidence remain open.",
   "humanStatus": "pending owner approval; zero sessions",
   "requiredCaptureFields": [
     "testedSha",
@@ -13893,8 +13893,8 @@
   ],
   "lifetime3Cleanup": "lifetime3-cleanup.json",
   "nextRuntime": {
-    "sha": "d0b05f8d20992e76276283c63c843119291b6bb6",
-    "assets": "f03-assets-reuse.json",
-    "state": "not started"
+    "sha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+    "assets": "f04-assets-reuse.json",
+    "state": "not started; metadata review pending"
   }
 }
