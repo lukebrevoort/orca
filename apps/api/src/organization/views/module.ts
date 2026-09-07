@@ -8,6 +8,10 @@ import {
   organizationViewDraftInputSchema,
   organizationViewPreparationInputSchema,
   organizationViewPreviewRequestSchema,
+  organizationViewSenderCandidatesRequestSchema,
+  organizationViewSenderCandidatesResponseSchema,
+  type OrganizationViewSenderCandidatesRequest,
+  type OrganizationViewSenderCandidatesResponse,
   organizationViewRemoveRequestSchema,
   organizationViewReorderRequestSchema,
   organizationViewResultQuerySchema,
@@ -100,6 +104,7 @@ export type OrganizationViewEvaluationPage = {
 };
 
 export type OrganizationViewsRepository = {
+  senderCandidates(input: { scope: OrganizationViewScope; definition: OrganizationViewDefinition; target: OrganizationViewSenderCandidatesRequest["target"]; authorization: OrganizationViewQueryAuthorization }): Omit<OrganizationViewSenderCandidatesResponse, "target" | "provenance"> & { authorizedScopeDigest: string };
   list(workspaceId: string): OrganizationView[];
   get(workspaceId: string, viewId: string): OrganizationView | null;
   getWorkspaceRevision(workspaceId: string): number;
@@ -362,6 +367,13 @@ export function createOrganizationViews(repository: OrganizationViewsRepository,
   }
 
   const module = {
+    senderCandidates(input: { scope: OrganizationViewScope; request: unknown }) {
+      const request = organizationViewSenderCandidatesRequestSchema.parse(input.request);
+      const reviewed = reviewDraft(input.scope, request.draft, false);
+      const result = repository.senderCandidates({ scope: input.scope, definition: reviewed.draft.definition, target: request.target, authorization: reviewed.authorization });
+      const { authorizedScopeDigest, ...candidates } = result;
+      return organizationViewSenderCandidatesResponseSchema.parse({ ...candidates, target: request.target, provenance: { source: "stored_mail", definitionDigest: reviewed.draft.definitionDigest, authorizedScopeDigest, evaluatedAt: now().toISOString() } });
+    },
     prepare(input: { scope: OrganizationViewScope; input: unknown }) {
       const prepared = draftInput(input.scope, input.input);
       const reviewed = reviewDraft(input.scope, prepared.draft, true, prepared.preparationNotices);
