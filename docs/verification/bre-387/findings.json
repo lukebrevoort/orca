@@ -37,7 +37,7 @@
     },
     {
       "id": "F02",
-      "status": "confirmed inherited contrast defect; separate fix owner planning",
+      "status": "fixed; independent bounded verification passed",
       "recordedAt": "2026-09-07T08:31:46.875450+00:00",
       "testedSha": "8d709a87fbd3bdb1a0569937d88b28650651e85c",
       "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
@@ -64,6 +64,11 @@
         "focus": "f02-light-guidance-1-focus.json",
         "contrast": 4.49048326062504,
         "limitations": "Default snapshot was taken before modal settled and contains no targets. File named active records active=false/hover=false, so it does not establish pressed state. Second-helper hover timed out after first sequence; retained as failed bounded attempt. No claim of active/sibling live proof."
+      },
+      "resolution": {
+        "sha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+        "guide": "../guidance-contrast/fix-guide.html",
+        "boundary": "Both start helpers and sample text locally strengthened.32 final captures/72 text measurements; minimum14.620005. Actual red held-active true independently preserved in fix evidence. Remaining control/native/human gates separate."
       }
     }
   ]

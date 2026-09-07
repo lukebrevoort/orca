@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-09-07T08:55:45.435167+00:00",
+  "browserSession": "bre387-fixed-8d709a8",
+  "browserClose": "Fix worker reported explicit close exec75443 exit0 after RED89513 exit1; no pending command",
+  "serverSession": 11655,
+  "serverStop": "Ctrl-C through owned persistent handle, terminal exit0",
+  "scratchDirectory": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-wlhvVH",
+  "scratchRemoved": true,
+  "ports": [
+    {
+      "port": 3087,
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "",
+      "released": true
+    },
+    {
+      "port": 5187,
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "",
+      "released": true
+    }
+  ],
+  "repositoryBoundary": "Receipt written to /tmp only while repository held; built assets unchanged"
+}
