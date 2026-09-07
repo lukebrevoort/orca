@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
@@ -19,7 +19,7 @@ const directory = mkdtempSync(join(tmpdir(), "orca-bre387-review-"));
 const path = join(directory, "review.sqlite");
 let closeDatabase: (() => void) | undefined;
 let api: ReturnType<typeof Bun.serve> | undefined;
-let web: Awaited<ReturnType<typeof createServer>> | undefined;
+let web: { close: () => Promise<unknown> } | undefined;
 let cleaned = false;
 async function cleanup() {
   if (cleaned) return;
@@ -168,8 +168,30 @@ api = Bun.serve({ hostname: "127.0.0.1", port: 3087, fetch: (request) => {
   if (pathname === "/v1/organization/views/commit" && failNextCommit) { failNextCommit = false; return Response.json({ error: { code: "review_injected_failure", message: "Reviewer-injected temporary server failure. Retry preserves this draft." } }, { status: 503 }); }
   return app.fetch(request);
 } });
-web = await createServer({ configFile: false, root: resolve("apps/web"), plugins: [react()], server: { host: "127.0.0.1", port: 5187, strictPort: true, proxy: { "/v1": "http://127.0.0.1:3087", "/health": "http://127.0.0.1:3087" } } });
-await web.listen();
+if (process.argv.includes("--built")) {
+  const dist = resolve("apps/web/dist");
+  const files = readdirSync(dist, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => resolve(entry.parentPath, entry.name)).sort();
+  const assets = files.map(filename => ({ filename: filename.slice(dist.length + 1), sha256: createHash("sha256").update(readFileSync(filename)).digest("hex") }));
+  assert.ok(assets.some(asset => asset.filename === "index.html"), "Run the web build before --built review");
+  const receipt = { mode: "built-SPA", productSourceBaseSha: "0e7762cf1977f77151a422963f73e9a10188b866", assetTreeSha256: createHash("sha256").update(JSON.stringify(assets)).digest("hex"), assets };
+  app.get("/v1/review/build", c => c.json(receipt));
+  const built = Bun.serve({ hostname: "127.0.0.1", port: 5187, async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/v1/") || url.pathname === "/health") return fetch(new Request(`http://127.0.0.1:3087${url.pathname}${url.search}`, request), { redirect: "manual" });
+    const relative = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+    const candidate = resolve(dist, relative);
+    if (!candidate.startsWith(`${dist}/`) && candidate !== dist) return new Response("Not found", { status: 404 });
+    if (assets.some(asset => asset.filename === relative)) return new Response(Bun.file(candidate), { headers: { "cache-control": "no-store" } });
+    if (url.pathname.startsWith("/assets/")) return new Response("Not found", { status: 404 });
+    return new Response(Bun.file(join(dist, "index.html")), { headers: { "cache-control": "no-store" } });
+  } });
+  web = { close: async () => { built.stop(true); } };
+  console.log(`Built asset receipt: ${JSON.stringify(receipt)}`);
+} else {
+  const vite = await createServer({ configFile: false, root: resolve("apps/web"), plugins: [react()], server: { host: "127.0.0.1", port: 5187, strictPort: true, proxy: { "/v1": "http://127.0.0.1:3087", "/health": "http://127.0.0.1:3087" } } });
+  web = vite;
+  await vite.listen();
+}
 console.log(`BRE-387 scratch database: ${path}\nOpen http://127.0.0.1:5187/v1/review/login\nAdd future mail: curl -X POST http://127.0.0.1:5187/v1/review/future\nStop with Ctrl-C. Only this harness temporary directory is removed on shutdown.`);
 } catch (error) { await cleanup(); throw error; }
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, async () => { await cleanup(); process.exit(0); });
