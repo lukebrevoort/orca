@@ -12,7 +12,7 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
+import type { AgentPropagationMuteRule, AttentionViewSetting, AuthProviderAvailability, BatchSenderAttentionChange, Collection, DeliveryResult, GmailLabelMigration, HumanClassification, InboxClassificationResponse, InboxMessage, MailAccount, MailContact, McpConnection, MessageDraft, OrganizationView, OrganizationViewPreparationInput, Pin, PinFilter, PinIcon, PropagatedAgentEvent, Reminder, ResolvedSenderAttention, SenderAttentionBatchResult, SyncStatus, ThreadDetail, ThreadDetailMessage, UserPreferences } from "@orca/shared";
 import { agentEventListPageSchema, agentPropagationMuteRuleSchema, attentionViewSettingSchema, authProviderAvailabilitySchema, authSessionSchema, collectionSchema, gmailLabelMigrationSchema, humanClassificationOverrideSchema, inboxClassificationResponseSchema, mailAccountPageSchema, mcpConnectionPageSchema, meResponseSchema, messageDraftSchema, organizationViewListResponseSchema, organizationViewsFixture, pinFilterSchema, pinSchema, propagatedAgentEventSchema, reminderSchema, reminderViewSettingsSchema, resolvedSenderAttentionSchema, senderAttentionBatchResultSchema, syncStatusSchema, threadDetailSchema, userPreferencesSchema } from "@orca/shared";
 import {
   demoAccount,
@@ -35,7 +35,7 @@ import { SchedulingAvailabilityPreviewPage } from "./calendar-availability-panel
 import { AppSidebar, ConnectivityNotice, DesktopDrawer, DesktopSettingsFrame, ManageSpacesDialog, OrganizationStudio, WorkspaceHeader, type SettingsNavigationPreview } from "./desktop-switch";
 import { createSidebarNavigationProjection, desktopDestinationFromLocation, destinationForSpace, parseDesktopDestination, readSpacePreferences, useOnlineStatus, writeSpacePreferences, type DesktopDestination, type WorkflowSpace } from "./navigation";
 import { ThreadLaneControls } from "./organization-lanes";
-import { SavedOrganizationViewWorkspace } from "./organization-views";
+import { OrganizationViewAuthoringWorkspace, SavedOrganizationViewWorkspace, type OrganizationViewAuthoringEntry } from "./organization-views";
 import { TopLayer, useTopLayerActive } from "./top-layer";
 import { isMailSearchResultReader, mailSearchLocationEvent, mailSearchResultEvent, openMailSearchFilter, type MailSearchResultEventDetail } from "./global-search";
 import { refreshMailboxThroughProvider, reportMailboxRevalidationMetric, startVisibleMailboxRevalidation } from "./mailbox-revalidation";
@@ -150,6 +150,7 @@ type PanelMode = "compose" | null;
 type AttentionBehavior = AttentionViewSetting["behavior"];
 type BulkAttentionClient = (input: BatchSenderAttentionChange) => Promise<SenderAttentionBatchResult>;
 type BulkAttentionTarget = BatchSenderAttentionChange["targets"][number];
+type InboxViewAuthoringReturnContext = { scrollX: number; scrollY: number; focus: "use-selected-senders" };
 type SenderAttentionControlTarget = Pick<InboxMessage, "id" | "from">;
 type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "humanClassification" | "humanSignal">;
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
@@ -1246,7 +1247,12 @@ export function InboxApp({
 }) {
   const topLayerActive = useTopLayerActive();
   const online = useOnlineStatus();
-  const demoInboxMessages = initialDemoMessages ?? demoMailWithAgentSources;
+  const bre383Evidence = import.meta.env.DEV && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("bre383Evidence") : null;
+  const demoInboxMessages = initialDemoMessages ?? (bre383Evidence === "mixed-account"
+    ? demoMailWithAgentSources.map((message) => message.from.name === "Jordan Bell" ? { ...message, accountId: "acct_demo_secondary" } : message)
+    : bre383Evidence === "self-omission"
+      ? demoMailWithAgentSources.map((message, index) => index === 0 ? { ...message, id: "message_self_evidence", from: { name: "You", email: demoAccount.email }, subject: "Self-sent status note" } : message)
+    : demoMailWithAgentSources);
   const [account, setAccount] = useState<MailAccount | null>(demoMode ? demoAccount : null);
   const [messages, setMessages] = useState<InboxMessage[]>(demoMode ? demoMessagesForClassification("human", demoInboxMessages) : []);
   const [allMailMessages, setAllMailMessages] = useState<InboxMessage[]>(demoMode ? demoInboxMessages : []);
@@ -3003,6 +3009,7 @@ export function InboxApp({
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
+              demoMode={demoMode}
               agentEventActionErrors={agentEventActionErrors}
               agentEvents={agentEvents}
               agentEventsError={agentEventsError}
@@ -4340,6 +4347,7 @@ export function MessageSubject({ subject, unread }: { subject: string; unread: b
 
 function InboxView({
   account,
+  demoMode,
   agentEventActionErrors,
   agentEvents,
   agentEventsError,
@@ -4403,6 +4411,7 @@ function InboxView({
   rowRefs,
 }: {
   account: MailAccount | null;
+  demoMode: boolean;
   agentEventActionErrors: Record<string, string>;
   agentEvents: PropagatedAgentEvent[];
   agentEventsError: string | null;
@@ -4490,15 +4499,19 @@ function InboxView({
   const [pinFilterColor, setPinFilterColor] = useState<string>(pinColorOptions[0].value);
   const [pinZeroMatchConfirmed, setPinZeroMatchConfirmed] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
   const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
+  const [viewAuthoringEntry, setViewAuthoringEntry] = useState<OrganizationViewAuthoringEntry<InboxViewAuthoringReturnContext> | null>(null);
   const [bulkAttentionStatus, setBulkAttentionStatus] = useState<"idle" | "saving" | "saved" | "partial" | "error">("idle");
   const [bulkAttentionMessage, setBulkAttentionMessage] = useState("");
   const [bulkPendingBehavior, setBulkPendingBehavior] = useState<AttentionBehavior | null>(null);
   const [bulkRetry, setBulkRetry] = useState<{ behavior: AttentionBehavior; targets: BulkAttentionTarget[] } | null>(null);
+  const useSelectedSendersRef = useRef<HTMLButtonElement>(null);
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
-  const visibleTargetKeys = useMemo(() => new Set(displayMessages.map((message) => senderAttentionTargetKey(senderAttentionTargetForMessage(message)))), [displayMessages]);
-  const selectedVisibleTargetCount = [...visibleTargetKeys].filter((key) => selectedTargets.has(key)).length;
+  const visibleRowKeys = useMemo(() => new Set(displayMessages.map(messageIdentityKey)), [displayMessages]);
+  const selectedVisibleRowCount = [...visibleRowKeys].filter((key) => selectedRows.has(key)).length;
   const selectedSenderCount = selectedTargets.size;
+  const selectedAccountCount = new Set([...selectedRows.values()].map((message) => message.accountId)).size;
   const pinPeople = useMemo(() => {
     const candidates = new Map<string, { email: string; name: string; unread: boolean }>();
     for (const message of allMessages) {
@@ -4510,6 +4523,12 @@ function InboxView({
     return [...candidates.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
   }, [allMessages]);
   const canPinCurrentView = !isCollectionView && viewMode !== "later";
+  function attentionTargetsForRows(rows: Map<string, InboxMessage>) {
+    return new Map([...rows.values()].map((message) => {
+      const target = senderAttentionTargetForMessage(message);
+      return [senderAttentionTargetKey(target), target] as const;
+    }));
+  }
   const pinFilter = useMemo<PinFilter>(() => ({
     mailbox: pinFilterMailbox,
     attention: pinFilterMailbox === "inbox" ? pinFilterAttention : "all",
@@ -4554,7 +4573,9 @@ function InboxView({
 
   useEffect(() => {
     setSelectionMode(false);
+    setSelectedRows(new Map());
     setSelectedTargets(new Map());
+    setViewAuthoringEntry(null);
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
   }, [classificationView, personFilter, viewMode]);
@@ -4602,12 +4623,12 @@ function InboxView({
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
     setBulkRetry(null);
-    setSelectedTargets((current) => {
+    setSelectedRows((current) => {
       const next = new Map(current);
-      const target = senderAttentionTargetForMessage(message);
-      const key = senderAttentionTargetKey(target);
+      const key = messageIdentityKey(message);
       if (next.has(key)) next.delete(key);
-      else next.set(key, target);
+      else next.set(key, message);
+      setSelectedTargets(attentionTargetsForRows(next));
       return next;
     });
   }
@@ -4615,6 +4636,7 @@ function InboxView({
   function closeSelectionMode() {
     if (bulkAttentionStatus === "saving") return;
     setSelectionMode(false);
+    setSelectedRows(new Map());
     setSelectedTargets(new Map());
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
@@ -4636,6 +4658,7 @@ function InboxView({
       const succeededTargets = new Set(succeeded.map((outcome) => senderAttentionTargetKey(outcome.target)));
       const nextSelected = new Map([...selectedTargets].filter(([key]) => !succeededTargets.has(key)));
       setSelectedTargets(nextSelected);
+      setSelectedRows((current) => new Map([...current].filter(([, message]) => !succeededTargets.has(senderAttentionTargetKey(senderAttentionTargetForMessage(message))))));
       const retryable = failed.filter((outcome) => outcome.retryable).map((outcome) => outcome.target);
       setBulkRetry(retryable.length ? { behavior, targets: retryable } : null);
       const destination = behavior === "normal" ? "Inbox" : behavior === "quiet" ? "Quiet" : behavior === "hidden" ? "Hidden" : behavior === "focus" ? "Focus" : "Notify me";
@@ -4658,6 +4681,20 @@ function InboxView({
     } finally {
       setBulkPendingBehavior(null);
     }
+  }
+
+  function openSelectedSenderAuthoring() {
+    if (!selectedRows.size || selectedAccountCount !== 1) return;
+    const preparation = selectedSenderPreparation([...selectedRows.values()], `${window.location.pathname}${window.location.search}${window.location.hash}`);
+    setViewAuthoringEntry({ preparation, returnContext: { scrollX: window.scrollX, scrollY: window.scrollY, focus: "use-selected-senders" } });
+  }
+
+  function restoreFromViewAuthoring(context: InboxViewAuthoringReturnContext) {
+    setViewAuthoringEntry(null);
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ left: context.scrollX, top: context.scrollY, behavior: "instant" });
+      useSelectedSendersRef.current?.focus({ preventScroll: true });
+    });
   }
   const inboxResultStatus = status === "loading"
     ? `Loading ${inboxTitle}.`
@@ -4818,25 +4855,27 @@ function InboxView({
           <section aria-busy={bulkAttentionStatus === "saving"} aria-label="Bulk sender actions" className="bulk-action-bar">
             <div>
               <strong>{selectedSenderCount ? `${selectedSenderCount} ${selectedSenderCount === 1 ? "sender" : "senders"} selected` : "Select messages"}</strong>
-              <span>Changes apply to future mail from each sender.</span>
+              <span>{selectedRows.size ? `${selectedRows.size} ${selectedRows.size === 1 ? "message" : "messages"} selected · ` : ""}Changes apply to future mail from each sender.</span>
             </div>
             <button
-              aria-pressed={visibleTargetKeys.size > 0 && selectedVisibleTargetCount === visibleTargetKeys.size}
+              aria-pressed={visibleRowKeys.size > 0 && selectedVisibleRowCount === visibleRowKeys.size}
               className="bulk-select-all"
               disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
-              onClick={() => setSelectedTargets((current) => {
+              onClick={() => setSelectedRows((current) => {
                 const next = new Map(current);
-                if (selectedVisibleTargetCount === visibleTargetKeys.size) visibleTargetKeys.forEach((key) => next.delete(key));
-                else displayMessages.forEach((message) => {
-                  const target = senderAttentionTargetForMessage(message);
-                  next.set(senderAttentionTargetKey(target), target);
-                });
+                if (selectedVisibleRowCount === visibleRowKeys.size) visibleRowKeys.forEach((key) => next.delete(key));
+                else displayMessages.forEach((message) => next.set(messageIdentityKey(message), message));
+                setSelectedTargets(attentionTargetsForRows(next));
                 return next;
               })}
               type="button"
             >
-              {selectedVisibleTargetCount === visibleTargetKeys.size ? "Clear visible" : "Select all visible"}
+              {selectedVisibleRowCount === visibleRowKeys.size ? "Clear visible" : "Select all visible"}
             </button>
+            <div className="bulk-view-action">
+              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving"} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
+              {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
+            </div>
             <div aria-label="Move selected senders" role="group">
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
               <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
@@ -4845,6 +4884,7 @@ function InboxView({
           </section>
         ) : null}
         {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
+        {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => restoreFromViewAuthoring(viewAuthoringEntry.returnContext)} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
         <section aria-busy={status === "loading" || status === "syncing" || isLoadingMoreMessages || undefined} className="inbox-body">
@@ -4909,7 +4949,7 @@ function InboxView({
               const senderAddress = message.from.email.trim().toLowerCase();
               const senderPinned = pinnedSenderAddresses.has(senderAddress);
               const senderName = message.from.name ?? message.from.email;
-              const selected = selectedTargets.has(senderAttentionTargetKey(senderAttentionTargetForMessage(message)));
+              const selected = selectedRows.has(messageIdentityKey(message));
 
               return (
                 <li key={messageIdentityKey(message)}>
@@ -6277,6 +6317,15 @@ export function senderAttentionTargetForMessage(message: Pick<InboxMessage, "acc
 
 export function senderAttentionTargetKey(target: BulkAttentionTarget) {
   return JSON.stringify([target.accountId, target.address.trim().toLowerCase()]);
+}
+
+export function selectedSenderPreparation(messages: readonly Pick<InboxMessage, "id" | "accountId" | "threadId">[], returnTarget: string): OrganizationViewPreparationInput {
+  return {
+    kind: "selected_senders",
+    source: { kind: "sender_selection", label: "Selected message senders", returnTarget },
+    identity: { name: "Selected senders", description: "", color: "#70867d", position: 0 },
+    references: messages.map((message) => ({ accountId: message.accountId, threadId: message.threadId, messageId: message.id })),
+  };
 }
 
 function getMessageAttentionBehavior(message: InboxMessage, attentionByAddress: Record<string, AttentionBehavior>) {

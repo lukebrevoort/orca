@@ -3,7 +3,7 @@ import { Hono, type Context } from "hono";
 import type { AuthVariables } from "../../auth/middleware.ts";
 import { requireAuth } from "../../auth/middleware.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { createOrganizationViews, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError } from "./module.ts";
+import { createOrganizationViews, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewSelectionError, OrganizationViewValidationError } from "./module.ts";
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
 type OrganizationApp = Hono<{ Variables: AuthVariables }>;
@@ -13,6 +13,7 @@ function errorResponse(c: Context<{ Variables: AuthVariables }>, error: unknown)
   if (error instanceof OrganizationViewNotFoundError) return c.json({ error: { code: error.code, message: error.message } }, 404);
   if (error instanceof OrganizationViewConflictError) return c.json({ error: { code: error.code, message: error.message } }, 409);
   if (error instanceof OrganizationViewQueryError) return c.json({ error: { code: error.code, message: error.message } }, 400);
+  if (error instanceof OrganizationViewSelectionError) return c.json({ error: { code: error.code, message: error.message } }, 400);
   if (error instanceof OrganizationViewValidationError) return c.json({ error: { code: error.code, message: error.message } }, 400);
   if (error instanceof Error && error.name === "ZodError") return c.json({ error: { code: "validation_error", message: "Invalid live View request" } }, 400);
   throw error;

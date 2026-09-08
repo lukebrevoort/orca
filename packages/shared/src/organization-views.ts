@@ -77,6 +77,13 @@ export const organizationViewUnsupportedClauseSchema = z.object({
 }).strict();
 export type OrganizationViewUnsupportedClause = z.infer<typeof organizationViewUnsupportedClauseSchema>;
 
+export const organizationViewPreparationNoticeSchema = z.object({
+  code: z.literal("self_sender_omitted"),
+  detail: nonEmptyStringSchema.max(500),
+  omittedCount: z.number().int().positive().max(organizationViewBounds.maximumPredicateItems),
+}).strict();
+export type OrganizationViewPreparationNotice = z.infer<typeof organizationViewPreparationNoticeSchema>;
+
 export const organizationViewDraftSourceSchema = z.object({
   kind: z.enum(["manual", "search", "sender_selection", "saved_view"]),
   label: nonEmptyStringSchema.max(120),
@@ -90,6 +97,21 @@ const organizationViewDraftIdentitySchema = z.object({
   color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).default("#0b9b84"),
   position: z.number().int().nonnegative().default(0),
 }).strict();
+
+export const organizationViewSelectedMessageReferenceSchema = z.object({
+  accountId: identifierSchema,
+  threadId: identifierSchema,
+  messageId: identifierSchema,
+}).strict();
+export type OrganizationViewSelectedMessageReference = z.infer<typeof organizationViewSelectedMessageReferenceSchema>;
+
+const uniqueSelectedMessageReferencesSchema = z.array(organizationViewSelectedMessageReferenceSchema)
+  .min(1)
+  .max(organizationViewBounds.maximumPredicateItems)
+  .superRefine((references, context) => {
+    const identities = references.map((reference) => JSON.stringify([reference.accountId, reference.threadId, reference.messageId]));
+    if (new Set(identities).size !== identities.length) context.addIssue({ code: "custom", message: "Selected message references must be unique" });
+  });
 
 export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -105,19 +127,30 @@ export const organizationViewPreparationInputSchema = z.discriminatedUnion("kind
     kind: z.literal("saved_view"),
     viewId: identifierSchema,
   }).strict(),
+  z.object({
+    kind: z.literal("selected_senders"),
+    source: organizationViewDraftSourceSchema.omit({ kind: true }).extend({
+      kind: z.literal("sender_selection"),
+    }).strict(),
+    identity: organizationViewDraftIdentitySchema,
+    references: uniqueSelectedMessageReferencesSchema,
+  }).strict(),
 ]);
 export type OrganizationViewPreparationInput = z.infer<typeof organizationViewPreparationInputSchema>;
 
 export const organizationViewDraftInputSchema = z.object({
   mode: z.enum(["create", "update"]),
   viewId: identifierSchema.nullable(),
+  viewRevision: z.number().int().positive().nullable(),
   source: organizationViewDraftSourceSchema,
   identity: organizationViewDraftIdentitySchema,
   definition: organizationViewDefinitionSchema,
   unsupportedClauses: z.array(organizationViewUnsupportedClauseSchema).max(20),
 }).strict().superRefine((value, context) => {
-  if ((value.mode === "create") !== (value.viewId === null)) {
-    context.addIssue({ code: "custom", path: ["viewId"], message: "Create drafts omit a View ID; update drafts require one" });
+  const invalidCreateIdentity = value.mode === "create" && (value.viewId !== null || value.viewRevision !== null);
+  const invalidUpdateIdentity = value.mode === "update" && (value.viewId === null || value.viewRevision === null);
+  if (invalidCreateIdentity || invalidUpdateIdentity) {
+    context.addIssue({ code: "custom", path: ["viewId"], message: "Create drafts omit View identity and revision; update drafts require both" });
   }
 });
 export type OrganizationViewDraftInput = z.infer<typeof organizationViewDraftInputSchema>;
@@ -136,6 +169,7 @@ export const organizationViewSaveEligibilitySchema = z.object({
 export type OrganizationViewSaveEligibility = z.infer<typeof organizationViewSaveEligibilitySchema>;
 
 export const organizationViewReviewedDraftSchema = organizationViewDraftInputSchema.extend({
+  preparationNotices: z.array(organizationViewPreparationNoticeSchema).max(20).default([]),
   definitionDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/),
   definitionKind: organizationViewDefinitionKindSchema,
   effectiveAccountIds: uniqueIdentifiersSchema.min(1),

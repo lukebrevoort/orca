@@ -116,7 +116,7 @@ describe("BRE-313 live Views REST adapter", () => {
       .run("override_message", "account_gmail", "message", "email_failure", "likely_human", "user_choice", timestamp, timestamp);
     overridden.sqlite.close();
     const classificationDraft = {
-      mode: "create", viewId: null, source: { kind: "manual", label: "Classification parity" },
+      mode: "create", viewId: null, viewRevision: null, source: { kind: "manual", label: "Classification parity" },
       identity: { name: "Override-aware", description: "", color: "#70867d", position: 4 },
       definition: { revision: 1, humanSignal: { classifications: ["likely_human"] }, thread: { subjectContains: "production failure" } }, unsupportedClauses: [],
     };
