@@ -95,7 +95,8 @@ describe("Gmail propagation boundary", () => {
         revision: 1,
         provider_message_id: "message-push-1",
       }]);
-      assert.deepEqual(reads, ["history", "get:message-push-1", "labels"]);
+      // Clients without getMessageMetadata fetch once for ordering, then for persistence.
+      assert.deepEqual(reads, ["history", "get:message-push-1", "get:message-push-1", "labels"]);
     } finally {
       sqlite.close();
     }

@@ -23,7 +23,7 @@ import {
 } from "@orca/shared";
 
 import { createDatabaseClient } from "../db/client.ts";
-import { emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
+import { emailAttachments, emailLabels, labels, emails, mcpConnectionAccounts, mcpConnections, mcpOAuthClients, mcpOrganizationApprovals, oauthAccounts, organizationChangeSets, organizationLanePolicies, organizationLanes, organizationMutationAttempts, organizationRuleSets, organizationThreadStates, organizationWorkspaceStates, senderAttentionRules, threads, users } from "../db/schema.ts";
 import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
 import { orcaAgentAuthorizationContextSchema } from "./authorization.ts";
@@ -396,6 +396,41 @@ afterEach(() => {
 });
 
 describe("Orca scoped MCP server", () => {
+  test("get_thread preserves multiple messages with label and attachment fan-out", async () => {
+    const { app, db, sqlite } = createFixture();
+    try {
+      db.update(emails).set({ threadId: "thread_a_1" }).where(eq(emails.id, "message_a_2")).run();
+      db.insert(labels).values([
+        { id: "work", accountId: "account_a", providerLabelId: "work", name: "Work", type: "user" },
+        { id: "inbox", accountId: "account_a", providerLabelId: "inbox", name: "Inbox", type: "system" },
+      ]).run();
+      db.insert(emailLabels).values([
+        { id: "work-link", emailId: "message_a_1", labelId: "work" },
+        { id: "inbox-link", emailId: "message_a_1", labelId: "inbox" },
+      ]).run();
+      db.insert(emailAttachments).values(["one", "two"].map((id) => ({
+        id, emailId: "message_a_1", providerAttachmentId: id, filename: `${id}.pdf`, mimeType: "application/pdf", size: 42,
+      }))).run();
+      const token = await signToken();
+      const result = await rpcBody(await callMcp(app, token, "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_a_1" },
+      }));
+      assert.ok(!result.result.isError, JSON.stringify(result));
+      const detail = result.result.structuredContent;
+      assert.deepEqual(detail.messages.map((message: { id: string }) => message.id), ["message_a_2", "message_a_1"]);
+      assert.equal(detail.messages[0].bodyExcerpt, "The deploy failed.");
+      assert.equal(detail.messages[1].bodyExcerpt, "Please review. [REDACTED]");
+      assert.doesNotMatch(JSON.stringify(detail), /Private B|private body|super-secret-token-value/);
+      const denied = await rpcBody(await callMcp(app, token, "tools/call", {
+        name: "get_thread", arguments: { accountId: "account_a", threadId: "thread_b" },
+      }));
+      assert.equal(denied.result.isError, true);
+      assert.equal(JSON.parse(denied.result.content[0].text).error.code, "not_found");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("maps the public OAuth scopes to only their resource capabilities", () => {
     assert.deepEqual(mapOAuthScopesToResourceScopes(["mail:read"]), [
       "orca:mail.metadata:read",

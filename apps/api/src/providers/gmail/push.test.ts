@@ -9,7 +9,9 @@ import { eq } from "drizzle-orm";
 
 import { storeProviderTokens } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
-import { emails, oauthAccounts, threads, users } from "../../db/schema.ts";
+import { emails, oauthAccounts, organizationRules, organizationEvaluationTraces, threads, users } from "../../db/schema.ts";
+import { createSqliteRuleRevisionRepository } from "../../organization/rules/sqlite-repository.ts";
+import { createRuleRevisionService } from "../../organization/rules/service.ts";
 import type { GmailClient } from "./client.ts";
 import {
   ensureGmailWatch,
@@ -169,7 +171,7 @@ describe("Gmail push sync", () => {
       });
 
       assert.equal(result?.historyId, "150");
-      assert.deepEqual(calls, ["watch", "history:100", "message:pending-message", "labels"]);
+      assert.deepEqual(calls, ["watch", "history:100", "message:pending-message", "message:pending-message", "labels"]);
       assert.equal((sqlite.query("select sync_history_id from oauth_accounts where id = 'acct_1'").get() as { sync_history_id: string | null }).sync_history_id, "150");
       assert.equal((sqlite.query("select count(*) as count from emails where provider_message_id = 'pending-message'").get() as { count: number }).count, 1);
     } finally {
@@ -416,4 +418,189 @@ describe("Gmail push sync", () => {
     assert.equal(verifyGmailPushToken(new Request("https://orca.example/v1/webhooks/gmail?token=wrong"), config), false);
     assert.equal(parseGmailPubSubNotification({ message: { data: "not-json" } }), null);
   });
+});
+
+test("history persists bounded batches in global date/id order and counts distinct identities", { timeout: 15_000 }, async () => {
+  setAuthEnv();
+  const { db, sqlite } = createMigratedClient();
+  try {
+    insertAccount(db, { historyId: "100" });
+    await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "test", refreshToken: "test", tokenExpiry: null });
+    const service = createRuleRevisionService(createSqliteRuleRevisionRepository(db));
+    const compiled = service.compile({ actor: { id: "user_1", type: "human" }, workspaceId: "user_1", request: {
+      idempotencyKey: "bounded-history", expectedRuleRevision: null, workspaceSchemaRevision: 1,
+      source: `orca 1
+rule "History boundary"
+event thread.updated
+predicate count = thread.message_count equals 26
+when count
+action notify immediate
+because "Observe the first event of the second batch"`,
+    } });
+    assert.equal(compiled.ok, true);
+    if (!compiled.ok) throw new Error("Rule compilation failed");
+    db.update(organizationRules).set({ activeRevisionId: compiled.revision.id }).where(eq(organizationRules.id, compiled.rule.id)).run();
+    const ids = Array.from({ length: 61 }, (_, i) => `bounded-${String(i).padStart(3, "0")}`);
+    const fetched: string[] = [];
+    let metadataInFlight = 0;
+    let maxMetadataInFlight = 0;
+    const message = (id: string) => ({ ...createMessage(id), internalDate: id === ids[0] ? undefined : id === ids[1] ? "2026-07-08T12:00:00.000Z" : String(1783512000000 + Math.floor(Number(id.slice(-3)) / 2)) });
+    const gmailClient: GmailClient & { getMessageMetadata: GmailClient["getMessage"] } = {
+      async getMessageMetadata(_token, id) {
+        metadataInFlight++;
+        maxMetadataInFlight = Math.max(maxMetadataInFlight, metadataInFlight);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        metadataInFlight--;
+        const m = message(id);
+        return { id, threadId: m.threadId, internalDate: m.internalDate };
+      },
+      async getMessage(_token, id) {
+        if (fetched.length === 60) assert.ok(db.select().from(emails).all().length > 0, "persist before final body fetch");
+        fetched.push(id);
+        return message(id);
+      },
+      async listLabels() { return [{ id: "INBOX", name: "Inbox" }, { id: "unused", name: "Unused" }]; },
+      async listInboxMessagePage() { throw new Error("unexpected backfill"); },
+      async listHistory({ cursor }) {
+        return { messageIds: cursor ? ids.slice(0, 30).reverse() : ids.slice(30).reverse(), deletedMessageIds: [], nextCursor: cursor ? null : "page2", historyId: "200" };
+      },
+    };
+    const providerDurations: number[] = [];
+    const result = await syncGmailAccountHistory(db, {
+      accountId: "acct_1", historyId: "200", gmailClient,
+      metrics: { recordProviderFetch(ms) { providerDurations.push(ms); }, recordDbWrite() {} },
+    });
+    // Two history pages, 61 metadata reads, 61 body reads and one label list.
+    assert.equal(providerDurations.length, 125);
+    assert.ok(providerDurations.every((ms) => Number.isFinite(ms) && ms >= 0));
+    assert.deepEqual(fetched, ids);
+    assert.ok(maxMetadataInFlight > 1 && maxMetadataInFlight <= 5);
+    const traces = db.select().from(organizationEvaluationTraces).all();
+    assert.equal(traces.length, 61);
+    for (let index = 1; index < ids.length; index++) {
+      const trace = traces.find((row) => row.eventId === `thread.updated:gmail:acct_1:${ids[index]}`);
+      assert.ok(trace);
+      const observed = JSON.parse(trace.traceJson).observedValues.find((value: { field: string }) => value.field === "thread.message_count");
+      assert.equal(observed.value, index + 1);
+    }
+    assert.equal(result.emailCount, 61);
+    assert.equal(result.threadCount, 1);
+    assert.equal(result.contactCount, 2);
+    assert.equal(result.labelCount, 3);
+    assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "200");
+    // Simulate losing the final checkpoint after all row/rule transactions.
+    db.update(oauthAccounts).set({ syncHistoryId: "100" }).run();
+    await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "200", gmailClient });
+    assert.equal(db.select().from(organizationEvaluationTraces).all().length, 61);
+    assert.equal(db.select().from(emails).all().length, 61);
+  } finally { sqlite.close(); }
+});
+
+for (const failure of ["provider", "lease", "ordering"] as const) {
+  test(`history ${failure} failure after a committed batch preserves cursor and replays idempotently`, async () => {
+    setAuthEnv();
+    const { db, sqlite } = createMigratedClient();
+    try {
+      insertAccount(db, { historyId: "100" });
+      await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "test", refreshToken: "test", tokenExpiry: null });
+      const ids = Array.from({ length: 55 }, (_, i) => `replay-${String(i).padStart(3, "0")}`);
+      let fail = true;
+      let lostLease = false;
+      const gmailClient: GmailClient = {
+        async getMessageMetadata(_token, id) { return { id, threadId: "thread-1", internalDate: "1783512000000" }; },
+        async getMessage(_token, id) {
+          if (fail && id === ids[30]) {
+            if (failure === "provider") throw new GmailApiError("synthetic failure", 500);
+            if (failure === "lease") lostLease = true;
+            if (failure === "ordering") return { ...createMessage(id), internalDate: "1783512000001" };
+          }
+          return createMessage(id);
+        },
+        async listLabels() { return []; },
+        async listInboxMessagePage() { throw new Error("unexpected backfill"); },
+        async listHistory() { return { messageIds: ids, deletedMessageIds: [], nextCursor: null, historyId: "200" }; },
+      };
+      const leaseGuard = { accountId: "acct_1", owner: "test", version: 1, renew: () => true, assert() { if (lostLease) throw new Error("synthetic lease lost"); } };
+      await assert.rejects(() => syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "200", gmailClient, leaseGuard }));
+      assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "100");
+      assert.equal(db.select().from(emails).all().length, 25);
+      const firstRow = db.select().from(emails).where(eq(emails.providerMessageId, ids[0]!)).get()!;
+      fail = false;
+      lostLease = false;
+      const result = await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "200", gmailClient, leaseGuard });
+      assert.equal(result.emailCount, 55);
+      assert.equal(result.threadCount, 1);
+      assert.equal(result.contactCount, 2);
+      assert.equal(db.select().from(emails).all().length, 55);
+      assert.equal(db.select().from(threads).get()?.messageCount, 55);
+      assert.equal(db.select().from(emails).where(eq(emails.providerMessageId, ids[0]!)).get()?.updatedAt.getTime(), firstRow.updatedAt.getTime());
+      assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "200");
+    } finally { sqlite.close(); }
+  });
+}
+
+test("history byte budget flushes large bodies before the count limit", async () => {
+  setAuthEnv();
+  const { db, sqlite } = createMigratedClient();
+  try {
+    insertAccount(db, { historyId: "100" });
+    await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "test", refreshToken: "test", tokenExpiry: null });
+    const gmailClient: GmailClient = {
+      async getMessageMetadata(_token, id) { return { id, threadId: "thread-1", internalDate: "1783512000000" }; },
+      async getMessage(_token, id) {
+        if (id === "large-3") assert.equal(db.select({ id: emails.id }).from(emails).all().length, 1);
+        const message = createMessage(id);
+        message.payload!.body = { data: Buffer.alloc(1_800_000, "a").toString("base64") };
+        return message;
+      },
+      async listLabels() { return []; },
+      async listInboxMessagePage() { throw new Error("unexpected backfill"); },
+      async listHistory() { return { messageIds: ["large-1", "large-2", "large-3"], deletedMessageIds: [], nextCursor: null, historyId: "200" }; },
+    };
+    const result = await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "200", gmailClient });
+    assert.equal(result.emailCount, 3);
+  } finally { sqlite.close(); }
+});
+
+test("history reconciles pages and metadata/body 404s, deletes in bounded fenced batches, and replays after lease loss", async () => {
+  setAuthEnv();
+  const { db, sqlite } = createMigratedClient();
+  try {
+    insertAccount(db, { historyId: "100" });
+    await storeProviderTokens(db, { oauthAccountId: "acct_1", accessToken: "test", refreshToken: "test", tokenExpiry: null });
+    const ids = Array.from({ length: 62 }, (_, i) => `delete-${String(i).padStart(3, "0")}`);
+    let deleting = false;
+    const gmailClient: GmailClient = {
+      async getMessageMetadata(_token, id) {
+        if (deleting && id === ids[59]) throw new GmailApiError("missing metadata", 404);
+        return { id, threadId: id, internalDate: "1783512000000" };
+      },
+      async getMessage(_token, id) {
+        if (deleting && id === ids[60]) throw new GmailApiError("missing body", 404);
+        return { ...createMessage(id), threadId: id };
+      },
+      async listLabels() { return []; },
+      async listInboxMessagePage() { throw new Error("unexpected backfill"); },
+      async listHistory({ cursor }) {
+        if (!deleting) return { messageIds: ids, deletedMessageIds: [], nextCursor: null, historyId: "200" };
+        return cursor
+          ? { messageIds: [ids[61]!], deletedMessageIds: [ids[0]!], nextCursor: null, historyId: "300" }
+          : { messageIds: [ids[0]!, ids[59]!, ids[60]!], deletedMessageIds: [...ids.slice(1, 59), ids[61]!], nextCursor: "p2", historyId: "300" };
+      },
+    };
+    await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "200", gmailClient });
+    deleting = true;
+    const leaseGuard = { accountId: "acct_1", owner: "test", version: 1, renew: () => true, assert() {
+      if (db.select({ id: emails.id }).from(emails).all().length < 62) throw new Error("lease lost after first deletion batch");
+    } };
+    await assert.rejects(() => syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "300", gmailClient, leaseGuard }));
+    assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "200");
+    assert.equal(db.select({ id: emails.id }).from(emails).all().length, 37);
+    const result = await syncGmailAccountHistory(db, { accountId: "acct_1", historyId: "300", gmailClient });
+    assert.equal(result.deletedEmailCount, 36);
+    assert.equal(result.emailCount, 1);
+    assert.deepEqual(db.select({ id: emails.providerMessageId }).from(emails).all(), [{ id: ids[61] }]);
+    assert.equal(db.select().from(threads).all().length, 1);
+    assert.equal(db.select().from(oauthAccounts).get()?.syncHistoryId, "300");
+  } finally { sqlite.close(); }
 });

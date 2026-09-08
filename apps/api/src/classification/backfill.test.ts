@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
+
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import type { SQLQueryBindings } from "bun:sqlite";
+import * as schema from "../db/schema.ts";
 
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { eq } from "drizzle-orm";
@@ -45,6 +49,218 @@ afterEach(() => {
 });
 
 describe("Human Signal backfill", () => {
+  test("an all-current account checks only a covering index and does not hydrate evidence", () => {
+    const { sqlite } = createMigratedClient();
+    try {
+      sqlite.exec(`
+        INSERT INTO users(id,email) VALUES ('user','fixture@example.com');
+        INSERT INTO oauth_accounts(id,user_id,provider,provider_email,provider_id)
+          VALUES ('account','user','gmail','fixture@example.com','fixture');
+        INSERT INTO threads(id,account_id,provider_thread_id) VALUES ('thread','account','thread');
+      `);
+      const insert = sqlite.prepare(`
+        INSERT INTO emails(id,account_id,thread_id,provider_message_id,received_at,
+          human_classifier_version,body_text,human_classification_evidence)
+        VALUES (?,'account','thread',?,?,?, ?,?)
+      `);
+      sqlite.transaction(() => {
+        for (let i = 0; i < 200; i++) {
+          insert.run(String(i), String(i), i, humanClassifierVersion, "wide body".repeat(1000), JSON.stringify(evidence()));
+        }
+      })();
+      const queries: Array<{ sql: string; params: unknown[] }> = [];
+      const db = drizzle(sqlite, { schema, logger: {
+        logQuery(sql, params) { queries.push({ sql, params }); },
+      } });
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 2 }), {
+        accountId: "account", processed: 0, hasMore: false,
+      });
+      assert.equal(queries.length, 1, "zero stale rows must not issue an evidence hydration query");
+      const lookup = queries[0]!;
+      const plan = sqlite.query("EXPLAIN QUERY PLAN " + lookup.sql)
+        .all(...lookup.params as SQLQueryBindings[]) as Array<{ detail: string }>;
+      assert.ok(plan.some(({ detail }) => detail.includes("USING COVERING INDEX emails_account_classifier_lookup_idx")),
+        JSON.stringify(plan));
+      assert.doesNotMatch(lookup.sql, /human_classification_evidence/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("hydrates at most limit+1 stale IDs and processes received_at,id order across versions", () => {
+    const { sqlite, db: fixtureDb } = createMigratedClient();
+    try {
+      fixtureDb.insert(users).values({ id: "user", email: "fixture@example.com" }).run();
+      fixtureDb.insert(oauthAccounts).values({
+        id: "account", userId: "user", provider: "gmail", providerEmail: "fixture@example.com", providerId: "fixture",
+      }).run();
+      fixtureDb.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
+      fixtureDb.insert(emails).values([
+        { id: "z_undated", receivedAt: null, humanClassifierVersion: null },
+        { id: "a_current", receivedAt: new Date(1), humanClassifierVersion },
+        { id: "z_early", receivedAt: new Date(2), humanClassifierVersion: "old" },
+        { id: "b_tied", receivedAt: new Date(3), humanClassifierVersion: "older" },
+        { id: "a_tied", receivedAt: new Date(3), humanClassifierVersion: null },
+        { id: "a_late", receivedAt: new Date(4), humanClassifierVersion: "old" },
+      ].map((row) => ({
+        ...row, accountId: "account", threadId: "thread", providerMessageId: row.id,
+        humanClassificationEvidence: JSON.stringify(evidence()),
+      }))).run();
+      const queries: Array<{ sql: string; params: unknown[] }> = [];
+      const db = drizzle(sqlite, { schema, logger: {
+        logQuery(sql, params) { queries.push({ sql, params }); },
+      } });
+      const result = backfillHumanClassifications(db, { accountId: "account", limit: 3 });
+      assert.deepEqual(result, { accountId: "account", processed: 3, hasMore: true });
+      const hydration = queries.filter(({ sql }) => sql.startsWith("select") && sql.includes("human_classification_evidence"));
+      assert.equal(hydration.length, 1);
+      assert.deepEqual(hydration[0]!.params, ["z_undated", "z_early", "a_tied", "b_tied"]);
+      const updates = queries.filter(({ sql }) => sql.startsWith("update"));
+      const processedIds = updates.map(({ params }) => params.find((param) =>
+        ["z_undated", "z_early", "a_tied", "b_tied", "a_late"].includes(String(param))));
+      assert.deepEqual(processedIds, ["z_undated", "z_early", "a_tied"]);
+      assert.deepEqual(sqlite.query(
+        "select id from emails where human_classifier_version != ? or human_classifier_version is null order by received_at,id",
+      ).all(humanClassifierVersion), [{ id: "b_tied" }, { id: "a_late" }]);
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 0 }), {
+        accountId: "account", processed: 1, hasMore: true,
+      });
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 1 }), {
+        accountId: "account", processed: 1, hasMore: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("caps an oversized request at 500 and hydrates only 501 candidates", () => {
+    const { sqlite, db: fixtureDb } = createMigratedClient();
+    try {
+      fixtureDb.insert(users).values({ id: "user", email: "fixture@example.com" }).run();
+      fixtureDb.insert(oauthAccounts).values({
+        id: "account", userId: "user", provider: "gmail", providerEmail: "fixture@example.com", providerId: "fixture",
+      }).run();
+      fixtureDb.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
+      const insert = sqlite.prepare(`
+        INSERT INTO emails(id,account_id,thread_id,provider_message_id,received_at)
+        VALUES (?,'account','thread',?,?)
+      `);
+      sqlite.transaction(() => {
+        for (let i = 0; i < 502; i++) insert.run(String(i), String(i), i);
+      })();
+      let hydratedIds: unknown[] = [];
+      let hydrationPlan: unknown[] = [];
+      const db = drizzle(sqlite, { schema, logger: {
+        logQuery(sql, params) {
+          if (sql.startsWith("select") && sql.includes("human_classification_evidence")) {
+            hydratedIds = params;
+            hydrationPlan = sqlite.query("EXPLAIN QUERY PLAN " + sql).all(...params as SQLQueryBindings[]);
+          }
+        },
+      } });
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 999 }), {
+        accountId: "account", processed: 500, hasMore: true,
+      });
+      assert.match(JSON.stringify(hydrationPlan), /USING INDEX sqlite_autoindex_emails_1 \(id=\?\)/);
+      assert.equal(hydratedIds.length, 501);
+      assert.equal(hydratedIds.at(-1), "500");
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 999 }), {
+        accountId: "account", processed: 2, hasMore: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("retries candidates changed between ID selection and hydration without overwriting sync", () => {
+    const { sqlite, db: fixtureDb } = createMigratedClient();
+    try {
+      fixtureDb.insert(users).values({ id: "user", email: "fixture@example.com" }).run();
+      fixtureDb.insert(oauthAccounts).values({
+        id: "account", userId: "user", provider: "gmail", providerEmail: "fixture@example.com", providerId: "fixture",
+      }).run();
+      fixtureDb.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
+      fixtureDb.insert(oauthAccounts).values({
+        id: "other_account", userId: "user", provider: "gmail", providerEmail: "other@example.com", providerId: "other",
+      }).run();
+      fixtureDb.insert(threads).values({
+        id: "other_thread", accountId: "other_account", providerThreadId: "other_thread",
+      }).run();
+      fixtureDb.insert(emails).values(["deleted", "refreshed", "reparented", "unchanged"].map((id) => ({
+        id, accountId: "account", threadId: "thread", providerMessageId: id,
+        receivedAt: new Date(1), humanClassificationEvidence: JSON.stringify(evidence()),
+      }))).run();
+      let refreshed = false;
+      const db = drizzle(sqlite, { schema, logger: {
+        logQuery(sql) {
+          if (!refreshed && sql.startsWith("select") && sql.includes("human_classification_evidence")) {
+            refreshed = true;
+            sqlite.exec("DELETE FROM emails WHERE id = 'deleted'");
+            fixtureDb.update(emails).set({
+              accountId: "other_account", threadId: "other_thread",
+            }).where(eq(emails.id, "reparented")).run();
+            // Refresh the version alone: evidence equality must not defeat the version guard.
+            fixtureDb.update(emails).set({
+              humanClassifierVersion, humanClassification: "automated_or_bulk", humanSignal: 2,
+            }).where(eq(emails.id, "refreshed")).run();
+          }
+        },
+      } });
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 4 }), {
+        accountId: "account", processed: 1, hasMore: true,
+      });
+      assert.deepEqual(sqlite.query(
+        "SELECT account_id, human_classifier_version, human_signal FROM emails WHERE id = 'reparented'",
+      ).get(), { account_id: "other_account", human_classifier_version: null, human_signal: null });
+      assert.deepEqual(sqlite.query("SELECT human_signal FROM emails WHERE id = 'refreshed'").get(), { human_signal: 2 });
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 4 }), {
+        accountId: "account", processed: 0, hasMore: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  test("upgrades a pre-index database without changing stored mail", () => {
+    const directory = mkdtempSync(join(tmpdir(), "orca-classifier-upgrade-"));
+    tempDirectories.push(directory);
+    const partial = join(directory, "partial");
+    mkdirSync(join(partial, "meta"), { recursive: true });
+    const journal = JSON.parse(readFileSync(join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
+      entries: Array<{ idx: number; tag: string }>;
+    };
+    const preceding = journal.entries.filter(({ idx }) => idx < 39);
+    for (const entry of preceding) {
+      writeFileSync(join(partial, entry.tag + ".sql"), readFileSync(join(migrationsFolder, entry.tag + ".sql")));
+    }
+    writeFileSync(join(partial, "meta/_journal.json"), JSON.stringify({ ...journal, entries: preceding }));
+    const { db, sqlite } = createDatabaseClient(join(directory, "upgrade.sqlite"));
+    try {
+      migrate(db, { migrationsFolder: partial });
+      sqlite.exec(`
+        INSERT INTO users(id,email) VALUES ('user','fixture@example.com');
+        INSERT INTO oauth_accounts(id,user_id,provider,provider_email,provider_id)
+          VALUES ('account','user','gmail','fixture@example.com','fixture');
+        INSERT INTO threads(id,account_id,provider_thread_id) VALUES ('thread','account','thread');
+        INSERT INTO emails(id,account_id,thread_id,provider_message_id,body_text,human_classifier_version)
+          VALUES ('email','account','thread','message','Synthetic upgrade fixture','old');
+      `);
+      assert.deepEqual(sqlite.query("PRAGMA index_info(emails_account_classifier_lookup_idx)").all(), []);
+      const before = sqlite.query("SELECT * FROM emails").all();
+      migrate(db, { migrationsFolder });
+      migrate(db, { migrationsFolder });
+      assert.deepEqual(sqlite.query("SELECT * FROM emails").all(), before);
+      const columns = sqlite.query("PRAGMA index_info(emails_account_classifier_lookup_idx)").all() as Array<{ name: string }>;
+      assert.deepEqual(columns.map(({ name }) => name), ["account_id", "human_classifier_version", "received_at", "id"]);
+      assert.deepEqual(sqlite.query("PRAGMA foreign_key_check").all(), []);
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account" }), {
+        accountId: "account", processed: 1, hasMore: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   test("is account-scoped, bounded, version-aware, and idempotent without provider access", () => {
     const { db, sqlite } = createMigratedClient();
     try {

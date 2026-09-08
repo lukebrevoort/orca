@@ -10,7 +10,8 @@ import {
   GmailApiError,
   type GmailClient,
 } from "./client.ts";
-import type { GmailMessage } from "./types.ts";
+import type { GmailLabel, GmailMessage } from "./types.ts";
+import { normalizeGmailMessage } from "./normalizer.ts";
 import {
   getGmailAccount,
   GmailSyncError,
@@ -330,6 +331,7 @@ export async function syncGmailAccountHistory(
 
   try {
     do {
+      input.leaseGuard?.assert(db);
       const providerStartedAt = performance.now();
       const page = await gmailClient.listHistory({
         accessToken: tokenRecord.accessToken,
@@ -381,46 +383,125 @@ export async function syncGmailAccountHistory(
     throw mapGmailPushError(error);
   }
 
-  let persisted = {
-    emailCount: 0,
-    threadCount: 0,
-    labelCount: 0,
-    contactCount: 0,
-    threadIds: [] as string[],
-  };
+  const accessToken = tokenRecord.accessToken;
+  // Keep only ordering keys and identity sets for the complete drain. Bodies
+  // must never accumulate with the number of history pages.
+  const threadIds = new Set<string>();
+  const labelIds = new Set<string>();
+  const contactEmails = new Set<string>();
+  let emailCount = 0;
   let deletedEmailCount = 0;
-
-  if (messageIds.size > 0) {
-    let fetched: { messages: GmailMessage[]; missingMessageIds: string[] };
-    try {
-      const providerStartedAt = performance.now();
-      fetched = await fetchMessageDetails(gmailClient, tokenRecord.accessToken, [...messageIds]);
-      for (const messageId of fetched.missingMessageIds) {
-        messageIds.delete(messageId);
-        deletedMessageIds.add(messageId);
+  try {
+    const ordered: Array<{ providerId: string; id: string; receivedAt: string }> = [];
+    const fetchMessage = async (id: string, metadata: boolean) => {
+      input.leaseGuard?.assert(db);
+      const startedAt = performance.now();
+      try {
+        // Compatibility clients may lack metadata. Extract keys immediately;
+        // this fallback holds one full message, never the entire history drain.
+        return await (metadata && gmailClient.getMessageMetadata
+          ? gmailClient.getMessageMetadata(accessToken, id)
+          : gmailClient.getMessage(accessToken, id));
+      } catch (error) {
+        if (error instanceof GmailApiError && error.status === 404) {
+          deletedMessageIds.add(id);
+          return null;
+        }
+        throw error;
+      } finally {
+        input.metrics?.recordProviderFetch(performance.now() - startedAt);
       }
-      if (fetched.messages.length > 0) {
-        const labelList = await gmailClient.listLabels(tokenRecord.accessToken);
-        input.metrics?.recordProviderFetch(performance.now() - providerStartedAt);
-        persisted = await persistGmailMessages(db, {
-          accountId: account.id,
-          accountEmail: account.providerEmail,
-          gmailMessages: fetched.messages,
-          labelList,
-          now,
-          propagationTrigger: "push",
-          propagationOptions: input.propagation,
-          leaseGuard: input.leaseGuard,
-          metrics: input.metrics,
-        });
+    };
+    const fetchOrderKey = async (providerId: string) => {
+      const message = await fetchMessage(providerId, true);
+      return message ? { providerId, ...messageOrderKey(message, account.id) } : null;
+    };
+    // Only lightweight metadata is concurrent. Legacy clients that fetch full
+    // bodies to extract keys must still retain at most one body at a time.
+    const metadataConcurrency = gmailClient.getMessageMetadata ? 5 : 1;
+    let pendingKeys: Array<ReturnType<typeof fetchOrderKey>> = [];
+    const collectKeys = async () => {
+      for (const key of await Promise.all(pendingKeys)) {
+        if (key) ordered.push(key);
       }
-    } catch (error) {
-      throw mapGmailPushError(error);
+      pendingKeys = [];
+    };
+    for (const providerId of messageIds) {
+      pendingKeys.push(fetchOrderKey(providerId));
+      if (pendingKeys.length === metadataConcurrency) await collectKeys();
     }
-  }
+    await collectKeys();
+    ordered.sort((left, right) => Date.parse(left.receivedAt) - Date.parse(right.receivedAt) || left.id.localeCompare(right.id));
 
-  if (deletedMessageIds.size > 0) {
-    deletedEmailCount = deleteGmailMessages(db, account.id, [...deletedMessageIds], now, input.leaseGuard, input.metrics);
+    let batch: GmailMessage[] = [];
+    let batchBytes = 0;
+    let labelList: GmailLabel[] | undefined;
+    const flush = async () => {
+      if (batch.length === 0) return;
+      input.leaseGuard?.assert(db);
+      if (!labelList) {
+        const startedAt = performance.now();
+        try { labelList = await gmailClient.listLabels(accessToken); }
+        finally { input.metrics?.recordProviderFetch(performance.now() - startedAt); }
+      }
+      const persisted = await persistGmailMessages(db, {
+        accountId: account.id,
+        accountEmail: account.providerEmail,
+        gmailMessages: batch,
+        labelList,
+        now,
+        propagationTrigger: "push",
+        propagationOptions: input.propagation,
+        leaseGuard: input.leaseGuard,
+        metrics: input.metrics,
+      });
+      emailCount += persisted.emailCount;
+      for (const id of persisted.threadIds) threadIds.add(id);
+      for (const label of labelList) labelIds.add(label.id);
+      for (const message of batch) {
+        // Counters need only headers/labels, not a second decoded body copy.
+        const normalized = normalizeGmailMessage({ ...message, payload: { headers: message.payload?.headers } }, { accountId: account.id });
+        for (const id of normalized.labels) labelIds.add(id);
+        for (const contact of [normalized.from, ...normalized.to, ...normalized.cc, ...normalized.bcc]) {
+          const email = contact.email.trim().toLowerCase();
+          if (email) contactEmails.add(email);
+        }
+      }
+      batch = [];
+      batchBytes = 0;
+    };
+    for (const key of ordered) {
+      const message = await fetchMessage(key.providerId, false);
+      if (!message) continue;
+      const actual = messageOrderKey(message, account.id);
+      if (actual.id !== key.id || actual.receivedAt !== key.receivedAt) {
+        throw new GmailPushError("Gmail message ordering changed during history sync", "provider_error");
+      }
+      const bytes = Buffer.byteLength(JSON.stringify(message), "utf8");
+      // The byte target bounds retained batch payloads, not process RSS. One
+      // incoming message and normalization copies can exceed it; Gmail's API
+      // returns a complete message, so a single-message maximum is unavoidable.
+      if (batchBytes + bytes > historyBatchBytes) await flush();
+      batch.push(message);
+      batchBytes += bytes;
+      if (batch.length >= historyBatchSize || batchBytes >= historyBatchBytes) await flush();
+    }
+    await flush();
+    let deletionBatch: string[] = [];
+    for (const id of deletedMessageIds) {
+      deletionBatch.push(id);
+      if (deletionBatch.length === historyBatchSize) {
+        input.leaseGuard?.assert(db);
+        deletedEmailCount += deleteGmailMessages(db, account.id, deletionBatch, now, input.leaseGuard, input.metrics);
+        deletionBatch = [];
+      }
+    }
+    if (deletionBatch.length) {
+      input.leaseGuard?.assert(db);
+      deletedEmailCount += deleteGmailMessages(db, account.id, deletionBatch, now, input.leaseGuard, input.metrics);
+    }
+  } catch (error) {
+    throw mapGmailPushError(error);
   }
 
   updateHistoryCursor(db, account.id, historyId, now, input.leaseGuard, input.metrics);
@@ -428,11 +509,11 @@ export async function syncGmailAccountHistory(
   return {
     accountId: account.id,
     historyId,
-    emailCount: persisted.emailCount,
+    emailCount,
     deletedEmailCount,
-    threadCount: persisted.threadCount,
-    labelCount: persisted.labelCount,
-    contactCount: persisted.contactCount,
+    threadCount: threadIds.size,
+    labelCount: labelIds.size,
+    contactCount: contactEmails.size,
     usedBackfill: false,
     lastSyncedAt: now.toISOString(),
   };
@@ -547,32 +628,14 @@ function deleteGmailMessages(
   return existing.length;
 }
 
-async function fetchMessageDetails(
-  gmailClient: GmailClient,
-  accessToken: string,
-  messageIds: string[],
-): Promise<{ messages: GmailMessage[]; missingMessageIds: string[] }> {
-  const messages: GmailMessage[] = [];
-  const missingMessageIds: string[] = [];
-  const concurrentRequests = 5;
-  for (let index = 0; index < messageIds.length; index += concurrentRequests) {
-    const batch = messageIds.slice(index, index + concurrentRequests);
-    const results = await Promise.all(batch.map(async (messageId) => {
-      try {
-        return { message: await gmailClient.getMessage(accessToken, messageId) };
-      } catch (error) {
-        if (error instanceof GmailApiError && error.status === 404) {
-          return { missingMessageId: messageId };
-        }
-        throw error;
-      }
-    }));
-    for (const result of results) {
-      if ("message" in result && result.message) messages.push(result.message);
-      else if ("missingMessageId" in result) missingMessageIds.push(result.missingMessageId);
-    }
-  }
-  return { messages, missingMessageIds };
+const historyBatchSize = 25;
+const historyBatchBytes = 4 * 1024 * 1024;
+
+function messageOrderKey(message: GmailMessage, accountId: string) {
+  // Use the persistence normalizer itself for missing, numeric and ISO dates
+  // and provider-scoped ID tie-breaking, without decoding message bodies.
+  const normalized = normalizeGmailMessage({ id: message.id, threadId: message.threadId, internalDate: message.internalDate }, { accountId });
+  return { id: normalized.id, receivedAt: normalized.receivedAt };
 }
 
 function parseWatchExpiration(value: string | number, now: Date): Date | null {

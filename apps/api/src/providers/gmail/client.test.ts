@@ -80,3 +80,18 @@ describe("Gmail push API client", () => {
     assert.equal(query, `after:${Math.floor((since.getTime() - 60_000) / 1000)}`);
   });
 });
+
+test("fetches history ordering metadata without payloads and preserves provider failures", async () => {
+  const urls: URL[] = [];
+  const client = createGmailClient((async (input: string | URL | Request) => {
+    urls.push(new URL(String(input)));
+    return Response.json({ id: "message-1", threadId: "thread-1", internalDate: "1783512000000" });
+  }) as typeof fetch);
+  assert.deepEqual(await client.getMessageMetadata!("synthetic-token", "message-1"), {
+    id: "message-1", threadId: "thread-1", internalDate: "1783512000000",
+  });
+  assert.equal(urls[0]!.searchParams.get("format"), "metadata");
+  assert.equal(urls[0]!.searchParams.get("fields"), "id,threadId,internalDate");
+  const missing = createGmailClient((async () => new Response(null, { status: 404 })) as unknown as typeof fetch);
+  await assert.rejects(() => missing.getMessageMetadata!("synthetic-token", "missing"), (error: unknown) => error instanceof GmailApiError && error.status === 404);
+});

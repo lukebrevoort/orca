@@ -3025,28 +3025,32 @@ function readThreadDetail(
     receivedAt: emails.receivedAt, isRead: emails.isRead, isStarred: emails.isStarred, isDraft: emails.isDraft,
     humanSignal: emails.humanSignal, humanClassification: emails.humanClassification,
     humanClassificationReasons: emails.humanClassificationReasons, humanClassifierVersion: emails.humanClassifierVersion,
-    labelName: labels.name,
-  }).from(emails).leftJoin(emailLabels, eq(emailLabels.emailId, emails.id)).leftJoin(labels, eq(labels.id, emailLabels.labelId))
+  }).from(emails)
     .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id)))
     .orderBy(asc(emails.receivedAt), asc(emails.createdAt), asc(emails.id)).all();
-  const attachmentRows = db.select().from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
+  // Keep one-to-many associations separate so neither join repeats message bodies.
+  const labelRows = db.select({ id: emails.id, labelName: labels.name })
+    .from(emails).innerJoin(emailLabels, eq(emailLabels.emailId, emails.id)).innerJoin(labels, eq(labels.id, emailLabels.labelId))
     .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
-  const messagesById = new Map<string, typeof messageRows[number]>();
+  const attachmentRows = db.select({
+    id: emailAttachments.id, emailId: emailAttachments.emailId, filename: emailAttachments.filename,
+    mimeType: emailAttachments.mimeType, size: emailAttachments.size,
+  }).from(emailAttachments).innerJoin(emails, eq(emails.id, emailAttachments.emailId))
+    .where(and(eq(emails.threadId, thread.id), eq(emails.accountId, account.id))).all();
   const labelsByMessage = new Map<string, string[]>();
-  for (const row of messageRows) {
-    messagesById.set(row.id, row);
+  for (const row of labelRows) {
     const names = labelsByMessage.get(row.id) ?? [];
     if (row.labelName) names.push(row.labelName);
     labelsByMessage.set(row.id, names);
   }
   const attachmentsByMessage = new Map<string, Array<{ id: string; filename: string; mimeType: string; size: number }>>();
-  for (const { email_attachments: attachment } of attachmentRows) {
+  for (const attachment of attachmentRows) {
     const attachments = attachmentsByMessage.get(attachment.emailId) ?? [];
     attachments.push({ id: attachment.id, filename: attachment.filename, mimeType: attachment.mimeType, size: attachment.size });
     attachmentsByMessage.set(attachment.emailId, attachments);
   }
   const resolveClassification = createHumanClassificationOverrideResolver(listHumanClassificationOverrides(db, account.id));
-  const messages = [...messagesById.values()].map((message) => {
+  const messages = messageRows.map((message) => {
     const bodyHtml = sanitizeProviderHtml(message.bodyHtml);
     const humanClassification = resolveHumanClassification(message, resolveClassification);
     return {
@@ -3061,7 +3065,7 @@ function readThreadDetail(
       attachments: attachmentsByMessage.get(message.id) ?? [],
     };
   });
-  const sourceMessages = [...messagesById.values()];
+  const sourceMessages = messageRows;
   return threadDetailSchema.parse({
     account: serializedAccount,
     thread: {

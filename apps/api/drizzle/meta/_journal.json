@@ -274,6 +274,13 @@
       "when": 1788739200000,
       "tag": "0038_first_view_guidance",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1788825600000,
+      "tag": "0039_classifier_lookup_index",
+      "breakpoints": true
     }
   ]
 }
