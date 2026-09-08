@@ -158,3 +158,13 @@
 .search-view-authoring .view-composer-actions { flex-wrap: wrap; }
 .search-view-authoring .view-unsupported-clauses,
 .search-view-authoring .view-unsupported-clauses li > div { background: var(--orca-surface); }
+
+/* Exact sender corrections use the same theme-safe labeled controls as Tune. */
+.view-sender-correction { margin: 16px 0; padding: 18px; border: 1px solid var(--orca-border); border-radius: 10px; background: var(--orca-surface-hover); color: var(--orca-ink); }
+.view-sender-correction h4 { margin: 0 0 10px; font-size: 18px; }
+.view-sender-correction p { line-height: 1.5; overflow-wrap: anywhere; }
+.view-sender-correction > div { display: grid; gap: 8px; max-height: 260px; overflow: auto; margin: 12px 0; }
+.view-sender-correction label { display: flex; align-items: center; gap: 10px; min-height: 36px; overflow-wrap: anywhere; color: var(--orca-ink); }
+.view-sender-correction input { width: 18px; height: 18px; accent-color: var(--desktop-accent); flex-shrink: 0; }
+.view-sender-correction button { margin: 6px 8px 0 0; }
+.view-sender-correction :focus-visible { outline: 2px solid var(--desktop-accent); outline-offset: 3px; }

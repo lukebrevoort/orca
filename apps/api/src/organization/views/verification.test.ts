@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, test } from "node:test";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
-import { organizationViewBounds, organizationViewCommitRequestSchema, type OrganizationView } from "@orca/shared";
+import { organizationViewBounds, organizationViewCommitRequestSchema, type OrganizationView, type OrganizationViewDefinition } from "@orca/shared";
 
 import { createSession } from "../../auth/session-store.ts";
 import { createDatabaseClient } from "../../db/client.ts";
@@ -16,6 +16,80 @@ import { buildOrganizationViewDetailQuery, buildOrganizationViewPageKeyQuery, ty
 import { createSqliteOrganizationViewsRepository } from "./sqlite-repository.ts";
 
 const temporaryDirectories: string[] = [];
+
+test("BRE-385 correction census covers complete authorized matching messages and proves row witnesses", { timeout: 30_000 }, async () => {
+  const { app, headers, path } = await setup();
+  const db = createDatabaseClient(path);
+  const date = new Date("2026-08-25T18:00:00.000Z");
+  for (let i = 0; i < 7; i++) {
+    db.db.insert(threads).values({ id: `census_${i}`, accountId: "account_a", providerThreadId: `census_${i}`, subject: "Census", latestReceivedAt: date }).run();
+    db.db.insert(emails).values({ id: `census_mail_${i}`, accountId: "account_a", threadId: `census_${i}`, providerMessageId: `census_${i}`, fromAddress: `sender${i}@example.com`, receivedAt: date, humanSignal: 8 }).run();
+  }
+  db.db.insert(emails).values({ id: "census_latest", accountId: "account_a", threadId: "census_0", providerMessageId: "latest", fromAddress: "display@example.com", receivedAt: new Date(date.getTime() + 1000), humanSignal: 1 }).run();
+  const before = db.sqlite.query("SELECT * FROM organization_change_sets").all();
+  db.sqlite.close();
+  const draft = { mode: "create", viewId: null, viewRevision: null, source: { kind: "manual", label: "Census" }, identity: { name: "Census" }, definition: { revision: 1, accountIds: ["account_a"], thread: { subjectContains: "Census" }, humanSignal: { minimumScore: 7 } }, unsupportedClauses: [] };
+  const response = await app.request("/v1/organization/views/sender-candidates", { method: "POST", headers, body: JSON.stringify({ draft, target: { accountId: "account_a", threadId: "census_0" } }) });
+  assert.equal(response.status, 200, await response.clone().text());
+  const body = await response.json();
+  assert.equal(body.status, "complete");
+  assert.deepEqual(body.addresses, Array.from({ length: 7 }, (_, i) => `sender${i}@example.com`));
+  assert.deepEqual(body.witnessAddresses, ["sender0@example.com"]);
+  assert.deepEqual(body.target, { accountId: "account_a", threadId: "census_0" });
+  assert.equal(body.provenance.definitionDigest, digestOrganizationViewDefinition(draft.definition as OrganizationViewDefinition));
+  assert.match(body.provenance.authorizedScopeDigest, /^sha256:/);
+  assert.ok(Date.parse(body.provenance.evaluatedAt));
+  const after = createDatabaseClient(path);
+  assert.deepEqual(after.sqlite.query("SELECT * FROM organization_change_sets").all(), before);
+  after.sqlite.close();
+  const corrected = { ...draft, definition: { ...draft.definition, sender: { addresses: body.addresses.filter((address: string) => address !== "sender0@example.com") } } };
+  const previewResponse = await app.request("/v1/organization/views/preview", { method: "POST", headers, body: JSON.stringify({ draft: corrected, page: { limit: 50 } }) });
+  assert.equal(previewResponse.status, 200);
+  const preview = await previewResponse.json();
+  assert.equal(preview.results.items.length, 6);
+  const commitRequest = { draft: preview.draft, expectedRevisions: { workspace: preview.workspaceRevision, view: null }, retryKey: "bre385-census-save", confirmedZeroMatchDigest: null };
+  const committedResponse = await app.request("/v1/organization/views/commit", { method: "POST", headers, body: JSON.stringify(commitRequest) });
+  assert.equal(committedResponse.status, 200, await committedResponse.clone().text());
+  const committed = await committedResponse.json();
+  const future = createDatabaseClient(path);
+  for (const [id, accountId, fromAddress] of [["allowed", "account_a", "sender1@example.com"], ["new", "account_a", "new@example.com"], ["foreign_allowed", "account_b", "sender1@example.com"]]) {
+    future.db.insert(threads).values({ id: id!, accountId: accountId!, providerThreadId: id!, subject: "Census future", latestReceivedAt: date }).run();
+    future.db.insert(emails).values({ id: `future_${id}`, accountId: accountId!, threadId: id!, providerMessageId: id!, fromAddress: fromAddress!, receivedAt: date, humanSignal: 8 }).run();
+  }
+  const protectedTables = ["emails", "threads", "oauth_accounts", "organization_thread_lane_states", "human_classification_overrides"];
+  // GET materializes new lane-state projection first; mutation checks compare established state.
+  const results = await (await app.request(`/v1/organization/views/${committed.view.id}/results?limit=50`, { headers })).json();
+  assert.ok(results.items.some((item: { threadId: string }) => item.threadId === "allowed"));
+  assert.ok(!results.items.some((item: { threadId: string }) => ["new", "foreign_allowed", "census_0"].includes(item.threadId)));
+  const snapshot = () => protectedTables.map((table) => future.sqlite.query(`SELECT * FROM ${table} ORDER BY rowid`).all());
+  const protectedBefore = snapshot();
+  const removed = await app.request(`/v1/organization/views/${committed.view.id}?expectedRevision=${committed.view.revision}&expectedWorkspaceRevision=${committed.workspaceRevision}&idempotencyKey=bre385-remove`, { method: "DELETE", headers });
+  assert.equal(removed.status, 204, await removed.clone().text());
+  assert.deepEqual(snapshot(), protectedBefore);
+  future.sqlite.close();
+});
+test("BRE-385 census fails closed for overflow, multiple accounts, malformed senders and foreign targets", { timeout: 30_000 }, async () => {
+  const { app, headers, path } = await setup();
+  const database = createDatabaseClient(path);
+  const date = new Date("2026-08-25T18:00:00.000Z");
+  database.db.insert(threads).values({ id: "bounded", accountId: "account_a", providerThreadId: "bounded", subject: "Bounded", latestReceivedAt: date }).run();
+  for (let i = 0; i < 50; i++) database.db.insert(emails).values({ id: `bounded_${i}`, accountId: "account_a", threadId: "bounded", providerMessageId: `bounded_${i}`, fromAddress: `sender${i}@example.com`, receivedAt: date }).run();
+  const draft = { mode: "create", viewId: null, viewRevision: null, source: { kind: "manual", label: "Bounded" }, identity: { name: "Bounded" }, definition: { revision: 1, accountIds: ["account_a"], thread: { subjectContains: "Bounded" } }, unsupportedClauses: [] };
+  const census = (candidate = draft, target = { accountId: "account_a", threadId: "bounded" }) => app.request("/v1/organization/views/sender-candidates", { method: "POST", headers, body: JSON.stringify({ draft: candidate, target }) });
+  assert.equal((await (await census()).json()).addresses.length, 50);
+  database.db.insert(emails).values({ id: "bounded_extra", accountId: "account_a", threadId: "bounded", providerMessageId: "extra", fromAddress: "extra@example.com", receivedAt: date }).run();
+  const overflow = await (await census()).json();
+  assert.equal(overflow.status, "overflow"); assert.deepEqual(overflow.addresses, []); assert.deepEqual(overflow.witnessAddresses, []);
+  database.sqlite.query("DELETE FROM emails WHERE id='bounded_extra'").run();
+  database.sqlite.query("UPDATE emails SET from_address='malformed' WHERE id='bounded_0'").run();
+  const malformed = await (await census()).json(); assert.equal(malformed.status, "unavailable"); assert.deepEqual(malformed.addresses, []);
+  const multi = await (await census({ ...draft, definition: { ...draft.definition, accountIds: ["account_a", "account_b"] } })).json();
+  assert.equal(multi.status, "unavailable"); assert.deepEqual(multi.addresses, []);
+  assert.equal((await census(draft, { accountId: "account_foreign", threadId: "thread_foreign" })).status, 403);
+  assert.equal((await census({ ...draft, definition: { ...draft.definition, accountIds: ["account_foreign"] } })).status, 403);
+  database.sqlite.close();
+});
+
 const ecmaScriptTrimCharacters = [
   "\u0009", "\u000A", "\u000B", "\u000C", "\u000D", "\u0020", "\u00A0", "\u1680",
   "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006", "\u2007",
