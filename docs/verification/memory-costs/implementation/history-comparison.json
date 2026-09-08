@@ -1,0 +1,21 @@
+{
+  "fixture": {
+    "messages": 250,
+    "plainTextBodyBytes": 100000,
+    "runtime": "Bun 1.3.14",
+    "platform": "macOS arm64",
+    "provider": "synthetic Gmail client without optional metadata method (bounded fallback exercised)"
+  },
+  "beforeFixReportedRssMiB": {
+    "start": 125,
+    "after": 284
+  },
+  "afterFixRssMiB": {
+    "start": 125.4,
+    "after": 202.1,
+    "afterGc": 202.2
+  },
+  "persistedBeforeFinalSyntheticIdFetch": 150,
+  "persistedTotal": 250,
+  "limitations": "Separate process runs, no Linux cgroup/file-cache measurement; figures are diagnostic, not a production memory guarantee. Strong invariant covered by tests: persistence starts before all bodies have been fetched."
+}

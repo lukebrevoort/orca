@@ -1,0 +1,35 @@
+{
+  "revision": "e14b64652ce0f879033feec00a7ad56ad9eba42a",
+  "command": "bun run test",
+  "exitCode": 1,
+  "workspaceResults": {
+    "shared": {
+      "passed": 85,
+      "failed": 0
+    },
+    "web": {
+      "passed": 347,
+      "failed": 6
+    },
+    "api": {
+      "passed": 540,
+      "failed": 3
+    }
+  },
+  "failureNames": [
+    "@orca/api test: (fail) Orca API > mirrors durable drafts asynchronously and keeps failed provider cleanup recoverable",
+    "@orca/api test: (fail) Orca API > dispatches account lifecycle through a partial custom registry",
+    "@orca/web test: (fail) desktop application shell > switches to complete, theme-safe mobile navigation only through 760px",
+    "@orca/web test: (fail) desktop application shell > reflows mobile message anatomy into content and 44px action bands",
+    "@orca/web test: (fail) desktop application shell > bounds Inbox heading actions to the desktop workspace at narrow and wide widths",
+    "@orca/web test: (fail) desktop application shell > keeps compact Later evidence, attention, and reminder actions in separate bands",
+    "@orca/web test: (fail) desktop application shell > keeps compact read and unread rows restrained, scannable, and aligned",
+    "@orca/api test: (fail) BRE-319 bounded mutation-attempt audit > serializes two Worker retention attempts so both newest IDs survive and both oldest IDs are pruned",
+    "@orca/web test: (fail) Desktop evidence and navigation > keeps Inbox and Settings on the same customized sidebar projection in both themes"
+  ],
+  "typecheck": {
+    "command": "bun run typecheck",
+    "exitCode": 0
+  },
+  "note": "Unchanged source baseline during parallel local checks; some failures are timeouts. Not failures introduced by this patch."
+}
