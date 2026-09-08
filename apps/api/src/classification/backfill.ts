@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 
 import { humanClassificationEvidenceSchema } from "@orca/shared";
 
@@ -35,12 +35,10 @@ export function backfillHumanClassifications(
   input: { accountId: string; limit?: number; now?: Date },
 ): HumanClassificationBackfillResult {
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500);
-  const rows = db
-    .select({
-      id: emails.id,
-      humanClassificationEvidence: emails.humanClassificationEvidence,
-      humanClassifierVersion: emails.humanClassifierVersion,
-    })
+  // Keep the account-wide version check on the covering index. Evidence can
+  // be large and is only needed for the bounded set of stale messages.
+  const selectedIds = db
+    .select({ id: emails.id })
     .from(emails)
     .where(and(
       eq(emails.accountId, input.accountId),
@@ -50,11 +48,31 @@ export function backfillHumanClassifications(
     .limit(limit + 1)
     .all();
 
-  const batch = rows.slice(0, limit);
+  const rows = selectedIds.length === 0 ? [] : db
+    .select({
+      id: emails.id,
+      humanClassificationEvidence: emails.humanClassificationEvidence,
+      humanClassifierVersion: emails.humanClassifierVersion,
+    })
+    .from(emails)
+    // IDs are globally unique and already account-scoped. Adding accountId
+    // here can make SQLite scan an account index instead of looking up IDs.
+    // The write below still checks account ownership as part of its CAS.
+    .where(inArray(emails.id, selectedIds.map(({ id }) => id)))
+    .all();
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+  const batch = selectedIds.slice(0, limit);
   const updatedAt = input.now ?? new Date();
   let processed = 0;
   let skippedChangedRow = false;
-  for (const row of batch) {
+  for (const { id } of batch) {
+    const row = rowsById.get(id);
+    // A concurrent sync can delete or classify a candidate before hydration.
+    // Keep this pass bounded and let the caller retry any changed candidate.
+    if (!row || row.humanClassifierVersion === humanClassifierVersion) {
+      skippedChangedRow = true;
+      continue;
+    }
     if (applyBackfillClassification(db, { accountId: input.accountId, row, updatedAt })) {
       processed += 1;
     } else {
@@ -65,7 +83,7 @@ export function backfillHumanClassifications(
   return {
     accountId: input.accountId,
     processed,
-    hasMore: rows.length > limit || skippedChangedRow,
+    hasMore: selectedIds.length > limit || skippedChangedRow,
   };
 }
 

@@ -898,6 +898,12 @@ export const emails = sqliteTable(
       table.accountId,
       table.receivedAt,
     ),
+    accountClassifierLookupIdx: index("emails_account_classifier_lookup_idx").on(
+      table.accountId,
+      table.humanClassifierVersion,
+      table.receivedAt,
+      table.id,
+    ),
     accountHumanClassificationIdx: index("emails_account_human_classification_idx").on(
       table.accountId,
       table.humanClassification,
