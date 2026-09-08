@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { z } from "zod";
+import { guidanceUserPreferencesResponseSchema } from "@orca/shared";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -263,6 +265,48 @@ describe("Orca API", () => {
       delete process.env.SESSION_SECRET;
       delete process.env.TOKEN_ENCRYPTION_KEY;
     }
+  });
+
+  test("BRE-386 dismissal is monotonic, user-scoped and survives another session and stale settings", async () => {
+    process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 12).toString("base64");
+    const tempDir = mkdtempSync(join(tmpdir(), "orca-guidance-test-"));
+    const dbPath = join(tempDir, "preferences.sqlite");
+    const { db, sqlite } = createDatabaseClient(dbPath);
+    migrate(db, { migrationsFolder: resolve(import.meta.dir, "../drizzle") });
+    try {
+      db.insert(users).values([{ id: "guidance_user", email: "one@example.com" }, { id: "guidance_other", email: "two@example.com" }]).run();
+      const first = await createSession(db, "guidance_user");
+      const second = await createSession(db, "guidance_user");
+      const other = await createSession(db, "guidance_other");
+      const testApp = createApp({ dbFactory: () => createDatabaseClient(dbPath), now: () => new Date("2026-09-06T12:00:00.000Z") });
+      const headers = (token: string) => ({ cookie: `orca_session=${token}`, "content-type": "application/json" });
+      const read = async (token: string) => guidanceUserPreferencesResponseSchema.parse(await (await testApp.request("/v1/preferences?include=first_view_guidance", { headers: headers(token) })).json());
+      assert.equal((await read(first.token)).firstViewGuidanceCompletedAt, null);
+      const response = await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: headers(first.token), body: JSON.stringify({ firstViewGuidanceCompletedAt: "2000-01-01T00:00:00.000Z" }) });
+      assert.equal(response.status, 200);
+      assert.equal(guidanceUserPreferencesResponseSchema.parse(await response.json()).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+      assert.equal((await read(second.token)).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: headers(second.token), body: JSON.stringify({ signature: "New signature", composeFormat: "plain", replyBehavior: "reply", notifyByDefault: false, firstViewGuidanceCompletedAt: null }) });
+      const updated = await read(first.token);
+      assert.equal(updated.signature, "New signature");
+      assert.equal(updated.firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      assert.equal((await read(other.token)).firstViewGuidanceCompletedAt, null);
+      // Verbatim four-field strict contract from BRE-385 fe7029a.
+      const legacySchema = z.object({ signature: z.string().max(10_000), composeFormat: z.enum(["plain", "rich"]), replyBehavior: z.enum(["reply", "reply_all"]), notifyByDefault: z.boolean() }).strict();
+      const legacy = legacySchema.parse(await (await testApp.request("/v1/preferences", { headers: headers(first.token) })).json());
+      const legacySaved = await testApp.request("/v1/preferences", { method: "PATCH", headers: headers(first.token), body: JSON.stringify({ ...legacy, signature: "Old Settings" }) });
+      assert.equal(legacySaved.status, 200);
+      assert.equal(legacySaved.headers.get("Cache-Control"), "private, no-store");
+      assert.equal(legacySchema.parse(await legacySaved.json()).signature, "Old Settings");
+      assert.equal((await read(second.token)).firstViewGuidanceCompletedAt, "2026-09-06T12:00:00.000Z");
+      for (const method of ["GET", "PATCH"]) {
+        assert.equal((await testApp.request("/v1/preferences?include=unknown", { method, headers: headers(first.token), ...(method === "PATCH" ? { body: JSON.stringify({ signature: "Must not save" }) } : {}) })).status, 400);
+      }
+      assert.equal((await read(first.token)).signature, "Old Settings");
+      assert.equal((await testApp.request("/v1/preferences?include=first_view_guidance", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ firstViewGuidanceCompletedAt: "2026-09-06T12:00:00.000Z" }) })).status, 401);
+    } finally { sqlite.close(); rmSync(tempDir, { recursive: true, force: true }); delete process.env.SESSION_SECRET; delete process.env.TOKEN_ENCRYPTION_KEY; }
   });
 
   test("persists onboarding completion and exposes it on later session checks", async () => {

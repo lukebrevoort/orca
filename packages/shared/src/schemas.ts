@@ -70,10 +70,20 @@ export const userPreferencesSchema = z.object({
   composeFormat: z.enum(["plain", "rich"]),
   replyBehavior: z.enum(["reply", "reply_all"]),
   notifyByDefault: z.boolean(),
+  firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable().default(null),
 }).strict();
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 
-export const updateUserPreferencesSchema = userPreferencesSchema.partial().refine(
+// Wire contracts distinguish rolling legacy clients from explicit guidance reads.
+export const legacyUserPreferencesResponseSchema = userPreferencesSchema.omit({ firstViewGuidanceCompletedAt: true });
+export type LegacyUserPreferencesResponse = z.infer<typeof legacyUserPreferencesResponseSchema>;
+export const guidanceUserPreferencesResponseSchema = userPreferencesSchema.extend({ firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable() });
+export type GuidanceUserPreferencesResponse = z.infer<typeof guidanceUserPreferencesResponseSchema>;
+export const userPreferencesQuerySchema = z.object({ include: z.literal("first_view_guidance").optional() }).strict();
+
+export const updateUserPreferencesSchema = userPreferencesSchema.omit({ firstViewGuidanceCompletedAt: true }).partial().extend({
+  firstViewGuidanceCompletedAt: isoDateTimeStringSchema.nullable().optional(),
+}).refine(
   (value) => Object.keys(value).length > 0,
   { message: "Expected at least one preference" },
 );

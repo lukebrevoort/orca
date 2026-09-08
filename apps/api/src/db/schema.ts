@@ -24,6 +24,7 @@ export const userPreferences = sqliteTable(
   "user_preferences",
   {
     userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+    firstViewGuidanceCompletedAt: text("first_view_guidance_completed_at"),
     signature: text("signature").notNull().default(""),
     composeFormat: text("compose_format").notNull().default("plain"),
     replyBehavior: text("reply_behavior").notNull().default("reply"),
