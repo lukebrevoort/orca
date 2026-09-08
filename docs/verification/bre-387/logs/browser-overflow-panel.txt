@@ -1,0 +1,46 @@
+2026-09-07T05:02:44.557301+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:02:47.877777+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'More than 50 matching senders')
+More than 50 matching senders
+2026-09-07T05:02:48.577097+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'scrollintoview', '.view-sender-correction')
+✓ Done
+2026-09-07T05:02:50.959724+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1024-overflow-panel', 'Light', '1024', '768', 'Opened real 51-sender correction unavailable panel', 'Verify More than 50 matching senders text|Scroll actual panel into view|No partial candidate list or Apply')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-overflow-panel.png
+screenshots/light-1024-overflow-panel.png
+2026-09-07T05:02:52.504557+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1024-overflow-panel')
+{"scenario": "light-1024-overflow-panel", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Remove account filter", "personal", "work"]}
+2026-09-07T05:02:54.142375+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:02:56.825943+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'More than 50 matching senders')
+More than 50 matching senders
+2026-09-07T05:02:57.942332+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'scrollintoview', '.view-sender-correction')
+✓ Done
+2026-09-07T05:03:01.776663+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1440-overflow-panel', 'Light', '1440', '900', 'Opened real 51-sender correction unavailable panel', 'Verify More than 50 matching senders text|Scroll actual panel into view|No partial candidate list or Apply')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-overflow-panel.png
+screenshots/light-1440-overflow-panel.png
+2026-09-07T05:03:10.040506+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1440-overflow-panel')
+{"scenario": "light-1440-overflow-panel", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Add filter \uff0b"]}
+2026-09-07T05:03:12.741896+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'find', 'role', 'button', 'click', '--name', 'Switch to Orca Black', '--exact')
+✓ Done
+2026-09-07T05:03:15.950755+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:03:20.301798+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'More than 50 matching senders')
+More than 50 matching senders
+2026-09-07T05:03:23.073750+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'scrollintoview', '.view-sender-correction')
+✓ Done
+2026-09-07T05:03:26.538363+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1440-overflow-panel', 'Orca Black', '1440', '900', 'Opened real 51-sender correction unavailable panel', 'Verify More than 50 matching senders text|Scroll actual panel into view|No partial candidate list or Apply')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-overflow-panel.png
+screenshots/black-1440-overflow-panel.png
+2026-09-07T05:03:29.956197+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1440-overflow-panel')
+{"scenario": "black-1440-overflow-panel", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Add filter \uff0b"]}
+2026-09-07T05:03:34.307795+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:03:41.001105+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'More than 50 matching senders')
+More than 50 matching senders
+2026-09-07T05:03:42.976437+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'scrollintoview', '.view-sender-correction')
+✓ Done
+2026-09-07T05:03:47.409245+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1024-overflow-panel', 'Orca Black', '1024', '768', 'Opened real 51-sender correction unavailable panel', 'Verify More than 50 matching senders text|Scroll actual panel into view|No partial candidate list or Apply')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-overflow-panel.png
+screenshots/black-1024-overflow-panel.png
+2026-09-07T05:03:53.373285+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1024-overflow-panel')
+{"scenario": "black-1024-overflow-panel", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": ["Remove account filter", "personal", "work"]}

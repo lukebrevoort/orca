@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:32:37.488917+00:00",
+  "completedAt": "2026-09-07T14:32:50.764181+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-residual-selection-commands.json",
+  "raw": "black-1024-residual-selection-raw.json",
+  "stderr": "black-1024-residual-selection-stderr.txt",
+  "parsedRecords": 12
+}

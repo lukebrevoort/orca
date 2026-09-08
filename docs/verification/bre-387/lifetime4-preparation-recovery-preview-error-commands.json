@@ -1,0 +1,52 @@
+[
+  [
+    "network",
+    "unroute",
+    "**/v1/organization/views/prepare"
+  ],
+  [
+    "click",
+    ".view-preparation-error button:first-of-type"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-composer\")&&!document.querySelector(\".view-preparation-error\")"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "/v1/organization/views/prepare"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "route",
+    "**/v1/organization/views/preview",
+    "--body",
+    "{}"
+  ],
+  [
+    "click",
+    ".view-unsupported-clauses li button:first-of-type"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-preview-retry\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "/v1/organization/views/preview"
+  ]
+]

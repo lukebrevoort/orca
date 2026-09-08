@@ -1,0 +1,23 @@
+[
+  [
+    "click",
+    ".view-lifecycle-actions button:nth-child(2)"
+  ],
+  [
+    "click",
+    ".desktop-sidebar-content button:has(.desktop-space-view_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750)"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".saved-view-results .view-thread-open\")&&!!document.querySelector(\".saved-view-results .view-continuation button:not(:disabled)\")"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime5-saved-controls-baseline\",at:new Date().toISOString(),url:location.href,heading:document.querySelector(\"#saved-view-title\").textContent,rows:document.querySelectorAll(\".saved-view-results .view-thread-open\").length,loadMore:document.querySelector(\".saved-view-results .view-continuation button\").textContent}})"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

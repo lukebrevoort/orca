@@ -1,0 +1,43 @@
+[
+  [
+    "network",
+    "unroute",
+    "**/v1/preferences?include=first_view_guidance"
+  ],
+  [
+    "click",
+    ".first-view-help .first-view-guidance > button"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".first-view-help .first-view-starts\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "include=first_view_guidance"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/review/fail-next-preference\",{method:\"POST\"}).then(r=>r.json())"
+  ],
+  [
+    "click",
+    ".first-view-help footer button:first-of-type"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".first-view-save-state button\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

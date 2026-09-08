@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-09-07T12:26:06.414494+00:00",
+  "source": "Read-only sibling f037 process/file diagnosis; no browser command by reviewer",
+  "classification": "Browser process replacement inside persistent daemon supported for third boundary; cause unknown",
+  "observations": {
+    "daemonPid": 46822,
+    "daemonStartedAt": "2026-09-07T10:16:59Z",
+    "chromePid": 78860,
+    "chromeStartedAt": "2026-09-07T12:05:29Z",
+    "lastValidDraft": "2026-09-07T12:04:28.567Z",
+    "thirdBlank": "2026-09-07T12:07:23.003Z",
+    "pinned": true,
+    "agentBrowserVersion": "0.34.0"
+  },
+  "limits": [
+    "Later reused lifecycle and unchanged launchHash do not establish process continuity",
+    "No matching crash-report filenames found by reviewer; absence does not exclude crash or kill",
+    "No immediate pre-viewport identity in historical failure, so no command causality established",
+    "Pin prevents target fallback but does not preserve React state across process/document loss"
+  ],
+  "artifacts": [
+    "lifetime3-process-boundary.txt",
+    "lifetime3-third-blank-boundary.json",
+    "lifetime3-third-blank-tabs.json",
+    "black-1024-cancel-hover-replacement-raw.json"
+  ],
+  "nextObservation": "lifetime3-planned-census-viewport.json",
+  "plannedViewportOutcome": "Observed planned1024x768\u21921440x900 preserved daemon/Chrome starts, target3687BAFD9818E5C0C8E84E5D4DFE47AD, URL/timeOrigin1788782901619.2, draft and8census. Rules out unconditional replacement for this call only, not intermittent cause."
+}

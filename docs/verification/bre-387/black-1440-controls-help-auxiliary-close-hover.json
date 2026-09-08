@@ -1,0 +1,111 @@
+{
+  "at": "2026-09-07T13:07:35.537Z",
+  "scenario": "black-1440-controls-help-auxiliary-close-hover",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(23, 23, 23)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "first-view-help-close",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(36, 36, 36)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "first-view-help",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "auto",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer first-view-help-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": false,
+      "focusVisible": false,
+      "hit": true,
+      "hover": true,
+      "label": "Close Getting started",
+      "pressed": null,
+      "rect": {
+        "bottom": 328.203125,
+        "height": 41,
+        "left": 1013.546875,
+        "right": 1049,
+        "top": 287.203125,
+        "width": 35.453125,
+        "x": 1013.546875,
+        "y": 287.203125
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "viewport": [
+    1440,
+    900
+  ],
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:33:16.746103+00:00",
+  "completedAt": "2026-09-07T13:34:21.257120+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-external-rejected-setup-commands.json",
+  "raw": "lifetime3-external-rejected-setup-raw.json",
+  "stderr": "lifetime3-external-rejected-setup-stderr.txt",
+  "parsedRecords": 2
+}

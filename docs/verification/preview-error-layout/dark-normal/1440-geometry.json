@@ -1,0 +1,218 @@
+{
+  "first": {
+    "applicable": true,
+    "at": "2026-09-07T15:23:42.230Z",
+    "footer": {
+      "clientWidth": 1034,
+      "gridTemplateColumns": "493px 493px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "normal",
+      "rect": {
+        "bottom": 483.1875,
+        "height": 66,
+        "left": 203,
+        "right": 1237,
+        "top": 417.1875,
+        "width": 1034
+      },
+      "scrollWidth": 1034,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "preview": {
+      "clientWidth": 493,
+      "gridTemplateColumns": "493px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 471.1875,
+        "height": 41,
+        "left": 221,
+        "right": 714,
+        "top": 430.1875,
+        "width": 493
+      },
+      "scrollWidth": 493,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "previewEscapes": false,
+    "previewLines": [
+      {
+        "bottom": 441.1875,
+        "height": 10,
+        "left": 221,
+        "right": 342.953125,
+        "top": 431.1875,
+        "width": 121.953125
+      },
+      {
+        "bottom": 458.1875,
+        "height": 13,
+        "left": 221,
+        "right": 423.46875,
+        "top": 445.1875,
+        "width": 202.46875
+      },
+      {
+        "bottom": 471.1875,
+        "height": 10,
+        "left": 221,
+        "right": 378.125,
+        "top": 461.1875,
+        "width": 157.125
+      }
+    ],
+    "red": false,
+    "retry": null,
+    "saveDisabled": false,
+    "textOverlap": false,
+    "theme": "dark",
+    "transition": null,
+    "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+    "validation": {
+      "clientWidth": 493,
+      "gridTemplateColumns": "none",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 456.6875,
+        "height": 12,
+        "left": 726,
+        "right": 1219,
+        "top": 444.6875,
+        "width": 493
+      },
+      "scrollWidth": 493,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "validationEscapes": false,
+    "validationLines": [
+      {
+        "bottom": 456.6875,
+        "height": 12,
+        "left": 993.109375,
+        "right": 1219,
+        "top": 444.6875,
+        "width": 225.890625
+      }
+    ],
+    "validationText": "Preview is current. Ready to save this perspective.",
+    "viewport": [
+      1440,
+      900
+    ]
+  },
+  "second": {
+    "applicable": true,
+    "at": "2026-09-07T15:23:42.841Z",
+    "footer": {
+      "clientWidth": 1034,
+      "gridTemplateColumns": "493px 493px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "normal",
+      "rect": {
+        "bottom": 483.1875,
+        "height": 66,
+        "left": 203,
+        "right": 1237,
+        "top": 417.1875,
+        "width": 1034
+      },
+      "scrollWidth": 1034,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "preview": {
+      "clientWidth": 493,
+      "gridTemplateColumns": "493px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 471.1875,
+        "height": 41,
+        "left": 221,
+        "right": 714,
+        "top": 430.1875,
+        "width": 493
+      },
+      "scrollWidth": 493,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "previewEscapes": false,
+    "previewLines": [
+      {
+        "bottom": 441.1875,
+        "height": 10,
+        "left": 221,
+        "right": 342.953125,
+        "top": 431.1875,
+        "width": 121.953125
+      },
+      {
+        "bottom": 458.1875,
+        "height": 13,
+        "left": 221,
+        "right": 423.46875,
+        "top": 445.1875,
+        "width": 202.46875
+      },
+      {
+        "bottom": 471.1875,
+        "height": 10,
+        "left": 221,
+        "right": 378.125,
+        "top": 461.1875,
+        "width": 157.125
+      }
+    ],
+    "red": false,
+    "retry": null,
+    "saveDisabled": false,
+    "textOverlap": false,
+    "theme": "dark",
+    "transition": null,
+    "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+    "validation": {
+      "clientWidth": 493,
+      "gridTemplateColumns": "none",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 456.6875,
+        "height": 12,
+        "left": 726,
+        "right": 1219,
+        "top": 444.6875,
+        "width": 493
+      },
+      "scrollWidth": 493,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "validationEscapes": false,
+    "validationLines": [
+      {
+        "bottom": 456.6875,
+        "height": 12,
+        "left": 993.109375,
+        "right": 1219,
+        "top": 444.6875,
+        "width": 225.890625
+      }
+    ],
+    "validationText": "Preview is current. Ready to save this perspective.",
+    "viewport": [
+      1440,
+      900
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "at": "2026-09-07T14:52:01.639389+00:00",
+  "capturesChecked": 491,
+  "mismatches": [],
+  "runtime": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "harness": "a63d6da1182e485a2c382554914398a579ccb385",
+  "scope": "Indexed capture bytes only, not blanket acceptance."
+}

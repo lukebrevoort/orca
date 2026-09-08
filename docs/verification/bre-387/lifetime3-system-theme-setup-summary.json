@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:32:24.449266+00:00",
+  "completedAt": "2026-09-07T13:32:29.959484+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-system-theme-setup-commands.json",
+  "raw": "lifetime3-system-theme-setup-raw.json",
+  "stderr": "lifetime3-system-theme-setup-stderr.txt",
+  "parsedRecords": 2
+}

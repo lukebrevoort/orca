@@ -1,0 +1,299 @@
+{
+  "startedAt": "2026-09-07T16:27:53.778321+00:00",
+  "harnessSha": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+  "runtimeSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "scope": "Direct API harness controls, not browser or provider proof",
+  "records": [
+    {
+      "name": "setup",
+      "at": "2026-09-07T16:27:55.747769+00:00",
+      "firstStatus": 200,
+      "firstRows": 100,
+      "requestPath": "/v1/inbox?limit=100&classification=all&view=all&query=Project&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0",
+      "initialProbeBoundary": "Earlier directAPI login followed302 to absent APIroot404; corrected SPAlogin before any arm"
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.060275+00:00",
+      "path": "/v1/inbox?cursor=",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.066710+00:00",
+      "path": "/v1/inbox?cursor=a&%63ursor=b",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.104452+00:00",
+      "path": "/v1/inbox?cursor=%ZZ",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.205374+00:00",
+      "path": "/v1/inbox?cursor=%FF",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.235317+00:00",
+      "path": "/v1/inbox?cursor=a",
+      "context": "saved",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.254489+00:00",
+      "path": "/v1/preferences?cursor=a",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "reject identity",
+      "at": "2026-09-07T16:27:56.262843+00:00",
+      "path": "/v1/inbox?cursor=a#fragment",
+      "context": "search",
+      "status": 400
+    },
+    {
+      "name": "symmetric mutual exclusion",
+      "at": "2026-09-07T16:27:56.299351+00:00",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent continuation arm",
+      "at": "2026-09-07T16:27:56.398703+00:00",
+      "loserStatus": 409,
+      "retained": {
+        "armed": true,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "cc8e5912-f77f-4345-9eef-a98dc2207c8d",
+          "armedAt": "2026-09-07T16:27:56.317Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?accountId=work&classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET"
+        }
+      }
+    },
+    {
+      "name": "preview wins delayed continuation body",
+      "at": "2026-09-07T16:27:56.490230+00:00",
+      "loserStatus": 409
+    },
+    {
+      "name": "unmatched preserves arm",
+      "at": "2026-09-07T16:27:56.733267+00:00",
+      "method": "GET",
+      "path": "/v1/inbox?limit=100&classification=all&view=all&query=Other&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0",
+      "status": 400
+    },
+    {
+      "name": "unmatched preserves arm",
+      "at": "2026-09-07T16:27:57.034353+00:00",
+      "method": "GET",
+      "path": "/v1/inbox?limit=100&classification=all&view=all&query=Project&cursor=xeyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0",
+      "status": 400
+    },
+    {
+      "name": "unmatched preserves arm",
+      "at": "2026-09-07T16:27:58.124138+00:00",
+      "method": "GET",
+      "path": "/v1/organization/views/other/results?limit=25&cursor=x",
+      "status": 404
+    },
+    {
+      "name": "unmatched preserves arm",
+      "at": "2026-09-07T16:27:58.196181+00:00",
+      "method": "POST",
+      "path": "/v1/inbox?limit=100&classification=all&view=all&query=Project&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0",
+      "status": 404
+    },
+    {
+      "name": "unconsumed idempotent release",
+      "at": "2026-09-07T16:27:58.218602+00:00",
+      "receipt": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "f9aa3f84-5314-4aa0-9780-b3fc8eaf5977",
+          "armedAt": "2026-09-07T16:27:56.505Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "releasedAt": "2026-09-07T16:27:58.211Z",
+          "releaseReason": "explicit"
+        }
+      }
+    },
+    {
+      "name": "matched held original response",
+      "at": "2026-09-07T16:27:58.874890+00:00",
+      "pending": {
+        "armed": false,
+        "held": true,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "5821e17f-df51-439a-ac46-17a7527d23c1",
+          "armedAt": "2026-09-07T16:27:58.275Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "heldAt": "2026-09-07T16:27:58.341Z",
+          "responseStatus": 200,
+          "responseBodySha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e"
+        }
+      }
+    },
+    {
+      "name": "explicit release identical response",
+      "at": "2026-09-07T16:27:58.902150+00:00",
+      "status": 200,
+      "sha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e",
+      "receipt": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "5821e17f-df51-439a-ac46-17a7527d23c1",
+          "armedAt": "2026-09-07T16:27:58.275Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "heldAt": "2026-09-07T16:27:58.341Z",
+          "responseStatus": 200,
+          "responseBodySha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e",
+          "releasedAt": "2026-09-07T16:27:58.894Z",
+          "releaseReason": "explicit"
+        }
+      }
+    },
+    {
+      "name": "direct TCP abort",
+      "at": "2026-09-07T16:27:59.040826+00:00",
+      "receipt": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "084a3dcb-2424-4ce1-8bde-2649cc3c77c1",
+          "armedAt": "2026-09-07T16:27:58.913Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "heldAt": "2026-09-07T16:27:58.917Z",
+          "responseStatus": 200,
+          "responseBodySha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e",
+          "releasedAt": "2026-09-07T16:27:59.030Z",
+          "releaseReason": "abort"
+        }
+      }
+    },
+    {
+      "name": "actual configured held timeout started",
+      "at": "2026-09-07T16:27:59.453435+00:00",
+      "pending": {
+        "armed": false,
+        "held": true,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "4c51bdec-45d7-4b7a-85ab-5184e0687460",
+          "armedAt": "2026-09-07T16:27:59.044Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "heldAt": "2026-09-07T16:27:59.047Z",
+          "responseStatus": 200,
+          "responseBodySha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e"
+        }
+      }
+    },
+    {
+      "name": "actual240s held timeout",
+      "at": "2026-09-07T16:31:59.166782+00:00",
+      "elapsedSeconds": 240.08754037501058,
+      "status": 200,
+      "sha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e",
+      "receipt": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "4c51bdec-45d7-4b7a-85ab-5184e0687460",
+          "armedAt": "2026-09-07T16:27:59.044Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "heldAt": "2026-09-07T16:27:59.047Z",
+          "responseStatus": 200,
+          "responseBodySha256": "9c81f090c325b325a6264012254dd0e72787a433cb4a97976bb73fe00338fc4e",
+          "releasedAt": "2026-09-07T16:31:59.079Z",
+          "releaseReason": "timeout"
+        }
+      }
+    },
+    {
+      "name": "actual configured unconsumed arm timeout started",
+      "at": "2026-09-07T16:31:59.196737+00:00",
+      "pending": {
+        "armed": true,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "9dc94069-df30-495f-9dc1-93f0a41d3d78",
+          "armedAt": "2026-09-07T16:31:59.190Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET"
+        }
+      }
+    },
+    {
+      "name": "actual240s unconsumed arm timeout",
+      "at": "2026-09-07T16:35:59.596393+00:00",
+      "elapsedSeconds": 240.38722979201702,
+      "receipt": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "9dc94069-df30-495f-9dc1-93f0a41d3d78",
+          "armedAt": "2026-09-07T16:31:59.190Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "releasedAt": "2026-09-07T16:35:59.225Z",
+          "releaseReason": "arm-timeout"
+        }
+      }
+    },
+    {
+      "name": "final controls clear",
+      "at": "2026-09-07T16:35:59.606436+00:00",
+      "pending": {
+        "armed": false,
+        "held": false,
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "9dc94069-df30-495f-9dc1-93f0a41d3d78",
+          "armedAt": "2026-09-07T16:31:59.190Z",
+          "context": "search",
+          "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+          "method": "GET",
+          "releasedAt": "2026-09-07T16:35:59.225Z",
+          "releaseReason": "arm-timeout"
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-09-07T16:35:59.604825+00:00",
+  "status": "PASS"
+}

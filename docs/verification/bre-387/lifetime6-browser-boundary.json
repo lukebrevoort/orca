@@ -1,0 +1,20 @@
+{
+  "at": "2026-09-07T16:59:10.320Z",
+  "evalExec": 31667,
+  "evalExit": 0,
+  "url": "about:blank",
+  "ready": "complete",
+  "rows": 0,
+  "timeOrigin": 1788800290111.5,
+  "captureExec": 8013,
+  "captureExit": 1,
+  "failedCommand": "scrollintoview .saved-view-results .view-continuation button",
+  "error": "OS35 after5retries",
+  "holdReceipt": "lifetime6-saved-after-os35.json",
+  "holdEnd": "abort, not timeout",
+  "daemonPid": 66714,
+  "formerChromePid": 66715,
+  "currentChromePid": 72070,
+  "currentChromeStartedLocal": "2026-09-07 10:57:22 America/Denver",
+  "interpretation": "Browser process replacement inside existing daemon and about:blank document loss; cause unknown. No Orca defect attribution, no manual restart."
+}

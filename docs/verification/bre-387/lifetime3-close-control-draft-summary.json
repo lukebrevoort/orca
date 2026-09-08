@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:40:54.433466+00:00",
+  "completedAt": "2026-09-07T12:41:13.119291+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-close-control-draft-commands.json",
+  "raw": "lifetime3-close-control-draft-raw.json",
+  "stderr": "lifetime3-close-control-draft-stderr.txt",
+  "parsedRecords": 0
+}

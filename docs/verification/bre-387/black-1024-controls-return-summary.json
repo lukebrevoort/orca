@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:35:22.613067+00:00",
+  "completedAt": "2026-09-07T13:35:57.995794+00:00",
+  "exitCode": 1,
+  "commands": "black-1024-controls-return-commands.json",
+  "raw": "black-1024-controls-return-raw.json",
+  "stderr": "black-1024-controls-return-stderr.txt",
+  "parsedRecords": 3
+}

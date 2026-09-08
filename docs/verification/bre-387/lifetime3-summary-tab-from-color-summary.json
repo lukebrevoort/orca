@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:51:45.944480+00:00",
+  "completedAt": "2026-09-07T13:51:48.220430+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-summary-tab-from-color-commands.json",
+  "raw": "lifetime3-summary-tab-from-color-raw.json",
+  "stderr": "lifetime3-summary-tab-from-color-stderr.txt",
+  "parsedRecords": 0
+}

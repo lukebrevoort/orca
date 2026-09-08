@@ -1,0 +1,32 @@
+2026-09-07T04:00:51.777410+00:00 COMMAND ['press', 'Meta+k']
+✓ Done
+2026-09-07T04:00:53.393211+00:00 COMMAND ['find', 'role', 'textbox', 'fill', '--name', 'Search stored mail', '--exact', '']
+✓ Done
+2026-09-07T04:00:55.562773+00:00 COMMAND ['press', 'P']
+✓ Done
+2026-09-07T04:00:57.791184+00:00 COMMAND ['press', 'r']
+✓ Done
+2026-09-07T04:01:00.709049+00:00 COMMAND ['press', 'o']
+✓ Done
+2026-09-07T04:01:02.839394+00:00 COMMAND ['press', 'j']
+✓ Done
+2026-09-07T04:01:08.775757+00:00 COMMAND ['press', 'e']
+✓ Done
+2026-09-07T04:01:12.767410+00:00 COMMAND ['press', 'c']
+✓ Done
+2026-09-07T04:01:16.430412+00:00 COMMAND ['press', 't']
+✓ Done
+2026-09-07T04:01:20.806775+00:00 COMMAND ['press', 'End']
+✓ Done
+2026-09-07T04:01:24.065126+00:00 COMMAND ['press', 'x']
+✓ Done
+2026-09-07T04:01:28.862385+00:00 COMMAND ['press', 'Meta+z']
+✓ Done
+2026-09-07T04:01:32.447640+00:00 COMMAND ['eval', '({value:document.activeElement.value,label:document.activeElement.getAttribute("aria-label"),platform:navigator.platform})']
+{
+  "label": "Search stored mail",
+  "platform": "MacIntel",
+  "value": "Projectx"
+}
+2026-09-07T04:01:35.290089+00:00 COMMAND ['press', 'Escape']
+✓ Done

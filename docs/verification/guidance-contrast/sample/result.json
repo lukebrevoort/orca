@@ -1,0 +1,15 @@
+{
+  "status": "FAIL",
+  "failures": [
+    "light-1024-default: 0: text contrast 4.49048326062504 < 4.5",
+    "light-1024-default: 2: text contrast 4.49048326062504 < 4.5",
+    "light-1024-default: 3: text contrast 4.49048326062504 < 4.5",
+    "light-1440-default: 0: text contrast 4.49048326062504 < 4.5",
+    "light-1440-default: 2: text contrast 4.49048326062504 < 4.5",
+    "light-1440-default: 3: text contrast 4.49048326062504 < 4.5"
+  ],
+  "session": "guidance-contrast-f037",
+  "sample": true,
+  "minimumContrast": 4.5,
+  "method": "WCAG sRGB computed solid-background compositing, unrounded threshold; real pointer/keyboard pseudo-states"
+}

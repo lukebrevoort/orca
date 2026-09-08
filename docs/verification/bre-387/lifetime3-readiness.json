@@ -1,0 +1,35 @@
+{
+  "at": "2026-09-07T10:16:57.897359+00:00",
+  "checks": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/login",
+      "status": 302,
+      "location": "/"
+    },
+    {
+      "url": "http://127.0.0.1:5187/",
+      "status": 200,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-B72Z04Ct.css",
+      "status": 200,
+      "location": null
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-amMOSRSH.js",
+      "status": 200,
+      "location": null
+    }
+  ]
+}

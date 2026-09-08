@@ -1,0 +1,86 @@
+[
+  {
+    "phase": "before",
+    "at": "2026-09-07T12:25:47.331407+00:00",
+    "daemon": 46822,
+    "processes": [
+      "46822     1 Mon Sep  7 04:16:59 2026     /opt/homebrew/Cellar/agent-browser/0.34.0/libexec/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64",
+      "51132 46822 Mon Sep  7 04:29:43 2026     <defunct>",
+      "72025 46822 Mon Sep  7 05:42:28 2026     <defunct>",
+      "72190 46822 Mon Sep  7 05:43:29 2026     <defunct>",
+      "78860 46822 Mon Sep  7 06:05:29 2026     /Users/luke/.agent-browser/browsers/chrome-152.0.7977.54/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+    ]
+  },
+  {
+    "phase": "before-tabs",
+    "at": "2026-09-07T12:25:47.386552+00:00",
+    "command": [
+      "tab",
+      "list",
+      "--json"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_configured\"},\"tabs\":[{\"active\":true,\"label\":null,\"tabId\":\"t1\",\"targetId\":\"3687BAFD9818E5C0C8E84E5D4DFE47AD\",\"title\":\"Orca\",\"type\":\"page\",\"url\":\"http://127.0.0.1:5187/?destination=organization\"}]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "before-page",
+    "at": "2026-09-07T12:25:53.176705+00:00",
+    "command": [
+      "eval",
+      "({at:new Date().toISOString(),url:location.href,timeOrigin:performance.timeOrigin,ready:document.readyState,draft:!!document.querySelector(\".view-composer\"),census:document.querySelectorAll(\".view-sender-correction label input\").length,viewport:[innerWidth,innerHeight]})"
+    ],
+    "exitCode": 0,
+    "stdout": "{\n  \"at\": \"2026-09-07T12:26:01.154Z\",\n  \"census\": 8,\n  \"draft\": true,\n  \"ready\": \"complete\",\n  \"timeOrigin\": 1788782901619.2,\n  \"url\": \"http://127.0.0.1:5187/?destination=organization\",\n  \"viewport\": [\n    1024,\n    768\n  ]\n}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "planned-resize",
+    "at": "2026-09-07T12:26:02.156908+00:00",
+    "command": [
+      "set",
+      "viewport",
+      "1440",
+      "900",
+      "--json"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":900,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_configured\"},\"mobile\":false,\"width\":1440},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "after",
+    "at": "2026-09-07T12:26:16.662369+00:00",
+    "daemon": 46822,
+    "processes": [
+      "46822     1 Mon Sep  7 04:16:59 2026     /opt/homebrew/Cellar/agent-browser/0.34.0/libexec/lib/node_modules/agent-browser/bin/agent-browser-darwin-arm64",
+      "51132 46822 Mon Sep  7 04:29:43 2026     <defunct>",
+      "72025 46822 Mon Sep  7 05:42:28 2026     <defunct>",
+      "72190 46822 Mon Sep  7 05:43:29 2026     <defunct>",
+      "78860 46822 Mon Sep  7 06:05:29 2026     /Users/luke/.agent-browser/browsers/chrome-152.0.7977.54/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+    ]
+  },
+  {
+    "phase": "after-tabs",
+    "at": "2026-09-07T12:26:16.667087+00:00",
+    "command": [
+      "tab",
+      "list",
+      "--json"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_configured\"},\"tabs\":[{\"active\":true,\"label\":null,\"tabId\":\"t1\",\"targetId\":\"3687BAFD9818E5C0C8E84E5D4DFE47AD\",\"title\":\"Orca\",\"type\":\"page\",\"url\":\"http://127.0.0.1:5187/?destination=organization\"}]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "phase": "after-page",
+    "at": "2026-09-07T12:26:18.748196+00:00",
+    "command": [
+      "eval",
+      "({at:new Date().toISOString(),url:location.href,timeOrigin:performance.timeOrigin,ready:document.readyState,draft:!!document.querySelector(\".view-composer\"),census:document.querySelectorAll(\".view-sender-correction label input\").length,viewport:[innerWidth,innerHeight]})"
+    ],
+    "exitCode": 0,
+    "stdout": "{\n  \"at\": \"2026-09-07T12:26:21.616Z\",\n  \"census\": 8,\n  \"draft\": true,\n  \"ready\": \"complete\",\n  \"timeOrigin\": 1788782901619.2,\n  \"url\": \"http://127.0.0.1:5187/?destination=organization\",\n  \"viewport\": [\n    1440,\n    900\n  ]\n}\n",
+    "stderr": ""
+  }
+]

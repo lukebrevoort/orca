@@ -1,0 +1,46 @@
+[
+  [
+    "press",
+    "Escape"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\".first-view-help\")"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Edit definition",
+    "--exact"
+  ],
+  [
+    "wait",
+    "--fn",
+    "Boolean(document.querySelector(\".view-save\")) && !document.querySelector(\".view-save\").disabled"
+  ],
+  [
+    "eval",
+    "fetch(\"/v1/review/fail-next-commit\",{method:\"POST\"}).then(r=>r.json())"
+  ],
+  [
+    "scrollintoview",
+    ".view-composer h3"
+  ],
+  [
+    "click",
+    ".view-save"
+  ],
+  [
+    "wait",
+    "--text",
+    "Retry connection"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

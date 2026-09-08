@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:40:07.666151+00:00",
+  "completedAt": "2026-09-07T15:40:42.936962+00:00",
+  "exitCode": 0,
+  "commands": "lifetime5-remove-confirmation-setup-commands.json",
+  "raw": "lifetime5-remove-confirmation-setup-raw.json",
+  "stderr": "lifetime5-remove-confirmation-setup-stderr.txt",
+  "parsedRecords": 1
+}

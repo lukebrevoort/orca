@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-07T16:47:37.991753+00:00",
+  "armExec": 8206,
+  "armExit": 1,
+  "failure": "POST arm response timeout after20s; subsequent click40170 was started before authoritative arm terminal, excluded as sequencing-safe proof",
+  "clickExit": 0,
+  "control": {
+    "armed": false,
+    "held": false,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "9dc94069-df30-495f-9dc1-93f0a41d3d78",
+      "armedAt": "2026-09-07T16:31:59.190Z",
+      "context": "search",
+      "requestIdentity": "/v1/inbox?classification=all&cursor=eyJ2ZXJzaW9uIjoxLCJhY2NvdW50SWQiOiJ3b3JrIiwiaWQiOiJtZXNzYWdlLXdvcmstOTUiLCJhdHRlbnRpb25SYW5rIjoyLCJyZWNlaXZlZEF0IjoxNzg4Njk1OTA1MDAwLCJ2aWV3IjoiYWxsIiwiY2xhc3NpZmljYXRpb24iOiJhbGwiLCJhY2NvdW50SWRzIjpbInBlcnNvbmFsIiwid29yayJdLCJzY29wZSI6IntcInF1ZXJ5XCI6XCJQcm9qZWN0XCIsXCJzZW5kZXJcIjpudWxsLFwiY29sbGVjdGlvbklkXCI6bnVsbCxcInJlY2VpdmVkQWZ0ZXJcIjpudWxsLFwicmVjZWl2ZWRCZWZvcmVcIjpudWxsfSIsInJldmlzaW9uIjoibWFpbGJveC12Mjo0NzhiOTY5YzljNzgwYTUyYjZlOWQ4ZjVjNGQ0NmJlNjI3OGU4NjNmYTBiZjk2YzNmYzRlMjA0ZDZmOWZkOWZiIn0&limit=100&query=Project&view=all",
+      "method": "GET",
+      "releasedAt": "2026-09-07T16:35:59.225Z",
+      "releaseReason": "arm-timeout"
+    }
+  }
+}

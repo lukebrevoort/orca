@@ -1,0 +1,18 @@
+$ bun --filter '*' build
+@orca/shared build: Exited with code 0
+@orca/api build: Exited with code 0
+@orca/web build: vite v7.3.6 building client environment for production...
+@orca/web build: transforming...
+@orca/web build: ✓ 170 modules transformed.
+@orca/web build: rendering chunks...
+@orca/web build: computing gzip size...
+@orca/web build: dist/index.html                   1.44 kB │ gzip:   0.67 kB
+@orca/web build: dist/assets/index-DeNrCfsB.css  368.72 kB │ gzip:  56.03 kB
+@orca/web build: dist/assets/index-DD9Vz4rP.js   894.71 kB │ gzip: 248.96 kB
+@orca/web build: ✓ built in 2m 37s
+@orca/web build: 
+@orca/web build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@orca/web build: - Using dynamic import() to code-split the application
+@orca/web build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+@orca/web build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@orca/web build: Exited with code 0

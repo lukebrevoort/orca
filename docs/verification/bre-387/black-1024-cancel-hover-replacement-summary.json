@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:05:12.252037+00:00",
+  "completedAt": "2026-09-07T12:06:23.592614+00:00",
+  "exitCode": 1,
+  "commands": "black-1024-cancel-hover-replacement-commands.json",
+  "raw": "black-1024-cancel-hover-replacement-raw.json",
+  "stderr": "black-1024-cancel-hover-replacement-stderr.txt",
+  "parsedRecords": 0
+}

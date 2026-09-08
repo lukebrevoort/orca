@@ -1,0 +1,146 @@
+{
+  "at": "2026-09-07T10:55:44.535Z",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(232, 241, 236)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "rgb(8, 116, 97) 3px 0px 0px 0px inset",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 0px",
+          "overflow": "visible",
+          "tag": "A"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34) rgb(16, 37, 34) rgb(210, 221, 215)",
+          "borderWidth": "0px 0px 1px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "LI"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "global-mail-result-list",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "OL"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(210, 221, 215) rgb(16, 37, 34) rgb(16, 37, 34)",
+          "borderWidth": "1px 0px 0px",
+          "boxShadow": "none",
+          "class": "global-mail-search-results",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "auto",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(14, 35, 29, 0.18) 0px 28px 84px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Juniper StudioSep 6Project correction 0Seven distinct matching senders beyond one preview page.Likely human",
+      "pressed": null,
+      "rect": {
+        "bottom": 335,
+        "height": 68,
+        "left": 341,
+        "right": 1099,
+        "top": 267,
+        "width": 758,
+        "x": 341,
+        "y": 267
+      }
+    }
+  ],
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+  "viewport": [
+    1440,
+    900
+  ],
+  "scenario": "light-1440-controls-search-keyboard-only-result",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

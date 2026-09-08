@@ -1,0 +1,35 @@
+{
+  "at": "2026-09-07T14:27:46.116510+00:00",
+  "probes": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "location": null,
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "location": null,
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/login",
+      "status": 302,
+      "location": "/",
+      "bytes": 0
+    },
+    {
+      "url": "http://127.0.0.1:5187/",
+      "status": 200,
+      "location": null,
+      "bytes": 1437
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-BpsAWGzA.js",
+      "status": 200,
+      "location": null,
+      "bytes": 894705
+    }
+  ]
+}

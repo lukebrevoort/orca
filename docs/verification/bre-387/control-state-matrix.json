@@ -1,0 +1,191 @@
+{
+  "status": "Partial observed controls; F01\u2013F04 bounded fixes verified. Remaining finite controls/native/human gates retained.",
+  "source": "visual-observations.json",
+  "rows": [
+    {
+      "family": "Authoring Save hover and Tab focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-selected-authoring-hover",
+            "light-1440-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-selected-authoring-hover",
+            "light-1024-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-selected-authoring-account-pressed-hover",
+            "black-1440-fixed-selected-authoring-account-pressed-focus",
+            "black-1440-fixed-selected-authoring-hover",
+            "black-1440-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-selected-authoring-account-pressed-hover",
+            "black-1024-fixed-selected-authoring-account-pressed-focus",
+            "black-1024-fixed-selected-authoring-hover",
+            "black-1024-fixed-selected-authoring-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        }
+      ]
+    },
+    {
+      "family": "Pressed account hover and focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-selected-account-controls-pressed-hover",
+            "light-1440-fixed-selected-account-controls-pressed-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-selected-account-controls-pressed-hover",
+            "light-1024-fixed-selected-account-controls-pressed-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-selected-authoring-account-pressed-hover",
+            "black-1440-fixed-selected-authoring-account-pressed-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-selected-authoring-account-pressed-hover",
+            "black-1024-fixed-selected-authoring-account-pressed-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        }
+      ]
+    },
+    {
+      "family": "Organization selected View hover and reorder focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-organization",
+            "light-1440-fixed-organization-selected-hover",
+            "light-1440-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-organization",
+            "light-1024-fixed-organization-selected-hover",
+            "light-1024-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-organization",
+            "black-1440-fixed-organization-selected-hover",
+            "black-1440-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-organization",
+            "black-1024-fixed-organization-selected-hover",
+            "black-1024-fixed-organization-order-keyboard-focus"
+          ],
+          "status": "Historical observed state; current target coverage in remaining-control-reconciliation.json"
+        }
+      ]
+    },
+    {
+      "family": "Getting started start hover and focus",
+      "cells": [
+        {
+          "theme": "Light",
+          "width": 1440,
+          "observations": [
+            "light-1440-fixed-guidance-controls-hover",
+            "light-1440-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
+        },
+        {
+          "theme": "Light",
+          "width": 1024,
+          "observations": [
+            "light-1024-fixed-guidance-controls-hover",
+            "light-1024-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1440,
+          "observations": [
+            "black-1440-fixed-guidance-controls-hover",
+            "black-1440-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
+        },
+        {
+          "theme": "Orca Black",
+          "width": 1024,
+          "observations": [
+            "black-1024-fixed-guidance-controls-hover",
+            "black-1024-fixed-guidance-controls-keyboard-focus"
+          ],
+          "status": "Historical pre-F02 frame; superseded for fixed helper contrast by ce1bc03 independent guidance-contrast/fix-guide.html evidence"
+        }
+      ]
+    }
+  ],
+  "remaining": [
+    "Concrete unclosed target states in remaining-control-reconciliation.json; do not infer coverage from family overview images",
+    "Native Mac input Undo needs direct manual verification; handler-free control reproduces automation limitation",
+    "Human protocol unapproved and zero real sessions",
+    "Final immutable evidence integrity and exact-head CI pending"
+  ],
+  "guidanceEscape": "All four completed: helpOpen=false and active text Getting started; see lifetime2-actions.jsonl and logs/guidance-controls-remaining.txt.",
+  "currentReconciliation": "remaining-control-reconciliation.html",
+  "currentReconciliationData": "remaining-control-reconciliation.json",
+  "fixes": {
+    "F01": "../selection-header/fix-guide.html",
+    "F02": "../guidance-contrast/fix-guide.html"
+  }
+}

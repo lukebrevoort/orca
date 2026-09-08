@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:33:21.875468+00:00",
+  "completedAt": "2026-09-07T14:33:38.525691+00:00",
+  "exitCode": 0,
+  "commands": "lifetime4-system-setup-commands.json",
+  "raw": "lifetime4-system-setup-raw.json",
+  "stderr": "lifetime4-system-setup-stderr.txt",
+  "parsedRecords": 2
+}

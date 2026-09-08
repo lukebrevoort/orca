@@ -1,0 +1,9 @@
+{
+  "active": "<button type=\"button\">Retry saving choice</button>",
+  "at": "2026-09-07T14:45:13.380Z",
+  "body": "orca\nPERSONAL\nCompose\nC\n\nANCHORS\n\nInbox\n100\nDrafts\n0\nMY SPACES\nMANAGE\nFocus\n0\nNotify\n0\nQuiet\n0\nLater\n0\nAll Mail\n\nWORKSPACE\n\nOrganization\nSettings\nOrca reviewer\n2 accounts · attention\n›\n⌕\n⌘ K\nOrganization\nAttention\nLight\nOrganization\n\nSee where messages go, then tune the rules behind each decision.\n\nOrganization controls available\nAuthority is current · provider mail stays untouched\nOverview\nViews\nLanes\nRules\nGetting started\n\nHidden for this visit. Could not save your choice across devices. Retry saving choice\n\nWORKSPACE QUERIES · UNLIMITED\nLive Views\n\nOne Thread can appear in every useful perspective while keeping one primary Lane.\n\n+ New View\nLive from current Thread organization\nNo membership list is stored.\n0 ACCOUNTS · 0 PREDICATE FAMILIES\nChoose a View\n\nResults re-evaluate whenever the underlying Thread changes.\n\nEdit definition\nRemove View\n\nNo saved Views yet. Build one when Organization change authority is available.",
+  "retry": "<button type=\"button\">Retry saving choice</button>",
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/organization?destination=organization"
+}
+

@@ -1,0 +1,183 @@
+{
+  "at": "2026-09-07T13:19:39.822Z",
+  "scenario": "light-1024-controls-unsupported-replace-focus",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(210, 221, 215)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-action",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(8, 116, 97) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "color(srgb 0.787294 0.736392 0.712) rgb(16, 37, 34) rgb(16, 37, 34)",
+          "borderWidth": "1px 0px 0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "LI"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "UL"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "color(srgb 0.744471 0.582431 0.55702)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-unsupported-clauses",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(16, 37, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "view-builder-fieldset",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "FIELDSET"
+        },
+        {
+          "background": "rgb(246, 250, 247)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "view-composer",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "FORM"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(210, 221, 215)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(18, 40, 34, 0.07) 0px 20px 60px 0px",
+          "class": "views-workspace views-workspace-external-authoring",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(185, 200, 192)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "selected-view-authoring search-view-authoring",
+          "color": "rgb(16, 37, 34)",
+          "opacity": "1",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer selected-view-authoring-layer",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "auto",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Replace with subject contains \u201cProject\u201d",
+      "pressed": null,
+      "rect": {
+        "bottom": 548.1875,
+        "height": 36,
+        "left": 619.328125,
+        "right": 830.53125,
+        "top": 512.1875,
+        "width": 211.203125,
+        "x": 619.328125,
+        "y": 512.1875
+      },
+      "value": ""
+    }
+  ],
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "viewport": [
+    1024,
+    768
+  ],
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

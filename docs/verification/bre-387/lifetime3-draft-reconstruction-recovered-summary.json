@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:00:38.045946+00:00",
+  "completedAt": "2026-09-07T12:00:42.399836+00:00",
+  "exitCode": 1,
+  "commands": "lifetime3-draft-reconstruction-recovered-commands.json",
+  "raw": "lifetime3-draft-reconstruction-recovered-raw.json",
+  "stderr": "lifetime3-draft-reconstruction-recovered-stderr.txt",
+  "parsedRecords": 0
+}

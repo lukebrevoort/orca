@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:13:15.232683+00:00",
+  "completedAt": "2026-09-07T12:13:27.021396+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-census-open-commands.json",
+  "raw": "lifetime3-census-open-raw.json",
+  "stderr": "lifetime3-census-open-stderr.txt",
+  "parsedRecords": 1
+}

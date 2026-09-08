@@ -1,0 +1,15 @@
+{
+  "status": "FAIL",
+  "failures": [
+    "current-1-hover: 0: text contrast 4.49048326062504 < 4.5",
+    "current-1-active: 0: text contrast 4.49048326062504 < 4.5",
+    "current-1-focus: 0: visible keyboard focus missing",
+    "current-2-hover: 1: text contrast 4.49048326062504 < 4.5",
+    "current-2-active: 1: text contrast 4.49048326062504 < 4.5",
+    "current-2-focus: 1: visible keyboard focus missing"
+  ],
+  "session": "bre387-fixed-8d709a8",
+  "sample": false,
+  "minimumContrast": 4.5,
+  "method": "WCAG sRGB computed solid-background compositing, unrounded threshold; real pointer/keyboard pseudo-states"
+}

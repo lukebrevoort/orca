@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/check-browser.py", line 35, in <module>
+    assert forward['tune'] and forward['inside'],forward
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'url': 'http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F', 'theme': 'light', 'viewport': [1024, 768], 'active': '<button class="view-action" type="button">Replace with subject contains “Project”</button>', 'summary': False, 'color': False, 'tune': False, 'inside': True, 'focusVisible': True, 'open': True}

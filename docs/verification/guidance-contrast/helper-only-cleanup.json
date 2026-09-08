@@ -1,0 +1,20 @@
+{
+  "at": "2026-09-07T09:35:09.730978+00:00",
+  "browser": {
+    "session": "guidance-contrast-f037",
+    "closeExec": 56769,
+    "exitCode": 0
+  },
+  "server": {
+    "exec": 51781,
+    "pid": 20028,
+    "signal": "SIGINT",
+    "exitCode": 0
+  },
+  "scratchRemoved": true,
+  "ports": {
+    "exitCode": 1,
+    "output": ""
+  },
+  "priorAssetsBackup": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/f02-helper-only-dist-bsl5uu70/dist"
+}

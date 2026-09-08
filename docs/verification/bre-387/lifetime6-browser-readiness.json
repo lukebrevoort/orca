@@ -1,0 +1,36 @@
+{
+  "at": "2026-09-07T16:36:48.516081+00:00",
+  "probes": [
+    {
+      "path": "/health",
+      "status": 200,
+      "location": null,
+      "bytes": 32
+    },
+    {
+      "path": "/v1/review/login",
+      "status": 302,
+      "location": "/",
+      "bytes": 0
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "location": null,
+      "bytes": 1437
+    },
+    {
+      "path": "/assets/index-DD9Vz4rP.js",
+      "status": 200,
+      "location": null,
+      "bytes": 894705
+    },
+    {
+      "path": "/assets/index-DeNrCfsB.css",
+      "status": 200,
+      "location": null,
+      "bytes": 368722
+    }
+  ],
+  "boundary": "No cookie/token headers retained; no browser started"
+}

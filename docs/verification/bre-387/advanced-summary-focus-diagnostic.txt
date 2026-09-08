@@ -1,0 +1,5 @@
+{
+  "active": "<button class=\"view-action\" type=\"button\">Cancel</button>",
+  "summary": "<details class=\"view-preserved-constraints\" open=\"\"><summary>Preserved constraints · 1</summary><ul><li>Human classifications · Likely human</li></ul></details>"
+}
+

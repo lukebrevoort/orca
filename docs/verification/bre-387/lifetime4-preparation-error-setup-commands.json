@@ -1,0 +1,37 @@
+[
+  [
+    "open",
+    "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".global-mail-save:not(:disabled)\")"
+  ],
+  [
+    "network",
+    "route",
+    "**/v1/organization/views/prepare",
+    "--body",
+    "{}"
+  ],
+  [
+    "click",
+    ".global-mail-save"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-preparation-error\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "/v1/organization/views/prepare"
+  ]
+]

@@ -1,0 +1,457 @@
+{
+  "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+  "timestamp": "2026-09-07T02:08:57.587272+00:00",
+  "probes": [
+    {
+      "url": "http://127.0.0.1:3087/health",
+      "status": 200,
+      "durationSeconds": 0.573,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "0a9947f68e71401d5880cbfb7d39948d6ce268c996f9aa820bfc6b1c3d30fe7b",
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/health",
+      "status": 200,
+      "durationSeconds": 0.144,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "0a9947f68e71401d5880cbfb7d39948d6ce268c996f9aa820bfc6b1c3d30fe7b",
+      "bytes": 32
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/login",
+      "status": 302,
+      "durationSeconds": 0.004,
+      "location": "/",
+      "sessionCookiePresent": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "url": "http://127.0.0.1:5187/",
+      "status": 200,
+      "durationSeconds": 0.015,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "1f1f154c2e09f7023b2d0dd9b71b66d77bbad14750d1f206d5c9ede98675412f",
+      "bytes": 1437
+    },
+    {
+      "url": "http://127.0.0.1:5187/v1/review/build",
+      "status": 200,
+      "durationSeconds": 0.004,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "452f3269666d103d3fda99cb3b4136678c6b8edcf77a5d140b87229796f3ba06",
+      "bytes": 12077
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-BFt98LaZ.css",
+      "status": 200,
+      "durationSeconds": 0.003,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "7160e4a353c7a570dd79a8526b0fb58241f63492b241ddb808d945b48ff003e3",
+      "bytes": 368388
+    },
+    {
+      "url": "http://127.0.0.1:5187/assets/index-DftHYpWp.js",
+      "status": 200,
+      "durationSeconds": 0.01,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "ce496add9d8bf2d4549d63b0b7babfe41b756bf84f14ad15e74b9d6b23ec01f2",
+      "bytes": 894457
+    },
+    {
+      "url": "http://127.0.0.1:5187/index.html",
+      "status": 200,
+      "durationSeconds": 0.278,
+      "location": null,
+      "sessionCookiePresent": false,
+      "sha256": "1f1f154c2e09f7023b2d0dd9b71b66d77bbad14750d1f206d5c9ede98675412f",
+      "bytes": 1437
+    }
+  ],
+  "assetReceipt": {
+    "mode": "built-SPA",
+    "productSourceBaseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "assetTreeSha256": "8ec4045a489d6f0169cbb34d7f91ea865d1919995e5c7d244bd930b494515ade",
+    "assets": [
+      {
+        "filename": "assets/index-BFt98LaZ.css",
+        "sha256": "7160e4a353c7a570dd79a8526b0fb58241f63492b241ddb808d945b48ff003e3"
+      },
+      {
+        "filename": "assets/index-DftHYpWp.js",
+        "sha256": "ce496add9d8bf2d4549d63b0b7babfe41b756bf84f14ad15e74b9d6b23ec01f2"
+      },
+      {
+        "filename": "docs/assets/bre-155-dark-focus.png",
+        "sha256": "85335651d90ad9c764b46f2cc4af73f25d135716f49b5ccc07ffc6afc38af7c4"
+      },
+      {
+        "filename": "docs/assets/bre-155-recovered-light.png",
+        "sha256": "a9b09e1e797db0784bae42d8023ad4ab9f4dbfe3074e6603120b8994f67fb569"
+      },
+      {
+        "filename": "docs/assets/bre-252-correction-dark.png",
+        "sha256": "26dce0120c1568869af91e939d2893c8a6dde6a0670910a5daf7a680faf9a33f"
+      },
+      {
+        "filename": "docs/assets/bre-252-human-light.png",
+        "sha256": "6f8caf6f31ec92f5bbac5860b91f641a9d8628c64a957819540ba1fb7671d14a"
+      },
+      {
+        "filename": "docs/assets/bre-252-review-narrow.png",
+        "sha256": "4bb6f240214f1b17430c32c266683e7b27f6aeedad18094f844c863074baaafd"
+      },
+      {
+        "filename": "docs/assets/bre-252-tideline-dark.png",
+        "sha256": "6d5c3612374418712ffa5fa02088fe60641bde944d2b8aaa399372d30c2caa86"
+      },
+      {
+        "filename": "docs/assets/bre-268-dark-controls.png",
+        "sha256": "2d2789c2cdea3ee072fc5d411387c531b1caf389151421d75fa1668bb88e9785"
+      },
+      {
+        "filename": "docs/assets/bre-268-dark-disabled.png",
+        "sha256": "012dbf81342c192ffe2b8670f7e135eb7e25bc3524f5f62b159a607d4d544164"
+      },
+      {
+        "filename": "docs/assets/bre-268-dark-error.png",
+        "sha256": "07e354ce7605d08c686cbd2cc0d57df1b33cce2207044cac5dd404cc259db2fb"
+      },
+      {
+        "filename": "docs/assets/bre-268-dark-loading.png",
+        "sha256": "bd2a85885e84e7ea1c5a1b64bb5ae9851b834297b3509fec7c06dcb225558fb9"
+      },
+      {
+        "filename": "docs/assets/bre-268-dark-normal.png",
+        "sha256": "b337e3ae82e8c4e1d5b77dcfd17609ad40a2c1017e83454c8fc121ccf862f0bb"
+      },
+      {
+        "filename": "docs/assets/bre-268-light-controls.png",
+        "sha256": "a03aad898c8aeb3f05176a3c07b5b633931ca00d0682c5a2e5abb2aaa46b5ab5"
+      },
+      {
+        "filename": "docs/assets/bre-268-light-disabled.png",
+        "sha256": "ce29a580aaf6095c6941b5933efa94bdcaebcced33bf5c89100b2c7e7df04e84"
+      },
+      {
+        "filename": "docs/assets/bre-268-light-error.png",
+        "sha256": "a1457ddcb06973ff2e46d63e6d70250ba1002fa54bacbc3174a8a7c7035d8985"
+      },
+      {
+        "filename": "docs/assets/bre-268-light-loading.png",
+        "sha256": "4c90a4e0779bed54e06d4d87721507f2f8001673287e1731287403217fdd8988"
+      },
+      {
+        "filename": "docs/assets/bre-268-light-normal.png",
+        "sha256": "124b6654dbfa974c7223c00b1511a8cbd8a942b82f936c7fb0ea35bfac1ff9e7"
+      },
+      {
+        "filename": "docs/assets/bre-314-reviewer-guide.png",
+        "sha256": "36f2b2553ed4aec8022314a2dc4c467f06f4def3cccf188e0b7d1ea206e92184"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-dark-disabled.png",
+        "sha256": "9ea6bed9d67fb977971fbd4abd70c6ace0aa40a7592b7ce4a5d22d8890534d3d"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-dark-focus-diagnostic.png",
+        "sha256": "066ce0fbeb97bf13a7ebc2951d9df267883550549ab80c470076dab06f3cb29c"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-dark-hover-diagnostic.png",
+        "sha256": "959cec3677f80e960ed5fb3ca2ce8a2b1706edfd6c4c259f0fcc60fe78300917"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-dark-hover.png",
+        "sha256": "868388b04cafc293fec43e953ae485d2008944bcd4ef6633a5ce54d604cfc5d9"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-dark.png",
+        "sha256": "c77c56254896be0f46fa8740c15e0b6657773389c3bf0c104fccc42e7cc04900"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-light-diagnostic.png",
+        "sha256": "84c1f61f1caa9311557f3f5bb77d335a9683ca3549a7cc8d66137bf5778896da"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-light-disabled.png",
+        "sha256": "e749ced027387b65319c519f037287680e48828b457ee06c2a5f4f94ea35b111"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-light-focus.png",
+        "sha256": "ef4e27c67c824cf57abff577610c84960f376f9c17b0c59afb55a226f0db88aa"
+      },
+      {
+        "filename": "docs/assets/bre-314-tide-light.png",
+        "sha256": "b8a912d7eebc14c547448c5eee47d59e28ef6e129fc299602949e248b702892c"
+      },
+      {
+        "filename": "docs/assets/bre-315-trace-fixture.json",
+        "sha256": "4fd6a7add1ca3948d5736ab70d311f78af92c090d16907122a25555af559997d"
+      },
+      {
+        "filename": "docs/assets/bre-315-trace-light.png",
+        "sha256": "dea2cb37b28ce9b6e32a0424e5e8f291bfb47a6433659a5ab03a85f1f10772a7"
+      },
+      {
+        "filename": "docs/assets/bre-315-trace-orca-black.png",
+        "sha256": "eb885d700953f201c99f1dd20b982f3577292122b16a67d078f4b1508cb617d6"
+      },
+      {
+        "filename": "docs/bre-151-validation.html",
+        "sha256": "1664ca3f53af4293ffbfcb6e4ff9180fd87ab5eec4c53232228bbc487b590140"
+      },
+      {
+        "filename": "docs/bre-155-validation.html",
+        "sha256": "66532238c6e5c61fe7f8b96bf7fa9429b4f8298634a06ef524a1da149a1426d9"
+      },
+      {
+        "filename": "docs/bre-159-validation.html",
+        "sha256": "cf27fac6d2721d537cde9a157350f79e0a8908af97b023d51e611342d1b21fd4"
+      },
+      {
+        "filename": "docs/bre-252-validation.html",
+        "sha256": "4af0c88bfa8c1e5a514647f6cd193c04e422b6c4847acb09210c415d1d4894f1"
+      },
+      {
+        "filename": "docs/bre-267-validation.html",
+        "sha256": "c15020222248159bd34660ed9df706d94dc0e288ba9a4802f65edfa48cdbc197"
+      },
+      {
+        "filename": "docs/bre-268-validation.html",
+        "sha256": "65fac3d2bd62185cd481fd556527f3b4a0c138a02bf99864511af76a1f6112f1"
+      },
+      {
+        "filename": "docs/bre-269-validation.html",
+        "sha256": "e2e7e236f3c3cb43e0808f379b330abdcf913325d01ee85fefd87b1904b99e0a"
+      },
+      {
+        "filename": "docs/bre-278-calendar-availability-validation.html",
+        "sha256": "7e84ea766d5fb300c715e96191dc81f58fe0549c6138912420aba65e279c4f8b"
+      },
+      {
+        "filename": "docs/bre-311-light-states.png",
+        "sha256": "8125dcf787f6f2f5406215742910dacf4f731f122801dbfa3df25cce6e129e5c"
+      },
+      {
+        "filename": "docs/bre-311-light.png",
+        "sha256": "ce2a554b173ec8ca83f7c3ca379833a8abe360c12392f612f98364f48b219f81"
+      },
+      {
+        "filename": "docs/bre-311-orca-black-controls.png",
+        "sha256": "b84a2643d055056747ab6176e937808f14340edf5ee645adcb5e41177d958cf7"
+      },
+      {
+        "filename": "docs/bre-311-orca-black.png",
+        "sha256": "a1d2bd64c4b61620b602d8bd179e249fc744d2d6bd2566e325a7075a40b64ba1"
+      },
+      {
+        "filename": "docs/bre-311-validation.html",
+        "sha256": "dccef3dc2c54f015073d4cccf94933583b1a5cfd32a13a5740ad00d71fe97e79"
+      },
+      {
+        "filename": "docs/bre-313-live-views-black-composer.png",
+        "sha256": "a320248794dc9c13ffd843bed724fcf2c053784864526abccf8fb7ec538f875b"
+      },
+      {
+        "filename": "docs/bre-313-live-views-black-remove.png",
+        "sha256": "db1bc69ac556b028b632350d1bf7d41aec99e3b77c122384087ce06bb7a28b50"
+      },
+      {
+        "filename": "docs/bre-313-live-views-light-edit.png",
+        "sha256": "a8f3888926139de3c35087265e2e135d69cd5e2d7e5523a290e4255f87136255"
+      },
+      {
+        "filename": "docs/bre-313-live-views-light.png",
+        "sha256": "6db69e9a1f1aa3e61165bb159b9eb13956aa4d1d5ba0bf8c3a6588d84867a0ef"
+      },
+      {
+        "filename": "docs/bre-313-live-views-review.html",
+        "sha256": "f20e0d0afd1460e6de1036a565c4175f5afb7ca5701e45e9c4ab4493eeab933b"
+      },
+      {
+        "filename": "docs/bre-313-persona-black-remove-confirm.png",
+        "sha256": "1db72a6a25b2ecd19da39959862d78c1e815bb2750696a910c546bcd5ae4286d"
+      },
+      {
+        "filename": "docs/bre-313-persona-light-edit-load-more.png",
+        "sha256": "73325af9ba037a0a02b27ce48e1399f76efd2a3c7a02e554c7f2bea1e6c65918"
+      },
+      {
+        "filename": "docs/bre-314-validation.html",
+        "sha256": "707e3ff9fb502ec69c549a0426cce6242f16ec26dbe7ad24dc30f210b8607eeb"
+      },
+      {
+        "filename": "docs/bre-315-deterministic-evaluator.html",
+        "sha256": "78e3cbc6b9a269c151706d58ff55682921aebd36b2230396e7b7827fc950d408"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-consent-connected-dark.png",
+        "sha256": "9a18b032487f75dee2fb62a7aa52418e54f509f0337f5e47801d95932207957c"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-consent-connected-light.png",
+        "sha256": "8679ffe0a29bafbc266b2eb12abcbef2ccd372c3809d36518b9ab0940293d8ab"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-consent-error-dark.png",
+        "sha256": "da72e0b34f538b63bd0ff303a5e15cb78afac719c1f6dde34ce55b7a40aca708"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-consent-error-light.png",
+        "sha256": "840bb30bbb2fb3440a9747fcb1b0d4eeefc53d9f66a641992dfcb96012a644c9"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-settings-dark.png",
+        "sha256": "7e03314303efbd66473fb1ca595579a6c3e233ee5fe0ae6dfc13dd8d62c60e8e"
+      },
+      {
+        "filename": "docs/evidence/bre-278-calendar-settings-light.png",
+        "sha256": "fc90176fa30f839ea6a25a0be6c08d452d631ff4ddd0b2df3c719e4bdb29dbc0"
+      },
+      {
+        "filename": "docs/evidence/bre-278-reply-availability-dark.png",
+        "sha256": "4ba41e1013ea4acb6249fd3d4b3907df122a6692b666e136196db37f9843b102"
+      },
+      {
+        "filename": "docs/evidence/bre-278-reply-availability-light.png",
+        "sha256": "ee1a5726fd9a20284910633072af113005228306df0b190bc74c80f39e2255ed"
+      },
+      {
+        "filename": "docs/evidence/bre-370-organization-black.png",
+        "sha256": "4321348231d7abf69adac1eca1f7dccec536800d8b72cd3b9c5ff4eeb1cb9a85"
+      },
+      {
+        "filename": "docs/evidence/bre-370-organization-light.png",
+        "sha256": "daaa5d91cf18da5c91b39dc94eb7fd789f964422d071b9dd66faa5a0a34a279e"
+      },
+      {
+        "filename": "docs/evidence/bre-371-compact-black.png",
+        "sha256": "c140c81f9b33e57860bb47d81e0a65d9ba89865e8b16d4c30cb0a5f5c1ace6da"
+      },
+      {
+        "filename": "docs/evidence/bre-371-compact-light.png",
+        "sha256": "75b4b6d43ceb5210f8b9552872729b3c219db30e39e259965e147fa705e37383"
+      },
+      {
+        "filename": "docs/evidence/bre-372-search-expanded-1024.png",
+        "sha256": "e744811027ef32d97be81e9a51dae066c57d2406f43ed4405041305c703f8ba2"
+      },
+      {
+        "filename": "docs/evidence/bre-373-settings-focus-black.png",
+        "sha256": "9f7fef59f3c2f03615560dfa81968aa2be442db50ec84b6d742a288e91344847"
+      },
+      {
+        "filename": "docs/evidence/bre-373-settings-focus-light.png",
+        "sha256": "2db70edc7d755c36b838a4d0be9ba498bb73f07981298eed488cb988f146ceab"
+      },
+      {
+        "filename": "docs/evidence/bre-374-inbox-actions-black-selected.png",
+        "sha256": "5602c9aebb0ea13567490a65b80ee7f41151af12a08a4ce2529c2038f3946e8f"
+      },
+      {
+        "filename": "docs/evidence/bre-374-inbox-actions-light.png",
+        "sha256": "29f59357f5dd558a6aa9b71eea08541e55270c44103d1b5d3ab1c425bacc1ef0"
+      },
+      {
+        "filename": "docs/evidence/bre-375-organization-overview-black.png",
+        "sha256": "25163ec212d95e08061165fe26401e6255fc58ffac7bbb247253dfdde6311403"
+      },
+      {
+        "filename": "docs/evidence/bre-375-organization-overview-light.png",
+        "sha256": "6c3be10083493c66042533a64112482f4cec59b74101779b0b3afb6bc24314f4"
+      },
+      {
+        "filename": "docs/evidence/bre-376-compact-unread-black-selected.png",
+        "sha256": "b037a38e6a68bf29684e8f6ea0b43ef9805a3c14aa42a95380cb68a0dcac0db8"
+      },
+      {
+        "filename": "docs/evidence/bre-376-compact-unread-light.png",
+        "sha256": "ad66a02abb585cfb437c21fe9282b6487808c504ed40f662871bd6fde626f4da"
+      },
+      {
+        "filename": "docs/evidence/bre-377-light-timing.json",
+        "sha256": "e6a9a87c78357b62a5577740809562ca83f025a8528ee4da51f39d14407bc332"
+      },
+      {
+        "filename": "docs/evidence/bre-377-light.png",
+        "sha256": "c0d62c8124f2c43e07e817590f32887d00a08de5d527965098892288bf0c97d1"
+      },
+      {
+        "filename": "docs/evidence/bre-377-orca-black-timing.json",
+        "sha256": "5c7dfc9b63c47f753bd9402244e54c05344aae25de11d996ff02311ef09b912c"
+      },
+      {
+        "filename": "docs/evidence/bre-377-orca-black.png",
+        "sha256": "c2aa216afdbf31595ea1c5a2b64d89b2d5d70309a73fb321ba42b00cda943809"
+      },
+      {
+        "filename": "docs/evidence/bre-377-reader-refresh.html",
+        "sha256": "21398bfcce6206dc66997dd6ae52242ed8448a03c2f40f169f6575e4764b5f1c"
+      },
+      {
+        "filename": "docs/evidence/bre-377-reduced-motion-timing.json",
+        "sha256": "f0aec861794927f7ee22767e91f11eeda8b2014fb52c265f652d1bf887930231"
+      },
+      {
+        "filename": "docs/evidence/bre-377-reduced-motion.png",
+        "sha256": "e262711cfca3166c38953f7c3a90f6918d96c4654475c9fccfcf23b8f79d3565"
+      },
+      {
+        "filename": "docs/evidence/bre-378-light-1024x768-validation.png",
+        "sha256": "3b8783990f9fe3cad69ed224fbcf397b6323576b95d863d2e80c9e1d2afab39c"
+      },
+      {
+        "filename": "docs/evidence/bre-378-light-1440x900-builder.png",
+        "sha256": "bb8505e2db0800ab1e4afe1646e0a3ce9e13bbefc2971d63934b1a3de9614827"
+      },
+      {
+        "filename": "docs/evidence/bre-378-orca-black-1024x768-more-filters.png",
+        "sha256": "78d5ad5b136c9fa01fcde34169410c750d2a77e579d4081337a3919d008e903d"
+      },
+      {
+        "filename": "docs/evidence/bre-378-orca-black-1440x900-menu.png",
+        "sha256": "a2eaa16f35238ea106793ecc25b51bed931c4d26f3641a9dec163ccfb43b2ca5"
+      },
+      {
+        "filename": "docs/gmail-oauth-setup.html",
+        "sha256": "c265b9c8a2c040ccf19e172609094f85c88ddd9a6d6de27250799f9904ffd141"
+      },
+      {
+        "filename": "docs/outlook-oauth-setup.html",
+        "sha256": "3d39e5d4c4af67f8925964d5f084b0e946b0ac6b5cc3eb7557e933bfc1d97366"
+      },
+      {
+        "filename": "favicon.svg",
+        "sha256": "fb9f8559dba98fa0678a7b1c4b2c2eeaa5946f081754d7d20fd795e0c6b6642b"
+      },
+      {
+        "filename": "index.html",
+        "sha256": "1f1f154c2e09f7023b2d0dd9b71b66d77bbad14750d1f206d5c9ede98675412f"
+      },
+      {
+        "filename": "orca-black-mark.svg",
+        "sha256": "8947121d01bdcfd26b402d37da0edd5314675652952c5ed7ccda82753f89804a"
+      },
+      {
+        "filename": "profile-avatar.svg",
+        "sha256": "3f8d81d3ac75cde97172c12fe3fcba34febf1acb62e643685f8128374b5a7c8f"
+      }
+    ]
+  },
+  "status": "pass",
+  "buildProvenance": {
+    "declaredSourceBaseSha": "0e7762cf1977f77151a422963f73e9a10188b866",
+    "successfulBuildLog": "logs/2026-09-07T01-47-46.319553+00-00.txt",
+    "buildInvocationSha": "dcf8eebee2bddde76f8d474ecc9f0ebe444435e6",
+    "sourceCheck": "git diff 0e7762c HEAD -- apps/web apps/api packages/shared returned empty",
+    "distMutationRecord": "No dist-writing command was run after the successful web build. Served byte hashes match local receipt. This is a recorded build chain, not cryptographic source-to-binary attestation."
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "at": "2026-09-07T14:42:43.028Z",
+  "injection": {
+    "body": "{}",
+    "category": "browser transport fixture; not real server failure",
+    "endpoint": "/v1/preferences?include=first_view_guidance",
+    "expectedMethod": "GET"
+  },
+  "scenario": "light-1024-residual-retry-guidance-hover",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgb(237, 245, 242)",
+          "borderColor": "rgb(226, 236, 232)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgb(255, 255, 255)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "first-view-guidance",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(226, 236, 232)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "first-view-help",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "auto",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer first-view-help-layer",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(247, 250, 248)",
+          "borderColor": "rgb(15, 36, 34)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(15, 36, 34)",
+          "opacity": "1",
+          "outline": "rgb(15, 36, 34) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": false,
+      "focusVisible": false,
+      "hit": true,
+      "hover": true,
+      "label": "Retry guidance",
+      "pressed": null,
+      "rect": {
+        "bottom": 465.890625,
+        "height": 41,
+        "left": 201,
+        "right": 349.625,
+        "top": 424.890625,
+        "width": 148.625,
+        "x": 201,
+        "y": 424.890625
+      },
+      "value": ""
+    }
+  ],
+  "theme": "light",
+  "themeMechanism": "System appearance/media light",
+  "url": "http://127.0.0.1:5187/organization?destination=organization",
+  "viewport": [
+    1024,
+    768
+  ],
+  "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+  "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "providerRefreshNoop": false
+}

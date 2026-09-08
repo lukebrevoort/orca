@@ -1,0 +1,21 @@
+{
+  "accounts": [
+    {
+      "label": "personal",
+      "pressed": "false"
+    },
+    {
+      "label": "work",
+      "pressed": "true"
+    }
+  ],
+  "at": "2026-09-07T12:13:26.701Z",
+  "count": 8,
+  "scenario": "lifetime3-census-open",
+  "text": "Keep only these sendersCorrecting \u201cProject correction 0\u201d in work@example.com. Conversation census-0.This is a positive allowlist for this account only; accounts connected later are not included. Omitted and new senders stay outside this View until you add them. Exact addresses replace any existing domain filters. Mail stays unchanged.Complete distinct senders of matching stored messages in this account at the evaluated time.Complete bounded set: 8 addresses in work@example.com, evaluated 2026-09-07T12:13:24.360Z. Future mail is evaluated against the addresses you keep.Proven matching senders in this conversation: sender0@example.com. No sender is removed automatically; a conversation can contain more than one matching sender.maya@example.comsender0@example.comsender1@example.comsender2@example.comsender3@example.comsender4@example.comsender5@example.comsender6@example.comPreview these sendersCancel sender correction",
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

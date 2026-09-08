@@ -1,0 +1,55 @@
+[
+  [
+    "scrollintoview",
+    ".view-composer h3"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Cancel",
+    "--exact"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\".view-composer\")"
+  ],
+  [
+    "press",
+    "Meta+k"
+  ],
+  [
+    "wait",
+    "input[aria-label=\"Search stored mail\"]"
+  ],
+  [
+    "fill",
+    "input[aria-label=\"Search stored mail\"]",
+    "Project"
+  ],
+  [
+    "press",
+    "Enter"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\".global-mail-save\")&&!document.querySelector(\".global-mail-save\").disabled"
+  ],
+  [
+    "click",
+    ".global-mail-save"
+  ],
+  [
+    "wait",
+    "--text",
+    "Return to source"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

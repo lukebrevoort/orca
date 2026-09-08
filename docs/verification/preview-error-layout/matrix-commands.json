@@ -1,0 +1,337 @@
+[
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1024",
+      "768"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":768,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1024},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "open",
+      "http://127.0.0.1:5187/"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"targetId\":\"9C4DEBD941204C448E5951DADA798A04\",\"title\":\"Orca\",\"url\":\"http://127.0.0.1:5187/\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.desktop-theme-toggle')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.documentElement.dataset.theme"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/\",\"result\":\"light\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "document.documentElement.dataset.theme==='light' && !document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "open",
+      "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"targetId\":\"9C4DEBD941204C448E5951DADA798A04\",\"title\":\"Orca\",\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "route",
+      "**/v1/organization/views/preview",
+      "--body",
+      "{}"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"routed\":\"**/v1/organization/views/preview\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-save"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-save\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-unsupported-clauses li button')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".view-unsupported-clauses li button:first-of-type"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".view-unsupported-clauses li button:first-of-type\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "unroute",
+      "**/v1/organization/views/preview"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"unrouted\":\"**/v1/organization/views/preview\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".view-preview-retry"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".view-preview-retry\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "requests",
+      "--filter",
+      "/v1/organization/views/preview"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"requests\":[{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.254\",\"resourceType\":\"Fetch\",\"responseHeaders\":{},\"status\":200,\"timestamp\":1788794061682,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"},{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"application/json\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.277\",\"resourceType\":\"Fetch\",\"responseHeaders\":{\"Content-Length\":\"3516\",\"Content-Type\":\"application/json\",\"Date\":\"Mon, 07 Sep 2026 15:15:51 GMT\",\"Vary\":\"Origin\"},\"status\":200,\"timestamp\":1788794151382,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"}]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1024",
+      "768"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":768,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1024},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "open",
+      "http://127.0.0.1:5187/"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"targetId\":\"9C4DEBD941204C448E5951DADA798A04\",\"title\":\"Orca\",\"url\":\"http://127.0.0.1:5187/\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.desktop-theme-toggle')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.documentElement.dataset.theme"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/\",\"result\":\"light\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".desktop-theme-toggle"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".desktop-theme-toggle\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "document.documentElement.dataset.theme==='dark' && !document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "open",
+      "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"targetId\":\"9C4DEBD941204C448E5951DADA798A04\",\"title\":\"Orca\",\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.global-mail-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "route",
+      "**/v1/organization/views/preview",
+      "--body",
+      "{}"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"routed\":\"**/v1/organization/views/preview\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".global-mail-save"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".global-mail-save\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-unsupported-clauses li button')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".view-unsupported-clauses li button:first-of-type"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".view-unsupported-clauses li button:first-of-type\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "unroute",
+      "**/v1/organization/views/preview"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"unrouted\":\"**/v1/organization/views/preview\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "click",
+      ".view-preview-retry"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"clicked\":\".view-preview-retry\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!!document.querySelector('.view-save:not(:disabled)')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "requests",
+      "--filter",
+      "/v1/organization/views/preview"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"requests\":[{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.254\",\"resourceType\":\"Fetch\",\"responseHeaders\":{},\"status\":200,\"timestamp\":1788794061682,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"},{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"application/json\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.277\",\"resourceType\":\"Fetch\",\"responseHeaders\":{\"Content-Length\":\"3516\",\"Content-Type\":\"application/json\",\"Date\":\"Mon, 07 Sep 2026 15:15:51 GMT\",\"Vary\":\"Origin\"},\"status\":200,\"timestamp\":1788794151382,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"},{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.378\",\"resourceType\":\"Fetch\",\"responseHeaders\":{},\"status\":200,\"timestamp\":1788794270478,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"},{\"headers\":{\"Accept-Language\":\"en-US,en;q=0.9\",\"Referer\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"User-Agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36\",\"content-type\":\"application/json\",\"sec-ch-ua\":\"\\\"Not?A_Brand\\\";v=\\\"24\\\", \\\"Chromium\\\";v=\\\"152\\\"\",\"sec-ch-ua-mobile\":\"?0\",\"sec-ch-ua-platform\":\"\\\"macOS\\\"\"},\"method\":\"POST\",\"mimeType\":\"application/json\",\"postData\":\"{\\\"draft\\\":{\\\"mode\\\":\\\"create\\\",\\\"viewId\\\":null,\\\"viewRevision\\\":null,\\\"source\\\":{\\\"kind\\\":\\\"search\\\",\\\"label\\\":\\\"Search mail\\\",\\\"returnTarget\\\":\\\"/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\\\"},\\\"identity\\\":{\\\"name\\\":\\\"Search \u00b7 Project\\\",\\\"description\\\":\\\"\\\",\\\"color\\\":\\\"#0b9b84\\\",\\\"position\\\":0},\\\"definition\\\":{\\\"revision\\\":1,\\\"thread\\\":{\\\"subjectContains\\\":\\\"Project\\\"}},\\\"unsupportedClauses\\\":[]},\\\"page\\\":{\\\"limit\\\":5}}\",\"requestId\":\"36093.418\",\"resourceType\":\"Fetch\",\"responseHeaders\":{\"Content-Length\":\"3516\",\"Content-Type\":\"application/json\",\"Date\":\"Mon, 07 Sep 2026 15:23:11 GMT\",\"Vary\":\"Origin\"},\"status\":200,\"timestamp\":1788794591772,\"url\":\"http://127.0.0.1:5187/v1/organization/views/preview\"}]},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "network",
+      "unroute",
+      "**/v1/organization/views/preview"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"unrouted\":\"**/v1/organization/views/preview\"},\"error\":null}\n",
+    "stderr": ""
+  }
+]

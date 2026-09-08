@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:50:49.333788+00:00",
+  "completedAt": "2026-09-07T12:51:38.276135+00:00",
+  "exitCode": 0,
+  "commands": "black-1440-controls-lifecycle-commands.json",
+  "raw": "black-1440-controls-lifecycle-raw.json",
+  "stderr": "black-1440-controls-lifecycle-stderr.txt",
+  "parsedRecords": 29
+}

@@ -1,0 +1,59 @@
+{
+  "observations": [
+    {
+      "timestamp": "2026-09-07T07:16:28.800462+00:00",
+      "viewport": [
+        1024,
+        768
+      ],
+      "held": {
+        "armed": false,
+        "held": true,
+        "heldAt": "2026-09-07T07:15:54.995Z",
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "bb55e528-5b51-49c2-bad5-62d4e7c353e5",
+          "heldAt": "2026-09-07T07:15:54.995Z",
+          "responseStatus": 200,
+          "responseBodySha256": "98e640ecae45e3330e1f9637b8d33790eee8fbea42a41fda6b02bde62b691b84"
+        }
+      }
+    },
+    {
+      "timestamp": "2026-09-07T07:18:23.430885+00:00",
+      "viewport": [
+        1440,
+        900
+      ],
+      "held": {
+        "armed": false,
+        "held": true,
+        "heldAt": "2026-09-07T07:15:54.995Z",
+        "timeoutMs": 240000,
+        "receipt": {
+          "id": "bb55e528-5b51-49c2-bad5-62d4e7c353e5",
+          "heldAt": "2026-09-07T07:15:54.995Z",
+          "responseStatus": 200,
+          "responseBodySha256": "98e640ecae45e3330e1f9637b8d33790eee8fbea42a41fda6b02bde62b691b84"
+        }
+      }
+    }
+  ],
+  "release": {
+    "released": true
+  },
+  "final": {
+    "armed": false,
+    "held": false,
+    "heldAt": null,
+    "timeoutMs": 240000,
+    "receipt": {
+      "id": "bb55e528-5b51-49c2-bad5-62d4e7c353e5",
+      "heldAt": "2026-09-07T07:15:54.995Z",
+      "responseStatus": 200,
+      "responseBodySha256": "98e640ecae45e3330e1f9637b8d33790eee8fbea42a41fda6b02bde62b691b84",
+      "releasedAt": "2026-09-07T07:19:12.818Z",
+      "releaseReason": "explicit"
+    }
+  }
+}

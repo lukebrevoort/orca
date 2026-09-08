@@ -1,0 +1,125 @@
+{
+  "at": "2026-09-07T16:02:51.049Z",
+  "fixture": "Real Project Search ready100-plus matches; Close/Search/Filters collapsed/enabled continuation targets, no activation during variants",
+  "scenario": "black-1024-final-search-chrome-close-focus",
+  "targets": [
+    {
+      "active": false,
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgba(0, 0, 0, 0)",
+          "borderWidth": "1px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(177, 177, 171)",
+          "opacity": "1",
+          "outline": "rgb(106, 169, 245) solid 2px",
+          "overflow": "visible",
+          "tag": "BUTTON"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239) rgb(244, 243, 239) rgb(36, 36, 36)",
+          "borderWidth": "0px 0px 1px",
+          "boxShadow": "none",
+          "class": "global-mail-search-heading",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HEADER"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "borderColor": "rgb(58, 58, 58)",
+          "borderWidth": "1px",
+          "boxShadow": "rgba(0, 0, 0, 0.72) 0px 34px 110px 0px",
+          "class": "global-mail-search",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "hidden",
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "orca-top-layer global-mail-search-layer",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "borderColor": "rgb(244, 243, 239)",
+          "borderWidth": "0px",
+          "boxShadow": "none",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "opacity": "1",
+          "outline": "rgb(244, 243, 239) none 3px",
+          "overflow": "visible",
+          "tag": "HTML"
+        }
+      ],
+      "disabled": false,
+      "expanded": null,
+      "focus": true,
+      "focusVisible": true,
+      "hit": true,
+      "hover": false,
+      "label": "Close Search mail and return to Organization",
+      "pressed": null,
+      "rect": {
+        "bottom": 96.75,
+        "height": 32,
+        "left": 847,
+        "right": 879,
+        "top": 64.75,
+        "width": 32,
+        "x": 847,
+        "y": 64.75
+      },
+      "value": ""
+    }
+  ],
+  "theme": "dark",
+  "themeMechanism": "System Appearance/media dark",
+  "url": "http://127.0.0.1:5187/?destination=organization&search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F%3Fdestination%3Dorganization",
+  "viewport": [
+    1024,
+    768
+  ],
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

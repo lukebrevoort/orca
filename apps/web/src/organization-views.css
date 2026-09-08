@@ -97,7 +97,8 @@
 .view-context-error .view-action { min-height: 28px; flex: 0 0 auto; }
 .view-no-clauses { min-height: 54px; display: flex; align-items: center; gap: 6px; margin-top: 7px; padding: 0 12px; border: 1px dashed var(--desktop-border); border-radius: 9px; color: var(--desktop-muted); font-size: 9px; }
 .view-no-clauses strong { color: var(--desktop-ink); }
-.view-builder-footer { display: grid; grid-template-columns: minmax(0,1fr) minmax(200px,auto); align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--desktop-border); background: color-mix(in srgb,var(--desktop-surface) 60%,var(--desktop-paper)); border-radius: 0 0 15px 15px; }
+.view-builder-footer { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--desktop-border); background: color-mix(in srgb,var(--desktop-surface) 60%,var(--desktop-paper)); border-radius: 0 0 15px 15px; }
+.view-draft-preview,.view-validation { min-width: 0; overflow-wrap: anywhere; }
 .view-draft-preview { display: grid; gap: 3px; }
 .view-draft-preview strong { color: var(--desktop-ink); font-size: 10px; }
 .view-draft-preview small { color: var(--desktop-muted); font-size: 8px; }

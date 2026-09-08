@@ -1,0 +1,22 @@
+[
+  [
+    "focus",
+    ".view-color-field input"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "eval",
+    "({at:new Date().toISOString(),active:document.activeElement?.outerHTML,focusVisible:document.activeElement?.matches(\":focus-visible\")})"
+  ],
+  [
+    "press",
+    "Shift+Tab"
+  ],
+  [
+    "eval",
+    "({at:new Date().toISOString(),active:document.activeElement?.outerHTML,expectedPrevious:document.querySelector(\".view-color-field input\")?.outerHTML,url:location.href})"
+  ]
+]

@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T14:42:27.546391+00:00",
+  "completedAt": "2026-09-07T14:42:36.508761+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-residual-retry-guidance-commands.json",
+  "raw": "light-1440-residual-retry-guidance-raw.json",
+  "stderr": "light-1440-residual-retry-guidance-stderr.txt",
+  "parsedRecords": 4
+}

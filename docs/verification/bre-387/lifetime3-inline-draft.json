@@ -1,0 +1,16 @@
+{
+  "accounts": [
+    {
+      "label": "personal",
+      "pressed": "false"
+    },
+    {
+      "label": "work",
+      "pressed": "true"
+    }
+  ],
+  "authority": "available",
+  "preview": "STORED-MAIL PREVIEW\n2 predicate families · combined with AND\n5 shown · no preview state is persisted.",
+  "subject": "Project"
+}
+

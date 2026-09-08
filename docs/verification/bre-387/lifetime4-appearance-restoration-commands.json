@@ -1,0 +1,36 @@
+[
+  [
+    "click",
+    ".view-composer-actions button:nth-last-child(2)"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-discard-keep\")"
+  ],
+  [
+    "click",
+    ".view-preparation-state button:last-of-type"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/settings/reading"
+  ],
+  [
+    "wait",
+    "input[name=theme][value=dark]"
+  ],
+  [
+    "click",
+    "input[name=theme][value=dark]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelector(\"input[name=theme][value=dark]\").checked&&document.documentElement.dataset.theme===\"dark\""
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime4-appearance-restored\",at:new Date().toISOString(),url:location.href,selected:document.querySelector(\"input[name=theme]:checked\").value,theme:document.documentElement.dataset.theme,priorReceipt:\"lifetime4-theme-before-system.json\",method:\"Real Appearance Dark radio; prior explicit Dark restored\"}})"
+  ]
+]

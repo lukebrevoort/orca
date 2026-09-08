@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "mode": "normal",
+  "theme": "light",
+  "widths": [
+    1024,
+    1440,
+    390
+  ],
+  "fixture": "malformed POST200{} when error; actual server response when normal; no save"
+}

@@ -1,0 +1,11 @@
+{
+  "at": "2026-09-07T15:45:10.988Z",
+  "heading": "Review fixture Maya",
+  "loadMore": "Load more",
+  "rows": 25,
+  "scenario": "lifetime5-saved-controls-baseline",
+  "url": "http://127.0.0.1:5187/?destination=view%3Aview_c313ff0b-d2a8-4b4c-9b0a-f59ea6202750",
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

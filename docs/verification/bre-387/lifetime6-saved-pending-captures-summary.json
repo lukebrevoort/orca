@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:54:08.096360+00:00",
+  "completedAt": "2026-09-07T16:56:57.767463+00:00",
+  "exitCode": 1,
+  "commands": "lifetime6-saved-pending-captures-commands.json",
+  "raw": "lifetime6-saved-pending-captures-raw.json",
+  "stderr": "lifetime6-saved-pending-captures-stderr.txt",
+  "parsedRecords": 0
+}

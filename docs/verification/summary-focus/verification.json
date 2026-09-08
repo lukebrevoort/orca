@@ -1,0 +1,45 @@
+{
+  "focused": {
+    "exec": 63336,
+    "exit": 0,
+    "pass": 8,
+    "fail": 0,
+    "expects": 41
+  },
+  "build": {
+    "exec": 94840,
+    "exit": 0
+  },
+  "lint": {
+    "exec": 75631,
+    "exit": 0
+  },
+  "nativeLight": {
+    "exec": 57832,
+    "exit": 0
+  },
+  "nativeDarkHover": {
+    "exec": 94864,
+    "exit": 0
+  },
+  "lightHoverOnly": {
+    "exec": 75513,
+    "exit": 0
+  },
+  "boundaryRestore": {
+    "exec": 20073,
+    "exit": 0
+  },
+  "firstBrowserAttempt": {
+    "exec": 79123,
+    "exit": 1,
+    "reason": "Incorrect checker expected Tune; actual next target was Project replacement. Preserved, corrected named assertion."
+  },
+  "limits": [
+    "Happy DOM unit cases do not simulate native Tab.",
+    "Hidden interactive descendants tested in unit fixture, production summary contains static text.",
+    "Boundary/restore browser observation is Black1440 only.",
+    "Whole build raw logger blank lines retained.",
+    "Hosted exact-head typecheck/unit tests reported after push."
+  ]
+}

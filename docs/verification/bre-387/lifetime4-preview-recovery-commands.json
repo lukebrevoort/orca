@@ -1,0 +1,26 @@
+[
+  [
+    "network",
+    "unroute",
+    "**/v1/organization/views/preview"
+  ],
+  [
+    "click",
+    ".view-preview-retry"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-save:not(:disabled)\")&&!document.querySelector(\".view-preview-retry\")"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "/v1/organization/views/preview"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

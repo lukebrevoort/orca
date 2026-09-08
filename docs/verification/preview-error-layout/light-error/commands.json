@@ -1,0 +1,470 @@
+[
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1024",
+      "768"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":768,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1024},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "scrollintoview",
+      ".view-builder-footer"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"scrolled\":\".view-builder-footer\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "new Promise(resolve=>{const first=(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})();requestAnimationFrame(()=>requestAnimationFrame(()=>resolve({first,second:(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})()})))})"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"first\":{\"applicable\":true,\"at\":\"2026-09-07T15:14:35.008Z\",\"footer\":{\"clientWidth\":930,\"gridTemplateColumns\":\"441px 441px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":697.1875,\"height\":113,\"left\":47,\"right\":977,\"top\":584.1875,\"width\":930},\"scrollWidth\":930,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":441,\"gridTemplateColumns\":\"441px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":685.1875,\"height\":88,\"left\":65,\"right\":506,\"top\":597.1875,\"width\":441},\"scrollWidth\":441,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":608.1875,\"height\":10,\"left\":65,\"right\":186.953125,\"top\":598.1875,\"width\":121.953125},{\"bottom\":625.1875,\"height\":13,\"left\":65,\"right\":267.46875,\"top\":612.1875,\"width\":202.46875},{\"bottom\":638.1875,\"height\":10,\"left\":65,\"right\":342.515625,\"top\":628.1875,\"width\":277.515625},{\"bottom\":672.6875,\"height\":12,\"left\":78,\"right\":142.84375,\"top\":660.6875,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":441,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":671.1875,\"height\":60,\"left\":518,\"right\":959,\"top\":611.1875,\"width\":441},\"scrollWidth\":441,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":623.1875,\"height\":12,\"left\":521.5625,\"right\":959,\"top\":611.1875,\"width\":437.4375},{\"bottom\":635.1875,\"height\":12,\"left\":546.640625,\"right\":959,\"top\":623.1875,\"width\":412.359375},{\"bottom\":647.1875,\"height\":12,\"left\":553.078125,\"right\":959,\"top\":635.1875,\"width\":405.921875},{\"bottom\":659.1875,\"height\":12,\"left\":544.265625,\"right\":959,\"top\":647.1875,\"width\":414.734375},{\"bottom\":671.1875,\"height\":12,\"left\":884,\"right\":959,\"top\":659.1875,\"width\":75}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[1024,768]},\"second\":{\"applicable\":true,\"at\":\"2026-09-07T15:14:35.442Z\",\"footer\":{\"clientWidth\":930,\"gridTemplateColumns\":\"441px 441px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":697.1875,\"height\":113,\"left\":47,\"right\":977,\"top\":584.1875,\"width\":930},\"scrollWidth\":930,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":441,\"gridTemplateColumns\":\"441px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":685.1875,\"height\":88,\"left\":65,\"right\":506,\"top\":597.1875,\"width\":441},\"scrollWidth\":441,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":608.1875,\"height\":10,\"left\":65,\"right\":186.953125,\"top\":598.1875,\"width\":121.953125},{\"bottom\":625.1875,\"height\":13,\"left\":65,\"right\":267.46875,\"top\":612.1875,\"width\":202.46875},{\"bottom\":638.1875,\"height\":10,\"left\":65,\"right\":342.515625,\"top\":628.1875,\"width\":277.515625},{\"bottom\":672.6875,\"height\":12,\"left\":78,\"right\":142.84375,\"top\":660.6875,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":441,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":671.1875,\"height\":60,\"left\":518,\"right\":959,\"top\":611.1875,\"width\":441},\"scrollWidth\":441,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":623.1875,\"height\":12,\"left\":521.5625,\"right\":959,\"top\":611.1875,\"width\":437.4375},{\"bottom\":635.1875,\"height\":12,\"left\":546.640625,\"right\":959,\"top\":623.1875,\"width\":412.359375},{\"bottom\":647.1875,\"height\":12,\"left\":553.078125,\"right\":959,\"top\":635.1875,\"width\":405.921875},{\"bottom\":659.1875,\"height\":12,\"left\":544.265625,\"right\":959,\"top\":647.1875,\"width\":414.734375},{\"bottom\":671.1875,\"height\":12,\"left\":884,\"right\":959,\"top\":659.1875,\"width\":75}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[1024,768]}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "(()=>{const e=document.querySelector('.view-preview-retry'),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height}}})()"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"focus\":true,\"focusVisible\":true,\"hit\":true,\"rect\":{\"height\":36,\"width\":90.84375,\"x\":65,\"y\":649.1875}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/1024.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/1024.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1440",
+      "900"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":900,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1440},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "scrollintoview",
+      ".view-builder-footer"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"scrolled\":\".view-builder-footer\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "new Promise(resolve=>{const first=(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})();requestAnimationFrame(()=>requestAnimationFrame(()=>resolve({first,second:(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})()})))})"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"first\":{\"applicable\":true,\"at\":\"2026-09-07T15:15:08.238Z\",\"footer\":{\"clientWidth\":1034,\"gridTemplateColumns\":\"493px 493px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":829.1875,\"height\":113,\"left\":203,\"right\":1237,\"top\":716.1875,\"width\":1034},\"scrollWidth\":1034,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":493,\"gridTemplateColumns\":\"493px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":817.1875,\"height\":88,\"left\":221,\"right\":714,\"top\":729.1875,\"width\":493},\"scrollWidth\":493,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":740.1875,\"height\":10,\"left\":221,\"right\":342.953125,\"top\":730.1875,\"width\":121.953125},{\"bottom\":757.1875,\"height\":13,\"left\":221,\"right\":423.46875,\"top\":744.1875,\"width\":202.46875},{\"bottom\":770.1875,\"height\":10,\"left\":221,\"right\":498.515625,\"top\":760.1875,\"width\":277.515625},{\"bottom\":804.6875,\"height\":12,\"left\":234,\"right\":298.84375,\"top\":792.6875,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":493,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":797.1875,\"height\":48,\"left\":726,\"right\":1219,\"top\":749.1875,\"width\":493},\"scrollWidth\":493,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":761.1875,\"height\":12,\"left\":768.328125,\"right\":1219,\"top\":749.1875,\"width\":450.671875},{\"bottom\":773.1875,\"height\":12,\"left\":740.46875,\"right\":1219,\"top\":761.1875,\"width\":478.53125},{\"bottom\":785.1875,\"height\":12,\"left\":758.296875,\"right\":1219,\"top\":773.1875,\"width\":460.703125},{\"bottom\":797.1875,\"height\":12,\"left\":861.40625,\"right\":1219,\"top\":785.1875,\"width\":357.59375}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[1440,900]},\"second\":{\"applicable\":true,\"at\":\"2026-09-07T15:15:08.312Z\",\"footer\":{\"clientWidth\":1034,\"gridTemplateColumns\":\"493px 493px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":829.1875,\"height\":113,\"left\":203,\"right\":1237,\"top\":716.1875,\"width\":1034},\"scrollWidth\":1034,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":493,\"gridTemplateColumns\":\"493px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":817.1875,\"height\":88,\"left\":221,\"right\":714,\"top\":729.1875,\"width\":493},\"scrollWidth\":493,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":740.1875,\"height\":10,\"left\":221,\"right\":342.953125,\"top\":730.1875,\"width\":121.953125},{\"bottom\":757.1875,\"height\":13,\"left\":221,\"right\":423.46875,\"top\":744.1875,\"width\":202.46875},{\"bottom\":770.1875,\"height\":10,\"left\":221,\"right\":498.515625,\"top\":760.1875,\"width\":277.515625},{\"bottom\":804.6875,\"height\":12,\"left\":234,\"right\":298.84375,\"top\":792.6875,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":493,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":797.1875,\"height\":48,\"left\":726,\"right\":1219,\"top\":749.1875,\"width\":493},\"scrollWidth\":493,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":761.1875,\"height\":12,\"left\":768.328125,\"right\":1219,\"top\":749.1875,\"width\":450.671875},{\"bottom\":773.1875,\"height\":12,\"left\":740.46875,\"right\":1219,\"top\":761.1875,\"width\":478.53125},{\"bottom\":785.1875,\"height\":12,\"left\":758.296875,\"right\":1219,\"top\":773.1875,\"width\":460.703125},{\"bottom\":797.1875,\"height\":12,\"left\":861.40625,\"right\":1219,\"top\":785.1875,\"width\":357.59375}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[1440,900]}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "(()=>{const e=document.querySelector('.view-preview-retry'),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height}}})()"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"focus\":true,\"focusVisible\":true,\"hit\":true,\"rect\":{\"height\":36,\"width\":90.84375,\"x\":221,\"y\":781.1875}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/1440.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/1440.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "set",
+      "viewport",
+      "390",
+      "844"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":844,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":390},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "scrollintoview",
+      ".view-builder-footer"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"scrolled\":\".view-builder-footer\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "wait",
+      "--fn",
+      "!document.documentElement.hasAttribute('data-orca-transition')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "new Promise(resolve=>{const first=(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})();requestAnimationFrame(()=>requestAnimationFrame(()=>resolve({first,second:(()=>{const f=document.querySelector('.view-builder-footer'),p=f?.querySelector('.view-draft-preview'),v=f?.querySelector('.view-validation'),b=f?.querySelector('.view-preview-retry');if(!f||!p||!v)return {applicable:false};const box=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});const lines=e=>{const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(!n.textContent.trim())continue;const r=document.createRange();r.selectNodeContents(n);out.push(...[...r.getClientRects()].filter(x=>x.width&&x.height).map(box));}return out;};const info=e=>{const s=getComputedStyle(e);return {rect:box(e.getBoundingClientRect()),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,minWidth:s.minWidth,whiteSpace:s.whiteSpace,overflowWrap:s.overflowWrap,wordBreak:s.wordBreak,overflow:s.overflow,gridTemplateColumns:s.gridTemplateColumns};};const a=lines(p),c=lines(v),overlap=a.some(x=>c.some(y=>Math.min(x.right,y.right)-Math.max(x.left,y.left)>1&&Math.min(x.bottom,y.bottom)-Math.max(x.top,y.top)>1));const escapes=(rs,e)=>{const r=e.getBoundingClientRect();return rs.some(x=>x.left<r.left-1||x.right>r.right+1)};return {applicable:true,at:new Date().toISOString(),url:location.href,viewport:[innerWidth,innerHeight],transition:document.documentElement.dataset.orcaTransition??null,theme:document.documentElement.dataset.theme,footer:info(f),preview:info(p),validation:info(v),previewLines:a,validationLines:c,textOverlap:overlap,previewEscapes:escapes(a,p),validationEscapes:escapes(c,v),red:overlap||escapes(a,p)||escapes(c,v),retry:b?{text:b.textContent,disabled:b.matches(':disabled')}:null,saveDisabled:document.querySelector('.view-save')?.matches(':disabled'),validationText:v.textContent};})()})))})"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"first\":{\"applicable\":true,\"at\":\"2026-09-07T15:15:37.679Z\",\"footer\":{\"clientWidth\":308,\"gridTemplateColumns\":\"272px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":778.5625,\"height\":231,\"left\":41,\"right\":349,\"top\":547.5625,\"width\":308},\"scrollWidth\":308,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":272,\"gridTemplateColumns\":\"272px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":658.5625,\"height\":98,\"left\":59,\"right\":331,\"top\":560.5625,\"width\":272},\"scrollWidth\":272,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":571.5625,\"height\":10,\"left\":59,\"right\":180.953125,\"top\":561.5625,\"width\":121.953125},{\"bottom\":588.5625,\"height\":13,\"left\":59,\"right\":261.46875,\"top\":575.5625,\"width\":202.46875},{\"bottom\":601.5625,\"height\":10,\"left\":59,\"right\":297.984375,\"top\":591.5625,\"width\":238.984375},{\"bottom\":611.5625,\"height\":10,\"left\":59,\"right\":95.71875,\"top\":601.5625,\"width\":36.71875},{\"bottom\":646.0625,\"height\":12,\"left\":72,\"right\":136.84375,\"top\":634.0625,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":272,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":766.5625,\"height\":96,\"left\":59,\"right\":331,\"top\":670.5625,\"width\":272},\"scrollWidth\":272,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":682.5625,\"height\":12,\"left\":59,\"right\":301.640625,\"top\":670.5625,\"width\":242.640625},{\"bottom\":694.5625,\"height\":12,\"left\":59,\"right\":319.765625,\"top\":682.5625,\"width\":260.765625},{\"bottom\":706.5625,\"height\":12,\"left\":59,\"right\":244.96875,\"top\":694.5625,\"width\":185.96875},{\"bottom\":718.5625,\"height\":12,\"left\":59,\"right\":294.734375,\"top\":706.5625,\"width\":235.734375},{\"bottom\":730.5625,\"height\":12,\"left\":59,\"right\":325.09375,\"top\":718.5625,\"width\":266.09375},{\"bottom\":742.5625,\"height\":12,\"left\":59,\"right\":327.84375,\"top\":730.5625,\"width\":268.84375},{\"bottom\":754.5625,\"height\":12,\"left\":59,\"right\":329.4375,\"top\":742.5625,\"width\":270.4375},{\"bottom\":766.5625,\"height\":12,\"left\":59,\"right\":67.828125,\"top\":754.5625,\"width\":8.828125}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[390,844]},\"second\":{\"applicable\":true,\"at\":\"2026-09-07T15:15:37.768Z\",\"footer\":{\"clientWidth\":308,\"gridTemplateColumns\":\"272px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"normal\",\"rect\":{\"bottom\":778.5625,\"height\":231,\"left\":41,\"right\":349,\"top\":547.5625,\"width\":308},\"scrollWidth\":308,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"preview\":{\"clientWidth\":272,\"gridTemplateColumns\":\"272px\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":658.5625,\"height\":98,\"left\":59,\"right\":331,\"top\":560.5625,\"width\":272},\"scrollWidth\":272,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"previewEscapes\":false,\"previewLines\":[{\"bottom\":571.5625,\"height\":10,\"left\":59,\"right\":180.953125,\"top\":561.5625,\"width\":121.953125},{\"bottom\":588.5625,\"height\":13,\"left\":59,\"right\":261.46875,\"top\":575.5625,\"width\":202.46875},{\"bottom\":601.5625,\"height\":10,\"left\":59,\"right\":297.984375,\"top\":591.5625,\"width\":238.984375},{\"bottom\":611.5625,\"height\":10,\"left\":59,\"right\":95.71875,\"top\":601.5625,\"width\":36.71875},{\"bottom\":646.0625,\"height\":12,\"left\":72,\"right\":136.84375,\"top\":634.0625,\"width\":64.84375}],\"red\":false,\"retry\":{\"disabled\":false,\"text\":\"Retry preview\"},\"saveDisabled\":true,\"textOverlap\":false,\"theme\":\"light\",\"transition\":null,\"url\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"validation\":{\"clientWidth\":272,\"gridTemplateColumns\":\"none\",\"minWidth\":\"0px\",\"overflow\":\"visible\",\"overflowWrap\":\"anywhere\",\"rect\":{\"bottom\":766.5625,\"height\":96,\"left\":59,\"right\":331,\"top\":670.5625,\"width\":272},\"scrollWidth\":272,\"whiteSpace\":\"normal\",\"wordBreak\":\"normal\"},\"validationEscapes\":false,\"validationLines\":[{\"bottom\":682.5625,\"height\":12,\"left\":59,\"right\":301.640625,\"top\":670.5625,\"width\":242.640625},{\"bottom\":694.5625,\"height\":12,\"left\":59,\"right\":319.765625,\"top\":682.5625,\"width\":260.765625},{\"bottom\":706.5625,\"height\":12,\"left\":59,\"right\":244.96875,\"top\":694.5625,\"width\":185.96875},{\"bottom\":718.5625,\"height\":12,\"left\":59,\"right\":294.734375,\"top\":706.5625,\"width\":235.734375},{\"bottom\":730.5625,\"height\":12,\"left\":59,\"right\":325.09375,\"top\":718.5625,\"width\":266.09375},{\"bottom\":742.5625,\"height\":12,\"left\":59,\"right\":327.84375,\"top\":730.5625,\"width\":268.84375},{\"bottom\":754.5625,\"height\":12,\"left\":59,\"right\":329.4375,\"top\":742.5625,\"width\":270.4375},{\"bottom\":766.5625,\"height\":12,\"left\":59,\"right\":67.828125,\"top\":754.5625,\"width\":8.828125}],\"validationText\":\"[\\n  {\\n    \\\"expected\\\": \\\"string\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceId\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"number\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"workspaceRevision\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"draft\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  },\\n  {\\n    \\\"expected\\\": \\\"object\\\",\\n    \\\"code\\\": \\\"invalid_type\\\",\\n    \\\"path\\\": [\\n      \\\"results\\\"\\n    ],\\n    \\\"message\\\": \\\"Invalid input\\\"\\n  }\\n]\",\"viewport\":[390,844]}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":false},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "document.activeElement===document.querySelector('.view-preview-retry')"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":true},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "(()=>{const e=document.querySelector('.view-preview-retry'),r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {focus:e===document.activeElement,focusVisible:e.matches(':focus-visible'),hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height}}})()"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F\",\"result\":{\"focus\":true,\"focusVisible\":true,\"hit\":true,\"rect\":{\"height\":36,\"width\":90.84375,\"x\":59,\"y\":622.5625}}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/390.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/preview-error-layout/light-error/390.png\"},\"error\":null}\n",
+    "stderr": ""
+  }
+]

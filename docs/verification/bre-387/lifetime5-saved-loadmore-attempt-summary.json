@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:48:17.596259+00:00",
+  "completedAt": "2026-09-07T15:48:20.475377+00:00",
+  "exitCode": 0,
+  "commands": "lifetime5-saved-loadmore-attempt-commands.json",
+  "raw": "lifetime5-saved-loadmore-attempt-raw.json",
+  "stderr": "lifetime5-saved-loadmore-attempt-stderr.txt",
+  "parsedRecords": 2
+}

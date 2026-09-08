@@ -1,0 +1,10 @@
+{
+  "status": "FAIL",
+  "failures": [
+    "Error: mouse exited 1: Missing arguments for: mouse move\nUsage: agent-browser mouse move <x> <y>\n\n"
+  ],
+  "session": "bre387-fixed-8d709a8",
+  "sample": false,
+  "minimumContrast": 4.5,
+  "method": "WCAG sRGB computed solid-background compositing, unrounded threshold; real pointer/keyboard pseudo-states"
+}

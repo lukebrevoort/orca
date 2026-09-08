@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:08:56.142478+00:00",
+  "completedAt": "2026-09-07T12:09:29.062542+00:00",
+  "exitCode": 0,
+  "commands": "lifetime3-third-reconstruction-commands.json",
+  "raw": "lifetime3-third-reconstruction-raw.json",
+  "stderr": "lifetime3-third-reconstruction-stderr.txt",
+  "parsedRecords": 1
+}

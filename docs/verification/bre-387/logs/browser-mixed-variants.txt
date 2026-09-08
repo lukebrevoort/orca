@@ -1,0 +1,39 @@
+✓ Done
+2026-09-07T05:20:09.512528+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:20:10.007658+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Choose messages from one account')
+Choose messages from one account
+2026-09-07T05:20:28.738106+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1024-mixed-selection-state', 'Orca Black', '1024', '768', 'Two selected exact rows across work and personal; authoring disabled', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-mixed-selection-state.png
+screenshots/black-1024-mixed-selection-state.png
+2026-09-07T05:20:43.918044+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1024-mixed-selection-state')
+{"scenario": "black-1024-mixed-selection-state", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:20:53.253509+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:21:30.831826+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Choose messages from one account')
+Choose messages from one account
+2026-09-07T05:22:15.825854+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1440-mixed-selection-state', 'Orca Black', '1440', '900', 'Two selected exact rows across work and personal; authoring disabled', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-mixed-selection-state.png
+screenshots/black-1440-mixed-selection-state.png
+2026-09-07T05:22:39.682007+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1440-mixed-selection-state')
+{"scenario": "black-1440-mixed-selection-state", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:22:54.419101+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'find', 'role', 'button', 'click', '--name', 'Switch to Light', '--exact')
+✓ Done
+2026-09-07T05:23:23.427758+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:23:28.754981+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Choose messages from one account')
+Choose messages from one account
+2026-09-07T05:24:11.794064+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1440-mixed-selection-state', 'Light', '1440', '900', 'Two selected exact rows across work and personal; authoring disabled', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-mixed-selection-state.png
+screenshots/light-1440-mixed-selection-state.png
+2026-09-07T05:24:25.138315+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1440-mixed-selection-state')
+{"scenario": "light-1440-mixed-selection-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:24:32.803243+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:24:45.941102+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'Choose messages from one account')
+Choose messages from one account
+2026-09-07T05:24:56.653095+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1024-mixed-selection-state', 'Light', '1024', '768', 'Two selected exact rows across work and personal; authoring disabled', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-mixed-selection-state.png
+screenshots/light-1024-mixed-selection-state.png
+2026-09-07T05:25:05.791201+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1024-mixed-selection-state')
+{"scenario": "light-1024-mixed-selection-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}

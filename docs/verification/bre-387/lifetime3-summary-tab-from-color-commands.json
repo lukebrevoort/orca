@@ -1,0 +1,20 @@
+[
+  [
+    "focus",
+    ".view-color-field input"
+  ],
+  [
+    "press",
+    "Tab"
+  ],
+  [
+    "mouse",
+    "move",
+    "10",
+    "10"
+  ],
+  [
+    "eval",
+    "({at:new Date().toISOString(),active:document.activeElement?.outerHTML,focusVisible:document.activeElement?.matches(\":focus-visible\"),open:document.querySelector(\".view-preserved-constraints\").open})"
+  ]
+]

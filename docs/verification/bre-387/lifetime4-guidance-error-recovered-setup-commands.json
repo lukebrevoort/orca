@@ -1,0 +1,39 @@
+[
+  [
+    "click",
+    "@e13"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\"button[aria-controls=organization-views]\")"
+  ],
+  [
+    "click",
+    "button[aria-controls=organization-views]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!document.querySelector(\"#organization-views\").hidden"
+  ],
+  [
+    "click",
+    "#organization-views .views-workspace > button.view-action"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".first-view-help .first-view-guidance > button\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ],
+  [
+    "network",
+    "requests",
+    "--filter",
+    "include=first_view_guidance"
+  ]
+]

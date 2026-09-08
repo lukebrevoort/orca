@@ -1,0 +1,39 @@
+✓ Done
+2026-09-07T05:09:12.579905+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:09:14.660774+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'No Threads match this filtered View right now')
+No Threads match this filtered View right now
+2026-09-07T05:09:20.332497+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1024-zero-results-state', 'Orca Black', '1024', '768', 'Persisted revision8 zero-result View; ready for future mail', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-zero-results-state.png
+screenshots/black-1024-zero-results-state.png
+2026-09-07T05:09:25.884923+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1024-zero-results-state')
+{"scenario": "black-1024-zero-results-state", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:09:29.496106+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:09:34.577167+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'No Threads match this filtered View right now')
+No Threads match this filtered View right now
+2026-09-07T05:09:40.153088+00:00 ('python3', '/tmp/bre387-capture.py', 'black-1440-zero-results-state', 'Orca Black', '1440', '900', 'Persisted revision8 zero-result View; ready for future mail', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-zero-results-state.png
+screenshots/black-1440-zero-results-state.png
+2026-09-07T05:09:48.582056+00:00 ('python3', '/tmp/bre387-observe.py', 'black-1440-zero-results-state')
+{"scenario": "black-1440-zero-results-state", "active": {"label": "Switch to Light", "outline": "rgb(244, 243, 239) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:09:50.941039+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'find', 'role', 'button', 'click', '--name', 'Switch to Light', '--exact')
+✓ Done
+2026-09-07T05:09:53.991168+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1440', '900')
+✓ Done
+2026-09-07T05:09:55.294770+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'No Threads match this filtered View right now')
+No Threads match this filtered View right now
+2026-09-07T05:09:59.309962+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1440-zero-results-state', 'Light', '1440', '900', 'Persisted revision8 zero-result View; ready for future mail', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-zero-results-state.png
+screenshots/light-1440-zero-results-state.png
+2026-09-07T05:10:06.118594+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1440-zero-results-state')
+{"scenario": "light-1440-zero-results-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}
+2026-09-07T05:10:08.984508+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'set', 'viewport', '1024', '768')
+✓ Done
+2026-09-07T05:10:12.334227+00:00 ('/opt/homebrew/bin/agent-browser', '--session', 'bre387-built-623e5fc', 'wait', '--text', 'No Threads match this filtered View right now')
+No Threads match this filtered View right now
+2026-09-07T05:10:16.917831+00:00 ('python3', '/tmp/bre387-capture.py', 'light-1024-zero-results-state', 'Light', '1024', '768', 'Persisted revision8 zero-result View; ready for future mail', 'Reuse same draft state without persistence mutation|Set viewport and theme|Inspect visible labels and controls')
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-zero-results-state.png
+screenshots/light-1024-zero-results-state.png
+2026-09-07T05:10:25.050000+00:00 ('python3', '/tmp/bre387-observe.py', 'light-1024-zero-results-state')
+{"scenario": "light-1024-zero-results-state", "active": {"label": "Switch to Orca Black", "outline": "rgb(16, 37, 34) none 3px", "outlineOffset": "0px", "tag": "BUTTON"}, "documentOverflow": false, "pointerMisses": []}

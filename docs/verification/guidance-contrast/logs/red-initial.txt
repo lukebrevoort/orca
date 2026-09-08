@@ -1,0 +1,17 @@
+PASS current-default: 4.977829588709942, 4.977829588709942
+FAIL current-1-hover: 4.49048326062504, 4.977829588709942
+FAIL current-1-active: 4.977829588709942, 4.977829588709942
+16 | mkdirSync(output, { recursive: true });
+17 | const failures: string[] = [];
+18 | async function browser(...command: string[]) {
+19 |   const child = Bun.spawn(["/opt/homebrew/bin/agent-browser", "--session", session, ...command], { stdout: "pipe", stderr: "pipe" });
+20 |   const [status, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+21 |   if (status) throw new Error(`${command[0]} exited ${status}: ${stderr}\n${stdout}`);
+                             ^
+error: focus exited 1: ✗ Element not found: .first-view-guidance h2. Verify the selector, role, or name is correct and the element exists in the DOM.
+
+
+      at browser (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/scripts/check-guidance-contrast.ts:21:25)
+      at async states (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/scripts/check-guidance-contrast.ts:105:11)
+
+FAIL: 3 failures; /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/guidance-contrast/red

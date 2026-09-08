@@ -1,0 +1,7 @@
+BRE-387 scratch database: /var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-xmASu2/review.sqlite
+Open http://127.0.0.1:5187/v1/review/login
+Add future mail: curl -X POST http://127.0.0.1:5187/v1/review/future
+Stop with Ctrl-C. Only this harness temporary directory is removed on shutdown.
+8:02:48 PM [vite] (client) Pre-transform error: The service is no longer running
+  Plugin: vite:esbuild
+  File: /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-production-evidence-final/packages/feedback-kit-react/src/index.ts

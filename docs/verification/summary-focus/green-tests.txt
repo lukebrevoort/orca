@@ -1,0 +1,15 @@
+bun test v1.3.14 (d1632b29)
+
+apps/web/src/top-layer.test.tsx:
+(pass) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [428.87ms]
+(pass) shared top-layer contract > leaves interior native summary Tab to the browser (reverse=%s) [50.79ms]
+(pass) shared top-layer contract > wraps through native summary boundaries and excludes closed nested details contents [73.07ms]
+(pass) shared top-layer contract > does not treat secondary or negative-tabindex summaries as native tab stops [26.34ms]
+(pass) shared top-layer contract > stacks nested dialogs, traps Tab both ways, and restores each opener [205.36ms]
+(pass) shared top-layer contract > keeps focus inside a busy layer with no enabled actions and ignores Escape [30.36ms]
+(pass) shared top-layer contract > coalesces nested unregister restoration into one frame and restores the external opener [69.02ms]
+
+ 7 pass
+ 0 fail
+ 37 expect() calls
+Ran 7 tests across 1 file. [5.96s]

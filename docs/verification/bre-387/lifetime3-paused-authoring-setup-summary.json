@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:09:22.052883+00:00",
+  "completedAt": "2026-09-07T13:12:04.067726+00:00",
+  "exitCode": 1,
+  "commands": "lifetime3-paused-authoring-setup-commands.json",
+  "raw": "lifetime3-paused-authoring-setup-raw.json",
+  "stderr": "lifetime3-paused-authoring-setup-stderr.txt",
+  "parsedRecords": 0
+}

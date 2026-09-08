@@ -1,0 +1,7 @@
+{
+  "active": "<button class=\"view-action\" type=\"button\">Cancel</button>",
+  "at": "2026-09-07T13:52:31.014Z",
+  "summary": "<details class=\"view-preserved-constraints\" open=\"\"><summary>Preserved constraints · 1</summary><ul><li>Human classifications · Likely human</li></ul></details>",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F"
+}
+

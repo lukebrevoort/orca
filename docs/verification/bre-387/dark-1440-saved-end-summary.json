@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:57:23.150542+00:00",
+  "completedAt": "2026-09-07T15:57:28.648345+00:00",
+  "exitCode": 0,
+  "commands": "dark-1440-saved-end-commands.json",
+  "raw": "dark-1440-saved-end-raw.json",
+  "stderr": "dark-1440-saved-end-stderr.txt",
+  "parsedRecords": 2
+}

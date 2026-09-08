@@ -1,0 +1,16 @@
+PASS current-default: 4.977829588709942, 4.977829588709942
+16 | mkdirSync(output, { recursive: true });
+17 | const failures: string[] = [];
+18 | async function browser(...command: string[]) {
+19 |   const child = Bun.spawn(["/opt/homebrew/bin/agent-browser", "--session", session, ...command], { stdout: "pipe", stderr: "pipe" });
+20 |   const [status, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+21 |   if (status) throw new Error(`${command[0]} exited ${status}: ${stderr}\n${stdout}`);
+                             ^
+error: mouse exited 1: Missing arguments for: mouse move
+Usage: agent-browser mouse move <x> <y>
+
+
+      at browser (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/scripts/check-guidance-contrast.ts:21:25)
+      at async moveTo (/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/apps/web/scripts/check-guidance-contrast.ts:93:9)
+
+FAIL: 1 failures; /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/guidance-contrast/red-pointer

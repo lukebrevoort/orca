@@ -1,0 +1,19 @@
+[
+  [
+    "click",
+    ".selection-mode-toggle"
+  ],
+  [
+    "click",
+    ".message-list > li:first-child .message-row"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".bulk-view-action button:not(:disabled)\")"
+  ],
+  [
+    "eval",
+    "({at:new Date().toISOString(),selected:[...document.querySelectorAll(\".message-row[aria-pressed=true]\")].map(e=>e.getAttribute(\"aria-label\")),url:location.href})"
+  ]
+]

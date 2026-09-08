@@ -1,0 +1,21 @@
+{
+  "accounts": [
+    {
+      "label": "personal",
+      "pressed": "false"
+    },
+    {
+      "label": "work",
+      "pressed": "true"
+    }
+  ],
+  "at": "2026-09-07T12:09:28.859Z",
+  "authority": "available",
+  "scenario": "lifetime3-third-reconstructed-draft",
+  "subject": "Project",
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-07T15:55:48.780Z",
+  "currentButton": "<button class=\"view-action\" type=\"button\">Load more</button>",
+  "pending": {
+    "at": "2026-09-07T15:55:47.377Z",
+    "disabled": true,
+    "rect": {
+      "bottom": 834,
+      "height": 36,
+      "left": 774.484375,
+      "right": 911.515625,
+      "top": 798,
+      "width": 137.03125,
+      "x": 774.484375,
+      "y": 798
+    },
+    "text": "Loading more Threads\u2026",
+    "theme": "light"
+  },
+  "rows": 75,
+  "scenario": "light-1440-saved-pending-observation",
+  "harnessCheckoutSha": "0128377589d072555e1c6131e280561347789f75",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

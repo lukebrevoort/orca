@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "failures": [],
+  "session": "guidance-contrast-final-f037",
+  "sample": false,
+  "minimumContrast": 4.5,
+  "method": "WCAG sRGB computed solid-background compositing, unrounded threshold; real pointer/keyboard pseudo-states"
+}

@@ -1,0 +1,45 @@
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1024-controls-search-save-hover 1
+✓ Done
+
+✓ Done
+
+black-1024-controls-search-save-focus 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-controls-search.png
+screenshots/black-1024-controls-search.png
+✓ Done
+
+black-1024-controls-search-result-hover 1
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1024-controls-search-result-focus 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-controls-search-result-focus.png
+screenshots/black-1024-controls-search-result-focus.png
+✓ Done
+
+✓ Done
+
+black-1024-controls-search-input-focus 2
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1024-controls-search-input-focus.png
+screenshots/black-1024-controls-search-input-focus.png

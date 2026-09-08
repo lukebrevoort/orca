@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:59:11.039572+00:00",
+  "completedAt": "2026-09-07T15:59:14.747640+00:00",
+  "exitCode": 0,
+  "commands": "light-1440-org-end-commands.json",
+  "raw": "light-1440-org-end-raw.json",
+  "stderr": "light-1440-org-end-stderr.txt",
+  "parsedRecords": 2
+}

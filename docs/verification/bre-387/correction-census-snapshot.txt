@@ -1,0 +1,7 @@
+Observed via agent-browser 0.34.0, named bre387-built-623e5fc, production scratch; tested code 623e5fc23b6e8a35ae3fc8323b28fcd531c56d68.
+Census evaluation timestamp: 2026-09-07T02:42:49.863Z.
+Command: snapshot -s '[aria-label="Correct matching senders"]'
+Complete bounded set: 8 addresses in work@example.com.
+Proven matching senders in selected conversation census-0: sender0@example.com.
+All initially checked: MAYA@EXAMPLE.COM, SENDER0@EXAMPLE.COM, SENDER1@EXAMPLE.COM, SENDER2@EXAMPLE.COM, SENDER3@EXAMPLE.COM, SENDER4@EXAMPLE.COM, SENDER5@EXAMPLE.COM, SENDER6@EXAMPLE.COM.
+Summary transcribed from tool output; not an original raw stdout file. List is vertically scrollable; screenshots do not display all eight simultaneously.

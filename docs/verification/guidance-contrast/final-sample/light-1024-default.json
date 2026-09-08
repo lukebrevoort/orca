@@ -1,0 +1,433 @@
+{
+  "capturedAt": "2026-09-07T09:46:57.448Z",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "theme": "light",
+  "transition": null,
+  "viewport": [
+    1024,
+    768
+  ],
+  "activeElement": "<h2 id=\"_r_2_\" data-dialog-initial-focus=\"true\" tabindex=\"-1\">Keep useful mail together</h2>",
+  "assets": [
+    "http://127.0.0.1:5187/assets/index-amMOSRSH.js",
+    "http://127.0.0.1:5187/assets/index-B72Z04Ct.css"
+  ],
+  "targets": [
+    {
+      "text": "Example only · cannot be saved",
+      "foreground": "rgb(15, 36, 34)",
+      "effectiveBackground": [
+        237,
+        245,
+        242
+      ],
+      "ratio": 14.620005100049028,
+      "fontSize": "10px",
+      "fontWeight": "400",
+      "hovered": false,
+      "active": false,
+      "focused": false,
+      "focusVisible": false,
+      "outline": {
+        "style": "none",
+        "width": "3px",
+        "offset": "0px",
+        "color": "rgb(15, 36, 34)"
+      },
+      "rect": {
+        "x": 218,
+        "y": 383.390625,
+        "width": 588,
+        "height": 13
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "FIGCAPTION",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "FIGURE",
+          "className": "first-view-sample",
+          "background": "rgb(237, 245, 242)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(255, 255, 255)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    },
+    {
+      "text": "Project updates",
+      "foreground": "rgb(15, 36, 34)",
+      "effectiveBackground": [
+        237,
+        245,
+        242
+      ],
+      "ratio": 14.620005100049028,
+      "fontSize": "16px",
+      "fontWeight": "700",
+      "hovered": false,
+      "active": false,
+      "focused": false,
+      "focusVisible": false,
+      "outline": {
+        "style": "none",
+        "width": "3px",
+        "offset": "0px",
+        "color": "rgb(15, 36, 34)"
+      },
+      "rect": {
+        "x": 218,
+        "y": 406.390625,
+        "width": 131.890625,
+        "height": 21
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "STRONG",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "FIGURE",
+          "className": "first-view-sample",
+          "background": "rgb(237, 245, 242)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(255, 255, 255)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    },
+    {
+      "text": "A saved View keeps matching conversations together as new mail arrives.",
+      "foreground": "rgb(15, 36, 34)",
+      "effectiveBackground": [
+        237,
+        245,
+        242
+      ],
+      "ratio": 14.620005100049028,
+      "fontSize": "13px",
+      "fontWeight": "400",
+      "hovered": false,
+      "active": false,
+      "focused": false,
+      "focusVisible": false,
+      "outline": {
+        "style": "none",
+        "width": "3px",
+        "offset": "0px",
+        "color": "rgb(15, 36, 34)"
+      },
+      "rect": {
+        "x": 218,
+        "y": 433.390625,
+        "width": 588,
+        "height": 20.796875
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "P",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "FIGURE",
+          "className": "first-view-sample",
+          "background": "rgb(237, 245, 242)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(255, 255, 255)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    },
+    {
+      "text": "No sample mail is added to your mailbox.",
+      "foreground": "rgb(15, 36, 34)",
+      "effectiveBackground": [
+        237,
+        245,
+        242
+      ],
+      "ratio": 14.620005100049028,
+      "fontSize": "11px",
+      "fontWeight": "400",
+      "hovered": false,
+      "active": false,
+      "focused": false,
+      "focusVisible": false,
+      "outline": {
+        "style": "none",
+        "width": "3px",
+        "offset": "0px",
+        "color": "rgb(15, 36, 34)"
+      },
+      "rect": {
+        "x": 218,
+        "y": 465.1875,
+        "width": 227.515625,
+        "height": 14
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "SMALL",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "FIGURE",
+          "className": "first-view-sample",
+          "background": "rgb(237, 245, 242)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(255, 255, 255)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(247, 250, 248)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    }
+  ]
+}

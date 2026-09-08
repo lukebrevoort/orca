@@ -1,0 +1,1 @@
+PASS: 0 failures; /Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/guidance-contrast/behavior-black-1440

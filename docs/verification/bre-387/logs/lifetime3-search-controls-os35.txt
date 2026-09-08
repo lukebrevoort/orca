@@ -1,0 +1,158 @@
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-empty 3
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-save-hover 1
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-save-focus 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-controls-search.png
+screenshots/light-1024-controls-search.png
+✓ Done
+
+light-1024-controls-search-result-hover 100
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-result-focus 100
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-input-focus 2
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-empty 3
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-save-hover 1
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-save-focus 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-controls-search.png
+screenshots/light-1440-controls-search.png
+✓ Done
+
+light-1440-controls-search-result-hover 100
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-result-focus 100
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-input-focus 2
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-empty 3
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-save-hover 1
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-save-focus 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-controls-search.png
+screenshots/black-1440-controls-search.png
+✓ Done
+
+black-1440-controls-search-result-hover 100
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-result-focus 100
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-input-focus 2
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1024-controls-search-empty 3
+✓ Done
+
+✓ Done
+
+✗ Failed to read: Resource temporarily unavailable (os error 35) (after 5 retries - daemon may be busy or unresponsive)
+
+Traceback (most recent call last):
+  File "/tmp/bre387-search-controls.py", line 11, in <module>
+    run(*ab,'fill','input[aria-label="Search stored mail"]','Project');run(*ab,'press','Enter');run(*ab,'wait','.global-mail-result-list a');run(*ab,'hover','.global-mail-save');target(n+'-save-hover','.global-mail-save')
+                                                                                                ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bre387-search-controls.py", line 3, in run
+    def run(*a):subprocess.run(a,check=True)
+                ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '('python3', '/tmp/bre387-ab.py', 'wait', '.global-mail-result-list a')' returned non-zero exit status 1.

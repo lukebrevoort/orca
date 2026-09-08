@@ -1,0 +1,28 @@
+[
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Switch to Light",
+    "--exact"
+  ],
+  [
+    "find",
+    "role",
+    "button",
+    "click",
+    "--name",
+    "Correct senders for Project correction 0",
+    "--exact"
+  ],
+  [
+    "wait",
+    ".view-sender-correction label input"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-census-open\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,count:document.querySelectorAll(\".view-sender-correction label input\").length,text:document.querySelector(\".view-sender-correction\")?.textContent,accounts:[...document.querySelectorAll(\"[data-clause=account] button[aria-pressed]\")].map(e=>({label:e.textContent,pressed:e.getAttribute(\"aria-pressed\")}))}})"
+  ]
+]

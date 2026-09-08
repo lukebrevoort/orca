@@ -1,0 +1,135 @@
+[
+  {
+    "filename": "logs/lifetime2-bre387-fixed-selected.log",
+    "sha256": "499efa353bc1d02dabe378f0e86248fda5025b094fceba4bfd9a0e4ea9b41b10",
+    "original": "/tmp/bre387-fixed-selected.log",
+    "copiedAt": "2026-09-07T08:39:18.728128+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-org.log",
+    "sha256": "bd21dbbd63fe33b0740ddadbc68ac47637c5a86f5d709df04f054668120c3d90",
+    "original": "/tmp/bre387-fixed-org.log",
+    "copiedAt": "2026-09-07T08:39:18.730220+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-empty-help.log",
+    "sha256": "647085c052e63cf3d4d350d2d6c98c482efe595246cb972cb9bdd0a1421eff2c",
+    "original": "/tmp/bre387-fixed-empty-help.log",
+    "copiedAt": "2026-09-07T08:39:18.731863+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-preference.log",
+    "sha256": "2821c05c985ec2a627b4d6348a9c6390327bdb71179cee0847a5832f9b472550",
+    "original": "/tmp/bre387-fixed-preference.log",
+    "copiedAt": "2026-09-07T08:39:18.733134+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-empty.log",
+    "sha256": "c587f9569b3df005c1b0156917e52c3bf630d571f57a40808da2d36d0090e124",
+    "original": "/tmp/bre387-fixed-empty.log",
+    "copiedAt": "2026-09-07T08:39:18.734354+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-loading-black.log",
+    "sha256": "5a87292b90e2d3932d70c5559a78e246999d31f919972679c3be36f246cae08c",
+    "original": "/tmp/bre387-loading-black.log",
+    "copiedAt": "2026-09-07T08:39:18.735909+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-arrival.log",
+    "sha256": "410b291cfdb45d7c8346eed1cee43a726115c46f0675a5e4a4991d67e9acb62f",
+    "original": "/tmp/bre387-fixed-arrival.log",
+    "copiedAt": "2026-09-07T08:39:18.737336+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-guidance-controls.log",
+    "sha256": "d10fa40c95d6d1f8f2db476af876faa05773d091c59e743cd7564c0a548cc41a",
+    "original": "/tmp/bre387-fixed-guidance-controls.log",
+    "copiedAt": "2026-09-07T08:39:18.738641+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-selected-light-controls.log",
+    "sha256": "463cb682e6a175a5865256f0a81edde43826a3f2d1baac15160c849e4a0bf539",
+    "original": "/tmp/bre387-fixed-selected-light-controls.log",
+    "copiedAt": "2026-09-07T08:39:18.740664+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-preference-banner.log",
+    "sha256": "9c886c591bd3df54215eac438719b331eee9079788aa17988be2d700d1665f8b",
+    "original": "/tmp/bre387-fixed-preference-banner.log",
+    "copiedAt": "2026-09-07T08:39:18.741905+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-selected-black.log",
+    "sha256": "3ea08577ce98c5033aa5b74b4ceb55a4bb204734f28292b6609baa7e9b3f7267",
+    "original": "/tmp/bre387-fixed-selected-black.log",
+    "copiedAt": "2026-09-07T08:39:18.743224+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-empty-correction-remaining.log",
+    "sha256": "d001cb3a01b150a216ceacc99eed799a6bbec22e5cf25c969d472aa73084ccc7",
+    "original": "/tmp/bre387-fixed-empty-correction-remaining.log",
+    "copiedAt": "2026-09-07T08:39:18.744406+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-guidance-controls-remaining.log",
+    "sha256": "95ec1293920bc926e9d32a3a5f1356e91be63f42b4a58b3e5e33cdf9c21769df",
+    "original": "/tmp/bre387-guidance-controls-remaining.log",
+    "copiedAt": "2026-09-07T08:39:18.745507+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-list.log",
+    "sha256": "87913bd4de2af74023068c18da4e5667347d21d3201cbc01e71200f7778c2351",
+    "original": "/tmp/bre387-fixed-list.log",
+    "copiedAt": "2026-09-07T08:39:18.746838+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-server.log",
+    "sha256": "07a786c3f67ab8c272c8e7f9d2fc76d173ea23944dbf13267cb6f16d50aa2331",
+    "original": "/tmp/bre387-fixed-server.log",
+    "copiedAt": "2026-09-07T08:39:18.749039+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-loading-light.log",
+    "sha256": "412d5b0b97d3e549cb048f3780635582df8c1c47bd2779d3ef6263f78f8f5d83",
+    "original": "/tmp/bre387-loading-light.log",
+    "copiedAt": "2026-09-07T08:39:18.750500+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-order-manual.log",
+    "sha256": "b55625cda61d7c0f5f89cb3c77cc98bf1e80d008542981d19e22a576ad8c0a27",
+    "original": "/tmp/bre387-order-manual.log",
+    "copiedAt": "2026-09-07T08:39:18.751759+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-f02-targets.log",
+    "sha256": "bfa3ef97e469e4e4a915c172fe551eca3cf43462454f3f0eef23e74a0d4af869",
+    "original": "/tmp/bre387-f02-targets.log",
+    "copiedAt": "2026-09-07T08:39:18.752928+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  },
+  {
+    "filename": "logs/lifetime2-bre387-fixed-empty-correction.log",
+    "sha256": "55109092481a397ff278f2c89793772a48d3d7e2fc9c5f8ebf8dfbc1e3ac5690",
+    "original": "/tmp/bre387-fixed-empty-correction.log",
+    "copiedAt": "2026-09-07T08:39:18.754218+00:00",
+    "boundary": "Raw helper output preserved; command outcomes and receipt chronology determine claims, not filename."
+  }
+]

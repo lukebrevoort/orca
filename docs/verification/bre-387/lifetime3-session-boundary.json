@@ -1,0 +1,42 @@
+{
+  "recordedAt": "2026-09-07T10:41:00.822324+00:00",
+  "session": "bre387-controls-7d021ab",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "sequence": [
+    {
+      "handle": 83167,
+      "exit": 1,
+      "detail": "Black1024 result wait tool failed os35 after5 internal retries; not a rendered product error"
+    },
+    {
+      "handle": 5179,
+      "exit": 0,
+      "detail": "Fresh snapshot no interactive elements"
+    },
+    {
+      "handle": 9003,
+      "exit": 0,
+      "detail": "Readback about:blank emptydocument; root cause/session replacement unknown",
+      "evidence": "search-after-wait-dom.json"
+    },
+    {
+      "detail": "Existing proxy health200; same scratchserver87408, no reset"
+    },
+    {
+      "handle": 93839,
+      "exit": 0,
+      "detail": "Open scratch login in same named session returned Orca root"
+    },
+    {
+      "handle": 19595,
+      "exit": 0,
+      "detail": "Inbox ready"
+    },
+    {
+      "handle": 71784,
+      "detail": "Only missing Black1024 ready targets/focus frames resume"
+    }
+  ],
+  "boundary": "Earlier captures preserved with originaltimestamps. Same named session reused; do not claim continuous document lifetime across unexpected blank page. No provider stub or DB reset."
+}

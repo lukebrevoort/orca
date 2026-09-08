@@ -1,0 +1,1551 @@
+{
+  "theme": "Light",
+  "runtimeSourceSha": "44edbf2f5033f5d5e0b4ffa29169120482d22c47",
+  "states": [
+    {
+      "method": "Computed CSS foreground composited against ancestor solid background chain over white canvas; not pixel sampling. Background images/element opacity require separate review.",
+      "targets": [
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Maya selection up",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 431.5,
+            "width": 25,
+            "x": 474,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 16.033501095278172,
+          "disabled": false,
+          "effectiveBackground": [
+            255,
+            255,
+            255
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Maya selection down",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 458.5,
+            "width": 25,
+            "x": 474,
+            "y": 458.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 16.033501095278172,
+          "disabled": false,
+          "effectiveBackground": [
+            255,
+            255,
+            255
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Project evidence up",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 431.5,
+            "width": 25,
+            "x": 715,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Project evidence down",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 458.5,
+            "width": 25,
+            "x": 715,
+            "y": 458.5
+          }
+        }
+      ],
+      "timestamp": "2026-09-07T08:05:51.513Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": [
+        1024,
+        768
+      ]
+    },
+    {
+      "method": "Computed CSS foreground composited against ancestor solid background chain over white canvas; not pixel sampling. Background images/element opacity require separate review.",
+      "targets": [
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Maya selection up",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 431.5,
+            "width": 25,
+            "x": 474,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 13.914410928512549,
+          "disabled": false,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": true,
+          "label": "Move Fixed Maya selection down",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 458.5,
+            "width": 25,
+            "x": 474,
+            "y": 458.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 16.033501095278172,
+          "disabled": false,
+          "effectiveBackground": [
+            255,
+            255,
+            255
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Project evidence up",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 431.5,
+            "width": 25,
+            "x": 715,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Project evidence down",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 458.5,
+            "width": 25,
+            "x": 715,
+            "y": 458.5
+          }
+        }
+      ],
+      "timestamp": "2026-09-07T08:05:57.453Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": [
+        1024,
+        768
+      ]
+    },
+    {
+      "method": "Computed CSS foreground composited against ancestor solid background chain over white canvas; not pixel sampling. Background images/element opacity require separate review.",
+      "targets": [
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Maya selection up",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 431.5,
+            "width": 25,
+            "x": 474,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 16.033501095278172,
+          "disabled": false,
+          "effectiveBackground": [
+            255,
+            255,
+            255
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Maya selection down",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 474,
+            "right": 499,
+            "top": 458.5,
+            "width": 25,
+            "x": 474,
+            "y": 458.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 13.914410928512549,
+          "disabled": false,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(16, 37, 34)",
+          "glyph": "\u2191",
+          "hit": true,
+          "hovered": true,
+          "label": "Move Fixed Project evidence up",
+          "outline": "rgb(16, 37, 34) none 3px",
+          "rect": {
+            "bottom": 455.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 431.5,
+            "width": 25,
+            "x": 715,
+            "y": 431.5
+          }
+        },
+        {
+          "chain": [
+            {
+              "background": "rgb(232, 241, 236)",
+              "class": "view-icon-action",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BUTTON"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-order-controls",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list-item",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "view-list",
+              "image": "none",
+              "opacity": "1",
+              "tag": "NAV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "views-layout",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(255, 255, 255)",
+              "class": "views-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "organization-studio",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-workspace",
+              "image": "none",
+              "opacity": "1",
+              "tag": "SECTION"
+            },
+            {
+              "background": "rgb(246, 250, 247)",
+              "class": "desktop-shell",
+              "image": "none",
+              "opacity": "1",
+              "tag": "MAIN"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "app-root",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgba(0, 0, 0, 0)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "DIV"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "BODY"
+            },
+            {
+              "background": "rgb(247, 250, 248)",
+              "class": "",
+              "image": "none",
+              "opacity": "1",
+              "tag": "HTML"
+            }
+          ],
+          "contrast": 5.465659912533613,
+          "disabled": true,
+          "effectiveBackground": [
+            232,
+            241,
+            236
+          ],
+          "focused": false,
+          "foreground": "rgb(81, 100, 94)",
+          "glyph": "\u2193",
+          "hit": true,
+          "hovered": false,
+          "label": "Move Fixed Project evidence down",
+          "outline": "rgb(81, 100, 94) none 3px",
+          "rect": {
+            "bottom": 482.5,
+            "height": 24,
+            "left": 715,
+            "right": 740,
+            "top": 458.5,
+            "width": 25,
+            "x": 715,
+            "y": 458.5
+          }
+        }
+      ],
+      "timestamp": "2026-09-07T08:06:03.406Z",
+      "url": "http://127.0.0.1:5187/?destination=organization",
+      "viewport": [
+        1024,
+        768
+      ]
+    }
+  ]
+}

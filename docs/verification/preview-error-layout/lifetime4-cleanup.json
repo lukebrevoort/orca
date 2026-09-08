@@ -1,0 +1,16 @@
+{
+  "at": "2026-09-07T14:52:01.639389+00:00",
+  "browserSession": "bre387-residual-a63d6da",
+  "browserCloseExec": 89999,
+  "browserExitCode": 0,
+  "browserReceipt": "lifetime4-browser-close.json",
+  "serverExec": 2877,
+  "serverExitCode": 0,
+  "signal": "SIGINT via owned handle",
+  "scratch": "/var/folders/sx/28cs5l2n0c194m21c5prr8780000gp/T/orca-bre387-review-vKGKqj",
+  "scratchExists": false,
+  "listenerExit": 1,
+  "listeners": "",
+  "appearanceRestoration": "lifetime4-appearance-restored.json",
+  "routesCleared": "lifetime4-routes-cleared.txt"
+}

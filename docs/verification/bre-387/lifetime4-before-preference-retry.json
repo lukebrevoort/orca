@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-07T14:48:10.993Z",
+  "scenario": "lifetime4-before-preference-retry",
+  "value": {
+    "emptyMailCount": {
+      "count": 0
+    },
+    "preferences": [],
+    "views": []
+  },
+  "harnessCheckoutSha": "a63d6da1182e485a2c382554914398a579ccb385",
+  "runtimeSourceSha": "d0b05f8d20992e76276283c63c843119291b6bb6",
+  "providerRefreshNoop": false
+}

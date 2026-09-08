@@ -1,0 +1,15 @@
+{
+  "hit": "<button aria-pressed=\"false\" class=\"bulk-select-all\" type=\"button\">Select all visible</button>",
+  "outer": "<button aria-label=\"Switch to Orca Black\" class=\"desktop-theme-toggle\" type=\"button\">Black</button>",
+  "rect": {
+    "bottom": 50.5,
+    "height": 34,
+    "left": 954.34375,
+    "right": 1004,
+    "top": 16.5,
+    "width": 49.65625,
+    "x": 954.34375,
+    "y": 16.5
+  },
+  "scrollY": 0
+}

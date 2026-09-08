@@ -1,0 +1,38 @@
+[
+  [
+    "open",
+    "http://127.0.0.1:5187/settings/reading"
+  ],
+  [
+    "wait",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "click",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/?destination=view%3Aview_d642cf03-3a5e-4803-a419-77a034557e86"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelectorAll('.saved-view-results .view-thread-open').length===25"
+  ],
+  [
+    "set",
+    "viewport",
+    "1024",
+    "768"
+  ],
+  [
+    "scrollintoview",
+    ".saved-view-results .view-continuation button"
+  ]
+]

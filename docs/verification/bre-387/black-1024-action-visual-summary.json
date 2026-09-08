@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T11:40:21.049304+00:00",
+  "completedAt": "2026-09-07T11:42:04.400795+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-action-visual-commands.json",
+  "raw": "black-1024-action-visual-raw.json",
+  "stderr": "black-1024-action-visual-stderr.txt",
+  "parsedRecords": 16
+}

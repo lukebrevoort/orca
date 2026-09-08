@@ -1,0 +1,86 @@
+{
+  "status": "pass",
+  "space": {
+    "all": {
+      "selected": 100,
+      "pressed": "true",
+      "focused": "bulk-select-all"
+    },
+    "clear": {
+      "selected": 0,
+      "pressed": "false",
+      "focused": "bulk-select-all"
+    }
+  },
+  "authoring": {
+    "before": {
+      "scroll": 600,
+      "selected": [
+        "Deselect Maya Chen: Apartment viewing 1"
+      ]
+    },
+    "cancel": {
+      "scroll": 600,
+      "selected": [
+        "Deselect Maya Chen: Apartment viewing 1"
+      ],
+      "focus": "Use these senders"
+    },
+    "discard": {
+      "scroll": 600,
+      "selected": [
+        "Deselect Maya Chen: Apartment viewing 1"
+      ],
+      "focus": "Use these senders"
+    }
+  },
+  "readerReturn": {
+    "scroll": 600,
+    "focus": "MCMaya ChennormalSep 6Apartment weekendA separate connected account.",
+    "url": "http://127.0.0.1:5187/?destination=inbox",
+    "activePane": "Inbox",
+    "readerRect": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    }
+  },
+  "mobile": {
+    "viewport": 390,
+    "documentWidth": 390,
+    "pane": {
+      "x": 16,
+      "y": 59,
+      "width": 358,
+      "height": 716,
+      "top": 59,
+      "right": 374,
+      "bottom": 775,
+      "left": 16
+    },
+    "headerMinHeight": "58px",
+    "bulkTop": "12px",
+    "bulkZ": "30",
+    "mobileNavigation": "grid"
+  },
+  "pressedThemePreservation": {
+    "selected": 100,
+    "pressed": "true"
+  },
+  "visualSmoke": [
+    "Organization Light 1440 and Black 1024",
+    "Reader Light 1440 and Black 1024",
+    "Mobile Inbox 390x844 Light and Black",
+    "Pressed/hover bulk labels in Light and Black"
+  ],
+  "limitations": [
+    "Initial Light Reader wait expected DOM removal and timed out at 25s. App deliberately retains the hidden reader. Original screenshot/scroll/focus record is preserved; corrected Black recheck asserts public Inbox pane and zero-size Reader rectangle.",
+    "Source identity checks use fixture-unique accessible row labels, not database IDs.",
+    "Organization and mobile screenshots are layout smoke, not a full behavior/contrast certification."
+  ]
+}

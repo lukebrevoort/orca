@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T13:14:09.215076+00:00",
+  "completedAt": "2026-09-07T13:14:32.250464+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-controls-paused-commands.json",
+  "raw": "black-1024-controls-paused-raw.json",
+  "stderr": "black-1024-controls-paused-stderr.txt",
+  "parsedRecords": 9
+}

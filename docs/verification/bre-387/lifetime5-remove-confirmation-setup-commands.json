@@ -1,0 +1,58 @@
+[
+  [
+    "open",
+    "http://127.0.0.1:5187/settings/reading"
+  ],
+  [
+    "wait",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime5-appearance-baseline\",at:new Date().toISOString(),selected:document.querySelector(\"input[name=theme]:checked\").value,theme:document.documentElement.dataset.theme}})"
+  ],
+  [
+    "click",
+    "input[name=theme][value=system]"
+  ],
+  [
+    "set",
+    "media",
+    "light"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.documentElement.dataset.theme===\"light\""
+  ],
+  [
+    "open",
+    "http://127.0.0.1:5187/?destination=organization"
+  ],
+  [
+    "wait",
+    "button[aria-controls=organization-views]"
+  ],
+  [
+    "click",
+    "button[aria-controls=organization-views]"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-lifecycle-actions .view-danger:not(:disabled)\")"
+  ],
+  [
+    "click",
+    ".view-lifecycle-actions .view-danger"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector(\".view-confirm:not(:disabled)\")"
+  ],
+  [
+    "snapshot",
+    "-i"
+  ]
+]

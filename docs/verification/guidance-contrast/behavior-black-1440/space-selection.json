@@ -1,0 +1,13 @@
+{
+  "url": "http://127.0.0.1:5187/?destination=all",
+  "theme": "dark",
+  "viewport": [
+    1440,
+    900
+  ],
+  "active": "<button aria-pressed=\"true\" class=\"selection-mode-toggle\" type=\"button\">Done selecting</button>",
+  "help": false,
+  "search": false,
+  "bulk": true,
+  "selected": []
+}

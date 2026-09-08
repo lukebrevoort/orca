@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-07T13:32:28.099Z",
+  "mediaDark": true,
+  "provenance": "Real Appearance System radio; agent-browser color-scheme media emulation drives production matchMedia listener, no CSS/DOM theme override",
+  "scenario": "lifetime3-system-theme-setup",
+  "systemChecked": true,
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/settings/reading",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

@@ -1,0 +1,10 @@
+{
+  "method": "Computed CSS foreground composited against ancestor solid background chain over white canvas; not pixel sampling. Background images/element opacity require separate review.",
+  "targets": [],
+  "timestamp": "2026-09-07T08:38:40.137Z",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "viewport": [
+    1024,
+    768
+  ]
+}

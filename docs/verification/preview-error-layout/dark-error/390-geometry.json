@@ -1,0 +1,368 @@
+{
+  "first": {
+    "applicable": true,
+    "at": "2026-09-07T15:22:30.880Z",
+    "footer": {
+      "clientWidth": 308,
+      "gridTemplateColumns": "272px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "normal",
+      "rect": {
+        "bottom": 778.5625,
+        "height": 231,
+        "left": 41,
+        "right": 349,
+        "top": 547.5625,
+        "width": 308
+      },
+      "scrollWidth": 308,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "preview": {
+      "clientWidth": 272,
+      "gridTemplateColumns": "272px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 658.5625,
+        "height": 98,
+        "left": 59,
+        "right": 331,
+        "top": 560.5625,
+        "width": 272
+      },
+      "scrollWidth": 272,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "previewEscapes": false,
+    "previewLines": [
+      {
+        "bottom": 571.5625,
+        "height": 10,
+        "left": 59,
+        "right": 180.953125,
+        "top": 561.5625,
+        "width": 121.953125
+      },
+      {
+        "bottom": 588.5625,
+        "height": 13,
+        "left": 59,
+        "right": 261.46875,
+        "top": 575.5625,
+        "width": 202.46875
+      },
+      {
+        "bottom": 601.5625,
+        "height": 10,
+        "left": 59,
+        "right": 297.984375,
+        "top": 591.5625,
+        "width": 238.984375
+      },
+      {
+        "bottom": 611.5625,
+        "height": 10,
+        "left": 59,
+        "right": 95.71875,
+        "top": 601.5625,
+        "width": 36.71875
+      },
+      {
+        "bottom": 646.0625,
+        "height": 12,
+        "left": 72,
+        "right": 136.84375,
+        "top": 634.0625,
+        "width": 64.84375
+      }
+    ],
+    "red": false,
+    "retry": {
+      "disabled": false,
+      "text": "Retry preview"
+    },
+    "saveDisabled": true,
+    "textOverlap": false,
+    "theme": "dark",
+    "transition": null,
+    "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+    "validation": {
+      "clientWidth": 272,
+      "gridTemplateColumns": "none",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 766.5625,
+        "height": 96,
+        "left": 59,
+        "right": 331,
+        "top": 670.5625,
+        "width": 272
+      },
+      "scrollWidth": 272,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "validationEscapes": false,
+    "validationLines": [
+      {
+        "bottom": 682.5625,
+        "height": 12,
+        "left": 59,
+        "right": 301.640625,
+        "top": 670.5625,
+        "width": 242.640625
+      },
+      {
+        "bottom": 694.5625,
+        "height": 12,
+        "left": 59,
+        "right": 319.765625,
+        "top": 682.5625,
+        "width": 260.765625
+      },
+      {
+        "bottom": 706.5625,
+        "height": 12,
+        "left": 59,
+        "right": 244.96875,
+        "top": 694.5625,
+        "width": 185.96875
+      },
+      {
+        "bottom": 718.5625,
+        "height": 12,
+        "left": 59,
+        "right": 294.734375,
+        "top": 706.5625,
+        "width": 235.734375
+      },
+      {
+        "bottom": 730.5625,
+        "height": 12,
+        "left": 59,
+        "right": 325.09375,
+        "top": 718.5625,
+        "width": 266.09375
+      },
+      {
+        "bottom": 742.5625,
+        "height": 12,
+        "left": 59,
+        "right": 327.84375,
+        "top": 730.5625,
+        "width": 268.84375
+      },
+      {
+        "bottom": 754.5625,
+        "height": 12,
+        "left": 59,
+        "right": 329.4375,
+        "top": 742.5625,
+        "width": 270.4375
+      },
+      {
+        "bottom": 766.5625,
+        "height": 12,
+        "left": 59,
+        "right": 67.828125,
+        "top": 754.5625,
+        "width": 8.828125
+      }
+    ],
+    "validationText": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"workspaceId\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"number\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"workspaceRevision\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"draft\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"results\"\n    ],\n    \"message\": \"Invalid input\"\n  }\n]",
+    "viewport": [
+      390,
+      844
+    ]
+  },
+  "second": {
+    "applicable": true,
+    "at": "2026-09-07T15:22:31.040Z",
+    "footer": {
+      "clientWidth": 308,
+      "gridTemplateColumns": "272px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "normal",
+      "rect": {
+        "bottom": 778.5625,
+        "height": 231,
+        "left": 41,
+        "right": 349,
+        "top": 547.5625,
+        "width": 308
+      },
+      "scrollWidth": 308,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "preview": {
+      "clientWidth": 272,
+      "gridTemplateColumns": "272px",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 658.5625,
+        "height": 98,
+        "left": 59,
+        "right": 331,
+        "top": 560.5625,
+        "width": 272
+      },
+      "scrollWidth": 272,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "previewEscapes": false,
+    "previewLines": [
+      {
+        "bottom": 571.5625,
+        "height": 10,
+        "left": 59,
+        "right": 180.953125,
+        "top": 561.5625,
+        "width": 121.953125
+      },
+      {
+        "bottom": 588.5625,
+        "height": 13,
+        "left": 59,
+        "right": 261.46875,
+        "top": 575.5625,
+        "width": 202.46875
+      },
+      {
+        "bottom": 601.5625,
+        "height": 10,
+        "left": 59,
+        "right": 297.984375,
+        "top": 591.5625,
+        "width": 238.984375
+      },
+      {
+        "bottom": 611.5625,
+        "height": 10,
+        "left": 59,
+        "right": 95.71875,
+        "top": 601.5625,
+        "width": 36.71875
+      },
+      {
+        "bottom": 646.0625,
+        "height": 12,
+        "left": 72,
+        "right": 136.84375,
+        "top": 634.0625,
+        "width": 64.84375
+      }
+    ],
+    "red": false,
+    "retry": {
+      "disabled": false,
+      "text": "Retry preview"
+    },
+    "saveDisabled": true,
+    "textOverlap": false,
+    "theme": "dark",
+    "transition": null,
+    "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+    "validation": {
+      "clientWidth": 272,
+      "gridTemplateColumns": "none",
+      "minWidth": "0px",
+      "overflow": "visible",
+      "overflowWrap": "anywhere",
+      "rect": {
+        "bottom": 766.5625,
+        "height": 96,
+        "left": 59,
+        "right": 331,
+        "top": 670.5625,
+        "width": 272
+      },
+      "scrollWidth": 272,
+      "whiteSpace": "normal",
+      "wordBreak": "normal"
+    },
+    "validationEscapes": false,
+    "validationLines": [
+      {
+        "bottom": 682.5625,
+        "height": 12,
+        "left": 59,
+        "right": 301.640625,
+        "top": 670.5625,
+        "width": 242.640625
+      },
+      {
+        "bottom": 694.5625,
+        "height": 12,
+        "left": 59,
+        "right": 319.765625,
+        "top": 682.5625,
+        "width": 260.765625
+      },
+      {
+        "bottom": 706.5625,
+        "height": 12,
+        "left": 59,
+        "right": 244.96875,
+        "top": 694.5625,
+        "width": 185.96875
+      },
+      {
+        "bottom": 718.5625,
+        "height": 12,
+        "left": 59,
+        "right": 294.734375,
+        "top": 706.5625,
+        "width": 235.734375
+      },
+      {
+        "bottom": 730.5625,
+        "height": 12,
+        "left": 59,
+        "right": 325.09375,
+        "top": 718.5625,
+        "width": 266.09375
+      },
+      {
+        "bottom": 742.5625,
+        "height": 12,
+        "left": 59,
+        "right": 327.84375,
+        "top": 730.5625,
+        "width": 268.84375
+      },
+      {
+        "bottom": 754.5625,
+        "height": 12,
+        "left": 59,
+        "right": 329.4375,
+        "top": 742.5625,
+        "width": 270.4375
+      },
+      {
+        "bottom": 766.5625,
+        "height": 12,
+        "left": 59,
+        "right": 67.828125,
+        "top": 754.5625,
+        "width": 8.828125
+      }
+    ],
+    "validationText": "[\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"workspaceId\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"number\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"workspaceRevision\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"draft\"\n    ],\n    \"message\": \"Invalid input\"\n  },\n  {\n    \"expected\": \"object\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"results\"\n    ],\n    \"message\": \"Invalid input\"\n  }\n]",
+    "viewport": [
+      390,
+      844
+    ]
+  }
+}

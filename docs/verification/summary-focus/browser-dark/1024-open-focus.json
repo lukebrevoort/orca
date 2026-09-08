@@ -1,0 +1,15 @@
+{
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F",
+  "theme": "dark",
+  "viewport": [
+    1024,
+    768
+  ],
+  "active": "<summary>Preserved constraints \u00b7 1</summary>",
+  "summary": true,
+  "color": false,
+  "next": false,
+  "inside": true,
+  "focusVisible": true,
+  "open": true
+}

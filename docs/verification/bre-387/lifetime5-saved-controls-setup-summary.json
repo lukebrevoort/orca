@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T15:44:53.315198+00:00",
+  "completedAt": "2026-09-07T15:45:12.449870+00:00",
+  "exitCode": 0,
+  "commands": "lifetime5-saved-controls-setup-commands.json",
+  "raw": "lifetime5-saved-controls-setup-raw.json",
+  "stderr": "lifetime5-saved-controls-setup-stderr.txt",
+  "parsedRecords": 1
+}

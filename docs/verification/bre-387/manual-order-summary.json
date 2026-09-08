@@ -1,0 +1,57 @@
+{
+  "method": "Actual arrow glyph foreground/background chain and pointer hits; CSS compositing, not sampled pixels. Raw axe incompletes retained. Enabled icon buttons meet even 4.5:1 text threshold; accessible aria-labels identify move direction and View. Disabled boundary arrows remain intentionally inactive and are visually documented separately.",
+  "targets": [
+    {
+      "file": "manual-order-light-1440.json",
+      "theme": "Light",
+      "width": 1440,
+      "minimumEnabledContrast": 13.914410928512549,
+      "allEnabledHit": true,
+      "backgroundImages": [
+        "none"
+      ],
+      "ancestorOpacities": [
+        "1"
+      ]
+    },
+    {
+      "file": "manual-order-black-1440.json",
+      "theme": "Orca Black",
+      "width": 1440,
+      "minimumEnabledContrast": 16.146372246689523,
+      "allEnabledHit": true,
+      "backgroundImages": [
+        "none"
+      ],
+      "ancestorOpacities": [
+        "1"
+      ]
+    },
+    {
+      "file": "manual-order-black-1024.json",
+      "theme": "Orca Black",
+      "width": 1024,
+      "minimumEnabledContrast": 16.146372246689523,
+      "allEnabledHit": true,
+      "backgroundImages": [
+        "none"
+      ],
+      "ancestorOpacities": [
+        "1"
+      ]
+    },
+    {
+      "file": "manual-order-light-1024.json",
+      "theme": "Light",
+      "width": 1024,
+      "minimumEnabledContrast": 13.914410928512549,
+      "allEnabledHit": true,
+      "backgroundImages": [
+        "none"
+      ],
+      "ancestorOpacities": [
+        "1"
+      ]
+    }
+  ]
+}

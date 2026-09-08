@@ -1,0 +1,291 @@
+[
+  {
+    "recordedAt": "2026-09-07T02:40:39.969990+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "session": "bre387-built-623e5fc",
+    "actions": [
+      {
+        "command": "type @e7 Project",
+        "handle": 53685,
+        "exit": 0,
+        "observation": "Next snapshot showed ProjectProjectProjectProject. Cause unknown; automation observation, not an isolated product defect. No duration measured beyond persistent polling."
+      },
+      {
+        "command": "fill @e8 Project",
+        "exit": 0,
+        "observation": "Next snapshot shows Project and real matching stored-mail results."
+      },
+      {
+        "command": "Save as View; Replace with subject contains Project; Undo draft change",
+        "observation": "Unsupported general clause retained and Save disabled; explicit replacement produced preview and enabled Save; Undo restored blocker and disabled Save."
+      },
+      {
+        "command": "Correct senders for Project correction 0",
+        "observation": "Multi-account scope unavailable with Choose one account in Tune explanation; no partial sender list offered."
+      },
+      {
+        "command": "Add filter Account; choose work; correction click",
+        "observation": "Correction click returned no matching button while Checking draft was visible. Subsequent screenshot showed personal OR work selected; narrowing not yet established."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T02:50:48.996184+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "deselect personal; Correct senders for Project correction 0",
+        "observation": "Complete bounded census: 8 addresses in work@example.com at 2026-09-07T02:42:49.863Z. Proven conversation sender sender0; no automatic removal."
+      },
+      {
+        "command": "uncheck sender0; Preview these senders",
+        "observation": "Seven exact addresses excluding sender0; preview starts correction1, correction2, correction3, update4, correction4."
+      },
+      {
+        "command": "Undo draft change",
+        "observation": "Sender filter removed; correction0 restored to first preview result."
+      },
+      {
+        "command": "fill View name Project review evidence; Save View; inspection; reload",
+        "observation": "Real persisted work-only subject Project View revision1. Reload restored results and My spaces entry. See browser-saved-inspection.json."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T03:04:01.164704+00:00",
+    "testedSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "focus Maya; Space; click sender0..6 checkboxes",
+        "observation": "All eight unchecked; Preview these senders disabled. Offscreen candidates reached by semantic browser clicks."
+      },
+      {
+        "command": "check Maya; Preview these senders; Save changes; inspection",
+        "observation": "Same saved View ID, revision2, accountIds work, sender maya@example.com, subject Project. browser-allowlist-inspection.json."
+      },
+      {
+        "command": "POST /v1/review/future; authenticated all-page results; reload",
+        "observation": "Five exhausted pages,110 unique work identities; future2 included and future1 excluded. browser-future-pages.json; persisted allowlist screenshot."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T03:15:13.064589+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Rename original View; Cancel; Keep editing; Save",
+        "observation": "Dirty choice shown, edited name retained, same View renamed Project renamed evidence."
+      },
+      {
+        "command": "Inbox Select; select work and personal rows",
+        "observation": "Zero selection disables authoring. Mixed selection retains2 rows and explains single account requirement. Deselect personal opens work/Maya sender draft."
+      },
+      {
+        "command": "Return backdrop locator; Cancel; Discard",
+        "observation": "Fullscreen empty-text backdrop center covered by editor as expected (backdrop-hit-test.json). Visible Cancel/Discard succeeded; source selected row retained, focus restored Use these senders. No visible Return-control defect claimed."
+      },
+      {
+        "command": "Arm fail-next-commit; Save; Retry connection; Save",
+        "observation": "Injected error retained disabled selected-Maya draft; Retry restored fields/name/preview; Save created second real View. browser-two-views.json."
+      },
+      {
+        "command": "Organization Views; move selected View down; Confirm remove",
+        "observation": "Reordered output captured browser-reordered.txt, then second View removed. Original renamed corrected View remains in browser-after-remove.json."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T03:27:18.894675+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Login independent empty user; Organization Views",
+        "observation": "Empty mailbox illustration; no real starts, Return when mail arrives. No View for empty user."
+      },
+      {
+        "command": "Arm fail-next-preference; Skip for now; Retry saving choice; reload; Views",
+        "observation": "Injected preference error offered retry; successful retry completion at03:14:06.942Z; invitation absent after reload, Getting started available. See empty-after-skip-inspection.json and empty-after-skip-reload.txt."
+      },
+      {
+        "command": "Getting started; Escape; POST empty-arrival",
+        "observation": "Manual help initially empty. First arrival request proxy ECONNRESET; HTTP200 inspection still count0. One bounded idempotent retry HTTP200 insertedtrue."
+      },
+      {
+        "command": "Reopen Getting started; Use selected mail",
+        "observation": "Manual help now both real starts (arrival-help screenshot); selection mode shows one new stored row and Use these senders disabled with zero selected."
+      },
+      {
+        "command": "Login reviewer second session; GET preferences include first_view_guidance",
+        "observation": "Same reviewer completion preserved; browser-second-session-preferences.json."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T03:44:40.078803+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Toggle list failure on; Organization Views; toggle off; Retry Organization",
+        "observation": "Injected failure disabled new/edit/remove. Clearing fixture and Retry restored original View and enabled lifecycle. Scoped snapshot briefly no element during recovery; subsequent full snapshot settled."
+      },
+      {
+        "command": "POST overflow fixture; edit existing View draft; remove sender filter; subject Overflow census; correction first result",
+        "observation": "51 inserted; explicit more-than50 matching senders warning; no partial candidates or apply control. Raw overflow-correction.txt and screenshot."
+      },
+      {
+        "command": "Cancel correction; fill unmatched subject; Review zero matches",
+        "observation": "CLI reported no matching button after action, but subsequent fresh snapshot showed Cancel zero-match confirmation and Confirm zero-match save. State transition observed; cause of exit/state discrepancy unknown. Not a product defect claim."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T03:53:17.167227+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Confirm zero-match save; inspection; capture",
+        "observation": "Original View now revision6, work-only unmatched subject and no sender filter. browser-zero-saved.json and zero-saved screenshot. Earlier revision2 allowlist/future pages remain historical proof, not current result claims."
+      },
+      {
+        "command": "Meta+k; fill Search Project; End; x; Meta+z; Escape",
+        "observation": "Cmd+K opened Search, native Undo left Projectx (unresolved). Escape returned saved View heading. Raw keyboard-input.txt and keyboard-platform.json."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T04:15:36.232337+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "commands": [
+          "find role textbox fill --name SUBJECT CONTAINS --exact Project",
+          "snapshot -i -d 5 > draft-undo-before.txt",
+          "focus .view-composer h3",
+          "press Meta+z",
+          "snapshot -i -d 5 > draft-undo-after.txt"
+        ],
+        "observation": "Before ready Project with enabled Save and Undo. After ready original unmatched subject with Review zero matches, no Undo and no recovery error. Focus targeted non-text H3 inside composer. Commands retained in tool transcript; snapshot file mtimes bound sequence, not exact key event timestamps.",
+        "snapshotTimes": {
+          "draft-undo-before.txt": "2026-09-07T04:02:51.059634+00:00",
+          "draft-undo-after.txt": "2026-09-07T04:03:39.255897+00:00"
+        }
+      },
+      {
+        "command": "Fill Project; verify ready; press Meta+Enter twice; inspection",
+        "observation": "keyboard-submit.txt timestamps two sequential key commands ~5.6s apart; same View revision6\u21927, no extra View. Does not prove overlapping in-flight duplicate submission or change-set count."
+      },
+      {
+        "command": "Saved Load more; read DOM before/after; map tuples to authenticated API pages",
+        "observation": "Rendered25\u219250, stable original prefix. CLI late locator error despite completed transition. pagination-composite-match.json maps50 unique subject/account-email/timestamp tuples to50 exact account/thread IDs; live single-page continuation proof, exhaustive semantics remain API/tests."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T04:35:29.554747+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Keyboard scroll sender6 into view across all four theme/viewport variants; inspect actual span and desktop-health computed styles and hit-testing",
+        "observation": "manual-targets-{black,light}-{1024,1440}.json and matching census-keyboard screenshots show actual targets visible and hittable. Contrast uses actual span and conservative alpha-header bound; raw axe incompletes retained."
+      },
+      {
+        "command": "One injected commit failure, then viewport/theme variants; focus Retry, Tab Return to source, hover Retry; four axe audits",
+        "observation": "All four form-error audits: zero violations,22 passes,one glyph incomplete. Disabled retained draft visible. Category is injected failure over real scratch production routes; no provider integration assertion."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T04:52:27.016999+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Recover injected error with Retry connection; Cancel; reuse dirty guard across four theme/size variants; Discard draft",
+        "observation": "Dirty guard captures preserve Keep editing/Discard controls. View persisted revision7 remains historical current state; diagnostic eight-sender draft discarded."
+      },
+      {
+        "command": "Search mail fill Project; Enter; Save as View; capture unsupported in Light both sizes. Cancel, Escape to shell, switch Black, reopen same source; capture Black both sizes",
+        "observation": "All four unsupported general-clause states captured; disabled Save due retained blocker. light-1024-prepare-transition.png is settled unsupported, not loading."
+      },
+      {
+        "command": "Replace with subject contains Project; snapshot",
+        "observation": "Transient snapshot showed Checking draft\u2026 disabled (tool output only, no loading screenshot). Next snapshot settled Save View enabled."
+      },
+      {
+        "command": "Correct senders for Project correction0 with omitted account filter; capture Black both sizes",
+        "observation": "Complete message Choose one account in Tune; no partial sender list. Dynamic scope remains unsupported for bounded correction until explicit account selection."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T04:58:37.021695+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Cancel Search draft; Discard; Escape; Edit or rename View; immediate field lookup",
+        "observation": "Lookup failed because preparation had failed. Fresh snapshot showed Organization500 and Retry preparation, not a successful editor. late-editor-preparation-retry.txt preserves visible error; late-editor-proxy-error.txt records built proxy ECONNRESET to API prepare. No app-specific defect attribution."
+      },
+      {
+        "command": "Retry preparation; Retry connection; fresh snapshot; fill subject Overflow",
+        "observation": "Recovered enabled editor and ready five Overflow results; retained same saved View revision7. Diagnostic subject draft not saved."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T05:08:07.952034+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Initial Overflow variant loop used broad wait text50; subsequent screenshots/readback",
+        "observation": "Four -overflow-state images are ready draft overviews, NOT opened >50-panel proof. Relabeled after direct inspection. No saved mutation."
+      },
+      {
+        "command": "For each theme/viewport: verify full More than 50 matching senders text; scrollintoview .view-sender-correction; save panel-only text and screenshot",
+        "observation": "Four -overflow-panel captures show complete unavailable panel, no partial list/Apply. Narrow pointer probe misses account controls scrolled above target behind sticky header; those are not visible-panel hit failures."
+      },
+      {
+        "command": "Cancel sender correction; fill BRE387 visual zero unmatched; wait Review zero matches; click Review zero matches",
+        "observation": "Explicit Confirm zero-match save and Cancel zero-match confirmation controls shown. Four-way confirmation loop makes no persistence mutation."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T05:10:36.425563+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "After four-way confirmation inspection: Confirm zero-match save once; authenticated inspection; settled result text",
+        "observation": "Same View view_7efd42ca-3b60-4d90-89a2-020148aa4af4 revision7\u21928, subject BRE387 visual zero unmatched, accountIds[work], no sender filter. browser-zero-second-save.txt. Settled UI0matches, future-ready message; earlier revision2 allowlist/future proof remains historical."
+      }
+    ]
+  },
+  {
+    "recordedAt": "2026-09-07T05:20:16.407093+00:00",
+    "testedSha": "a6fc0564174da554554add78231827a09c0aa2c0",
+    "behaviorSha": "623e5fc23b6e8a35ae3fc8323b28fcd531c56d68",
+    "actions": [
+      {
+        "command": "Inbox Select; four-way no-selection captures; select Apartment viewing1 work and Apartment weekend personal",
+        "observation": "Zero-selection Use these senders disabled all4. Exact two rows selected; mixed account warning shown."
+      },
+      {
+        "command": "Attempt theme switch after personal row auto-scroll; hit-test; capture scrolled state",
+        "observation": "Click rejected: bulk-select-all covers theme rect. selection-theme-hit.json and light-1024-mixed-scrolled.png show sticky bulk toolbar overlapping global header; no force click. Parent notified for triage, no runtime fix or proven root cause."
+      },
+      {
+        "command": "scrollintoview .inbox-title failed (selector absent); scrollintoview h1 succeeded",
+        "observation": "Returned to visible Inbox heading to continue theme variants. Failed selector did not mutate state."
+      }
+    ]
+  }
+]

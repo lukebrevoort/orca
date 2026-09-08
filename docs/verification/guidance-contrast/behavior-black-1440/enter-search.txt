@@ -1,0 +1,7 @@
+- heading "Search mail" [level=1, ref=e3]
+- button "Close Search mail and return to Organization" [ref=e4]
+- textbox "Search stored mail" [ref=e7]
+- button "Search" [ref=e5]
+- button "Filters" [expanded=false, ref=e1]
+- button "Save as View" [disabled, ref=e2]
+- heading "Find a person, subject, or phrase." [level=2, ref=e6]

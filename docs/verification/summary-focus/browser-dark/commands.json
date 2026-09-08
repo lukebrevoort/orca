@@ -1,0 +1,591 @@
+[
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1024",
+      "768"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":768,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1024},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-open-focus.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-open-focus.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<button class=\\\\\\\"view-action\\\\\\\" type=\\\\\\\"button\\\\\\\">Replace with subject contains \u201cProject\u201d</button>\\\",\\\"summary\\\":false,\\\"color\\\":false,\\\"next\\\":true,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<input aria-label=\\\\\\\"View color\\\\\\\" type=\\\\\\\"color\\\\\\\" value=\\\\\\\"#0b9b84\\\\\\\">\\\",\\\"summary\\\":false,\\\"color\\\":true,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "hover",
+      ".view-preserved-constraints summary"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"hovered\":\".view-preserved-constraints summary\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify((()=>{const e=document.querySelector('.view-preserved-constraints summary'),r=e.getBoundingClientRect(),s=getComputedStyle(e),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],open:e.parentElement.open,text:e.textContent,hover:e.matches(':hover'),focused:e===document.activeElement,hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height},color:s.color,fontSize:s.fontSize,visibility:s.visibility}})())"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"open\\\":true,\\\"text\\\":\\\"Preserved constraints \u00b7 1\\\",\\\"hover\\\":true,\\\"focused\\\":false,\\\"hit\\\":true,\\\"rect\\\":{\\\"x\\\":83,\\\"y\\\":509.1875,\\\"width\\\":137.625,\\\"height\\\":12},\\\"color\\\":\\\"rgb(244, 243, 239)\\\",\\\"fontSize\\\":\\\"8px\\\",\\\"visibility\\\":\\\"visible\\\"}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-open-hover.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-open-hover.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Space"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Space\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-closed-focus.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-closed-focus.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<button class=\\\\\\\"view-action\\\\\\\" type=\\\\\\\"button\\\\\\\">Replace with subject contains \u201cProject\u201d</button>\\\",\\\"summary\\\":false,\\\"color\\\":false,\\\"next\\\":true,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"active\\\":\\\"<input aria-label=\\\\\\\"View color\\\\\\\" type=\\\\\\\"color\\\\\\\" value=\\\\\\\"#0b9b84\\\\\\\">\\\",\\\"summary\\\":false,\\\"color\\\":true,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "hover",
+      ".view-preserved-constraints summary"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"hovered\":\".view-preserved-constraints summary\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify((()=>{const e=document.querySelector('.view-preserved-constraints summary'),r=e.getBoundingClientRect(),s=getComputedStyle(e),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],open:e.parentElement.open,text:e.textContent,hover:e.matches(':hover'),focused:e===document.activeElement,hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height},color:s.color,fontSize:s.fontSize,visibility:s.visibility}})())"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1024,768],\\\"open\\\":false,\\\"text\\\":\\\"Preserved constraints \u00b7 1\\\",\\\"hover\\\":true,\\\"focused\\\":false,\\\"hit\\\":true,\\\"rect\\\":{\\\"x\\\":83,\\\"y\\\":509.1875,\\\"width\\\":137.625,\\\"height\\\":12},\\\"color\\\":\\\"rgb(244, 243, 239)\\\",\\\"fontSize\\\":\\\"8px\\\",\\\"visibility\\\":\\\"visible\\\"}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-closed-hover.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1024-closed-hover.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "set",
+      "viewport",
+      "1440",
+      "900"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"deviceScaleFactor\":1.0,\"height\":900,\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"mobile\":false,\"width\":1440},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Space"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Space\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-open-focus.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-open-focus.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<button class=\\\\\\\"view-action\\\\\\\" type=\\\\\\\"button\\\\\\\">Replace with subject contains \u201cProject\u201d</button>\\\",\\\"summary\\\":false,\\\"color\\\":false,\\\"next\\\":true,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<input aria-label=\\\\\\\"View color\\\\\\\" type=\\\\\\\"color\\\\\\\" value=\\\\\\\"#0b9b84\\\\\\\">\\\",\\\"summary\\\":false,\\\"color\\\":true,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "hover",
+      ".view-preserved-constraints summary"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"hovered\":\".view-preserved-constraints summary\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify((()=>{const e=document.querySelector('.view-preserved-constraints summary'),r=e.getBoundingClientRect(),s=getComputedStyle(e),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],open:e.parentElement.open,text:e.textContent,hover:e.matches(':hover'),focused:e===document.activeElement,hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height},color:s.color,fontSize:s.fontSize,visibility:s.visibility}})())"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"open\\\":true,\\\"text\\\":\\\"Preserved constraints \u00b7 1\\\",\\\"hover\\\":true,\\\"focused\\\":false,\\\"hit\\\":true,\\\"rect\\\":{\\\"x\\\":239,\\\"y\\\":509.1875,\\\"width\\\":137.625,\\\"height\\\":12},\\\"color\\\":\\\"rgb(244, 243, 239)\\\",\\\"fontSize\\\":\\\"8px\\\",\\\"visibility\\\":\\\"visible\\\"}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-open-hover.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-open-hover.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":true}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Space"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Space\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-closed-focus.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-closed-focus.png\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<button class=\\\\\\\"view-action\\\\\\\" type=\\\\\\\"button\\\\\\\">Replace with subject contains \u201cProject\u201d</button>\\\",\\\"summary\\\":false,\\\"color\\\":false,\\\"next\\\":true,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<summary>Preserved constraints \u00b7 1</summary>\\\",\\\"summary\\\":true,\\\"color\\\":false,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "press",
+      "Shift+Tab"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"pressed\":\"Shift+Tab\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify(({url:location.href,theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],active:document.activeElement?.outerHTML,summary:document.activeElement===document.querySelector('.view-preserved-constraints summary'),color:document.activeElement===document.querySelector('.view-color-field input'),next:document.activeElement?.textContent==='Replace with subject contains \u201cProject\u201d',inside:!!document.activeElement?.closest('[data-top-layer=active]'),focusVisible:document.activeElement?.matches(':focus-visible'),open:document.querySelector('.view-preserved-constraints')?.open}))"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"url\\\":\\\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\\\",\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"active\\\":\\\"<input aria-label=\\\\\\\"View color\\\\\\\" type=\\\\\\\"color\\\\\\\" value=\\\\\\\"#0b9b84\\\\\\\">\\\",\\\"summary\\\":false,\\\"color\\\":true,\\\"next\\\":false,\\\"inside\\\":true,\\\"focusVisible\\\":true,\\\"open\\\":false}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "focus",
+      ".view-color-field input"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"focused\":\".view-color-field input\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "hover",
+      ".view-preserved-constraints summary"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"hovered\":\".view-preserved-constraints summary\",\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "eval",
+      "JSON.stringify((()=>{const e=document.querySelector('.view-preserved-constraints summary'),r=e.getBoundingClientRect(),s=getComputedStyle(e),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {theme:document.documentElement.dataset.theme,viewport:[innerWidth,innerHeight],open:e.parentElement.open,text:e.textContent,hover:e.matches(':hover'),focused:e===document.activeElement,hit:e===h||e.contains(h),rect:{x:r.x,y:r.y,width:r.width,height:r.height},color:s.color,fontSize:s.fontSize,visibility:s.visibility}})())"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"origin\":\"http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=human&searchSource=%2F\",\"result\":\"{\\\"theme\\\":\\\"dark\\\",\\\"viewport\\\":[1440,900],\\\"open\\\":false,\\\"text\\\":\\\"Preserved constraints \u00b7 1\\\",\\\"hover\\\":true,\\\"focused\\\":false,\\\"hit\\\":true,\\\"rect\\\":{\\\"x\\\":239,\\\"y\\\":509.1875,\\\"width\\\":137.625,\\\"height\\\":12},\\\"color\\\":\\\"rgb(244, 243, 239)\\\",\\\"fontSize\\\":\\\"8px\\\",\\\"visibility\\\":\\\"visible\\\"}\"},\"error\":null}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "screenshot",
+      "/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-closed-hover.png"
+    ],
+    "exit": 0,
+    "stdout": "{\"success\":true,\"data\":{\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":12798390076057945372},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"},\"path\":\"/Users/luke/MALCOM/repos/orca-agt-08a81e67e32c-agent-67e32c-bre-387-shell-selection-fix/docs/verification/summary-focus/browser-dark/1440-closed-hover.png\"},\"error\":null}\n",
+    "stderr": ""
+  }
+]

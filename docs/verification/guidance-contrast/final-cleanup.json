@@ -1,0 +1,20 @@
+{
+  "at": "2026-09-07T09:59:23.106062+00:00",
+  "browser": {
+    "session": "guidance-contrast-final-f037",
+    "closeExec": 39149,
+    "exitCode": 0
+  },
+  "server": {
+    "exec": 24826,
+    "pid": 33517,
+    "signal": "SIGINT",
+    "exitCode": 0
+  },
+  "scratchRemoved": true,
+  "ports": {
+    "exitCode": 1,
+    "output": ""
+  },
+  "retainedAssets": "apps/web/dist (final-build.json)"
+}

@@ -1,0 +1,22 @@
+[
+  [
+    "reload"
+  ],
+  [
+    "wait",
+    ".view-chip"
+  ],
+  [
+    "click",
+    ".view-chip:first-of-type"
+  ],
+  [
+    "wait",
+    "--fn",
+    "document.querySelectorAll(\".view-chip\").length===2 && !document.querySelector(\".view-lifecycle-actions button:first-child\").disabled"
+  ],
+  [
+    "eval",
+    "({controlObservation:{scenario:\"lifetime3-lifecycle-ready\",at:new Date().toISOString(),url:location.href,theme:document.documentElement.dataset.theme,views:[...document.querySelectorAll(\".view-chip\")].map(e=>({name:e.innerText,pressed:e.getAttribute(\"aria-pressed\")})),actions:[...document.querySelectorAll(\".view-lifecycle-actions button,.view-order-controls button\")].map(e=>({label:e.getAttribute(\"aria-label\")||e.textContent,disabled:e.matches(\":disabled\")}))}})"
+  ]
+]

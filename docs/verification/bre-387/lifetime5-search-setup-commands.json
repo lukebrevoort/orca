@@ -1,0 +1,28 @@
+[
+  [
+    "press",
+    "Meta+k"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector('.global-mail-search-form input')"
+  ],
+  [
+    "fill",
+    ".global-mail-search-form input",
+    "Project"
+  ],
+  [
+    "press",
+    "Enter"
+  ],
+  [
+    "wait",
+    "--fn",
+    "!!document.querySelector('.global-mail-load-more')&&!document.querySelector('.global-mail-load-more').disabled"
+  ],
+  [
+    "snapshot"
+  ]
+]

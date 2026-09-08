@@ -1,0 +1,92 @@
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-keyboard-only-result 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-controls-search-keyboard-only-result.png
+screenshots/light-1024-controls-search-keyboard-only-result.png
+✓ Done
+
+✓ Done
+
+light-1024-controls-search-keyboard-only-input 2
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1024-controls-search-keyboard-only-input.png
+screenshots/light-1024-controls-search-keyboard-only-input.png
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-keyboard-only-result 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-controls-search-keyboard-only-result.png
+screenshots/light-1440-controls-search-keyboard-only-result.png
+✓ Done
+
+✓ Done
+
+light-1440-controls-search-keyboard-only-input 2
+✓ Screenshot saved to docs/verification/bre-387/screenshots/light-1440-controls-search-keyboard-only-input.png
+screenshots/light-1440-controls-search-keyboard-only-input.png
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-keyboard-only-result 1
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-controls-search-keyboard-only-result.png
+screenshots/black-1440-controls-search-keyboard-only-result.png
+✓ Done
+
+✓ Done
+
+black-1440-controls-search-keyboard-only-input 2
+✓ Screenshot saved to docs/verification/bre-387/screenshots/black-1440-controls-search-keyboard-only-input.png
+screenshots/black-1440-controls-search-keyboard-only-input.png

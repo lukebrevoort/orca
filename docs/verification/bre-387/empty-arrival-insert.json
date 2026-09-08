@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-09-07T03:20:27.334077+00:00",
+  "status": "failed transport",
+  "command": "agent-browser eval fetch POST /v1/review/empty-arrival then json",
+  "toolExit": 1,
+  "toolError": "Unexpected token <, <!doctype is not valid JSON",
+  "serverError": "ECONNRESET fetching http://127.0.0.1:3087/v1/review/empty-arrival",
+  "readback": "empty-arrival-inspection.json: HTTP200, emptyMailCount0",
+  "response": "No mutation observed; one bounded retry authorized by idempotent fixture."
+}

@@ -1,0 +1,45 @@
+{
+  "actions": [
+    {
+      "disabled": true,
+      "label": "Move Review fixture Sender0 up"
+    },
+    {
+      "disabled": false,
+      "label": "Move Review fixture Sender0 down"
+    },
+    {
+      "disabled": false,
+      "label": "Move Review fixture Maya up"
+    },
+    {
+      "disabled": true,
+      "label": "Move Review fixture Maya down"
+    },
+    {
+      "disabled": false,
+      "label": "Edit definition"
+    },
+    {
+      "disabled": false,
+      "label": "Remove View"
+    }
+  ],
+  "at": "2026-09-07T12:48:51.957Z",
+  "scenario": "lifetime3-lifecycle-ready-after-overview",
+  "theme": "light",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "views": [
+    {
+      "name": "Review fixture Sender0\n2 predicate families\n\u203a",
+      "pressed": "true"
+    },
+    {
+      "name": "Review fixture Maya\n2 predicate families\n\u203a",
+      "pressed": "false"
+    }
+  ],
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

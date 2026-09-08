@@ -1,0 +1,38 @@
+{
+  "active": "<button class=\"view-action\" type=\"button\">Return to source</button>",
+  "at": "2026-09-07T13:36:13.514Z",
+  "targets": [
+    {
+      "focus": false,
+      "focusVisible": false,
+      "rect": {
+        "bottom": 359.1875,
+        "height": 36,
+        "left": 69,
+        "right": 955,
+        "top": 323.1875,
+        "width": 886,
+        "x": 69,
+        "y": 323.1875
+      },
+      "text": "Retry connection"
+    },
+    {
+      "focus": true,
+      "focusVisible": true,
+      "rect": {
+        "bottom": 400.1875,
+        "height": 36,
+        "left": 69,
+        "right": 955,
+        "top": 364.1875,
+        "width": 886,
+        "x": 69,
+        "y": 364.1875
+      },
+      "text": "Return to source"
+    }
+  ],
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F"
+}
+

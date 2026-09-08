@@ -1,0 +1,29 @@
+{
+  "baselineChecker": {
+    "exit": 1,
+    "source": "immutable original two-frame browser measurements",
+    "beforeCss": true
+  },
+  "build": {
+    "exec": 6541,
+    "exit": 0,
+    "log": "build.txt"
+  },
+  "matrix": {
+    "exec": 69923,
+    "pid": 37312,
+    "exit": 0,
+    "cases": 12,
+    "frames": 24,
+    "result": "matrix-result.json"
+  },
+  "lint": {
+    "exec": 89582,
+    "pid": 41370,
+    "exit": 0,
+    "log": "lint.txt"
+  },
+  "cleanup": "cleanup.json",
+  "hosted": "Exact immutable-head typecheck/unit tests reported separately after push.",
+  "scope": "CSS footer containment; actual malformed transport response and recovered normal footer, both themes and three widths. No View saved."
+}

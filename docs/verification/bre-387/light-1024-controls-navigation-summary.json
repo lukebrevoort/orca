@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T12:57:47.525919+00:00",
+  "completedAt": "2026-09-07T12:59:09.538253+00:00",
+  "exitCode": 0,
+  "commands": "light-1024-controls-navigation-commands.json",
+  "raw": "light-1024-controls-navigation-raw.json",
+  "stderr": "light-1024-controls-navigation-stderr.txt",
+  "parsedRecords": 12
+}

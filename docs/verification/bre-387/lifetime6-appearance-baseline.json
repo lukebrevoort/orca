@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-07T16:42:34.426Z",
+  "scenario": "lifetime6-appearance-baseline",
+  "selected": "system",
+  "theme": "light",
+  "harnessCheckoutSha": "d8a52896efb29b34ec07cbe4d06bcd7b805ddf43",
+  "runtimeSourceSha": "465be988438e12631a4e201f6706a6f8e0dfb035",
+  "providerRefreshNoop": false
+}

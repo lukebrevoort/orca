@@ -1,0 +1,46 @@
+{
+  "base": "e9caad71059ba0879c1e92b3571836a368f4bff2",
+  "finalBuild": {
+    "exec": 42657,
+    "exitCode": 0,
+    "log": "logs/final-build.txt"
+  },
+  "finalHelper": {
+    "exec": 44707,
+    "exitCode": 0,
+    "captures": 28,
+    "result": "final-helper/result.json"
+  },
+  "finalSample": {
+    "exec": 26343,
+    "exitCode": 0,
+    "captures": 4,
+    "result": "final-sample/result.json"
+  },
+  "focused": {
+    "exec": 16645,
+    "exitCode": 0,
+    "pass": 12,
+    "fail": 0,
+    "expects": 68,
+    "log": "logs/focused.txt"
+  },
+  "lint": {
+    "exec": 40625,
+    "exitCode": 0,
+    "log": "logs/lint.txt"
+  },
+  "cleanup": "final-cleanup.json",
+  "minimumFinalContrast": 14.620005100049028,
+  "priorBehavior": {
+    "exec": 47487,
+    "exitCode": 0,
+    "result": "behavior-black-1440/result.json",
+    "scope": "Prior helper-only runtime. Not repeated after sample-only foreground selectors."
+  },
+  "hosted": "Pending exact immutable head CI at freeze; consult GitHub checks on reviewed commit.",
+  "stagedWhitespace": {
+    "sourceAndChecker": "PASS",
+    "rawLogs": "Two Vite logger blank lines retain trailing spaces in logs/build.txt and logs/final-build.txt; full staged --check reports these. Raw evidence not normalized."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "at": "2026-09-07T13:37:38.012Z",
+  "mediaDark": true,
+  "returnPresent": true,
+  "sameModal": true,
+  "scenario": "black-1440-controls-return-continuity",
+  "theme": "dark",
+  "url": "http://127.0.0.1:5187/?search=mail&searchQuery=Project&searchMailbox=all&searchEvidence=all&searchSource=%2F",
+  "harnessCheckoutSha": "7d021abc8b04ea14a29ea2aaea216e4f101c50d1",
+  "runtimeSourceSha": "ce1bc03a0e34ed5dc9446656108f5f202787054e",
+  "providerRefreshNoop": false
+}

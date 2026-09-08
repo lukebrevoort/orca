@@ -1,0 +1,398 @@
+{
+  "active": {
+    "checked": false,
+    "label": "sender6@example.com",
+    "outline": "rgb(106, 169, 245) solid 2px"
+  },
+  "nodes": [
+    {
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "desktop-health desktop-health-syncing",
+          "color": "rgb(177, 177, 171)",
+          "fontSize": "9px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 12,
+            "w": 49.953125,
+            "x": 1113.59375,
+            "y": 27.5
+          },
+          "tag": "SPAN"
+        },
+        {
+          "background": "color(srgb 0.0196078 0.0196078 0.0196078 / 0.94)",
+          "class": "desktop-workspace-header",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 68,
+            "w": 1194,
+            "x": 246,
+            "y": 0
+          },
+          "tag": "HEADER"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "desktop-workspace",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 900,
+            "w": 1194,
+            "x": 246,
+            "y": 0
+          },
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "desktop-shell",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "app-root",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML"
+        }
+      ],
+      "hit": true,
+      "hitClass": "desktop-health desktop-health-syncing",
+      "hitTag": "SPAN",
+      "rect": {
+        "h": 12,
+        "w": 49.953125,
+        "x": 1113.59375,
+        "y": 27.5
+      },
+      "selector": ".desktop-health",
+      "text": "syncing"
+    },
+    {
+      "chain": [
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(177, 177, 171)",
+          "fontSize": "8px",
+          "fontWeight": "750",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 10,
+            "w": 101.015625,
+            "x": 479,
+            "y": 450
+          },
+          "tag": "SPAN"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 42,
+            "w": 798,
+            "x": 444,
+            "y": 434
+          },
+          "tag": "LABEL"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 260,
+            "w": 798,
+            "x": 444,
+            "y": 216
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(23, 23, 23)",
+          "class": "view-sender-correction",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 686,
+            "w": 836,
+            "x": 425,
+            "y": -137
+          },
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "view-composer",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 1910,
+            "w": 838,
+            "x": 424,
+            "y": -834
+          },
+          "tag": "FORM"
+        },
+        {
+          "background": "rgb(13, 13, 13)",
+          "class": "views-workspace views-workspace-external-authoring",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2126,
+            "w": 880,
+            "x": 403,
+            "y": -1013
+          },
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 2126,
+            "w": 880,
+            "x": 403,
+            "y": -1013
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "content-pane",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 880,
+            "x": 403,
+            "y": -1013
+          },
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "desktop-workspace",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "auto",
+          "rect": {
+            "h": 900,
+            "w": 1194,
+            "x": 246,
+            "y": 0
+          },
+          "tag": "SECTION"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "desktop-shell",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "hidden",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "MAIN"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "app-root",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgba(0, 0, 0, 0)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "DIV"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "BODY"
+        },
+        {
+          "background": "rgb(5, 5, 5)",
+          "class": "",
+          "color": "rgb(244, 243, 239)",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "opacity": "1",
+          "overflow": "visible",
+          "rect": {
+            "h": 900,
+            "w": 1440,
+            "x": 0,
+            "y": 0
+          },
+          "tag": "HTML"
+        }
+      ],
+      "hit": true,
+      "hitClass": "",
+      "hitTag": "SPAN",
+      "rect": {
+        "h": 10,
+        "w": 101.015625,
+        "x": 479,
+        "y": 450
+      },
+      "selector": ".view-sender-correction label:nth-child(8) > span",
+      "text": "sender6@example.com"
+    }
+  ],
+  "theme": "dark",
+  "timestamp": "2026-09-07T04:17:21.021Z",
+  "url": "http://127.0.0.1:5187/?destination=view%3Aview_7efd42ca-3b60-4d90-89a2-020148aa4af4",
+  "viewport": {
+    "height": 900,
+    "width": 1440
+  }
+}

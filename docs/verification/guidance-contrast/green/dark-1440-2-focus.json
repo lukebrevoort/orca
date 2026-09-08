@@ -1,0 +1,243 @@
+{
+  "capturedAt": "2026-09-07T09:18:01.147Z",
+  "url": "http://127.0.0.1:5187/?destination=organization",
+  "theme": "dark",
+  "transition": null,
+  "viewport": [
+    1440,
+    900
+  ],
+  "activeElement": "<button type=\"button\"><strong>Use selected mail</strong><span>Select conversations from one account, then choose Use these senders.</span></button>",
+  "assets": [
+    "http://127.0.0.1:5187/assets/index-CKkfyQ22.js",
+    "http://127.0.0.1:5187/assets/index-BfW5_TeU.css"
+  ],
+  "targets": [
+    {
+      "text": "Find mail, then choose Save as View.",
+      "foreground": "rgb(244, 243, 239)",
+      "effectiveBackground": [
+        13,
+        13,
+        13
+      ],
+      "ratio": 17.50426120133967,
+      "fontSize": "11px",
+      "fontWeight": "400",
+      "hovered": false,
+      "active": false,
+      "focused": false,
+      "focusVisible": false,
+      "outline": {
+        "style": "none",
+        "width": "3px",
+        "offset": "0px",
+        "color": "rgb(244, 243, 239)"
+      },
+      "rect": {
+        "x": 430,
+        "y": 499.046875,
+        "width": 270,
+        "height": 16.5
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "SPAN",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BUTTON",
+          "className": "",
+          "background": "rgb(13, 13, 13)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-starts",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(13, 13, 13)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    },
+    {
+      "text": "Select conversations from one account, then choose Use these senders.",
+      "foreground": "rgb(244, 243, 239)",
+      "effectiveBackground": [
+        13,
+        13,
+        13
+      ],
+      "ratio": 17.50426120133967,
+      "fontSize": "11px",
+      "fontWeight": "400",
+      "hovered": false,
+      "active": false,
+      "focused": true,
+      "focusVisible": true,
+      "outline": {
+        "style": "solid",
+        "width": "2px",
+        "offset": "3px",
+        "color": "rgb(244, 243, 239)"
+      },
+      "rect": {
+        "x": 740,
+        "y": 490.796875,
+        "width": 270,
+        "height": 33
+      },
+      "hit": true,
+      "chain": [
+        {
+          "tag": "SPAN",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BUTTON",
+          "className": "",
+          "background": "rgb(13, 13, 13)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-starts",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "SECTION",
+          "className": "first-view-guidance",
+          "background": "rgb(13, 13, 13)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "first-view-help",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "orca-top-layer first-view-help-layer",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "DIV",
+          "className": "",
+          "background": "rgba(0, 0, 0, 0)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "BODY",
+          "className": "",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        },
+        {
+          "tag": "HTML",
+          "className": "",
+          "background": "rgb(5, 5, 5)",
+          "image": "none",
+          "opacity": "1",
+          "filter": "none",
+          "backdropFilter": "none"
+        }
+      ],
+      "unsupported": false
+    }
+  ]
+}

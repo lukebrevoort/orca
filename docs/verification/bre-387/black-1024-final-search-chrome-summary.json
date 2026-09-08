@@ -1,0 +1,9 @@
+{
+  "startedAt": "2026-09-07T16:02:40.914481+00:00",
+  "completedAt": "2026-09-07T16:03:06.087548+00:00",
+  "exitCode": 0,
+  "commands": "black-1024-final-search-chrome-commands.json",
+  "raw": "black-1024-final-search-chrome-raw.json",
+  "stderr": "black-1024-final-search-chrome-stderr.txt",
+  "parsedRecords": 16
+}
