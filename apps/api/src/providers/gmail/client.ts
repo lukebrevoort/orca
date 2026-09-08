@@ -46,6 +46,7 @@ export type GmailMessagePage = {
 };
 
 export type GmailClient = {
+  getMessageMetadata?(accessToken: string, messageId: string): Promise<GmailMessage>;
   getMessage(accessToken: string, messageId: string): Promise<GmailMessage>;
   listInboxMessagePage(input: {
     accessToken: string;
@@ -99,6 +100,10 @@ export class GmailApiError extends Error {
 
 export function createGmailClient(fetchImpl: typeof fetch = fetch): GmailClient & GmailTransportClient {
   return {
+    async getMessageMetadata(accessToken, messageId) {
+      return gmailRequest<GmailMessage>(fetchImpl, accessToken, `/messages/${messageId}?format=metadata&fields=id,threadId,internalDate`);
+    },
+
     async getMessage(accessToken, messageId) {
       return gmailRequest<GmailMessage>(fetchImpl, accessToken, `/messages/${messageId}?format=full`);
     },
