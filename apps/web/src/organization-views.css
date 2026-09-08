@@ -145,3 +145,16 @@
 @media(max-width:820px){.view-identity{grid-template-columns:1fr 1fr 60px}.view-clause{grid-template-columns:1fr;gap:9px}.view-clause>header{padding:0 0 7px;border-right:0;border-bottom:1px solid var(--desktop-border)}.view-inline-fields-three{grid-template-columns:1fr 1fr}.view-inline-fields-three label:last-child{grid-column:1/-1}}
 @media(max-width:760px){.views-workspace{padding:14px}.views-header,.view-composer>header,.view-results>header{align-items:start;flex-direction:column}.view-identity,.view-inline-fields,.view-inline-fields-three,.view-list,.view-builder-footer{grid-template-columns:1fr}.view-inline-fields-three label:last-child{grid-column:auto}.view-validation{text-align:left}.view-thread-row{grid-template-columns:28px minmax(0,1fr) auto}.view-thread-lane{display:none}}
 @media(prefers-reduced-motion:reduce){.views-workspace *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Search reuses the common authoring surface and semantic control states. */
+.search-view-authoring { background: var(--desktop-surface); border: 1px solid var(--desktop-border-strong); border-radius: 18px; color: var(--desktop-ink); }
+.search-view-transition { color: var(--desktop-muted); font: 12px/1.6 var(--desktop-sans); margin: 0; padding: 18px 24px 0; }
+.search-view-authoring .view-unsupported-clauses li { flex-wrap: wrap; }
+.search-view-authoring .view-unsupported-clauses li > div { flex: 1 1 260px; }
+.search-view-authoring .view-unsupported-clauses .view-action { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.search-view-authoring .view-action[aria-expanded="true"] { background: var(--desktop-surface-hover); border-color: var(--desktop-border-strong); color: var(--desktop-ink); }
+.search-view-authoring [hidden] { display: none !important; }
+#search-view-tune { margin-top: 12px; }
+.search-view-authoring .view-composer-actions { flex-wrap: wrap; }
+.search-view-authoring .view-unsupported-clauses,
+.search-view-authoring .view-unsupported-clauses li > div { background: var(--orca-surface); }
