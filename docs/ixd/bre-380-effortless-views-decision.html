@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>BRE-380 · Effortless views production decision</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f3f7f5;
+      --surface: #ffffff;
+      --surface-hover: #e8f0ed;
+      --ink: #102522;
+      --muted: #5c706b;
+      --line: #d5e1dc;
+      --accent: #087461;
+      --accent-soft: #dceee8;
+      --warning: #8a5f18;
+      --warning-soft: #fff2d9;
+      --danger: #a84238;
+      --danger-soft: #fae9e6;
+      --code: #12201e;
+      --code-ink: #e7ece9;
+      --shadow: 0 18px 60px rgba(16, 37, 34, .08);
+      --sans: Sora, "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+      --serif: Newsreader, Iowan Old Style, Georgia, serif;
+      --mono: SFMono-Regular, Consolas, ui-monospace, monospace;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #050505;
+      --surface: #101010;
+      --surface-hover: #1b1b1b;
+      --ink: #f4f3ef;
+      --muted: #aaa9a4;
+      --line: #323232;
+      --accent: #82b8fa;
+      --accent-soft: #172435;
+      --warning: #f0c979;
+      --warning-soft: #2b2418;
+      --danger: #ff998d;
+      --danger-soft: #301b19;
+      --code: #0a0a0a;
+      --code-ink: #e4e3df;
+      --shadow: 0 18px 60px rgba(0, 0, 0, .36);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --paper: #050505;
+        --surface: #101010;
+        --surface-hover: #1b1b1b;
+        --ink: #f4f3ef;
+        --muted: #aaa9a4;
+        --line: #323232;
+        --accent: #82b8fa;
+        --accent-soft: #172435;
+        --warning: #f0c979;
+        --warning-soft: #2b2418;
+        --danger: #ff998d;
+        --danger-soft: #301b19;
+        --code: #0a0a0a;
+        --code-ink: #e4e3df;
+        --shadow: 0 18px 60px rgba(0, 0, 0, .36);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.55; }
+    a { color: inherit; }
+    button, input { font: inherit; }
+    code, pre, kbd { font-family: var(--mono); }
+    code { color: var(--accent); font-size: .92em; }
+    kbd { padding: 2px 6px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); font-size: .82em; }
+
+    .hero { position: relative; overflow: hidden; min-height: 72vh; display: grid; align-content: end; padding: 9vw max(26px, calc((100vw - 1240px) / 2)); background: #050505; color: #f4f3ef; }
+    .hero::before { content: ""; position: absolute; right: -100px; top: -190px; width: 540px; height: 540px; border: 1px solid #242424; border-radius: 50%; box-shadow: 0 0 0 72px rgba(255,255,255,.01), 0 0 0 144px rgba(255,255,255,.007); }
+    .hero > * { position: relative; }
+    .eyebrow { color: #82b8fa; font: 800 11px/1 var(--mono); letter-spacing: .15em; text-transform: uppercase; }
+    h1 { max-width: 1000px; margin: 22px 0; font: 500 clamp(54px, 8vw, 104px)/.9 var(--serif); letter-spacing: -.055em; }
+    .hero .lede { max-width: 790px; margin: 0; color: #aaa9a4; font-size: 18px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 42px; color: #777773; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+
+    .toolbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 9px 16px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 93%, transparent); backdrop-filter: blur(18px); }
+    .toolbar a, .theme-toggle { flex: 0 0 auto; padding: 7px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 750; text-decoration: none; }
+    .toolbar a:hover, .theme-toggle:hover, .theme-toggle:focus-visible { background: var(--surface-hover); border-color: var(--line); color: var(--ink); }
+    .theme-toggle { margin-left: auto; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    main { max-width: 1240px; margin: auto; padding: 26px 22px 120px; }
+    section { scroll-margin-top: 62px; padding: 60px 0 8px; }
+    .section-head { display: grid; grid-template-columns: 72px minmax(0, 1fr) minmax(250px, 390px); align-items: end; gap: 20px; margin-bottom: 22px; }
+    .num { color: var(--accent); font: 800 11px/1 var(--mono); letter-spacing: .12em; }
+    h2 { margin: 0; font: 500 clamp(34px, 5vw, 48px)/1 var(--serif); letter-spacing: -.04em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 12px; }
+    h3 { margin: 0 0 10px; font: 500 25px/1.12 var(--serif); }
+    h4 { margin: 20px 0 8px; font-size: 12px; }
+    p { color: var(--muted); }
+    strong { color: var(--ink); }
+
+    .panel { padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+    .panel + .panel { margin-top: 14px; }
+    .panel p { margin: 8px 0; font-size: 12px; }
+    .panel ul, .panel ol { margin: 10px 0 0; padding-left: 20px; color: var(--muted); font-size: 12px; }
+    .panel li { margin: 7px 0; }
+    .decision { border-left: 4px solid var(--accent); }
+    .warning { border-color: color-mix(in srgb, var(--warning) 45%, var(--line)); background: var(--warning-soft); }
+    .warning p, .warning li { color: color-mix(in srgb, var(--warning) 82%, var(--ink)); }
+    .risk { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); background: var(--danger-soft); }
+    .risk p, .risk li { color: color-mix(in srgb, var(--danger) 78%, var(--ink)); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card { min-height: 150px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .card b { display: block; margin-bottom: 11px; color: var(--accent); font: 800 9px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .card strong { display: block; font-size: 13px; }
+    .card p { margin: 8px 0 0; font-size: 11px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 800 9px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+    .pill.pending { background: var(--warning-soft); color: var(--warning); }
+
+    .journey { display: grid; grid-template-columns: repeat(6, minmax(130px, 1fr)); gap: 6px; overflow-x: auto; margin: 0; padding: 0; list-style: none; }
+    .journey:focus-visible, .table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .journey li { position: relative; min-height: 138px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .journey li:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; right: -12px; top: 52%; width: 18px; color: var(--accent); font-weight: 800; text-align: center; }
+    .journey span { color: var(--accent); font: 800 9px/1 var(--mono); }
+    .journey strong { display: block; margin: 11px 0 6px; font-size: 12px; }
+    .journey p { margin: 0; font-size: 10px; }
+
+    .wireframe { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 430px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+    .wire-side { padding: 20px 14px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, var(--paper)); }
+    .wire-brand { margin-bottom: 24px; font: 500 25px/1 var(--serif); }
+    .wire-label { margin: 18px 8px 7px; color: var(--muted); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .wire-nav { padding: 8px; border-radius: 8px; color: var(--muted); font-size: 10px; }
+    .wire-nav.active { border: 1px solid var(--line); background: var(--surface-hover); color: var(--ink); }
+    .wire-main { padding: 24px; }
+    .wire-search { padding: 13px 15px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 11px; }
+    .wire-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 8px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+    .wire-summary strong { font-size: 11px; }
+    .wire-summary span { color: var(--muted); font-size: 9px; }
+    .wire-action { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-hover); color: var(--ink); font-size: 9px; font-weight: 800; }
+    .wire-tune { margin-bottom: 10px; padding: 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--ink); font-size: 10px; }
+    .wire-results { display: grid; gap: 7px; }
+    .wire-row { display: grid; grid-template-columns: 18px 110px minmax(0, 1fr) 58px; gap: 10px; align-items: center; padding: 13px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+    .wire-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+    table { width: 100%; min-width: 860px; border-collapse: collapse; font-size: 10px; }
+    th { padding: 11px 12px; background: var(--surface-hover); color: var(--muted); font-size: 8px; letter-spacing: .1em; text-align: left; text-transform: uppercase; }
+    td { padding: 12px; border-top: 1px solid var(--line); vertical-align: top; }
+    td p { margin: 4px 0 0; font-size: 9px; }
+    .yes { color: var(--accent); font-weight: 800; }
+    .no { color: var(--danger); font-weight: 800; }
+    .conditional { color: var(--warning); font-weight: 800; }
+
+    pre { overflow: auto; margin: 14px 0 0; padding: 20px; border: 1px solid #2a2a2a; border-radius: 12px; background: var(--code); color: var(--code-ink); font-size: 10px; line-height: 1.65; white-space: pre-wrap; }
+    .sequence { counter-reset: item; display: grid; gap: 10px; }
+    .sequence article { position: relative; min-height: 88px; padding: 18px 18px 18px 64px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .sequence article::before { counter-increment: item; content: counter(item, decimal-leading-zero); position: absolute; left: 18px; top: 19px; color: var(--accent); font: 800 11px/1 var(--mono); }
+    .sequence strong { font-size: 12px; }
+    .sequence p { margin: 5px 0 0; font-size: 10px; }
+    .scope-key { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 16px; font-size: 11px; }
+    .scope-key dt { color: var(--accent); font-weight: 800; }
+    .scope-key dd { margin: 0; color: var(--muted); }
+    .footer { margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+
+    @media (max-width: 860px) {
+      .section-head { grid-template-columns: 46px minmax(0, 1fr); }
+      .section-head p { display: none; }
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+      .wireframe { grid-template-columns: 1fr; }
+      .wire-side { display: none; }
+      main { padding-inline: 14px; }
+      .journey { grid-template-columns: repeat(6, 150px); }
+    }
+
+    @media print {
+      .toolbar, .theme-toggle { display: none; }
+      body { background: #fff; }
+      .hero { min-height: 0; padding: 48px; }
+      section { break-inside: avoid; }
+      .panel, .table-wrap, .wireframe { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="eyebrow">BRE-380 · production decision · 2026-09-06</div>
+    <h1>Find it.<br>Keep it together.</h1>
+    <p class="lede">A concrete M9 recommendation for turning exact mail searches and selected message/conversation rows into durable live Views—without changing the BRE-321 shell, replacing the BRE-378 controls, or implying AI understanding.</p>
+    <div class="hero-meta"><span>Recommendation, not prototype</span><span>Implementation-ready contracts</span><span>No AI dependency</span><span>Owner threshold pending</span></div>
+  </header>
+
+  <nav class="toolbar" aria-label="Decision sections">
+    <a href="#decision">Decision</a><a href="#journey">Journey</a><a href="#layout">Layout</a><a href="#navigation">Navigation</a><a href="#identity">Identity</a><a href="#translation">Translation</a><a href="#correction">Correction</a><a href="#onboarding">Onboarding</a><a href="#keyboard">Keyboard</a><a href="#threshold">Threshold</a><a href="#handoff">Handoff</a>
+    <button class="theme-toggle" id="theme-toggle" type="button">Toggle theme</button>
+  </nav>
+
+  <main>
+    <section id="decision">
+      <div class="section-head"><span class="num">00</span><h2>Decision at a glance</h2><p>This resolves every open item in BRE-380’s final execution review. One owner decision remains: approve or revise the proposed human threshold.</p></div>
+      <div class="panel decision">
+        <span class="pill">Recommended</span>
+        <h3 style="margin-top:14px">Choose A, narrowly adapted: Search first, then refine in place.</h3>
+        <p>Both entry paths produce the same typed draft, preview it in the central workspace, expose the existing BRE-378 progressive controls through <strong>Tune</strong>, and commit only after explicit Save. Search shows results before View authoring begins. Selected message/conversation rows skip the empty search step and arrive at the same preview with a server-resolved sender allowlist for one explicitly named account.</p>
+      </div>
+      <div class="grid3" style="margin-top:14px">
+        <article class="card"><b>Keep</b><strong>BRE-321 shell and My spaces</strong><p>One sidebar, Search in the workspace header, calm central mail surface, theme-safe selected controls.</p></article>
+        <article class="card"><b>Deepen</b><strong>BRE-378 Views module</strong><p>Add unsaved prepare/preview behind its existing seam. Do not create a parallel search-only builder.</p></article>
+        <article class="card"><b>Defer</b><strong>Inference and true exclusion</strong><p>No Describe it, intent parser, topic inference, “more like this,” model adapter, or exclusion promise in M9.</p></article>
+      </div>
+      <div class="panel warning">
+        <h3>Owner feedback requested</h3>
+        <p>Approve or revise the proposed uncoached threshold in §09: <strong>at least 4 of 5 participants independently save a useful View within 60 seconds and correct one planted wrong match.</strong> This document does not claim that evidence exists.</p>
+      </div>
+    </section>
+
+    <section id="journey">
+      <div class="section-head"><span class="num">01</span><h2>One authoring journey</h2><p>The source differs; every step after preparation is shared. Create and Edit use the same layout and definition controls.</p></div>
+      <ol class="journey" aria-label="Shared authoring journey" tabindex="0">
+        <li><span>01 · Start</span><strong>Search or select</strong><p>Search shows mail first. Selection exposes “Use these senders.” Neither asks for a View name.</p></li>
+        <li><span>02 · Prepare</span><strong>Typed draft</strong><p>The server validates scope and translates exact clauses or resolves selected row identities.</p></li>
+        <li><span>03 · Preview</span><strong>Matching conversations</strong><p>Readable definition, result-count state, pagination, provenance, and unsupported clauses stay visible.</p></li>
+        <li><span>04 · Refine</span><strong>Tune or correct</strong><p>BRE-378 controls edit the draft. Latest-request ordering prevents stale previews from winning.</p></li>
+        <li><span>05 · Review</span><strong>Name and save</strong><p>A suggested name is editable. Save persists the reviewed definition, never result IDs.</p></li>
+        <li><span>06 · Resume</span><strong>Open the live View</strong><p>The new View opens under My spaces. Back restores the exact search or selection context.</p></li>
+      </ol>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel"><h3>Search entry</h3><ol><li>Open Search with <kbd>⌘K</kbd>; type or set visible filters.</li><li>Results render in the normal central mail list.</li><li>“Keep as View” appears only after a search has run. Unsupported clauses remain visible and block Save, not preview.</li><li>Activate “Keep as View” to enter the shared draft workspace without losing the search URL or result position.</li></ol></div>
+        <div class="panel"><h3>Selected-row entry</h3><ol><li>Select one or more message/conversation rows from one connected account and activate “Use these senders.”</li><li>The server resolves only the <code>From</code> identity visibly represented by each selected row from authorized account/thread/message references.</li><li>The shared workspace opens with that account and its exact address allowlist plus preview results.</li><li>No selected thread ID becomes live membership; no hidden participant, historical correspondent, topic, or subject restriction is inferred.</li></ol></div>
+      </div>
+      <div class="panel"><h3>Create, edit, save, discard</h3><p><strong>Create</strong> and <strong>Edit</strong> share one draft representation and one evaluator. Edit seeds that draft from the complete saved definition, including advanced filters the compact controls do not modify. Cancel leaves the saved View untouched. Save rechecks workspace authority and expected revisions, is retry-safe, and changes no mail placement, provider state, notification, or routing policy. A save failure preserves the draft and names the next safe action. Discard affects only the local draft.</p></div>
+      <div class="panel decision"><h3>A valid zero-match View may be saved for future mail—with explicit confirmation.</h3><p>A blank draft, a draft containing only no-op scope, or a draft with any incomplete or unsupported clause is invalid: Save stays disabled and the first invalid control receives focus. When the shared View evaluator successfully returns zero current conversations for a complete, supported definition, show “No conversations match this View yet. Future matching mail will appear here.” Keep <strong>Review filters</strong> and <strong>Save for future mail</strong> available. The first Save action enters the existing confirm-zero state and says “This exact scope currently has zero matches. Saving it will keep watching for future mail.” Only a second, explicit <strong>Save zero-match View</strong> action commits. Canceling that confirmation preserves the entire draft, source query, and return snapshot, then restores focus to Save; Review filters focuses the first predicate without changing it. After confirmed Save, open the canonical empty View under My spaces with the same zero-result copy. A preview error is not a zero-match result and never permits blind Save.</p></div>
+    </section>
+
+    <section id="layout">
+      <div class="section-head"><span class="num">02</span><h2>Layout: A+</h2><p>A production adaptation of “Search first”: full-width results remain primary; progressive controls expand inline only after authoring begins.</p></div>
+      <div class="wireframe" aria-label="Recommended desktop layout diagram" role="group">
+        <aside class="wire-side"><div class="wire-brand">orca ◌</div><div class="wire-nav">Inbox</div><div class="wire-nav">Drafts</div><div class="wire-label">My spaces</div><div class="wire-nav active">Client follow-ups</div><div class="wire-nav">Focus</div><div class="wire-nav">Quiet</div><div class="wire-label">Workspace</div><div class="wire-nav">Organization</div><div class="wire-nav">Settings</div></aside>
+        <div class="wire-main"><div class="wire-search">⌕ apartment &nbsp; · &nbsp; Account: Work</div><div class="wire-summary"><div><strong>18 matching messages · Search results</strong><br><span>General text “apartment” · Work account</span></div><button class="wire-action" type="button">Tune</button></div><div class="wire-tune"><strong>Save blocked · unsupported general text.</strong> Search checks sender, subject, and snippet. Replace explicitly with <u>Subject contains “apartment”</u> to run a View preview, or remove it.</div><div class="wire-results"><div class="wire-row"><i></i><b>Maya Chen</b><span>Apartment review and next steps</span><time>9:42</time></div><div class="wire-row"><i></i><b>Juniper Lee</b><span>Lease questions</span><time>Tue</time></div><div class="wire-row"><i></i><b>Rae Morgan</b><span>Apartment inventory</span><time>Mon</time></div><div class="wire-row"><i></i><b>Otto Studio</b><span>Furniture for the apartment</span><time>Fri</time></div></div></div>
+      </div>
+      <div class="grid3" style="margin-top:14px">
+        <article class="card"><b>Why A+</b><strong>Meaning before configuration</strong><p>People judge real results before committing to a View. The first action remains mail work.</p></article>
+        <article class="card"><b>Reject B</b><strong>No permanent workbench</strong><p>Always-visible controls compete with mail and repeat BRE-378’s solved progressive-disclosure problem.</p></article>
+        <article class="card"><b>Reject C</b><strong>No inbox beside a drawer</strong><p>It compresses the fixed message columns at 1024px and turns authoring into a second shell pattern.</p></article>
+      </div>
+      <div class="panel"><h3>Responsive production behavior</h3><p>At wide desktop widths, the definition summary and Tune region remain above the full-width preview. At 1024px, the same regions stack; no lateral authoring drawer is introduced. On Create, identity fields appear in the review footer near Save, not as a gate. On Edit, the same A+ workspace opens from the live View. This is a focused extension of the approved shell, not an Organization redesign.</p></div>
+    </section>
+
+    <section id="navigation">
+      <div class="section-head"><span class="num">03</span><h2>Durable navigation</h2><p>Saved Views are work destinations, not artifacts hidden inside the Organization editor.</p></div>
+      <div class="panel decision"><h3>Open saved Views from My spaces.</h3><p>Each saved View is projected into the BRE-321 <strong>My spaces</strong> section and opens through a stable destination keyed by View ID (recommended location form: <code>/?destination=view:&lt;viewId&gt;</code>). Organization → Views remains the management index for create, rename, reorder, remove, and advanced editing.</p></div>
+      <div class="sequence">
+        <article><strong>After Save</strong><p>Replace the authoring location with the canonical saved-View destination, focus its heading, announce “View saved,” and keep the originating source in surface history.</p></article>
+        <article><strong>After reload or on another device</strong><p>Load the server-owned View list before resolving the destination. Restore the same View by stable ID; never rely on in-memory state, display name, or local order.</p></article>
+        <article><strong>If the View is missing, removed, or unauthorized</strong><p>Open Organization → Views with an operational message naming what happened. Do not silently fall back to Inbox or another View.</p></article>
+        <article><strong>Rename, reorder, remove</strong><p>Rename preserves destination identity. Server order drives My spaces. Remove deletes only the View; mail stays unchanged and focus moves to the next View or the Organization → Views heading.</p></article>
+      </div>
+      <div class="panel risk"><h3>Risk and fallback</h3><p><strong>Risk:</strong> Collections and saved Views may both appear as custom spaces. <strong>Fallback:</strong> render a single My spaces list with a small type affordance only in Manage spaces; do not create separate global navigation sections. If route projection is not ready when persistence lands, Organization → Views is the temporary retrieval surface—but M9 is not complete until reload retrieval from My spaces works.</p></div>
+    </section>
+
+    <section id="identity">
+      <div class="section-head"><span class="num">04</span><h2>Sender identity</h2><p>Each selected row contributes only the exact sender identity the row visibly represents. Hidden conversation history is never mined for additional people.</p></div>
+      <div class="panel decision"><h3>Identity key: one account ID + normalized visible-row From address.</h3><p>The selection handoff contains stable <code>{ accountId, threadId, messageId }</code> row references—not client-asserted email addresses. <code>messageId</code> is the internal <code>InboxMessage.id</code>, never the provider message ID. A regular inbox conversation row is backed by the latest message selected by <code>getLatestThreadRows</code>; a global Search row is an individual message. In both cases, the server validates every triple, resolves and normalizes only that stored row’s <code>emails.from_address</code>, and then deduplicates addresses for the one-account View definition. The response displays the authoritative exact address for confirmation. A selected row contributes no other participant or earlier correspondent.</p></div>
+      <div class="table-wrap" role="region" aria-label="Sender identity decisions" tabindex="0">
+        <table>
+          <thead><tr><th>Case</th><th>Recommendation</th><th>Visible truth</th><th>Validation</th></tr></thead>
+          <tbody>
+            <tr><td>One inbound row</td><td>Seed only the stored <code>From</code> address represented by that row.</td><td>Display name is secondary; full address and account are always shown.</td><td>Account/thread/message must be workspace-owned and mutually consistent.</td></tr>
+            <tr><td>Group conversation</td><td>Seed only the selected row message’s visible <code>From</code> identity. Do not add other participants or historical senders.</td><td>The confirmation repeats the row’s displayed sender. No group roster is implied.</td><td>Resolve the row’s message ID; do not scan the thread for candidates.</td></tr>
+            <tr><td>Visible row is outgoing/self</td><td>Contributes no sender. Do not fall back to an earlier external correspondent.</td><td>“This row is from your Work address and was not added.”</td><td>For M9, self is the normalized server-owned <code>oauth_accounts.provider_email</code>; no alias inventory is assumed.</td></tr>
+            <tr><td>All selected rows are self</td><td>Block preparation because the resulting allowlist would be empty.</td><td>“No external sender was selected. Choose an inbound row or Search mail.”</td><td>An empty sender allowlist is never serialized or interpreted as all senders.</td></tr>
+            <tr><td>Same person, two addresses</td><td>Keep two identities. Do not merge by display name or inferred personhood.</td><td>Both exact addresses appear and can be edited independently.</td><td>Address syntax and bounds use the shared contract.</td></tr>
+            <tr><td>Mixed accounts</td><td>M9 does not prepare the draft. Keep the selection and ask the person to choose rows from one account.</td><td>Disable the action with “Choose conversations from one account.”</td><td>The current View schema cannot represent per-account sender groups without cross-product broadening.</td></tr>
+            <tr><td>Missing/deleted/inaccessible row reference</td><td>Fail preparation without producing a narrower draft. Preserve selection and require explicit resubmission after the person removes the bad row.</td><td>“1 of 4 selected messages is no longer available. Review your selection and try again.”</td><td>Never omit silently or trust a client-supplied fallback address.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel warning"><h3>M9 single-account and selection-state constraints</h3><p>The current View definition can exactly represent <code>accountIds: [oneAccount]</code> plus a positive sender set. With multiple accounts it creates an account × address cross-product, which is broader than the selection. Therefore M9 enables “Use these senders” only when every selected row belongs to one connected account. The client must retain separate row selection keyed by <code>[accountId, messageId]</code> with <code>threadId</code>; the current sender-deduped <code>selectedTargets</code> projection is display/provenance only and is not authoritative input. Account-scoped sender groups are a possible later extension, not an implicit BRE-381 requirement.</p></div>
+    </section>
+
+    <section id="translation">
+      <div class="section-head"><span class="num">05</span><h2>Exact search translation</h2><p>Only explicit clauses with evaluator-equivalent View predicates can be saved. A page of IDs is never a live View.</p></div>
+      <div class="panel"><h3>Current global Search → View</h3><p>Today’s <code>MailSearchState</code> exposes only general query, mailbox, evidence, account, collection, and return source. This table is exhaustive for that current entry surface.</p></div>
+      <div class="table-wrap" role="region" aria-label="Current Search translation matrix" tabindex="0">
+        <table>
+          <thead><tr><th>Current Search state</th><th>Exact now?</th><th>Typed View meaning</th><th>M9 treatment</th></tr></thead>
+          <tbody>
+            <tr><td>No account filter</td><td class="yes">Yes</td><td>Omit <code>accountIds</code>. Scope is dynamic: every account authorized at each evaluation, including accounts connected later.</td><td>Supported. Summary states “All current and future connected accounts.”</td></tr>
+            <tr><td><code>accountId</code> is one exact account</td><td class="yes">Yes</td><td><code>accountIds: [id]</code></td><td>Supported. Server-issued ID is ownership-validated.</td></tr>
+            <tr><td><code>query</code> is general text</td><td class="no">No</td><td>Current Search is a case-insensitive literal substring across From name/address, subject, and snippet; it never searches full body. No one View predicate is equivalent.</td><td>Keep visible and block Save. Boolean, quotes, <code>from:</code>, <code>-term</code>, and natural language are not parsed; they remain general text.</td></tr>
+            <tr><td><code>mailbox=all</code></td><td class="yes">Yes</td><td>No mailbox-attention restriction.</td><td>Supported by omission.</td></tr>
+            <tr><td><code>mailbox=inbox|focus|quiet|hidden</code></td><td class="no">No</td><td>Mailbox attention behavior is not an Organization Lane.</td><td>Block Save. Never map Focus to a Lane; replacing it with an exact Lane is an explicit meaning change.</td></tr>
+            <tr><td><code>evidence=all</code></td><td class="yes">Yes</td><td>No classification restriction.</td><td>Supported by omission.</td></tr>
+            <tr><td><code>evidence=human|tideline|uncertain</code></td><td class="conditional">Gated</td><td>Search uses effective classification after message/address/domain overrides; current Views filter raw stored classification.</td><td>M9 supports translation only after the shared saved/unsaved evaluator becomes override-aware and equivalence tests pass. Otherwise keep visible and block Save. Intended mapping: Human → likely_human; Tideline → automated_or_bulk; Uncertain → uncertain + unclassified.</td></tr>
+            <tr><td>No collection</td><td class="yes">Yes</td><td>No collection-membership restriction.</td><td>Supported by omission.</td></tr>
+            <tr><td><code>collectionId</code></td><td class="no">No</td><td>No live collection-membership View predicate exists.</td><td>Block Save; never freeze current member or page IDs.</td></tr>
+            <tr><td><code>source</code></td><td class="yes">Navigation only</td><td>Not a filter; retained only as safe return context.</td><td>Exclude from the definition and preserve in surface history.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel"><h3>Tune-only View predicates</h3><p>These are valid BRE-378 definition controls, but they are <strong>not clauses in current global Search</strong>. Adding one is an explicit refinement. Replacing an unsupported Search clause with one is a visible meaning change followed by a fresh View preview.</p></div>
+      <div class="table-wrap" role="region" aria-label="Tune-only View predicate matrix" tabindex="0">
+        <table>
+          <thead><tr><th>Tune control</th><th>View support</th><th>Exact meaning</th><th>Guardrail</th></tr></thead>
+          <tbody>
+            <tr><td>Sender address is [exact address]</td><td class="yes">Supported</td><td><code>sender.addresses</code>, normalized equality; with selected-row entry, paired with exactly one <code>accountId</code>.</td><td>Not the lower-level fuzzy <code>sender</code> mailbox filter. Show full address and account.</td></tr>
+            <tr><td>Sender domain is [exact domain]</td><td class="yes">Supported</td><td><code>sender.domains</code>, exact normalized domain.</td><td>Validate domain syntax; never infer from a display name.</td></tr>
+            <tr><td>Subject contains [literal]</td><td class="yes">Supported</td><td><code>thread.subjectContains</code> on the canonical conversation subject, case-insensitive literal substring.</td><td>Escape wildcard characters as literals; maximum 200 characters.</td></tr>
+            <tr><td>Unread / Read</td><td class="yes">Supported</td><td><code>thread.readState</code>; Unread means at least one unread message, Read means none unread.</td><td>Print the conversation-level meaning beside the control.</td></tr>
+            <tr><td>Received after / before [absolute instant]</td><td class="yes">Supported</td><td><code>receivedAfter</code> uses <code>&gt;=</code>; <code>receivedBefore</code> uses <code>&lt;=</code>. A conversation matches when one message falls inside both inclusive bounds.</td><td>Show local timezone and serialize exact ISO instants. Relative dates remain unsupported.</td></tr>
+            <tr><td>Lane is [exact Organization Lane]</td><td class="yes">Supported</td><td><code>laneIds</code> against effective primary Lane IDs.</td><td>Do not equate a Lane with mailbox attention behavior.</td></tr>
+            <tr><td>Existing advanced Facet, Context, workflow, or Human Signal constraint</td><td class="yes">Preserve</td><td>Round-trip the full saved definition through Edit even when compact controls do not change it.</td><td>Never drop an unchanged advanced constraint.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel warning"><h3>Predicate conjunction is narrower than “any message” independently</h3><p>Sender, date, and classification/evidence clauses are combined inside one <code>EXISTS emails e</code>: <strong>the same stored message must satisfy every email-level clause.</strong> Thread subject/read and Lane constraints then combine with that result using AND. The readable definition and preview tests must state this grouping.</p></div>
+      <div class="panel decision"><h3>Unsupported-clause rule</h3><p>If any clause is unsupported, preview may continue using the source Search semantics, but <strong>Save remains disabled</strong>. Every unsupported clause stays in the readable definition with a reason and two explicit actions: Edit/replace it or Remove it. Removing or replacing a clause is a visible meaning change followed by a new View preview. There is no “Save supported parts,” no silent dropping, and no subject-only fallback.</p></div>
+      <div class="panel"><h3>Count and pagination truth</h3><p>Current View result pages expose items and <code>nextCursor</code>, not an exact total. Display “25 loaded · more matches” until the evaluator computes an exact count for the same authorized scope and definition digest. An exact label such as “18 matching conversations” is permitted only when that exact count is returned; never infer a total from one page.</p></div>
+      <div class="panel risk"><h3>Evaluator risk and fallback</h3><p><strong>Risk:</strong> current global Search returns message rows while Views return conversation aggregates. Even identically named filters can diverge. <strong>Fallback:</strong> once “Keep as View” begins, run the shared unsaved View evaluator and label the transition “Previewing conversations for this View.” BRE-387 must prove saved/unsaved equivalence across pages, accounts, and future mail before release.</p></div>
+    </section>
+
+    <section id="correction">
+      <div class="section-head"><span class="num">06</span><h2>Correction and undo</h2><p>M9 supports deterministic positive narrowing. It does not claim “exclude this result” or semantic correction.</p></div>
+      <div class="grid2">
+        <div class="panel"><h3>Draft scope</h3><ul><li>Every correction changes only the open draft until Save.</li><li>The preview request carries a definition digest; late responses with another digest cannot replace the current result.</li><li>Save persists the reviewed definition, not preview membership.</li><li>Cancel Edit restores the saved View exactly, including advanced constraints.</li></ul></div>
+        <div class="panel"><h3>Undo scope</h3><ul><li>Undo reverses the latest definition-changing action: add/remove/edit filter, sender selection, or quick correction.</li><li>It does not undo ordinary typing inside the focused name/description field; native text undo remains local there.</li><li>The stack is session-local, bounded, and cleared on Save or confirmed Discard.</li><li>After Undo, preview reruns and focus returns to the changed control; a live region announces the restored summary.</li></ul></div>
+      </div>
+      <div class="panel decision"><h3>Wrong match → “Keep only these senders”</h3><ol><li>The quick action never means “exclude this sender.” It opens a positive allowlist editor.</li><li>Offer it only when the draft’s effective scope is exactly one account. Candidates come from a server-reported complete distinct-sender summary for the current preview scope, not from the visible page.</li><li>If one-account scope or complete candidates cannot be proved within the contract bound, the quick action is unavailable and Tune opens instead.</li><li>The wrong result’s sender starts unchecked; every remaining checked address is visible with the account.</li><li>Before Apply, state the consequence: “Future mail matches only these addresses. New senders will not appear until you add them.”</li><li>Apply creates/replaces the positive sender allowlist and reruns preview. Undo restores the exact prior definition.</li></ol></div>
+      <div class="panel warning"><h3>Empty-set invariant</h3><p>Zero checked senders is invalid. Disable Apply and show “Keep at least one sender, or cancel this correction.” Never serialize <code>[]</code>; never remove the sender predicate as an interpretation of an empty allowlist, because omission means <strong>all senders</strong>. If removing the wrong sender leaves no positive sender, offer Tune or adjust the subject/date/read filters.</p></div>
+      <div class="panel risk"><h3>Deferred: true exclusion</h3><p>No M9 control is labeled “Exclude,” “Never show,” or equivalent. A true negative predicate would require bounded account-aware schema, evaluator, cursor-digest, readability, and migration work. It may be proposed separately; it is not promised by BRE-380.</p></div>
+    </section>
+
+    <section id="onboarding">
+      <div class="section-head"><span class="num">07</span><h2>Onboarding scope</h2><p>Teach one next action. Persist dismissal for the Orca user, not per browser or per connected provider account.</p></div>
+      <div class="panel decision"><h3>User-scoped dismissal, durable across reload and devices.</h3><p>Add a nullable first-View invitation dismissal/completion timestamp through the existing authenticated user-preferences mechanism. Once dismissed or once a first View is saved, the invitation stays hidden for that Orca user across reload, sign-in on another device, and adding/switching connected mail accounts. A different Orca user sees their own invitation. Organization → Views → “Getting started” always reopens it without clearing the stored preference or duplicating Views.</p></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel"><h3>Mailbox with mail</h3><p>Offer exactly two actions: <strong>Search mail</strong> and <strong>Select conversations</strong>. Each enters the same production journey described above. No automatic View, notification permission, filter taxonomy tour, assistant toggle, or agent setup.</p></div>
+        <div class="panel"><h3>Empty mailbox</h3><p>Show a clearly labeled, non-interactive sample explaining the outcome, plus <strong>Skip for now</strong> and <strong>Return when mail arrives</strong>. The person can reopen help later. Do not manufacture a savable production draft.</p></div>
+      </div>
+      <div class="panel warning"><h3>Fixture isolation</h3><p>Tutorial fixtures live outside the real mailbox repository and carry a non-committable tutorial provenance. They never use production account IDs, thread IDs, message IDs, or sender addresses. The commit interface rejects tutorial provenance. A real action always restarts through <code>prepare</code> with authorized stored-mail references; sample sender/account identifiers can never persist as a View.</p></div>
+    </section>
+
+    <section id="keyboard">
+      <div class="section-head"><span class="num">08</span><h2>Keyboard, focus, return</h2><p>The flow follows BRE-321’s one-layer-at-a-time dismissal and safe-return grammar.</p></div>
+      <div class="table-wrap" role="region" aria-label="Keyboard, focus, and return behavior" tabindex="0">
+        <table>
+          <thead><tr><th>Moment</th><th>Keyboard / focus behavior</th><th>Return context</th></tr></thead>
+          <tbody>
+            <tr><td>Open Search</td><td><kbd>⌘K</kbd> opens Search and focuses the query input. Existing shell shortcut behavior remains authoritative.</td><td>Serialize source destination, account, query, filters, focused element, scroll anchor, and selection.</td></tr>
+            <tr><td>Search results</td><td><kbd>↑ Up</kbd>/<kbd>↓ Down</kbd> move the active result when the list owns focus; <kbd>Enter</kbd> opens Reader. Normal Tab order reaches filters and “Keep as View.”</td><td>Reader Back returns to the same active result and scroll position.</td></tr>
+            <tr><td>Select conversations</td><td><kbd>Space</kbd> toggles the focused row checkbox. The selection toolbar announces count and exposes “Use these senders” in Tab order.</td><td>Cancel restores selected IDs, active row, destination, and scroll anchor if those rows still exist.</td></tr>
+            <tr><td>Enter authoring</td><td>Focus the authoring heading, then the readable definition. Do not auto-focus the optional name.</td><td>Keep an immutable source-location snapshot for Cancel/Back.</td></tr>
+            <tr><td>Open Tune</td><td>The selected Tune button uses surface-hover + border + ink. Focus moves to the first editable filter; <kbd>Esc</kbd> collapses Tune and returns to its trigger.</td><td>No route change; preview and source context remain intact.</td></tr>
+            <tr><td>Undo</td><td><kbd>⌘Z</kbd> invokes draft Undo only when focus is not in a text-editing control. A visible Undo button is always available when the stack is non-empty.</td><td>Focus returns to the control whose definition change was reversed.</td></tr>
+            <tr><td>Save</td><td><kbd>⌘Enter</kbd> is a discoverable shortcut while authoring and Save is enabled. On validation failure, focus the first invalid/unsupported clause. For a valid zero-match preview, the first invocation enters confirm-zero and focuses “Save zero-match View”; only a second invocation commits.</td><td>Canceling confirm-zero preserves the draft/query and returns focus to Save. Confirmed Save opens the canonical empty View and focuses its heading; Back restores the source snapshot.</td></tr>
+            <tr><td>Escape / Cancel</td><td><kbd>Esc</kbd> closes only the top transient layer. If the draft differs from its seed, show a discard confirmation; otherwise return immediately.</td><td>Search source restores exact URL/filter/page anchor. Selection source restores rows where still present. Edit returns to the unchanged saved View.</td></tr>
+            <tr><td>Async/error</td><td>Preview region uses <code>aria-busy</code>; result totals and correction outcomes use a polite live region; blocking errors use an alert without stealing focus.</td><td>Retry preserves the draft, source snapshot, and current focus target.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel"><h3>Theme-safe states are release gates</h3><p>Default, hover, focus, selected/pressed, loading, and disabled controls must keep readable labels in Light and Orca Black. Selected controls use the established <strong>surface-hover + border + ink</strong> treatment; Orca Black uses graphite, visible label, and a restrained blue edge. No assumed inverse color.</p></div>
+    </section>
+
+    <section id="threshold">
+      <div class="section-head"><span class="num">09</span><h2>Human usability threshold</h2><p>This is a proposal for owner approval, not existing evidence and not yet a release gate.</p></div>
+      <div class="panel warning">
+        <span class="pill pending">Owner approval pending</span>
+        <h3 style="margin-top:14px">Proposed: 4 of 5 uncoached participants succeed.</h3>
+        <p>A participant succeeds only if they independently <strong>(a)</strong> start from Search or selected conversations, <strong>(b)</strong> preview and save a useful View within 60 seconds, and <strong>(c)</strong> correct one deliberately planted wrong match without assistance. Time starts when the task prompt ends and stops when the saved View opens under My spaces. The correction may occur before Save in the same 60-second attempt.</p>
+      </div>
+      <div class="grid3" style="margin-top:14px">
+        <article class="card"><b>Report separately</b><strong>Comprehension</strong><p>Unsupported-clause confusion, sender/account scope understanding, and whether positive narrowing is mistaken for exclusion.</p></article>
+        <article class="card"><b>Report separately</b><strong>System latency</strong><p>Prepare, first preview, correction preview, and Save duration. Do not count network delay as interaction confusion.</p></article>
+        <article class="card"><b>Do not claim</b><strong>Evidence before sessions</strong><p>Prototype exercise and automated checks prove operability, not uncoached human usability.</p></article>
+      </div>
+      <div class="panel risk"><h3>Fallback if the owner rejects the threshold</h3><p>BRE-387 records the revised sample, time box, success definition, and permitted coaching before sessions begin. Engineering verification can continue independently, but M9 remains open until the owner-approved human protocol is run and reported.</p></div>
+    </section>
+
+    <section id="handoff">
+      <div class="section-head"><span class="num">10</span><h2>Contract handoff</h2><p>One deep Views module owns translation, identity, preview equivalence, authority, and commit. Callers do not recreate those decisions.</p></div>
+      <div class="panel decision"><h3>Deepen the existing Views module at its current seam.</h3><p>The interface below gives Search, selected-conversation entry, onboarding, Create, and Edit one small surface. The implementation hides clause translation, visible-row identity resolution, definition digests, pagination, authorization, revisions, and retry semantics. The SQLite adapter satisfies the repository seam. Tests exercise the same interface as production callers.</p>
+        <pre>prepare(scope, seed) → ReviewedDraft
+  seed = SearchSeed | SelectedConversationSeed | SavedViewSeed
+
+preview(scope, reviewedDraft, page?) → {
+  validatedDefinition,
+  readableSummary,
+  effectiveAccountScope,
+  unsupportedClauses,
+  results,
+  resultCompleteness,
+  definitionDigest,
+  provenance
+}
+
+commit(scope, reviewedDraft, expectedRevisions, retryKey) → SavedView</pre>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel"><h3>Invariants behind the interface</h3><ul><li>Unsaved and saved definitions use one evaluator.</li><li>Draft preview never persists a temporary View.</li><li>Cursors bind to definition digest and authorized scope.</li><li>Account/thread ownership is resolved server-side.</li><li>Latest preview wins; failed work preserves input.</li><li>Confirm-zero is bound to the current definition digest and clears after any definition change.</li><li>Commit rechecks live authority and revisions.</li></ul></div>
+        <div class="panel"><h3>Explicit non-goals</h3><ul><li>Natural-language intent or conversational refinement.</li><li>Topic, person, or similarity inference.</li><li>Railway/local-model/runtime decisions.</li><li>True sender/thread exclusion.</li><li>Notification or routing changes.</li><li>BRE-381 implementation in this artifact.</li></ul></div>
+      </div>
+      <div class="panel"><h3>Risks and bounded fallbacks</h3><dl class="scope-key"><dt>Search mismatch</dt><dd>Block Save for unsupported clauses; never weaken the query.</dd><dt>Mixed-account selection</dt><dd>Require one account in M9; do not broaden through a global sender set.</dd><dt>Incomplete sender census</dt><dd>Hide quick positive narrowing and open Tune; never derive from one page.</dd><dt>Blank or incomplete draft</dt><dd>Disable Save and focus the missing or unsupported predicate; confirm-zero is never offered.</dd><dt>Valid zero matches</dt><dd>Preserve the exact draft and allow Save only after explicit, digest-bound confirm-zero; the empty View remains live for future matching mail.</dd><dt>Unavailable preview</dt><dd>Keep the draft and offer Retry or Cancel; do not permit blind Save.</dd><dt>Missing return target</dt><dd>Return to the nearest surviving source destination and explain what changed.</dd><dt>Human evidence pending</dt><dd>Keep BRE-387/M9 open and label the threshold as proposed.</dd></dl></div>
+    </section>
+
+    <footer class="footer">
+      <strong>Authority:</strong> BRE-380 latest Linear acceptance criteria → this production decision → BRE-321 shell and BRE-378 progressive controls → current code contracts. The prototype snapshot at <code>db646d8</code> is interaction evidence only and is not a production source. · Ticket UUID: <code>4f256143-1f99-432b-8a17-d5b3200c7eb6</code>
+    </footer>
+  </main>
+
+  <script>
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    toggle.addEventListener("click", () => {
+      const renderedDark = getComputedStyle(root).colorScheme === "dark";
+      root.dataset.theme = renderedDark ? "light" : "dark";
+      toggle.textContent = renderedDark ? "Use dark theme" : "Use light theme";
+    });
+  </script>
+</body>
+</html>
