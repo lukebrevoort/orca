@@ -180,7 +180,13 @@ describe("Human Signal backfill", () => {
         id: "account", userId: "user", provider: "gmail", providerEmail: "fixture@example.com", providerId: "fixture",
       }).run();
       fixtureDb.insert(threads).values({ id: "thread", accountId: "account", providerThreadId: "thread" }).run();
-      fixtureDb.insert(emails).values(["deleted", "refreshed", "unchanged"].map((id) => ({
+      fixtureDb.insert(oauthAccounts).values({
+        id: "other_account", userId: "user", provider: "gmail", providerEmail: "other@example.com", providerId: "other",
+      }).run();
+      fixtureDb.insert(threads).values({
+        id: "other_thread", accountId: "other_account", providerThreadId: "other_thread",
+      }).run();
+      fixtureDb.insert(emails).values(["deleted", "refreshed", "reparented", "unchanged"].map((id) => ({
         id, accountId: "account", threadId: "thread", providerMessageId: id,
         receivedAt: new Date(1), humanClassificationEvidence: JSON.stringify(evidence()),
       }))).run();
@@ -190,6 +196,9 @@ describe("Human Signal backfill", () => {
           if (!refreshed && sql.startsWith("select") && sql.includes("human_classification_evidence")) {
             refreshed = true;
             sqlite.exec("DELETE FROM emails WHERE id = 'deleted'");
+            fixtureDb.update(emails).set({
+              accountId: "other_account", threadId: "other_thread",
+            }).where(eq(emails.id, "reparented")).run();
             // Refresh the version alone: evidence equality must not defeat the version guard.
             fixtureDb.update(emails).set({
               humanClassifierVersion, humanClassification: "automated_or_bulk", humanSignal: 2,
@@ -197,11 +206,14 @@ describe("Human Signal backfill", () => {
           }
         },
       } });
-      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 3 }), {
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 4 }), {
         accountId: "account", processed: 1, hasMore: true,
       });
+      assert.deepEqual(sqlite.query(
+        "SELECT account_id, human_classifier_version, human_signal FROM emails WHERE id = 'reparented'",
+      ).get(), { account_id: "other_account", human_classifier_version: null, human_signal: null });
       assert.deepEqual(sqlite.query("SELECT human_signal FROM emails WHERE id = 'refreshed'").get(), { human_signal: 2 });
-      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 3 }), {
+      assert.deepEqual(backfillHumanClassifications(db, { accountId: "account", limit: 4 }), {
         accountId: "account", processed: 0, hasMore: false,
       });
     } finally {
