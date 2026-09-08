@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRE-381 · Shared View draft verification</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f3f7f5; --card:#fff; --ink:#102c25; --muted:#51645e; --line:#cbd9d4; --accent:#087f69; --safe:#e4f3ee; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#090b0b; --card:#111414; --ink:#f1f5f2; --muted:#a9b7b1; --line:#2b3733; --accent:#62b8ff; --safe:#112725; } }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 ui-sans-serif,system-ui,sans-serif; }
+    main { width:min(1120px,calc(100% - 32px)); margin:40px auto 72px; }
+    header { padding:8px 4px 24px; } h1 { margin:4px 0 8px; font:700 clamp(2.2rem,6vw,4.8rem)/.98 Georgia,serif; letter-spacing:-.045em; }
+    h2 { margin:0 0 14px; font:700 1.45rem/1.15 Georgia,serif; } p { margin:0; } .eyebrow { color:var(--accent); font-size:.74rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+    .lede { color:var(--muted); max-width:72ch; font-size:1.05rem; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; } section { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; }
+    section.wide { grid-column:1/-1; } .flow { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px; }
+    .flow article { border:1px solid var(--line); border-radius:13px; padding:14px; } .flow strong { display:block; margin:3px 0 5px; font-size:1.05rem; } .flow small { color:var(--muted); }
+    table { width:100%; border-collapse:collapse; } th,td { padding:11px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } th { color:var(--muted); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; }
+    code { background:var(--safe); border-radius:5px; padding:.1em .35em; } ul,ol { margin:8px 0 0; padding-left:20px; } li+li { margin-top:7px; }
+    pre { margin:12px 0 0; padding:13px 15px; overflow:auto; background:var(--safe); border-radius:10px; } pre code { padding:0; }
+    .pass { color:var(--accent); font-weight:800; } .callout { margin-top:16px; padding:14px 16px; background:var(--safe); border-left:3px solid var(--accent); border-radius:8px; }
+    @media (max-width:760px) { .grid,.flow { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body><main>
+  <header><span class="eyebrow">BRE-381 · reviewer evidence</span><h1>One reviewed definition,<br>preview to durable View.</h1><p class="lede">The shared draft contract reuses the canonical saved-View evaluator without persisting preview state, binds every page to live authority, and commits through the existing retry-safe View mutation boundary.</p></header>
+  <div class="grid">
+    <section class="wide"><h2>Deep module journey</h2><div class="flow">
+      <article><span class="eyebrow">1 · Prepare</span><strong>Typed inputs only</strong><small><code>prepare(scope, input)</code> accepts manual definitions and saved View IDs. Future search and selected-sender adapters plug in here; BRE-381 adds no interpreter or AI dependency.</small></article>
+      <article><span class="eyebrow">2 · Preview</span><strong>Canonical, write-free evaluation</strong><small><code>preview(scope, definition, page)</code> validates exact Account/resource ownership and uses the same override-aware SQL evaluator as saved results.</small></article>
+      <article><span class="eyebrow">3 · Commit</span><strong>Retry-safe durable identity</strong><small><code>commit(scope, draft, revisions, retryKey)</code> rechecks the digest and revisions, delegates to create/update, refetches canonical state, and returns <code>view:&lt;id&gt;</code>.</small></article>
+    </div></section>
+    <section><h2>Authority and cursor invariants</h2><ul>
+      <li>Explicit inaccessible Accounts and referenced Lane, Facet, Context, relationship, or Workflow resources are rejected—never silently intersected.</li>
+      <li>Every page rechecks live query capability, Actor, Workspace, Account scope, and required resource families.</li>
+      <li>Cursor v2 binds definition digest, authorized scope digest, cumulative shown count, and the complete <code>(receivedAt, accountId, threadId)</code> keyset.</li>
+      <li>Any cursor field tamper, scope expansion, View revision change, or permission revocation fails closed.</li>
+    </ul></section>
+    <section><h2>Honest interaction state</h2><ul>
+      <li>Draft edits synchronously stale the prior generation, abort its request, and disable Save.</li>
+      <li>Only a matching generation and definition digest can re-enable Save.</li>
+      <li>Pagination reports “N shown” until exact exhaustion.</li>
+      <li><code>match_all</code> is distinct from a filtered exact zero; zero requires a second digest-bound confirmation.</li>
+      <li>Commit failures retain the same retry key; success opens the real persisted View.</li>
+    </ul></section>
+    <section class="wide"><h2>Independent-review corrections</h2><ul>
+      <li>Structurally empty predicate objects such as <code>humanSignal: {}</code> are rejected as invalid instead of becoming saveable filtered Views.</li>
+      <li>Maximum-size sender definitions remain valid; summaries use bounded counts for multi-address/domain filters while the complete definition remains unchanged.</li>
+      <li>An exact successful commit replay is checked before mutable mailbox zero-match evaluation. A changed payload still conflicts, and live authority is still required.</li>
+      <li>Saved-result continuation pages deduplicate by <code>accountId:threadId</code>, abort superseded loads, and ignore responses from stale View generations.</li>
+    </ul></section>
+    <section class="wide"><h2>Executable evidence</h2><table><thead><tr><th>Gate</th><th>Result</th><th>Coverage</th></tr></thead><tbody>
+      <tr><td><code>bun run test</code></td><td class="pass">915 pass · 0 fail</td><td>79 shared, 532 API, 304 web</td></tr>
+      <tr><td><code>bun run typecheck</code></td><td class="pass">Pass</td><td>All workspaces</td></tr>
+      <tr><td><code>bun run build</code></td><td class="pass">Pass</td><td>Shared, API, production Vite client</td></tr>
+      <tr><td><code>bun run lint</code></td><td class="pass">Pass</td><td>All workspaces</td></tr>
+      <tr><td>Headless browser</td><td class="pass">0 axe violations</td><td>Light and Orca Black; 1440×900 and 1024×768; default, focus, selected, disabled, loading, error, exact-zero, ready, and durable reload states</td></tr>
+    </tbody></table></section>
+    <section><h2>Read-only preview proof</h2><p>Integration tests snapshot mail, Threads, placements, policies, Views, and Change Sets before and after preview. Preview produces zero writes and never changes provider, placement, notification, or policy state.</p><p class="callout"><strong>Evidence parity:</strong> message override wins address override, which wins domain override, which wins raw classification. Unsaved and saved pages exercise that same evaluator.</p></section>
+    <section><h2>Durable navigation proof</h2><p>Saved Views project beneath My spaces and resolve as <code>/?destination=view:&lt;viewId&gt;</code>. Reload refetches the canonical definition and live results. Opening a result adds both <code>thread</code> and <code>accountId</code>, preserving composite identity.</p><p class="callout"><strong>Fixture disclosure:</strong> the captured visual-state screenshots use the development fixture ID <code>view_weekly_production</code>. They prove layout, theme, focus, and state rendering—not persistence.</p></section>
+    <section class="wide"><h2>Reproduce the production scratch-DB contract</h2><p>The API verification test creates a new temporary SQLite database, runs production migrations, creates an authenticated session and owned Accounts, then calls the production prepare, preview, commit, list, and results boundaries. No developer fixture or browser mock is used.</p>
+      <pre><code>bun test apps/api/src/organization/views/verification.test.ts</code></pre>
+      <ol>
+        <li>Confirm <code>previews and commits one reviewed definition…</code> passes. The commit response supplies the real generated <code>view.id</code> and <code>view:&lt;id&gt;</code> navigation target.</li>
+        <li>Confirm saved-result reads using that returned ID match unsaved preview pages across Accounts and still include newly inserted future mail.</li>
+        <li>Confirm <code>replays a committed draft before mutable zero-match evaluation…</code> passes after the scratch mailbox is changed to zero matches.</li>
+        <li>Expected terminal result: <code>15 pass · 0 fail</code>.</li>
+      </ol>
+      <p class="callout"><strong>Independent production walkthrough:</strong> the verifier saved against a scratch database, copied the returned non-fixture View ID, reloaded its <code>/?destination=view%3A&lt;returned-id&gt;</code> route, and confirmed the same View appeared under Settings → My spaces. That production result—not the fixture screenshots—is the persistence proof.</p>
+    </section>
+    <section class="wide"><h2>Reproduce browser-visible states</h2><p>Start the normal development stack, then use these development-only fixture routes for deterministic visual review. The <code>bre381Evidence</code> values select presentation states only.</p>
+      <pre><code>bun run dev
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=ready'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=loading'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=error'
+open 'http://localhost:5173/dev/inbox?destination=organization&amp;bre381Evidence=zero'
+open 'http://localhost:5173/dev/inbox?destination=view%3Aview_weekly_production'</code></pre>
+      <p>Expected: ready enables the labeled Save action; loading and error keep it disabled; zero requires two digest-bound confirmations; the saved fixture route renders a reload-safe result surface. Repeat at 1440×900 and 1024×768 in light and Orca Black. These steps reproduce the screenshots, while the scratch-DB test and independent walkthrough above prove persistence.</p>
+    </section>
+  </div>
+</main></body>
+</html>

@@ -33,7 +33,7 @@ function fixture() {
     id: "persisted-grant", revision: 1, actor,
     scope: { workspaceId: "workspace", accountIds: ["account"] },
     operations: ["describe", "query", "simulate", "apply", "revert"],
-    resourceFamilies: ["view", "collection", "shortcut", "saved_query", "context", "rule"],
+    resourceFamilies: ["mail", "thread", "view", "collection", "shortcut", "saved_query", "context", "rule"],
     actionFamilies: ["organization_read", "organization_structure"],
   };
   let current: OrganizationLiveCapability | null = { snapshot: baseline, revokedAt: null };
@@ -56,6 +56,28 @@ function fixture() {
 }
 
 describe("BRE-318 transaction-live agent replay authorization", () => {
+  test("View preview rechecks the live agent grant and every query resource inside each transaction", () => {
+    const f = fixture();
+    try {
+      const service = createOrganizationViews(createSqliteOrganizationViewsRepository(f.sqlite), { agentCapabilitySource: f.source });
+      const draft = {
+        mode: "create" as const, viewId: null, source: { kind: "manual" as const, label: "Agent prepared" },
+        identity: { name: "Agent View", description: "", color: "#70867d", position: 0 },
+        definition: { revision: 1 as const, thread: { subjectContains: "customer" } }, unsupportedClauses: [],
+      };
+      assert.equal(service.preview({ scope: f.scope, request: { draft, page: { limit: 25 } } }).results.state, "zero");
+      const loadsAfterAllowedPreview = f.transactionLoads();
+      assert.ok(loadsAfterAllowedPreview >= 1, "evaluation must resolve the live grant again inside the transaction");
+      f.revoke();
+      assert.throws(() => service.preview({ scope: f.scope, request: { draft, page: { limit: 25 } } }), OrganizationViewAccessError);
+      f.reset();
+      const withoutMail = f.source.load(f.scope)!.snapshot;
+      withoutMail.resourceFamilies = withoutMail.resourceFamilies.filter((family) => family !== "mail");
+      const restricted = createOrganizationViews(createSqliteOrganizationViewsRepository(f.sqlite), { agentCapabilitySource: { load: () => ({ snapshot: withoutMail, revokedAt: null }) } });
+      assert.throws(() => restricted.preview({ scope: f.scope, request: { draft, page: { limit: 25 } } }), OrganizationViewAccessError);
+    } finally { f.sqlite.close(); }
+  });
+
   test("View duplicate return reauthorizes after another connection commits and revokes between preflight and transaction entry", () => {
     const f = fixture();
     const competing = createDatabaseClient(f.path);

@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
-import type { Collection } from "@orca/shared";
+import type { Collection, OrganizationView } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}`;
+export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -10,6 +10,7 @@ export type WorkflowSpace = {
   count?: number;
   color?: string;
   custom?: boolean;
+  kind?: "built_in" | "collection" | "view";
   hidden?: boolean;
 };
 
@@ -81,6 +82,7 @@ export function parseDesktopDestination(value: string | null | undefined): Deskt
   if (rootDestinations.has(value as DesktopDestination)) return value as DesktopDestination;
   if (value === "settings") return "settings";
   if (value.startsWith("space:") && value.slice("space:".length).trim()) return value as `space:${string}`;
+  if (value.startsWith("view:") && value.slice("view:".length).trim()) return value as `view:${string}`;
   return null;
 }
 
@@ -105,12 +107,14 @@ export function desktopDestinationUrl(currentHref: string, destination: Exclude<
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
-export function destinationForSpace(space: Pick<WorkflowSpace, "custom" | "id">): DesktopDestination {
+export function destinationForSpace(space: Pick<WorkflowSpace, "custom" | "id" | "kind">): DesktopDestination {
+  if (space.kind === "view") return `view:${space.id}`;
   return space.custom ? `space:${space.id}` : parseDesktopDestination(space.id) ?? "inbox";
 }
 
-export function projectWorkflowSpaces({ collections, counts = {}, hidden = [], labels = {}, order = builtInSpaceIds }: {
+export function projectWorkflowSpaces({ collections, views = [], counts = {}, hidden = [], labels = {}, order = builtInSpaceIds }: {
   collections: readonly Collection[];
+  views?: readonly OrganizationView[];
   counts?: Partial<Record<BuiltInSpaceId, number>>;
   hidden?: readonly string[];
   labels?: Readonly<Record<string, string>>;
@@ -126,6 +130,7 @@ export function projectWorkflowSpaces({ collections, counts = {}, hidden = [], l
       count: collection.threadIds.length,
       color: collection.color,
       custom: true,
+      kind: "collection" as const,
     } satisfies WorkflowSpace]));
   const knownIds = new Set([...builtInSpaceIds, ...customSpaces.keys()]);
   const canonicalOrder = [...new Set(order.filter((id) => knownIds.has(id)))];
@@ -138,8 +143,15 @@ export function projectWorkflowSpaces({ collections, counts = {}, hidden = [], l
     const space = builtIn
       ? { ...builtIn, label: labels[id] ?? builtIn.label, count: counts[id as BuiltInSpaceId] }
       : customSpaces.get(id);
-    return space ? [{ ...space, hidden: hiddenIds.has(id) }] : [];
-  });
+    return space ? [{ ...space, kind: space.kind ?? "built_in", hidden: hiddenIds.has(id) }] : [];
+  }).concat(views.slice().sort((left, right) => left.position - right.position || left.id.localeCompare(right.id)).map((view) => ({
+    id: view.id,
+    label: view.name,
+    description: "live View",
+    color: view.color,
+    kind: "view" as const,
+    hidden: false,
+  })));
 }
 
 export function deriveSidebarHealth({ attention = false, known = true, online, syncing = false }: {
@@ -154,11 +166,12 @@ export function deriveSidebarHealth({ attention = false, known = true, online, s
   return known ? "synced" : "unknown";
 }
 
-export function createSidebarNavigationProjection({ account, active, attention = false, collections, counts, draftCount, hidden, inboxCount, known = true, labels, online, order, syncing = false }: {
+export function createSidebarNavigationProjection({ account, active, attention = false, collections, views = [], counts, draftCount, hidden, inboxCount, known = true, labels, online, order, syncing = false }: {
   account: Omit<SidebarAccount, "health">;
   active: DesktopDestination;
   attention?: boolean;
   collections: readonly Collection[];
+  views?: readonly OrganizationView[];
   counts?: Partial<Record<BuiltInSpaceId, number>>;
   draftCount?: number;
   hidden?: readonly string[];
@@ -180,7 +193,7 @@ export function createSidebarNavigationProjection({ account, active, attention =
     draftCount,
     inboxCount,
     online,
-    spaces: projectWorkflowSpaces({ collections, counts, hidden, labels, order }),
+    spaces: projectWorkflowSpaces({ collections, views, counts, hidden, labels, order }),
   };
 }
 

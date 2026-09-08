@@ -20,14 +20,14 @@ import {
 import { validateFacetFilters, FacetWorkflowValidationError } from "../facet-workflow.ts";
 import { authorizeOrganizationOperation, canonicalOrganizationJson, digestOrganizationAuthorizationEnvelope, digestOrganizationCommand } from "../authority.ts";
 import { loadAuthorizedOrganizationAgentCapability, organizationReplayAuthorityMatches } from "../agent-capability.ts";
-import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
+import { digestOrganizationViewOrder, organizationViewOrderResourceId, OrganizationViewAccessError, OrganizationViewConflictError, OrganizationViewNotFoundError, OrganizationViewQueryError, OrganizationViewValidationError, type OrganizationViewMutationAuthorization, type OrganizationViewMutationPlan, type OrganizationViewQueryAuthorization, type OrganizationViewsRepository, type OrganizationViewScope } from "./module.ts";
 
 type ViewRow = {
   workspace_id: string; id: string; name: string; description: string; color: string; position: number;
   definition: string; revision: number; created_at: number; updated_at: number;
 };
 type SqlBinding = string | number | bigint | boolean | Uint8Array | null;
-export type OrganizationViewPageKey = { threadId: string };
+export type OrganizationViewPageKey = { accountId: string; threadId: string };
 type OrganizationViewDetailRow = {
   accountId: string; accountEmail: string; provider: string; threadId: string; subject: string; latestReceivedAt: number;
   messageCount: number; isRead: number; primaryLaneId: string; senderName: string | null; senderEmail: string;
@@ -44,10 +44,13 @@ function mapView(row: ViewRow): OrganizationView {
 }
 
 function placeholders(values: readonly unknown[]) { return values.map(() => "?").join(","); }
-function fingerprint(view: OrganizationView, accountIds: readonly string[]) {
-  return createHash("sha256").update(JSON.stringify([view.id, view.revision, view.definition, accountIds])).digest("hex");
+function fingerprint(input: { definitionDigest: string; resultSetKey: string; accountIds: readonly string[]; authorizedScopeDigest: string }) {
+  return createHash("sha256").update(canonicalOrganizationJson(input)).digest("hex");
 }
-type Cursor = { version: 1; fingerprint: string; receivedAt: number; accountId: string; threadId: string };
+function cursorDigest(scopeFingerprint: string, key: Omit<Cursor, "version" | "fingerprint">) {
+  return createHash("sha256").update(canonicalOrganizationJson({ scopeFingerprint, key })).digest("hex");
+}
+type Cursor = { version: 2; fingerprint: string; receivedAt: number; accountId: string; threadId: string; shown: number };
 function isBoundedIdentifier(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= 200;
 }
@@ -61,18 +64,21 @@ function decodeCursor(value: string | undefined, expectedFingerprint: string): C
     if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
       const candidate = parsed as Record<string, unknown>;
       const keys = Object.keys(candidate);
-      if (keys.length === 5
-        && keys.every((key) => ["version", "fingerprint", "receivedAt", "accountId", "threadId"].includes(key))
-        && candidate.version === 1
+      if (keys.length === 6
+        && keys.every((key) => ["version", "fingerprint", "receivedAt", "accountId", "threadId", "shown"].includes(key))
+        && candidate.version === 2
         && typeof candidate.fingerprint === "string"
         && /^[0-9a-f]{64}$/.test(candidate.fingerprint)
-        && candidate.fingerprint === expectedFingerprint
         && typeof candidate.receivedAt === "number"
         && Number.isSafeInteger(candidate.receivedAt)
         && candidate.receivedAt >= 0
         && candidate.receivedAt <= 8_640_000_000_000_000
+        && Number.isSafeInteger(candidate.shown) && Number(candidate.shown) >= 1
         && isBoundedIdentifier(candidate.accountId)
-        && isBoundedIdentifier(candidate.threadId)) return candidate as Cursor;
+        && isBoundedIdentifier(candidate.threadId)) {
+        const key = { receivedAt: candidate.receivedAt, accountId: candidate.accountId, threadId: candidate.threadId, shown: Number(candidate.shown) };
+        if (candidate.fingerprint === cursorDigest(expectedFingerprint, key)) return candidate as Cursor;
+      }
     }
   } catch { /* one stable public error below */ }
   throw new OrganizationViewQueryError("The View cursor does not match this live definition or Account scope");
@@ -81,8 +87,23 @@ function decodeCursor(value: string | undefined, expectedFingerprint: string): C
 function escapeLikeLiteral(value: string) {
   return value.replace(/[\\%_]/g, "\\$&");
 }
-function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: string) {
-  return Buffer.from(JSON.stringify({ version: 1, fingerprint: cursorFingerprint, receivedAt: Date.parse(item.latestReceivedAt), accountId: item.accountId, threadId: item.threadId }), "utf8").toString("base64url");
+function encodeCursor(item: OrganizationViewResultItem, cursorFingerprint: string, shown: number) {
+  const key = { receivedAt: Date.parse(item.latestReceivedAt), accountId: item.accountId, threadId: item.threadId, shown };
+  return Buffer.from(JSON.stringify({ version: 2, fingerprint: cursorDigest(cursorFingerprint, key), ...key }), "utf8").toString("base64url");
+}
+
+function normalizedAddressSql(alias: string) { return `lower(trim(coalesce(${alias}.from_address, '')))`; }
+function normalizedDomainSql(alias: string) { const address = normalizedAddressSql(alias); return `case when instr(${address}, '@') > 0 then substr(${address}, instr(${address}, '@') + 1) else '' end`; }
+function effectiveClassificationSql(alias: string) {
+  const address = normalizedAddressSql(alias);
+  const domain = normalizedDomainSql(alias);
+  return `coalesce(
+    (select override.classification from human_classification_overrides override where override.account_id=${alias}.account_id and override.target_type='message' and override.target_value=${alias}.id limit 1),
+    (select override.classification from human_classification_overrides override where override.account_id=${alias}.account_id and override.target_type='sender_address' and override.target_value=${address} limit 1),
+    (select override.classification from human_classification_overrides override where override.account_id=${alias}.account_id and override.target_type='sender_domain' and override.target_value=${domain} limit 1),
+    ${alias}.human_classification,
+    'unclassified'
+  )`;
 }
 
 function facetPredicate(filter: FacetFilter, params: SqlBinding[]) {
@@ -108,9 +129,16 @@ function facetPredicate(filter: FacetFilter, params: SqlBinding[]) {
  * CROSS JOIN is deliberate: it keeps Threads as the outer loop at small limits,
  * where SQLite otherwise reorders the inner joins and adds a temporary B-tree.
  */
-export function buildOrganizationViewPageKeyQuery(input: { scope: OrganizationViewScope; view: OrganizationView; query: OrganizationViewResultQuery }) {
-  const { scope, view, query } = input;
-  const definition = organizationViewDefinitionSchema.parse(view.definition);
+export function buildOrganizationViewPageKeyQuery(input: {
+  scope: OrganizationViewScope;
+  definition: OrganizationViewDefinition;
+  definitionDigest: string;
+  resultSetKey: string;
+  authorizedScopeDigest: string;
+  query: OrganizationViewResultQuery;
+}) {
+  const { scope, query } = input;
+  const definition = organizationViewDefinitionSchema.parse(input.definition);
   const owned = new Set(scope.accountIds);
   const accountIds = [...(definition.accountIds ?? scope.accountIds)].sort();
   if (accountIds.some((accountId) => !owned.has(accountId))) throw new OrganizationViewQueryError("The View Account scope is no longer authorized");
@@ -135,7 +163,7 @@ export function buildOrganizationViewPageKeyQuery(input: { scope: OrganizationVi
   const signal = definition.humanSignal;
   if (signal?.minimumScore !== undefined) { emailConditions.push("e.human_signal >= ?"); params.push(signal.minimumScore); }
   if (signal?.maximumScore !== undefined) { emailConditions.push("e.human_signal <= ?"); params.push(signal.maximumScore); }
-  if (signal?.classifications) { emailConditions.push(`e.human_classification IN (${placeholders(signal.classifications)})`); params.push(...signal.classifications); }
+  if (signal?.classifications) { emailConditions.push(`${effectiveClassificationSql("e")} IN (${placeholders(signal.classifications)})`); params.push(...signal.classifications); }
   if (signal?.evidenceReasonCodes) { emailConditions.push(`EXISTS (SELECT 1 FROM json_each(COALESCE(e.human_classification_reasons,'[]')) reason WHERE reason.value IN (${placeholders(signal.evidenceReasonCodes)}))`); params.push(...signal.evidenceReasonCodes); }
   if (definition.sender) {
     const senderParts: string[] = [];
@@ -147,7 +175,7 @@ export function buildOrganizationViewPageKeyQuery(input: { scope: OrganizationVi
   if (definition.date?.receivedBefore) { emailConditions.push("e.received_at <= ?"); params.push(Date.parse(definition.date.receivedBefore)); }
   if (emailConditions.length > 2) conditions.push(`EXISTS (SELECT 1 FROM emails e WHERE ${emailConditions.join(" AND ")})`);
 
-  const cursorFingerprint = fingerprint(view, accountIds);
+  const cursorFingerprint = fingerprint({ definitionDigest: input.definitionDigest, resultSetKey: input.resultSetKey, accountIds, authorizedScopeDigest: input.authorizedScopeDigest });
   const cursor = decodeCursor(query.cursor, cursorFingerprint);
   if (cursor) {
     conditions.push("(COALESCE(t.latest_received_at,t.created_at) < ? OR (COALESCE(t.latest_received_at,t.created_at) = ? AND (t.account_id > ? OR (t.account_id = ? AND t.id > ?))))");
@@ -155,10 +183,11 @@ export function buildOrganizationViewPageKeyQuery(input: { scope: OrganizationVi
   }
   params.push(query.limit + 1);
   return {
-    sql: `SELECT t.id AS threadId FROM threads t INDEXED BY threads_view_order_idx CROSS JOIN oauth_accounts oa ON oa.id=t.account_id CROSS JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id WHERE ${conditions.join(" AND ")} ORDER BY COALESCE(t.latest_received_at,t.created_at) DESC,t.account_id ASC,t.id ASC LIMIT ?`,
+    sql: `SELECT t.account_id AS accountId,t.id AS threadId FROM threads t INDEXED BY threads_view_order_idx CROSS JOIN oauth_accounts oa ON oa.id=t.account_id CROSS JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id WHERE ${conditions.join(" AND ")} ORDER BY COALESCE(t.latest_received_at,t.created_at) DESC,t.account_id ASC,t.id ASC LIMIT ?`,
     params,
     accountIds,
     cursorFingerprint,
+    previouslyShown: cursor?.shown ?? 0,
   };
 }
 
@@ -171,10 +200,10 @@ export function buildOrganizationViewDetailQuery(keys: readonly OrganizationView
   if (keys.length < 1 || keys.length > organizationViewBounds.maximumResultsPerPage) {
     throw new Error(`View detail projection requires 1-${organizationViewBounds.maximumResultsPerPage} page keys`);
   }
-  const values = keys.map(() => "(?)").join(",");
+  const values = keys.map(() => "(?,?)").join(",");
   return {
-    sql: `WITH requested(thread_id) AS (VALUES ${values}) SELECT t.account_id AS accountId,oa.provider_email AS accountEmail,oa.provider,t.id AS threadId,COALESCE(t.subject,'') AS subject,COALESCE(t.latest_received_at,t.created_at) AS latestReceivedAt,t.message_count AS messageCount,t.is_read AS isRead,lane.primary_lane_id AS primaryLaneId,latest.from_name AS senderName,COALESCE(latest.from_address,'') AS senderEmail,(SELECT MAX(signal_email.human_signal) FROM emails signal_email WHERE signal_email.account_id=t.account_id AND signal_email.thread_id=t.id) AS humanSignal,latest.human_classification AS humanClassification FROM requested JOIN threads t ON t.id=requested.thread_id JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id LEFT JOIN emails latest ON latest.id=(SELECT latest_id.id FROM emails latest_id WHERE latest_id.account_id=t.account_id AND latest_id.thread_id=t.id ORDER BY latest_id.received_at DESC,latest_id.id DESC LIMIT 1)`,
-    params: keys.map((key) => key.threadId),
+    sql: `WITH requested(account_id,thread_id) AS (VALUES ${values}) SELECT t.account_id AS accountId,oa.provider_email AS accountEmail,oa.provider,t.id AS threadId,COALESCE(t.subject,'') AS subject,COALESCE(t.latest_received_at,t.created_at) AS latestReceivedAt,t.message_count AS messageCount,t.is_read AS isRead,lane.primary_lane_id AS primaryLaneId,latest.from_name AS senderName,COALESCE(latest.from_address,'') AS senderEmail,(SELECT MAX(signal_email.human_signal) FROM emails signal_email WHERE signal_email.account_id=t.account_id AND signal_email.thread_id=t.id) AS humanSignal,${effectiveClassificationSql("latest")} AS humanClassification FROM requested JOIN threads t ON t.account_id=requested.account_id AND t.id=requested.thread_id JOIN oauth_accounts oa ON oa.id=t.account_id JOIN organization_thread_lane_states lane ON lane.workspace_id=oa.user_id AND lane.account_id=t.account_id AND lane.thread_id=t.id LEFT JOIN emails latest ON latest.id=(SELECT latest_id.id FROM emails latest_id WHERE latest_id.account_id=t.account_id AND latest_id.thread_id=t.id ORDER BY latest_id.received_at DESC,latest_id.id DESC LIMIT 1)`,
+    params: keys.flatMap((key) => [key.accountId, key.threadId]),
   };
 }
 
@@ -199,11 +228,12 @@ function loadFacetDefinitions(sqlite: Database, workspaceId: string, ids: readon
   }));
 }
 
-function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition: OrganizationViewDefinition) {
-  if (definition.accountIds?.length) {
-    const row = sqlite.query(`SELECT COUNT(*) AS count FROM oauth_accounts WHERE user_id=? AND id IN (${placeholders(definition.accountIds)})`).get(workspaceId, ...definition.accountIds) as { count: number };
-    if (row.count !== definition.accountIds.length) throw new OrganizationViewAccessError();
-  }
+function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition: OrganizationViewDefinition, authorizedAccountIds: readonly string[]) {
+  const granted = new Set(authorizedAccountIds);
+  const effectiveAccountIds = [...(definition.accountIds ?? authorizedAccountIds)].sort();
+  if (effectiveAccountIds.length === 0 || effectiveAccountIds.some((accountId) => !granted.has(accountId))) throw new OrganizationViewAccessError();
+  const accountRow = sqlite.query(`SELECT COUNT(*) AS count FROM oauth_accounts WHERE user_id=? AND id IN (${placeholders(effectiveAccountIds)})`).get(workspaceId, ...effectiveAccountIds) as { count: number };
+  if (accountRow.count !== effectiveAccountIds.length) throw new OrganizationViewAccessError();
   assertOwnedIds(sqlite, workspaceId, "organization_lanes", definition.laneIds);
   const facetFilters = definition.facetFilters ?? [];
   assertOwnedIds(sqlite, workspaceId, "organization_facets", facetFilters.map((filter) => filter.facetId));
@@ -211,7 +241,7 @@ function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition
   catch (error) { if (error instanceof FacetWorkflowValidationError) throw new OrganizationViewValidationError(error.message); throw error; }
   assertOwnedIds(sqlite, workspaceId, "organization_workflow_states", definition.workflowStateIds);
   if (definition.thread?.ids?.length) {
-    const row = sqlite.query(`SELECT COUNT(*) AS count FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id WHERE oa.user_id=? AND t.id IN (${placeholders(definition.thread.ids)})`).get(workspaceId, ...definition.thread.ids) as { count: number };
+    const row = sqlite.query(`SELECT COUNT(*) AS count FROM threads t JOIN oauth_accounts oa ON oa.id=t.account_id WHERE oa.user_id=? AND t.account_id IN (${placeholders(effectiveAccountIds)}) AND t.id IN (${placeholders(definition.thread.ids)})`).get(workspaceId, ...effectiveAccountIds, ...definition.thread.ids) as { count: number };
     if (row.count !== definition.thread.ids.length) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
   }
   for (const filter of definition.contextFilters ?? []) {
@@ -219,6 +249,31 @@ function assertOwnedDefinition(sqlite: Database, workspaceId: string, definition
       .get(workspaceId, filter.context.contextTypeId, filter.context.contextId, filter.relationshipTypeId, ...(filter.direction ? [filter.direction] : []));
     if (!owned) throw new OrganizationViewAccessError("The View definition references a resource outside this Workspace", "resource_denied");
   }
+}
+
+function verifyQueryAuthorization(sqlite: Database, scope: OrganizationViewScope, authorization: OrganizationViewQueryAuthorization) {
+  const expected = authorization.capabilitySnapshot;
+  const live = scope.actor.type === "agent"
+    ? authorization.agentCapabilitySource?.load({ actor: scope.actor as typeof scope.actor & { type: "agent" }, workspaceId: scope.workspaceId, accountIds: scope.accountIds }, sqlite) ?? null
+    : { snapshot: expected, revokedAt: null };
+  if (!live || live.revokedAt !== null
+    || canonicalOrganizationJson(live.snapshot) !== canonicalOrganizationJson(expected)
+    || expected.actor.id !== scope.actor.id
+    || expected.actor.type !== scope.actor.type
+    || expected.scope.workspaceId !== scope.workspaceId
+    || canonicalOrganizationJson([...expected.scope.accountIds].sort()) !== canonicalOrganizationJson([...scope.accountIds].sort())
+    || !expected.operations.includes("query")
+    || !expected.actionFamilies.includes("organization_read")
+    || authorization.requiredResourceFamilies.some((family) => !expected.resourceFamilies.includes(family))) {
+    throw new OrganizationViewAccessError("The live Capability no longer authorizes this View query and every referenced resource family", "resource_denied");
+  }
+  return `sha256:${createHash("sha256").update(canonicalOrganizationJson({
+    actor: scope.actor,
+    workspaceId: scope.workspaceId,
+    authorizedAccountIds: [...scope.accountIds].sort(),
+    capability: expected,
+    requiredResourceFamilies: [...authorization.requiredResourceFamilies].sort(),
+  })).digest("hex")}`;
 }
 
 function viewRows(sqlite: Database, workspaceId: string) {
@@ -429,7 +484,7 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
     create({ workspaceId, viewId, request, boundRequest, plan, authorization, now }) {
       const timestamp = now.getTime();
       return authorizedMutation(sqlite, { workspaceId, boundRequest, plan, authorization, now, mutate: () => {
-        assertOwnedDefinition(sqlite, workspaceId, request.definition);
+        assertOwnedDefinition(sqlite, workspaceId, request.definition, authorization.executionContext.accountIds);
         const current = viewRows(sqlite, workspaceId);
         const temporaryPosition = Math.max(current.length, ...current.map((row) => row.position + 1)) + current.length + 1;
         sqlite.query("INSERT INTO organization_views (workspace_id,id,name,description,color,position,definition,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
@@ -445,7 +500,7 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         if (!current) throw new OrganizationViewNotFoundError();
         if (current.revision !== request.expectedRevision) throw new OrganizationViewConflictError();
         const next = { ...current, ...request.patch, definition: request.patch.definition ?? current.definition };
-        assertOwnedDefinition(sqlite, workspaceId, next.definition);
+        assertOwnedDefinition(sqlite, workspaceId, next.definition, authorization.executionContext.accountIds);
         if (request.patch.position !== undefined) {
           const rows = viewRows(sqlite, workspaceId);
           rewritePositions(sqlite, workspaceId, plan.orderedViewIds, new Set(rows.filter((row) => plan.orderedViewIds.indexOf(row.id) !== row.position && row.id !== viewId).map((row) => row.id)), now.getTime());
@@ -482,22 +537,32 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
         return null;
       } });
     },
-    query({ scope, view, query }) {
-      const pageQuery = buildOrganizationViewPageKeyQuery({ scope, view, query });
+    validateDefinition({ scope, definition, authorization }) {
       return sqlite.transaction(() => {
+        const authorizedScopeDigest = verifyQueryAuthorization(sqlite, scope, authorization);
+        assertOwnedDefinition(sqlite, scope.workspaceId, definition, scope.accountIds);
+        return { accountIds: [...(definition.accountIds ?? scope.accountIds)].sort(), authorizedScopeDigest };
+      })();
+    },
+    evaluate({ scope, definition, definitionDigest, resultSetKey, query, authorization }) {
+      return sqlite.transaction(() => {
+        const authorizedScopeDigest = verifyQueryAuthorization(sqlite, scope, authorization);
+        assertOwnedDefinition(sqlite, scope.workspaceId, definition, scope.accountIds);
+        const pageQuery = buildOrganizationViewPageKeyQuery({ scope, definition, definitionDigest, resultSetKey, authorizedScopeDigest, query });
         const pageKeys = sqlite.query(pageQuery.sql).all(...pageQuery.params) as OrganizationViewPageKey[];
         const hasMore = pageKeys.length > query.limit;
         const requestedKeys = pageKeys.slice(0, query.limit);
+        const cumulativeCount = pageQuery.previouslyShown + requestedKeys.length;
         if (requestedKeys.length === 0) {
-          return organizationViewResultPageSchema.parse({ viewId: view.id, viewRevision: view.revision, accountIds: pageQuery.accountIds, items: [], nextCursor: null, limit: query.limit });
+          return { accountIds: pageQuery.accountIds, items: [], nextCursor: null, limit: query.limit, count: { kind: "exact" as const, value: cumulativeCount }, authorizedScopeDigest };
         }
 
         const detailQuery = buildOrganizationViewDetailQuery(requestedKeys);
         const details = sqlite.query(detailQuery.sql).all(...detailQuery.params) as OrganizationViewDetailRow[];
-        const detailsByKey = new Map(details.map((row) => [row.threadId, row]));
+        const detailsByKey = new Map(details.map((row) => [canonicalOrganizationJson([row.accountId, row.threadId]), row]));
         const items = requestedKeys.map((key) => {
-          const row = detailsByKey.get(key.threadId);
-          if (!row) throw new Error(`View detail projection did not return ${key.threadId}`);
+          const row = detailsByKey.get(canonicalOrganizationJson([key.accountId, key.threadId]));
+          if (!row) throw new Error(`View detail projection did not return ${key.accountId}:${key.threadId}`);
           return organizationViewResultItemSchema.parse({
             accountId: row.accountId, accountEmail: row.accountEmail, provider: row.provider, threadId: row.threadId, subject: row.subject,
             latestReceivedAt: iso(row.latestReceivedAt), messageCount: row.messageCount, readState: row.isRead ? "read" : "unread",
@@ -505,8 +570,15 @@ export function createSqliteOrganizationViewsRepository(sqlite: Database): Organ
             humanClassification: row.humanClassification,
           });
         });
-        return organizationViewResultPageSchema.parse({ viewId: view.id, viewRevision: view.revision, accountIds: pageQuery.accountIds, items, nextCursor: hasMore ? encodeCursor(items.at(-1)!, pageQuery.cursorFingerprint) : null, limit: query.limit });
-      }).deferred();
+        return {
+          accountIds: pageQuery.accountIds,
+          items,
+          nextCursor: hasMore ? encodeCursor(items.at(-1)!, pageQuery.cursorFingerprint, cumulativeCount) : null,
+          limit: query.limit,
+          count: { kind: hasMore ? "shown" as const : "exact" as const, value: cumulativeCount },
+          authorizedScopeDigest,
+        };
+      })();
     },
   };
 }

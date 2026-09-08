@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Collection } from "@orca/shared";
+import { organizationViewsFixture, type Collection } from "@orca/shared";
 import {
   createSidebarNavigationProjection,
   desktopDestinationFromLocation,
@@ -19,12 +19,14 @@ const collections: Collection[] = [
 describe("shared desktop navigation contract", () => {
   test("parses one destination grammar and serializes stable production and preview URLs", () => {
     expect(parseDesktopDestination("space:space-one")).toBe("space:space-one");
+    expect(parseDesktopDestination("view:view-one")).toBe("view:view-one");
     expect(parseDesktopDestination("space:")).toBeNull();
     expect(parseDesktopDestination("unknown")).toBeNull();
     expect(desktopDestinationFromLocation({ pathname: "/settings/integrations/gmail", search: "?destination=space:ignored" } as Location)).toBe("settings");
     expect(desktopDestinationFromLocation({ pathname: "/", search: "?destination=space%3Aspace-one" } as Location)).toBe("space:space-one");
     expect(desktopDestinationHref("space:space-one", "/settings")).toBe("/?destination=space%3Aspace-one");
     expect(desktopDestinationHref("space:space-one", "/dev/settings")).toBe("/dev/inbox?destination=space%3Aspace-one");
+    expect(desktopDestinationHref("view:view-one", "/settings")).toBe("/?destination=view%3Aview-one");
     expect(desktopDestinationUrl("http://localhost:5173/dev/inbox?q=maya&thread=thread-1&compose=1", "focus")).toBe("/dev/inbox?q=maya&destination=focus");
   });
 
@@ -68,5 +70,19 @@ describe("shared desktop navigation contract", () => {
     writeSpacePreferences("account", preferences, storage);
     expect(values.has(spacePreferencesKey("account"))).toBe(true);
     expect(readSpacePreferences("account", storage)).toEqual(preferences);
+  });
+
+  test("projects saved Views after locally managed spaces with their durable destination identity", () => {
+    const projection = createSidebarNavigationProjection({
+      account: { displayName: "Maya", email: "maya@example.com", accountCount: 1 },
+      active: `view:${organizationViewsFixture[0]!.id}`,
+      collections,
+      views: organizationViewsFixture,
+      online: true,
+    });
+    const projectedViews = projection.spaces.filter((space) => space.kind === "view");
+    expect(projectedViews.map((space) => space.label)).toEqual(organizationViewsFixture.map((view) => view.name));
+    expect(projectedViews.map((space) => space.hidden)).toEqual([false, false, false]);
+    expect(projectedViews.map((space) => `view:${space.id}`)).toContain(projection.active);
   });
 });
