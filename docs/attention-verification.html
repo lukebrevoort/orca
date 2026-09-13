@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Try Attention · Orca</title>
+<style>
+:root{color-scheme:light dark;--paper:#f5f8f4;--ink:#19352b;--muted:#52675c;--line:#d1ddd4;--card:#fff}
+@media(prefers-color-scheme:dark){:root{--paper:#14221c;--ink:#e6eee7;--muted:#adbbb0;--line:#3b4e40;--card:#1b2d23}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 'Avenir Next',system-ui,sans-serif}main{max-width:920px;margin:64px auto;padding:0 28px}h1,h2{font-family:Georgia,serif;font-weight:400;line-height:1.15}h1{font-size:clamp(36px,6vw,60px);max-width:680px}h2{font-size:27px;margin-top:0}p{max-width:700px}.eyebrow,small{color:var(--muted)}.eyebrow{letter-spacing:.09em;text-transform:uppercase;font-size:12px}.steps{display:grid;gap:18px;margin:40px 0}article{padding:28px;border:1px solid var(--line);border-radius:14px;background:var(--card)}article p{margin-bottom:0}a{color:inherit;text-underline-offset:4px}strong{font-weight:650}.state{border-top:1px solid var(--line);padding-top:20px;color:var(--muted)}
+</style>
+<main>
+<p class="eyebrow">Orca · Attention</p>
+<h1>A few small moves.<br>A calmer inbox.</h1>
+<p>Attention gives senders a home. Inside a message or the inbox, you can also move just one conversation.</p>
+<p class="state"><a href="/?destination=attention">Open Attention →</a> · The mailbox uses sample messages; changes never touch your real mail.</p>
+<div class="steps">
+<article><h2>1. Move one conversation</h2><p>Open <strong>Kickoff notes</strong> from Maya. Choose <strong>This conversation → Quiet</strong>. It should leave Inbox and appear in Quiet. Maya’s <strong>Thursday review</strong> should stay in Inbox.</p></article>
+<article><h2>2. Choose a home for a sender</h2><p>In Attention, add <strong>maya@studio.example</strong> to Quiet for the work account. Thursday review should follow that sender choice. Maya’s dinner message in the personal account should stay where it was.</p></article>
+<article><h2>3. Make an exception</h2><p>Move Kickoff notes to Inbox for <strong>this conversation</strong>. The sender can stay Quiet while that conversation stays in Inbox. Choose <strong>Use sender choice</strong> to make the conversation follow the sender again.</p></article>
+<article><h2>4. Change your mind</h2><p>Change a sender’s destination, then use <strong>Undo</strong>. Reload the page to check that the restored choice stays saved. If another change has happened since, Undo should explain the conflict instead of replacing that newer choice.</p></article>
+<article><h2>5. Try it your way</h2><p>Search for a sender, switch accounts, and try both themes. The main question: can you tell where a message will go and how much each choice affects?</p></article>
+</div>
+<article><h2>Verification</h2><p>Routing persistence, account isolation, conversation overrides, reset and guarded Undo were exercised against disposable SQLite databases. App regressions cover overlapping pagination, background refresh and Undo responses. The browser check also delivered a captured HTTP 200 page after a newer routing save and verified that pagination still worked.</p><p>Light and dark controls were checked at 1440px and 1024px, with a narrow-layout smoke check at 390px. Tests cover offline, read-only, stale response and uncertain-save recovery. The full monorepo suite was not run locally; the pull request runs repository CI.</p><p><strong>Final validation:</strong> 19 Attention integration tests, 72 app/navigation/revalidation tests, 17 selected bulk/navigation tests, web typecheck and production build passed. Independent final review passed for implementation ecb7963f2abceb51de9a8d866a41bbfa17df4242.</p></article>
+<div class="steps"><article><h2>Attention</h2><img style="width:100%;height:auto" src="attention-evidence/attention-light.png" alt="Attention page in light mode"><img style="width:100%;height:auto;margin-top:20px" src="attention-evidence/attention-dark.png" alt="Attention page in dark mode at 1024 pixels"></article><article><h2>Inside a message</h2><img style="width:100%;height:auto" src="attention-evidence/reader-light.png" alt="Readable Attention control inside a message"><img style="width:100%;height:auto;margin-top:20px" src="attention-evidence/reader-dark.png" alt="Reader Attention control with visible keyboard focus in dark mode"></article></div>
+<small>Inbox and Quiet describe where mail appears in Orca. Notification delivery is a separate capability and is not available in this implementation.</small>
+<details style="margin:32px 0"><summary>Run this sample mailbox locally</summary><pre style="overflow:auto">bun install --frozen-lockfile
+bun run --cwd apps/web build
+ATTENTION_REPO="$PWD" ATTENTION_PREVIEW_PORT=51439 bun scripts/attention-workflow-preview.ts</pre><p>The script creates a fresh disposable database and a fixture session. It does not use your production mailbox. For a pagination fixture, also set <code>ATTENTION_PREVIEW_EXTRA_MESSAGES=120</code>.</p></details></main>
+</html>
