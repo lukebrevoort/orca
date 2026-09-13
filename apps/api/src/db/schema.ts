@@ -1616,3 +1616,11 @@ export const mcpRefreshTokens = sqliteTable(
     revokedAtIdx: index("mcp_refresh_tokens_revoked_at_idx").on(table.revokedAt),
   }),
 );
+
+// Notification intent only; independent of inbox placement and provider delivery.
+export const accountAttentionPreferences = sqliteTable("account_attention_preferences", {
+  accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  defaultChoice: text("default_choice", { enum: ["notify", "quiet"] }).notNull(),
+  sendersJson: text("senders_json").notNull(),
+});

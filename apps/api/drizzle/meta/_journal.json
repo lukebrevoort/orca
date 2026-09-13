@@ -281,6 +281,13 @@
       "when": 1788825600000,
       "tag": "0039_classifier_lookup_index",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1789257600000,
+      "tag": "0040_attention_preferences",
+      "breakpoints": true
     }
   ]
 }

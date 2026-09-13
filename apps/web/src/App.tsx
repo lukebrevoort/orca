@@ -1,3 +1,4 @@
+import { AttentionPage } from "./attention-page";
 import {
   useEffect,
   useLayoutEffect,
@@ -1304,7 +1305,10 @@ export function InboxApp({
   const [agentEventActionErrors, setAgentEventActionErrors] = useState<Record<string, string>>(() => demoMode && agentEventPreviewState() === "action-error" && demoAgentEvents[0]
     ? { [demoAgentEvents[0].id]: "Could not save this local change. The original message and Human Signal were not changed." }
     : {});
-  const [organizationStudioOpen, setOrganizationStudioOpen] = useState(() => typeof window !== "undefined" && desktopDestinationFromLocation(window.location) === "organization");
+  const [organizationStudioOpen, setOrganizationStudioOpen] = useState<false | "organization" | "attention">(() => {
+    const destination = typeof window !== "undefined" ? desktopDestinationFromLocation(window.location) : "inbox";
+    return destination === "organization" || destination === "attention" ? destination : false;
+  });
   const bre320EvidenceState = useMemo(() => {
     if (!import.meta.env.DEV || typeof window === "undefined") return null;
     const requested = new URLSearchParams(window.location.search).get("bre320Evidence");
@@ -1793,7 +1797,7 @@ export function InboxApp({
   }, [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, classificationView, inboxFilter, isClassificationMailbox, mailboxMessages, personFilter]);
 
   const activeDesktopDestination: DesktopDestination = organizationStudioOpen
-    ? "organization"
+    ? organizationStudioOpen
     : activeSavedViewId
       ? `view:${activeSavedViewId}`
     : activeCollectionId
@@ -2089,13 +2093,13 @@ export function InboxApp({
     }
     setManageSpacesOpen(false);
     setStreamQuery(location.query);
-    setOrganizationStudioOpen(destination === "organization");
+    setOrganizationStudioOpen(destination === "organization" || destination === "attention" ? destination : false);
     setActiveSavedViewId(destination.startsWith("view:") ? destination.slice("view:".length) || null : null);
     if (destination.startsWith("space:")) {
       setActiveCollectionId(destination.slice("space:".length) || null);
     } else {
       setActiveCollectionId(null);
-      if (destination !== "organization") setActiveMailbox(destination as Mailbox);
+      if (destination !== "organization" && destination !== "attention") setActiveMailbox(destination as Mailbox);
     }
 
     const history = surfaceHistoryRef.current;
@@ -2894,9 +2898,9 @@ export function InboxApp({
       return;
     }
     surfaceHistoryRef.current?.navigate(destination);
-    if (destination === "organization") {
+    if (destination === "organization" || destination === "attention") {
       runUiTransition("content", () => {
-        setOrganizationStudioOpen(true);
+        setOrganizationStudioOpen(destination as "organization" | "attention");
         setSelectedThreadId(null);
         setSelectedThreadAccountId(null);
         setActiveCollectionId(null);
@@ -3012,10 +3016,10 @@ export function InboxApp({
             onThemeChange={() => runUiTransition("theme", () => setTheme((current) => current === "dark" ? "light" : "dark"))}
             query={streamQuery}
             theme={theme}
-            title={organizationStudioOpen ? "Organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
+            title={organizationStudioOpen ? organizationStudioOpen === "attention" ? "Attention" : "Advanced organization" : activeSavedViewId ? savedViews.find((view) => view.id === activeSavedViewId)?.name ?? "Saved View" : activeCollection?.name ?? (activeMailbox === "all" ? "All Mail" : activeMailbox === "drafts" ? "Drafts" : activeMailbox.charAt(0).toUpperCase() + activeMailbox.slice(1))}
           />
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
-          {organizationStudioOpen ? <OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
+          {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
             {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}

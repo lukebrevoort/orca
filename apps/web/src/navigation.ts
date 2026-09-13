@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Collection, OrganizationView } from "@orca/shared";
 
-export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "organization" | "settings" | `space:${string}` | `view:${string}`;
+export type DesktopDestination = "inbox" | "drafts" | "focus" | "signals" | "quiet" | "later" | "all" | "attention" | "organization" | "settings" | `space:${string}` | `view:${string}`;
 
 export type WorkflowSpace = {
   id: string;
@@ -42,7 +42,7 @@ export type SidebarNavigationProjection = {
 type BuiltInSpaceId = "focus" | "signals" | "quiet" | "later";
 
 const builtInSpaceIds: BuiltInSpaceId[] = ["focus", "signals", "quiet", "later"];
-const rootDestinations = new Set<DesktopDestination>(["inbox", "drafts", "focus", "signals", "quiet", "later", "all", "organization"]);
+const rootDestinations = new Set<DesktopDestination>(["inbox", "drafts", "focus", "signals", "quiet", "later", "all", "attention", "organization"]);
 
 const builtInSpaces: Record<BuiltInSpaceId, Omit<WorkflowSpace, "count" | "hidden">> = {
   focus: { id: "focus", label: "Focus", description: "protected attention" },

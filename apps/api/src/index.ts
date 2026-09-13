@@ -140,6 +140,7 @@ import {
 import { createSqliteOrganizationRepository } from "./organization/sqlite-repository.ts";
 import { FacetWorkflowValidationError } from "./organization/facet-workflow.ts";
 import { registerOrganizationCollectionsPinsRoutes } from "./organization/collections-pins/routes.ts";
+import { registerAttentionPreferencesRoutes } from "./attention/preferences-routes.ts";
 import { registerOrganizationContextRoutes } from "./organization/contexts/routes.ts";
 import { registerOrganizationViewRoutes } from "./organization/views/routes.ts";
 import { registerOrganizationRuleRoutes } from "./organization/rules/routes.ts";
@@ -267,6 +268,7 @@ export function createApp(options: CreateAppOptions = {}): Hono<{
 
   registerOrganizationCollectionsPinsRoutes(app, { dbFactory });
   registerOrganizationContextRoutes(app, { dbFactory });
+  registerAttentionPreferencesRoutes(app, { dbFactory });
   registerOrganizationViewRoutes(app, { dbFactory });
   registerOrganizationRuleRoutes(app, { dbFactory });
 

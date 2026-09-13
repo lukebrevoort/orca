@@ -103,7 +103,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
       />)}
       <SidebarItem active={active === "all"} icon={<NavIcon name="all" />} label="All Mail" onClick={() => onNavigate("all")} />
       <p className="desktop-sidebar-label">Workspace</p>
-      <SidebarItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => onNavigate("organization")} />
+      <SidebarItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => onNavigate("attention")} />
       <SidebarItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => onNavigate("settings")} />
       <div className="desktop-sidebar-spacer"/>
       <button className="desktop-account" onClick={() => onNavigate("settings")} type="button">
@@ -145,7 +145,7 @@ export function AppSidebar({ composeButtonRef, projection, theme, onCompose, onM
           </div>
           <div aria-label="Workspace" role="group">
             <p aria-hidden="true" className="desktop-mobile-menu-label">Workspace</p>
-            <MobileMenuItem active={active === "organization"} icon={<NavIcon name="organization" />} label="Organization" onClick={() => navigateFromMobileMenu("organization")} />
+            <MobileMenuItem active={active === "attention" || active === "organization"} icon={<NavIcon name="organization" />} label="Attention" onClick={() => navigateFromMobileMenu("attention")} />
             <MobileMenuItem active={active === "settings"} icon={<NavIcon name="settings" />} label="Settings" onClick={() => navigateFromMobileMenu("settings")} />
             <MobileMenuItem icon={<span aria-hidden="true" className="desktop-account-avatar">{account.avatar ?? initials}</span>} label={`Account · ${account.displayName}`} onClick={() => navigateFromMobileMenu("settings")} />
           </div>
