@@ -1,3 +1,5 @@
+import { AttentionRoutingProvider } from "./attention-routing";
+import { RoutingChooser } from "./routing-chooser";
 import { AttentionPage } from "./attention-page";
 import {
   useEffect,
@@ -153,7 +155,7 @@ type AttentionBehavior = AttentionViewSetting["behavior"];
 type BulkAttentionClient = (input: BatchSenderAttentionChange) => Promise<SenderAttentionBatchResult>;
 type BulkAttentionTarget = BatchSenderAttentionChange["targets"][number];
 type InboxViewAuthoringReturnContext = { scrollX: number; scrollY: number; focus: "use-selected-senders" };
-type SenderAttentionControlTarget = Pick<InboxMessage, "id" | "from">;
+type SenderAttentionControlTarget = Pick<InboxMessage, "id" | "accountId" | "threadId" | "from">;
 type ClassificationMessage = Pick<InboxMessage, "id" | "accountId" | "from" | "humanClassification" | "humanSignal">;
 type ClassificationOverride = NonNullable<NonNullable<InboxMessage["humanClassification"]>["userOverride"]>;
 type OAuthProvider = "gmail" | "outlook";
@@ -1261,6 +1263,11 @@ export function InboxApp({
   const [classificationView, setClassificationView] = useState<ClassificationView>("all");
   const [classificationCounts, setClassificationCounts] = useState<ClassificationCounts>(demoClassificationCounts);
   const [classificationCursor, setClassificationCursor] = useState<string | null>(null);
+  const [quietPage, setQuietPage] = useState<InboxClassificationResponse | null>(null);
+  const [quietRetry, setQuietRetry] = useState(0);
+  const [quietLoading, setQuietLoading] = useState(false);
+  const [quietError, setQuietError] = useState<string | null>(null);
+  const quietRequest = useRef(0);
   const [allMailCursor, setAllMailCursor] = useState<string | null>(null);
   const [classificationLoading, setClassificationLoading] = useState(false);
   const [classificationError, setClassificationError] = useState<string | null>(null);
@@ -1271,6 +1278,7 @@ export function InboxApp({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [routingCounts, setRoutingCounts] = useState<InboxClassificationResponse["counts"]["attention"] | null>(null);
   const [attentionByAddress, setAttentionByAddress] = useState<Record<string, AttentionBehavior>>({});
   const [collections, setCollections] = useState<Collection[]>(demoMode ? demoCollections : []);
   const [savedViews, setSavedViews] = useState<OrganizationView[]>(demoMode ? organizationViewsFixture : []);
@@ -1537,6 +1545,7 @@ export function InboxApp({
         setMessages(inbox.messages);
         setAllMailMessages((current) => classificationView === "all" ? inbox.messages : mergeMessages(current, inbox.messages));
         setClassificationCounts(toClassificationCounts(inbox.counts.classification));
+        setRoutingCounts(inbox.counts.attention);
         setClassificationCursor(inbox.nextCursor);
         if (classificationView === "all") setAllMailCursor(inbox.nextCursor);
         setClassificationLoading(false);
@@ -1600,6 +1609,7 @@ export function InboxApp({
           setMessages(refreshedInbox.messages);
           setAllMailMessages((current) => refreshedView === "all" ? refreshedInbox.messages : mergeMessages(current, refreshedInbox.messages));
           setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));
+          setRoutingCounts(refreshedInbox.counts.attention);
           setClassificationCursor(refreshedInbox.nextCursor);
           if (refreshedView === "all") setAllMailCursor(refreshedInbox.nextCursor);
           setClassificationLoading(false);
@@ -1760,6 +1770,20 @@ export function InboxApp({
     ])));
   }, [messages, status]);
 
+  useEffect(() => {
+    if (demoMode || activeMailbox !== "quiet") return;
+    const controller = new AbortController();
+    const generation = ++quietRequest.current;
+    setQuietLoading(true);
+    void fetchJson("/v1/inbox?view=quiet&classification=all&limit=100", inboxClassificationResponseSchema, controller.signal).then(page => {
+      if (controller.signal.aborted || generation !== quietRequest.current) return;
+      setQuietPage(page); setRoutingCounts(page.counts.attention); setQuietError(null);
+      setAllMailMessages(current => mergeMessages(current, page.messages));
+    }).catch(error => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietError(`Quiet mail could not reload. ${getErrorMessage(error)}`); })
+      .finally(() => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietLoading(false); });
+    return () => controller.abort();
+  }, [activeMailbox, demoMode, refreshKey, quietRetry]);
+
   const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
   const mailboxMessages = useMemo(
     () => {
@@ -1768,11 +1792,13 @@ export function InboxApp({
         ? allMailMessages.filter((message) => activeCollection.threadIds.includes(message.threadId))
         : isClassificationMailbox
           ? getMessagesForMailbox(messages, activeMailbox, attentionByAddress)
+          : activeMailbox === "quiet" && !demoMode
+            ? quietPage?.messages ?? []
           : activeMailbox === "later"
             ? allMailMessages.filter((message) => reminders.some((reminder) => reminder.threadId === message.threadId && (reminder.status === "scheduled" || reminder.status === "resurfaced")))
             : getMessagesForMailbox(allMailMessages, activeMailbox, attentionByAddress);
     },
-    [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, isClassificationMailbox, messages, reminders],
+    [activeCollectionId, activeMailbox, allMailMessages, attentionByAddress, collections, demoMode, isClassificationMailbox, messages, quietPage, reminders],
   );
 
   const visibleMessages = useMemo(() => {
@@ -1816,20 +1842,20 @@ export function InboxApp({
     collections,
     views: savedViews,
     counts: {
-      focus: getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
+      focus: routingCounts?.focus ?? getMessagesForMailbox(allMailMessages, "focus", attentionByAddress).length,
       signals: getMessagesForMailbox(allMailMessages, "signals", attentionByAddress).length,
-      quiet: getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length,
+      quiet: routingCounts?.quiet ?? getMessagesForMailbox(allMailMessages, "quiet", attentionByAddress).length,
       later: new Set(reminders.filter((reminder) => reminder.status === "scheduled" || reminder.status === "resurfaced").map((reminder) => reminder.threadId)).size,
     },
     draftCount: drafts?.length ?? 0,
     hidden: hiddenSpaceIds,
-    inboxCount: messages.length,
+    inboxCount: routingCounts ? routingCounts.all - routingCounts.quiet - routingCounts.hidden : messages.length,
     known: status === "ready" || status === "syncing",
     labels: { ...spaceLabels, later: spaceLabels.later ?? laterLabel },
     online,
     order: spaceOrder,
     syncing: status === "syncing" || isGmailRefreshing,
-  }), [account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
+  }), [routingCounts, account, activeDesktopDestination, allMailMessages, attentionByAddress, collections, drafts?.length, hiddenSpaceIds, isGmailRefreshing, laterLabel, messages.length, online, reminders, savedViews, spaceLabels, spaceOrder, status, syncStatus]);
   const workflowSpaces = sidebarProjection.spaces;
   const readerOriginLabel = typeof window !== "undefined" && isMailSearchResultReader(window.location)
     ? "Search results"
@@ -2034,7 +2060,7 @@ export function InboxApp({
   );
 
   const activeMailboxItem = mailboxes.find((item) => item.id === activeMailbox) ?? mailboxes[0];
-  const activeMailboxCursor = activeCollectionId || !isClassificationMailbox ? allMailCursor : classificationCursor;
+  const activeMailboxCursor = !activeCollectionId && activeMailbox === "quiet" && !demoMode ? quietPage?.nextCursor ?? null : activeCollectionId || !isClassificationMailbox ? allMailCursor : classificationCursor;
   const composeContacts = useMemo(() => collectComposeContacts(allMailMessages, account?.email ?? ""), [account?.email, allMailMessages]);
   const activeCollection = collections.find((collection) => collection.id === activeCollectionId) ?? null;
   const pinnedPeople = useMemo(
@@ -2488,6 +2514,19 @@ export function InboxApp({
   }
 
   async function loadMoreMessages() {
+    if (!demoMode && activeMailbox === "quiet" && !activeCollectionId) {
+      if (!quietPage?.nextCursor || isLoadingMoreMessages || quietLoading) return;
+      const generation = ++quietRequest.current;
+      setIsLoadingMoreMessages(true);
+      try {
+        const page = await fetchJson(`/v1/inbox?view=quiet&classification=all&limit=100&cursor=${encodeURIComponent(quietPage.nextCursor)}`, inboxClassificationResponseSchema);
+        if (generation !== quietRequest.current) return;
+        setQuietPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
+        setAllMailMessages(current => mergeMessages(current, page.messages)); setQuietError(null);
+      } catch (error) { if (generation === quietRequest.current) setQuietError(`Quiet mail could not load more. ${getErrorMessage(error)}`); }
+      finally { setIsLoadingMoreMessages(false); }
+      return;
+    }
     const useClassificationSource = isClassificationMailbox && !activeCollectionId;
     const view = classificationView;
     const cursor = useClassificationSource ? classificationCursor : allMailCursor;
@@ -2827,7 +2866,7 @@ export function InboxApp({
           body: JSON.stringify(input),
         });
     if (bre358EvidenceState === "partial") bre358PartialServedRef.current = true;
-    setAttentionByAddress((current) => {
+    if (demoMode || bulkAttentionClient) setAttentionByAddress((current) => {
       const next = { ...current };
       for (const outcome of result.outcomes) {
         delete next[outcome.target.address];
@@ -2839,6 +2878,7 @@ export function InboxApp({
       }
       return next;
     });
+    if (!demoMode && !bulkAttentionClient) await reloadRoutingMail();
     return result;
   }
 
@@ -2846,23 +2886,34 @@ export function InboxApp({
     runUiTransition("content", () => setInboxFilter(filter));
   }
 
-  async function updateSenderAttention(address: string, behavior?: AttentionBehavior) {
-    if (behavior) {
-      setAttentionByAddress((current) => ({ ...current, [address]: behavior }));
-      return behavior;
-    }
-    if (demoMode) {
-      setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
-      return "normal" as const;
-    }
-    try {
-      const resolved = await fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema);
-      setAttentionByAddress((current) => ({ ...current, [address]: resolved.behavior }));
-      return resolved.behavior;
-    } catch {
-      setAttentionByAddress((current) => ({ ...current, [address]: "normal" }));
-      return "normal" as const;
-    }
+  async function reloadRoutingMail() {
+    if (demoMode) return;
+    const generation = ++classificationRequestRef.current;
+    classificationPageRequestRef.current += 1;
+    allMailPageRequestRef.current += 1;
+    setClassificationCursor(null); setAllMailCursor(null);
+    const view = classificationViewRef.current;
+    const quietGeneration = ++quietRequest.current;
+    const all = await fetchJson("/v1/inbox?view=all&classification=all&limit=100", inboxClassificationResponseSchema);
+    const quiet = await fetchJson("/v1/inbox?view=quiet&classification=all&limit=100", inboxClassificationResponseSchema);
+    const inbox = view === "all" ? all : await fetchJson(`/v1/inbox?classification=${view}&limit=100`, inboxClassificationResponseSchema);
+    if (generation !== classificationRequestRef.current || view !== classificationViewRef.current) return;
+    setAttentionByAddress({});
+    if (quietGeneration === quietRequest.current) { setQuietPage(quiet); setQuietLoading(false); setQuietError(null); }
+    setAllMailMessages(all.messages); setAllMailCursor(all.nextCursor);
+    setMessages(inbox.messages); setClassificationCursor(inbox.nextCursor);
+    setClassificationCounts(toClassificationCounts(inbox.counts.classification));
+    setRoutingCounts(all.counts.attention);
+    setReaderRefreshKey(key => key + 1);
+    setClassificationLoading(false);
+    window.dispatchEvent(new Event("orca:routing-changed"));
+  }
+
+  // Compatibility callback for existing reader/list props; no local sender cache.
+  async function updateSenderAttention(_address: string, behavior?: AttentionBehavior) {
+    await reloadRoutingMail();
+    if (!behavior) throw new Error("Reload the canonical routing selection.");
+    return behavior;
   }
 
   async function saveReminder(input: { threadId: string; scheduledFor: string; timezone: string; notify: boolean }, existingReminder?: Reminder | null) {
@@ -2999,7 +3050,7 @@ export function InboxApp({
   }
 
   return (
-    <FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
+    <AttentionRoutingProvider onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -3021,6 +3072,8 @@ export function InboxApp({
           <ConnectivityNotice onOpenDrafts={() => navigateDesktop("drafts")} online={online} />
           {organizationStudioOpen === "attention" ? <AttentionPage demoMode={demoMode} onAdvanced={() => navigateDesktop("organization")} /> : organizationStudioOpen ? <><button className="attention-back" onClick={() => navigateDesktop("attention")} type="button">← Attention</button><OrganizationStudio interactivePreview={demoMode} releaseEvidenceState={bre320EvidenceState} viewPreviewEvidenceState={bre381EvidenceState} /></> : <section aria-label={selectedThreadId ? "Message reader" : activeMailbox === "drafts" ? "Drafts" : "Inbox"} className={`content-pane${selectedThreadId ? " content-pane-reader" : ""}`} ref={contentPaneRef} tabIndex={-1}>
           <div style={{ display: selectedThreadId ? "none" : undefined }}>
+            {activeMailbox === "quiet" && quietLoading && <p role="status">Loading Quiet mail…</p>}
+            {activeMailbox === "quiet" && quietError && <p role="alert">{quietError} <button className="attention-back" onClick={() => setQuietRetry(value => value + 1)}>Retry Quiet mail</button></p>}
             {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               demoMode={demoMode}
@@ -3037,7 +3090,7 @@ export function InboxApp({
               inboxTitle={inboxTitle}
               originLabel={activeCollection?.name ?? activeMailboxLabel}
               classificationView={classificationView}
-              classificationError={classificationError}
+              classificationError={activeMailbox === "quiet" ? null : classificationError}
               classificationActionError={classificationActionError}
               classificationActionMessage={classificationActionMessage}
               hasMoreMessages={Boolean(activeMailboxCursor)}
@@ -3208,7 +3261,7 @@ export function InboxApp({
         </>
       ) : null}
     </div>
-    </FirstViewGuidanceProvider>
+    </FirstViewGuidanceProvider></AttentionRoutingProvider>
   );
 }
 
@@ -5237,7 +5290,7 @@ export function MessageReader({
   const [showJumpToTop, setShowJumpToTop] = useState(false);
   const messages = useMemo(() => sortThreadMessages(detail?.messages ?? []), [detail]);
   const messageGroups = useMemo(() => groupThreadMessages(messages), [messages]);
-  const fallbackAttentionByAddress = useMemo(() => new Map(fallbackMessages.map((message) => [message.from.email.trim().toLowerCase(), message.attentionBehavior])), [fallbackMessages]);
+
   const newestMessage = messages[messages.length - 1];
   const newestUnreadMessage = [...messages].reverse().find((message) => message.unread);
   const firstUnreadMessage = messages.find((message) => message.unread);
@@ -5364,7 +5417,7 @@ export function MessageReader({
                       </div>
                       <time className="reader-sent-time" dateTime={message.receivedAt}>{formatReceivedAt(message.receivedAt)}</time>
                       <ClassificationCorrection message={message} onCorrect={(target, classification) => onClassificationChange(message, target, classification)} compact />
-                      <SenderAttentionControl compact initialBehavior={fallbackAttentionByAddress.get(message.from.email.trim().toLowerCase()) ?? "normal"} reader message={message} onBehaviorChange={onAttentionChange} />
+                      <SenderAttentionControl compact initialBehavior={message.attentionBehavior ?? detail?.thread.attention.attentionBehavior ?? "normal"} reader message={{ ...message, accountId: detail!.account.id, threadId: detail!.thread.id }} onBehaviorChange={onAttentionChange} />
                     </header>
                     {message.bodyHtml ? (
                       <div className="reader-body reader-body-html" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
@@ -5600,207 +5653,8 @@ function ReaderLoading({ title, messages }: { title: string; messages: InboxMess
   return <section className="reader-document reader-loading" aria-busy="true" aria-live="polite"><header className="reader-heading"><p className="reader-kicker">Opening conversation</p><h1 id="reader-title">{title}</h1></header><div className="reader-loading-line" /><div className="reader-loading-line reader-loading-line-short" /><span className="visually-hidden">Loading {messages.length || 1} message conversation</span></section>;
 }
 
-function SenderAttentionControl({ message, compact = false, initialBehavior, reader = false, onBehaviorChange }: { message: SenderAttentionControlTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
-  const [expanded, setExpanded] = useState(false);
-  const presence = useExitPresence(expanded);
-  const [resolution, setResolution] = useState<ResolvedSenderAttention | null>(null);
-  const [selectedBehavior, setSelectedBehavior] = useState<AttentionViewSetting["behavior"] | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "saving" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const controlRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLElement>(null);
-  const focusAfterCloseRef = useRef<{ behavior?: AttentionBehavior } | null>(null);
-  const address = message.from.email.trim().toLowerCase();
-  const senderName = message.from.name ?? address;
-  const attentionChoices: Array<{ behavior: AttentionViewSetting["behavior"]; label: string }> = [
-    { behavior: "notify", label: "Notify me" },
-    { behavior: "focus", label: "Prioritize" },
-    { behavior: "normal", label: "Keep in inbox" },
-    { behavior: "quiet", label: "Quiet" },
-    { behavior: "hidden", label: "Hide" },
-  ];
-
-  useEffect(() => {
-    if (!expanded || resolution || !address) return;
-    if (isDevPreviewRoute()) {
-      setSelectedBehavior((current) => current ?? initialBehavior);
-      setStatus("idle");
-      return;
-    }
-    const controller = new AbortController();
-    setStatus("loading");
-    fetchJson(`/v1/attention/resolve?address=${encodeURIComponent(address)}`, resolvedSenderAttentionResponseSchema, controller.signal)
-      .then((nextResolution) => {
-        if (!controller.signal.aborted) {
-          setResolution(nextResolution);
-          setSelectedBehavior(nextResolution.behavior);
-          setStatus("idle");
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setStatus("error");
-          setErrorMessage(getErrorMessage(error));
-        }
-      });
-    return () => controller.abort();
-  }, [address, expanded, initialBehavior, resolution]);
-
-  useEffect(() => {
-    if (!presence.rendered || presence.closing) return;
-    const selectedChoice = menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]');
-    (selectedChoice ?? menuRef.current?.querySelector<HTMLButtonElement>(".sender-attention-choices button:not([disabled])"))?.focus();
-    function dismissOnOutsidePointer(event: PointerEvent) {
-      if (controlRef.current && !controlRef.current.contains(event.target as Node)) {
-        closeAndRestoreFocus();
-      }
-    }
-    function dismissOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        closeAndRestoreFocus();
-      }
-    }
-    window.addEventListener("pointerdown", dismissOnOutsidePointer);
-    window.addEventListener("keydown", dismissOnEscape);
-    return () => {
-      window.removeEventListener("pointerdown", dismissOnOutsidePointer);
-      window.removeEventListener("keydown", dismissOnEscape);
-    };
-  }, [presence.closing, presence.rendered]);
-
-  useEffect(() => {
-    if (!expanded || presence.closing || status !== "idle" || !selectedBehavior) return;
-    menuRef.current?.querySelector<HTMLButtonElement>('.sender-attention-choices button[aria-pressed="true"]')?.focus();
-  }, [expanded, presence.closing, selectedBehavior, status]);
-
-  useEffect(() => {
-    if (presence.rendered || !focusAfterCloseRef.current) return;
-    const { behavior } = focusAfterCloseRef.current;
-    focusAfterCloseRef.current = null;
-    requestAnimationFrame(() => {
-      if (behavior === "hidden" && !reader) {
-        document.querySelector<HTMLButtonElement>(".message-row")?.focus();
-      } else if (triggerRef.current?.isConnected) {
-        triggerRef.current.focus();
-      } else {
-        document.querySelector<HTMLButtonElement>(reader ? ".reader-back" : ".message-row")?.focus();
-      }
-    });
-  }, [presence.rendered, reader]);
-
-  function closeAndRestoreFocus(behavior?: AttentionBehavior) {
-    if (!expanded || presence.closing) return;
-    focusAfterCloseRef.current = { behavior };
-    setExpanded(false);
-  }
-
-  function captureListFocusTarget() {
-    if (reader) return null;
-    const currentRow = controlRef.current?.closest<HTMLElement>(".message-row-wrap");
-    if (!currentRow) return null;
-    const rows = Array.from(document.querySelectorAll<HTMLElement>(".message-row-wrap"));
-    const currentIndex = rows.indexOf(currentRow);
-    const nextRow = rows[currentIndex + 1] ?? rows[currentIndex - 1];
-    return nextRow?.querySelector<HTMLButtonElement>(".message-row") ?? null;
-  }
-
-  function finishBehaviorChange(behavior: AttentionBehavior, listFocusTarget: HTMLButtonElement | null) {
-    if (!reader && !triggerRef.current?.isConnected) {
-      requestAnimationFrame(() => {
-        const target = listFocusTarget?.isConnected
-          ? listFocusTarget
-          : document.querySelector<HTMLButtonElement>(".message-row")
-            ?? document.querySelector<HTMLButtonElement>('[aria-label="Inbox attention filters"] button[aria-pressed="true"]')
-            ?? document.querySelector<HTMLButtonElement>('button[aria-current="page"]');
-        target?.focus();
-      });
-      return;
-    }
-    closeAndRestoreFocus(behavior);
-  }
-
-  async function saveRule(behavior: AttentionViewSetting["behavior"]) {
-    if (!address) return;
-    setSelectedBehavior(behavior);
-    const listFocusTarget = captureListFocusTarget();
-    if (isDevPreviewRoute()) {
-      const appliedBehavior = await onBehaviorChange(address, behavior);
-      finishBehaviorChange(appliedBehavior, listFocusTarget);
-      return;
-    }
-    setStatus("saving");
-    setErrorMessage(null);
-    try {
-      const existingRule = resolution?.rule?.scope === "address" && resolution.rule.value === address
-        ? resolution.rule
-        : null;
-      await fetchJson(existingRule ? `/v1/attention/rules/${existingRule.id}` : "/v1/attention/rules", { parse: (value: unknown) => value }, undefined, {
-        method: existingRule ? "PATCH" : "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(existingRule ? { behavior } : { scope: "address", value: address, behavior, source: "user_choice" }),
-      });
-      setResolution(null);
-      const appliedBehavior = await onBehaviorChange(address, behavior);
-      finishBehaviorChange(appliedBehavior, listFocusTarget);
-      setStatus("idle");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(getErrorMessage(error));
-    }
-  }
-
-  async function resetRule() {
-    if (resolution?.rule?.scope !== "address") return;
-    const listFocusTarget = captureListFocusTarget();
-    setStatus("saving");
-    setErrorMessage(null);
-    try {
-      const response = await fetch(`/v1/attention/rules/${resolution.rule.id}`, { method: "DELETE", credentials: "include" });
-      if (!response.ok) throw new ApiRequestError(response.status, `Request failed with ${response.status} ${response.statusText}`.trim());
-      setResolution(null);
-      const inheritedBehavior = await onBehaviorChange(address);
-      finishBehaviorChange(inheritedBehavior, listFocusTarget);
-      setStatus("idle");
-    } catch (error) {
-      setStatus("error");
-      setErrorMessage(getErrorMessage(error));
-    }
-  }
-
-  return (
-    <div className={`sender-attention-control${compact ? " sender-attention-control-compact" : ""}${reader ? " sender-attention-control-reader" : ""}${presence.rendered ? " sender-attention-control-expanded" : ""}${presence.closing ? " sender-attention-control-closing" : ""}`} ref={controlRef}>
-      <button aria-controls={`sender-attention-${message.id}`} aria-expanded={expanded} aria-label={`Manage mail from ${senderName}`} className="sender-attention-trigger" onClick={() => expanded ? closeAndRestoreFocus() : setExpanded(true)} ref={triggerRef} title={reader ? "Manage attention" : `Tune mail from ${senderName}`} type="button">
-        {reader ? "Attention" : <MessageActionGlyph name="tune" />}
-      </button>
-      {presence.rendered ? (
-        <section className={`sender-attention-menu${presence.closing ? " sender-attention-menu-closing" : ""}`} id={`sender-attention-${message.id}`} ref={menuRef} role="group" aria-label={`Mail handling for ${senderName}`}>
-          <div className="sender-attention-heading">
-            <p className="sender-attention-kicker">All mail from <strong>{senderName}</strong></p>
-            <button aria-label="Close sender controls" className="sender-attention-close" onClick={() => closeAndRestoreFocus()} type="button">×</button>
-          </div>
-          {status === "loading" ? <p>Loading…</p> : null}
-          {status !== "loading" ? <>
-            <div aria-label="Destination for all sender mail" className="sender-attention-choices" role="group">
-              {!compact ? <><span className="sender-attention-choice-label">Send to</span><p className="sender-attention-explainer">This is your attention choice. Human signal only describes whether a message seems person-written; it never decides this destination.</p></> : null}
-              <div className="sender-attention-choice-grid">
-                {attentionChoices.map(({ behavior, label }) => (
-                  <button aria-pressed={selectedBehavior === behavior} disabled={status === "saving"} key={behavior} onClick={() => void saveRule(behavior)} type="button">
-                    {status === "saving" && selectedBehavior === behavior ? "Saving…" : label}
-                  </button>
-                ))}
-              </div>
-              {resolution?.rule?.scope === "address" ? <button className="sender-attention-default" disabled={status === "saving"} onClick={() => void resetRule()} type="button">Use default</button> : null}
-            </div>
-          </> : null}
-          <span aria-live="polite" className="visually-hidden">{status === "loading" ? "Loading sender preference" : status === "saving" ? "Saving sender preference" : ""}</span>
-          {status === "error" ? <p className="sender-attention-error" role="alert">Could not update handling. {errorMessage}</p> : null}
-        </section>
-      ) : null}
-    </div>
-  );
+function SenderAttentionControl({ message, reader = false }: { message: SenderAttentionControlTarget; compact?: boolean; initialBehavior: AttentionBehavior; reader?: boolean; onBehaviorChange: (address: string, behavior?: AttentionBehavior) => Promise<AttentionBehavior> }) {
+  return <div className={`sender-attention-control sender-attention-control-compact${reader ? " sender-attention-control-reader" : ""}`}><RoutingChooser message={message} reader={reader} /></div>;
 }
 
 function MessageActionGlyph({ name, mode = "add" }: { name: "pin" | "keep" | "tune"; mode?: "add" | "remove" }) {
@@ -6365,9 +6219,7 @@ export function selectedSenderPreparation(messages: readonly Pick<InboxMessage, 
 
 function getMessageAttentionBehavior(message: InboxMessage, attentionByAddress: Record<string, AttentionBehavior>) {
   const target = senderAttentionTargetForMessage(message);
-  return attentionByAddress[target.address]
-    ?? attentionByAddress[senderAttentionTargetKey(target)]
-    ?? message.attentionBehavior;
+  return message.accountId === demoAccount.id ? attentionByAddress[senderAttentionTargetKey(target)] ?? message.attentionBehavior : message.attentionBehavior;
 }
 
 export function getMessagesForMailbox(messages: InboxMessage[], mailboxId: Mailbox, attentionByAddress: Record<string, AttentionBehavior> = {}) {

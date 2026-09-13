@@ -204,3 +204,17 @@ test("conversation override covers all senders and future replies; reset exposes
   expect((await f.state("a", "&threadId=m1")).selection.effective.behavior).toBe("normal");
   f.sqlite.close();
 });
+
+test("reader canonical sender orders missing dates after epoch-zero and pre-epoch mail", async () => {
+  const f = await setup();
+  f.message("m7", "a", "undated@example.com", "m1");
+  f.sqlite.query("UPDATE emails SET received_at = NULL WHERE id = 'm7'").run();
+  await f.save({ scope: "sender", address: "undated@example.com" }, "hidden");
+  await f.save(sender, "quiet");
+  for (const timestamp of [0, -1000]) {
+    f.sqlite.query("UPDATE emails SET received_at = ? WHERE id = 'm1'").run(timestamp);
+    expect((await f.state("a", "&threadId=m1")).selection.effective.behavior).toBe("quiet");
+    expect(await (await f.request("/v1/threads/m1?accountId=a")).json()).toMatchObject({ thread: { attention: { attentionBehavior: "quiet" } } });
+  }
+  f.sqlite.close();
+});

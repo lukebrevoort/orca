@@ -161,7 +161,7 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Organization", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Attention", "Settings", "Account · Maya Chen"]);
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 
@@ -174,7 +174,7 @@ describe("AppSidebar mobile navigation", () => {
 
     const expected = new Map<string, DesktopDestination>([
       ["Inbox", "inbox"], ["Drafts", "drafts"], ["All Mail", "all"], ["Focus", "focus"], ["Signals", "signals"],
-      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Organization", "organization"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
+      ["Quiet", "quiet"], ["Later", "later"], ["Orca launch", "space:launch"], ["Attention", "attention"], ["Settings", "settings"], ["Account · Maya Chen", "settings"],
     ]);
     for (const [label, destination] of expected) {
       await click(more);

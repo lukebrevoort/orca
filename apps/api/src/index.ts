@@ -3076,7 +3076,7 @@ function readThreadDetailSnapshot(
   });
   const sourceMessages = messageRows;
   const latestMessage = [...messageRows].sort((a, b) =>
-    (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0)
+    (a.receivedAt === null ? (b.receivedAt === null ? 0 : 1) : b.receivedAt === null ? -1 : b.receivedAt.getTime() - a.receivedAt.getTime())
     || b.createdAt.getTime() - a.createdAt.getTime()
     || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))[0];
   return threadDetailSchema.parse({
