@@ -1604,11 +1604,13 @@ export function InboxApp({
           const refreshedView = refreshed.inbox.view;
           const refreshedInbox = refreshed.inbox.inbox;
           const nextStatus = refreshed.status;
-          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView || refreshed.inbox.epoch !== mailboxSnapshotEpochRef.current) return;
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) return;
+          // Routing can supersede the mailbox snapshot without superseding provider status.
+          setSyncStatus(nextStatus);
+          if (classificationViewRef.current !== refreshedView || refreshed.inbox.epoch !== mailboxSnapshotEpochRef.current) return;
           classificationPageRequestRef.current += 1;
           allMailPageRequestRef.current += 1;
           setIsLoadingMoreMessages(false);
-          setSyncStatus(nextStatus);
           setMessages(refreshedInbox.messages);
           setAllMailMessages((current) => refreshedView === "all" ? refreshedInbox.messages : mergeMessages(current, refreshedInbox.messages));
           setClassificationCounts(toClassificationCounts(refreshedInbox.counts.classification));

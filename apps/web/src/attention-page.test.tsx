@@ -636,6 +636,62 @@ test("App ignores a pre-save background snapshot after Quiet save, retaining row
   expect(document.body.textContent).toContain("Older mail 104");
 }, 20000);
 
+test("App accepts final provider status after routing invalidates its completed background snapshot", async () => {
+  seedPages();
+  const account = await (await request("/v1/me")).json();
+  const gate = deferred();
+  let snapshots = 0;
+  let held = false;
+  let syncs = 0;
+  let staleCursor = "";
+  const cursors: string[] = [];
+  intercept = async (path) => {
+    if (path === "/v1/sync/gmail") { syncs++; return Response.json({}); }
+    if (path === "/v1/sync/status") {
+      if (snapshots >= 2 && !held) {
+        held = true;
+        await gate.promise;
+      }
+      return Response.json({ accounts: [{ ...account, state: held ? "idle" : "syncing", lastSyncedAt: held ? "2026-09-13T12:00:00.000Z" : null, error: null }] });
+    }
+    if (path.includes("/v1/inbox?") && path.includes("cursor=")) cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
+    if (path === "/v1/inbox?view=all&classification=all&limit=100" && ++snapshots === 2) {
+      const snapshot = await request(path);
+      staleCursor = (await snapshot.clone().json()).nextCursor;
+      return snapshot;
+    }
+  };
+  await renderMailbox();
+  expect(held).toBe(true);
+  expect(syncs).toBe(1);
+  expect(document.querySelector(".sync-status-chip")?.textContent).toBe("Syncing Gmail…");
+  await nav("Attention");
+  await select("Destination for maya@example.com", "quiet");
+  await nav("Inbox");
+  const rows = () => [...document.querySelectorAll(".message-row")].map(row => row.textContent);
+  const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
+  const canonicalRows = rows();
+  const canonicalCounts = counts();
+  expect(canonicalRows.some(row => row?.includes("Mail a"))).toBe(false);
+  expect(canonicalCounts).toContain("Quiet1");
+  expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(true);
+  await act(async () => gate.release());
+  await settle(); await settle();
+  expect(document.querySelector(".sync-status-idle")?.textContent).toStartWith("Synced ");
+  expect(document.querySelector(".sync-status-syncing")).toBeNull();
+  expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(false);
+  expect(rows()).toEqual(canonicalRows);
+  expect(counts()).toEqual(canonicalCounts);
+  await click("Load more messages");
+  expect(cursors).toHaveLength(1);
+  expect(cursors[0]).not.toBe(staleCursor);
+  expect(document.body.textContent).toContain("Older mail 104");
+  await act(async () => document.querySelector<HTMLButtonElement>(".refresh-button")!.click());
+  await settle(); await settle();
+  expect(syncs).toBe(2);
+  expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(false);
+}, 20000);
+
 test("delayed successful old Undo response cannot replace a newer receipt", async () => {
   await act(async () => root.render(<AttentionRoutingProvider onRefresh={async () => {}}>
     {["a", "b"].map(id => <RoutingChooser key={id} message={{ id: `message-${id}`, accountId: id, threadId: `thread-${id}`, from: { email: "maya@example.com", name: id } }} />)}
