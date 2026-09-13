@@ -74,3 +74,24 @@ test("no connected account disables save controls", async () => {
   expect(container.textContent).toContain("Connect an account");
   expect(button("+ Add sender").disabled).toBe(true);
 });
+
+test("failed reload retains last loaded choices read-only until recovery", async () => {
+  let failReload = false;
+  mock(async (path, init) => {
+    if (path === "/v1/accounts") return Response.json({ items: accounts, nextCursor: null });
+    if (init?.method === "PUT") { failReload = true; return Response.json({ error: { message: "Save interrupted" } }, { status: 503 }); }
+    if (failReload) return Response.json({ error: { message: "Access expired" } }, { status: 403 });
+    return Response.json(state());
+  });
+  await render();
+  await act(async () => container.querySelector<HTMLInputElement>('[role="switch"]')!.click());
+  await act(async () => button("Reload choices").click());
+  const retained = container.querySelector<HTMLInputElement>('[role="switch"]')!;
+  expect(retained.checked).toBe(true);
+  expect(retained.disabled).toBe(true);
+  expect(container.textContent).toContain("Read-only.");
+  failReload = false;
+  await act(async () => button("Reload choices").click());
+  expect(container.querySelector<HTMLInputElement>('[role="switch"]')!.disabled).toBe(false);
+  expect(container.textContent).not.toContain("Read-only.");
+});

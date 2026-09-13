@@ -60,16 +60,22 @@ export function AttentionPage({ demoMode = false, onAdvanced }: { demoMode?: boo
   useEffect(() => {
     const current = ++generation.current;
     const controller = new AbortController();
-    setPreferences(null); if (accountId) setError(""); setStatus(""); setReadOnly(false); setStale(false); setSaving(false); savingLock.current = false;
+    // Keep reliable choices during a same-account reload, but never show another account's data.
+    setPreferences(previous => previous?.accountId === accountId ? previous : null); if (accountId) setError(""); setStatus(""); setReadOnly(false); setStale(true); setSaving(false); savingLock.current = false;
     setAdding(false); setQuery(""); setFilter("all"); setLoading(Boolean(accountId));
     if (!accountId) return () => { ++generation.current; controller.abort(); };
-    if (demoMode) { setPreferences(demoPreferences); setLoading(false); }
+    if (demoMode) { setPreferences(demoPreferences); setStale(false); setLoading(false); }
     else void request(`/v1/attention/preferences?accountId=${encodeURIComponent(accountId)}`, { signal: controller.signal }).then(raw => {
       if (current !== generation.current) return;
       const next = attentionPreferencesSchema.parse(raw);
       if (next.accountId !== accountId) throw new Error("The account changed. Reload your choices.");
       setPreferences(next);
-    }).catch(cause => { if (current === generation.current && !controller.signal.aborted) setError(cause.message); })
+      setStale(false);
+    }).catch(cause => {
+      if (current !== generation.current || controller.signal.aborted) return;
+      if (cause instanceof RequestError && (cause.status === 401 || cause.status === 403)) setReadOnly(true);
+      setError(`${cause.message} Reload to check your saved choices.`);
+    })
       .finally(() => { if (current === generation.current) setLoading(false); });
     return () => { ++generation.current; controller.abort(); };
   }, [accountId, demoMode, reload]);
