@@ -25,8 +25,8 @@ export function createAttentionPreferences(db: Db, userId: string) {
       const next = { revision: current.revision + 1, defaultChoice: value.defaultChoice, sendersJson: JSON.stringify(value.senders) };
       if (current.revision === 0) tx.insert(accountAttentionPreferences).values({ accountId, ...next }).run();
       else {
-        const changed = tx.update(accountAttentionPreferences).set(next).where(and(eq(accountAttentionPreferences.accountId, accountId), eq(accountAttentionPreferences.revision, current.revision))).run();
-        if (changed.changes !== 1) throw new AttentionPreferencesError(409, "These choices changed elsewhere. Reload before trying again.");
+        const changed = tx.update(accountAttentionPreferences).set(next).where(and(eq(accountAttentionPreferences.accountId, accountId), eq(accountAttentionPreferences.revision, current.revision))).returning({ accountId: accountAttentionPreferences.accountId }).all();
+        if (changed.length !== 1) throw new AttentionPreferencesError(409, "These choices changed elsewhere. Reload before trying again.");
       }
       return createAttentionPreferences(tx, userId).read(accountId);
     }, { behavior: "immediate" });

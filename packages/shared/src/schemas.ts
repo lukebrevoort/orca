@@ -489,6 +489,7 @@ export const threadReadStateSchema = z.enum(["read", "unread"]);
 export type ThreadReadState = z.infer<typeof threadReadStateSchema>;
 
 export const threadAttentionSchema = z.object({
+  attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
   hasUnread: z.boolean(),
   hasStarred: z.boolean(),
   hasDraft: z.boolean(),
@@ -504,6 +505,7 @@ export const threadDetailMessageSchema = normalizedMessageSchema
     humanSignal: humanSignalScoreSchema,
     humanClassification: humanClassificationResultSchema.nullable().default(null),
     attachments: z.array(mailAttachmentSchema),
+    attentionBehavior: z.enum(["notify", "focus", "normal", "quiet", "hidden"]).optional(),
   })
   .strict();
 export type ThreadDetailMessage = z.infer<typeof threadDetailMessageSchema>;
@@ -636,6 +638,7 @@ export const updateSenderAttentionRuleSchema = senderAttentionRuleInputSchema.pa
 export type UpdateSenderAttentionRule = z.infer<typeof updateSenderAttentionRuleSchema>;
 
 export const resolveSenderAttentionSchema = z.object({
+  accountId: z.string().min(1).max(256).optional(),
   address: z.string().trim().email().max(320),
 }).strict();
 export type ResolveSenderAttention = z.infer<typeof resolveSenderAttentionSchema>;

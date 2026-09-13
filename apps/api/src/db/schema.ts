@@ -1624,3 +1624,15 @@ export const accountAttentionPreferences = sqliteTable("account_attention_prefer
   defaultChoice: text("default_choice", { enum: ["notify", "quiet"] }).notNull(),
   sendersJson: text("senders_json").notNull(),
 });
+
+/** Actual local mail routing. Notification intent is stored separately. */
+export const accountAttentionRouting = sqliteTable("account_attention_routing", {
+  accountId: text("account_id").primaryKey().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  defaultBehavior: text("default_behavior"),
+  revision: integer("revision").notNull().default(0),
+});
+export const threadAttentionOverrides = sqliteTable("thread_attention_overrides", {
+  accountId: text("account_id").notNull().references(() => oauthAccounts.id, { onDelete: "cascade" }),
+  threadId: text("thread_id").notNull().references(() => threads.id, { onDelete: "cascade" }),
+  behavior: text("behavior").notNull(),
+}, table => [primaryKey({ columns: [table.accountId, table.threadId] })]);

@@ -57,6 +57,7 @@ export type OrganizationThreadRecord = {
   readState: "read" | "unread";
   messages: WorkspaceThreadMessage[];
   attentionRules: OrganizationAttentionRule[];
+  attentionBehavior?: AttentionBehavior;
   facetValues?: WorkspaceThread["organization"]["facetValues"];
   workflowState?: WorkspaceThread["organization"]["workflowState"];
   organizationRevision?: number | null;
@@ -522,7 +523,7 @@ export function createOrganization(repository: OrganizationRepository, dependenc
               : value === filter.value);
           })) return [];
           const latest = record.messages[0];
-          const attentionBehavior = resolveAttention(latest?.from.email ?? "", record.attentionRules);
+          const attentionBehavior = record.attentionBehavior ?? resolveAttention(latest?.from.email ?? "", record.attentionRules);
           if (!matchesAttention(attentionBehavior, query.attention)) return [];
           const humanClassification = latest?.humanClassification ?? null;
           if (!matchesClassification(humanClassification, query.classification)) return [];

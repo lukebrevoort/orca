@@ -1,3 +1,4 @@
+import { loadAttentionRouting } from "../attention/routing.ts";
 import { and, asc, desc, eq } from "drizzle-orm";
 import {
   attentionBehaviorSchema,
@@ -221,6 +222,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
         const overrideRecords = db.select().from(humanClassificationOverrides)
           .where(eq(humanClassificationOverrides.accountId, accountId)).all();
         const overrides = new Map(overrideRecords.map((record) => [overrideKey(record.targetType, record.targetValue), record]));
+        const routing = loadAttentionRouting(db, accountId);
         const attentionRules = db.select().from(senderAttentionRules)
           .where(eq(senderAttentionRules.accountId, accountId))
           .orderBy(asc(senderAttentionRules.scope), asc(senderAttentionRules.value))
@@ -286,6 +288,7 @@ export function createSqliteOrganizationRepository(db: Database): OrganizationRe
             readState: thread.isRead ? "read" : "unread",
             messages: messagesByThread.get(thread.id) ?? [],
             attentionRules,
+            attentionBehavior: routing.resolve(messagesByThread.get(thread.id)?.[0]?.from.email ?? "", thread.id).behavior,
             facetValues: facetValues.filter((value) => value.threadId === thread.id).map((value) => ({
                 facetId: value.facetId,
                 value: JSON.parse(value.value) as string | number | boolean | Array<string | number | boolean>,

@@ -176,6 +176,10 @@ const reasonCodes = new Set<HumanClassificationReasonCode>([
 const normalizedAddressSql = "lower(trim(coalesce(e.from_address, '')))";
 const normalizedDomainSql = `case when instr(${normalizedAddressSql}, '@') > 0 then substr(${normalizedAddressSql}, instr(${normalizedAddressSql}, '@') + 1) else '' end`;
 const resolvedJoinsSql = `
+  left join thread_attention_overrides attention_thread
+    on attention_thread.account_id = e.account_id and attention_thread.thread_id = e.thread_id
+  left join account_attention_routing attention_account
+    on attention_account.account_id = e.account_id
   left join sender_attention_rules attention_address
     on attention_address.account_id = e.account_id
     and attention_address.scope = 'address'
@@ -196,7 +200,7 @@ const resolvedJoinsSql = `
     on classification_domain.account_id = e.account_id
     and classification_domain.target_type = 'sender_domain'
     and classification_domain.target_value = ${normalizedDomainSql}`;
-const attentionSql = "coalesce(attention_address.behavior, attention_domain.behavior, 'normal')";
+const attentionSql = "coalesce(attention_thread.behavior, attention_address.behavior, attention_domain.behavior, attention_account.default_behavior, 'normal')";
 const effectiveClassificationSql = "coalesce(classification_message.classification, classification_address.classification, classification_domain.classification, e.human_classification, 'unclassified')";
 const effectiveOverrideSql = {
   id: "coalesce(classification_message.id, classification_address.id, classification_domain.id)",

@@ -9,8 +9,9 @@ import { createAttentionPreferences } from "./preferences.ts";
 import { createSession } from "../auth/session-store.ts";
 import { createApp } from "../index.ts";
 const folders: string[] = [];
+const originalTokenKey = process.env.TOKEN_ENCRYPTION_KEY;
 const originalSessionSecret = process.env.SESSION_SECRET;
-afterEach(() => { for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true }); if (originalSessionSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = originalSessionSecret; });
+afterEach(() => { if (originalTokenKey === undefined) delete process.env.TOKEN_ENCRYPTION_KEY; else process.env.TOKEN_ENCRYPTION_KEY = originalTokenKey; for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true }); if (originalSessionSecret === undefined) delete process.env.SESSION_SECRET; else process.env.SESSION_SECRET = originalSessionSecret; });
 function setup() {
   const directory = mkdtempSync(join(tmpdir(), "orca-attention-")); folders.push(directory);
   const path = join(directory, "test.sqlite");
@@ -53,6 +54,7 @@ test("invalid and case-insensitive duplicate addresses reject atomically", () =>
   client.sqlite.close();
 });
 test("HTTP requires authentication, checks account ownership, and reports revision conflicts", async () => {
+  process.env.TOKEN_ENCRYPTION_KEY ??= Buffer.alloc(32, 17).toString("base64");
   process.env.SESSION_SECRET ??= "attention-test-session-secret-long-enough";
   const client = setup(); const session = await createSession(client.db, "owner"); client.sqlite.close();
   const app = createApp({ dbFactory: () => createDatabaseClient(client.path) });
