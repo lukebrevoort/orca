@@ -83,14 +83,15 @@ export function AttentionRoutingProvider({
   const receiptGeneration = useRef(0);
   const online = useOnlineStatus();
   async function changed(next?: Receipt) {
+    const generation = ++receiptGeneration.current;
     setReceipt(next);
     setNotice(next?.text ?? "");
     setVersion((v) => v + 1);
     try {
       await onRefresh();
-      setError("");
+      if (generation === receiptGeneration.current) setError("");
     } catch {
-      setError("Mail could not reload. Last loaded mail may be out of date.");
+      if (generation === receiptGeneration.current) setError("Mail could not reload. Last loaded mail may be out of date.");
     }
   }
   async function undo() {
@@ -112,17 +113,19 @@ export function AttentionRoutingProvider({
         await onRefresh();
         return;
       }
+      const completionGeneration = receiptGeneration.current + 1;
       await changed();
+      if (completionGeneration !== receiptGeneration.current) return;
       setNotice("Last routing change undone.");
-      requestAnimationFrame(() =>
-        document
-          .querySelector<HTMLElement>(
-            '#sender-heading, .content-pane, button[aria-current="page"]',
-          )
-          ?.focus(),
-      );
+      requestAnimationFrame(() => {
+        if (completionGeneration !== receiptGeneration.current) return;
+        (document.querySelector<HTMLElement>("#sender-heading")
+          ?? document.querySelector<HTMLElement>(".content-pane")
+          ?? document.querySelector<HTMLElement>('button[aria-current="page"]'))?.focus();
+      });
     } catch {
       if (generation !== receiptGeneration.current) return;
+      const failureGeneration = ++receiptGeneration.current;
       setReceipt(undefined);
       setNotice(
         "Undo could not be confirmed. Reloading current routing; your old change will not be retried.",
@@ -131,7 +134,7 @@ export function AttentionRoutingProvider({
       try {
         await onRefresh();
       } catch {
-        setError("Mail could not reload. Retry mail reload.");
+        if (failureGeneration === receiptGeneration.current) setError("Mail could not reload. Retry mail reload.");
       }
     } finally {
       lock.current = false;
@@ -172,6 +175,7 @@ export function AttentionRoutingProvider({
             aria-label="Dismiss routing update"
             disabled={busy}
             onClick={() => {
+              receiptGeneration.current += 1;
               setReceipt(undefined);
               setNotice("");
               setError("");
@@ -321,6 +325,7 @@ export function useAttentionRouting(
   }
   return {
     state: stateKey.current === key ? state : null,
+    reliable: stateKey.current === key && !stale && !loading && !loadError,
     loading,
     saving,
     locked,

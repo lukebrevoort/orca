@@ -16,6 +16,8 @@ import {
 } from "../../api/src/db/schema";
 import { createSession } from "../../api/src/auth/session-store";
 import { createApp } from "../../api/src/index";
+import { InboxApp, defaultReaderPreferences } from "./App";
+import { TopLayerProvider } from "./top-layer";
 import { AttentionPage } from "./attention-page";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
@@ -25,6 +27,13 @@ const globals = [
   "document",
   "navigator",
   "HTMLElement",
+  "HTMLButtonElement",
+  "MutationObserver",
+  "CustomEvent",
+  "Text",
+  "DocumentFragment",
+  "getComputedStyle",
+  "cancelAnimationFrame",
   "HTMLInputElement",
   "HTMLSelectElement",
   "Element",
@@ -52,6 +61,7 @@ let intercept:
   | undefined;
 let puts: Array<{ path: string; body: any }>;
 let refreshes: number;
+let onRefresh: (() => Promise<void>) | undefined;
 beforeEach(async () => {
   process.env.SESSION_SECRET = "attention-web-integration-test-session-secret";
   process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 19).toString("base64");
@@ -98,6 +108,7 @@ beforeEach(async () => {
         providerMessageId: id,
         fromAddress: "maya@example.com",
         fromName: "Maya Chen",
+        subject: `Mail ${id}`,
         receivedAt: new Date(),
         bodyText: "Hello",
       })),
@@ -143,6 +154,7 @@ beforeEach(async () => {
   root = createRoot(container);
   puts = [];
   refreshes = 0;
+  onRefresh = undefined;
   intercept = undefined;
   globalThis.fetch = (async (
     input: string | URL | Request,
@@ -198,8 +210,10 @@ async function render(chooser = false) {
       <AttentionRoutingProvider
         onRefresh={async () => {
           refreshes++;
+          await onRefresh?.();
         }}
       >
+        <button aria-current="page">Attention navigation</button>
         {chooser ? (
           <RoutingChooser
             message={{
@@ -465,4 +479,182 @@ test("filtered sender disappearance and Undo return focus to a useful heading", 
   await click("Undo");
   for (let attempt = 0; attempt < 50 && document.activeElement?.id !== "sender-heading"; attempt++) await settle();
   expect(document.activeElement?.id).toBe("sender-heading");
+});
+
+function deferred() {
+  let release!: () => void;
+  const promise = new Promise<void>(resolve => { release = resolve; });
+  return { promise, release };
+}
+for (const outcome of ["conflict", "success"] as const) {
+  test(`old Undo ${outcome} completion preserves a later save receipt`, async () => {
+    await render();
+    await select("Destination for maya@example.com", "quiet");
+    const gate = deferred();
+    let held = false;
+    if (outcome === "success") onRefresh = async () => {
+      if (refreshes === 2) { held = true; await gate.promise; }
+    };
+    else intercept = async (path, init) => {
+      if (init?.method !== "PUT" || held) return;
+      held = true;
+      await gate.promise;
+      return request(path, init);
+    };
+    await click("Undo");
+    expect(held).toBe(true);
+    await select("Default destination for everyone else", "quiet");
+    expect(document.querySelector(".routing-feedback")?.textContent).toContain("Everyone else · Quiet.");
+    await act(async () => gate.release());
+    await settle();
+    expect(document.querySelector(".routing-feedback")?.textContent).toContain("Everyone else · Quiet.");
+    expect(button("Undo").disabled).toBe(false);
+    await click("Undo");
+    expect((await state()).defaultBehavior).toBeNull();
+  });
+}
+for (const outcome of ["committed", "rejected", "moved-focus"] as const) {
+  test(`filtered sender attempted edit reconciles focus after ${outcome} ambiguous response`, async () => {
+    await render();
+    await select("Destination for maya@example.com", "quiet");
+    await act(async () => document.querySelectorAll<HTMLButtonElement>(".simple-attention-choices button")[1]!.click());
+    const control = document.querySelector<HTMLSelectElement>('[aria-label="Destination for maya@example.com"]')!;
+    control.focus();
+    const gate = deferred();
+    intercept = async (path, init) => {
+      if (init?.method !== "PUT") return;
+      if (outcome !== "rejected") await request(path, init);
+      await gate.promise;
+      return Response.json({}, { status: 503 });
+    };
+    await select("Destination for maya@example.com", "normal");
+    const search = document.querySelector<HTMLInputElement>('[aria-label="Search senders"]')!;
+    if (outcome === "moved-focus") search.focus();
+    await act(async () => gate.release());
+    await settle(); await settle();
+    expect(puts).toHaveLength(2);
+    expect(document.querySelector(".routing-feedback button")?.textContent).not.toBe("Undo");
+    if (outcome === "committed") {
+      expect(control.isConnected).toBe(false);
+      expect(document.activeElement?.id).toBe("sender-heading");
+    } else if (outcome === "moved-focus") expect(document.activeElement).toBe(search);
+    else {
+      expect(control.isConnected).toBe(true);
+      expect(document.activeElement).toBe(control);
+    }
+  });
+}
+
+async function renderMailbox() {
+  await act(async () => root.render(<TopLayerProvider><InboxApp demoMode={false} preferences={defaultReaderPreferences} theme="light" setTheme={() => {}} /></TopLayerProvider>));
+  await settle(); await settle();
+}
+async function nav(label: string) {
+  const target = (label === "Signals" ? document.querySelector(".desktop-space-signals")?.closest("button") : null) ?? document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+    ?? [...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar button")].find(b => b.textContent?.includes(label));
+  expect(target).toBeDefined();
+  await act(async () => target!.click());
+  await settle();
+}
+function seedPages(signals = false) {
+  const client = createDatabaseClient(join(directory, "test.sqlite"));
+  for (let i = 0; i < 105; i++) {
+    client.db.insert(threads).values({ id: `extra-${i}`, accountId: "a", providerThreadId: `extra-${i}`, messageCount: 1 }).run();
+    client.db.insert(emails).values({ id: `extra-${i}`, threadId: `extra-${i}`, accountId: "a", providerMessageId: `extra-${i}`, fromAddress: "extra@example.com", subject: `Older mail ${i}`, receivedAt: new Date(1700000000000 - i * 1000), bodyText: "Older mail" }).run();
+  }
+  if (signals) client.db.insert(senderAttentionRules).values({ id: "extra", accountId: "a", scope: "address", value: "extra@example.com", behavior: "notify", source: "user_choice" }).run();
+  client.sqlite.close();
+}
+function syncNoop(path: string) {
+  if (path === "/v1/sync/status") return Response.json({ accounts: [] });
+  if (path === "/v1/sync/gmail") return Response.json({});
+}
+for (const mailbox of ["Inbox", "Signals"]) {
+  test(`App routing refresh releases pending ${mailbox} pagination and installs usable canonical cursor`, async () => {
+    seedPages(mailbox === "Signals");
+    const gate = deferred();
+    let held = false;
+    const cursors: string[] = [];
+    intercept = async (path) => {
+      if (path.includes("/v1/inbox?") && path.includes("cursor=")) {
+        cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
+        if (!held) { held = true; const old = await request(path); await gate.promise; return old; }
+      }
+      return syncNoop(path);
+    };
+    await renderMailbox();
+    if (mailbox === "Signals") await nav("Signals");
+    await click("Load more messages");
+    expect(held).toBe(true);
+    await nav("Attention");
+    await select("Destination for maya@example.com", "quiet");
+    await nav(mailbox);
+    await act(async () => gate.release());
+    await settle();
+    expect(document.querySelector<HTMLButtonElement>(".classification-load-more button")?.disabled).toBe(false);
+    await click("Load more messages");
+    expect(cursors).toHaveLength(2);
+    expect(cursors[1]).not.toBe(cursors[0]);
+    expect(document.body.textContent).toContain("Older mail 104");
+  }, 20000);
+}
+
+test("App ignores a pre-save background snapshot after Quiet save, retaining row, count and cursor truth", async () => {
+  seedPages();
+  const gate = deferred();
+  let snapshots = 0;
+  let held = false;
+  let staleCursor = "";
+  const cursors: string[] = [];
+  intercept = async (path) => {
+    if (path.includes("/v1/inbox?") && path.includes("cursor=")) cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
+    if (path === "/v1/inbox?view=all&classification=all&limit=100" && ++snapshots === 2) {
+      const old = await request(path);
+      staleCursor = (await old.clone().json()).nextCursor;
+      held = true;
+      await gate.promise;
+      return old;
+    }
+    return syncNoop(path);
+  };
+  await renderMailbox();
+  expect(held).toBe(true);
+  await nav("Attention");
+  await select("Destination for maya@example.com", "quiet");
+  await nav("Inbox");
+  expect([...document.querySelectorAll(".message-row")].some(row => row.textContent?.includes("Mail a"))).toBe(false);
+  const counts = () => [...document.querySelectorAll(".desktop-sidebar-item")].filter(b => b.textContent?.startsWith("Inbox") || b.textContent?.startsWith("Quiet")).map(b => b.textContent);
+  const sidebarCounts = counts();
+  expect(sidebarCounts).toContain("Quiet1");
+  await act(async () => gate.release());
+  await settle(); await settle();
+  expect([...document.querySelectorAll(".message-row")].some(row => row.textContent?.includes("Mail a"))).toBe(false);
+  expect(counts()).toEqual(sidebarCounts);
+  await click("Load more messages");
+  expect(cursors).toHaveLength(1);
+  expect(cursors[0]).not.toBe(staleCursor);
+  expect(document.body.textContent).toContain("Older mail 104");
+}, 20000);
+
+test("delayed successful old Undo response cannot replace a newer receipt", async () => {
+  await act(async () => root.render(<AttentionRoutingProvider onRefresh={async () => {}}>
+    {["a", "b"].map(id => <RoutingChooser key={id} message={{ id: `message-${id}`, accountId: id, threadId: `thread-${id}`, from: { email: "maya@example.com", name: id } }} />)}
+  </AttentionRoutingProvider>));
+  await click("Tune"); await click("Quiet"); await click("Save choice");
+  const gate = deferred();
+  let held = false;
+  intercept = async (path, init) => {
+    if (init?.method !== "PUT" || held) return;
+    held = true;
+    const response = await request(path, init);
+    await gate.promise;
+    return response;
+  };
+  await click("Undo");
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Manage mail from b"]')!.click());
+  await settle(); await click("Quiet"); await click("Save choice");
+  await act(async () => gate.release()); await settle();
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("This conversation · Quiet.");
+  await click("Undo");
+  expect((await state("b", "&threadId=thread-b")).selection.explicitBehavior).toBeNull();
 });

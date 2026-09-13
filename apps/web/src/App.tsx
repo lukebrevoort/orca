@@ -1416,6 +1416,8 @@ export function InboxApp({
   const loadedInboxRef = useRef(false);
   const lastGmailRefreshKeyRef = useRef<number | null>(null);
   const gmailRefreshGenerationRef = useRef(0);
+  // Routing changes invalidate snapshots, not the shared provider-sync lifecycle.
+  const mailboxSnapshotEpochRef = useRef(0);
   // Initial, manual, interval, focus, and visibility refreshes all await the
   // same promise so "focus-to-fresh" cannot finish before the active sync.
   const gmailRefreshPromiseRef = useRef<Promise<void> | null>(null);
@@ -1591,9 +1593,10 @@ export function InboxApp({
               while (true) {
                 if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) throw new DOMException("Refresh superseded", "AbortError");
                 const view = classificationViewRef.current;
+                const epoch = mailboxSnapshotEpochRef.current;
                 const inbox = await readInboxSnapshot(view);
                 if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current) throw new DOMException("Refresh superseded", "AbortError");
-                if (classificationViewRef.current === view) return { view, inbox };
+                if (classificationViewRef.current === view && epoch === mailboxSnapshotEpochRef.current) return { view, inbox, epoch };
               }
             },
             onInitialStatus: setSyncStatus,
@@ -1601,7 +1604,7 @@ export function InboxApp({
           const refreshedView = refreshed.inbox.view;
           const refreshedInbox = refreshed.inbox.inbox;
           const nextStatus = refreshed.status;
-          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView) return;
+          if (refreshController.signal.aborted || refreshGeneration !== gmailRefreshGenerationRef.current || classificationViewRef.current !== refreshedView || refreshed.inbox.epoch !== mailboxSnapshotEpochRef.current) return;
           classificationPageRequestRef.current += 1;
           allMailPageRequestRef.current += 1;
           setIsLoadingMoreMessages(false);
@@ -2888,6 +2891,8 @@ export function InboxApp({
 
   async function reloadRoutingMail() {
     if (demoMode) return;
+    mailboxSnapshotEpochRef.current += 1;
+    setIsLoadingMoreMessages(false);
     const generation = ++classificationRequestRef.current;
     classificationPageRequestRef.current += 1;
     allMailPageRequestRef.current += 1;

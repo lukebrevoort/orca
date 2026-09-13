@@ -46,29 +46,31 @@ export function AttentionPage({
   const dialog = useRef<HTMLDialogElement>(null);
   const addButton = useRef<HTMLButtonElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const [pendingSenderFocus, setPendingSenderFocus] = useState<{
-    value: string;
-    behavior: "normal" | "quiet" | null;
+  const pendingSenderFocus = useRef<{
+    accountId: string;
+    row: Element;
+    initialState: typeof routing.state;
   } | null>(null);
   useEffect(() => {
-    if (!pendingSenderFocus || routing.loading || !routing.state) return;
-    const savedChoice =
-      routing.state.senders.find(
-        (sender) =>
-          sender.scope === "address" &&
-          sender.value === pendingSenderFocus.value,
-      )?.behavior ?? null;
-    if (savedChoice !== pendingSenderFocus.behavior) return;
-    const rowRemains = [
-      ...document.querySelectorAll(".simple-attention-row select"),
-    ].some(
-      (control) =>
-        control.getAttribute("aria-label") ===
-        `Destination for ${pendingSenderFocus.value}`,
-    );
-    if (!rowRemains) heading.current?.focus();
-    setPendingSenderFocus(null);
-  }, [pendingSenderFocus, routing.loading, routing.state]);
+    // Moving to another control cancels the pending focus restoration.
+    const onFocus = (event: FocusEvent) => {
+      const intent = pendingSenderFocus.current;
+      if (intent && event.target instanceof Node && event.target !== document.body
+        && !intent.row.contains(event.target)) pendingSenderFocus.current = null;
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => document.removeEventListener("focusin", onFocus);
+  }, []);
+  useEffect(() => {
+    const intent = pendingSenderFocus.current;
+    if (!intent) return;
+    if (intent.accountId !== accountId) { pendingSenderFocus.current = null; return; }
+    // A rejected/ambiguous write is reconciled only against a new reliable GET.
+    if (routing.loading || routing.saving || !routing.reliable || !routing.state
+      || routing.state === intent.initialState) return;
+    pendingSenderFocus.current = null;
+    if (!intent.row.isConnected) heading.current?.focus();
+  }, [accountId, routing.loading, routing.saving, routing.reliable, routing.state]);
   useEffect(() => {
     const controller = new AbortController();
     setAccountsLoading(true);
@@ -96,7 +98,7 @@ export function AttentionPage({
   useEffect(() => {
     setNames({});
     setCandidates([]);
-    setPendingSenderFocus(null);
+    pendingSenderFocus.current = null;
     setAdding(false);
     setAddress("");
     setQuery("");
@@ -167,9 +169,9 @@ export function AttentionPage({
     value: string,
     behavior: "normal" | "quiet" | null,
   ) {
-    if (await routing.save(behavior, { scope: "sender", address: value })) {
-      setPendingSenderFocus({ value, behavior });
-    }
+    const row = document.activeElement?.closest(".simple-attention-row");
+    pendingSenderFocus.current = row ? { accountId, row, initialState: routing.state } : null;
+    await routing.save(behavior, { scope: "sender", address: value });
   }
 
   return (
