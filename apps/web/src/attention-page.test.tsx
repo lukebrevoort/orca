@@ -245,15 +245,37 @@ async function click(text: string) {
   await act(async () => button(text).click());
   await settle();
 }
+async function editableSelect(label: string) {
+  // App navigation loads accounts before it can load their routing choices.
+  // A fixed settle delay can end between those reads in a busy full-suite run.
+  const selector = `[aria-label="${label}"]`;
+  const deadline = Date.now() + 2000;
+  let control = document.querySelector<HTMLSelectElement>(selector);
+  while ((!control || control.disabled) && Date.now() < deadline) {
+    await settle();
+    control = document.querySelector<HTMLSelectElement>(selector);
+  }
+  expect(control, `Expected ${label} to load. Page: ${document.body.textContent}`).not.toBeNull();
+  expect(control!.disabled, `Expected ${label} to become editable`).toBe(false);
+  return control!;
+}
 async function select(label: string, value: string) {
+  const control = await editableSelect(label);
   await act(async () => {
-    const select = document.querySelector<HTMLSelectElement>(
-      `[aria-label="${label}"]`,
-    )!;
-    select.value = value;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    control.value = value;
+    control.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await settle();
+}
+async function expectEmptySenderRules(accountId: string) {
+  await editableSelect("Default destination for everyone else");
+  expect((await editableSelect("Attention account")).value).toBe(accountId);
+  // Both accounts know Maya from mail; hidden Add-sender suggestions may include
+  // her, but another account's explicit rules must never appear in this list.
+  const senderList = document.querySelector('[aria-labelledby="sender-heading"]');
+  expect(senderList).not.toBeNull();
+  expect(senderList!.querySelectorAll(".simple-attention-row")).toHaveLength(0);
+  expect(senderList!.querySelector(".simple-attention-empty")?.textContent).toContain("No sender choices yet.");
 }
 
 test("page saves actual sender routing, refreshes consumers, Undo restores prior explicit state, accounts isolated", async () => {
@@ -269,7 +291,7 @@ test("page saves actual sender routing, refreshes consumers, Undo restores prior
   await click("Undo");
   expect((await state()).senders[0]?.behavior).toBe("normal");
   await select("Attention account", "b");
-  expect(document.body.textContent).not.toContain("maya@example.com");
+  await expectEmptySenderRules("b");
   expect(document.body.textContent).not.toContain(
     "Last routing change undone.",
   );
@@ -360,9 +382,10 @@ test("late account response cannot replace current account and discovery never c
   };
   await render();
   await select("Attention account", "b");
-  await act(async () => release?.());
+  expect(release).toBeDefined();
+  await act(async () => release!());
   await settle();
-  expect(document.body.textContent).not.toContain("maya@example.com");
+  await expectEmptySenderRules("b");
   expect((await state("b")).senders).toHaveLength(0);
   expect(puts).toHaveLength(0);
 });
@@ -558,12 +581,18 @@ async function nav(label: string) {
 }
 function seedPages(signals = false) {
   const client = createDatabaseClient(join(directory, "test.sqlite"));
-  for (let i = 0; i < 105; i++) {
-    client.db.insert(threads).values({ id: `extra-${i}`, accountId: "a", providerThreadId: `extra-${i}`, messageCount: 1 }).run();
-    client.db.insert(emails).values({ id: `extra-${i}`, threadId: `extra-${i}`, accountId: "a", providerMessageId: `extra-${i}`, fromAddress: "extra@example.com", subject: `Older mail ${i}`, receivedAt: new Date(1700000000000 - i * 1000), bodyText: "Older mail" }).run();
+  try {
+    // Seed atomically so setup does not spend the race-test budget on 210 fsyncs.
+    client.db.transaction((tx) => {
+      for (let i = 0; i < 105; i++) {
+        tx.insert(threads).values({ id: `extra-${i}`, accountId: "a", providerThreadId: `extra-${i}`, messageCount: 1 }).run();
+        tx.insert(emails).values({ id: `extra-${i}`, threadId: `extra-${i}`, accountId: "a", providerMessageId: `extra-${i}`, fromAddress: "extra@example.com", subject: `Older mail ${i}`, receivedAt: new Date(1700000000000 - i * 1000), bodyText: "Older mail" }).run();
+      }
+      if (signals) tx.insert(senderAttentionRules).values({ id: "extra", accountId: "a", scope: "address", value: "extra@example.com", behavior: "notify", source: "user_choice" }).run();
+    });
+  } finally {
+    client.sqlite.close();
   }
-  if (signals) client.db.insert(senderAttentionRules).values({ id: "extra", accountId: "a", scope: "address", value: "extra@example.com", behavior: "notify", source: "user_choice" }).run();
-  client.sqlite.close();
 }
 function syncNoop(path: string) {
   if (path === "/v1/sync/status") return Response.json({ accounts: [] });
@@ -574,8 +603,14 @@ for (const mailbox of ["Inbox", "Signals"]) {
     seedPages(mailbox === "Signals");
     const gate = deferred();
     let held = false;
+    let delayedRoutingRead = false;
     const cursors: string[] = [];
     intercept = async (path) => {
+      // Exercise readiness beyond settle() without releasing the stale page.
+      if (path.startsWith("/v1/attention/routing?") && !delayedRoutingRead) {
+        delayedRoutingRead = true;
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
       if (path.includes("/v1/inbox?") && path.includes("cursor=")) {
         cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
         if (!held) { held = true; const old = await request(path); await gate.promise; return old; }
@@ -588,6 +623,7 @@ for (const mailbox of ["Inbox", "Signals"]) {
     expect(held).toBe(true);
     await nav("Attention");
     await select("Destination for maya@example.com", "quiet");
+    expect(delayedRoutingRead).toBe(true);
     await nav(mailbox);
     await act(async () => gate.release());
     await settle();
