@@ -1779,15 +1779,19 @@ export function InboxApp({
     if (demoMode || activeMailbox !== "quiet") return;
     const controller = new AbortController();
     const generation = ++quietRequest.current;
+    const epoch = mailboxSnapshotEpochRef.current;
+    // A completed provider refresh replaces the whole Quiet snapshot and cursor.
+    // Pending pages belong to the preceding snapshot and no longer own busy state.
+    setIsLoadingMoreMessages(false);
     setQuietLoading(true);
     void fetchJson("/v1/inbox?view=quiet&classification=all&limit=100", inboxClassificationResponseSchema, controller.signal).then(page => {
-      if (controller.signal.aborted || generation !== quietRequest.current) return;
+      if (controller.signal.aborted || generation !== quietRequest.current || epoch !== mailboxSnapshotEpochRef.current) return;
       setQuietPage(page); setRoutingCounts(page.counts.attention); setQuietError(null);
       setAllMailMessages(current => mergeMessages(current, page.messages));
     }).catch(error => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietError(`Quiet mail could not reload. ${getErrorMessage(error)}`); })
       .finally(() => { if (!controller.signal.aborted && generation === quietRequest.current) setQuietLoading(false); });
     return () => controller.abort();
-  }, [activeMailbox, demoMode, refreshKey, quietRetry]);
+  }, [activeMailbox, demoMode, mailboxRefreshGeneration, quietRetry]);
 
   const isClassificationMailbox = activeMailbox === "inbox" || activeMailbox === "all";
   const mailboxMessages = useMemo(
@@ -2529,7 +2533,7 @@ export function InboxApp({
         setQuietPage(current => ({ ...page, messages: mergeMessages(current?.messages ?? [], page.messages) }));
         setAllMailMessages(current => mergeMessages(current, page.messages)); setQuietError(null);
       } catch (error) { if (generation === quietRequest.current) setQuietError(`Quiet mail could not load more. ${getErrorMessage(error)}`); }
-      finally { setIsLoadingMoreMessages(false); }
+      finally { if (generation === quietRequest.current) setIsLoadingMoreMessages(false); }
       return;
     }
     const useClassificationSource = isClassificationMailbox && !activeCollectionId;

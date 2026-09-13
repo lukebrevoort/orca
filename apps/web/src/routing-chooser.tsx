@@ -4,6 +4,7 @@ import type { AttentionBehavior, AttentionRoutingTarget } from "@orca/shared";
 import {
   RoutingErrors,
   routingLabel,
+  routingUrl,
   useAttentionRouting,
 } from "./attention-routing";
 import "./attention-page.css";
@@ -23,7 +24,7 @@ export function RoutingChooser({
 }) {
   const [open, setOpen] = useState(false);
   const [scope, setScope] = useState<"conversation" | "sender">("conversation");
-  const [choice, setChoice] = useState<"normal" | "quiet" | "">("");
+  const [userChoice, setChoice] = useState<{ key: string; value: "normal" | "quiet" } | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const address = message.from.email.trim().toLowerCase();
@@ -36,12 +37,14 @@ export function RoutingChooser({
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
   }, [open]);
-  useEffect(() => {
-    if (open && routing.state && !choice) {
-      const value = routing.state.selection.effective.behavior;
-      if (value === "normal" || value === "quiet") setChoice(value);
-    }
-  }, [open, routing.state, choice]);
+  // Only a click is an explicit choice. A loaded default must follow the fresh
+  // read for this opening/target, rather than becoming sticky cached intent.
+  const currentBehavior = routing.reliable
+    ? routing.state?.selection.effective.behavior
+    : undefined;
+  const choiceKey = routingUrl(message.accountId, target);
+  const choice = userChoice?.key === choiceKey ? userChoice.value :
+    (currentBehavior === "normal" || currentBehavior === "quiet" ? currentBehavior : "");
   function close() {
     dialog.current?.close();
     setOpen(false);
@@ -79,7 +82,7 @@ export function RoutingChooser({
         onClick={(event) => {
           event.stopPropagation();
           setScope("conversation");
-          setChoice("");
+          setChoice(null);
           setOpen(true);
         }}
         type="button"
@@ -141,7 +144,7 @@ export function RoutingChooser({
                 disabled={routing.saving}
                 onChange={(e) => {
                   setScope(e.target.value as "conversation" | "sender");
-                  setChoice("");
+                  setChoice(null);
                 }}
               >
                 <option value="conversation">This conversation</option>
@@ -173,7 +176,7 @@ export function RoutingChooser({
                   key={value}
                   disabled={routing.locked}
                   aria-pressed={choice === value}
-                  onClick={() => setChoice(value)}
+                  onClick={() => setChoice({ key: choiceKey, value })}
                 >
                   {routingLabel(value)}
                 </button>

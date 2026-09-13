@@ -750,3 +750,115 @@ test("delayed successful old Undo response cannot replace a newer receipt", asyn
   await click("Undo");
   expect((await state("b", "&threadId=thread-b")).selection.explicitBehavior).toBeNull();
 });
+
+
+test("cancelled chooser reopening reads external routing before selecting or saving", async () => {
+  await render(true);
+  await click("Tune");
+  expect(button("Inbox").getAttribute("aria-pressed")).toBe("true");
+  await click("Cancel");
+  const current = await state();
+  await request("/v1/attention/routing?accountId=a", {
+    method: "PUT",
+    body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "conversation", threadId: "thread-a" }, behavior: "quiet" }),
+  });
+  const gate = deferred();
+  let held = false;
+  intercept = async (path) => {
+    if (path.includes("/v1/attention/routing?")) { held = true; await gate.promise; }
+    return undefined;
+  };
+  await click("Tune");
+  expect(held).toBe(true);
+  expect(button("Save choice").disabled).toBe(true);
+  await act(async () => gate.release());
+  await settle();
+  expect(document.querySelector(".routing-current")?.textContent).toContain("Currently Quiet");
+  expect(button("Quiet").getAttribute("aria-pressed")).toBe("true");
+  expect(button("Inbox").getAttribute("aria-pressed")).toBe("false");
+  await click("Save choice");
+  expect(puts).toHaveLength(1);
+  expect(puts[0]?.body.behavior).toBe("quiet");
+  expect((await state("a", "&threadId=thread-a")).selection.explicitBehavior).toBe("quiet");
+});
+
+for (const entry of ["focus", "interval", "manual"] as const) {
+  test(`App ${entry} provider completion refreshes Quiet rows, count and cursor and rejects old pagination`, async () => {
+    seedPages();
+    const current = await state();
+    await request("/v1/attention/routing?accountId=a", {
+      method: "PUT",
+      body: JSON.stringify({ expectedRevision: current.revision, target: { scope: "account" }, behavior: "quiet" }),
+    });
+    let interval: (() => void) | undefined;
+    const originalInterval = browser.setInterval.bind(browser);
+    browser.setInterval = ((handler: () => void, delay: number, ...args: unknown[]) => {
+      if (delay === 15000) interval = handler;
+      return originalInterval(handler, delay, ...args);
+    }) as typeof browser.setInterval;
+    const stalePage = deferred();
+    const freshPage = deferred();
+    const finalStatus = deferred();
+    let holdStatus = false;
+    let statusHeld = false;
+    let syncs = 0;
+    const cursors: string[] = [];
+    intercept = async (path) => {
+      if (path.includes("view=quiet") && path.includes("cursor=")) {
+        cursors.push(new URL(path, "http://localhost").searchParams.get("cursor")!);
+        if (cursors.length === 1) { const old = await request(path); await stalePage.promise; return old; }
+        if (cursors.length === 2) await freshPage.promise;
+      }
+      if (path === "/v1/sync/gmail") {
+        syncs++;
+        if (syncs === 2) {
+          const client = createDatabaseClient(join(directory, "test.sqlite"));
+          try {
+            client.db.transaction(tx => {
+              tx.insert(threads).values({ id: "incoming", accountId: "a", providerThreadId: "incoming", messageCount: 1 }).run();
+              tx.insert(emails).values({ id: "incoming", threadId: "incoming", accountId: "a", providerMessageId: "incoming", fromAddress: "extra@example.com", subject: "Incoming Quiet mail", receivedAt: new Date(), bodyText: "New arrival" }).run();
+            });
+          } finally { client.sqlite.close(); }
+          holdStatus = true;
+        }
+        return Response.json({});
+      }
+      if (path === "/v1/sync/status") {
+        if (holdStatus) { holdStatus = false; statusHeld = true; await finalStatus.promise; }
+        return Response.json({ accounts: [] });
+      }
+    };
+    await renderMailbox();
+    await nav("Quiet");
+    expect(document.querySelector(".content-pane")?.textContent).not.toContain("Incoming Quiet mail");
+    await click("Load more messages");
+    expect(cursors).toHaveLength(1);
+    await act(async () => {
+      if (entry === "focus") window.dispatchEvent(new Event("focus"));
+      else if (entry === "interval") { expect(interval).toBeDefined(); interval!(); }
+      else document.querySelector<HTMLButtonElement>(".refresh-button")!.click();
+    });
+    const deadline = Date.now() + 2000;
+    while (!statusHeld && Date.now() < deadline) await settle();
+    expect(statusHeld).toBe(true);
+    await act(async () => finalStatus.release());
+    const refreshed = Date.now() + 2000;
+    while (!document.querySelector(".content-pane")?.textContent?.includes("Incoming Quiet mail") && Date.now() < refreshed) await settle();
+    expect(document.querySelector(".content-pane")?.textContent).toContain("Incoming Quiet mail");
+    expect([...document.querySelectorAll(".desktop-sidebar-item")].map(b => b.textContent)).toContain("Quiet106");
+    expect(document.querySelector<HTMLButtonElement>(".refresh-button")?.disabled).toBe(false);
+    expect(button("Load more messages").disabled).toBe(false);
+    await click("Load more messages");
+    expect(cursors).toHaveLength(2);
+    expect(cursors[1]).not.toBe(cursors[0]);
+    await act(async () => stalePage.release());
+    await settle();
+    expect(document.querySelector(".content-pane")?.textContent).not.toContain("Older mail 104");
+    // The superseded request must not release the newer page's busy state.
+    expect(button("Loading more…").disabled).toBe(true);
+    await act(async () => freshPage.release());
+    await settle();
+    expect(document.querySelector(".content-pane")?.textContent).toContain("Older mail 104");
+    expect(document.querySelector(".content-pane")?.textContent).toContain("Incoming Quiet mail");
+  }, 20000);
+}
