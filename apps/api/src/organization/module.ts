@@ -317,7 +317,7 @@ function unconfiguredLaneSnapshot(workspaceRevision: number, accountIds: readonl
       workspaceRevision,
       fallbackLaneId: laneId,
       policies: [{ id: policyId, visibility: "standard", interruption: "badge", review: "daily", retention: { mode: "keep", days: null }, providerDeletion: false, revision: 1 }],
-      lanes: [{ id: laneId, name: "Everything else", position: 0, defaultPolicyId: policyId, retiredAt: null, revision: 1 }],
+      lanes: [{ id: laneId, name: "Everything else", color: "#70867d", position: 0, defaultPolicyId: policyId, retiredAt: null, revision: 1 }],
     },
     placements: threads.filter((thread) => accountIds.includes(thread.accountId)).map((thread) => fallbackPlacement({ accountId: thread.accountId, threadId: thread.id, fallbackLaneId: laneId })),
   };

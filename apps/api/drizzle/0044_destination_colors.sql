@@ -1,0 +1,1 @@
+ALTER TABLE organization_lanes ADD COLUMN color TEXT NOT NULL DEFAULT '#70867d';

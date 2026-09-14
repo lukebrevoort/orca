@@ -427,6 +427,7 @@ export const organizationLanes = sqliteTable(
     workspaceId: text("workspace_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     id: text("id").notNull(),
     name: text("name").notNull(),
+    color: text("color").notNull().default("#70867d"),
     position: integer("position").notNull(),
     defaultPolicyId: text("default_policy_id").notNull(),
     retiredAt: integer("retired_at", { mode: "timestamp_ms" }),

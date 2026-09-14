@@ -1,3 +1,4 @@
+import { defaultSpaceColor, spaceColorSchema } from "./space-color.ts";
 import { destinationResolutionSchema } from "./destination-resolution.ts";
 import { z } from "zod";
 
@@ -33,6 +34,7 @@ export type LanePolicy = z.infer<typeof lanePolicySchema>;
 export const laneSchema = z.object({
   id: identifierSchema,
   name: nonEmptyStringSchema.max(120),
+  color: spaceColorSchema.default(defaultSpaceColor),
   position: positionSchema,
   defaultPolicyId: identifierSchema,
   retiredAt: retiredAtSchema,
@@ -139,6 +141,7 @@ const defineLaneActionSchema = z.object({
   kind: z.literal("define_lane"),
   id: identifierSchema,
   name: nonEmptyStringSchema.max(120),
+  color: spaceColorSchema.optional(),
   position: positionSchema,
   defaultPolicyId: identifierSchema,
 }).strict();
@@ -147,12 +150,13 @@ const updateLaneActionSchema = z.object({
   kind: z.literal("update_lane"),
   laneId: identifierSchema,
   name: nonEmptyStringSchema.max(120).optional(),
+  color: spaceColorSchema.optional(),
   position: positionSchema.optional(),
   defaultPolicyId: identifierSchema.optional(),
   retired: z.boolean().optional(),
   expectedRevision: revisionSchema,
 }).strict().superRefine((action, context) => {
-  if (action.name === undefined && action.position === undefined && action.defaultPolicyId === undefined && action.retired === undefined) {
+  if (action.color === undefined && action.name === undefined && action.position === undefined && action.defaultPolicyId === undefined && action.retired === undefined) {
     context.addIssue({ code: "custom", message: "A Lane update must rename, reorder, change Policy, or change retirement" });
   }
 });

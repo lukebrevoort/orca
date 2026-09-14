@@ -40,10 +40,11 @@ function applyDemoActions(configuration: OrganizationLaneConfiguration, actions:
         revision: 1,
       } satisfies LanePolicy);
     }
-    if (action.kind === "define_lane") next.lanes.push({ id: action.id, name: action.name, position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
+    if (action.kind === "define_lane") next.lanes.push({ id: action.id, name: action.name, color: action.color ?? "#70867d", position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
     if (action.kind === "update_lane") {
       const lane = next.lanes.find((item) => item.id === action.laneId); if (!lane) continue;
       if (action.name !== undefined) lane.name = action.name;
+      if (action.color !== undefined) lane.color = action.color;
       if (action.position !== undefined) lane.position = action.position;
       if (action.retired !== undefined) lane.retiredAt = action.retired ? new Date().toISOString() : null;
       lane.revision += 1;

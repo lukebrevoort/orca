@@ -141,7 +141,7 @@ export function applyLaneActions(
       if (configuration.lanes.some((lane) => lane.id === action.id)) throw new OrganizationLaneValidationError(`Lane ${action.id} already exists`);
       if (!configuration.policies.some((policy) => policy.id === action.defaultPolicyId)) throw new OrganizationLaneValidationError(`Lane Policy ${action.defaultPolicyId} does not exist`);
       if (configuration.lanes.some(l => !l.retiredAt && l.name.trim().toLowerCase() === action.name?.trim().toLowerCase())) throw new OrganizationLaneValidationError("A destination with this name already exists");
-      configuration.lanes.push({ id: action.id, name: action.name, position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
+      configuration.lanes.push({ id: action.id, name: action.name, color: action.color ?? "#70867d", position: action.position, defaultPolicyId: action.defaultPolicyId, retiredAt: null, revision: 1 });
       continue;
     }
     if (action.kind === "update_lane") {
@@ -156,6 +156,7 @@ export function applyLaneActions(
       if (action.name !== undefined && configuration.lanes.some(l => l.id !== lane.id && !l.retiredAt && l.name.trim().toLowerCase() === action.name?.trim().toLowerCase())) throw new OrganizationLaneValidationError("A destination with this name already exists");
       if (action.retired === true && destinationBindings.some(b => b.destinationId === lane.id)) throw new OrganizationLaneValidationError("Reassign destination choices before retiring this destination");
       if (action.name !== undefined) lane.name = action.name;
+      if (action.color !== undefined) lane.color = action.color;
       if (action.position !== undefined) lane.position = action.position;
       if (action.defaultPolicyId !== undefined) lane.defaultPolicyId = action.defaultPolicyId;
       if (action.retired !== undefined) lane.retiredAt = action.retired ? input.now : null;

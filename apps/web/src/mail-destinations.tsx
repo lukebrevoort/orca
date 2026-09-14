@@ -1,6 +1,6 @@
 import { TopLayer } from "./top-layer";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { destinationListSchema, destinationMutationResultSchema, type MailDestination } from "@orca/shared";
+import { defaultSpaceColor, destinationListSchema, destinationMutationResultSchema, type MailDestination } from "@orca/shared";
 import { useOnlineStatus } from "./navigation";
 
 export const destinationChangeEvent = "orca:destination-authority-changed";
@@ -42,6 +42,7 @@ export function useDestinations(preview = false) {
 export function DestinationManager({ onClose, onCreated, preview = false }: { onClose: () => void; onCreated: (id: string) => void; preview?: boolean }) {
   const catalog = useDestinations(preview);
   const [name, setName] = useState("");
+  const [color, setColor] = useState(defaultSpaceColor);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
@@ -59,10 +60,11 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
   }
   return <TopLayer ariaLabelledBy="destination-manager-title" className="simple-attention-dialog destination-manager" layerClassName="desktop-dialog-layer" backdropClassName="desktop-dialog-backdrop" backdropAriaLabel="Close space manager" initialFocusSelector="input" dismissible={!busy} ariaBusy={busy} onClose={onClose}>
     <h2 id="destination-manager-title">Your spaces</h2>
-    <p>Names are shared across your accounts. Routing choices stay with each account.</p>
+    <p>Spaces hold mail. Tools help you work with it. Space names and colors are shared across your accounts.</p>
     {preview && <p role="status">Synthetic preview. Connect an account to create or change spaces.</p>}
-    <form onSubmit={event => { event.preventDefault(); void mutate("/v1/destinations", "POST", { name: name.trim() }, true); }}>
+    <form onSubmit={event => { event.preventDefault(); void mutate("/v1/destinations", "POST", { name: name.trim(), color }, true); }}>
       <label>New space<input autoFocus required maxLength={120} value={name} onInput={event => setName(event.currentTarget.value)} /></label>
+      <SpaceColorPicker color={color} onChange={setColor} disabled={busy || catalog.locked} />
       <button disabled={busy || catalog.locked || !name.trim()}>Create space</button>
     </form>
     {catalog.active.map(item => <DestinationEditor key={item.id} item={item} fallbackId={catalog.data?.fallbackDestinationId ?? ""} disabled={busy || catalog.locked} mutate={mutate} />)}
@@ -73,11 +75,32 @@ export function DestinationManager({ onClose, onCreated, preview = false }: { on
 }
 function DestinationEditor({ item, fallbackId, disabled, mutate }: { item: MailDestination; fallbackId: string; disabled: boolean; mutate: (path: string, method: string, change: object) => Promise<void> }) {
   const [name, setName] = useState(item.name);
+  const [color, setColor] = useState(item.color);
   useEffect(() => setName(item.name), [item.name]);
-  return <details><summary>{item.name}{item.isFallback ? " · Default" : ""}</summary>
+  useEffect(() => setColor(item.color), [item.color]);
+  return <details><summary><span aria-hidden="true" className="desktop-space-mark" style={{ background: item.color }} />{item.name}{item.isFallback ? " · Default" : ""}</summary>
     <label>Name<input value={name} maxLength={120} disabled={disabled} onInput={event => setName(event.currentTarget.value)} /></label>
-    <button disabled={disabled || !name.trim() || name.trim() === item.name} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim() })}>Rename</button>
+    <SpaceColorPicker color={color} onChange={setColor} disabled={disabled} />
+    <button disabled={disabled || !name.trim() || (name.trim() === item.name && color === item.color)} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim(), color })}>Save changes</button>
     {item.isFallback ? <p>Your default space cannot be removed.</p> : <p>Move conversations and update sender choices before removing this space.</p>}
     <button aria-label={`Remove ${item.name}`} disabled={disabled || item.isFallback || !fallbackId} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: fallbackId })}>Remove space</button>
   </details>;
+}
+
+const spacePalette = [
+  { name: "Sage", value: defaultSpaceColor },
+  { name: "Blue", value: "#648ac4" },
+  { name: "Violet", value: "#9a7bc0" },
+  { name: "Rose", value: "#c7788c" },
+  { name: "Amber", value: "#b58b48" },
+  { name: "Teal", value: "#459c98" },
+];
+function SpaceColorPicker({ color, onChange, disabled }: { color: string; onChange: (color: string) => void; disabled: boolean }) {
+  const choices = spacePalette.some(choice => choice.value.toLowerCase() === color.toLowerCase()) ? spacePalette : [...spacePalette, { name: "Custom", value: color }];
+  return <fieldset className="space-color-picker" disabled={disabled}><legend>Dot color</legend>
+    {choices.map(choice => <button key={choice.value} type="button" aria-pressed={color.toLowerCase() === choice.value.toLowerCase()} onClick={() => onChange(choice.value)}>
+      <span aria-hidden="true" className="desktop-space-mark" style={{ background: choice.value }} />
+      <span>{choice.name}</span><span aria-hidden="true" className="space-color-check">{color.toLowerCase() === choice.value.toLowerCase() ? "✓" : ""}</span>
+    </button>)}
+  </fieldset>;
 }

@@ -309,6 +309,13 @@
       "when": 1789516800000,
       "tag": "0043_destination_latest_index",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1789603200000,
+      "tag": "0044_destination_colors",
+      "breakpoints": true
     }
   ]
 }

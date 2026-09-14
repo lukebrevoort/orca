@@ -889,9 +889,12 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await click("Manage spaces");
   await inputValue(document.querySelector<HTMLInputElement>('.destination-manager input')!, "Clients");
   expect(button("Create space").disabled, document.querySelector(".destination-manager")?.outerHTML).toBe(false);
+  await click("Blue");
   await click("Create space");
   const catalog = await (await request("/v1/destinations")).json();
   const clients = catalog.destinations.find((item: {name: string}) => item.name === "Clients");
+  expect(clients.color).toBe("#648ac4");
+  expect([...document.querySelectorAll<HTMLButtonElement>(".desktop-sidebar-item")].find(b => b.textContent?.startsWith("Clients"))?.querySelector<HTMLElement>(".desktop-space-mark")?.style.background).toBe("#648ac4");
   expect(clients, document.querySelector(".destination-manager")?.outerHTML).toBeDefined();
   expect(new URL(window.location.href).searchParams.get("destination")).toBe(`destination:${clients.id}`);
   expect(document.querySelector(".content-pane")?.textContent).toContain("No mail in Clients yet");
@@ -914,7 +917,11 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await click("Manage spaces");
   const details = [...document.querySelectorAll(".destination-manager details")].find(item => item.querySelector("summary")?.textContent === "Clients")!;
   await inputValue(details.querySelector<HTMLInputElement>("input")!, "Partners");
-  await act(async () => details.querySelector<HTMLButtonElement>("button")!.click());
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Rose")!.click());
+  expect(details.querySelector<HTMLInputElement>("input")!.value).toBe("Partners");
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Save changes")!.click());
+  await act(async () => refreshDestinations());
+  expect((await (await request("/v1/destinations")).json()).destinations.find((d: { id: string }) => d.id === clients.id).color).toBe("#c7788c");
   await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
   expect((await state()).senders[0]?.destinationId).toBe(clients.id);

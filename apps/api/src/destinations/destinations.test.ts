@@ -288,6 +288,7 @@ test("populated pre-0042 upgrade preserves custom fallback identity and legacy c
     }
     const s = createDestinations(f.db, "owner"), catalog = s.list();
     expect(catalog.fallbackDestinationId).toBe(fallback.id);
+    expect(catalog.destinations.every(d => d.color === "#70867d")).toBe(true);
     expect(catalog.destinations.find(d => d.isFallback)?.name).toBe("Personal desk");
     expect(catalog.legacyDestinationIds.quiet).toBeDefined();
     expect(catalog.legacyDestinationIds.hidden).toBeUndefined();
@@ -319,4 +320,34 @@ test("HTTP destination mutations return affected stable ID and enforce validatio
     expect(catalog.legacyDestinationIds.quiet).not.toBe(customQuiet.id);
     expect(new Set(catalog.destinations.map(d => d.name.trim().toLowerCase())).size).toBe(catalog.destinations.length);
     f.sqlite.close();
+});
+
+test("destination color persists through authority, stale writes, rename/reorder and database reopen", async () => {
+    const f = await setup(), s = service(f);
+    const initial = s.list();
+    expect(initial.destinations[0]?.color).toBe("#70867d");
+    const created = s.create({ expectedRevision: initial.revision, name: "Clients", color: "#648ac4" });
+    const id = created.destinationId;
+    route(f, sender, id);
+    const before = s.list().revision;
+    s.update(id, { expectedRevision: before, name: "Partners", color: "#c7788c" });
+    expect(() => s.update(id, { expectedRevision: before, color: "#459c98" })).toThrow("changed");
+    const revision = s.list().revision;
+    const invalid = await f.request(`/v1/destinations/${id}`, "PATCH", { expectedRevision: revision, color: "url(evil)" });
+    expect(invalid.status).toBe(400);
+    expect(s.list().revision).toBe(revision);
+    s.update(id, { expectedRevision: revision, name: "Partners renamed", position: 0 });
+    expect(s.list().destinations[0]).toMatchObject({ id, name: "Partners renamed", color: "#c7788c" });
+    const repo = createSqliteOrganizationRepository(f.db);
+    expect(repo.lanes!.getSnapshot("owner", []).configuration.lanes.find(l => l.id === id)?.color).toBe("#c7788c");
+    const audit = f.sqlite.query("select before_json,after_json from organization_change_actions where resource_family='lane' and resource_id=? and action_kind='update_lane' order by rowid").all(id) as { before_json: string; after_json: string }[];
+    expect(audit.some(a => JSON.parse(a.before_json).color === "#648ac4" && JSON.parse(a.after_json).color === "#c7788c")).toBe(true);
+    f.sqlite.close();
+    const reopened = createDatabaseClient(f.path);
+    try {
+        const restored = createDestinations(reopened.db, "owner");
+        expect(restored.list().destinations.find(d => d.id === id)?.color).toBe("#c7788c");
+        expect(restored.read("a", sender).selection.effective.destinationId).toBe(id);
+        expect(restored.read("b", sender).selection.effective.destinationId).not.toBe(id);
+    } finally { reopened.sqlite.close(); }
 });

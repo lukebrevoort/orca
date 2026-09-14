@@ -161,7 +161,9 @@ describe("AppSidebar mobile navigation", () => {
     const itemLabel = (item: HTMLButtonElement) => item.querySelector(':scope > span:not([aria-hidden="true"])')?.textContent?.trim();
     const findItem = (openMenu: HTMLElement, label: string) => [...openMenu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((candidate) => itemLabel(candidate) === label);
     const labels = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].map(itemLabel);
-    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Manage spaces", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(labels).toEqual(["Inbox", "Drafts", "All Mail", "Manage spaces", "Focus", "Signals", "Quiet", "Later", "Orca launch", "Attention", "Settings", "Account · Maya Chen"]);
+    expect(menu.querySelector('[role="group"][aria-label="Spaces"]')).not.toBeNull();
+    expect(menu.querySelector('[role="group"][aria-label="Tools"]')?.textContent).toContain("Later");
     expect(menu.querySelector('[aria-current="page"]')?.textContent).toContain("Quiet");
     expect(browserWindow.document.activeElement?.textContent).toContain("Quiet");
 
@@ -190,8 +192,8 @@ describe("AppSidebar mobile navigation", () => {
     manage.focus();
     await click(manage);
     expect(manageCalls).toBe(1);
-    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).not.toBeNull();
-    expect((browserWindow.document.activeElement as unknown as HTMLButtonElement) === manage).toBe(true);
+    expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();
+    await click(more);
     await click(browserWindow.document.querySelector(".desktop-mobile-menu-backdrop") as unknown as HTMLButtonElement);
     await flush();
     expect(browserWindow.document.querySelector('[aria-label="Navigation menu"]')).toBeNull();

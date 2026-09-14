@@ -92,7 +92,7 @@ function loadSnapshot(
     }));
   const lanes = executor.select().from(organizationLanes)
     .where(eq(organizationLanes.workspaceId, workspaceId)).orderBy(asc(organizationLanes.position), asc(organizationLanes.id)).all()
-    .map((lane) => ({ id: lane.id, name: lane.name, position: lane.position, defaultPolicyId: lane.defaultPolicyId, retiredAt: lane.retiredAt?.toISOString() ?? null, revision: lane.revision }));
+    .map((lane) => ({ id: lane.id, name: lane.name, color: lane.color, position: lane.position, defaultPolicyId: lane.defaultPolicyId, retiredAt: lane.retiredAt?.toISOString() ?? null, revision: lane.revision }));
   const rows = accountIds.length === 0 ? [] : executor.select().from(organizationThreadLaneStates)
     .where(and(eq(organizationThreadLaneStates.workspaceId, workspaceId), inArray(organizationThreadLaneStates.accountId, [...accountIds]))).all();
   const placements = rows.map((row): ThreadLanePlacement => {
@@ -369,7 +369,7 @@ export function createSqliteOrganizationLanesRepository(db: Database): Organizat
           .where(and(eq(organizationLanes.workspaceId, workspaceId), inArray(organizationLanes.id, movedExistingLaneIds))).run();
         for (const lane of changedLanes) {
           const values = {
-            workspaceId, id: lane.id, name: lane.name, position: lane.position, defaultPolicyId: lane.defaultPolicyId,
+            workspaceId, id: lane.id, name: lane.name, color: lane.color, position: lane.position, defaultPolicyId: lane.defaultPolicyId,
             retiredAt: lane.retiredAt ? new Date(lane.retiredAt) : null, revision: lane.revision, updatedAt: new Date(now),
           };
           if (!currentLanes.has(lane.id)) transaction.insert(organizationLanes).values(values).run();

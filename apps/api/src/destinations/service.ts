@@ -87,7 +87,7 @@ export function createDestinations(db: Db, workspaceId: string) {
     }
     return {
         list: () => db.transaction(list, { behavior: "deferred" }),
-        create(input: unknown) { const v = destinationCreateSchema.parse(input); return db.transaction(() => { check(v.expectedRevision); const id = randomUUID(), c = config(); apply(v.expectedRevision, [{ kind: "define_lane_policy", id, visibility: "standard", interruption: "quiet", review: "manual", retention: { mode: "keep", days: null } }, { kind: "define_lane", id, name: v.name, position: Math.max(-1, ...c.lanes.map(l => l.position)) + 1, defaultPolicyId: id }]); return { state: list(), destinationId: id }; }); },
+        create(input: unknown) { const v = destinationCreateSchema.parse(input); return db.transaction(() => { check(v.expectedRevision); const id = randomUUID(), c = config(); apply(v.expectedRevision, [{ kind: "define_lane_policy", id, visibility: "standard", interruption: "quiet", review: "manual", retention: { mode: "keep", days: null } }, { kind: "define_lane", id, name: v.name, ...(v.color !== undefined ? { color: v.color } : {}), position: Math.max(-1, ...c.lanes.map(l => l.position)) + 1, defaultPolicyId: id }]); return { state: list(), destinationId: id }; }); },
         update(id: string, input: unknown) {
             const v = destinationUpdateSchema.parse(input);
             return db.transaction(() => {
@@ -100,8 +100,9 @@ export function createDestinations(db: Db, workspaceId: string) {
                     ordered.splice(c.lanes.findIndex(n => n.id === id), 0, l);
                 for (const [position, lane] of ordered.entries()) {
                     const name = lane.id === id ? v.name : undefined;
-                    if (name !== undefined || (v.position !== undefined && lane.position !== position))
-                        actions.push({ kind: "update_lane", laneId: lane.id, ...(name !== undefined ? { name } : {}), ...(v.position !== undefined ? { position } : {}), expectedRevision: lane.revision });
+                    const color = lane.id === id ? v.color : undefined;
+                    if (color !== undefined || name !== undefined || (v.position !== undefined && lane.position !== position))
+                        actions.push({ kind: "update_lane", laneId: lane.id, ...(color !== undefined ? { color } : {}), ...(name !== undefined ? { name } : {}), ...(v.position !== undefined ? { position } : {}), expectedRevision: lane.revision });
                 }
                 if (v.notificationPreference !== undefined) {
                     const policy = c.policies.find(p => p.id === l.defaultPolicyId)!;

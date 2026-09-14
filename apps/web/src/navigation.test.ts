@@ -88,9 +88,11 @@ describe("shared desktop navigation contract", () => {
 });
 
 test("catalog names and identity outrank stale local categories in every sidebar", () => {
-  const item = { id: "fallback-id", name: "My correspondence", isFallback: true, retiredAt: null, revision: 1, position: 0, notificationPreference: "quiet" as const, delivery: "proposal_only" as const, counts: { total: 204, unread: 3 } };
+  const item = { id: "fallback-id", name: "My correspondence", color: "#648ac4", isFallback: true, retiredAt: null, revision: 1, position: 0, notificationPreference: "quiet" as const, delivery: "proposal_only" as const, counts: { total: 204, unread: 3 } };
   const projection = createSidebarNavigationProjection({ account: { displayName: "Owner", email: "owner@example.com", accountCount: 2 }, active: "destination:clients", collections: [], online: true, labels: { focus: "Old focus" }, destinations: [item, { ...item, id: "clients", name: "Clients", isFallback: false, position: 2 }, { ...item, id: "retired", isFallback: false, retiredAt: "2026-09-13" }] });
   expect(projection.fallbackDestination?.name).toBe("My correspondence");
   expect(projection.inboxCount).toBe(204);
+  expect(projection.fallbackDestination?.color).toBe("#648ac4");
+  expect(projection.spaces[0]?.color).toBe("#648ac4");
   expect(projection.spaces.map(space => space.label)).toEqual(["Clients", "Later"]);
 });

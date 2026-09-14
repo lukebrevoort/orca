@@ -8,8 +8,8 @@ export const organizationLaneConfigurationFixture: OrganizationLaneConfiguration
     { id: "policy_fallback", visibility: "standard", interruption: "badge", review: "daily", retention: { mode: "review_after", days: 30 }, providerDeletion: false, revision: 1 },
   ],
   lanes: [
-    { id: "lane_focus", name: "Focus", position: 0, defaultPolicyId: "policy_focus", retiredAt: null, revision: 1 },
-    { id: "lane_everything_else", name: "Everything else", position: 1, defaultPolicyId: "policy_fallback", retiredAt: null, revision: 1 },
+    { id: "lane_focus", name: "Focus", color: "#70867d", position: 0, defaultPolicyId: "policy_focus", retiredAt: null, revision: 1 },
+    { id: "lane_everything_else", name: "Everything else", color: "#70867d", position: 1, defaultPolicyId: "policy_fallback", retiredAt: null, revision: 1 },
   ],
 };
 
