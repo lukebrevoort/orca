@@ -1,3 +1,4 @@
+import { BulkSpaceMove, conversationKey, selectedConversations } from "./bulk-space-move";
 import { DestinationManager, refreshDestinations, useDestinations } from "./mail-destinations";
 import { AttentionRoutingProvider } from "./attention-routing";
 import { RoutingChooser } from "./routing-chooser";
@@ -3101,7 +3102,7 @@ export function InboxApp({
   }
 
   return (
-    <AttentionRoutingProvider onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
+    <AttentionRoutingProvider ownerKey={account?.id ?? ""} onRefresh={reloadRoutingMail}><FirstViewGuidanceProvider demoMode={demoMode} onSearch={() => openMailSearch()} onSelect={() => { if (organizationStudioOpen || activeMailbox !== "inbox" || status !== "ready" || visibleMessages.length === 0) { navigateDesktop("all"); return "all"; } return "inbox"; }}>
     <div className="app-root">
       <main className={`desktop-shell${selectedThreadId ? " desktop-shell-reader" : ""}`}>
         <AppSidebar
@@ -4624,6 +4625,7 @@ function InboxView({
   const guidanceSelectionRequest = useViewGuidanceSelectionRequest(viewMode);
   const handledGuidanceSelection = useRef(0);
   const pendingGuidanceFocus = useRef(false);
+  const [bulkSpaceBusy, setBulkSpaceBusy] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Map<string, InboxMessage>>(() => new Map());
   const [selectedTargets, setSelectedTargets] = useState<Map<string, BulkAttentionTarget>>(() => new Map());
   const selectedViewDismissRef = useRef<(() => void) | null>(null);
@@ -4636,6 +4638,8 @@ function InboxView({
   const displayMessages = useMemo(() => getStreamMessages(messages, viewMode, searchQuery), [messages, searchQuery, viewMode]);
   const visibleRowKeys = useMemo(() => new Set(displayMessages.map(messageIdentityKey)), [displayMessages]);
   const selectedVisibleRowCount = [...visibleRowKeys].filter((key) => selectedRows.has(key)).length;
+  const visibleSelectedRows = [...selectedRows.values()].filter(message => visibleRowKeys.has(messageIdentityKey(message)));
+  const conversationTargets = selectedConversations(visibleSelectedRows);
   const selectedSenderCount = selectedTargets.size;
   const selectedAccountCount = new Set([...selectedRows.values()].map((message) => message.accountId)).size;
   const pinPeople = useMemo(() => {
@@ -4648,6 +4652,20 @@ function InboxView({
     }
     return [...candidates.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(0, 8);
   }, [allMessages]);
+  useEffect(() => {
+    setSelectedRows(current => {
+      if ([...current.keys()].every(key => visibleRowKeys.has(key))) return current;
+      const next = new Map([...current].filter(([key]) => visibleRowKeys.has(key)));
+      const targets = attentionTargetsForRows(next);
+      setSelectedTargets(targets);
+      setBulkRetry(retry => {
+        if (!retry) return null;
+        const remaining = retry.targets.filter(target => targets.has(senderAttentionTargetKey(target)));
+        return remaining.length ? { ...retry, targets: remaining } : null;
+      });
+      return next;
+    });
+  }, [visibleRowKeys]);
   const canPinCurrentView = !destinationFilterUnsupported && !isCollectionView && viewMode !== "later";
   function attentionTargetsForRows(rows: Map<string, InboxMessage>) {
     return new Map([...rows.values()].map((message) => {
@@ -4706,7 +4724,7 @@ function InboxView({
     setBulkAttentionMessage("");
     setBulkRetry(null);
     setBulkPendingBehavior(null);
-  }, [classificationView, inboxFilter, personFilter, searchQuery, viewMode]);
+  }, [account?.id, collection?.id, classificationView, inboxFilter, personFilter, searchQuery, viewMode]);
 
   useEffect(() => {
     if (!guidanceSelectionRequest || handledGuidanceSelection.current === guidanceSelectionRequest) return;
@@ -4764,7 +4782,7 @@ function InboxView({
   }
 
   function toggleSelection(message: InboxMessage) {
-    if (bulkAttentionStatus === "saving") return;
+    if ((bulkAttentionStatus === "saving" || bulkSpaceBusy)) return;
     setBulkAttentionStatus("idle");
     setBulkAttentionMessage("");
     setBulkRetry(null);
@@ -4779,7 +4797,7 @@ function InboxView({
   }
 
   function closeSelectionMode() {
-    if (bulkAttentionStatus === "saving") return;
+    if ((bulkAttentionStatus === "saving" || bulkSpaceBusy)) return;
     setSelectionMode(false);
     setSelectedRows(new Map());
     setSelectedTargets(new Map());
@@ -4788,14 +4806,14 @@ function InboxView({
     setBulkRetry(null);
   }
 
-  const bulkQuery = `${classificationView}:${inboxFilter}:${personFilter ?? ""}:${searchQuery}:${viewMode}`;
+  const bulkQuery = `${account?.id ?? ""}:${collection?.id ?? ""}:${classificationView}:${inboxFilter}:${personFilter ?? ""}:${searchQuery}:${viewMode}`;
   const bulkQueryRef = useRef({ key: bulkQuery, generation: 0 });
   if (bulkQueryRef.current.key !== bulkQuery) bulkQueryRef.current = { key: bulkQuery, generation: bulkQueryRef.current.generation + 1 };
 
   async function applyBulkAttention(behavior: AttentionBehavior, onlyTargets?: readonly BulkAttentionTarget[]) {
     const queryGeneration = bulkQueryRef.current.generation;
     const attemptedTargets = [...new Map((onlyTargets ?? [...selectedTargets.values()]).map((target) => [senderAttentionTargetKey(target), target])).values()];
-    if (!attemptedTargets.length || bulkAttentionStatus === "saving") return;
+    if (!attemptedTargets.length || (bulkAttentionStatus === "saving" || bulkSpaceBusy)) return;
     const count = attemptedTargets.length;
     setBulkAttentionStatus("saving");
     setBulkPendingBehavior(behavior);
@@ -4874,8 +4892,8 @@ function InboxView({
           </div>
           <p className="stream-context">{viewMode === "collection" && collection ? `Named by you · ${collection.threadIds.length} of ${collection.threadIds.length} threads here` : inboxEyebrow}</p>
         </div>
-        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving"} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
-        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || bulkAttentionStatus === "saving"} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {collection ? <div className="collection-view-actions"><button onClick={onRenameCollection} type="button">Rename</button><button onClick={() => { if (displayMessages[0]) onOpenThread(displayMessages[0]); }} type="button">Open latest thread</button><button aria-pressed={selectionMode} disabled={status !== "ready" || displayMessages.length === 0 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
+        {!collection ? <div className="stream-header-tools"><label className="stream-search"><span aria-hidden="true">⌕</span><input aria-label="Search the stream" onChange={(event) => onSearchChange(event.target.value)} placeholder="Search the stream…" ref={searchInputRef} value={searchQuery}/><kbd>⌘K</kbd></label><button aria-pressed={selectionMode} className="selection-mode-toggle" disabled={status !== "ready" || displayMessages.length === 0 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => selectionMode ? closeSelectionMode() : setSelectionMode(true)} type="button">{selectionMode ? "Done selecting" : "Select"}</button></div> : null}
         <div className="pane-header-meta">
           <button
             className={`refresh-button${isRefreshing ? " refresh-button-active" : ""}`}
@@ -5008,15 +5026,15 @@ function InboxView({
         ) : null}
 
         {selectionMode ? (
-          <section aria-busy={bulkAttentionStatus === "saving"} aria-label="Bulk sender actions" className="bulk-action-bar">
+          <section aria-busy={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} aria-label="Selected message actions" className="bulk-action-bar">
             <div>
-              <strong>{selectedSenderCount ? `${selectedSenderCount} ${selectedSenderCount === 1 ? "sender" : "senders"} selected` : "Select messages"}</strong>
-              <span>{selectedRows.size ? `${selectedRows.size} ${selectedRows.size === 1 ? "message" : "messages"} selected · ` : ""}Changes apply to future mail from each sender.</span>
+              <strong>{visibleSelectedRows.length ? `${conversationTargets.length} ${conversationTargets.length === 1 ? "conversation" : "conversations"} selected` : "Select messages"}</strong>
+              <span>{visibleSelectedRows.length} visible {visibleSelectedRows.length === 1 ? "message" : "messages"} · {selectedSenderCount} {selectedSenderCount === 1 ? "sender" : "senders"}</span>
             </div>
             <button
               aria-pressed={visibleRowKeys.size > 0 && selectedVisibleRowCount === visibleRowKeys.size}
               className="bulk-select-all"
-              disabled={bulkAttentionStatus === "saving" || displayMessages.length === 0}
+              disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy) || displayMessages.length === 0}
               onClick={() => setSelectedRows((current) => {
                 const next = new Map(current);
                 if (selectedVisibleRowCount === visibleRowKeys.size) visibleRowKeys.forEach((key) => next.delete(key));
@@ -5028,18 +5046,28 @@ function InboxView({
             >
               {selectedVisibleRowCount === visibleRowKeys.size ? "Clear visible" : "Select all visible"}
             </button>
+            <BulkSpaceMove targets={conversationTargets} disabled={bulkAttentionStatus === "saving"} preview={demoMode} queryOwner={bulkQueryRef.current.generation} onBusy={setBulkSpaceBusy} onMoved={(targets, owner) => {
+              if (owner !== bulkQueryRef.current.generation) return;
+              const moved = new Set(targets.map(conversationKey));
+              setBulkRetry(null); setBulkAttentionMessage("");
+              setSelectedRows(current => {
+                const next = new Map([...current].filter(([, message]) => !moved.has(conversationKey(message))));
+                setSelectedTargets(attentionTargetsForRows(next));
+                return next;
+              });
+            }} />
             <div className="bulk-view-action">
-              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || bulkAttentionStatus === "saving"} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
+              <button disabled={!selectedRows.size || selectedAccountCount !== 1 || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={openSelectedSenderAuthoring} ref={useSelectedSendersRef} type="button">Use these senders</button>
               {selectedAccountCount > 1 ? <span role="alert">Choose messages from one account to build a View.</span> : null}
             </div>
-            <details><summary>Advanced legacy attention preferences</summary><div aria-label="Legacy sender preferences" role="group">
-              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
-              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
-              <button disabled={!selectedSenderCount || bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
+            <details><summary>Advanced legacy attention preferences</summary><p>These sender preferences apply to existing and future mail from each selected sender.</p><div aria-label="Legacy sender preferences" role="group">
+              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("normal")} type="button">{bulkPendingBehavior === "normal" ? "Moving…" : "Keep in inbox"}</button>
+              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("quiet")} type="button">{bulkPendingBehavior === "quiet" ? "Moving…" : "Quiet"}</button>
+              <button disabled={!selectedSenderCount || (bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention("hidden")} type="button">{bulkPendingBehavior === "hidden" ? "Moving…" : "Hide"}</button>
             </div></details>
           </section>
         ) : null}
-        {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={bulkAttentionStatus === "saving"} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
+        {bulkAttentionMessage ? <div aria-atomic="true" className={`bulk-action-message bulk-action-message-${bulkAttentionStatus}`} role={bulkAttentionStatus === "error" || bulkAttentionStatus === "partial" ? "alert" : "status"}><span>{bulkAttentionMessage}</span>{bulkRetry ? <button disabled={(bulkAttentionStatus === "saving" || bulkSpaceBusy)} onClick={() => void applyBulkAttention(bulkRetry.behavior, bulkRetry.targets)} type="button">Retry failed</button> : null}</div> : null}
         {viewAuthoringEntry ? <TopLayer ariaLabelledBy="views-title" as="section" backdropAriaLabel="Return to selected messages" backdropClassName="selected-view-authoring-backdrop" className="selected-view-authoring" initialFocusRef={undefined} layerClassName="selected-view-authoring-layer" onClose={() => selectedViewDismissRef.current?.()} style={{ position: "relative", zIndex: 151 }}><OrganizationViewAuthoringWorkspace dismissRef={selectedViewDismissRef} demoMode={demoMode} entry={viewAuthoringEntry} onCancel={restoreFromViewAuthoring} onCommitted={(result) => window.location.assign(result.navigation.href)}/></TopLayer> : null}
 
         <p aria-atomic="true" className="inbox-results-status visually-hidden" role="status">{inboxResultStatus}</p>
@@ -5115,7 +5143,7 @@ function InboxView({
                       aria-label={selectionMode ? `${selected ? "Deselect" : "Select"} ${senderName}: ${message.subject || "(no subject)"}` : undefined}
                       aria-pressed={selectionMode ? selected : undefined}
                       className={`message-row${message.unread ? " message-row-unread" : ""}${isReply ? " message-row-reply" : ""}`}
-                      disabled={selectionMode && bulkAttentionStatus === "saving"}
+                      disabled={selectionMode && (bulkAttentionStatus === "saving" || bulkSpaceBusy)}
                       onClick={() => selectionMode ? toggleSelection(message) : onOpenThread(message)}
                       ref={(node) => {
                         const key = messageIdentityKey(message);

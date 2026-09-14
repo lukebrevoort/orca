@@ -351,3 +351,92 @@ test("destination color persists through authority, stale writes, rename/reorder
         expect(restored.read("b", sender).selection.effective.destinationId).not.toBe(id);
     } finally { reopened.sqlite.close(); }
 });
+
+test("batch conversation move dedupes across accounts, uses one command, preserves sender scope and atomically undoes mixed prior choices", async () => {
+    const f = await setup(), s = service(f), clients = add(f), archive = add(f, "Archive");
+    route(f, sender, clients.id);
+    // Legacy override and explicit override must both survive compensating Undo.
+    await f.save(conversation, "quiet");
+    route(f, { scope: "conversation", threadId: "m4" }, clients.id, "b");
+    f.message("m7", "a", "maya@example.com", "m1");
+    const targets = [{ accountId: "a", threadId: "m1" }, { accountId: "a", threadId: "m2" }, { accountId: "b", threadId: "m4" }];
+    const prior = targets.map(t => s.read(t.accountId, { scope: "conversation", threadId: t.threadId }).selection);
+    const count = () => f.sqlite.query("select count(*) n from organization_change_sets where workspace_id='owner'").get();
+    const beforeCount = count() as {n: number};
+    const result = s.batch({ expectedRevision: s.list().revision, changes: [...targets, targets[0]!].map(t => ({ ...t, destinationId: archive.id })) });
+    expect(result.targets).toEqual(targets);
+    expect(count()).toEqual({ n: beforeCount.n + 1 });
+    expect(result.state.destinations.find(d => d.id === archive.id)?.counts.total).toBe(4);
+    for (const t of targets) expect(s.read(t.accountId, { scope: "conversation", threadId: t.threadId }).selection.effective.destinationId).toBe(archive.id);
+    expect(s.read("a", sender).selection.explicitDestinationId).toBe(clients.id);
+    const reader = createMailboxReader(f.sqlite);
+    const page = reader.read({ authorization: { userId: "owner", accountIds: ["a", "b"] }, query: { destinationId: archive.id, limit: 1 } }).response;
+    expect(page.counts.attention.all).toBe(4);
+    expect((await (await f.request("/v1/threads/m1?accountId=a")).json()).thread.attention.destination.destinationId).toBe(archive.id);
+    const undone = s.batch(result.undo);
+    expect(undone.targets).toEqual(targets);
+    targets.forEach((t, index) => {
+        const restored = s.read(t.accountId, { scope: "conversation", threadId: t.threadId }).selection;
+        expect(restored.explicitDestinationId).toBe(prior[index]!.explicitDestinationId);
+        expect(restored.effective.destinationId).toBe(prior[index]!.effective.destinationId);
+    });
+    expect(() => s.batch(result.undo)).toThrow("changed");
+    f.message("m8");
+    expect(s.read("a", { scope: "conversation", threadId: "m8" }).selection.effective.destinationId).toBe(clients.id);
+    expect(s.list().destinations.find(d => d.id === archive.id)?.counts.total).toBe(0);
+    f.sqlite.close();
+});
+
+test("batch rejects any invalid target without placement, revision or audit writes; Undo is all-or-nothing after intervening writes", async () => {
+    const f = await setup(), s = service(f), clients = add(f), retired = add(f, "Retired");
+    s.retire(retired.id, { expectedRevision: s.list().revision, reassignToDestinationId: s.list().fallbackDestinationId });
+    const foreign = createDestinations(f.db, "other").list().fallbackDestinationId;
+    const first = { accountId: "a", threadId: "m1", destinationId: clients.id };
+    const snapshot = () => JSON.stringify([s.list(), f.sqlite.query("select * from organization_thread_lane_states order by workspace_id,account_id,thread_id").all(), f.sqlite.query("select * from organization_destination_bindings order by workspace_id,account_id,scope,value").all(), f.sqlite.query("select * from organization_change_sets order by id").all()]);
+    for (const bad of [
+        { accountId: "private", threadId: "m5", destinationId: clients.id },
+        { accountId: "b", threadId: "m1", destinationId: clients.id },
+        { accountId: "a", threadId: "missing", destinationId: clients.id },
+        { accountId: "a", threadId: "m2", destinationId: retired.id },
+        { accountId: "a", threadId: "m2", destinationId: foreign },
+        { ...first, destinationId: null },
+    ]) {
+        const before = snapshot();
+        const res = await f.request("/v1/destinations/routing/batch", "PUT", { expectedRevision: s.list().revision, changes: [first, bad] });
+        expect([400, 404]).toContain(res.status);
+        expect(snapshot()).toBe(before);
+    }
+    for (const changes of [[], Array.from({ length: 51 }, () => first)]) {
+        const before = snapshot();
+        expect((await f.request("/v1/destinations/routing/batch", "PUT", { expectedRevision: s.list().revision, changes })).status).toBe(400);
+        expect(snapshot()).toBe(before);
+    }
+    const targets = [first, { accountId: "b", threadId: "m4", destinationId: clients.id }];
+    const moved = s.batch({ expectedRevision: s.list().revision, changes: targets });
+    const before = snapshot();
+    expect(() => s.batch({ expectedRevision: moved.undo.expectedRevision - 1, changes: targets })).toThrow("changed");
+    expect(snapshot()).toBe(before);
+    route(f, { scope: "conversation", threadId: "m4" }, null, "b");
+    const afterNewChoice = snapshot();
+    expect(() => s.batch(moved.undo)).toThrow("changed");
+    expect(snapshot()).toBe(afterNewChoice);
+    const repo = createSqliteOrganizationRepository(f.db);
+    const placement = repo.lanes!.getSnapshot("owner", ["b"]).placements.find(p => p.threadId === "m4")!;
+    createOrganization(repo).apply({ scope: { actor: { type: "human", id: "owner" }, workspaceId: "owner", accountIds: ["a", "b"] }, command: { id: "batch-lock", idempotencyKey: "batch-lock", expectedWorkspaceRevision: s.list().revision, actions: [{ kind: "set_thread_safety_lock", accountId: "b", threadId: "m4", locked: true, reason: "Protect", expectedThreadRevision: placement.revision }] } });
+    const locked = snapshot();
+    expect((await f.request("/v1/destinations/routing/batch", "PUT", { expectedRevision: s.list().revision, changes: targets })).status).toBe(409);
+    expect(snapshot()).toBe(locked);
+    expect((await f.app.request("/v1/destinations/routing/batch", { method: "PUT", body: JSON.stringify({ expectedRevision: s.list().revision, changes: targets }) })).status).toBe(401);
+    f.sqlite.close();
+});
+
+test("batch accepts the exact 50-conversation authority bound and applies a single atomic Undo", async () => {
+    const f = await setup(), s = service(f), clients = add(f);
+    f.db.transaction(() => { for (let i = 100; i < 150; i++) f.message(`m${i}`); });
+    const changes = Array.from({ length: 50 }, (_, i) => ({ accountId: "a", threadId: `m${i + 100}`, destinationId: clients.id }));
+    const result = s.batch({ expectedRevision: s.list().revision, changes });
+    expect(result.targets).toHaveLength(50);
+    expect(result.state.destinations.find(d => d.id === clients.id)?.counts.total).toBe(50);
+    expect(s.batch(result.undo).state.destinations.find(d => d.id === clients.id)?.counts.total).toBe(0);
+    f.sqlite.close();
+});

@@ -11,11 +11,12 @@ export function registerDestinationRoutes(app: Hono<{
 }>, { dbFactory = createDatabaseClient }: {
     dbFactory?: typeof createDatabaseClient;
 } = {}) {
-    for (const [method, path] of [["get", "/v1/destinations"], ["post", "/v1/destinations"], ["get", "/v1/destinations/routing"], ["put", "/v1/destinations/routing"], ["patch", "/v1/destinations/:id"], ["post", "/v1/destinations/:id/retire"]] as const)
+    for (const [method, path] of [["put", "/v1/destinations/routing/batch"], ["get", "/v1/destinations"], ["post", "/v1/destinations"], ["get", "/v1/destinations/routing"], ["put", "/v1/destinations/routing"], ["patch", "/v1/destinations/:id"], ["post", "/v1/destinations/:id/retire"]] as const)
         app[method](path, requireAuth({ dbFactory }), async (c) => {
             const { db, sqlite } = dbFactory();
             try {
                 const service = createDestinations(db, c.get("auth").userId);
+                if (path.endsWith("/routing/batch")) return c.json(service.batch(await c.req.json()));
                 if (path.endsWith("/routing")) {
                     const q = destinationRoutingQuerySchema.parse(c.req.query());
                     return c.json(method === "get" ? service.read(q.accountId, q.threadId ? { scope: "conversation", threadId: q.threadId } : q.address ? { scope: "sender", address: q.address } : { scope: "account" }) : service.save(q.accountId, await c.req.json()));

@@ -5731,3 +5731,10 @@ body:has(#orca-top-layer-root [data-top-layer="active"]) .feedback-kit-root { op
   .agent-event-source { display: grid; gap: 5px; }
   .agent-events-error { align-items: flex-start; flex-direction: column; }
 }
+
+.bulk-action-bar .bulk-space-trigger { background: var(--orca-surface-hover); border-color: var(--orca-border); color: var(--orca-ink); font-size: 12px; }
+.bulk-space-action { display: grid; gap: 4px; }
+.bulk-space-action > span { color: var(--orca-muted); font-size: 11px; max-width: 240px; }
+.bulk-space-dialog .routing-destinations button { display: flex; align-items: center; gap: 8px; }
+.bulk-action-bar > details { grid-column: 1 / -1; color: var(--orca-muted); font-size: 11px; }
+.bulk-action-bar > details p { margin: 8px 0; }

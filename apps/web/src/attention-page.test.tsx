@@ -1083,3 +1083,101 @@ test("rejected mark-read restores canonical destination unread state without cha
   expect(findRow("Mail a").classList.contains("message-row-unread")).toBe(true);
   expect(findRow("Mail b").classList.contains("message-row-unread")).toBe(true);
 });
+
+async function openBulkMove() {
+  await click("Select");
+  await click("Select all visible");
+  await click("Move to space");
+  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Quiet")!.click());
+}
+
+test("App bulk move dedupes selected messages across accounts, refreshes counts/pages and retains root Undo", async () => {
+  const client = createDatabaseClient(join(directory, "test.sqlite"));
+  client.db.insert(emails).values({ id: "message-a2", threadId: "thread-a", accountId: "a", providerMessageId: "a2", fromAddress: "maya@example.com", subject: "Second message", receivedAt: new Date(), bodyText: "Hello again" }).run();
+  client.sqlite.close();
+  intercept = async path => syncNoop(path);
+  await renderMailbox();
+  await openBulkMove();
+  expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain("2 selected conversations across 2 accounts");
+  expect(button("Use these senders").disabled).toBe(true);
+  const gate = deferred();
+  intercept = async (path, init) => { if (path.endsWith("/routing/batch") && init?.method === "PUT") await gate.promise; return syncNoop(path); };
+  const move = button("Move conversations");
+  await act(async () => { move.click(); move.click(); });
+  expect(puts.filter(p => p.path.endsWith("/routing/batch"))).toHaveLength(1);
+  expect(button("Moving…").disabled).toBe(true);
+  await act(async () => gate.release()); await settle(); await settle();
+  expect(puts[0]!.body.changes).toHaveLength(2);
+  expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+  expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("Select messages");
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("2 conversations moved to Quiet.");
+  const catalog = await (await request("/v1/destinations")).json();
+  expect(catalog.destinations.find((d: {id: string}) => d.id === quietId).counts.total).toBe(3);
+  expect((await state("a")).senders).toEqual([expect.objectContaining({ value: "maya@example.com", destinationId: fallbackId })]);
+  await nav("Quiet");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(2);
+  await click("Undo");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+  await nav("Inbox");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(2);
+  expect((await state("a", "&threadId=thread-a")).selection.explicitDestinationId).toBeNull();
+  expect((await state("b", "&threadId=thread-b")).selection.explicitDestinationId).toBeNull();
+});
+
+for (const failure of ["rejected", "unconfirmed"] as const) test(`App bulk ${failure} preserves choices and requires explicit recovery without fabricated Undo`, async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") {
+      if (failure === "unconfirmed") throw new Error("Disconnected");
+      return Response.json({ error: { message: "A selected conversation is protected." } }, { status: 409 });
+    }
+    return syncNoop(path);
+  };
+  await click("Move conversations");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).toContain(failure === "rejected" ? "No conversations were moved" : "Move could not be confirmed");
+  expect(document.querySelector('.bulk-space-dialog [aria-pressed="true"]')?.textContent).toBe("Quiet");
+  expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("2 conversations selected");
+  expect(button("Move conversations").disabled).toBe(true);
+  expect([...document.querySelectorAll("button")].some(b => b.textContent === "Undo")).toBe(false);
+  intercept = async path => syncNoop(path);
+  await click("Reload spaces and mail");
+  expect(button("Move conversations").disabled).toBe(false);
+  await click("Move conversations");
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("2 conversations moved to Quiet.");
+});
+
+test("App bulk selection over 50 conversations is explicit and never silently truncated", async () => {
+  seedPages(); intercept = async path => syncNoop(path);
+  await renderMailbox(); await click("Select"); await click("Select all visible");
+  expect(button("Move to space").disabled).toBe(true);
+  expect(document.querySelector(".bulk-action-bar")?.textContent).toContain("Select up to 50 conversations per move");
+  expect(puts).toHaveLength(0);
+  await click("Clear visible");
+  expect(button("Move to space").disabled).toBe(true);
+});
+
+test("App late batch completion does not clear another view's selection or overwrite its newer receipt", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  const gate = deferred(); let held: Response | undefined;
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT" && !held) { held = await request(path, init); await gate.promise; return held; }
+    return syncNoop(path);
+  };
+  await act(async () => button("Move conversations").click());
+  await settle();
+  // Navigation can occur while a request is in flight; the new view owns new selection.
+  await nav("All Mail"); await click("Select");
+  await act(async () => document.querySelector<HTMLButtonElement>(".message-row")!.click());
+  await click("Move to space");
+  await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".bulk-space-dialog .routing-destinations button")].find(b => b.textContent === "Inbox")!.click());
+  await click("Move conversations");
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
+  await act(async () => gate.release()); await settle(); await settle();
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("1 conversation moved to Inbox.");
+  expect(document.querySelector(".routing-feedback")?.textContent).not.toContain("2 conversations moved");
+  await click("Undo");
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("Last routing change undone");
+});

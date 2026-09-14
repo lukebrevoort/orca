@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { destinationCreateSchema, destinationUpdateSchema, destinationRetireSchema, destinationRoutingChangeSchema, destinationListSchema, destinationRoutingStateSchema, attentionRoutingTargetSchema, type AttentionRoutingTarget, type OrganizationLaneAction } from "@orca/shared";
+import { destinationBatchChangeSchema, destinationCreateSchema, destinationUpdateSchema, destinationRetireSchema, destinationRoutingChangeSchema, destinationListSchema, destinationRoutingStateSchema, attentionRoutingTargetSchema, type AttentionRoutingTarget, type OrganizationLaneAction } from "@orca/shared";
 import type { createDatabaseClient } from "../db/client.ts";
 import { createOrganization } from "../organization/module.ts";
 import { createSqliteOrganizationRepository } from "../organization/sqlite-repository.ts";
@@ -135,6 +135,38 @@ export function createDestinations(db: Db, workspaceId: string) {
             });
         },
         read(accountId: string, target: AttentionRoutingTarget = { scope: "account" }) { return db.transaction(() => selection(accountId, attentionRoutingTargetSchema.parse(target)).state, { behavior: "deferred" }); },
+        batch(input: unknown) {
+            const v = destinationBatchChangeSchema.parse(input);
+            const changes = new Map<string, typeof v.changes[number]>();
+            for (const change of v.changes) {
+                const key = JSON.stringify([change.accountId, change.threadId]);
+                if (changes.has(key) && changes.get(key)!.destinationId !== change.destinationId)
+                    throw new DestinationError(400, "Choose one space per conversation.");
+                changes.set(key, change);
+            }
+            return db.transaction(() => {
+                check(v.expectedRevision);
+                const actions: OrganizationLaneAction[] = [];
+                const inverse: typeof v.changes = [];
+                // Validate and capture every target before the sole authority apply.
+                for (const change of changes.values()) {
+                    const { accountId, threadId, destinationId } = change;
+                    owned(accountId);
+                    if (destinationId !== null) active(destinationId);
+                    const before = selection(accountId, { scope: "conversation", threadId });
+                    const p = db.all<{ revision: number; safety_locked: number }>(sql `select revision,safety_locked from organization_thread_lane_states where workspace_id=${workspaceId} and account_id=${accountId} and thread_id=${threadId}`)[0];
+                    if (p?.safety_locked) throw new DestinationError(409, "A selected conversation is protected. No conversations were moved. Review its safety lock in Organization.");
+                    inverse.push({ accountId, threadId, destinationId: before.state.selection.explicitDestinationId });
+                    actions.push(
+                        { kind: "set_thread_manual_override", accountId, threadId, laneId: destinationId, expectedThreadRevision: p?.revision ?? null, reason: "User batch space choice" },
+                        { kind: "set_destination_binding", accountId, scope: "conversation", value: threadId, destinationId: null, expectedRevision: before.binding?.revision ?? null },
+                    );
+                }
+                apply(v.expectedRevision, actions);
+                const state = list();
+                return { state, targets: [...changes.values()].map(({ accountId, threadId }) => ({ accountId, threadId })), undo: { expectedRevision: state.revision, changes: inverse } };
+            });
+        },
         save(accountId: string, input: unknown) {
             const v = destinationRoutingChangeSchema.parse(input);
             return db.transaction(() => {

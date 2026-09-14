@@ -19,3 +19,18 @@ export type DestinationRoutingState = z.infer<typeof destinationRoutingStateSche
 export type DestinationRoutingChange = z.infer<typeof destinationRoutingChangeSchema>;
 export type DestinationResolution = z.infer<typeof destinationResolutionSchema>;
 export const destinationMutationResultSchema = z.object({ state: destinationListSchema, destinationId: id }).strict();
+
+// Each conversation uses two existing Organization actions (100-action limit).
+export const destinationBatchLimit = 50;
+export const destinationConversationSchema = z.object({ accountId: id, threadId: id }).strict();
+export const destinationBatchChangeSchema = z.object({
+  expectedRevision: revision,
+  changes: z.array(destinationConversationSchema.extend({ destinationId: id.nullable() }).strict()).min(1).max(destinationBatchLimit),
+}).strict();
+export const destinationBatchResultSchema = z.object({
+  state: destinationListSchema,
+  targets: z.array(destinationConversationSchema).min(1).max(destinationBatchLimit),
+  undo: destinationBatchChangeSchema,
+}).strict();
+export type DestinationBatchChange = z.infer<typeof destinationBatchChangeSchema>;
+export type DestinationConversation = z.infer<typeof destinationConversationSchema>;

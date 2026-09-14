@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import {
+  destinationBatchResultSchema,
+  type DestinationBatchChange,
   destinationRoutingResultSchema,
   destinationRoutingStateSchema,
   type DestinationRoutingChange,
@@ -47,15 +49,13 @@ export function routingUrl(
 export const routingLabel = destinationLabel;
 export const inheritanceLabel = (state: DestinationRoutingState) =>
   `${routingLabel(state.selection.inherited.destinationId)} · ${state.selection.inherited.source} choice`;
-type Receipt = {
-  accountId: string;
-  undo: DestinationRoutingChange;
-  text: string;
-};
+type Receipt = ({ accountId: string; undo: DestinationRoutingChange; batch?: false } | { batch: true; undo: DestinationBatchChange }) & { text: string };
+type ReceiptOwner = { generation: number; key: string };
 const RoutingContext = createContext({
   provided: false,
   version: 0,
-  changed: async (_receipt?: Receipt) => {},
+  begin: (): ReceiptOwner => ({ generation: 0, key: "" }),
+  changed: async (_receipt?: Receipt, _owner?: ReceiptOwner) => true,
   clear: () => {},
 });
 
@@ -63,9 +63,11 @@ const RoutingContext = createContext({
 export function AttentionRoutingProvider({
   children,
   onRefresh,
+  ownerKey = "",
 }: {
   children: ReactNode;
   onRefresh: () => Promise<void>;
+  ownerKey?: string;
 }) {
   const [version, setVersion] = useState(0);
   const [receipt, setReceipt] = useState<Receipt>();
@@ -75,7 +77,20 @@ export function AttentionRoutingProvider({
   const lock = useRef(false);
   const receiptGeneration = useRef(0);
   const online = useOnlineStatus();
-  async function changed(next?: Receipt) {
+  const currentOwner = useRef(ownerKey);
+  if (currentOwner.current !== ownerKey) { currentOwner.current = ownerKey; receiptGeneration.current++; }
+  useEffect(() => { setReceipt(undefined); setNotice(""); setError(""); }, [ownerKey]);
+  useEffect(() => () => { receiptGeneration.current++; currentOwner.current = "unmounted"; }, []);
+  function begin() {
+    const generation = ++receiptGeneration.current;
+    setReceipt(undefined); setNotice(""); setError("");
+    return { generation, key: currentOwner.current };
+  }
+  async function changed(next?: Receipt, owner?: ReceiptOwner) {
+    if (owner && (owner.generation !== receiptGeneration.current || owner.key !== currentOwner.current)) {
+      await Promise.all([onRefresh(), refreshDestinations()]).catch(() => {});
+      return false;
+    }
     const generation = ++receiptGeneration.current;
     setReceipt(next);
     setNotice(next?.text ?? "");
@@ -83,8 +98,10 @@ export function AttentionRoutingProvider({
     try {
       await Promise.all([onRefresh(), refreshDestinations()]);
       if (generation === receiptGeneration.current) setError("");
+      return true;
     } catch {
       if (generation === receiptGeneration.current) setError("Mail could not reload. Last loaded mail may be out of date.");
+      return false;
     }
   }
   useEffect(() => {
@@ -98,15 +115,11 @@ export function AttentionRoutingProvider({
     setBusy(true);
     const generation = receiptGeneration.current;
     try {
-      const result = destinationRoutingResultSchema.parse(
-        await attentionRequest(routingUrl(receipt.accountId), {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(receipt.undo),
-        }),
-      );
-      if (result.state.accountId !== receipt.accountId)
-        throw new Error("Account mismatch");
+      const raw = await attentionRequest(receipt.batch ? "/v1/destinations/routing/batch" : routingUrl(receipt.accountId), {
+        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(receipt.undo),
+      });
+      if (receipt.batch) destinationBatchResultSchema.parse(raw);
+      else if (destinationRoutingResultSchema.parse(raw).state.accountId !== receipt.accountId) throw new Error("Account mismatch");
       if (generation !== receiptGeneration.current) {
         await Promise.all([onRefresh(), refreshDestinations()]);
         return;
@@ -145,6 +158,7 @@ export function AttentionRoutingProvider({
         provided: true,
         version,
         changed,
+        begin,
         clear: () => {
           receiptGeneration.current += 1;
           setReceipt(undefined);
@@ -186,6 +200,8 @@ export function AttentionRoutingProvider({
     </RoutingContext.Provider>
   );
 }
+
+export function useRoutingUpdates() { return useContext(RoutingContext); }
 
 export function useAttentionRouting(
   accountId: string,
@@ -271,6 +287,7 @@ export function useAttentionRouting(
     setSaving(true);
     setSaveError("");
     const savedKey = key;
+    const receiptOwner = context.begin();
     try {
       const result = destinationRoutingResultSchema.parse(
         await attentionRequest(routingUrl(accountId), {
@@ -290,17 +307,17 @@ export function useAttentionRouting(
         result.undo.expectedRevision !== result.state.revision
       )
         throw new Error("Routing response mismatch");
-      if (!mounted.current || activeKey.current !== savedKey) { await context.changed(); return false; }
+      if (!mounted.current || activeKey.current !== savedKey) { await context.changed(undefined, receiptOwner); return false; }
       setStale(true);
       await context.changed({
         accountId,
         undo: result.undo,
         text: `${saveTarget.scope === "account" ? "Everyone else" : saveTarget.scope === "sender" ? `Mail from ${saveTarget.address}` : "This conversation"} · ${destinationId === null ? "Inherited choice restored" : routingLabel(destinationId)}.`,
-      });
+      }, receiptOwner);
       if (!context.provided) setReload((v) => v + 1);
       return true;
     } catch (cause) {
-      if (!mounted.current || activeKey.current !== savedKey) { await context.changed(); return false; }
+      if (!mounted.current || activeKey.current !== savedKey) { await context.changed(undefined, receiptOwner); return false; }
       setStale(true);
       if (
         cause instanceof RoutingRequestError &&
@@ -314,7 +331,7 @@ export function useAttentionRouting(
           ? "Choices changed elsewhere."
           : "Save could not be confirmed.",
       );
-      await context.changed();
+      await context.changed(undefined, receiptOwner);
       if (!context.provided) setReload((v) => v + 1);
       return false;
     } finally {
