@@ -55,6 +55,7 @@ const RoutingContext = createContext({
   provided: false,
   version: 0,
   recoveryRequired: false,
+  recovering: false,
   requireRecovery: (_owner: ReceiptOwner) => {},
   recover: async () => false,
   begin: (): ReceiptOwner => ({ generation: 0, key: "" }),
@@ -69,7 +70,7 @@ export function AttentionRoutingProvider({
   ownerKey = "",
 }: {
   children: ReactNode;
-  onRefresh: () => Promise<void>;
+  onRefresh: () => Promise<void | boolean>;
   ownerKey?: string;
 }) {
   const [version, setVersion] = useState(0);
@@ -78,12 +79,14 @@ export function AttentionRoutingProvider({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [recoveryRequired, setRecoveryRequired] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const recoveryAttempt = useRef<{ promise: Promise<boolean> } | null>(null);
   const lock = useRef(false);
   const receiptGeneration = useRef(0);
   const online = useOnlineStatus();
   const currentOwner = useRef(ownerKey);
-  if (currentOwner.current !== ownerKey) { currentOwner.current = ownerKey; receiptGeneration.current++; }
-  useEffect(() => { setReceipt(undefined); setNotice(""); setError(""); setRecoveryRequired(false); }, [ownerKey]);
+  if (currentOwner.current !== ownerKey) { currentOwner.current = ownerKey; receiptGeneration.current++; recoveryAttempt.current = null; }
+  useEffect(() => { setReceipt(undefined); setNotice(""); setError(""); setRecoveryRequired(false); setRecovering(false); }, [ownerKey]);
   useEffect(() => () => { receiptGeneration.current++; currentOwner.current = "unmounted"; }, []);
   function begin() {
     const generation = ++receiptGeneration.current;
@@ -113,17 +116,29 @@ export function AttentionRoutingProvider({
     window.addEventListener(destinationChangeEvent, refresh);
     return () => window.removeEventListener(destinationChangeEvent, refresh);
   }, [onRefresh]);
-  async function recover() {
+  function recover(): Promise<boolean> {
+    // Every recovery trigger shares this owner-scoped attempt. A duplicate click
+    // must not supersede the canonical snapshot another recovery is awaiting.
+    if (recoveryAttempt.current) return recoveryAttempt.current.promise;
     const key = currentOwner.current, generation = receiptGeneration.current;
-    try {
-      await Promise.all([onRefresh(), refreshDestinations()]);
-      if (key !== currentOwner.current || generation !== receiptGeneration.current) return false;
-      setRecoveryRequired(false); setError("");
-      return true;
-    } catch {
-      if (key === currentOwner.current && generation === receiptGeneration.current) setError("Mail could not reload. Retry mail reload.");
-      return false;
-    }
+    const attempt = { promise: Promise.resolve(false) };
+    recoveryAttempt.current = attempt;
+    setRecovering(true);
+    attempt.promise = (async () => {
+      try {
+        const [applied] = await Promise.all([onRefresh(), refreshDestinations()]);
+        if (key !== currentOwner.current || generation !== receiptGeneration.current) return false;
+        if (applied === false) throw new Error("Mail refresh was superseded");
+        setRecoveryRequired(false); setError("");
+        return true;
+      } catch {
+        if (key === currentOwner.current && generation === receiptGeneration.current) setError("Mail could not reload. Retry mail reload.");
+        return false;
+      } finally {
+        if (recoveryAttempt.current === attempt) { recoveryAttempt.current = null; setRecovering(false); }
+      }
+    })();
+    return attempt.promise;
   }
   async function undo() {
     if (!receipt || lock.current || !online) return;
@@ -176,6 +191,7 @@ export function AttentionRoutingProvider({
         changed,
         begin,
         recoveryRequired,
+        recovering,
         requireRecovery: (owner) => {
           if (owner.key === currentOwner.current && owner.generation === receiptGeneration.current) setRecoveryRequired(true);
         },
@@ -199,7 +215,7 @@ export function AttentionRoutingProvider({
           {error && (
             <span role="alert">
               {error}{" "}
-              <button onClick={() => void recover()}>
+              <button disabled={recovering || !online} onClick={() => void recover()}>
                 Retry mail reload
               </button>
             </span>

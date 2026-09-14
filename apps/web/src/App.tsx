@@ -2931,7 +2931,7 @@ export function InboxApp({
   }
 
   async function reloadRoutingMail() {
-    if (demoMode) return;
+    if (demoMode) return false;
     mailboxSnapshotEpochRef.current += 1;
     destinationRequest.current += 1;
     setDestinationRetry(value => value + 1);
@@ -2943,7 +2943,7 @@ export function InboxApp({
     const view = classificationViewRef.current;
     const all = await fetchJson("/v1/inbox?view=all&classification=all&limit=100", inboxClassificationResponseSchema);
     const inbox = view === "all" ? all : await fetchJson(`/v1/inbox?classification=${view}&limit=100`, inboxClassificationResponseSchema);
-    if (generation !== classificationRequestRef.current || view !== classificationViewRef.current) return;
+    if (generation !== classificationRequestRef.current || view !== classificationViewRef.current) return false;
     setAttentionByAddress({});
     setAllMailMessages(all.messages); setAllMailCursor(all.nextCursor);
     setMessages(inbox.messages); setClassificationCursor(inbox.nextCursor);
@@ -2952,6 +2952,7 @@ export function InboxApp({
     setReaderRefreshKey(key => key + 1);
     setClassificationLoading(false);
     window.dispatchEvent(new Event("orca:routing-changed"));
+    return true;
   }
 
   // Compatibility callback for existing reader/list props; no local sender cache.

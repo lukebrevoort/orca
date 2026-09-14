@@ -1283,3 +1283,46 @@ test("App uncertain batch recovery survives Cancel and selection teardown until 
   await click("Cancel"); await nav("Quiet"); await openBulkMove();
   expect(button("Move conversations").disabled).toBe(false);
 });
+
+test("App repeated global recovery clicks share one attempt and failed recovery keeps new batch choosers locked", async () => {
+  intercept = async path => syncNoop(path);
+  await renderMailbox(); await openBulkMove();
+  let committed = false;
+  intercept = async (path, init) => {
+    if (path.endsWith("/routing/batch") && init?.method === "PUT") { await request(path, init); committed = true; throw new Error("Response lost"); }
+    if (committed && path.startsWith("/v1/inbox?")) return Response.json({ error: { message: "Mail unavailable" } }, { status: 503 });
+    return syncNoop(path);
+  };
+  await click("Move conversations"); await click("Cancel"); await click("Done selecting");
+  const gate = deferred(); let reads = 0;
+  intercept = async path => {
+    if (path === "/v1/inbox?view=all&classification=all&limit=100") { reads++; await gate.promise; return Response.json({ error: { message: "Still unavailable" } }, { status: 503 }); }
+    if (path.startsWith("/v1/inbox?")) return Response.json({ error: { message: "Mail unavailable" } }, { status: 503 });
+    return syncNoop(path);
+  };
+  const retry = button("Retry mail reload");
+  await act(async () => { retry.click(); retry.click(); }); await settle();
+  expect(retry.disabled).toBe(true);
+  expect(reads).toBe(1);
+  await act(async () => gate.release()); await settle();
+  expect(document.querySelector(".routing-feedback")?.textContent).toContain("Mail could not reload");
+  await openBulkMove();
+  expect(button("Move conversations").disabled).toBe(true);
+  expect(puts).toHaveLength(1);
+  intercept = async path => syncNoop(path);
+  await click("Reload spaces and mail");
+  expect(document.querySelector(".bulk-space-dialog")?.textContent).not.toContain("A previous move needs recovery");
+  expect(document.querySelectorAll(".message-row")).toHaveLength(0);
+});
+
+test("superseded mail snapshot cannot satisfy explicit recovery", async () => {
+  let updates!: ReturnType<typeof useRoutingUpdates>;
+  function Capture() { updates = useRoutingUpdates(); return null; }
+  await act(async () => root.render(<AttentionRoutingProvider onRefresh={async () => false}><Capture /></AttentionRoutingProvider>));
+  await act(async () => { updates.requireRecovery(updates.begin()); });
+  let recovered = true;
+  await act(async () => { recovered = await updates.recover(); });
+  expect(recovered).toBe(false);
+  expect(updates.recoveryRequired).toBe(true);
+  expect(updates.recovering).toBe(false);
+});

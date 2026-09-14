@@ -28,7 +28,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { setOpen(false); setChoice(""); setError(""); setRecovery(false); }, [queryOwner]);
   const overLimit = targets.length > destinationBatchLimit;
-  const blocked = disabled || busy || catalog.locked || recovery || updates.recoveryRequired || !targets.length || overLimit;
+  const blocked = disabled || busy || updates.recovering || catalog.locked || recovery || updates.recoveryRequired || !targets.length || overLimit;
   async function move() {
     if (blocked || lock.current || !catalog.data || !catalog.active.some(space => space.id === choice)) return;
     const attempted = targets.map(target => ({ ...target }));
@@ -79,7 +79,7 @@ export function BulkSpaceMove({ targets, disabled, preview, queryOwner, onMoved,
       {busy && <p role="status">Updating selected conversations…</p>}
       {(error || catalog.error) && <p role="alert">{error || catalog.error}</p>}
       {updates.recoveryRequired && !error && <p role="alert">A previous move needs recovery. Reload current mail before moving conversations.</p>}
-      {(recovery || updates.recoveryRequired || catalog.error) && <button type="button" disabled={busy} onClick={() => void reload()}>Reload spaces and mail</button>}
+      {(recovery || updates.recoveryRequired || catalog.error) && <button type="button" disabled={busy || updates.recovering} onClick={() => void reload()}>Reload spaces and mail</button>}
       {!targets.length && <p role="status">No selected conversations remain in this view. Close and select visible messages.</p>}
       <footer><button type="button" disabled={busy} onClick={() => setOpen(false)}>Cancel</button><button type="button" disabled={blocked || !catalog.active.some(space => space.id === choice)} onClick={() => void move()}>{busy ? "Moving…" : "Move conversations"}</button></footer>
     </TopLayer>}
