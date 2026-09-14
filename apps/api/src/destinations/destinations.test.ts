@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { organizationLaneApplyResponseSchema } from "@orca/shared";
 import { mkdtempSync, rmSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -149,6 +150,59 @@ test("explicit sender beats advanced placement; safety lock freezes actual effec
     route(f, sender, advanced.id);
     expect(readThreadDestination(f.db, "owner", "a", "m1")).toMatchObject({ destinationId: clients.id, locked: true });
     expect(() => route(f, conversation, advanced.id)).toThrow("protected");
+    const locked = repo.lanes!.getSnapshot("owner", ["a"]);
+    const unlockInput = { scope: { actor: { type: "human" as const, id: "owner" }, workspaceId: "owner", accountIds: ["a", "b"] }, command: { id: "unlock", idempotencyKey: "unlock", expectedWorkspaceRevision: locked.configuration.workspaceRevision, actions: [{ kind: "set_thread_safety_lock" as const, accountId: "a", threadId: "m1", locked: false, reason: "Release", expectedThreadRevision: locked.placements.find(p => p.threadId === "m1")!.revision }] } };
+    const unlocked = organizationLaneApplyResponseSchema.parse(org.apply(unlockInput));
+    expect(unlocked.placements[0]).toMatchObject({ primaryLaneId: advanced.id, destination: { destinationId: advanced.id, source: "sender", locked: false } });
+    expect(org.apply(unlockInput)).toEqual(unlocked);
+    expect(repo.lanes!.getSnapshot("owner", ["a"]).placements.find(p => p.threadId === "m1")).toEqual(unlocked.placements[0]);
+    f.sqlite.close();
+});
+test("lock preserves advanced candidate across sender reset, database reopen and unlock", async () => {
+    const f = await setup(), clients = add(f), advanced = add(f, "Advanced");
+    f.db.run(sql`update organization_thread_lane_states set primary_lane_id=${advanced.id},placement_source='lane_policy',source_id='advanced-policy',reason='Advanced A' where account_id='a' and thread_id='m1'`);
+    route(f, sender, clients.id);
+    const scope = { actor: { type: "human" as const, id: "owner" }, workspaceId: "owner", accountIds: ["a"] };
+    const lock = (db: typeof f.db, locked: boolean) => {
+        const repo = createSqliteOrganizationRepository(db);
+        const snapshot = repo.lanes!.getSnapshot("owner", ["a"]);
+        return createOrganization(repo).apply({ scope, command: { id: locked ? "freeze" : "unfreeze", idempotencyKey: locked ? "freeze" : "unfreeze", expectedWorkspaceRevision: snapshot.configuration.workspaceRevision, actions: [{ kind: "set_thread_safety_lock", accountId: "a", threadId: "m1", locked, reason: "Protect", expectedThreadRevision: snapshot.placements.find(p => p.threadId === "m1")!.revision }] } });
+    };
+    lock(f.db, true);
+    const audit = f.sqlite.query("select before_json,after_json from organization_change_actions where change_id='freeze' and resource_family='thread'").get() as { before_json: string; after_json: string };
+    expect(JSON.parse(audit.before_json).placement).toMatchObject({ primaryLaneId: advanced.id, evidence: { sourceId: "advanced-policy", reason: "Advanced A" } });
+    expect(JSON.parse(audit.after_json)).toMatchObject({ placement: { primaryLaneId: clients.id, evidence: { winningSource: "safety_lock", sourceId: clients.id } }, lowerCandidate: { primaryLaneId: advanced.id, evidence: { sourceId: "advanced-policy", reason: "Advanced A" } } });
+    route(f, sender, null);
+    expect(() => createOrganization(createSqliteOrganizationRepository(f.db)).apply({ scope: { ...scope, accountIds: ["b"] }, command: { id: "retire-locked", idempotencyKey: "retire-locked", expectedWorkspaceRevision: service(f).list().revision, actions: [{ kind: "update_lane", laneId: clients.id, retired: true, expectedRevision: clients.revision }] } })).toThrow("referenced");
+    f.sqlite.close();
+    const reopened = createDatabaseClient(f.path);
+    try {
+        expect(readThreadDestination(reopened.db, "owner", "a", "m1")).toMatchObject({ destinationId: clients.id, locked: true });
+        expect(createDestinations(reopened.db, "owner").read("a", conversation).selection.effective).toMatchObject({ destinationId: clients.id, locked: true });
+        lock(reopened.db, false);
+        expect(readThreadDestination(reopened.db, "owner", "a", "m1")).toMatchObject({ destinationId: advanced.id, source: "advanced", locked: false });
+        expect(createSqliteOrganizationRepository(reopened.db).lanes!.getSnapshot("owner", ["a"]).placements.find(p => p.threadId === "m1")).toMatchObject({ primaryLaneId: advanced.id, evidence: { winningSource: "lane_policy", sourceId: "advanced-policy", reason: "Advanced A" } });
+    } finally { reopened.sqlite.close(); }
+});
+for (const target of [sender, account]) test(`manual reset apply and replay match canonical ${target.scope} destination reads`, async () => {
+    const f = await setup(), clients = add(f), manual = add(f, "Manual");
+    route(f, target, clients.id);
+    route(f, conversation, manual.id);
+    const repo = createSqliteOrganizationRepository(f.db), org = createOrganization(repo);
+    const snapshot = repo.lanes!.getSnapshot("owner", ["a"]);
+    const input = { scope: { actor: { type: "human" as const, id: "owner" }, workspaceId: "owner", accountIds: ["a"] }, command: { id: "reset", idempotencyKey: "reset", expectedWorkspaceRevision: snapshot.configuration.workspaceRevision, actions: [{ kind: "set_thread_manual_override" as const, accountId: "a", threadId: "m1", laneId: null, reason: "Inherit", expectedThreadRevision: snapshot.placements.find(p => p.threadId === "m1")!.revision }] } };
+    const response = organizationLaneApplyResponseSchema.parse(org.apply(input));
+    expect(response.placements[0]).toMatchObject({ primaryLaneId: clients.id, destination: { destinationId: clients.id, source: target.scope } });
+    expect(org.apply(input)).toEqual(response);
+    expect(repo.lanes!.getSnapshot("owner", ["a"]).placements.find(p => p.threadId === "m1")).toEqual(response.placements[0]);
+    const query = org.query({ scope: input.scope, query: { accountIds: ["a"], laneIds: [clients.id], limit: 20 } });
+    expect(query.threads.find(t => t.id === "m1")?.organization.lanePlacement.primaryLaneId).toBe(clients.id);
+    const detail = await f.request("/v1/threads/m1?accountId=a");
+    expect(await detail.json()).toMatchObject({ thread: { attention: { destination: { destinationId: clients.id } } } });
+    const page = createMailboxReader(f.sqlite).read({ authorization: { userId: "owner", accountIds: ["a"] }, query: { destinationId: clients.id, limit: 20 } }).response;
+    expect(page.messages.find(m => m.id === "m1")?.destination?.destinationId).toBe(clients.id);
+    const audit = f.sqlite.query("select after_json from organization_change_actions where change_id='reset' and resource_family='thread'").get() as { after_json: string };
+    expect(JSON.parse(audit.after_json).lowerCandidate.primaryLaneId).toBe(service(f).list().fallbackDestinationId);
     f.sqlite.close();
 });
 test("destination filtering paginates beyond 100 and rejects changed filters or stale concurrent writes", async () => {
@@ -221,7 +275,17 @@ test("populated pre-0042 upgrade preserves custom fallback identity and legacy c
     };
     f.sqlite.query("update organization_lanes set name='Personal desk' where workspace_id='owner' and id=?").run(fallback.id);
     createAttentionRouting(f.db, "owner").save("a", { expectedRevision: 0, target: { scope: "conversation", threadId: "t" }, behavior: "quiet" });
+    // Both historical lock forms must keep their existing visible destination.
+    f.db.insert(threads).values([{ id: "locked-lower", accountId: "a", providerThreadId: "locked-lower" }, { id: "locked-manual", accountId: "a", providerThreadId: "locked-manual" }]).run();
+    f.sqlite.query("insert into organization_lanes(workspace_id,id,name,position,default_policy_id) select workspace_id,'old-manual','Old manual',99,default_policy_id from organization_lanes where workspace_id='owner' and id=?").run(fallback.id);
+    f.sqlite.exec("update organization_thread_lane_states set safety_locked=1,safety_lock_actor_id='owner',safety_lock_actor_type='human',safety_lock_reason='Legacy protection' where thread_id in ('locked-lower','locked-manual')");
+    f.sqlite.exec("update organization_thread_lane_states set manual_override_lane_id='old-manual',manual_override_actor_id='owner',manual_override_actor_type='human',manual_override_reason='Manual',manual_override_at=1 where thread_id='locked-manual'");
     migrate(f.db, { migrationsFolder: source });
+    for (const [threadId, destinationId] of [["locked-lower", fallback.id], ["locked-manual", "old-manual"]]) {
+        expect(readThreadDestination(f.db, "owner", "a", threadId!)).toMatchObject({ destinationId, locked: true });
+        expect(createDestinations(f.db, "owner").read("a", { scope: "conversation", threadId: threadId! }).selection.effective).toMatchObject({ destinationId, locked: true });
+        expect(f.sqlite.query("select safety_lock_lane_id id from organization_thread_lane_states where thread_id=?").get(threadId!)).toEqual({ id: destinationId });
+    }
     const s = createDestinations(f.db, "owner"), catalog = s.list();
     expect(catalog.fallbackDestinationId).toBe(fallback.id);
     expect(catalog.destinations.find(d => d.isFallback)?.name).toBe("Personal desk");

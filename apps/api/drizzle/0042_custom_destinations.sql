@@ -1,3 +1,10 @@
+-- Keep the frozen visible target separate from the underlying policy candidate.
+ALTER TABLE organization_thread_lane_states ADD COLUMN safety_lock_lane_id text;
+--> statement-breakpoint
+UPDATE organization_thread_lane_states
+SET safety_lock_lane_id = coalesce(manual_override_lane_id, primary_lane_id)
+WHERE safety_locked = 1;
+--> statement-breakpoint
 CREATE TABLE organization_destination_bindings (
  workspace_id text NOT NULL, account_id text NOT NULL, scope text NOT NULL, value text NOT NULL,
  destination_id text, revision integer NOT NULL DEFAULT 1 CHECK(revision > 0),
@@ -157,7 +164,7 @@ CREATE TRIGGER destinations_mailbox_organization_workspace_states_delete AFTER D
 CREATE VIEW organization_effective_destinations AS
  SELECT t.account_id,t.id thread_id,a.user_id workspace_id,
  CASE
- WHEN ls.safety_locked=1 THEN coalesce(ls.manual_override_lane_id,ls.primary_lane_id)
+ WHEN ls.safety_locked=1 THEN coalesce(ls.safety_lock_lane_id,ls.manual_override_lane_id,ls.primary_lane_id)
  WHEN ls.manual_override_lane_id IS NOT NULL THEN ls.manual_override_lane_id
  WHEN cb.revision IS NULL AND ta.behavior IS NOT NULL THEN coalesce(tl.destination_id,ws.fallback_lane_id)
  WHEN sb.destination_id IS NOT NULL THEN sb.destination_id
