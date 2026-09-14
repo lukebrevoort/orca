@@ -1362,7 +1362,7 @@ export function InboxApp({
   const [activeMailbox, setActiveMailbox] = useState<Mailbox>(() => {
     if (typeof window === "undefined") return "inbox";
     const destination = desktopDestinationFromLocation(window.location);
-    return ["inbox", "focus", "signals", "quiet", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
+    return ["inbox", "focus", "signals", "quiet", "hidden", "all", "later", "drafts"].includes(destination ?? "") ? destination as Mailbox : "inbox";
   });
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -3114,7 +3114,7 @@ export function InboxApp({
             {requestedDestinationId && destinationLoading && <p role="status">Loading mail…</p>}
             {requestedDestinationId && destinationError && <p role="alert">{destinationError} <button onClick={() => setDestinationRetry(value => value + 1)}>Retry destination</button></p>}
             {destinationSurface && !requestedDestinationId && <p role="status">{catalog.loading ? "Loading destinations…" : "This legacy destination is unavailable. Choose a destination from the sidebar."}</p>}
-            {activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
+            {destinationSurface && !demoMode && (!selectedDestination || selectedDestination.retiredAt) ? null : activeSavedViewId ? <SavedOrganizationViewWorkspace demoMode={demoMode} onManage={() => navigateDesktop("organization")} onOpenThread={openSavedViewThread} previewMode={demoMode} viewId={activeSavedViewId}/> : activeMailbox === "drafts" ? <DraftsView drafts={drafts} status={draftsStatus} error={draftsError} onRetry={() => setDraftRefreshKey((key) => key + 1)} onOpenDraft={(draft) => openCompose(draft.id)} /> : <InboxView
               account={account}
               demoMode={demoMode}
               agentEventActionErrors={agentEventActionErrors}

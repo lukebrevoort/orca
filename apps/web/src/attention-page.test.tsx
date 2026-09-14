@@ -913,6 +913,13 @@ test("create from sidebar opens durable destination; sender routing covers futur
   await act(async () => { replacement.value = fallbackId; replacement.dispatchEvent(new Event("change", { bubbles: true })); });
   await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
   await settle();
+  expect(document.querySelector(".desktop-sidebar")?.textContent).toContain("Partners");
+  expect(document.querySelector("dialog [role=alert]")).not.toBeNull();
+  const latest = await state();
+  await request("/v1/destinations/routing?accountId=a", { method: "PUT", body: JSON.stringify({ expectedRevision: latest.revision, target: { scope: "sender", address: "maya@example.com" }, destinationId: null }) });
+  await act(async () => refreshDestinations());
+  await act(async () => [...details.querySelectorAll<HTMLButtonElement>("button")].find(item => item.textContent === "Retire Partners")!.click());
+  await settle();
   expect(document.querySelector(".desktop-sidebar")?.textContent).not.toContain("Partners");
   const retired = await (await request("/v1/destinations")).json();
   expect(retired.destinations.find((item: {id: string}) => item.id === clients.id).retiredAt).not.toBeNull();

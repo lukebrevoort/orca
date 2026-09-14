@@ -61,7 +61,7 @@ export function DestinationManager({ onClose, onCreated }: { onClose: () => void
     </form>
     {catalog.active.map(item => <DestinationEditor key={item.id} item={item} choices={catalog.active} disabled={busy || catalog.locked} mutate={mutate} />)}
     {(error || catalog.error) && <p role="alert">{error || catalog.error} <button disabled={busy} onClick={() => void catalog.refresh().catch(() => {})}>Reload destinations</button></p>}
-    <p>Retiring a destination reassigns its mail and choices. It never deletes messages. Notification delivery is not available.</p>
+    <p>A destination can be retired only after its routing and organization references are cleared. The server checks this before saving; mail is never deleted. Notification delivery is not available.</p>
     <footer><button disabled={busy} onClick={onClose}>Done</button></footer>
   </dialog>;
 }
@@ -72,7 +72,7 @@ function DestinationEditor({ item, choices, disabled, mutate }: { item: MailDest
   return <details><summary>{item.name}{item.isFallback ? " · Default" : ""}</summary>
     <label>Name<input value={name} maxLength={120} disabled={disabled} onChange={event => setName(event.target.value)} /></label>
     <button disabled={disabled || !name.trim() || name.trim() === item.name} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}`, "PATCH", { name: name.trim() })}>Rename</button>
-    <label>Reassign mail and choices to<select disabled={disabled} value={replacement} onChange={event => setReplacement(event.target.value)}><option value="">Choose replacement</option>{choices.filter(choice => choice.id !== item.id).map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</select></label>
+    <label>Replacement destination (if retirement is allowed)<select disabled={disabled} value={replacement} onChange={event => setReplacement(event.target.value)}><option value="">Choose replacement</option>{choices.filter(choice => choice.id !== item.id).map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}</select></label>
     <button disabled={disabled || !replacement} onClick={() => void mutate(`/v1/destinations/${encodeURIComponent(item.id)}/retire`, "POST", { reassignToDestinationId: replacement })}>Retire {item.name}</button>
   </details>;
 }
